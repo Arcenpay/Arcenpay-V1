@@ -1,0 +1,95 @@
+// ArcenPay — placeholder Prisma schema
+//
+// This is a reduced, illustrative schema included with this repository.
+// It is NOT the production schema; the real one is not published here.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String?  @unique
+  walletAddress String?  @unique
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  memberships TeamMember[]
+}
+
+model Team {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members       TeamMember[]
+  plans         Plan[]
+  subscriptions Subscription[]
+}
+
+model TeamMember {
+  id     String @id @default(cuid())
+  teamId String
+  userId String
+  role   String @default("MEMBER")
+
+  team Team @relation(fields: [teamId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([teamId, userId])
+}
+
+model Plan {
+  id        String   @id @default(cuid())
+  teamId    String
+  name      String
+  amount    Int
+  currency  String   @default("USD")
+  interval  String   @default("MONTH")
+  createdAt DateTime @default(now())
+
+  team          Team           @relation(fields: [teamId], references: [id])
+  subscriptions Subscription[]
+}
+
+model Subscription {
+  id               String    @id @default(cuid())
+  teamId           String
+  planId           String
+  subscriber       String
+  status           String    @default("ACTIVE")
+  currentPeriodEnd DateTime?
+  createdAt        DateTime  @default(now())
+
+  team Team @relation(fields: [teamId], references: [id])
+  plan Plan @relation(fields: [planId], references: [id])
+
+  @@index([teamId])
+  @@index([subscriber])
+}
+
+model Invoice {
+  id        String    @id @default(cuid())
+  number    String    @unique
+  amount    Int
+  currency  String    @default("USD")
+  status    String    @default("DRAFT")
+  issuedAt  DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([status])
+}
+
+model WebhookEndpoint {
+  id        String   @id @default(cuid())
+  url       String
+  secret    String
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+}

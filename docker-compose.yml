@@ -1,0 +1,43 @@
+# ArcenPay — Local Development Stack
+# Usage:
+#   docker compose up -d          → start postgres + redis
+#   docker compose down -v        → stop and wipe volumes
+#   docker compose logs -f        → tail all logs
+#
+# The dashboard and facilitator run outside Docker (npm run dev) and
+# connect to these services via localhost ports.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    environment:
+      POSTGRES_USER: arcenpay
+      POSTGRES_PASSWORD: arcenpay_dev
+      POSTGRES_DB: arcenpay
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U arcenpay -d arcenpay"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6380}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+  redis_data:

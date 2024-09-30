@@ -1,0 +1,17 @@
+# *
+User-agent: *
+Allow: /login
+Disallow: /
+Disallow: /api/
+Disallow: /invite
+Disallow: /onboarding
+Disallow: /pay
+Disallow: /sign-in
+Disallow: /sign-up
+Disallow: /sso-callback
+
+# Host
+Host: https://app.arcenpay.com
+
+# Sitemaps
+Sitemap: https://app.arcenpay.com/sitemap.xml

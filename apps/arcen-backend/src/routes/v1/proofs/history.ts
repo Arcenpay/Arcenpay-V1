@@ -1,0 +1,59 @@
+import type { Context } from "hono";
+import { resolveSession } from "../../../middleware/auth.js";
+import { FACILITATOR_URL, FACILITATOR_SECRET } from "../../../config.js";
+
+export async function getProofHistory(c: Context) {
+  const session = await resolveSession(c);
+  if (!session) {
+    return c.json({ error: "Unauthorized" }, 401 as any);
+  }
+
+  if (!session.currentTeamId) {
+    return c.json({ error: "No active team selected" }, 400 as any);
+  }
+
+  try {
+    const rawLimit = Number(c.req.query("limit") || "12");
+    const limit = Number.isFinite(rawLimit)
+      ? Math.max(1, Math.min(Math.trunc(rawLimit), 200))
+      : 12;
+
+    const upstream = await fetch(
+      `${FACILITATOR_URL}/api/proofs/history?limit=${limit}`,
+      {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          ...(FACILITATOR_SECRET
+            ? { Authorization: `Bearer ${FACILITATOR_SECRET}` }
+            : {}),
+        },
+      },
+    );
+
+    if (!upstream.ok) {
+      return c.json({
+        count: 0,
+        jobs: [],
+        degraded: true,
+        message: `Facilitator returned ${upstream.status}.`,
+      });
+    }
+
+    const payload = await upstream.json() as { count?: number; jobs?: unknown };
+    const jobs = Array.isArray(payload.jobs) ? payload.jobs : [];
+    return c.json({
+      count: Number(payload.count) || jobs.length,
+      jobs,
+      degraded: false,
+    });
+  } catch (err) {
+    console.error("[proofs/history]", err);
+    return c.json({
+      count: 0,
+      jobs: [],
+      degraded: true,
+      message: err instanceof Error ? err.message : "Proof history unavailable.",
+    });
+  }
+}

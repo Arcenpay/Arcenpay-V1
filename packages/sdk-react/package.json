@@ -1,0 +1,130 @@
+{
+  "name": "@arcenpay/react",
+  "version": "1.2.0",
+  "description": "ArcenPay SDK \u2014 React components for Web3 subscription billing",
+  "license": "MIT",
+  "homepage": "https://app.arcenpay.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Arcenpay/Arcenpay.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Arcenpay/Arcenpay/issues"
+  },
+  "keywords": [
+    "arcenpay",
+    "react",
+    "web3",
+    "subscriptions",
+    "billing",
+    "wagmi"
+  ],
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "typings": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "default": "./dist/index.mjs"
+    },
+    "./smart-account": {
+      "types": "./dist/smart-account.d.ts",
+      "import": "./dist/smart-account.mjs",
+      "require": "./dist/smart-account.js",
+      "default": "./dist/smart-account.mjs"
+    },
+    "./bundler": {
+      "types": "./dist/bundler.d.ts",
+      "import": "./dist/bundler.mjs",
+      "require": "./dist/bundler.js",
+      "default": "./dist/bundler.mjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "sync:core": "node ../../scripts/sync-internal-core.mjs sdk-react",
+    "prebuild": "npm run sync:core",
+    "predev": "npm run sync:core",
+    "pretest": "npm run sync:core",
+    "pretypecheck": "npm run sync:core",
+    "build": "npx tsup src/index.ts src/smart-account.ts src/bundler.ts --clean --format cjs,esm --dts --dts-resolve --external react --external permissionless --external @lit-protocol/lit-node-client --external @lit-protocol/constants --external @lit-protocol/auth-helpers",
+    "dev": "npx tsup src/index.ts src/smart-account.ts src/bundler.ts --clean --format cjs,esm --dts --external react --external permissionless --external @lit-protocol/lit-node-client --external @lit-protocol/constants --external @lit-protocol/auth-helpers --watch",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit --skipLibCheck",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run build"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0 || ^19.0.0",
+    "react-dom": "^18.0.0 || ^19.0.0",
+    "@react-native-async-storage/async-storage": "*",
+    "pino-pretty": "*",
+    "@x402/core": "*",
+    "@x402/fetch": "*",
+    "@x402/client": "*",
+    "@x402/server": "*",
+    "@lit-protocol/auth-helpers": "*",
+    "@lit-protocol/constants": "*",
+    "@lit-protocol/lit-node-client": "*"
+  },
+  "peerDependenciesMeta": {
+    "@react-native-async-storage/async-storage": {
+      "optional": true
+    },
+    "pino-pretty": {
+      "optional": true
+    },
+    "@x402/core": {
+      "optional": true
+    },
+    "@x402/fetch": {
+      "optional": true
+    },
+    "@x402/client": {
+      "optional": true
+    },
+    "@x402/server": {
+      "optional": true
+    },
+    "@lit-protocol/auth-helpers": {
+      "optional": true
+    },
+    "@lit-protocol/constants": {
+      "optional": true
+    },
+    "@lit-protocol/lit-node-client": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "@solana/web3.js": "^1.98.4",
+    "@stellar/freighter-api": "^3.0.0",
+    "@stellar/stellar-sdk": "^16.2.0",
+    "@tanstack/react-query": "^5.62.0",
+    "lucide-react": "^0.454.0",
+    "permissionless": "^0.3.5",
+    "viem": "^2.21.0",
+    "wagmi": "^2.14.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "react": "^19.0.0",
+    "tsup": "^8.3.0",
+    "typescript": "^5.7.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "optionalDependencies": {
+    "@rollup/rollup-linux-x64-gnu": "^4.60.4"
+  }
+}

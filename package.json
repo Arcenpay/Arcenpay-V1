@@ -1,0 +1,77 @@
+{
+  "name": "arcenpay",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Web3 Entitlement Layer \u2014 ArcenPay + ZKVUB Protocol",
+  "workspaces": [
+    "packages/*",
+    "apps/*",
+    "subgraph"
+  ],
+  "scripts": {
+    "build": "turbo run build",
+    "build:sdk": "turbo run build --filter=@arcenpay/react --filter=@arcenpay/node",
+    "build:launch": "turbo run build --filter=@arcenpay/dashboard...",
+    "dev": "turbo run dev --ui=tui",
+    "dev:all": "turbo run dev --ui=tui",
+    "dev:stream": "turbo run dev --ui=stream --log-order=stream --log-prefix=task",
+    "dev:dashboard": "turbo run dev --ui=tui --filter=@arcenpay/dashboard...",
+    "dev:backend": "turbo run dev --ui=tui --filter=@arcenpay/backend...",
+    "build:backend": "turbo run build --filter=@arcenpay/backend...",
+    "build:railway": "npx turbo run build --filter=@arcenpay/backend...",
+    "start": "node --import tsx apps/arcen-backend/dist/server.js",
+    "start:backend": "node --import tsx apps/arcen-backend/dist/server.js",
+    "start:backend:prod": "npx prisma migrate deploy --schema=apps/arcen-backend/prisma/schema.prisma && node --import tsx apps/arcen-backend/dist/server.js",
+    "migrate:deploy": "prisma migrate deploy --schema=apps/arcen-backend/prisma/schema.prisma",
+    "test": "turbo run test",
+    "test:sdk": "turbo run test --filter=@arcenpay/react --filter=@arcenpay/node",
+    "test:launch": "turbo run test --filter=@arcenpay/dashboard...",
+    "typecheck": "turbo run typecheck",
+    "check:core-sync": "node scripts/check-internal-core-sync.mjs",
+    "typecheck:sdk": "turbo run typecheck --filter=@arcenpay/react --filter=@arcenpay/node",
+    "typecheck:launch": "turbo run typecheck --filter=@arcenpay/dashboard...",
+    "lint": "turbo run lint",
+    "lint:launch": "turbo run lint --filter=@arcenpay/dashboard...",
+    "clean": "turbo run clean",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "publish:sdk:dry-run": "npm run build:sdk && npm run test:sdk && npm run typecheck:sdk && npm publish --dry-run --workspace=@arcenpay/react --access public && npm publish --dry-run --workspace=@arcenpay/node --access public",
+    "publish:sdk": "npm run build:sdk && npm run test:sdk && npm run typecheck:sdk && npm publish --workspace=@arcenpay/react --access public && npm publish --workspace=@arcenpay/node --access public",
+    "verify:stellar:renewal": "npm run verify:stellar:renewal --workspace=@arcenpay/backend",
+    "setup:billing": "cd apps/arcen-backend && npm run setup:platform-billing",
+    "send:launch": "npx tsx scripts/send-launch-emails.ts",
+    "send:launch:dry": "npx tsx scripts/send-launch-emails.ts --dry-run",
+    "send:launch:preview": "npx tsx scripts/send-launch-emails.ts --preview /tmp/launch-preview.html"
+  },
+  "dependencies": {
+    "@arcjet/next": "^1.4.0",
+    "@arcjet/node": "^1.4.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "tsup": "^8.3.0",
+    "turbo": "^2.10.12",
+    "typescript": "^5.9.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.19",
+    "next": "^16.0.10",
+    "picomatch": "^2.3.2",
+    "prettier": "^3.4.0",
+    "turbo": "^2.10.12",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "packageManager": "npm@10.2.4",
+  "overrides": {
+    "@coinbase/cdp-sdk": "1.44.1"
+  },
+  "optionalDependencies": {
+    "@rollup/rollup-linux-x64-gnu": "^4.60.4",
+    "@tailwindcss/oxide-linux-x64-gnu": "4.2.1",
+    "@next/swc-linux-x64-gnu": "16.0.10",
+    "lightningcss-linux-x64-gnu": "1.31.1"
+  }
+}

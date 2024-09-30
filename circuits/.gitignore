@@ -1,0 +1,16 @@
+# Build artifacts
+build/
+
+# Proof outputs
+proof/
+
+# Powers of Tau ceremony files
+ptau/
+
+
+
+# Dependencies
+node_modules/
+
+# Generated Solidity verifier
+contracts/

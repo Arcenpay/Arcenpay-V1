@@ -1,0 +1,103 @@
+{
+  "name": "@arcenpay/node",
+  "version": "1.2.0",
+  "description": "ArcenPay SDK \u2014 Node.js middleware and billing services",
+  "license": "MIT",
+  "homepage": "https://app.arcenpay.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Arcenpay/Arcenpay.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Arcenpay/Arcenpay/issues"
+  },
+  "keywords": [
+    "arcenpay",
+    "web3",
+    "subscriptions",
+    "billing",
+    "node",
+    "x402"
+  ],
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "typings": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "default": "./dist/index.mjs"
+    },
+    "./client": {
+      "types": "./dist/client-entry.d.ts",
+      "import": "./dist/client-entry.mjs",
+      "require": "./dist/client-entry.js",
+      "default": "./dist/client-entry.mjs"
+    },
+    "./core": {
+      "types": "./dist/core.d.ts",
+      "import": "./dist/core.mjs",
+      "require": "./dist/core.js",
+      "default": "./dist/core.mjs"
+    },
+    "./event-contracts": {
+      "types": "./dist/event-contracts.d.ts",
+      "import": "./dist/event-contracts.mjs",
+      "require": "./dist/event-contracts.js",
+      "default": "./dist/event-contracts.mjs"
+    },
+    "./webhooks": {
+      "types": "./dist/webhooks.d.ts",
+      "import": "./dist/webhooks.mjs",
+      "require": "./dist/webhooks.js",
+      "default": "./dist/webhooks.mjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "sync:core": "node ../../scripts/sync-internal-core.mjs sdk-node",
+    "prebuild": "npm run sync:core",
+    "predev": "npm run sync:core",
+    "pretest": "npm run sync:core",
+    "pretypecheck": "npm run sync:core",
+    "build": "tsup src/index.ts src/client-entry.ts src/core.ts src/event-contracts.ts src/webhooks.ts --clean --format cjs,esm --dts --dts-resolve",
+    "dev": "tsup src/index.ts src/client-entry.ts src/core.ts src/event-contracts.ts src/webhooks.ts --clean --format cjs,esm --dts --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "@solana/web3.js": "^1.98.4",
+    "@stellar/stellar-sdk": "^16.2.0",
+    "viem": "^2.21.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "tsup": "^8.3.0",
+    "typescript": "^5.7.0",
+    "vitest": "^4.0.18"
+  },
+  "peerDependencies": {
+    "express": "^4.0.0 || ^5.0.0"
+  },
+  "peerDependenciesMeta": {
+    "express": {
+      "optional": true
+    }
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "optionalDependencies": {
+    "@rollup/rollup-linux-x64-gnu": "^4.60.4"
+  }
+}

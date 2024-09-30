@@ -1,0 +1,29 @@
+{
+  "name": "arcenpay-circuits",
+  "version": "1.0.0",
+  "description": "ZKVUB zk-SNARK circuits (Groth16 via Circom)",
+  "scripts": {
+    "check:tooling": "bash scripts/ensure-tooling.sh all",
+    "compile": "bash scripts/ensure-tooling.sh circom && mkdir -p build && circom UsageBilling.circom --r1cs --wasm --sym -l node_modules -o build/",
+    "setup": "bash scripts/setup.sh",
+    "contribute": "snarkjs zkey contribute build/circuit_0000.zkey build/circuit_final.zkey --name='ArcenPay Ceremony' -e='arcenpay-random-entropy'",
+    "export-vkey": "snarkjs zkey export verificationkey build/circuit_final.zkey build/verification_key.json",
+    "export-solidity": "bash scripts/export-verifier.sh",
+    "prove": "node scripts/prove.js input/sample_input.json",
+    "prove:input": "node scripts/prove.js",
+    "verify": "snarkjs groth16 verify build/verification_key.json proof/public.json proof/proof.json",
+    "deploy-artifacts": "bash scripts/deploy-artifacts.sh",
+    "build:all": "npm run compile && npm run setup && npm run export-vkey && npm run deploy-artifacts",
+    "test": "mocha test/**/*.test.js --timeout 120000"
+  },
+  "dependencies": {
+    "circomlib": "^2.0.5",
+    "circomlibjs": "^0.1.7",
+    "snarkjs": "^0.7.4"
+  },
+  "devDependencies": {
+    "chai": "^4.4.1",
+    "circom_tester": "^0.0.20",
+    "mocha": "^10.7.3"
+  }
+}
