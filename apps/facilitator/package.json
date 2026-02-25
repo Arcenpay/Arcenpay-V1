@@ -1,0 +1,27 @@
+{
+  "name": "@meap/facilitator",
+  "version": "0.0.1",
+  "private": true,
+  "description": "MEAP Facilitator Node — x402 payment validation and on-chain submission",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/server.ts",
+    "start": "node dist/server.js",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@meap/core": "*",
+    "@meap/node": "*",
+    "express": "^5.0.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.0",
+    "viem": "^2.21.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/cors": "^2.8.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}
