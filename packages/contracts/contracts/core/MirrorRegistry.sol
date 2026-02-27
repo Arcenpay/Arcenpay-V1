@@ -9,6 +9,9 @@ import "../interfaces/ISubscriptionRegistry.sol";
 /// @dev Receives GMP messages and mirrors subscription state from primary chain
 /// @dev Phase 3 stub — will integrate Axelar GMP and Chainlink CCIP
 contract MirrorRegistry is Ownable {
+    uint8 public constant ROUTE_AXELAR = 1;
+    uint8 public constant ROUTE_CCIP = 2;
+
     // ============================================================
     //                          STRUCTS
     // ============================================================
@@ -20,6 +23,7 @@ contract MirrorRegistry is Ownable {
         uint64 expiration;
         uint256 sourceChainId;
         uint256 sourceTokenId;
+        uint64 sourceUpdatedAt;
         uint64 lastUpdated;
     }
 
@@ -35,6 +39,9 @@ contract MirrorRegistry is Ownable {
     );
 
     event BridgeAuthorized(address indexed bridge, uint256 sourceChainId);
+    event MirrorRouteConfigured(uint8 indexed route, address indexed transport);
+    event TrustedSourceConfigured(uint256 indexed sourceChainId, bytes32 indexed sourceHash);
+    event RoutedMessageProcessed(bytes32 indexed messageId, uint8 indexed route);
 
     // ============================================================
     //                         STORAGE
@@ -42,6 +49,18 @@ contract MirrorRegistry is Ownable {
 
     /// @notice Source chain ID => bridge address => authorized
     mapping(uint256 => mapping(address => bool)) public authorizedBridges;
+
+    /// @notice Source chain ID => trusted source registry hash
+    mapping(uint256 => bytes32) public trustedSources;
+
+    /// @notice Processed message IDs for duplicate suppression
+    mapping(bytes32 => bool) public processedMessages;
+
+    /// @notice Axelar gateway contract
+    address public axelarGateway;
+
+    /// @notice CCIP router contract
+    address public ccipRouter;
 
     /// @notice Subscriber address => mirrored subscription
     mapping(address => MirroredSubscription) private _mirrors;
@@ -65,6 +84,26 @@ contract MirrorRegistry is Ownable {
         emit BridgeAuthorized(bridge, sourceChainId);
     }
 
+    /// @notice Configures the Axelar transport gateway
+    function setAxelarGateway(address gateway) external onlyOwner {
+        axelarGateway = gateway;
+        emit MirrorRouteConfigured(ROUTE_AXELAR, gateway);
+    }
+
+    /// @notice Configures the CCIP transport router
+    function setCCIPRouter(address router) external onlyOwner {
+        ccipRouter = router;
+        emit MirrorRouteConfigured(ROUTE_CCIP, router);
+    }
+
+    /// @notice Registers trusted source subscription registry per source chain
+    function setTrustedSource(uint256 sourceChainId, bytes calldata sourceAddress) external onlyOwner {
+        require(sourceChainId > 0, "MirrorRegistry: invalid source chain");
+        bytes32 sourceHash = keccak256(sourceAddress);
+        trustedSources[sourceChainId] = sourceHash;
+        emit TrustedSourceConfigured(sourceChainId, sourceHash);
+    }
+
     // ============================================================
     //                    MIRROR FUNCTIONS
     // ============================================================
@@ -80,7 +119,6 @@ contract MirrorRegistry is Ownable {
             "MirrorRegistry: unauthorized bridge"
         );
 
-        // Decode payload
         (
             address subscriber,
             uint256 sourceTokenId,
@@ -89,22 +127,37 @@ contract MirrorRegistry is Ownable {
             uint64 expiration
         ) = abi.decode(payload, (address, uint256, uint256, string, uint64));
 
-        // Update mirror
-        _mirrors[subscriber] = MirroredSubscription({
-            subscriber: subscriber,
-            planId: planId,
-            planTier: planTier,
-            expiration: expiration,
-            sourceChainId: sourceChainId,
-            sourceTokenId: sourceTokenId,
-            lastUpdated: uint64(block.timestamp)
-        });
+        _applyMirrorUpdate(
+            subscriber,
+            sourceTokenId,
+            planId,
+            planTier,
+            expiration,
+            sourceChainId,
+            uint64(block.timestamp)
+        );
+    }
 
-        // Map source token to subscriber
-        bytes32 sourceKey = keccak256(abi.encodePacked(sourceChainId, sourceTokenId));
-        _sourceToSubscriber[sourceKey] = subscriber;
+    /// @notice Axelar-routed update entrypoint (primary route)
+    function onAxelarMessage(
+        uint256 sourceChainId,
+        bytes calldata sourceAddress,
+        bytes32 messageId,
+        bytes calldata payload
+    ) external {
+        require(msg.sender == axelarGateway, "MirrorRegistry: unauthorized axelar");
+        _processRoutedMessage(ROUTE_AXELAR, sourceChainId, sourceAddress, messageId, payload);
+    }
 
-        emit SubscriptionMirrored(subscriber, sourceTokenId, sourceChainId, expiration);
+    /// @notice CCIP-routed update entrypoint (fallback route)
+    function onCCIPMessage(
+        uint256 sourceChainId,
+        bytes calldata sourceAddress,
+        bytes32 messageId,
+        bytes calldata payload
+    ) external {
+        require(msg.sender == ccipRouter, "MirrorRegistry: unauthorized ccip");
+        _processRoutedMessage(ROUTE_CCIP, sourceChainId, sourceAddress, messageId, payload);
     }
 
     // ============================================================
@@ -130,5 +183,76 @@ contract MirrorRegistry is Ownable {
     /// @notice Returns the plan tier for a subscriber
     function getPlanTier(address subscriber) external view returns (string memory) {
         return _mirrors[subscriber].planTier;
+    }
+
+    function _processRoutedMessage(
+        uint8 route,
+        uint256 sourceChainId,
+        bytes calldata sourceAddress,
+        bytes32 messageId,
+        bytes calldata payload
+    ) internal {
+        require(messageId != bytes32(0), "MirrorRegistry: zero message id");
+        require(!processedMessages[messageId], "MirrorRegistry: duplicate message");
+
+        bytes32 trustedSourceHash = trustedSources[sourceChainId];
+        require(trustedSourceHash != bytes32(0), "MirrorRegistry: source not configured");
+        require(keccak256(sourceAddress) == trustedSourceHash, "MirrorRegistry: invalid source");
+
+        processedMessages[messageId] = true;
+
+        (
+            address subscriber,
+            uint256 sourceTokenId,
+            uint256 planId,
+            string memory planTier,
+            uint64 expiration,
+            uint64 sourceUpdatedAt
+        ) = abi.decode(payload, (address, uint256, uint256, string, uint64, uint64));
+
+        _applyMirrorUpdate(
+            subscriber,
+            sourceTokenId,
+            planId,
+            planTier,
+            expiration,
+            sourceChainId,
+            sourceUpdatedAt
+        );
+
+        emit RoutedMessageProcessed(messageId, route);
+    }
+
+    function _applyMirrorUpdate(
+        address subscriber,
+        uint256 sourceTokenId,
+        uint256 planId,
+        string memory planTier,
+        uint64 expiration,
+        uint256 sourceChainId,
+        uint64 sourceUpdatedAt
+    ) internal {
+        MirroredSubscription storage existing = _mirrors[subscriber];
+        bool sameSource = existing.sourceChainId == sourceChainId &&
+            existing.sourceTokenId == sourceTokenId;
+        if (sameSource && existing.sourceUpdatedAt > sourceUpdatedAt) {
+            return;
+        }
+
+        _mirrors[subscriber] = MirroredSubscription({
+            subscriber: subscriber,
+            planId: planId,
+            planTier: planTier,
+            expiration: expiration,
+            sourceChainId: sourceChainId,
+            sourceTokenId: sourceTokenId,
+            sourceUpdatedAt: sourceUpdatedAt,
+            lastUpdated: uint64(block.timestamp)
+        });
+
+        bytes32 sourceKey = keccak256(abi.encodePacked(sourceChainId, sourceTokenId));
+        _sourceToSubscriber[sourceKey] = subscriber;
+
+        emit SubscriptionMirrored(subscriber, sourceTokenId, sourceChainId, expiration);
     }
 }

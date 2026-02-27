@@ -1,33 +1,40 @@
-version: '3.8'
-
 services:
   facilitator:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ../..
+      dockerfile: apps/facilitator/Dockerfile
     container_name: meap-facilitator
     ports:
-      - '3001:3001'
+      - '3402:3402'
     environment:
-      - PORT=3001
-      - NODE_ENV=development
-      - DEPLOYER_PRIVATE_KEY=${DEPLOYER_PRIVATE_KEY}
-      - SEPOLIA_RPC_URL=${SEPOLIA_RPC_URL:-https://ethereum-sepolia-rpc.publicnode.com}
-      - CHAIN_ID=11155111
-      # Contract addresses (Sepolia)
-      - PLAN_FACTORY_ADDRESS=0xc736f5d91aC0039b97A4Fc3540B8f3d59E7FdBa6
-      - FEE_COLLECTOR_ADDRESS=0x513fab5218045790364b33A38D95FE8E17403BAe
-      - SUBSCRIPTION_REGISTRY_ADDRESS=0xf45A9E5280F72260a713c50b0Ca4e4FB1e22Cc8A
-      - SESSION_VAULT_ADDRESS=0x2dccEaad8551a620E4Fc736bb4d0fbb8D1A17D7C
-      - ZK_USAGE_VERIFIER_ADDRESS=0x265E0dC80b00044d183AFa83237F5976bB4d585c
-      - AUTOPAY_MODULE_ADDRESS=0x3f3734fb45D1511c23384D18Eb1927492E5e3764
-      - MIRROR_REGISTRY_ADDRESS=0x05BdaB1b4A87a4a5DF3Af1Ebb9Da853A0d31592E
-      - USDC_ADDRESS=0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238
-    volumes:
-      - ./src:/app/src
+      - PORT=3402
+      - NODE_ENV=production
+      - RPC_URL=${RPC_URL:-https://ethereum-sepolia-rpc.publicnode.com}
+      - CHAIN_ID=${CHAIN_ID:-11155111}
+      - PRIVATE_KEY=${PRIVATE_KEY}
+      - X402_ENABLE_SETTLEMENT=true
+      - X402_REQUIRE_SETTLER_AUTH=true
+      - REDIS_URL=redis://redis:6379
+      - SESSION_VAULT_ADDRESS=${SESSION_VAULT_ADDRESS:-0x2dccEaad8551a620E4Fc736bb4d0fbb8D1A17D7C}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000,http://localhost:3002}
+    depends_on:
+      redis:
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ['CMD', 'curl', '-f', 'http://localhost:3001/health']
+      test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://localhost:3402/health']
       interval: 30s
       timeout: 10s
       retries: 3
+
+  redis:
+    image: redis:7-alpine
+    container_name: meap-facilitator-redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5

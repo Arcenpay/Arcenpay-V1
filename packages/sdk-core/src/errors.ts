@@ -97,3 +97,69 @@ export function parseContractError(error: unknown): string {
 
     return errorString || 'An unknown error occurred.';
 }
+
+export type MEAPErrorCode =
+    | 'UNKNOWN'
+    | 'CONTRACT_REVERT'
+    | 'WALLET_REJECTED'
+    | 'INSUFFICIENT_FUNDS'
+    | 'INVALID_INPUT'
+    | 'UNAUTHORIZED'
+    | 'NETWORK_ERROR';
+
+export class MEAPError extends Error {
+    code: MEAPErrorCode;
+    cause?: unknown;
+    details?: Record<string, unknown>;
+
+    constructor(
+        message: string,
+        code: MEAPErrorCode = 'UNKNOWN',
+        options?: { cause?: unknown; details?: Record<string, unknown> },
+    ) {
+        super(message);
+        this.name = 'MEAPError';
+        this.code = code;
+        this.cause = options?.cause;
+        this.details = options?.details;
+    }
+}
+
+export class ContractError extends MEAPError {
+    constructor(message: string, options?: { cause?: unknown; details?: Record<string, unknown> }) {
+        super(message, 'CONTRACT_REVERT', options);
+        this.name = 'ContractError';
+    }
+}
+
+export class AuthError extends MEAPError {
+    constructor(message: string, options?: { cause?: unknown; details?: Record<string, unknown> }) {
+        super(message, 'UNAUTHORIZED', options);
+        this.name = 'AuthError';
+    }
+}
+
+export function normalizeError(error: unknown): MEAPError {
+    if (error instanceof MEAPError) return error;
+
+    const message = typeof error === 'string' ? error : (error as Error)?.message || 'Unknown error';
+    const lower = message.toLowerCase();
+
+    if (lower.includes('user rejected') || lower.includes('user denied')) {
+        return new MEAPError('Transaction was rejected in your wallet.', 'WALLET_REJECTED', {
+            cause: error,
+        });
+    }
+
+    if (lower.includes('insufficient funds')) {
+        return new MEAPError('Insufficient ETH for gas fees.', 'INSUFFICIENT_FUNDS', {
+            cause: error,
+        });
+    }
+
+    if (lower.includes('execution reverted') || lower.includes('revert')) {
+        return new ContractError(parseContractError(error), { cause: error });
+    }
+
+    return new MEAPError(message, 'UNKNOWN', { cause: error });
+}

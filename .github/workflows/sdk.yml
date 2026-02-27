@@ -30,11 +30,11 @@ jobs:
         run: npx turbo run build --filter='./packages/sdk-*'
 
       - name: Run tests
-        run: npx turbo run test --filter='./packages/sdk-*' || true
+        run: npx turbo run test --filter='./packages/sdk-*'
 
       - name: Check bundle size
         run: |
-          du -sh packages/sdk-core/dist/ || true
-          du -sh packages/sdk-react/dist/ || true
-          du -sh packages/sdk-node/dist/ || true
-          du -sh packages/sdk-agent/dist/ || true
+          du -sh packages/sdk-core/dist/
+          du -sh packages/sdk-react/dist/
+          du -sh packages/sdk-node/dist/
+          du -sh packages/sdk-agent/dist/

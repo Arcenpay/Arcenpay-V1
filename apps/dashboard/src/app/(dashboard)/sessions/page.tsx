@@ -4,7 +4,13 @@ import { useState, useEffect } from "react";
 import { useAccount, useReadContract, useReadContracts, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { parseUnits } from "viem";
 import { SessionVaultABI, getContractAddresses, TOKENS } from "@meap/core";
-import { CHAIN_ID, formatUSDC, truncateAddress } from "@/lib/contracts";
+import {
+  CHAIN_ID,
+  FACILITATOR_BASE_URL,
+  formatUSDC,
+  getExplorerUrl,
+  truncateAddress,
+} from "@/lib/contracts";
 import { TransactionFlow } from "@/components/TransactionFlow";
 
 const contracts = getContractAddresses(CHAIN_ID);
@@ -14,6 +20,22 @@ export default function SessionsPage() {
   const { address } = useAccount();
   const [showDeposit, setShowDeposit] = useState(false);
   const [depositAmount, setDepositAmount] = useState("");
+  const [usageBySession, setUsageBySession] = useState<
+    Record<string, { callCount: number; latestSettlementTxHash: string | null; source: string }>
+  >({});
+  const [aggregatorStats, setAggregatorStats] = useState<{
+    sessions: number;
+    totalEntries: number;
+    pendingSettlements: number;
+    threshold: number;
+  } | null>(null);
+  const [settlementStatus, setSettlementStatus] = useState<{
+    onchainEnabled: boolean;
+    signerAuthorized: boolean | null;
+    signerAddress: string | null;
+  } | null>(null);
+  const [facilitatorError, setFacilitatorError] = useState<string | null>(null);
+  const [refreshSeq, setRefreshSeq] = useState(0);
 
   // Get session IDs for connected address
   const {
@@ -72,6 +94,89 @@ export default function SessionsPage() {
     (sum, s) => sum + (s!.totalSettled ?? BigInt(0)),
     BigInt(0),
   );
+  const sessionIdsKey = JSON.stringify((sessionIds as `0x${string}`[]) || []);
+
+  useEffect(() => {
+    const ids = ((sessionIds as `0x${string}`[]) || []);
+    if (!address || ids.length === 0) {
+      setUsageBySession({});
+      setAggregatorStats(null);
+      setSettlementStatus(null);
+      return;
+    }
+
+    let cancelled = false;
+    const facilitatorBase = FACILITATOR_BASE_URL.replace(/\/$/, "");
+
+    const loadFacilitatorData = async () => {
+      try {
+        const [statsResponse, settlementResponse, ...usageResponses] = await Promise.all([
+          fetch(`${facilitatorBase}/api/aggregator/stats`),
+          fetch(`${facilitatorBase}/api/ops/settlement/status`),
+          ...ids.map((id) => fetch(`${facilitatorBase}/api/usage/${id}`)),
+        ]);
+
+        if (cancelled) return;
+
+        if (statsResponse.ok) {
+          setAggregatorStats(await statsResponse.json());
+        }
+
+        if (settlementResponse.ok) {
+          const status = await settlementResponse.json();
+          setSettlementStatus({
+            onchainEnabled: Boolean(status.onchainEnabled),
+            signerAuthorized:
+              status.signerAuthorized === null ? null : Boolean(status.signerAuthorized),
+            signerAddress: status.signerAddress || null,
+          });
+        }
+
+        const usageEntries = await Promise.all(
+          usageResponses.map(async (response, index) => {
+            if (!response.ok) return null;
+            const payload = await response.json();
+            return {
+              sessionId: ids[index],
+              data: {
+                callCount: Number(payload.callCount || 0),
+                latestSettlementTxHash: payload.latestSettlementTxHash || null,
+                source: String(payload.source || "unknown"),
+              },
+            };
+          }),
+        );
+
+        const nextUsageState: Record<
+          string,
+          { callCount: number; latestSettlementTxHash: string | null; source: string }
+        > = {};
+        for (const entry of usageEntries) {
+          if (entry) {
+            nextUsageState[entry.sessionId] = entry.data;
+          }
+        }
+        setUsageBySession(nextUsageState);
+        setFacilitatorError(null);
+      } catch {
+        if (!cancelled) {
+          setFacilitatorError(
+            `Unable to reach facilitator at ${FACILITATOR_BASE_URL}. Set NEXT_PUBLIC_FACILITATOR_URL or run facilitator locally.`,
+          );
+        }
+      }
+    };
+
+    void loadFacilitatorData();
+    const interval = setInterval(() => {
+      void loadFacilitatorData();
+    }, 15000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [address, sessionIdsKey, refreshSeq]);
 
   // Write: USDC approve for deposit
   const {
@@ -214,6 +319,18 @@ export default function SessionsPage() {
         </div>
       )}
 
+      {facilitatorError && (
+        <div className="alert alert-warning">
+          {facilitatorError}
+        </div>
+      )}
+
+      {settlementStatus && settlementStatus.onchainEnabled && settlementStatus.signerAuthorized === false && (
+        <div className="alert alert-warning">
+          Facilitator signer {settlementStatus.signerAddress ? truncateAddress(settlementStatus.signerAddress) : "N/A"} is not an authorized SessionVault settler.
+        </div>
+      )}
+
       {/* Deposit Form */}
       {showDeposit && (
         <div className="data-table" style={{ marginBottom: 24 }}>
@@ -325,16 +442,28 @@ export default function SessionsPage() {
           </div>
         </div>
         <div className="stat-card">
-          <div className="label">Proofs Verified</div>
-          <div className="value">—</div>
-          <div className="change">Requires ZK pipeline</div>
+          <div className="label">Aggregator Queue</div>
+          <div className="value">
+            {aggregatorStats ? aggregatorStats.pendingSettlements : "—"}
+          </div>
+          <div className="change">
+            {aggregatorStats
+              ? `${aggregatorStats.totalEntries} entries / threshold ${aggregatorStats.threshold}`
+              : "Awaiting facilitator data"}
+          </div>
         </div>
       </div>
 
       <div className="data-table">
         <div className="table-header">
           <h3>Session Activity</h3>
-          <button className="btn" onClick={() => refetch()}>
+          <button
+            className="btn"
+            onClick={() => {
+              void refetch();
+              setRefreshSeq((value) => value + 1);
+            }}
+          >
             Refresh
           </button>
         </div>
@@ -346,6 +475,8 @@ export default function SessionsPage() {
               <th>Funded</th>
               <th>Settled</th>
               <th>Balance</th>
+              <th>Usage Calls</th>
+              <th>Last Settlement</th>
               <th>Status</th>
               <th>Action</th>
             </tr>
@@ -353,7 +484,7 @@ export default function SessionsPage() {
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan={7} style={{ padding: 24 }}>
+                <td colSpan={9} style={{ padding: 24 }}>
                   <div
                     className="skeleton"
                     style={{ width: "100%", height: 20 }}
@@ -363,7 +494,7 @@ export default function SessionsPage() {
             ) : sessions.length === 0 ? (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={9}
                   style={{
                     textAlign: "center",
                     color: "var(--text-muted)",
@@ -385,6 +516,24 @@ export default function SessionsPage() {
                   <td>${formatUSDC(session!.totalFunded)}</td>
                   <td>${formatUSDC(session!.totalSettled)}</td>
                   <td>${formatUSDC(session!.balance)}</td>
+                  <td>{usageBySession[session!.id]?.callCount ?? "—"}</td>
+                  <td>
+                    {usageBySession[session!.id]?.latestSettlementTxHash ? (
+                      <a
+                        href={getExplorerUrl(
+                          usageBySession[session!.id]!.latestSettlementTxHash!,
+                          CHAIN_ID,
+                          "tx",
+                        )}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {truncateAddress(usageBySession[session!.id]!.latestSettlementTxHash!)} ↗
+                      </a>
+                    ) : (
+                      <span style={{ color: "var(--text-muted)" }}>—</span>
+                    )}
+                  </td>
                   <td>
                     <span
                       className={`badge ${session!.active ? "active" : "inactive"}`}
@@ -446,4 +595,3 @@ export default function SessionsPage() {
     </>
   );
 }
-

@@ -305,6 +305,11 @@ export default function SettingsPage() {
                                 desc: "Target chain (default: 11155111)",
                             },
                             {
+                                name: "NEXT_PUBLIC_FACILITATOR_URL",
+                                required: false,
+                                desc: "Facilitator API base URL for session telemetry",
+                            },
+                            {
                                 name: "NEXTAUTH_SECRET",
                                 required: true,
                                 desc: "SIWE session signing secret",
@@ -323,6 +328,21 @@ export default function SettingsPage() {
                                 name: "LIT_NETWORK",
                                 required: false,
                                 desc: "Lit Protocol network (manzano/habanero)",
+                            },
+                            {
+                                name: "TABLELAND_TABLE_NAME",
+                                required: false,
+                                desc: "Tableland table used for feature/entitlement state",
+                            },
+                            {
+                                name: "TABLELAND_PRIVATE_KEY",
+                                required: false,
+                                desc: "Signer key for Tableland write transactions",
+                            },
+                            {
+                                name: "TABLELAND_RPC_URL",
+                                required: false,
+                                desc: "RPC used by Tableland signer wallet",
                             },
                             {
                                 name: "RESEND_API_KEY",

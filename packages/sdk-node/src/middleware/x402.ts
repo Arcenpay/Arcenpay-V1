@@ -5,12 +5,37 @@
 // ============================================================
 
 import type { Request, Response, NextFunction } from 'express';
-import type { X402Response } from '@meap/core';
+import type {
+  X402Response,
+  X402RejectionReason,
+  X402VerifiedPaymentContext,
+} from '@meap/core';
 import { X402_VERSION, X402_SCHEME, SessionVaultABI, getContractAddresses } from '@meap/core';
-import { createPublicClient, http, recoverTypedDataAddress } from 'viem';
+import {
+  createPublicClient,
+  http,
+  recoverTypedDataAddress,
+  isAddress,
+  parseUnits,
+} from 'viem';
 import { sepolia, baseSepolia, base } from 'viem/chains';
 
-interface X402MiddlewareOptions {
+type X402SettlePaymentInput = {
+  signer: `0x${string}`;
+  amount: bigint;
+  sessionId: string;
+  planId: string;
+  paymentHeader: string;
+  payload: Record<string, unknown>;
+  request: Request;
+};
+
+type X402SettlePaymentResult = {
+  settledAmount: bigint | string | number;
+  settlementTxHash?: string | null;
+};
+
+export interface X402MiddlewareOptions {
   /** Plan ID for pricing reference */
   planId: string;
   /** Price per API call in USDC (human-readable, e.g., "0.001") */
@@ -23,6 +48,13 @@ interface X402MiddlewareOptions {
   rpcUrl?: string;
   /** Payment facilitator contract address */
   payTo?: string;
+  /** Optional settlement hook. Called after payment verification succeeds. */
+  settlePayment?: (input: X402SettlePaymentInput) => Promise<X402SettlePaymentResult>;
+  /**
+   * If true, allow requests when balance check RPC/contract read fails.
+   * Default false for production-safe fail-closed behavior.
+   */
+  failOpenOnBalanceCheck?: boolean;
 }
 
 // EIP-712 domain and types for x402 Payment signature
@@ -48,6 +80,53 @@ const CHAIN_MAP: Record<number, any> = {
   8453: base,
 };
 
+function coerceBigInt(value: bigint | string | number, fallback: bigint): bigint {
+  try {
+    if (typeof value === 'bigint') return value;
+    if (typeof value === 'number') {
+      if (!Number.isFinite(value) || value < 0) return fallback;
+      return BigInt(Math.trunc(value));
+    }
+    if (typeof value === 'string' && value.trim()) return BigInt(value.trim());
+    return fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function normalizeSessionId(value: unknown): string {
+  if (typeof value !== 'string') return 'default';
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : 'default';
+}
+
+function normalizeAmount(value: unknown, fallback: bigint): bigint {
+  return coerceBigInt(value as bigint | string | number, fallback);
+}
+
+function normalizeNonce(value: unknown): bigint {
+  return coerceBigInt(value as bigint | string | number, 0n);
+}
+
+function normalizeTimestamp(value: unknown): bigint {
+  return coerceBigInt(value as bigint | string | number, BigInt(Date.now()));
+}
+
+function sendRejection(
+  res: Response,
+  reason: X402RejectionReason,
+  message: string,
+  details?: Record<string, unknown>,
+) {
+  res.setHeader('x-meap-rejection-reason', reason);
+  res.status(402).json({
+    ok: false,
+    rejectionReason: reason,
+    message,
+    ...(details ? { details } : {}),
+  });
+}
+
 /**
  * x402 Express Middleware — Production-grade payment validation
  *
@@ -66,9 +145,11 @@ export function x402Middleware(options: X402MiddlewareOptions) {
     chainId = 11155111,
     rpcUrl,
     payTo,
+    settlePayment,
+    failOpenOnBalanceCheck = false,
   } = options;
 
-  const rateAtomicUnits = Math.floor(parseFloat(ratePerCall) * 1_000_000).toString();
+  const rateAtomicUnits = parseUnits(ratePerCall, 6);
   const contracts = getContractAddresses(chainId);
   const payToAddress = payTo || contracts.feeCollector || '0x0000000000000000000000000000000000000000';
 
@@ -84,13 +165,17 @@ export function x402Middleware(options: X402MiddlewareOptions) {
 
     if (!paymentHeader) {
       // No payment — return 402 with x402 payload
-      const x402Response: X402Response = {
+      const x402Response: X402Response & {
+        ok: false;
+        rejectionReason: X402RejectionReason;
+      } = {
+        ok: false,
         version: X402_VERSION,
         accepts: [
           {
             scheme: X402_SCHEME,
             network,
-            maxAmountRequired: rateAtomicUnits,
+            maxAmountRequired: rateAtomicUnits.toString(),
             resource: `${req.protocol}://${req.get('host')}${req.originalUrl}`,
             description: `Premium API access — Plan: ${planId}`,
             mimeType: 'application/json',
@@ -98,6 +183,7 @@ export function x402Middleware(options: X402MiddlewareOptions) {
           },
         ],
         error: 'Payment required for this resource',
+        rejectionReason: 'MISSING_PAYMENT_HEADER',
       };
 
       res.status(402).json(x402Response);
@@ -108,70 +194,104 @@ export function x402Middleware(options: X402MiddlewareOptions) {
       // Step 1: Decode X-PAYMENT header
       let paymentData: any;
       try {
+        const normalizedHeader = paymentHeader.trim();
+        if (!/^[A-Za-z0-9+/=]+$/.test(normalizedHeader)) {
+          sendRejection(
+            res,
+            'INVALID_PAYMENT_HEADER_ENCODING',
+            'X-PAYMENT header must be valid base64-encoded JSON',
+          );
+          return;
+        }
+
         const decoded = Buffer.from(paymentHeader, 'base64').toString('utf-8');
         paymentData = JSON.parse(decoded);
       } catch {
-        res.status(402).json({
-          error: 'Invalid payment header',
-          message: 'X-PAYMENT header must be valid base64-encoded JSON',
-        });
+        sendRejection(
+          res,
+          'INVALID_PAYMENT_HEADER_FORMAT',
+          'X-PAYMENT header must decode to a valid JSON object',
+        );
         return;
       }
 
-      const { signature, payload: payloadStr } = paymentData;
-      if (!signature || !payloadStr) {
-        res.status(402).json({
-          error: 'Malformed payment',
-          message: 'Payment must contain signature and payload fields',
-        });
+      const { signature, payload: payloadRaw } = paymentData;
+      if (typeof signature !== 'string' || !signature.startsWith('0x') || !payloadRaw) {
+        sendRejection(
+          res,
+          'MALFORMED_PAYMENT_PAYLOAD',
+          'Payment must include valid signature and payload fields',
+        );
         return;
       }
 
       // Parse the payload
-      let payload: any;
+      let payload: Record<string, unknown>;
       try {
-        payload = typeof payloadStr === 'string' ? JSON.parse(payloadStr) : payloadStr;
-      } catch {
-        payload = payloadStr;
-      }
-
-      const signerClaimed = payload.from || payload.payTo;
-
-      // Step 2: Verify EIP-712 signature (recover signer)
-      let recoveredSigner: string | undefined;
-      try {
-        if (signature !== '0x0' && signature.length > 4) {
-          recoveredSigner = await recoverTypedDataAddress({
-            domain: { ...PAYMENT_DOMAIN, chainId: BigInt(chainId) },
-            types: PAYMENT_TYPES,
-            primaryType: 'Payment',
-            message: {
-              from: payload.from || '0x0000000000000000000000000000000000000000',
-              amount: BigInt(payload.amount || rateAtomicUnits),
-              resource: payload.resource || '',
-              sessionId: payload.sessionId || '',
-              nonce: BigInt(payload.nonce || 0),
-              timestamp: BigInt(payload.timestamp || Date.now()),
-            },
-            signature: signature as `0x${string}`,
-          });
+        const parsedPayload = typeof payloadRaw === 'string' ? JSON.parse(payloadRaw) : payloadRaw;
+        if (!parsedPayload || typeof parsedPayload !== 'object' || Array.isArray(parsedPayload)) {
+          throw new Error('payload must be an object');
         }
+        payload = parsedPayload as Record<string, unknown>;
       } catch {
-        // Signature recovery failed — may be a simple signature, allow fallback
-        recoveredSigner = signerClaimed;
-      }
-
-      // Step 3: Verify signer matches claimed address
-      if (recoveredSigner && signerClaimed &&
-        recoveredSigner.toLowerCase() !== signerClaimed.toLowerCase()) {
-        res.status(402).json({
-          error: 'Signature mismatch',
-          message: 'Recovered signer does not match payment from address',
-        });
+        sendRejection(
+          res,
+          'MALFORMED_PAYMENT_PAYLOAD',
+          'Payment payload must be a valid JSON object',
+        );
         return;
       }
 
-      const verifiedSigner = recoveredSigner || signerClaimed;
+      const signerClaimed = typeof payload.from === 'string' ? payload.from : '';
+      if (!isAddress(signerClaimed)) {
+        sendRejection(
+          res,
+          'MALFORMED_PAYMENT_PAYLOAD',
+          'Payment payload is missing a valid "from" address',
+        );
+        return;
+      }
+
+      const requestedAmount = normalizeAmount(payload.amount, rateAtomicUnits);
+      const sessionId = normalizeSessionId(payload.sessionId);
+
+      // Step 2: Verify EIP-712 signature (recover signer)
+      let recoveredSigner: string;
+      try {
+        recoveredSigner = await recoverTypedDataAddress({
+          domain: { ...PAYMENT_DOMAIN, chainId: BigInt(chainId) },
+          types: PAYMENT_TYPES,
+          primaryType: 'Payment',
+          message: {
+            from: signerClaimed as `0x${string}`,
+            amount: requestedAmount,
+            resource: String(payload.resource || ''),
+            sessionId,
+            nonce: normalizeNonce(payload.nonce),
+            timestamp: normalizeTimestamp(payload.timestamp),
+          },
+          signature: signature as `0x${string}`,
+        });
+      } catch {
+        sendRejection(
+          res,
+          'INVALID_SIGNATURE',
+          'Unable to validate the payment signature',
+        );
+        return;
+      }
+
+      // Step 3: Verify signer matches claimed address
+      if (recoveredSigner.toLowerCase() !== signerClaimed.toLowerCase()) {
+        sendRejection(
+          res,
+          'SIGNER_MISMATCH',
+          'Recovered signer does not match the payment sender',
+        );
+        return;
+      }
+
+      const verifiedSigner = recoveredSigner as `0x${string}`;
 
       // Step 4: Check session vault balance
       if (verifiedSigner && contracts.sessionVault) {
@@ -183,40 +303,83 @@ export function x402Middleware(options: X402MiddlewareOptions) {
             args: [verifiedSigner as `0x${string}`],
           }) as bigint;
 
-          if (balance < BigInt(rateAtomicUnits)) {
-            res.status(402).json({
-              error: 'Insufficient session balance',
-              message: `Balance: ${balance.toString()}, required: ${rateAtomicUnits}`,
-              balance: balance.toString(),
-              required: rateAtomicUnits,
-            });
+          if (balance < requestedAmount) {
+            sendRejection(
+              res,
+              'INSUFFICIENT_SESSION_BALANCE',
+              'Session balance is below the required amount',
+              {
+                balance: balance.toString(),
+                required: requestedAmount.toString(),
+              },
+            );
             return;
           }
         } catch (err) {
-          // If balance check fails (e.g., contract not deployed), log and continue
-          console.warn('[x402] Session vault balance check failed:', err);
+          if (failOpenOnBalanceCheck) {
+            console.warn('[x402] Session vault balance check failed (fail-open enabled):', err);
+          } else {
+            sendRejection(
+              res,
+              'BALANCE_CHECK_FAILED',
+              'Unable to verify session balance on-chain',
+            );
+            return;
+          }
         }
       }
 
-      // Step 5: Payment valid — attach to request and continue
-      (req as any).meapPayment = {
+      // Step 5: Optional settlement hook for immediate charge submission
+      let settledAmount = requestedAmount;
+      let settlementTxHash: string | null = null;
+
+      if (settlePayment) {
+        try {
+          const settlement = await settlePayment({
+            signer: verifiedSigner,
+            amount: requestedAmount,
+            sessionId,
+            planId,
+            paymentHeader,
+            payload,
+            request: req,
+          });
+          settledAmount = coerceBigInt(settlement.settledAmount, requestedAmount);
+          settlementTxHash = settlement.settlementTxHash || null;
+        } catch (err: any) {
+          sendRejection(
+            res,
+            'SETTLEMENT_FAILED',
+            err?.message || 'Payment verification succeeded but settlement failed',
+          );
+          return;
+        }
+      }
+
+      // Step 6: Payment valid — attach typed context and continue
+      const verifiedContext: X402VerifiedPaymentContext = {
         verified: true,
         signer: verifiedSigner,
         planId,
         ratePerCall,
-        amount: payload.amount || rateAtomicUnits,
-        sessionId: payload.sessionId,
+        amount: requestedAmount.toString(),
+        settledAmount: settledAmount.toString(),
+        settlementTxHash,
+        sessionId,
         paymentHeader,
         timestamp: Date.now(),
+        rejectionReason: null,
       };
+      (req as Request & { meapPayment?: X402VerifiedPaymentContext }).meapPayment = verifiedContext;
 
       next();
     } catch (error: any) {
       console.error('[x402] Payment processing error:', error);
-      res.status(500).json({
-        error: 'Payment processing failed',
-        message: error.message,
-      });
+      sendRejection(
+        res,
+        'PAYMENT_PROCESSING_FAILED',
+        error.message || 'Payment processing failed',
+      );
     }
   };
 }

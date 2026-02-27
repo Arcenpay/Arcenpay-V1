@@ -46,7 +46,7 @@ jobs:
 
       - name: Gas snapshot check
         working-directory: packages/contracts
-        run: forge snapshot --check || forge snapshot
+        run: forge snapshot --check
 
   # ============================================================
   #  SDK Build & Type Check

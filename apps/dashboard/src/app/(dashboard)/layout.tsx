@@ -1,61 +1,22 @@
-"use client";
+import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
+import { getIronSession } from "iron-session";
+import { DashboardShell } from "@/components/DashboardShell";
+import { sessionOptions, type SessionData } from "@/lib/session";
 
-import { usePathname } from "next/navigation";
-import { ConnectButton } from "@/components/ConnectButton";
-
-const NAV_ITEMS = [
-  { href: "/", label: "Overview", icon: "📊" },
-  { href: "/plans", label: "Plans", icon: "📋" },
-  { href: "/subscribers", label: "Subscribers", icon: "👥" },
-  { href: "/features", label: "Feature Flags", icon: "🚀" },
-  { href: "/sessions", label: "ZKVUB Sessions", icon: "⚡" },
-  { href: "/settings", label: "Settings", icon: "⚙️" },
-];
-
-export default function DashboardLayout({
+export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const pathname = usePathname();
-
-  return (
-    <div className="dashboard-layout">
-      <aside className="sidebar">
-        <div className="sidebar-brand">
-          ⬡ <span>ArcenPay</span>
-        </div>
-
-        {NAV_ITEMS.map((item) => (
-          <a
-            key={item.href}
-            href={item.href}
-            className={`nav-item ${pathname === item.href ? "active" : ""}`}
-          >
-            {item.icon} {item.label}
-          </a>
-        ))}
-
-        <div
-          style={{
-            marginTop: "auto",
-            display: "flex",
-            flexDirection: "column",
-            gap: 8,
-          }}
-        >
-          <ConnectButton />
-          <a
-            href="/api/auth/logout"
-            className="nav-item"
-            style={{ justifyContent: "center", fontSize: 13 }}
-          >
-            Sign Out
-          </a>
-        </div>
-      </aside>
-
-      <main className="main-content">{children}</main>
-    </div>
+  const session = await getIronSession<SessionData>(
+    await cookies(),
+    sessionOptions,
   );
+
+  if (!session.isLoggedIn || !session.address) {
+    redirect("/login");
+  }
+
+  return <DashboardShell>{children}</DashboardShell>;
 }

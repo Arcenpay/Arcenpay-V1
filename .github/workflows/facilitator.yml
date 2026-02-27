@@ -30,7 +30,7 @@ jobs:
         run: cd apps/facilitator && npx tsc --noEmit
 
       - name: Build facilitator
-        run: cd apps/facilitator && npm run build || true
+        run: cd apps/facilitator && npm run build
 
   docker:
     needs: build

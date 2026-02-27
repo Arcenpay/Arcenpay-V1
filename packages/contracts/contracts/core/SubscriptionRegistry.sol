@@ -9,6 +9,14 @@ import "../interfaces/ISubscriptionRegistry.sol";
 import "../interfaces/IERC5643.sol";
 import "../interfaces/IPlanFactory.sol";
 
+interface ICrossChainTransport {
+    function dispatch(
+        uint256 destinationChainId,
+        bytes calldata payload,
+        address refundAddress
+    ) external payable returns (bytes32 messageId);
+}
+
 /// @title SubscriptionRegistry
 /// @notice ERC-5643 based subscription NFT lifecycle management
 /// @dev Extends ERC-721 with subscription-specific logic: expiry, renewal, cancellation
@@ -20,6 +28,9 @@ contract SubscriptionRegistry is
     Ownable,
     ReentrancyGuard
 {
+    uint8 public constant ROUTE_AXELAR = 1;
+    uint8 public constant ROUTE_CCIP = 2;
+
     // ============================================================
     //                         STORAGE
     // ============================================================
@@ -44,6 +55,12 @@ contract SubscriptionRegistry is
 
     /// @notice Authorized GMP bridge addresses for cross-chain updates
     mapping(address => bool) public authorizedBridges;
+
+    /// @notice Primary (Axelar) transport adapter
+    address public axelarTransport;
+
+    /// @notice Fallback (CCIP) transport adapter
+    address public ccipTransport;
 
     // ============================================================
     //                        CONSTRUCTOR
@@ -95,6 +112,15 @@ contract SubscriptionRegistry is
     /// @notice Revokes a bridge's authorization
     function revokeBridge(address bridge) external onlyOwner {
         authorizedBridges[bridge] = false;
+    }
+
+    /// @inheritdoc ISubscriptionRegistry
+    function setCrossChainTransports(
+        address _axelarTransport,
+        address _ccipTransport
+    ) external onlyOwner {
+        axelarTransport = _axelarTransport;
+        ccipTransport = _ccipTransport;
     }
 
     // ============================================================
@@ -197,6 +223,58 @@ contract SubscriptionRegistry is
         emit SubscriptionUpdate(tokenId, newExpiration);
     }
 
+    /// @inheritdoc ISubscriptionRegistry
+    function dispatchCrossChainUpdate(
+        uint256 tokenId,
+        uint256 destinationChainId,
+        address refundAddress
+    ) external payable onlyBiller returns (bytes32 messageId, uint8 routeUsed) {
+        require(_ownerOf(tokenId) != address(0), "SubscriptionRegistry: nonexistent token");
+        require(destinationChainId > 0, "SubscriptionRegistry: invalid destination");
+        require(refundAddress != address(0), "SubscriptionRegistry: zero refund");
+
+        bytes memory payload = _buildMirrorPayload(tokenId);
+
+        if (axelarTransport != address(0)) {
+            (bool ok, bytes memory data) = axelarTransport.call{value: msg.value}(
+                abi.encodeWithSelector(
+                    ICrossChainTransport.dispatch.selector,
+                    destinationChainId,
+                    payload,
+                    refundAddress
+                )
+            );
+
+            if (ok) {
+                messageId = data.length >= 32 ? abi.decode(data, (bytes32)) : bytes32(0);
+                emit CrossChainDispatchRequested(
+                    tokenId,
+                    destinationChainId,
+                    ROUTE_AXELAR,
+                    messageId
+                );
+                return (messageId, ROUTE_AXELAR);
+            }
+
+            emit CrossChainFallbackTriggered(tokenId, destinationChainId, data);
+        }
+
+        require(ccipTransport != address(0), "SubscriptionRegistry: no fallback transport");
+        (bool fallbackOk, bytes memory fallbackData) = ccipTransport.call{value: msg.value}(
+            abi.encodeWithSelector(
+                ICrossChainTransport.dispatch.selector,
+                destinationChainId,
+                payload,
+                refundAddress
+            )
+        );
+        require(fallbackOk, "SubscriptionRegistry: fallback dispatch failed");
+
+        messageId = fallbackData.length >= 32 ? abi.decode(fallbackData, (bytes32)) : bytes32(0);
+        emit CrossChainDispatchRequested(tokenId, destinationChainId, ROUTE_CCIP, messageId);
+        return (messageId, ROUTE_CCIP);
+    }
+
     // ============================================================
     //                    ERC-5643 IMPLEMENTATION
     // ============================================================
@@ -270,6 +348,19 @@ contract SubscriptionRegistry is
 
         emit SubscriptionUpdate(tokenId, newExpiry);
         emit SubscriptionRenewed(tokenId, newExpiry, 0); // Amount set to 0 here; biller tracks payment
+    }
+
+    function _buildMirrorPayload(uint256 tokenId) internal view returns (bytes memory payload) {
+        uint256 planId = _tokenPlans[tokenId];
+        IPlanFactory.Plan memory plan = planFactory.getPlan(planId);
+        payload = abi.encode(
+            ownerOf(tokenId),
+            tokenId,
+            planId,
+            plan.tier,
+            _expirations[tokenId],
+            uint64(block.timestamp)
+        );
     }
 
     // ============================================================

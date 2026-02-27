@@ -9,6 +9,8 @@
     "test:hardhat": "hardhat test",
     "clean": "hardhat clean && forge clean",
     "deploy:sepolia": "hardhat run script/deploy.ts --network baseSepolia",
+    "ops:authorize-facilitator:settler": "hardhat run scripts/authorize-facilitator-settler.ts --network sepolia",
+    "ops:set-groth16-verifier": "hardhat run scripts/set-groth16-verifier.ts --network sepolia",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {

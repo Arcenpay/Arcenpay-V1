@@ -1,0 +1,17 @@
+{
+  "name": "@meap/subgraph",
+  "version": "0.0.1",
+  "private": true,
+  "description": "The Graph indexer for MEAP + ZKVUB",
+  "scripts": {
+    "prepare:abis": "node scripts/sync-abis.mjs",
+    "sync:sepolia": "node scripts/sync-addresses.mjs --deployment ../packages/contracts/deployments/sepolia-latest.json --network sepolia",
+    "codegen": "graph codegen",
+    "build": "graph build"
+  },
+  "devDependencies": {
+    "@graphprotocol/graph-cli": "^0.98.1",
+    "@graphprotocol/graph-ts": "^0.38.2",
+    "assemblyscript": "^0.27.37"
+  }
+}

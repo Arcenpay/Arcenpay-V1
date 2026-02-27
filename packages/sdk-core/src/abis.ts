@@ -73,6 +73,30 @@ export const SubscriptionRegistryABI = [
     outputs: [{ name: "", type: "bool" }],
     stateMutability: "view",
   },
+  {
+    type: "function",
+    name: "setCrossChainTransports",
+    inputs: [
+      { name: "axelarTransport", type: "address" },
+      { name: "ccipTransport", type: "address" },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "dispatchCrossChainUpdate",
+    inputs: [
+      { name: "tokenId", type: "uint256" },
+      { name: "destinationChainId", type: "uint256" },
+      { name: "refundAddress", type: "address" },
+    ],
+    outputs: [
+      { name: "messageId", type: "bytes32" },
+      { name: "routeUsed", type: "uint8" },
+    ],
+    stateMutability: "payable",
+  },
   // Events
   {
     type: "event",
@@ -106,6 +130,34 @@ export const SubscriptionRegistryABI = [
       { name: "planId", type: "uint256", indexed: true },
       { name: "amount", type: "uint256", indexed: false },
       { name: "timestamp", type: "uint256", indexed: false },
+    ],
+  },
+  {
+    type: "event",
+    name: "CrossChainDispatchRequested",
+    inputs: [
+      { name: "tokenId", type: "uint256", indexed: true },
+      { name: "destinationChainId", type: "uint256", indexed: true },
+      { name: "route", type: "uint8", indexed: true },
+      { name: "messageId", type: "bytes32", indexed: false },
+    ],
+  },
+  {
+    type: "event",
+    name: "CrossChainFallbackTriggered",
+    inputs: [
+      { name: "tokenId", type: "uint256", indexed: true },
+      { name: "destinationChainId", type: "uint256", indexed: true },
+      { name: "primaryError", type: "bytes", indexed: false },
+    ],
+  },
+  {
+    type: "event",
+    name: "Transfer",
+    inputs: [
+      { name: "from", type: "address", indexed: true },
+      { name: "to", type: "address", indexed: true },
+      { name: "tokenId", type: "uint256", indexed: true },
     ],
   },
 ] as const;
@@ -199,6 +251,13 @@ export const ERC7579AutopayModuleABI = [
     ],
     outputs: [],
     stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "isInitialized",
+    inputs: [{ name: "smartAccount", type: "address" }],
+    outputs: [{ name: "", type: "bool" }],
+    stateMutability: "view",
   },
   {
     type: "function",
@@ -344,6 +403,13 @@ export const SessionVaultABI = [
     stateMutability: "view",
   },
   {
+    type: "function",
+    name: "authorizedSettlers",
+    inputs: [{ name: "", type: "address" }],
+    outputs: [{ name: "", type: "bool" }],
+    stateMutability: "view",
+  },
+  {
     type: "event",
     name: "SessionFunded",
     inputs: [
@@ -374,6 +440,20 @@ export const SessionVaultABI = [
 ] as const;
 
 export const ZKUsageVerifierABI = [
+  {
+    type: "function",
+    name: "setGroth16Verifier",
+    inputs: [{ name: "verifier", type: "address" }],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "groth16Verifier",
+    inputs: [],
+    outputs: [{ name: "", type: "address" }],
+    stateMutability: "view",
+  },
   {
     type: "function",
     name: "submitProof",
@@ -436,6 +516,11 @@ export const ZKUsageVerifierABI = [
       { name: "windowStart", type: "uint64", indexed: false },
       { name: "windowEnd", type: "uint64", indexed: false },
     ],
+  },
+  {
+    type: "event",
+    name: "Groth16VerifierSet",
+    inputs: [{ name: "verifier", type: "address", indexed: true }],
   },
 ] as const;
 

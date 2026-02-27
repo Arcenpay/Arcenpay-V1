@@ -11,17 +11,29 @@
       "import": "./dist/index.mjs",
       "require": "./dist/index.js",
       "default": "./src/index.ts"
+    },
+    "./tableland": {
+      "types": "./dist/tableland.d.ts",
+      "import": "./dist/tableland.mjs",
+      "require": "./dist/tableland.js",
+      "default": "./dist/tableland.mjs"
     }
   },
   "files": ["dist", "src"],
   "scripts": {
-    "build": "tsup src/index.ts --format cjs,esm --dts",
-    "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
+    "build": "tsup src/index.ts src/tableland.ts --format cjs,esm --dts",
+    "dev": "tsup src/index.ts src/tableland.ts --format cjs,esm --dts --watch",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "@lit-protocol/constants": "^7.4.0",
+    "@lit-protocol/encryption": "^7.4.0",
+    "@lit-protocol/lit-node-client": "^7.4.0",
+    "@tableland/sdk": "^7.2.1",
     "@meap/core": "*",
+    "ethers": "^6.13.5",
+    "redis": "^4.7.1",
     "viem": "^2.21.0"
   },
   "devDependencies": {

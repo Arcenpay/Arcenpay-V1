@@ -1,7 +1,22 @@
 # MEAP + ZKVUB Protocol — Subgraph Schema
-# The Graph GraphQL schema for indexing on-chain protocol events
 
-type Subscription @entity {
+type Provider @entity(immutable: false) {
+  id: ID! # provider wallet
+  wallet: Bytes!
+  createdAt: BigInt!
+  planCount: Int!
+  totalRevenue: BigInt!
+}
+
+type Subscriber @entity(immutable: false) {
+  id: ID! # subscriber wallet
+  wallet: Bytes!
+  activeSubscriptionCount: Int!
+  totalPaid: BigInt!
+  lastUpdated: BigInt!
+}
+
+type Subscription @entity(immutable: false) {
   id: ID! # tokenId
   subscriber: Bytes!
   plan: Plan!
@@ -15,22 +30,21 @@ type Subscription @entity {
   blockNumber: BigInt!
 }
 
-type Plan @entity {
+type Plan @entity(immutable: false) {
   id: ID! # planId
   provider: Bytes!
   name: String!
   tier: String!
   price: BigInt!
   billingInterval: BigInt!
-  acceptedToken: Bytes!
+  acceptedToken: Bytes
   active: Boolean!
   createdAt: BigInt!
-  subscriptions: [Subscription!]! @derivedFrom(field: "plan")
   subscriberCount: Int!
 }
 
-type Session @entity {
-  id: ID! # agentAddress
+type Session @entity(immutable: false) {
+  id: ID! # sessionId
   agent: Bytes!
   totalFunded: BigInt!
   totalWithdrawn: BigInt!
@@ -40,18 +54,18 @@ type Session @entity {
   settlements: [Settlement!]! @derivedFrom(field: "session")
 }
 
-type FundEvent @entity {
-  id: ID! # txHash
+type FundEvent @entity(immutable: true) {
+  id: ID! # txHash-logIndex
   session: Session!
   amount: BigInt!
   txHash: Bytes!
   blockNumber: BigInt!
   timestamp: BigInt!
-  type: String! # "funded" | "withdrawn"
+  eventType: String! # funded | withdrawn
 }
 
-type Settlement @entity {
-  id: ID! # txHash
+type Settlement @entity(immutable: true) {
+  id: ID! # txHash-logIndex
   session: Session!
   sessionId: Bytes!
   agentAddress: Bytes!
@@ -64,9 +78,45 @@ type Settlement @entity {
   timestamp: BigInt!
 }
 
+type ProofSubmission @entity(immutable: true) {
+  id: ID! # sessionId-windowEnd
+  sessionId: Bytes!
+  agentAddress: Bytes!
+  callCount: BigInt!
+  settlementAmount: BigInt!
+  windowStart: BigInt!
+  windowEnd: BigInt!
+  txHash: Bytes!
+  timestamp: BigInt!
+}
+
+type BillingEvent @entity(immutable: true) {
+  id: ID! # txHash-logIndex
+  eventType: String!
+  tokenId: BigInt
+  planId: BigInt
+  sessionId: Bytes
+  amount: BigInt
+  actor: Bytes
+  txHash: Bytes!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+}
+
+type FeeEvent @entity(immutable: true) {
+  id: ID! # txHash-logIndex
+  collector: Bytes!
+  grossAmount: BigInt!
+  feeAmount: BigInt!
+  feeType: String!
+  txHash: Bytes!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+}
+
 # Protocol-wide aggregates
-type ProtocolStats @entity {
-  id: ID! # "global"
+type ProtocolStats @entity(immutable: false) {
+  id: ID! # global
   totalSubscriptions: Int!
   activeSubscriptions: Int!
   totalPlans: Int!

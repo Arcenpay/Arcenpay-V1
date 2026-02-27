@@ -1,11 +1,17 @@
-import { getContractAddresses, TOKENS } from "@meap/core";
+import {
+  getContractAddresses,
+  TOKENS,
+  parseContractError as parseCoreContractError,
+} from "@meap/core";
 
 export const CHAIN_ID = Number(process.env.NEXT_PUBLIC_CHAIN_ID || "11155111");
 export const CONTRACTS = getContractAddresses(CHAIN_ID);
 export const USDC_ADDRESS = TOKENS[CHAIN_ID as keyof typeof TOKENS]
   ?.USDC as `0x${string}`;
+export const FACILITATOR_BASE_URL =
+  process.env.NEXT_PUBLIC_FACILITATOR_URL || "http://localhost:3402";
 
-export const CONTRACT_ERRORS: Record<string, string> = {
+export const DASHBOARD_ERRORS: Record<string, string> = {
   "PlanFactory: not a provider":
     "Your wallet is not registered as a provider. Contact the protocol admin.",
   "PlanFactory: price must be > 0": "Plan price must be greater than zero.",
@@ -26,13 +32,10 @@ export const CONTRACT_ERRORS: Record<string, string> = {
 
 export function parseContractError(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
-  for (const [key, readable] of Object.entries(CONTRACT_ERRORS)) {
+  for (const [key, readable] of Object.entries(DASHBOARD_ERRORS)) {
     if (message.includes(key)) return readable;
   }
-  if (message.includes("User rejected") || message.includes("user rejected")) {
-    return "Transaction was rejected in your wallet.";
-  }
-  return "Transaction failed. Please try again.";
+  return parseCoreContractError(error);
 }
 
 export function getExplorerUrl(

@@ -41,12 +41,30 @@ export interface SubscriptionEvent {
 
 // --- Entitlement Types ---
 
+export interface EntitlementSourceStatus {
+  enabled: boolean;
+  lastUpdatedAt: number | null;
+}
+
+export interface EntitlementSources {
+  onChain: EntitlementSourceStatus;
+  tableland: EntitlementSourceStatus;
+  lit: EntitlementSourceStatus;
+}
+
+export interface EntitlementFreshness {
+  resolvedAt: number | null;
+  staleAfterMs: number;
+}
+
 export interface Entitlement {
   isSubscribed: boolean;
   planTier: PlanTier;
   features: Record<string, boolean | string | number>;
   expiresAt: bigint;
   tokenId: bigint;
+  sources: EntitlementSources;
+  freshness: EntitlementFreshness;
 }
 
 export interface FeatureFlag {
@@ -131,6 +149,32 @@ export interface X402PaymentHeader {
   signature: string;
 }
 
+export type X402RejectionReason =
+  | 'MISSING_PAYMENT_HEADER'
+  | 'INVALID_PAYMENT_HEADER_ENCODING'
+  | 'INVALID_PAYMENT_HEADER_FORMAT'
+  | 'MALFORMED_PAYMENT_PAYLOAD'
+  | 'INVALID_SIGNATURE'
+  | 'SIGNER_MISMATCH'
+  | 'INSUFFICIENT_SESSION_BALANCE'
+  | 'BALANCE_CHECK_FAILED'
+  | 'SETTLEMENT_FAILED'
+  | 'PAYMENT_PROCESSING_FAILED';
+
+export interface X402VerifiedPaymentContext {
+  verified: true;
+  signer: string;
+  planId: string;
+  ratePerCall: string;
+  amount: string;
+  settledAmount: string;
+  settlementTxHash: string | null;
+  sessionId: string;
+  paymentHeader: string;
+  timestamp: number;
+  rejectionReason: null;
+}
+
 // --- Provider Dashboard Types ---
 
 export interface ProviderConfig {
@@ -204,6 +248,13 @@ export interface MEAPConfig {
   network: NetworkConfig;
   litNetwork?: 'manzano' | 'habanero';
   tablelandConfig?: {
-    providerUrl: string;
+    /** Facilitator or backend base URL, used by SDK clients to resolve entitlement endpoints. */
+    providerUrl?: string;
+    /**
+     * Optional explicit feature flags endpoint.
+     * If provided, use `{wallet}` token to inject wallet address.
+     * Example: `https://facilitator.example.com/api/entitlements/{wallet}/flags`
+     */
+    featureFlagsEndpoint?: string;
   };
 }

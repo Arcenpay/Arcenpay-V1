@@ -40,6 +40,9 @@ interface IZKUsageVerifier {
         uint64 windowEnd
     );
 
+    /// @notice Emitted when Groth16 verifier address is updated
+    event Groth16VerifierSet(address indexed verifier);
+
     // ============================================================
     //                     CORE FUNCTIONS
     // ============================================================
@@ -48,6 +51,10 @@ interface IZKUsageVerifier {
     /// @param proof The Groth16 proof
     /// @param inputs The public inputs
     function submitProof(Proof calldata proof, PublicInputs calldata inputs) external;
+
+    /// @notice Configures the generated Groth16 verifier contract
+    /// @param verifier Address of verifier contract exported from snarkjs
+    function setGroth16Verifier(address verifier) external;
 
     /// @notice Checks if a nullifier has been used
     /// @param nullifier The nullifier to check

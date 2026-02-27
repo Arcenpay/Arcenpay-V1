@@ -9,6 +9,9 @@ export type {
   Subscription,
   SubscriptionEvent,
   Entitlement,
+  EntitlementSourceStatus,
+  EntitlementSources,
+  EntitlementFreshness,
   FeatureFlag,
   AutopayConfig,
   SessionVaultInfo,
@@ -18,6 +21,8 @@ export type {
   X402Response,
   X402PaymentOption,
   X402PaymentHeader,
+  X402RejectionReason,
+  X402VerifiedPaymentContext,
   ProviderConfig,
   MirroredSubscription,
   NetworkConfig,
@@ -65,4 +70,12 @@ export {
 } from './constants';
 
 // Error mapping
-export { CONTRACT_ERRORS, parseContractError } from './errors';
+export {
+  CONTRACT_ERRORS,
+  parseContractError,
+  normalizeError,
+  MEAPError,
+  ContractError,
+  AuthError,
+} from './errors';
+export type { MEAPErrorCode } from './errors';

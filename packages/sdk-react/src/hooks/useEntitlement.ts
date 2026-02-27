@@ -1,8 +1,8 @@
 'use client';
 
-import { useReadContracts, usePublicClient, useWatchContractEvent } from 'wagmi';
-import { useCallback, useMemo } from 'react';
-import type { PlanTier } from '@meap/core';
+import { useReadContracts, useWatchBlockNumber, useWatchContractEvent } from 'wagmi';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { EntitlementFreshness, EntitlementSources, PlanTier } from '@meap/core';
 import {
   SubscriptionRegistryABI,
   getContractAddresses,
@@ -20,6 +20,8 @@ interface UseEntitlementReturn {
   features: Record<string, boolean | string | number>;
   expiresAt: bigint | null;
   tokenId: bigint | null;
+  sources: EntitlementSources;
+  freshness: EntitlementFreshness;
   isLoading: boolean;
   error: Error | null;
   refetch: () => void;
@@ -46,12 +48,88 @@ export function useEntitlement(
   walletAddress?: string,
   _featureKey?: string,
 ): UseEntitlementReturn {
-  const { network } = useMEAP();
+  const ONCHAIN_STALE_AFTER_MS = 30_000;
+  const { network, config } = useMEAP();
   const contracts = getContractAddresses(network.chainId);
   const registryAddress = contracts.subscriptionRegistry as `0x${string}`;
+  const lastBlockRefetchAt = useRef(0);
+  const [tablelandFeatures, setTablelandFeatures] = useState<
+    Record<string, boolean | string | number>
+  >({});
+  const [tablelandUpdatedAt, setTablelandUpdatedAt] = useState<number | null>(null);
+  const [tablelandLoading, setTablelandLoading] = useState(false);
+  const [tablelandError, setTablelandError] = useState<Error | null>(null);
+
+  const tablelandFeatureFlagsUrl = useMemo(() => {
+    if (!walletAddress) return null;
+
+    const explicit = config.tablelandConfig?.featureFlagsEndpoint;
+    if (explicit) {
+      return explicit.includes('{wallet}')
+        ? explicit.replace('{wallet}', walletAddress.toLowerCase())
+        : explicit;
+    }
+
+    const providerUrl = config.tablelandConfig?.providerUrl;
+    if (!providerUrl) return null;
+    return `${providerUrl.replace(/\/$/, '')}/api/entitlements/${walletAddress.toLowerCase()}/flags`;
+  }, [config.tablelandConfig?.featureFlagsEndpoint, config.tablelandConfig?.providerUrl, walletAddress]);
+
+  const refetchTableland = useCallback(async () => {
+    if (!tablelandFeatureFlagsUrl) {
+      setTablelandFeatures({});
+      setTablelandUpdatedAt(null);
+      setTablelandError(null);
+      return;
+    }
+
+    setTablelandLoading(true);
+    setTablelandError(null);
+
+    try {
+      const response = await fetch(tablelandFeatureFlagsUrl, {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
+        cache: 'no-store',
+      });
+
+      if (!response.ok) {
+        throw new Error(`Feature flags request failed (${response.status})`);
+      }
+
+      const data = (await response.json()) as {
+        ok?: boolean;
+        flags?: Record<string, boolean | string | number>;
+        updatedAt?: number;
+        error?: string;
+      };
+
+      if (!data.ok) {
+        throw new Error(data.error || 'Feature flags request failed.');
+      }
+
+      setTablelandFeatures(data.flags || {});
+      setTablelandUpdatedAt(data.updatedAt || Date.now());
+    } catch (err) {
+      setTablelandFeatures({});
+      setTablelandUpdatedAt(null);
+      setTablelandError(err instanceof Error ? err : new Error('Feature flags fetch failed.'));
+    } finally {
+      setTablelandLoading(false);
+    }
+  }, [tablelandFeatureFlagsUrl]);
+
+  useEffect(() => {
+    void refetchTableland();
+  }, [refetchTableland]);
 
   // Step 1: Get the wallet's tokenId
-  const { data: tokenIdResult, isLoading: tokenIdLoading, refetch: refetchTokenId } = useReadContracts({
+  const {
+    data: tokenIdResult,
+    isLoading: tokenIdLoading,
+    refetch: refetchTokenId,
+    dataUpdatedAt: tokenIdUpdatedAt,
+  } = useReadContracts({
     contracts: [
       {
         address: registryAddress,
@@ -63,7 +141,7 @@ export function useEntitlement(
     ],
     query: {
       enabled: !!walletAddress,
-      staleTime: 30_000,
+      staleTime: ONCHAIN_STALE_AFTER_MS,
     },
   });
 
@@ -71,7 +149,12 @@ export function useEntitlement(
   const hasToken = tokenId !== undefined && tokenId > 0n;
 
   // Step 2: If we have a tokenId, batch-read isValid, expiresAt, getPlanFeatures
-  const { data: subscriptionData, isLoading: subLoading, refetch: refetchSub } = useReadContracts({
+  const {
+    data: subscriptionData,
+    isLoading: subLoading,
+    refetch: refetchSub,
+    dataUpdatedAt: subscriptionUpdatedAt,
+  } = useReadContracts({
     contracts: [
       {
         address: registryAddress,
@@ -97,7 +180,7 @@ export function useEntitlement(
     ],
     query: {
       enabled: hasToken,
-      staleTime: 30_000,
+      staleTime: ONCHAIN_STALE_AFTER_MS,
     },
   });
 
@@ -108,7 +191,7 @@ export function useEntitlement(
   const planTier = planFeatures?.[1] as PlanTier | undefined;
 
   // Build features map from plan tier (basic tier-based features until Tableland)
-  const features = useMemo<Record<string, boolean | string | number>>(() => {
+  const onChainTierFeatures = useMemo<Record<string, boolean | string | number>>(() => {
     if (!planTier) return {};
     // Basic tier-based feature mapping
     const tierFeatures: Record<string, Record<string, boolean>> = {
@@ -133,14 +216,25 @@ export function useEntitlement(
     return tierFeatures[planTier] || {};
   }, [planTier]);
 
+  const features = useMemo<Record<string, boolean | string | number>>(() => {
+    if (Object.keys(tablelandFeatures).length > 0) {
+      return tablelandFeatures;
+    }
+    return onChainTierFeatures;
+  }, [tablelandFeatures, onChainTierFeatures]);
+
   // Watch for real-time contract events to auto-refetch
   useWatchContractEvent({
     address: registryAddress,
     abi: SubscriptionRegistryABI,
     eventName: 'SubscriptionMinted',
+    args: walletAddress
+      ? ({ subscriber: walletAddress as `0x${string}` } as const)
+      : undefined,
     onLogs: () => {
       refetchTokenId();
       refetchSub();
+      void refetchTableland();
     },
     enabled: !!walletAddress,
   });
@@ -149,8 +243,10 @@ export function useEntitlement(
     address: registryAddress,
     abi: SubscriptionRegistryABI,
     eventName: 'SubscriptionRenewed',
+    args: hasToken ? ({ tokenId: tokenId! } as const) : undefined,
     onLogs: () => {
       refetchSub();
+      void refetchTableland();
     },
     enabled: hasToken,
   });
@@ -159,23 +255,104 @@ export function useEntitlement(
     address: registryAddress,
     abi: SubscriptionRegistryABI,
     eventName: 'SubscriptionCancelled',
+    args: hasToken ? ({ tokenId: tokenId! } as const) : undefined,
     onLogs: () => {
       refetchTokenId();
       refetchSub();
+      void refetchTableland();
     },
     enabled: hasToken,
+  });
+
+  // Transfer events can move subscription ownership; invalidate wallet token mapping.
+  useWatchContractEvent({
+    address: registryAddress,
+    abi: SubscriptionRegistryABI,
+    eventName: 'Transfer',
+    args: walletAddress
+      ? ({ to: walletAddress as `0x${string}` } as const)
+      : undefined,
+    onLogs: () => {
+      refetchTokenId();
+      refetchSub();
+      void refetchTableland();
+    },
+    enabled: !!walletAddress,
+  });
+
+  useWatchContractEvent({
+    address: registryAddress,
+    abi: SubscriptionRegistryABI,
+    eventName: 'Transfer',
+    args: walletAddress
+      ? ({ from: walletAddress as `0x${string}` } as const)
+      : undefined,
+    onLogs: () => {
+      refetchTokenId();
+      refetchSub();
+      void refetchTableland();
+    },
+    enabled: !!walletAddress,
+  });
+
+  // Block-level fallback invalidation for missed websocket events.
+  useWatchBlockNumber({
+    chainId: network.chainId,
+    enabled: !!walletAddress,
+    onBlockNumber: () => {
+      const now = Date.now();
+      if (now - lastBlockRefetchAt.current < 15_000) return;
+      lastBlockRefetchAt.current = now;
+      refetchTokenId();
+      if (hasToken) refetchSub();
+      void refetchTableland();
+    },
   });
 
   const refetch = useCallback(() => {
     refetchTokenId();
     if (hasToken) refetchSub();
-  }, [refetchTokenId, refetchSub, hasToken]);
+    void refetchTableland();
+  }, [refetchTokenId, refetchSub, hasToken, refetchTableland]);
 
-  const isLoading = tokenIdLoading || (hasToken && subLoading);
+  const isLoading =
+    tokenIdLoading || (hasToken && subLoading) || (Boolean(tablelandFeatureFlagsUrl) && tablelandLoading);
 
-  const error = tokenIdResult?.[0]?.error
-    ? new Error(String(tokenIdResult[0].error))
-    : null;
+  const tokenError = (tokenIdResult?.[0] as { error?: unknown } | undefined)?.error;
+  const subscriptionError = (subscriptionData as Array<{ error?: unknown }> | undefined)
+    ?.find((entry) => entry?.error)?.error;
+  const error = tokenError
+      ? new Error(String(tokenError))
+    : subscriptionError
+      ? new Error(String(subscriptionError))
+      : tablelandError
+        ? tablelandError
+      : null;
+
+  const onChainLastUpdatedAt =
+    tokenIdUpdatedAt || subscriptionUpdatedAt
+      ? Math.max(tokenIdUpdatedAt || 0, subscriptionUpdatedAt || 0)
+      : null;
+
+  const sources: EntitlementSources = {
+    onChain: {
+      enabled: !!walletAddress,
+      lastUpdatedAt: onChainLastUpdatedAt,
+    },
+    tableland: {
+      enabled: Boolean(tablelandFeatureFlagsUrl),
+      lastUpdatedAt: tablelandUpdatedAt,
+    },
+    lit: {
+      enabled: Boolean(config.litNetwork),
+      lastUpdatedAt: null,
+    },
+  };
+
+  const freshness: EntitlementFreshness = {
+    resolvedAt: Math.max(onChainLastUpdatedAt || 0, tablelandUpdatedAt || 0) || null,
+    staleAfterMs: ONCHAIN_STALE_AFTER_MS,
+  };
 
   return {
     isSubscribed: isValid === true,
@@ -183,6 +360,8 @@ export function useEntitlement(
     features,
     expiresAt: expiresAt ?? null,
     tokenId: hasToken ? tokenId : null,
+    sources,
+    freshness,
     isLoading,
     error,
     refetch,

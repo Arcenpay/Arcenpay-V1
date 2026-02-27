@@ -10,6 +10,10 @@ export async function GET() {
     sessionOptions,
   );
   const nonce = crypto.randomBytes(16).toString("hex");
+  session.isLoggedIn = false;
+  session.address = "";
+  session.chainId = 0;
+  session.isProvider = false;
   session.nonce = nonce;
   await session.save();
   return NextResponse.json({ nonce });

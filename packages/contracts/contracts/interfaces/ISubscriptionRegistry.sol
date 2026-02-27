@@ -35,6 +35,21 @@ interface ISubscriptionRegistry {
         uint256 timestamp
     );
 
+    /// @notice Emitted when a cross-chain sync message is dispatched
+    event CrossChainDispatchRequested(
+        uint256 indexed tokenId,
+        uint256 indexed destinationChainId,
+        uint8 indexed route,
+        bytes32 messageId
+    );
+
+    /// @notice Emitted when primary route fails and fallback is attempted
+    event CrossChainFallbackTriggered(
+        uint256 indexed tokenId,
+        uint256 indexed destinationChainId,
+        bytes primaryError
+    );
+
     // ============================================================
     //                     CORE FUNCTIONS
     // ============================================================
@@ -74,4 +89,21 @@ interface ISubscriptionRegistry {
     /// @param tokenId The token ID to update
     /// @param gmMessage The GMP message payload
     function updateCrossChain(uint256 tokenId, bytes calldata gmMessage) external;
+
+    /// @notice Configure Axelar/CCIP transport adapter contracts
+    /// @param axelarTransport Address of Axelar adapter (primary)
+    /// @param ccipTransport Address of CCIP adapter (fallback)
+    function setCrossChainTransports(address axelarTransport, address ccipTransport) external;
+
+    /// @notice Dispatches subscription state to a mirror chain
+    /// @param tokenId Subscription token to sync
+    /// @param destinationChainId Target chain id
+    /// @param refundAddress Native-gas refund receiver for adapter
+    /// @return messageId Transport-level message id
+    /// @return routeUsed 1=Axelar, 2=CCIP
+    function dispatchCrossChainUpdate(
+        uint256 tokenId,
+        uint256 destinationChainId,
+        address refundAddress
+    ) external payable returns (bytes32 messageId, uint8 routeUsed);
 }

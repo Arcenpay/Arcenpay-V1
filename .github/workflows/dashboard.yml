@@ -30,7 +30,7 @@ jobs:
         run: npx turbo run typecheck --filter=@meap/dashboard
 
       - name: Lint
-        run: npx turbo run lint --filter=@meap/dashboard || true
+        run: npx turbo run lint --filter=@meap/dashboard
 
       - name: Build dashboard
         run: npx turbo run build --filter=@meap/dashboard

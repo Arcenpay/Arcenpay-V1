@@ -35,4 +35,4 @@ jobs:
         run: forge coverage --report summary
 
       - name: Forge Gas Snapshot
-        run: forge snapshot --check || forge snapshot
+        run: forge snapshot --check

@@ -1,221 +1,316 @@
 // ============================================================
 //  @meap/node — Tableland Feature Flags Service
 //  CRUD operations for feature flags stored in Tableland
-//  PRD §3.1.2 — Decentralized Entitlement Store
 // ============================================================
 
-import type { FeatureFlag, PlanTier, TablelandEntitlement } from '@meap/core';
+import { Database } from '@tableland/sdk';
+import type { PlanTier, TablelandEntitlement } from '@meap/core';
+import { JsonRpcProvider, Wallet } from 'ethers';
 
 export interface TablelandConfig {
-    /** Tableland table name (e.g., 'meap_feature_flags_84532_123') */
-    tableName: string;
-    /** Private key for Tableland controller wallet */
-    privateKey: string;
-    /** Chain ID for Tableland network */
-    chainId: number;
-    /** Gateway URL override (default: Tableland validator) */
-    gatewayUrl?: string;
+  /** Tableland table name (e.g., meap_feature_flags_84532_123) */
+  tableName: string;
+  /** Tableland controller wallet private key (required for writes) */
+  privateKey?: string;
+  /** Chain ID used for metadata and defaults */
+  chainId: number;
+  /** RPC URL for signer/provider connectivity */
+  rpcUrl?: string;
+  /** Gateway URL override (used for read HTTP fallback paths) */
+  gatewayUrl?: string;
 }
 
-/**
- * TablelandService — Feature flag CRUD via Tableland decentralized database.
- *
- * Table schema (PRD §3.1.2):
- *   wallet_address TEXT PRIMARY KEY,
- *   nft_token_id INTEGER,
- *   plan_tier TEXT,
- *   feature_flags TEXT (JSON),
- *   api_rate_limit INTEGER,
- *   billing_interval INTEGER,
- *   last_renewed INTEGER,
- *   expires_at INTEGER,
- *   chain_id INTEGER
- *
- * Requires: @tableland/sdk (install when ready for production)
- */
+type TierFlagsMatrix = Record<string, Record<string, boolean | string | number>>;
+
 export class TablelandService {
-    private config: TablelandConfig;
-    private initialized = false;
+  private config: TablelandConfig;
+  private initialized = false;
+  private dbRead: Database | null = null;
+  private dbWrite: Database | null = null;
 
-    constructor(config: TablelandConfig) {
-        this.config = config;
+  constructor(config: TablelandConfig) {
+    this.config = config;
+  }
+
+  async initialize(): Promise<void> {
+    this.ensureSafeTableName();
+    this.dbRead = new Database({
+      ...(this.config.gatewayUrl ? { baseUrl: this.config.gatewayUrl } : {}),
+    });
+
+    if (this.config.privateKey && this.config.rpcUrl) {
+      const provider = new JsonRpcProvider(this.config.rpcUrl);
+      const signer = new Wallet(this.config.privateKey, provider);
+      this.dbWrite = new Database({
+        signer,
+        ...(this.config.gatewayUrl ? { baseUrl: this.config.gatewayUrl } : {}),
+      });
     }
 
-    /**
-     * Initialize Tableland connection and create table if needed
-     */
-    async initialize(): Promise<void> {
-        // TODO: Replace with actual @tableland/sdk initialization
-        //
-        // import { Database } from '@tableland/sdk';
-        // import { Wallet, getDefaultProvider } from 'ethers';
-        //
-        // const signer = new Wallet(this.config.privateKey);
-        // this.db = new Database({ signer });
-        //
-        // Create table if not exists:
-        //   CREATE TABLE IF NOT EXISTS ${prefix} (
-        //     wallet_address TEXT PRIMARY KEY,
-        //     nft_token_id INTEGER,
-        //     plan_tier TEXT,
-        //     feature_flags TEXT,
-        //     api_rate_limit INTEGER DEFAULT 1000,
-        //     billing_interval INTEGER,
-        //     last_renewed INTEGER,
-        //     expires_at INTEGER,
-        //     chain_id INTEGER
-        //   )
+    this.initialized = true;
+    console.log(
+      `[Tableland] Initialized table=${this.config.tableName} mode=${this.dbWrite ? 'read-write' : 'read-only'}`,
+    );
+  }
 
-        this.initialized = true;
-        console.log(`[Tableland] Initialized table: ${this.config.tableName}`);
+  async getFeatureFlags(walletAddress: string): Promise<Record<string, boolean | string | number>> {
+    this.ensureInitialized();
+    const normalized = walletAddress.toLowerCase();
+
+    try {
+      const statement = `SELECT feature_flags FROM ${this.config.tableName} WHERE wallet_address = ? LIMIT 1`;
+      const response = await this.dbRead!.prepare(statement).bind(normalized).all();
+      const row = (response.results as Array<{ feature_flags?: string }>)[0];
+      if (!row?.feature_flags) return {};
+      const parsed = JSON.parse(row.feature_flags) as Record<string, boolean | string | number>;
+      return parsed ?? {};
+    } catch (err) {
+      console.error('[Tableland] getFeatureFlags error:', err);
+      return {};
+    }
+  }
+
+  async setFeatureFlags(
+    walletAddress: string,
+    flags: Record<string, boolean | string | number>,
+    metadata: Partial<TablelandEntitlement>,
+  ): Promise<boolean> {
+    this.ensureInitialized();
+    this.ensureWritable();
+    const normalized = walletAddress.toLowerCase();
+
+    const now = Math.floor(Date.now() / 1000);
+    const nftTokenId = metadata.nft_token_id ?? 0;
+    const planTier = metadata.plan_tier ?? 'starter';
+    const apiRateLimit = metadata.api_rate_limit ?? this.defaultRateLimitForTier(planTier);
+    const billingInterval = metadata.billing_interval ?? 2_592_000;
+    const lastRenewed = metadata.last_renewed ?? now;
+    const expiresAt = metadata.expires_at ?? 0;
+    const chainId = metadata.chain_id ?? this.config.chainId;
+
+    try {
+      const statement = `
+        INSERT INTO ${this.config.tableName}
+        (wallet_address, nft_token_id, plan_tier, feature_flags, api_rate_limit, billing_interval, last_renewed, expires_at, chain_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT (wallet_address) DO UPDATE SET
+          nft_token_id = excluded.nft_token_id,
+          plan_tier = excluded.plan_tier,
+          feature_flags = excluded.feature_flags,
+          api_rate_limit = excluded.api_rate_limit,
+          billing_interval = excluded.billing_interval,
+          last_renewed = excluded.last_renewed,
+          expires_at = excluded.expires_at,
+          chain_id = excluded.chain_id
+      `;
+
+      await this.dbWrite!
+        .prepare(statement)
+        .bind(
+          normalized,
+          nftTokenId,
+          planTier,
+          JSON.stringify(flags),
+          apiRateLimit,
+          billingInterval,
+          lastRenewed,
+          expiresAt,
+          chainId,
+        )
+        .run();
+
+      return true;
+    } catch (err) {
+      console.error('[Tableland] setFeatureFlags error:', err);
+      return false;
+    }
+  }
+
+  async revokeEntitlement(walletAddress: string): Promise<boolean> {
+    this.ensureInitialized();
+    this.ensureWritable();
+
+    try {
+      const statement = `DELETE FROM ${this.config.tableName} WHERE wallet_address = ?`;
+      await this.dbWrite!.prepare(statement).bind(walletAddress.toLowerCase()).run();
+      return true;
+    } catch (err) {
+      console.error('[Tableland] revokeEntitlement error:', err);
+      return false;
+    }
+  }
+
+  async revokeEntitlementByTokenId(tokenId: number): Promise<boolean> {
+    this.ensureInitialized();
+    this.ensureWritable();
+
+    try {
+      const statement = `DELETE FROM ${this.config.tableName} WHERE nft_token_id = ?`;
+      await this.dbWrite!.prepare(statement).bind(tokenId).run();
+      return true;
+    } catch (err) {
+      console.error('[Tableland] revokeEntitlementByTokenId error:', err);
+      return false;
+    }
+  }
+
+  async updateEntitlementByTokenId(
+    tokenId: number,
+    updates: Partial<Pick<TablelandEntitlement, 'feature_flags' | 'plan_tier' | 'expires_at' | 'last_renewed' | 'api_rate_limit' | 'billing_interval'>>,
+  ): Promise<boolean> {
+    this.ensureInitialized();
+    this.ensureWritable();
+
+    const assignments: string[] = [];
+    const values: Array<string | number> = [];
+
+    if (updates.feature_flags) {
+      assignments.push('feature_flags = ?');
+      values.push(JSON.stringify(updates.feature_flags));
+    }
+    if (updates.plan_tier) {
+      assignments.push('plan_tier = ?');
+      values.push(updates.plan_tier);
+    }
+    if (updates.expires_at !== undefined) {
+      assignments.push('expires_at = ?');
+      values.push(updates.expires_at);
+    }
+    if (updates.last_renewed !== undefined) {
+      assignments.push('last_renewed = ?');
+      values.push(updates.last_renewed);
+    }
+    if (updates.api_rate_limit !== undefined) {
+      assignments.push('api_rate_limit = ?');
+      values.push(updates.api_rate_limit);
+    }
+    if (updates.billing_interval !== undefined) {
+      assignments.push('billing_interval = ?');
+      values.push(updates.billing_interval);
     }
 
-    /**
-     * Get feature flags for a wallet
-     */
-    async getFeatureFlags(walletAddress: string): Promise<FeatureFlag[]> {
-        this.ensureInitialized();
+    if (assignments.length === 0) return true;
 
-        try {
-            const gatewayUrl = this.config.gatewayUrl || 'https://tableland.network/api/v1/query';
-            const response = await fetch(
-                `${gatewayUrl}?statement=SELECT feature_flags, plan_tier FROM ${this.config.tableName} WHERE wallet_address='${walletAddress.toLowerCase()}'`
-            );
-
-            if (!response.ok) {
-                console.warn('[Tableland] Query failed:', await response.text());
-                return [];
-            }
-
-            const rows = await response.json() as any[];
-            if (!rows.length) return [];
-
-            const row = rows[0];
-            const flags = JSON.parse(row.feature_flags || '{}');
-            const tier = row.plan_tier;
-
-            return Object.entries(flags).map(([key, value]) => ({
-                key,
-                value: value as boolean | string | number,
-                planTier: tier,
-            }));
-        } catch (err) {
-            console.error('[Tableland] Read error:', err);
-            return [];
-        }
+    try {
+      const statement = `UPDATE ${this.config.tableName} SET ${assignments.join(', ')} WHERE nft_token_id = ?`;
+      values.push(tokenId);
+      await this.dbWrite!.prepare(statement).bind(...values).run();
+      return true;
+    } catch (err) {
+      console.error('[Tableland] updateEntitlementByTokenId error:', err);
+      return false;
     }
+  }
 
-    /**
-     * Set feature flags for a wallet (upsert)
-     */
-    async setFeatureFlags(
-        walletAddress: string,
-        flags: Record<string, boolean | string | number>,
-        metadata: Partial<TablelandEntitlement>,
-    ): Promise<boolean> {
-        this.ensureInitialized();
+  async listEntitlements(limit = 100): Promise<TablelandEntitlement[]> {
+    this.ensureInitialized();
+    const safeLimit = Math.max(1, Math.min(limit, 1000));
 
-        try {
-            // TODO: Replace with actual @tableland/sdk write
-            //
-            // const { meta } = await this.db
-            //   .prepare(`INSERT INTO ${this.config.tableName}
-            //     (wallet_address, nft_token_id, plan_tier, feature_flags,
-            //      api_rate_limit, billing_interval, last_renewed, expires_at, chain_id)
-            //     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            //     ON CONFLICT (wallet_address) DO UPDATE SET
-            //       feature_flags = excluded.feature_flags,
-            //       plan_tier = excluded.plan_tier,
-            //       expires_at = excluded.expires_at,
-            //       last_renewed = excluded.last_renewed`)
-            //   .bind(
-            //     walletAddress.toLowerCase(),
-            //     metadata.nft_token_id || 0,
-            //     metadata.plan_tier || 'starter',
-            //     JSON.stringify(flags),
-            //     metadata.api_rate_limit || 1000,
-            //     metadata.billing_interval || 2592000,
-            //     metadata.last_renewed || Math.floor(Date.now() / 1000),
-            //     metadata.expires_at || 0,
-            //     this.config.chainId,
-            //   )
-            //   .run();
-
-            console.log(`[Tableland] Updated flags for ${walletAddress}: ${JSON.stringify(flags)}`);
-            return true;
-        } catch (err) {
-            console.error('[Tableland] Write error:', err);
-            return false;
-        }
+    try {
+      const statement = `SELECT * FROM ${this.config.tableName} LIMIT ?`;
+      const response = await this.dbRead!.prepare(statement).bind(safeLimit).all();
+      const rows = (response.results || []) as Array<Record<string, unknown>>;
+      return rows.map((row) => ({
+        wallet_address: String(row.wallet_address || ''),
+        nft_token_id: Number(row.nft_token_id || 0),
+        plan_tier: String(row.plan_tier || 'starter'),
+        feature_flags:
+          typeof row.feature_flags === 'string'
+            ? (JSON.parse(row.feature_flags) as Record<string, boolean | string | number>)
+            : ((row.feature_flags || {}) as Record<string, boolean | string | number>),
+        api_rate_limit: Number(row.api_rate_limit || 0),
+        billing_interval: Number(row.billing_interval || 0),
+        last_renewed: Number(row.last_renewed || 0),
+        expires_at: Number(row.expires_at || 0),
+        chain_id: Number(row.chain_id || this.config.chainId),
+      }));
+    } catch (err) {
+      console.error('[Tableland] listEntitlements error:', err);
+      return [];
     }
+  }
 
-    /**
-     * Delete entitlement entry (on cancellation)
-     */
-    async revokeEntitlement(walletAddress: string): Promise<boolean> {
-        this.ensureInitialized();
+  async syncSubscription(data: {
+    walletAddress: string;
+    tokenId: number;
+    planTier: PlanTier;
+    expiresAt: number;
+    billingInterval: number;
+    features: Record<string, boolean | string | number>;
+  }): Promise<void> {
+    await this.setFeatureFlags(data.walletAddress, data.features, {
+      wallet_address: data.walletAddress,
+      nft_token_id: data.tokenId,
+      plan_tier: data.planTier,
+      expires_at: data.expiresAt,
+      billing_interval: data.billingInterval,
+      last_renewed: Math.floor(Date.now() / 1000),
+      chain_id: this.config.chainId,
+      api_rate_limit: this.defaultRateLimitForTier(data.planTier),
+      feature_flags: data.features,
+    });
+  }
 
-        try {
-            // TODO: Replace with actual @tableland/sdk write
-            // await this.db.prepare(`DELETE FROM ${this.config.tableName} WHERE wallet_address=?`)
-            //   .bind(walletAddress.toLowerCase())
-            //   .run();
-
-            console.log(`[Tableland] Revoked entitlement for ${walletAddress}`);
-            return true;
-        } catch (err) {
-            console.error('[Tableland] Delete error:', err);
-            return false;
-        }
+  async listTierFeatureFlags(
+    providerAddress: string,
+    tiers: string[] = ['starter', 'pro', 'enterprise'],
+  ): Promise<TierFlagsMatrix> {
+    const matrix: TierFlagsMatrix = {};
+    for (const tier of tiers) {
+      const key = this.buildTierMatrixKey(providerAddress, tier);
+      matrix[tier] = await this.getFeatureFlags(key);
     }
+    return matrix;
+  }
 
-    /**
-     * Get all entitlements (for dashboard display)
-     */
-    async listEntitlements(limit = 100): Promise<TablelandEntitlement[]> {
-        this.ensureInitialized();
+  async setTierFeatureFlags(
+    providerAddress: string,
+    tier: string,
+    flags: Record<string, boolean | string | number>,
+  ): Promise<boolean> {
+    const key = this.buildTierMatrixKey(providerAddress, tier);
+    return this.setFeatureFlags(key, flags, {
+      wallet_address: key,
+      nft_token_id: 0,
+      plan_tier: tier,
+      expires_at: 0,
+      billing_interval: 0,
+      last_renewed: Math.floor(Date.now() / 1000),
+      chain_id: this.config.chainId,
+      api_rate_limit: this.defaultRateLimitForTier(tier),
+      feature_flags: flags,
+    });
+  }
 
-        try {
-            const gatewayUrl = this.config.gatewayUrl || 'https://tableland.network/api/v1/query';
-            const response = await fetch(
-                `${gatewayUrl}?statement=SELECT * FROM ${this.config.tableName} LIMIT ${limit}`
-            );
+  private buildTierMatrixKey(providerAddress: string, tier: string): string {
+    return `matrix:${providerAddress.toLowerCase()}:${tier.toLowerCase()}`;
+  }
 
-            if (!response.ok) return [];
-            return (await response.json()) as TablelandEntitlement[];
-        } catch {
-            return [];
-        }
+  private defaultRateLimitForTier(tier: string): number {
+    if (tier === 'enterprise') return 10000;
+    if (tier === 'pro') return 5000;
+    return 1000;
+  }
+
+  private ensureInitialized(): void {
+    if (!this.initialized || !this.dbRead) {
+      throw new Error('[Tableland] Service not initialized. Call initialize() first.');
     }
+  }
 
-    /**
-     * Sync on-chain subscription state to Tableland
-     * Called by EventListenerService on Minted/Renewed events
-     */
-    async syncSubscription(data: {
-        walletAddress: string;
-        tokenId: number;
-        planTier: PlanTier;
-        expiresAt: number;
-        billingInterval: number;
-        features: Record<string, boolean | string | number>;
-    }): Promise<void> {
-        await this.setFeatureFlags(data.walletAddress, data.features, {
-            wallet_address: data.walletAddress,
-            nft_token_id: data.tokenId,
-            plan_tier: data.planTier,
-            expires_at: data.expiresAt,
-            billing_interval: data.billingInterval,
-            last_renewed: Math.floor(Date.now() / 1000),
-            chain_id: this.config.chainId,
-            api_rate_limit: data.planTier === 'enterprise' ? 10000 : data.planTier === 'pro' ? 5000 : 1000,
-            feature_flags: data.features,
-        });
+  private ensureWritable(): void {
+    if (!this.dbWrite) {
+      throw new Error(
+        '[Tableland] Write requested without signer. Set TABLELAND_PRIVATE_KEY + TABLELAND_RPC_URL.',
+      );
     }
+  }
 
-    private ensureInitialized(): void {
-        if (!this.initialized) {
-            throw new Error('[Tableland] Service not initialized. Call initialize() first.');
-        }
+  private ensureSafeTableName(): void {
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(this.config.tableName)) {
+      throw new Error(
+        `[Tableland] Unsafe table name "${this.config.tableName}". Expected alphanumeric/underscore only.`,
+      );
     }
+  }
 }
