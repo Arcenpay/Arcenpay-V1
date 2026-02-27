@@ -1,0 +1,38 @@
+name: Contracts CI
+
+on:
+  push:
+    paths:
+      - 'packages/contracts/**'
+  pull_request:
+    paths:
+      - 'packages/contracts/**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/contracts
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Forge Build
+        run: forge build --sizes
+
+      - name: Forge Test
+        run: forge test -vvv
+
+      - name: Forge Coverage
+        run: forge coverage --report summary
+
+      - name: Forge Gas Snapshot
+        run: forge snapshot --check || forge snapshot

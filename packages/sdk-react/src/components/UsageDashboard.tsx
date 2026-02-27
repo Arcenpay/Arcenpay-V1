@@ -1,29 +1,21 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
+import { useAccount, useReadContract, useReadContracts } from 'wagmi';
+import { SessionVaultABI, ZKUsageVerifierABI, getContractAddresses } from '@meap/core';
+import { useMEAP } from '../providers/MEAPProvider';
 
 // ============================================================
 //  UsageDashboard — ZKVUB Session Usage Metrics
-//  PRD Section 5.1.3: Displays real-time usage metrics from
-//  the Facilitator Node API for ZKVUB sessions.
+//  Reads real data from SessionVault + ZKUsageVerifier contracts
 // ============================================================
 
-interface UsageMetrics {
-  sessionId: string;
-  callCount: number;
-  remainingBalance: string;
-  ratePerCall: string;
-  estimatedCallsRemaining: number;
-  sessionStatus: 'active' | 'settled' | 'withdrawn' | 'expired';
-  lastUpdated: number;
-}
-
 export interface UsageDashboardProps {
-  /** ZKVUB session ID */
-  sessionId: string;
+  /** ZKVUB session ID (bytes32 hex string) */
+  sessionId?: string;
   /** Plan ID for rate schedule lookup */
-  planId: string;
-  /** Facilitator Node API base URL */
+  planId?: string;
+  /** Facilitator Node API base URL (fallback for off-chain metrics) */
   facilitatorUrl?: string;
   /** Polling interval in ms (default: 5000) */
   pollInterval?: number;
@@ -34,57 +26,79 @@ export interface UsageDashboardProps {
 export function UsageDashboard({
   sessionId,
   planId,
-  facilitatorUrl = 'http://localhost:3001',
+  facilitatorUrl = 'http://localhost:3402',
   pollInterval = 5000,
   className = '',
 }: UsageDashboardProps) {
-  const [metrics, setMetrics] = useState<UsageMetrics | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { network } = useMEAP();
+  const { address } = useAccount();
+  const contracts = getContractAddresses(network.chainId);
 
-  useEffect(() => {
-    let interval: ReturnType<typeof setInterval>;
+  const vaultAddress = contracts.sessionVault as `0x${string}`;
+  const verifierAddress = contracts.zkUsageVerifier as `0x${string}`;
 
-    async function fetchMetrics() {
-      try {
-        const res = await fetch(
-          `${facilitatorUrl}/api/usage/${sessionId}?planId=${planId}`
-        );
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data: UsageMetrics = await res.json();
-        setMetrics(data);
-        setError(null);
-      } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch metrics');
-      } finally {
-        setLoading(false);
-      }
-    }
+  // Read agent's total balance across all sessions
+  const { data: agentBalance, isLoading: balanceLoading } = useReadContract({
+    address: vaultAddress,
+    abi: SessionVaultABI,
+    functionName: 'getAgentBalance',
+    args: [address!],
+    chainId: network.chainId,
+    query: {
+      enabled: !!address,
+      refetchInterval: pollInterval,
+    },
+  });
 
-    fetchMetrics();
-    interval = setInterval(fetchMetrics, pollInterval);
+  // If sessionId provided, get specific session details
+  const { data: sessionData, isLoading: sessionLoading } = useReadContract({
+    address: vaultAddress,
+    abi: SessionVaultABI,
+    functionName: 'getSession',
+    args: [sessionId as `0x${string}`],
+    chainId: network.chainId,
+    query: {
+      enabled: !!sessionId,
+      refetchInterval: pollInterval,
+    },
+  });
 
-    return () => clearInterval(interval);
-  }, [sessionId, planId, facilitatorUrl, pollInterval]);
+  // Get rate schedule from ZKUsageVerifier
+  const { data: ratePerCall } = useReadContract({
+    address: verifierAddress,
+    abi: ZKUsageVerifierABI,
+    functionName: 'getRateSchedule',
+    args: [planId ? BigInt(planId) : 0n],
+    chainId: network.chainId,
+    query: { enabled: !!planId },
+  });
 
-  if (loading) {
-    return (
-      <div className={`meap-usage-dashboard meap-loading ${className}`}>
-        <div className="meap-spinner" />
-        <p>Loading session metrics...</p>
-      </div>
-    );
-  }
+  // Get pending balance from verifier
+  const { data: pendingBalance } = useReadContract({
+    address: verifierAddress,
+    abi: ZKUsageVerifierABI,
+    functionName: 'getPendingBalance',
+    args: [address!],
+    chainId: network.chainId,
+    query: { enabled: !!address },
+  });
 
-  if (error) {
-    return (
-      <div className={`meap-usage-dashboard meap-error ${className}`}>
-        <p>⚠️ Error: {error}</p>
-      </div>
-    );
-  }
+  const session = sessionData as any;
+  const loading = balanceLoading || sessionLoading;
 
-  if (!metrics) return null;
+  const formatUSDC = (val: bigint | undefined) => {
+    if (val === undefined) return '0.00';
+    return (Number(val) / 1e6).toFixed(2);
+  };
+
+  const totalBalance = agentBalance as bigint | undefined;
+  const rate = ratePerCall as bigint | undefined;
+  const pending = pendingBalance as bigint | undefined;
+
+  // Estimate remaining calls
+  const estimatedCalls = totalBalance && rate && rate > 0n
+    ? Number(totalBalance / rate)
+    : 0;
 
   const statusColors: Record<string, string> = {
     active: '#22c55e',
@@ -93,46 +107,80 @@ export function UsageDashboard({
     expired: '#ef4444',
   };
 
+  const sessionStatus = session?.active ? 'active' : session ? 'settled' : 'active';
+
+  if (loading) {
+    return (
+      <div className={`meap-usage-dashboard meap-loading ${className}`}>
+        <div className="meap-spinner" />
+        <p>Loading session metrics from chain...</p>
+      </div>
+    );
+  }
+
   return (
     <div className={`meap-usage-dashboard ${className}`}>
       <div className="meap-usage-header">
         <h3>ZKVUB Session Usage</h3>
         <span
           className="meap-status-badge"
-          style={{ backgroundColor: statusColors[metrics.sessionStatus] || '#6b7280' }}
+          style={{ backgroundColor: statusColors[sessionStatus] || '#6b7280' }}
         >
-          {metrics.sessionStatus}
+          {sessionStatus}
         </span>
       </div>
 
       <div className="meap-usage-grid">
         <div className="meap-metric-card">
-          <span className="meap-metric-label">API Calls</span>
-          <span className="meap-metric-value">{metrics.callCount.toLocaleString()}</span>
+          <span className="meap-metric-label">Total Balance</span>
+          <span className="meap-metric-value">${formatUSDC(totalBalance)} USDC</span>
         </div>
 
-        <div className="meap-metric-card">
-          <span className="meap-metric-label">Remaining Balance</span>
-          <span className="meap-metric-value">{metrics.remainingBalance} USDC</span>
-        </div>
+        {session && (
+          <>
+            <div className="meap-metric-card">
+              <span className="meap-metric-label">Session Balance</span>
+              <span className="meap-metric-value">${formatUSDC(session.balance)} USDC</span>
+            </div>
+
+            <div className="meap-metric-card">
+              <span className="meap-metric-label">Total Funded</span>
+              <span className="meap-metric-value">${formatUSDC(session.totalFunded)} USDC</span>
+            </div>
+
+            <div className="meap-metric-card">
+              <span className="meap-metric-label">Total Settled</span>
+              <span className="meap-metric-value">${formatUSDC(session.totalSettled)} USDC</span>
+            </div>
+          </>
+        )}
 
         <div className="meap-metric-card">
           <span className="meap-metric-label">Rate/Call</span>
-          <span className="meap-metric-value">{metrics.ratePerCall} USDC</span>
+          <span className="meap-metric-value">
+            {rate ? `$${formatUSDC(rate)}` : '—'} USDC
+          </span>
         </div>
 
         <div className="meap-metric-card">
-          <span className="meap-metric-label">Calls Remaining</span>
+          <span className="meap-metric-label">Est. Calls Remaining</span>
           <span className="meap-metric-value">
-            ~{metrics.estimatedCallsRemaining.toLocaleString()}
+            ~{estimatedCalls.toLocaleString()}
           </span>
+        </div>
+
+        <div className="meap-metric-card">
+          <span className="meap-metric-label">Pending Settlement</span>
+          <span className="meap-metric-value">${formatUSDC(pending)} USDC</span>
         </div>
       </div>
 
       <div className="meap-usage-footer">
-        <span className="meap-session-id">Session: {sessionId.slice(0, 10)}...</span>
+        {sessionId && (
+          <span className="meap-session-id">Session: {sessionId.slice(0, 10)}...</span>
+        )}
         <span className="meap-last-updated">
-          Updated: {new Date(metrics.lastUpdated * 1000).toLocaleTimeString()}
+          Chain: {network.name} ({network.chainId})
         </span>
       </div>
     </div>

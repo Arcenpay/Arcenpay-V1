@@ -1,0 +1,77 @@
+# MEAP + ZKVUB Protocol — Subgraph Schema
+# The Graph GraphQL schema for indexing on-chain protocol events
+
+type Subscription @entity {
+  id: ID! # tokenId
+  subscriber: Bytes!
+  plan: Plan!
+  expiration: BigInt!
+  isActive: Boolean!
+  mintedAt: BigInt!
+  renewedAt: BigInt
+  cancelledAt: BigInt
+  amountPaid: BigInt!
+  txHash: Bytes!
+  blockNumber: BigInt!
+}
+
+type Plan @entity {
+  id: ID! # planId
+  provider: Bytes!
+  name: String!
+  tier: String!
+  price: BigInt!
+  billingInterval: BigInt!
+  acceptedToken: Bytes!
+  active: Boolean!
+  createdAt: BigInt!
+  subscriptions: [Subscription!]! @derivedFrom(field: "plan")
+  subscriberCount: Int!
+}
+
+type Session @entity {
+  id: ID! # agentAddress
+  agent: Bytes!
+  totalFunded: BigInt!
+  totalWithdrawn: BigInt!
+  totalSettled: BigInt!
+  currentBalance: BigInt!
+  fundEvents: [FundEvent!]! @derivedFrom(field: "session")
+  settlements: [Settlement!]! @derivedFrom(field: "session")
+}
+
+type FundEvent @entity {
+  id: ID! # txHash
+  session: Session!
+  amount: BigInt!
+  txHash: Bytes!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  type: String! # "funded" | "withdrawn"
+}
+
+type Settlement @entity {
+  id: ID! # txHash
+  session: Session!
+  sessionId: Bytes!
+  agentAddress: Bytes!
+  callCount: BigInt!
+  settlementAmount: BigInt!
+  windowStart: BigInt!
+  windowEnd: BigInt!
+  txHash: Bytes!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+}
+
+# Protocol-wide aggregates
+type ProtocolStats @entity {
+  id: ID! # "global"
+  totalSubscriptions: Int!
+  activeSubscriptions: Int!
+  totalPlans: Int!
+  totalRevenue: BigInt!
+  totalSettlements: Int!
+  totalSettlementVolume: BigInt!
+  totalSessionsFunded: BigInt!
+}

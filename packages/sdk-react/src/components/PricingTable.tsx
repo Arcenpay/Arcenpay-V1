@@ -1,15 +1,21 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
+import { useReadContract, useReadContracts } from 'wagmi';
 import type { Plan } from '@meap/core';
+import { PlanFactoryABI, getContractAddresses } from '@meap/core';
 import { useMEAP } from '../providers/MEAPProvider';
 
 // ============================================================
 //  PricingTable — Displays subscription plan tiers
+//  Fetches real plan data from PlanFactory contract
 // ============================================================
 
 interface PricingTableProps {
-  planIds: bigint[];
+  /** Plan IDs to display, or provider address to fetch all plans */
+  planIds?: bigint[];
+  /** Provider address — if provided, fetches all plans for this provider */
+  providerAddress?: string;
   onSelectPlan?: (planId: bigint) => void;
   theme?: 'light' | 'dark';
   className?: string;
@@ -21,27 +27,68 @@ interface PricingTableProps {
  * @example
  * ```tsx
  * <PricingTable
- *   planIds={[1n, 2n, 3n]}
+ *   providerAddress="0x1234..."
  *   onSelectPlan={(planId) => console.log('Selected:', planId)}
  * />
  * ```
  */
 export function PricingTable({
-  planIds,
+  planIds: explicitPlanIds,
+  providerAddress,
   onSelectPlan,
   theme = 'dark',
   className = '',
 }: PricingTableProps) {
-  const { contracts } = useMEAP();
-  const [plans, setPlans] = useState<Plan[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { network } = useMEAP();
+  const contracts = getContractAddresses(network.chainId);
+  const factoryAddress = contracts.planFactory as `0x${string}`;
+
   const [selectedPlan, setSelectedPlan] = useState<bigint | null>(null);
 
-  useEffect(() => {
-    // TODO: Fetch plans from PlanFactory contract using viem
-    // For now, using placeholder data structure
-    setLoading(false);
-  }, [planIds, contracts]);
+  // Fetch provider's plan IDs if providerAddress given (and no explicit IDs)
+  const { data: fetchedPlanIds } = useReadContract({
+    address: factoryAddress,
+    abi: PlanFactoryABI,
+    functionName: 'getProviderPlans',
+    args: [providerAddress as `0x${string}`],
+    chainId: network.chainId,
+    query: { enabled: !!providerAddress && !explicitPlanIds },
+  });
+
+  const activePlanIds = explicitPlanIds || (fetchedPlanIds as bigint[]) || [];
+
+  // Batch-fetch plan details for each plan ID
+  const planContracts = activePlanIds.map((id) => ({
+    address: factoryAddress,
+    abi: PlanFactoryABI,
+    functionName: 'getPlan' as const,
+    args: [id] as const,
+    chainId: network.chainId,
+  }));
+
+  const { data: plansData, isLoading } = useReadContracts({
+    contracts: planContracts,
+    query: { enabled: planContracts.length > 0 },
+  });
+
+  // Parse plan data from contract results
+  const plans: Plan[] = (plansData || [])
+    .map((result) => {
+      const plan = result.result as any;
+      if (!plan) return null;
+      return {
+        id: plan.id as bigint,
+        provider: plan.provider as string,
+        name: plan.name as string,
+        tier: plan.tier as string,
+        price: plan.price as bigint,
+        billingInterval: Number(plan.billingInterval),
+        acceptedToken: plan.acceptedToken as string,
+        active: plan.active as boolean,
+        metadataURI: plan.metadataURI as string,
+      };
+    })
+    .filter((p): p is Plan => p !== null && p.active);
 
   const handleSelect = useCallback((planId: bigint) => {
     setSelectedPlan(planId);
@@ -49,22 +96,30 @@ export function PricingTable({
   }, [onSelectPlan]);
 
   const formatPrice = (price: bigint) => {
-    // USDC has 6 decimals
     const dollars = Number(price) / 1_000_000;
     return `$${dollars.toFixed(2)}`;
   };
 
   const formatInterval = (seconds: number) => {
-    if (seconds === 2_592_000) return '/month';
-    if (seconds === 31_536_000) return '/year';
+    if (seconds >= 31_536_000) return '/year';
+    if (seconds >= 7_776_000) return '/quarter';
+    if (seconds >= 2_592_000) return '/month';
     return `/${Math.floor(seconds / 86400)} days`;
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className={`meap-pricing-loading ${className}`}>
         <div className="meap-spinner" />
-        <p>Loading plans...</p>
+        <p>Loading plans from chain...</p>
+      </div>
+    );
+  }
+
+  if (plans.length === 0) {
+    return (
+      <div className={`meap-pricing-empty ${className}`}>
+        <p>No active plans found.</p>
       </div>
     );
   }

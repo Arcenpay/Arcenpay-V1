@@ -1,70 +1,105 @@
 // ============================================================
 //  @meap/node — Settlement Watcher & Session Balance Service
-//  PRD Section 5.2.3: Settlement monitoring and vault queries
+//  Real viem integration for on-chain reads and event watching
 // ============================================================
 
+import { createPublicClient, http } from 'viem';
+import { sepolia, baseSepolia, base } from 'viem/chains';
 import type { BillingSettlement } from '@meap/core';
+import { SessionVaultABI, ZKUsageVerifierABI, getContractAddresses } from '@meap/core';
 
 type SettlementCallback = (settlement: BillingSettlement) => void;
 
+const CHAIN_MAP: Record<number, any> = {
+  11155111: sepolia,
+  84532: baseSepolia,
+  8453: base,
+};
+
 /**
  * SettlementService — Monitors on-chain BillingSettled events
- * and provides session vault balance queries
+ * and provides session vault balance queries via viem
  */
 export class SettlementService {
   private rpcUrl: string;
+  private chainId: number;
   private zkVerifierAddress: string;
   private sessionVaultAddress: string;
   private watchers: SettlementCallback[] = [];
   private pollInterval: ReturnType<typeof setInterval> | null = null;
+  private lastBlock: bigint = 0n;
+  private publicClient: any;
 
   constructor(config: {
     rpcUrl: string;
-    zkVerifierAddress: string;
-    sessionVaultAddress: string;
+    chainId?: number;
+    zkVerifierAddress?: string;
+    sessionVaultAddress?: string;
   }) {
     this.rpcUrl = config.rpcUrl;
-    this.zkVerifierAddress = config.zkVerifierAddress;
-    this.sessionVaultAddress = config.sessionVaultAddress;
+    this.chainId = config.chainId || 11155111;
+
+    const contracts = getContractAddresses(this.chainId);
+    this.zkVerifierAddress = config.zkVerifierAddress || contracts.zkUsageVerifier;
+    this.sessionVaultAddress = config.sessionVaultAddress || contracts.sessionVault;
+
+    const chain = CHAIN_MAP[this.chainId] || sepolia;
+    this.publicClient = createPublicClient({
+      chain,
+      transport: http(this.rpcUrl),
+    }) as any;
   }
 
   /**
    * Queries the SessionVault for remaining balance
-   * PRD: meap.getSessionBalance(agentAddress)
    */
   async getSessionBalance(agentAddress: string): Promise<bigint> {
-    // TODO: Implement via viem public client
-    // 1. Create public client with the configured RPC URL
-    // 2. Call SessionVault.getAgentBalance(agentAddress)
-    // 3. Return the balance as bigint
-    //
-    // const client = createPublicClient({ transport: http(this.rpcUrl) });
-    // return await client.readContract({
-    //   address: this.sessionVaultAddress as `0x${string}`,
-    //   abi: sessionVaultAbi,
-    //   functionName: 'getAgentBalance',
-    //   args: [agentAddress],
-    // });
+    try {
+      const balance = await this.publicClient.readContract({
+        address: this.sessionVaultAddress as `0x${string}`,
+        abi: SessionVaultABI,
+        functionName: 'getAgentBalance',
+        args: [agentAddress as `0x${string}`],
+      });
+      return balance as bigint;
+    } catch (err) {
+      console.error('[SettlementService] Balance query failed:', err);
+      return 0n;
+    }
+  }
 
-    console.log(`[SettlementService] Querying balance for ${agentAddress}`);
-    return 0n; // Placeholder until viem integration
+  /**
+   * Gets details for a specific session
+   */
+  async getSessionDetails(sessionId: string): Promise<any> {
+    try {
+      const session = await this.publicClient.readContract({
+        address: this.sessionVaultAddress as `0x${string}`,
+        abi: SessionVaultABI,
+        functionName: 'getSession',
+        args: [sessionId as `0x${string}`],
+      });
+      return session;
+    } catch (err) {
+      console.error('[SettlementService] Session query failed:', err);
+      return null;
+    }
   }
 
   /**
    * Subscribes to on-chain BillingSettled events
-   * PRD: meap.watchSettlements(callback)
    */
   watchSettlements(callback: SettlementCallback, intervalMs = 10000): () => void {
     this.watchers.push(callback);
 
-    // Start polling if not already running
     if (!this.pollInterval) {
-      this.pollInterval = setInterval(async () => {
-        await this.pollSettlements();
-      }, intervalMs);
+      this.initBlockNumber().then(() => {
+        this.pollInterval = setInterval(async () => {
+          await this.pollSettlements();
+        }, intervalMs);
+      });
     }
 
-    // Return unsubscribe function
     return () => {
       this.watchers = this.watchers.filter((w) => w !== callback);
       if (this.watchers.length === 0 && this.pollInterval) {
@@ -75,23 +110,60 @@ export class SettlementService {
   }
 
   /**
-   * Polls for new BillingSettled events
+   * Initialize the starting block number for event polling
+   */
+  private async initBlockNumber(): Promise<void> {
+    try {
+      this.lastBlock = await this.publicClient.getBlockNumber();
+    } catch {
+      this.lastBlock = 0n;
+    }
+  }
+
+  /**
+   * Polls for new BillingSettled events from ZKUsageVerifier
    */
   private async pollSettlements(): Promise<void> {
-    // TODO: Implement via viem
-    // 1. Create public client
-    // 2. Query BillingSettled events from ZKUsageVerifier since last block
-    // 3. Parse events and notify all watchers
-    //
-    // const logs = await client.getLogs({
-    //   address: this.zkVerifierAddress as `0x${string}`,
-    //   event: parseAbiItem('event BillingSettled(bytes32 sessionId, ...)'),
-    //   fromBlock: this.lastBlock,
-    // });
-    // logs.forEach(log => {
-    //   const settlement = parseSettlement(log);
-    //   this.watchers.forEach(cb => cb(settlement));
-    // });
+    try {
+      const currentBlock = await this.publicClient.getBlockNumber();
+      if (currentBlock <= this.lastBlock) return;
+
+      const logs = await this.publicClient.getLogs({
+        address: this.zkVerifierAddress as `0x${string}`,
+        event: {
+          type: 'event',
+          name: 'BillingSettled',
+          inputs: [
+            { name: 'sessionId', type: 'bytes32', indexed: true },
+            { name: 'agentAddress', type: 'bytes32', indexed: true },
+            { name: 'callCount', type: 'uint256', indexed: false },
+            { name: 'settlementAmount', type: 'uint256', indexed: false },
+            { name: 'windowStart', type: 'uint64', indexed: false },
+            { name: 'windowEnd', type: 'uint64', indexed: false },
+          ],
+        },
+        fromBlock: this.lastBlock + 1n,
+        toBlock: currentBlock,
+      });
+
+      for (const log of logs) {
+        const settlement: BillingSettlement = {
+          sessionId: log.args.sessionId as string,
+          agentAddress: log.args.agentAddress as string,
+          callCount: log.args.callCount as bigint,
+          settlementAmount: log.args.settlementAmount as bigint,
+          windowStart: log.args.windowStart as bigint,
+          windowEnd: log.args.windowEnd as bigint,
+          transactionHash: log.transactionHash,
+        };
+
+        this.watchers.forEach((cb) => cb(settlement));
+      }
+
+      this.lastBlock = currentBlock;
+    } catch (err) {
+      console.error('[SettlementService] Polling error:', err);
+    }
   }
 
   /**

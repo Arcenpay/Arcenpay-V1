@@ -1,12 +1,13 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { usePublicClient } from 'wagmi';
+import { SubscriptionRegistryABI, getContractAddresses } from '@meap/core';
+import { useMEAP } from '../providers/MEAPProvider';
 
 // ============================================================
 //  BillingHistory — On-Chain Billing Events Display
-//  PRD Section 5.1.3: Fetches and displays on-chain billing
-//  events from SubscriptionRegistry (BillingSuccess, Renewed,
-//  Cancelled events).
+//  Queries real SubscriptionRegistry events via viem
 // ============================================================
 
 export interface BillingEvent {
@@ -22,10 +23,6 @@ export interface BillingEvent {
 export interface BillingHistoryProps {
   /** Wallet address to query billing history for */
   walletAddress: string;
-  /** SubscriptionRegistry contract address */
-  registryAddress?: string;
-  /** RPC URL for querying events */
-  rpcUrl?: string;
   /** Maximum number of events to show */
   maxEvents?: number;
   /** Custom CSS class */
@@ -34,32 +31,131 @@ export interface BillingHistoryProps {
 
 export function BillingHistory({
   walletAddress,
-  registryAddress,
-  rpcUrl,
   maxEvents = 20,
   className = '',
 }: BillingHistoryProps) {
+  const { network } = useMEAP();
+  const contracts = getContractAddresses(network.chainId);
+  const publicClient = usePublicClient({ chainId: network.chainId });
+
   const [events, setEvents] = useState<BillingEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const registryAddress = contracts.subscriptionRegistry as `0x${string}`;
+
+  // Explorer URL helper
+  const getExplorerBase = () => {
+    const explorers: Record<number, string> = {
+      11155111: 'https://sepolia.etherscan.io',
+      84532: 'https://sepolia.basescan.org',
+      8453: 'https://basescan.org',
+    };
+    return explorers[network.chainId] || explorers[11155111];
+  };
+
   useEffect(() => {
     async function fetchBillingEvents() {
+      if (!publicClient || !walletAddress) {
+        setLoading(false);
+        return;
+      }
+
       try {
         setLoading(true);
+        const allEvents: BillingEvent[] = [];
 
-        // TODO: Use viem to query contract events from SubscriptionRegistry
-        // For now, this is a structured placeholder that will be wired up
-        // when the full SDK integration is complete.
-        //
-        // In production, this will:
-        // 1. Create a viem public client with the provided RPC URL
-        // 2. Query SubscriptionMinted, SubscriptionRenewed, SubscriptionCancelled,
-        //    and BillingSuccess events filtered by wallet address
-        // 3. Parse and sort events by timestamp
+        // Query SubscriptionMinted events for this wallet
+        const mintedLogs = await publicClient.getLogs({
+          address: registryAddress,
+          event: {
+            type: 'event',
+            name: 'SubscriptionMinted',
+            inputs: [
+              { name: 'subscriber', type: 'address', indexed: true },
+              { name: 'tokenId', type: 'uint256', indexed: true },
+              { name: 'planId', type: 'uint256', indexed: true },
+              { name: 'expiration', type: 'uint64', indexed: false },
+            ],
+          },
+          args: { subscriber: walletAddress as `0x${string}` },
+          fromBlock: 0n,
+          toBlock: 'latest',
+        });
 
-        const mockEvents: BillingEvent[] = [];
-        setEvents(mockEvents);
+        for (const log of mintedLogs) {
+          const block = await publicClient.getBlock({ blockNumber: log.blockNumber });
+          allEvents.push({
+            type: 'minted',
+            tokenId: String(log.args.tokenId),
+            planId: String(log.args.planId),
+            amount: '0',
+            timestamp: Number(block.timestamp),
+            transactionHash: log.transactionHash,
+            blockNumber: Number(log.blockNumber),
+          });
+        }
+
+        // Query SubscriptionRenewed events
+        const renewedLogs = await publicClient.getLogs({
+          address: registryAddress,
+          event: {
+            type: 'event',
+            name: 'SubscriptionRenewed',
+            inputs: [
+              { name: 'tokenId', type: 'uint256', indexed: true },
+              { name: 'newExpiration', type: 'uint64', indexed: false },
+              { name: 'amountPaid', type: 'uint256', indexed: false },
+            ],
+          },
+          fromBlock: 0n,
+          toBlock: 'latest',
+        });
+
+        for (const log of renewedLogs) {
+          const block = await publicClient.getBlock({ blockNumber: log.blockNumber });
+          const amountPaid = log.args.amountPaid as bigint;
+          allEvents.push({
+            type: 'renewal',
+            tokenId: String(log.args.tokenId),
+            planId: '',
+            amount: (Number(amountPaid) / 1e6).toFixed(2),
+            timestamp: Number(block.timestamp),
+            transactionHash: log.transactionHash,
+            blockNumber: Number(log.blockNumber),
+          });
+        }
+
+        // Query SubscriptionCancelled events
+        const cancelledLogs = await publicClient.getLogs({
+          address: registryAddress,
+          event: {
+            type: 'event',
+            name: 'SubscriptionCancelled',
+            inputs: [
+              { name: 'tokenId', type: 'uint256', indexed: true },
+            ],
+          },
+          fromBlock: 0n,
+          toBlock: 'latest',
+        });
+
+        for (const log of cancelledLogs) {
+          const block = await publicClient.getBlock({ blockNumber: log.blockNumber });
+          allEvents.push({
+            type: 'cancellation',
+            tokenId: String(log.args.tokenId),
+            planId: '',
+            amount: '0',
+            timestamp: Number(block.timestamp),
+            transactionHash: log.transactionHash,
+            blockNumber: Number(log.blockNumber),
+          });
+        }
+
+        // Sort by timestamp descending (newest first)
+        allEvents.sort((a, b) => b.timestamp - a.timestamp);
+        setEvents(allEvents.slice(0, maxEvents));
         setError(null);
       } catch (err: unknown) {
         setError(err instanceof Error ? err.message : 'Failed to fetch billing history');
@@ -68,10 +164,8 @@ export function BillingHistory({
       }
     }
 
-    if (walletAddress) {
-      fetchBillingEvents();
-    }
-  }, [walletAddress, registryAddress, rpcUrl, maxEvents]);
+    fetchBillingEvents();
+  }, [walletAddress, publicClient, registryAddress, maxEvents]);
 
   const eventIcons: Record<string, string> = {
     payment: '💳',
@@ -87,11 +181,13 @@ export function BillingHistory({
     minted: '#a855f7',
   };
 
+  const explorerBase = getExplorerBase();
+
   if (loading) {
     return (
       <div className={`meap-billing-history meap-loading ${className}`}>
         <div className="meap-spinner" />
-        <p>Loading billing history...</p>
+        <p>Loading billing history from chain...</p>
       </div>
     );
   }
@@ -117,7 +213,7 @@ export function BillingHistory({
         </div>
       ) : (
         <div className="meap-billing-list">
-          {events.slice(0, maxEvents).map((event, index) => (
+          {events.map((event, index) => (
             <div key={`${event.transactionHash}-${index}`} className="meap-billing-item">
               <div className="meap-billing-icon">
                 <span>{eventIcons[event.type] || '📋'}</span>
@@ -139,7 +235,7 @@ export function BillingHistory({
                     {new Date(event.timestamp * 1000).toLocaleDateString()}
                   </span>
                   <a
-                    href={`https://sepolia.etherscan.io/tx/${event.transactionHash}`}
+                    href={`${explorerBase}/tx/${event.transactionHash}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="meap-tx-link"

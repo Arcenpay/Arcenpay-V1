@@ -1,0 +1,14 @@
+{
+    "name": "meap-circuits",
+    "version": "0.1.0",
+    "description": "ZKVUB zk-SNARK circuits (Groth16 via Circom)",
+    "scripts": {
+        "compile": "circom circuits/UsageBilling.circom --r1cs --wasm --sym -o build/",
+        "setup": "snarkjs groth16 setup build/UsageBilling.r1cs ptau/pot12_final.ptau build/circuit_0000.zkey",
+        "contribute": "snarkjs zkey contribute build/circuit_0000.zkey build/circuit_final.zkey --name='ArcenPay Ceremony'",
+        "export-vkey": "snarkjs zkey export verificationkey build/circuit_final.zkey build/verification_key.json",
+        "export-solidity": "snarkjs zkey export solidityverifier build/circuit_final.zkey contracts/Groth16Verifier.sol",
+        "prove": "node scripts/prove.js",
+        "verify": "snarkjs groth16 verify build/verification_key.json proof/public.json proof/proof.json"
+    }
+}

@@ -1,12 +1,17 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import type { PlanTier, Entitlement } from '@meap/core';
+import { useReadContracts, usePublicClient, useWatchContractEvent } from 'wagmi';
+import { useCallback, useMemo } from 'react';
+import type { PlanTier } from '@meap/core';
+import {
+  SubscriptionRegistryABI,
+  getContractAddresses,
+} from '@meap/core';
 import { useMEAP } from '../providers/MEAPProvider';
 
 // ============================================================
 //  useEntitlement — Hook for entitlement state
-//  Checks on-chain NFT validity + Tableland feature flags
+//  Checks on-chain NFT validity + plan features
 // ============================================================
 
 interface UseEntitlementReturn {
@@ -17,90 +22,169 @@ interface UseEntitlementReturn {
   tokenId: bigint | null;
   isLoading: boolean;
   error: Error | null;
-  refetch: () => Promise<void>;
+  refetch: () => void;
 }
 
 /**
  * useEntitlement — Programmatic access to entitlement state
  *
+ * Performs real on-chain reads against SubscriptionRegistry:
+ * 1. getWalletSubscription(wallet) → tokenId
+ * 2. isValid(tokenId)
+ * 3. expiresAt(tokenId)
+ * 4. getPlanFeatures(tokenId) → { planId, planTier }
+ *
  * @param walletAddress - The wallet address to check
- * @param featureKey - Optional specific feature to check
+ * @param _featureKey - Optional specific feature to check (reserved for Tableland integration)
  *
  * @example
  * ```tsx
- * const { isSubscribed, planTier, features, expiresAt } = useEntitlement(address);
+ * const { isSubscribed, planTier, expiresAt } = useEntitlement(address);
  * ```
  */
 export function useEntitlement(
   walletAddress?: string,
-  featureKey?: string,
+  _featureKey?: string,
 ): UseEntitlementReturn {
-  const { contracts, network } = useMEAP();
-  const [state, setState] = useState<{
-    isSubscribed: boolean;
-    planTier: PlanTier | null;
-    features: Record<string, boolean | string | number>;
-    expiresAt: bigint | null;
-    tokenId: bigint | null;
-    isLoading: boolean;
-    error: Error | null;
-  }>({
-    isSubscribed: false,
-    planTier: null,
-    features: {},
-    expiresAt: null,
-    tokenId: null,
-    isLoading: true,
-    error: null,
+  const { network } = useMEAP();
+  const contracts = getContractAddresses(network.chainId);
+  const registryAddress = contracts.subscriptionRegistry as `0x${string}`;
+
+  // Step 1: Get the wallet's tokenId
+  const { data: tokenIdResult, isLoading: tokenIdLoading, refetch: refetchTokenId } = useReadContracts({
+    contracts: [
+      {
+        address: registryAddress,
+        abi: SubscriptionRegistryABI,
+        functionName: 'getWalletSubscription',
+        args: [walletAddress as `0x${string}`],
+        chainId: network.chainId,
+      },
+    ],
+    query: {
+      enabled: !!walletAddress,
+      staleTime: 30_000,
+    },
   });
 
-  const fetchEntitlement = useCallback(async () => {
-    if (!walletAddress) {
-      setState((prev) => ({ ...prev, isLoading: false }));
-      return;
-    }
+  const tokenId = tokenIdResult?.[0]?.result as bigint | undefined;
+  const hasToken = tokenId !== undefined && tokenId > 0n;
 
-    setState((prev) => ({ ...prev, isLoading: true, error: null }));
+  // Step 2: If we have a tokenId, batch-read isValid, expiresAt, getPlanFeatures
+  const { data: subscriptionData, isLoading: subLoading, refetch: refetchSub } = useReadContracts({
+    contracts: [
+      {
+        address: registryAddress,
+        abi: SubscriptionRegistryABI,
+        functionName: 'isValid',
+        args: [tokenId!],
+        chainId: network.chainId,
+      },
+      {
+        address: registryAddress,
+        abi: SubscriptionRegistryABI,
+        functionName: 'expiresAt',
+        args: [tokenId!],
+        chainId: network.chainId,
+      },
+      {
+        address: registryAddress,
+        abi: SubscriptionRegistryABI,
+        functionName: 'getPlanFeatures',
+        args: [tokenId!],
+        chainId: network.chainId,
+      },
+    ],
+    query: {
+      enabled: hasToken,
+      staleTime: 30_000,
+    },
+  });
 
-    try {
-      // TODO: Implement full on-chain query flow:
-      // 1. Call SubscriptionRegistry.getWalletSubscription(walletAddress)
-      // 2. If tokenId > 0, call SubscriptionRegistry.isValid(tokenId)
-      // 3. Call SubscriptionRegistry.expiresAt(tokenId)
-      // 4. Call SubscriptionRegistry.getPlanFeatures(tokenId)
-      // 5. Query Tableland for feature flags
-      // 6. Optionally, check Lit Protocol ACCs
+  const isValid = subscriptionData?.[0]?.result as boolean | undefined;
+  const expiresAt = subscriptionData?.[1]?.result as bigint | undefined;
+  const planFeatures = subscriptionData?.[2]?.result as [bigint, string] | undefined;
 
-      // For now, return default state
-      setState({
-        isSubscribed: false,
-        planTier: null,
-        features: {},
-        expiresAt: null,
-        tokenId: null,
-        isLoading: false,
-        error: null,
-      });
-    } catch (err: any) {
-      setState((prev) => ({
-        ...prev,
-        isLoading: false,
-        error: err instanceof Error ? err : new Error(err.message),
-      }));
-    }
-  }, [walletAddress, contracts, network]);
+  const planTier = planFeatures?.[1] as PlanTier | undefined;
 
-  useEffect(() => {
-    fetchEntitlement();
-  }, [fetchEntitlement]);
+  // Build features map from plan tier (basic tier-based features until Tableland)
+  const features = useMemo<Record<string, boolean | string | number>>(() => {
+    if (!planTier) return {};
+    // Basic tier-based feature mapping
+    const tierFeatures: Record<string, Record<string, boolean>> = {
+      starter: {
+        webhook_integration: true,
+      },
+      pro: {
+        webhook_integration: true,
+        analytics_dashboard: true,
+        api_access: true,
+        multi_user: true,
+      },
+      enterprise: {
+        webhook_integration: true,
+        analytics_dashboard: true,
+        api_access: true,
+        multi_user: true,
+        custom_branding: true,
+        priority_support: true,
+      },
+    };
+    return tierFeatures[planTier] || {};
+  }, [planTier]);
 
-  // TODO: Subscribe to contract events for real-time updates
-  // - SubscriptionMinted
-  // - SubscriptionRenewed
-  // - SubscriptionCancelled
+  // Watch for real-time contract events to auto-refetch
+  useWatchContractEvent({
+    address: registryAddress,
+    abi: SubscriptionRegistryABI,
+    eventName: 'SubscriptionMinted',
+    onLogs: () => {
+      refetchTokenId();
+      refetchSub();
+    },
+    enabled: !!walletAddress,
+  });
+
+  useWatchContractEvent({
+    address: registryAddress,
+    abi: SubscriptionRegistryABI,
+    eventName: 'SubscriptionRenewed',
+    onLogs: () => {
+      refetchSub();
+    },
+    enabled: hasToken,
+  });
+
+  useWatchContractEvent({
+    address: registryAddress,
+    abi: SubscriptionRegistryABI,
+    eventName: 'SubscriptionCancelled',
+    onLogs: () => {
+      refetchTokenId();
+      refetchSub();
+    },
+    enabled: hasToken,
+  });
+
+  const refetch = useCallback(() => {
+    refetchTokenId();
+    if (hasToken) refetchSub();
+  }, [refetchTokenId, refetchSub, hasToken]);
+
+  const isLoading = tokenIdLoading || (hasToken && subLoading);
+
+  const error = tokenIdResult?.[0]?.error
+    ? new Error(String(tokenIdResult[0].error))
+    : null;
 
   return {
-    ...state,
-    refetch: fetchEntitlement,
+    isSubscribed: isValid === true,
+    planTier: planTier ?? null,
+    features,
+    expiresAt: expiresAt ?? null,
+    tokenId: hasToken ? tokenId : null,
+    isLoading,
+    error,
+    refetch,
   };
 }

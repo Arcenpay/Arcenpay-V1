@@ -1,0 +1,39 @@
+name: Dashboard CI
+
+on:
+  push:
+    paths:
+      - 'apps/dashboard/**'
+  pull_request:
+    paths:
+      - 'apps/dashboard/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build SDK dependencies
+        run: npx turbo run build --filter='./packages/*'
+
+      - name: TypeScript check
+        run: npx turbo run typecheck --filter=@meap/dashboard
+
+      - name: Lint
+        run: npx turbo run lint --filter=@meap/dashboard || true
+
+      - name: Build dashboard
+        run: npx turbo run build --filter=@meap/dashboard
+        env:
+          NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || 'ci-placeholder' }}
+          NEXT_PUBLIC_CHAIN_ID: '11155111'

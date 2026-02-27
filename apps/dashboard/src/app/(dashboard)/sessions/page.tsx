@@ -1,13 +1,19 @@
 "use client";
 
-import { useAccount, useReadContract, useReadContracts } from "wagmi";
-import { SessionVaultABI, getContractAddresses } from "@meap/core";
+import { useState, useEffect } from "react";
+import { useAccount, useReadContract, useReadContracts, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import { parseUnits } from "viem";
+import { SessionVaultABI, getContractAddresses, TOKENS } from "@meap/core";
 import { CHAIN_ID, formatUSDC, truncateAddress } from "@/lib/contracts";
+import { TransactionFlow } from "@/components/TransactionFlow";
 
 const contracts = getContractAddresses(CHAIN_ID);
+const USDC = TOKENS[CHAIN_ID as keyof typeof TOKENS]?.USDC as `0x${string}`;
 
 export default function SessionsPage() {
   const { address } = useAccount();
+  const [showDeposit, setShowDeposit] = useState(false);
+  const [depositAmount, setDepositAmount] = useState("");
 
   // Get session IDs for connected address
   const {
@@ -67,18 +73,223 @@ export default function SessionsPage() {
     BigInt(0),
   );
 
+  // Write: USDC approve for deposit
+  const {
+    writeContract: writeApprove,
+    data: approveHash,
+    isPending: isApproving,
+    error: approveError,
+    reset: resetApprove,
+  } = useWriteContract();
+
+  const { isSuccess: approveConfirmed } = useWaitForTransactionReceipt({
+    hash: approveHash,
+  });
+
+  // Write: Fund session
+  const {
+    writeContract: writeFund,
+    data: fundHash,
+    isPending: isFunding,
+    error: fundError,
+    reset: resetFund,
+  } = useWriteContract();
+
+  const { isSuccess: fundConfirmed, isLoading: fundConfirming } = useWaitForTransactionReceipt({
+    hash: fundHash,
+  });
+
+  // Auto-call fundSession after approve confirms
+  useEffect(() => {
+    if (approveConfirmed && depositAmount) {
+      const amount = parseUnits(depositAmount, 6);
+      writeFund({
+        address: contracts.sessionVault as `0x${string}`,
+        abi: SessionVaultABI,
+        functionName: "fundSession",
+        args: [amount, USDC],
+        chainId: CHAIN_ID,
+      });
+    }
+  }, [approveConfirmed, depositAmount, writeFund]);
+
+  // Refetch after successful fund
+  useEffect(() => {
+    if (fundConfirmed) {
+      refetch();
+      setDepositAmount("");
+      setShowDeposit(false);
+    }
+  }, [fundConfirmed, refetch]);
+
+  // Write: Withdraw session
+  const {
+    writeContract: writeWithdraw,
+    data: withdrawHash,
+    isPending: isWithdrawing,
+    error: withdrawError,
+    reset: resetWithdraw,
+  } = useWriteContract();
+
+  const { isSuccess: withdrawConfirmed, isLoading: withdrawConfirming } = useWaitForTransactionReceipt({
+    hash: withdrawHash,
+  });
+
+  useEffect(() => {
+    if (withdrawConfirmed) {
+      refetch();
+    }
+  }, [withdrawConfirmed, refetch]);
+
+  const handleDeposit = () => {
+    if (!depositAmount || !USDC) return;
+    const amount = parseUnits(depositAmount, 6);
+    writeApprove({
+      address: USDC,
+      abi: [{
+        type: "function",
+        name: "approve",
+        inputs: [
+          { name: "spender", type: "address" },
+          { name: "amount", type: "uint256" },
+        ],
+        outputs: [{ name: "", type: "bool" }],
+        stateMutability: "nonpayable",
+      }] as const,
+      functionName: "approve",
+      args: [contracts.sessionVault as `0x${string}`, amount],
+      chainId: CHAIN_ID,
+    });
+  };
+
+  const handleWithdraw = (sessionId: `0x${string}`) => {
+    writeWithdraw({
+      address: contracts.sessionVault as `0x${string}`,
+      abi: SessionVaultABI,
+      functionName: "withdraw",
+      args: [sessionId],
+      chainId: CHAIN_ID,
+    });
+  };
+
+  const depositStatus = fundConfirmed
+    ? "success"
+    : fundConfirming || isFunding
+      ? "confirming"
+      : isApproving
+        ? "pending"
+        : (approveError || fundError)
+          ? "error"
+          : "idle";
+
   return (
     <>
       <div className="page-header">
-        <h1>ZKVUB Sessions</h1>
-        <p>
-          Monitor active billing sessions, vault balances, and proof settlements
-        </p>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <div>
+            <h1>ZKVUB Sessions</h1>
+            <p>
+              Monitor active billing sessions, vault balances, and proof settlements
+            </p>
+          </div>
+          <button
+            className="btn btn-primary"
+            onClick={() => setShowDeposit(!showDeposit)}
+            disabled={!address}
+          >
+            + Fund Session
+          </button>
+        </div>
       </div>
 
       {!address && (
         <div className="alert alert-warning">
           Connect your wallet to view sessions.
+        </div>
+      )}
+
+      {/* Deposit Form */}
+      {showDeposit && (
+        <div className="data-table" style={{ marginBottom: 24 }}>
+          <div className="table-header">
+            <h3>Fund New Session</h3>
+          </div>
+          <div
+            style={{
+              padding: 24,
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: 16,
+            }}
+          >
+            <div>
+              <label className="form-label">Amount (USDC)</label>
+              <input
+                type="number"
+                placeholder="10.00"
+                step="0.01"
+                className="form-input"
+                value={depositAmount}
+                onChange={(e) => setDepositAmount(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="form-label">Token</label>
+              <input
+                type="text"
+                className="form-input"
+                value="USDC"
+                disabled
+              />
+            </div>
+            <div
+              style={{
+                gridColumn: "1 / -1",
+                display: "flex",
+                gap: 12,
+                justifyContent: "flex-end",
+                paddingTop: 8,
+              }}
+            >
+              <button
+                className="btn"
+                onClick={() => {
+                  setShowDeposit(false);
+                  resetApprove();
+                  resetFund();
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={handleDeposit}
+                disabled={!depositAmount || isApproving || isFunding || fundConfirming}
+              >
+                {isApproving
+                  ? "Approving USDC..."
+                  : isFunding || fundConfirming
+                    ? "Funding Session..."
+                    : "Approve & Fund Session"}
+              </button>
+            </div>
+            <div style={{ gridColumn: "1 / -1" }}>
+              <TransactionFlow
+                status={depositStatus as any}
+                txHash={fundHash || approveHash}
+                error={approveError || fundError}
+                chainId={CHAIN_ID}
+                onReset={() => { resetApprove(); resetFund(); }}
+                successMessage="Session funded on-chain!"
+              />
+            </div>
+          </div>
         </div>
       )}
 
@@ -136,12 +347,13 @@ export default function SessionsPage() {
               <th>Settled</th>
               <th>Balance</th>
               <th>Status</th>
+              <th>Action</th>
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan={6} style={{ padding: 24 }}>
+                <td colSpan={7} style={{ padding: 24 }}>
                   <div
                     className="skeleton"
                     style={{ width: "100%", height: 20 }}
@@ -151,15 +363,14 @@ export default function SessionsPage() {
             ) : sessions.length === 0 ? (
               <tr>
                 <td
-                  colSpan={6}
+                  colSpan={7}
                   style={{
                     textAlign: "center",
                     color: "var(--text-muted)",
                     padding: 40,
                   }}
                 >
-                  No ZKVUB sessions active. Deploy x402 middleware to start
-                  metering.
+                  No ZKVUB sessions active. Click "Fund Session" to deposit USDC.
                 </td>
               </tr>
             ) : (
@@ -180,6 +391,18 @@ export default function SessionsPage() {
                     >
                       {session!.active ? "Active" : "Closed"}
                     </span>
+                  </td>
+                  <td>
+                    {session!.active && session!.balance > 0n && (
+                      <button
+                        className="btn"
+                        style={{ fontSize: 12, padding: "4px 8px" }}
+                        onClick={() => handleWithdraw(session!.id as `0x${string}`)}
+                        disabled={isWithdrawing || withdrawConfirming}
+                      >
+                        {isWithdrawing || withdrawConfirming ? "..." : "Withdraw"}
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))
@@ -223,3 +446,4 @@ export default function SessionsPage() {
     </>
   );
 }
+

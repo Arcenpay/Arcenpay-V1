@@ -1,11 +1,27 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
+import {
+  useAccount,
+  useConnect,
+  useReadContract,
+  useWriteContract,
+  useWaitForTransactionReceipt,
+  usePublicClient,
+} from 'wagmi';
+import { parseUnits } from 'viem';
+import {
+  PlanFactoryABI,
+  SubscriptionRegistryABI,
+  getContractAddresses,
+  TOKENS,
+} from '@meap/core';
 import { useMEAP } from '../providers/MEAPProvider';
 
 // ============================================================
 //  CheckoutModal — Wallet connect + Smart Account + Autopay
-//  Handles the full subscription checkout flow
+//  Handles the full subscription checkout flow with real
+//  on-chain contract interactions
 // ============================================================
 
 type CheckoutStep = 'connect' | 'account' | 'approve' | 'subscribe' | 'success' | 'error';
@@ -24,20 +40,10 @@ interface CheckoutModalProps {
  *
  * Flow:
  * 1. Connect wallet (if not connected)
- * 2. Deploy ERC-7579 smart account (if needed)
- * 3. Approve USDC spending
- * 4. Install Autopay Module & mint subscription NFT
+ * 2. Smart account check (ERC-7579 — placeholder for ZeroDev)
+ * 3. Approve USDC spending for SubscriptionRegistry
+ * 4. Mint subscription NFT
  * 5. Success!
- *
- * @example
- * ```tsx
- * <CheckoutModal
- *   planId={1n}
- *   isOpen={showCheckout}
- *   onClose={() => setShowCheckout(false)}
- *   onSuccess={(tokenId) => console.log('Subscribed!', tokenId)}
- * />
- * ```
  */
 export function CheckoutModal({
   planId,
@@ -47,36 +53,132 @@ export function CheckoutModal({
   onError,
   className = '',
 }: CheckoutModalProps) {
-  const { contracts, isTestnet } = useMEAP();
+  const { network, isTestnet } = useMEAP();
+  const contracts = getContractAddresses(network.chainId);
+  const { address, isConnected } = useAccount();
+  const { connect, connectors } = useConnect();
+  const publicClient = usePublicClient({ chainId: network.chainId });
+
   const [step, setStep] = useState<CheckoutStep>('connect');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [txHash, setTxHash] = useState<string | null>(null);
 
-  const handleConnect = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      // TODO: Integrate wagmi useConnect hook
-      // For now, simulate wallet connection
+  const USDC_ADDRESS = TOKENS[network.chainId as keyof typeof TOKENS]
+    ?.USDC as `0x${string}`;
+  const registryAddress = contracts.subscriptionRegistry as `0x${string}`;
+
+  // Auto-advance past connect step if already connected
+  useEffect(() => {
+    if (isConnected && step === 'connect') {
       setStep('account');
+    }
+  }, [isConnected, step]);
+
+  // Fetch plan details for pricing
+  const { data: planData } = useReadContract({
+    address: contracts.planFactory as `0x${string}`,
+    abi: PlanFactoryABI,
+    functionName: 'getPlan',
+    args: [planId],
+    chainId: network.chainId,
+    query: { enabled: isOpen },
+  });
+
+  const plan = planData as any;
+  const planPrice = plan?.price as bigint | undefined;
+  const planName = plan?.name as string | undefined;
+  const planInterval = plan?.billingInterval as number | undefined;
+
+  // Write: USDC approve
+  const {
+    writeContract: writeApprove,
+    data: approveHash,
+    isPending: isApproving,
+    error: approveError,
+    reset: resetApprove,
+  } = useWriteContract();
+
+  const { isSuccess: approveConfirmed } = useWaitForTransactionReceipt({
+    hash: approveHash,
+  });
+
+  // Write: Subscription mint
+  const {
+    writeContract: writeMint,
+    data: mintHash,
+    isPending: isMinting,
+    error: mintError,
+    reset: resetMint,
+  } = useWriteContract();
+
+  const { isSuccess: mintConfirmed } = useWaitForTransactionReceipt({
+    hash: mintHash,
+  });
+
+  // Auto-advance after approve confirmation
+  useEffect(() => {
+    if (approveConfirmed && step === 'approve') {
+      setStep('subscribe');
+      setLoading(false);
+    }
+  }, [approveConfirmed, step]);
+
+  // Auto-advance after mint confirmation
+  useEffect(() => {
+    if (mintConfirmed && step === 'subscribe') {
+      setStep('success');
+      setLoading(false);
+      onSuccess?.(1n); // TODO: Parse tokenId from mint receipt logs
+    }
+  }, [mintConfirmed, step, onSuccess]);
+
+  // Handle errors from contract writes
+  useEffect(() => {
+    if (approveError) {
+      setError(approveError.message);
+      setStep('error');
+      setLoading(false);
+      onError?.(approveError);
+    }
+  }, [approveError, onError]);
+
+  useEffect(() => {
+    if (mintError) {
+      setError(mintError.message);
+      setStep('error');
+      setLoading(false);
+      onError?.(mintError);
+    }
+  }, [mintError, onError]);
+
+  const handleConnect = useCallback(() => {
+    try {
+      const injectedConnector = connectors.find(c => c.id === 'injected') || connectors[0];
+      if (injectedConnector) {
+        connect({ connector: injectedConnector });
+      }
     } catch (err: any) {
       setError(err.message);
       setStep('error');
       onError?.(err);
-    } finally {
-      setLoading(false);
     }
-  }, [onError]);
+  }, [connect, connectors, onError]);
 
   const handleDeployAccount = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      // TODO: Deploy ERC-7579 smart account via ZeroDev SDK
-      // 1. Check if user already has a smart account
-      // 2. If not, deploy one via ZeroDev Kernel
-      // 3. Verify deployment was successful
+      // Check if the connected address already has contract code (smart account)
+      if (publicClient && address) {
+        const code = await publicClient.getCode({ address });
+        if (code && code.length > 2) {
+          console.log('[CheckoutModal] Smart account detected, skipping deployment');
+        } else {
+          console.log('[CheckoutModal] EOA detected — ZeroDev integration pending');
+          // TODO: Deploy ERC-7579 smart account via ZeroDev SDK
+          // For now, proceed with EOA (direct approval + mint)
+        }
+      }
       setStep('approve');
     } catch (err: any) {
       setError(err.message);
@@ -85,48 +187,58 @@ export function CheckoutModal({
     } finally {
       setLoading(false);
     }
-  }, [onError]);
+  }, [publicClient, address, onError]);
 
-  const handleApprove = useCallback(async () => {
+  const handleApprove = useCallback(() => {
+    if (!planPrice || !USDC_ADDRESS) return;
     setLoading(true);
     setError(null);
-    try {
-      // TODO: Approve USDC spending for the Autopay Module
-      // 1. Get plan price from PlanFactory
-      // 2. Request ERC-20 approval for Autopay Module contract
-      setStep('subscribe');
-    } catch (err: any) {
-      setError(err.message);
-      setStep('error');
-      onError?.(err);
-    } finally {
-      setLoading(false);
-    }
-  }, [onError]);
 
-  const handleSubscribe = useCallback(async () => {
+    // Approve 13 months worth (current + 12 renewals)
+    const approveAmount = planPrice * 13n;
+
+    writeApprove({
+      address: USDC_ADDRESS,
+      abi: [{
+        type: 'function',
+        name: 'approve',
+        inputs: [
+          { name: 'spender', type: 'address' },
+          { name: 'amount', type: 'uint256' },
+        ],
+        outputs: [{ name: '', type: 'bool' }],
+        stateMutability: 'nonpayable',
+      }] as const,
+      functionName: 'approve',
+      args: [registryAddress, approveAmount],
+      chainId: network.chainId,
+    });
+  }, [planPrice, USDC_ADDRESS, registryAddress, network.chainId, writeApprove]);
+
+  const handleSubscribe = useCallback(() => {
+    if (!address || !planInterval) return;
     setLoading(true);
     setError(null);
-    try {
-      // TODO: Install Autopay Module and execute first billing
-      // 1. Encode AutopayConfig
-      // 2. Install module on smart account via ERC-7579 interface
-      // 3. Execute first billing pull
-      // 4. Verify subscription NFT was minted
-      setStep('success');
-      onSuccess?.(1n); // Placeholder tokenId
-    } catch (err: any) {
-      setError(err.message);
-      setStep('error');
-      onError?.(err);
-    } finally {
-      setLoading(false);
-    }
-  }, [onSuccess, onError]);
+
+    writeMint({
+      address: registryAddress,
+      abi: SubscriptionRegistryABI,
+      functionName: 'mint',
+      args: [address, planId, BigInt(planInterval)],
+      chainId: network.chainId,
+    });
+  }, [address, planId, planInterval, registryAddress, network.chainId, writeMint]);
 
   if (!isOpen) return null;
 
-  const STEP_CONFIG: Record<CheckoutStep, { title: string; description: string; action?: () => void; actionLabel?: string }> = {
+  const formatPrice = (price: bigint) => `$${(Number(price) / 1e6).toFixed(2)}`;
+
+  const STEP_CONFIG: Record<CheckoutStep, {
+    title: string;
+    description: string;
+    action?: () => void;
+    actionLabel?: string;
+  }> = {
     connect: {
       title: 'Connect Wallet',
       description: 'Connect your wallet to start the subscription process.',
@@ -134,22 +246,26 @@ export function CheckoutModal({
       actionLabel: 'Connect Wallet',
     },
     account: {
-      title: 'Smart Account Setup',
-      description: 'We\'ll set up an ERC-7579 smart account for automated billing. This is a one-time setup.',
+      title: 'Smart Account Check',
+      description: 'Checking your account type for automated billing support.',
       action: handleDeployAccount,
-      actionLabel: 'Deploy Smart Account',
+      actionLabel: 'Continue',
     },
     approve: {
       title: 'Approve USDC',
-      description: 'Approve the subscription billing contract to debit USDC from your smart account.',
+      description: planPrice
+        ? `Approve ${formatPrice(planPrice * 13n)} USDC for the subscription billing contract.`
+        : 'Approve USDC spending for the billing contract.',
       action: handleApprove,
-      actionLabel: 'Approve USDC',
+      actionLabel: isApproving ? 'Confirm in Wallet...' : 'Approve USDC',
     },
     subscribe: {
-      title: 'Confirm Subscription',
-      description: 'Install the autopay module and start your subscription. You can cancel anytime.',
+      title: `Subscribe to ${planName || 'Plan'}`,
+      description: planPrice
+        ? `Mint your subscription NFT. ${formatPrice(planPrice)} USDC will be charged now.`
+        : 'Mint your subscription NFT and activate your plan.',
       action: handleSubscribe,
-      actionLabel: 'Subscribe Now',
+      actionLabel: isMinting ? 'Confirm in Wallet...' : 'Subscribe Now',
     },
     success: {
       title: '🎉 Subscription Active!',
@@ -163,6 +279,7 @@ export function CheckoutModal({
 
   const currentStep = STEP_CONFIG[step];
   const stepNumber = ['connect', 'account', 'approve', 'subscribe'].indexOf(step) + 1;
+  const latestTxHash = mintHash || approveHash;
 
   return (
     <div className={`meap-checkout-overlay ${className}`} onClick={onClose}>
@@ -193,13 +310,17 @@ export function CheckoutModal({
 
           {isTestnet && (
             <div className="meap-testnet-badge">
-              🔧 Testnet Mode (Base Sepolia)
+              🔧 Testnet Mode ({network.name})
             </div>
           )}
 
-          {txHash && (
+          {latestTxHash && (
             <div className="meap-tx-hash">
-              <a href={`https://sepolia.basescan.org/tx/${txHash}`} target="_blank" rel="noreferrer">
+              <a
+                href={`https://sepolia.etherscan.io/tx/${latestTxHash}`}
+                target="_blank"
+                rel="noreferrer"
+              >
                 View Transaction →
               </a>
             </div>
@@ -212,7 +333,7 @@ export function CheckoutModal({
             <button
               className="meap-checkout-btn primary"
               onClick={currentStep.action}
-              disabled={loading}
+              disabled={loading || isApproving || isMinting}
             >
               {loading ? 'Processing...' : currentStep.actionLabel}
             </button>
@@ -227,7 +348,12 @@ export function CheckoutModal({
           {step === 'error' && (
             <button
               className="meap-checkout-btn secondary"
-              onClick={() => setStep('connect')}
+              onClick={() => {
+                resetApprove();
+                resetMint();
+                setError(null);
+                setStep(isConnected ? 'account' : 'connect');
+              }}
             >
               Try Again
             </button>

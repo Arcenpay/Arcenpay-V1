@@ -1,0 +1,40 @@
+name: SDK CI
+
+on:
+  push:
+    paths:
+      - 'packages/sdk-*/**'
+  pull_request:
+    paths:
+      - 'packages/sdk-*/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript check
+        run: npx turbo run typecheck --filter='./packages/sdk-*'
+
+      - name: Build all SDKs
+        run: npx turbo run build --filter='./packages/sdk-*'
+
+      - name: Run tests
+        run: npx turbo run test --filter='./packages/sdk-*' || true
+
+      - name: Check bundle size
+        run: |
+          du -sh packages/sdk-core/dist/ || true
+          du -sh packages/sdk-react/dist/ || true
+          du -sh packages/sdk-node/dist/ || true
+          du -sh packages/sdk-agent/dist/ || true

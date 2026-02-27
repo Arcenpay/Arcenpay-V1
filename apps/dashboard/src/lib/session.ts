@@ -8,8 +8,14 @@ export interface SessionData {
   isLoggedIn: boolean;
 }
 
+// iron-session requires a 32+ character password. Use NEXTAUTH_SECRET or
+// fall back to a deterministic dev-only password when unset.
+const SESSION_PASSWORD =
+  process.env.NEXTAUTH_SECRET ||
+  "arcenpay-dev-secret-must-be-at-least-32-chars-long";
+
 export const sessionOptions: SessionOptions = {
-  password: process.env.NEXTAUTH_SECRET as string,
+  password: SESSION_PASSWORD,
   cookieName: "arcenpay-session",
   cookieOptions: {
     secure: process.env.NODE_ENV === "production",

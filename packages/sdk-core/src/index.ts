@@ -63,3 +63,6 @@ export {
   X402_VERSION,
   X402_SCHEME,
 } from './constants';
+
+// Error mapping
+export { CONTRACT_ERRORS, parseContractError } from './errors';

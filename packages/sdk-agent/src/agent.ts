@@ -1,10 +1,21 @@
 // ============================================================
 //  @meap/agent — AI Agent Client
-//  Autonomous x402 payment negotiation for AI agents
+//  Autonomous x402 payment negotiation with real viem signing
 // ============================================================
 
-import type { X402Response, X402PaymentHeader, SessionVaultInfo } from '@meap/core';
-import { X402_VERSION, X402_SCHEME } from '@meap/core';
+import {
+  createPublicClient,
+  createWalletClient,
+  http,
+  parseUnits,
+  type PublicClient,
+  type WalletClient,
+  type Chain,
+} from 'viem';
+import { privateKeyToAccount } from 'viem/accounts';
+import { sepolia, baseSepolia, base } from 'viem/chains';
+import type { X402Response, X402PaymentHeader } from '@meap/core';
+import { X402_VERSION, X402_SCHEME, SessionVaultABI, getContractAddresses, TOKENS } from '@meap/core';
 
 interface AgentConfig {
   /** Agent's wallet private key (for signing payments) */
@@ -26,11 +37,43 @@ interface FetchOptions extends RequestInit {
   autoApprove?: boolean;
 }
 
+// EIP-712 domain and types matching x402 middleware
+const PAYMENT_DOMAIN_NAME = 'MEAP x402 Payment';
+const PAYMENT_DOMAIN_VERSION = '1';
+
+const PAYMENT_TYPES = {
+  Payment: [
+    { name: 'from', type: 'address' },
+    { name: 'amount', type: 'uint256' },
+    { name: 'resource', type: 'string' },
+    { name: 'sessionId', type: 'string' },
+    { name: 'nonce', type: 'uint256' },
+    { name: 'timestamp', type: 'uint256' },
+  ],
+} as const;
+
+const CHAIN_MAP: Record<number, Chain> = {
+  11155111: sepolia,
+  84532: baseSepolia,
+  8453: base,
+};
+
+const ERC20_APPROVE_ABI = [{
+  type: 'function',
+  name: 'approve',
+  inputs: [
+    { name: 'spender', type: 'address' },
+    { name: 'amount', type: 'uint256' },
+  ],
+  outputs: [{ name: '', type: 'bool' }],
+  stateMutability: 'nonpayable',
+}] as const;
+
 /**
  * MEAPAgent — AI Agent SDK for autonomous x402 payments
  *
  * Drop-in replacement for fetch() that handles x402 payment negotiation automatically.
- * Designed for embedding in agent frameworks (LangChain, AutoGen, custom runtimes).
+ * Uses real viem signing and on-chain SessionVault interactions.
  *
  * @example
  * ```ts
@@ -38,13 +81,13 @@ interface FetchOptions extends RequestInit {
  *
  * const agent = new MEAPAgent({
  *   privateKey: process.env.AGENT_PRIVATE_KEY!,
- *   rpcUrl: 'https://sepolia.base.org',
- *   chainId: 84532,
+ *   rpcUrl: 'https://ethereum-sepolia-rpc.publicnode.com',
+ *   chainId: 11155111,
  *   maxAutoApprove: '0.01',
  * });
  *
  * // Fund a session
- * await agent.fundSession('10', '0xUSDC_ADDRESS');
+ * await agent.fundSession('10');
  *
  * // Use like fetch() — x402 payments are handled automatically
  * const response = await agent.fetch('https://api.example.com/premium/data');
@@ -55,26 +98,93 @@ export class MEAPAgent {
   private config: AgentConfig;
   private sessionId: string | null = null;
   private totalSpent: bigint = 0n;
+  private nonce: bigint = 0n;
+  private publicClient: PublicClient;
+  private walletClient: WalletClient;
+  private account: ReturnType<typeof privateKeyToAccount>;
+  private contracts: ReturnType<typeof getContractAddresses>;
+  private chain: Chain;
 
   constructor(config: AgentConfig) {
     this.config = {
       maxAutoApprove: '0.01',
       ...config,
     };
+
+    this.chain = CHAIN_MAP[config.chainId] || sepolia;
+    this.account = privateKeyToAccount(config.privateKey as `0x${string}`);
+    this.contracts = getContractAddresses(config.chainId);
+
+    this.publicClient = createPublicClient({
+      chain: this.chain,
+      transport: http(config.rpcUrl),
+    });
+
+    this.walletClient = createWalletClient({
+      account: this.account,
+      chain: this.chain,
+      transport: http(config.rpcUrl),
+    });
   }
 
   /**
-   * Pre-funds a ZKVUB session vault with stablecoins
-   * @param amount Amount to deposit (human-readable, e.g., "10" = 10 USDC)
-   * @param token Stablecoin address
+   * Returns the agent's wallet address
    */
-  async fundSession(amount: string, token: string): Promise<string> {
-    // TODO: Implement via viem:
-    // 1. Approve SessionVault to spend `amount` of `token`
-    // 2. Call SessionVault.fundSession(amount, token)
-    // 3. Store returned sessionId
+  get address(): string {
+    return this.account.address;
+  }
 
-    this.sessionId = `session_${Date.now()}`;
+  /**
+   * Pre-funds a ZKVUB session vault with USDC
+   *
+   * Steps:
+   * 1. Approve SessionVault to spend `amount` of USDC
+   * 2. Call SessionVault.fundSession(amount, token)
+   * 3. Store returned sessionId
+   *
+   * @param amount Amount to deposit (human-readable, e.g., "10" = 10 USDC)
+   * @returns Session ID (bytes32 hex)
+   */
+  async fundSession(amount: string): Promise<string> {
+    const amountAtomic = parseUnits(amount, 6);
+    const usdcAddress = TOKENS[this.config.chainId as keyof typeof TOKENS]?.USDC as `0x${string}`;
+    const vaultAddress = this.contracts.sessionVault as `0x${string}`;
+
+    if (!usdcAddress) {
+      throw new Error(`No USDC address configured for chain ${this.config.chainId}`);
+    }
+
+    // Step 1: Approve SessionVault to spend USDC
+    const approveHash = await this.walletClient.writeContract({
+      chain: this.chain,
+      account: this.account,
+      address: usdcAddress,
+      abi: ERC20_APPROVE_ABI,
+      functionName: 'approve',
+      args: [vaultAddress, amountAtomic],
+    } as any);
+
+    console.log(`[MEAPAgent] USDC approve tx: ${approveHash}`);
+    await this.publicClient.waitForTransactionReceipt({ hash: approveHash });
+
+    // Step 2: Call SessionVault.fundSession()
+    const fundHash = await this.walletClient.writeContract({
+      chain: this.chain,
+      account: this.account,
+      address: vaultAddress,
+      abi: SessionVaultABI,
+      functionName: 'fundSession',
+      args: [amountAtomic, usdcAddress],
+    } as any);
+
+    console.log(`[MEAPAgent] Fund session tx: ${fundHash}`);
+    const receipt = await this.publicClient.waitForTransactionReceipt({ hash: fundHash });
+
+    // Try to extract sessionId from logs
+    // SessionFunded(address indexed agent, bytes32 indexed sessionId, uint256 amount, address token)
+    const sessionLog = receipt.logs.find((log: { topics: readonly string[] }) => log.topics.length >= 3);
+    this.sessionId = sessionLog?.topics[2] ?? `0x${Date.now().toString(16).padStart(64, '0')}`;
+
     console.log(`[MEAPAgent] Session funded: ${amount} USDC → ${this.sessionId}`);
     return this.sessionId;
   }
@@ -90,7 +200,7 @@ export class MEAPAgent {
 
     // Step 2: Check if 402 Payment Required
     if (response.status !== 402) {
-      return response; // No payment needed
+      return response;
     }
 
     // Step 3: Parse x402 response
@@ -121,7 +231,7 @@ export class MEAPAgent {
       );
     }
 
-    // Step 6: Construct and sign payment
+    // Step 6: Construct and sign payment with EIP-712
     const paymentHeader = await this.constructPayment(paymentOption);
 
     // Step 7: Resubmit request with X-PAYMENT header
@@ -134,17 +244,28 @@ export class MEAPAgent {
     });
 
     this.totalSpent += requiredAmount;
+    this.nonce += 1n;
     console.log(`[MEAPAgent] Payment successful. Total spent: ${this.totalSpent}`);
 
     return paidResponse;
   }
 
   /**
-   * Returns current session vault balance
+   * Returns current session vault balance from on-chain
    */
   async getBalance(): Promise<bigint> {
-    // TODO: Query SessionVault.getAgentBalance() via viem
-    return 0n;
+    try {
+      const balance = await this.publicClient.readContract({
+        address: this.contracts.sessionVault as `0x${string}`,
+        abi: SessionVaultABI,
+        functionName: 'getAgentBalance',
+        args: [this.account.address],
+      });
+      return balance as bigint;
+    } catch (err) {
+      console.error('[MEAPAgent] Balance query failed:', err);
+      return 0n;
+    }
   }
 
   /**
@@ -154,36 +275,59 @@ export class MEAPAgent {
     sessionId: string;
     callCount: number;
     totalSpent: bigint;
+    remainingBalance: bigint;
   }> {
+    const balance = await this.getBalance();
     return {
       sessionId: sessionId || this.sessionId || 'none',
-      callCount: 0,
+      callCount: Number(this.nonce),
       totalSpent: this.totalSpent,
+      remainingBalance: balance,
     };
   }
 
   /**
-   * Constructs a signed X-PAYMENT header
+   * Constructs a signed X-PAYMENT header using EIP-712 typed data
    */
   private async constructPayment(option: X402Response['accepts'][0]): Promise<string> {
-    // TODO: Implement full x402 payment construction:
-    // 1. Create payment payload with amount, recipient, nonce
-    // 2. Sign with agent's private key via viem
-    // 3. Base64 encode the signed payload
-    // 4. Return as X-PAYMENT header value
+    const timestamp = BigInt(Math.floor(Date.now() / 1000));
+
+    const message = {
+      from: this.account.address,
+      amount: BigInt(option.maxAmountRequired),
+      resource: option.resource,
+      sessionId: this.sessionId || '',
+      nonce: this.nonce,
+      timestamp,
+    };
+
+    // Sign EIP-712 typed data
+    const signature = await this.walletClient.signTypedData({
+      account: this.account,
+      domain: {
+        name: PAYMENT_DOMAIN_NAME,
+        version: PAYMENT_DOMAIN_VERSION,
+        chainId: BigInt(this.config.chainId),
+      },
+      types: PAYMENT_TYPES,
+      primaryType: 'Payment',
+      message,
+    } as any);
 
     const payload: X402PaymentHeader = {
       version: X402_VERSION,
       scheme: option.scheme,
       network: option.network,
       payload: JSON.stringify({
+        from: this.account.address,
         amount: option.maxAmountRequired,
         payTo: option.payTo,
         resource: option.resource,
-        timestamp: Date.now(),
         sessionId: this.sessionId,
+        nonce: this.nonce.toString(),
+        timestamp: timestamp.toString(),
       }),
-      signature: '0x0', // TODO: Sign with viem
+      signature,
     };
 
     return Buffer.from(JSON.stringify(payload)).toString('base64');
