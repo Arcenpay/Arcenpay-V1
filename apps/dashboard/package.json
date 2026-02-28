@@ -14,6 +14,7 @@
     "@meap/core": "*",
     "@meap/node": "*",
     "@meap/react": "*",
+    "@sentry/nextjs": "^10.40.0",
     "@tanstack/react-query": "^5.62.0",
     "iron-session": "^8.0.0",
     "next": "^15.1.0",
