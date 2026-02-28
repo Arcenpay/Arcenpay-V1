@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect } from "react";
 import {
   useAccount,
   useConnect,
@@ -8,16 +8,16 @@ import {
   useWriteContract,
   useWaitForTransactionReceipt,
   usePublicClient,
-} from 'wagmi';
-import { decodeEventLog, encodeAbiParameters, parseAbiParameters } from 'viem';
+} from "wagmi";
+import { decodeEventLog, encodeAbiParameters, parseAbiParameters } from "viem";
 import {
   PlanFactoryABI,
   SubscriptionRegistryABI,
   ERC7579AutopayModuleABI,
   getContractAddresses,
   TOKENS,
-} from '@meap/core';
-import { useMEAP } from '../providers/MEAPProvider';
+} from "@meap/core";
+import { useMEAP } from "../providers/MEAPProvider";
 
 // ============================================================
 //  CheckoutModal — Wallet connect + Smart Account + Autopay
@@ -26,13 +26,13 @@ import { useMEAP } from '../providers/MEAPProvider';
 // ============================================================
 
 type CheckoutStep =
-  | 'connect'
-  | 'account'
-  | 'autopay'
-  | 'approve'
-  | 'subscribe'
-  | 'success'
-  | 'error';
+  | "connect"
+  | "account"
+  | "autopay"
+  | "approve"
+  | "subscribe"
+  | "success"
+  | "error";
 
 export interface CheckoutResult {
   tokenId: bigint;
@@ -85,7 +85,7 @@ export function CheckoutModal({
   onCheckoutComplete,
   onError,
   deploySmartAccount,
-  className = '',
+  className = "",
 }: CheckoutModalProps) {
   const { network, isTestnet } = useMEAP();
   const contracts = getContractAddresses(network.chainId);
@@ -93,7 +93,7 @@ export function CheckoutModal({
   const { connect, connectors } = useConnect();
   const publicClient = usePublicClient({ chainId: network.chainId });
 
-  const [step, setStep] = useState<CheckoutStep>('connect');
+  const [step, setStep] = useState<CheckoutStep>("connect");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [smartAccountAddress, setSmartAccountAddress] = useState<
@@ -115,8 +115,8 @@ export function CheckoutModal({
 
   // Auto-advance past connect step if already connected
   useEffect(() => {
-    if (isConnected && step === 'connect') {
-      setStep('account');
+    if (isConnected && step === "connect") {
+      setStep("account");
     }
   }, [isConnected, step]);
 
@@ -124,7 +124,7 @@ export function CheckoutModal({
   const { data: planData } = useReadContract({
     address: contracts.planFactory as `0x${string}`,
     abi: PlanFactoryABI,
-    functionName: 'getPlan',
+    functionName: "getPlan",
     args: [planId],
     chainId: network.chainId,
     query: { enabled: isOpen },
@@ -136,13 +136,14 @@ export function CheckoutModal({
   const planInterval = plan?.billingInterval as number | undefined;
   const planProvider = plan?.provider as `0x${string}` | undefined;
 
-  const paymentAccount = smartAccountAddress ?? (address as `0x${string}` | undefined);
+  const paymentAccount =
+    smartAccountAddress ?? (address as `0x${string}` | undefined);
 
   const { data: isAutopayInitialized, refetch: refetchAutopayState } =
     useReadContract({
       address: autopayAddress,
       abi: ERC7579AutopayModuleABI,
-      functionName: 'isInitialized',
+      functionName: "isInitialized",
       args: [paymentAccount!],
       chainId: network.chainId,
       query: {
@@ -183,9 +184,11 @@ export function CheckoutModal({
     hash: autopayInstallHash,
   });
 
-  const { isSuccess: autopayUninstallConfirmed } = useWaitForTransactionReceipt({
-    hash: autopayUninstallHash,
-  });
+  const { isSuccess: autopayUninstallConfirmed } = useWaitForTransactionReceipt(
+    {
+      hash: autopayUninstallHash,
+    },
+  );
 
   // Write: Subscription mint
   const {
@@ -196,9 +199,10 @@ export function CheckoutModal({
     reset: resetMint,
   } = useWriteContract();
 
-  const { isSuccess: mintConfirmed, data: mintReceipt } = useWaitForTransactionReceipt({
-    hash: mintHash,
-  });
+  const { isSuccess: mintConfirmed, data: mintReceipt } =
+    useWaitForTransactionReceipt({
+      hash: mintHash,
+    });
 
   useEffect(() => {
     if (autopayInstallHash) {
@@ -208,25 +212,25 @@ export function CheckoutModal({
 
   // Auto-advance after autopay install confirmation
   useEffect(() => {
-    if (autopayInstallConfirmed && step === 'autopay') {
+    if (autopayInstallConfirmed && step === "autopay") {
       refetchAutopayState();
       setAutopayInstalledLocally(true);
-      setStep('approve');
+      setStep("approve");
       setLoading(false);
     }
   }, [autopayInstallConfirmed, step, refetchAutopayState]);
 
   // Auto-advance after approve confirmation
   useEffect(() => {
-    if (approveConfirmed && step === 'approve') {
-      setStep('subscribe');
+    if (approveConfirmed && step === "approve") {
+      setStep("subscribe");
       setLoading(false);
     }
   }, [approveConfirmed, step]);
 
   // Auto-advance after mint confirmation
   useEffect(() => {
-    if (mintConfirmed && step === 'subscribe') {
+    if (mintConfirmed && step === "subscribe") {
       let cancelled = false;
 
       const resolveTokenAndFinalize = async () => {
@@ -238,7 +242,7 @@ export function CheckoutModal({
               data: log.data,
               topics: log.topics,
             });
-            if (decoded.eventName === 'SubscriptionMinted') {
+            if (decoded.eventName === "SubscriptionMinted") {
               parsedTokenId = decoded.args.tokenId as bigint;
               break;
             }
@@ -253,7 +257,7 @@ export function CheckoutModal({
             const onChainTokenId = await publicClient.readContract({
               address: registryAddress,
               abi: SubscriptionRegistryABI,
-              functionName: 'getWalletSubscription',
+              functionName: "getWalletSubscription",
               args: [paymentAccount],
             });
             parsedTokenId = onChainTokenId as bigint;
@@ -265,7 +269,7 @@ export function CheckoutModal({
         if (cancelled) return;
 
         setMintedTokenId(parsedTokenId);
-        setStep('success');
+        setStep("success");
         setLoading(false);
         onSuccess?.(parsedTokenId);
         onCheckoutComplete?.({
@@ -311,7 +315,7 @@ export function CheckoutModal({
   useEffect(() => {
     if (approveError) {
       setError(approveError.message);
-      setStep('error');
+      setStep("error");
       setLoading(false);
       onError?.(approveError);
     }
@@ -320,7 +324,7 @@ export function CheckoutModal({
   useEffect(() => {
     if (mintError) {
       setError(mintError.message);
-      setStep('error');
+      setStep("error");
       setLoading(false);
       onError?.(mintError);
     }
@@ -329,7 +333,7 @@ export function CheckoutModal({
   useEffect(() => {
     if (autopayInstallError) {
       setError(autopayInstallError.message);
-      setStep('error');
+      setStep("error");
       setLoading(false);
       onError?.(autopayInstallError);
     }
@@ -338,7 +342,7 @@ export function CheckoutModal({
   useEffect(() => {
     if (autopayUninstallError) {
       setError(autopayUninstallError.message);
-      setStep('error');
+      setStep("error");
       setLoading(false);
       onError?.(autopayUninstallError);
     }
@@ -346,13 +350,14 @@ export function CheckoutModal({
 
   const handleConnect = useCallback(() => {
     try {
-      const injectedConnector = connectors.find(c => c.id === 'injected') || connectors[0];
+      const injectedConnector =
+        connectors.find((c) => c.id === "injected") || connectors[0];
       if (injectedConnector) {
         connect({ connector: injectedConnector });
       }
     } catch (err: any) {
       setError(err.message);
-      setStep('error');
+      setStep("error");
       onError?.(err);
     }
   }, [connect, connectors, onError]);
@@ -365,7 +370,7 @@ export function CheckoutModal({
         const code = await publicClient.getCode({ address });
         if (code && code.length > 2) {
           setSmartAccountAddress(address);
-          setStep(isAutopayInitialized ? 'approve' : 'autopay');
+          setStep(isAutopayInitialized ? "approve" : "autopay");
         } else {
           const deploymentInput: SmartAccountDeploymentInput = {
             ownerAddress: address,
@@ -379,11 +384,14 @@ export function CheckoutModal({
           if (deploySmartAccount) {
             result = await deploySmartAccount(deploymentInput);
           } else if (process.env.NEXT_PUBLIC_ZERODEV_DEPLOY_URL) {
-            const response = await fetch(process.env.NEXT_PUBLIC_ZERODEV_DEPLOY_URL, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(deploymentInput),
-            });
+            const response = await fetch(
+              process.env.NEXT_PUBLIC_ZERODEV_DEPLOY_URL,
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(deploymentInput),
+              },
+            );
             if (response.ok) {
               const data = await response.json();
               result = {
@@ -397,23 +405,39 @@ export function CheckoutModal({
             setSmartAccountAddress(result.accountAddress);
             setSmartAccountDeployTxHash(result.txHash);
           } else {
-            // Fallback to connected EOA when deploy backend is not configured.
-            setSmartAccountAddress(address);
+            // ERC-7579 smart account required — no EOA fallback
+            throw new Error(
+              "Smart account deployment required. Configure a deploySmartAccount callback " +
+                "or set NEXT_PUBLIC_ZERODEV_DEPLOY_URL to enable automated billing.",
+            );
           }
-          setStep('autopay');
+          setStep("autopay");
         }
       }
     } catch (err: any) {
       setError(err.message);
-      setStep('error');
+      setStep("error");
       onError?.(err);
     } finally {
       setLoading(false);
     }
-  }, [publicClient, address, onError, deploySmartAccount, network.chainId, isAutopayInitialized]);
+  }, [
+    publicClient,
+    address,
+    onError,
+    deploySmartAccount,
+    network.chainId,
+    isAutopayInitialized,
+  ]);
 
   const handleInstallAutopay = useCallback(() => {
-    if (!paymentAccount || !planProvider || !planPrice || !planInterval || !USDC_ADDRESS) {
+    if (
+      !paymentAccount ||
+      !planProvider ||
+      !planPrice ||
+      !planInterval ||
+      !USDC_ADDRESS
+    ) {
       return;
     }
     setLoading(true);
@@ -421,7 +445,7 @@ export function CheckoutModal({
 
     const configData = encodeAbiParameters(
       parseAbiParameters(
-        '(address merchant,uint256 maxAmount,address token,uint32 interval,uint64 startTime,uint256 planId)',
+        "(address merchant,uint256 maxAmount,address token,uint32 interval,uint64 startTime,uint256 planId)",
       ),
       [
         {
@@ -438,7 +462,7 @@ export function CheckoutModal({
     writeAutopayInstall({
       address: autopayAddress,
       abi: ERC7579AutopayModuleABI,
-      functionName: 'onInstall',
+      functionName: "onInstall",
       args: [configData],
       chainId: network.chainId,
     });
@@ -460,8 +484,8 @@ export function CheckoutModal({
     writeAutopayUninstall({
       address: autopayAddress,
       abi: ERC7579AutopayModuleABI,
-      functionName: 'onUninstall',
-      args: ['0x'],
+      functionName: "onUninstall",
+      args: ["0x"],
       chainId: network.chainId,
     });
   }, [writeAutopayUninstall, autopayAddress, network.chainId]);
@@ -476,17 +500,19 @@ export function CheckoutModal({
 
     writeApprove({
       address: USDC_ADDRESS,
-      abi: [{
-        type: 'function',
-        name: 'approve',
-        inputs: [
-          { name: 'spender', type: 'address' },
-          { name: 'amount', type: 'uint256' },
-        ],
-        outputs: [{ name: '', type: 'bool' }],
-        stateMutability: 'nonpayable',
-      }] as const,
-      functionName: 'approve',
+      abi: [
+        {
+          type: "function",
+          name: "approve",
+          inputs: [
+            { name: "spender", type: "address" },
+            { name: "amount", type: "uint256" },
+          ],
+          outputs: [{ name: "", type: "bool" }],
+          stateMutability: "nonpayable",
+        },
+      ] as const,
+      functionName: "approve",
       args: [registryAddress, approveAmount],
       chainId: network.chainId,
     });
@@ -500,75 +526,90 @@ export function CheckoutModal({
     writeMint({
       address: registryAddress,
       abi: SubscriptionRegistryABI,
-      functionName: 'mint',
+      functionName: "mint",
       args: [paymentAccount, planId, BigInt(planInterval)],
       chainId: network.chainId,
     });
-  }, [paymentAccount, planId, planInterval, registryAddress, network.chainId, writeMint]);
+  }, [
+    paymentAccount,
+    planId,
+    planInterval,
+    registryAddress,
+    network.chainId,
+    writeMint,
+  ]);
 
   if (!isOpen) return null;
 
   const formatPrice = (price: bigint) => `$${(Number(price) / 1e6).toFixed(2)}`;
 
-  const STEP_CONFIG: Record<CheckoutStep, {
-    title: string;
-    description: string;
-    action?: () => void;
-    actionLabel?: string;
-  }> = {
+  const STEP_CONFIG: Record<
+    CheckoutStep,
+    {
+      title: string;
+      description: string;
+      action?: () => void;
+      actionLabel?: string;
+    }
+  > = {
     connect: {
-      title: 'Connect Wallet',
-      description: 'Connect your wallet to start the subscription process.',
+      title: "Connect Wallet",
+      description: "Connect your wallet to start the subscription process.",
       action: handleConnect,
-      actionLabel: 'Connect Wallet',
+      actionLabel: "Connect Wallet",
     },
     account: {
-      title: 'Smart Account Check',
-      description: 'Checking your account type for automated billing support.',
+      title: "Smart Account Check",
+      description: "Checking your account type for automated billing support.",
       action: handleDeployAccount,
-      actionLabel: 'Continue',
+      actionLabel: "Continue",
     },
     autopay: {
-      title: 'Install Autopay Module',
+      title: "Install Autopay Module",
       description: isAutopayInitialized
-        ? 'Autopay module is already installed for your payment account.'
-        : 'Install autopay module with plan constraints (merchant, token, interval, max amount).',
-      action: isAutopayInitialized ? () => setStep('approve') : handleInstallAutopay,
+        ? "Autopay module is already installed for your payment account."
+        : "Install autopay module with plan constraints (merchant, token, interval, max amount).",
+      action: isAutopayInitialized
+        ? () => setStep("approve")
+        : handleInstallAutopay,
       actionLabel: isInstallingAutopay
-        ? 'Confirm in Wallet...'
+        ? "Confirm in Wallet..."
         : isAutopayInitialized
-          ? 'Continue'
-          : 'Install Autopay',
+          ? "Continue"
+          : "Install Autopay",
     },
     approve: {
-      title: 'Approve USDC',
+      title: "Approve USDC",
       description: planPrice
         ? `Approve ${formatPrice(planPrice * 13n)} USDC for the subscription billing contract.`
-        : 'Approve USDC spending for the billing contract.',
+        : "Approve USDC spending for the billing contract.",
       action: handleApprove,
-      actionLabel: isApproving ? 'Confirm in Wallet...' : 'Approve USDC',
+      actionLabel: isApproving ? "Confirm in Wallet..." : "Approve USDC",
     },
     subscribe: {
-      title: `Subscribe to ${planName || 'Plan'}`,
+      title: `Subscribe to ${planName || "Plan"}`,
       description: planPrice
         ? `Mint your subscription NFT. ${formatPrice(planPrice)} USDC will be charged now.`
-        : 'Mint your subscription NFT and activate your plan.',
+        : "Mint your subscription NFT and activate your plan.",
       action: handleSubscribe,
-      actionLabel: isMinting ? 'Confirm in Wallet...' : 'Subscribe Now',
+      actionLabel: isMinting ? "Confirm in Wallet..." : "Subscribe Now",
     },
     success: {
-      title: '🎉 Subscription Active!',
-      description: 'Your subscription NFT has been minted. You now have access to all premium features.',
+      title: "🎉 Subscription Active!",
+      description:
+        "Your subscription NFT has been minted. You now have access to all premium features.",
     },
     error: {
-      title: 'Something went wrong',
-      description: error || 'An unexpected error occurred. Please try again.',
+      title: "Something went wrong",
+      description: error || "An unexpected error occurred. Please try again.",
     },
   };
 
   const currentStep = STEP_CONFIG[step];
-  const stepNumber = ['connect', 'account', 'autopay', 'approve', 'subscribe'].indexOf(step) + 1;
-  const latestTxHash = mintHash || approveHash || autopayInstallHash || smartAccountDeployTxHash;
+  const stepNumber =
+    ["connect", "account", "autopay", "approve", "subscribe"].indexOf(step) + 1;
+  const latestTxHash =
+    mintHash || approveHash || autopayInstallHash || smartAccountDeployTxHash;
 
   return (
     <div className={`meap-checkout-overlay ${className}`} onClick={onClose}>
@@ -576,20 +617,26 @@ export function CheckoutModal({
         {/* Header */}
         <div className="meap-checkout-header">
           <h2>{currentStep.title}</h2>
-          <button className="meap-checkout-close" onClick={onClose}>✕</button>
+          <button className="meap-checkout-close" onClick={onClose}>
+            ✕
+          </button>
         </div>
 
         {/* Progress */}
-        {step !== 'success' && step !== 'error' && (
+        {step !== "success" && step !== "error" && (
           <div className="meap-checkout-progress">
-            {['connect', 'account', 'autopay', 'approve', 'subscribe'].map((s, i) => (
-              <div
-                key={s}
-                className={`meap-checkout-step ${i + 1 <= stepNumber ? 'active' : ''} ${i + 1 < stepNumber ? 'completed' : ''}`}
-              >
-                <div className="meap-step-dot">{i + 1 < stepNumber ? '✓' : i + 1}</div>
-              </div>
-            ))}
+            {["connect", "account", "autopay", "approve", "subscribe"].map(
+              (s, i) => (
+                <div
+                  key={s}
+                  className={`meap-checkout-step ${i + 1 <= stepNumber ? "active" : ""} ${i + 1 < stepNumber ? "completed" : ""}`}
+                >
+                  <div className="meap-step-dot">
+                    {i + 1 < stepNumber ? "✓" : i + 1}
+                  </div>
+                </div>
+              ),
+            )}
           </div>
         )}
 
@@ -605,7 +652,8 @@ export function CheckoutModal({
 
           {paymentAccount && (
             <div className="meap-testnet-badge">
-              Payment Account: {paymentAccount.slice(0, 6)}...{paymentAccount.slice(-4)}
+              Payment Account: {paymentAccount.slice(0, 6)}...
+              {paymentAccount.slice(-4)}
             </div>
           )}
 
@@ -632,13 +680,19 @@ export function CheckoutModal({
             <button
               className="meap-checkout-btn primary"
               onClick={currentStep.action}
-              disabled={loading || isApproving || isMinting || isInstallingAutopay || isRevokingAutopay}
+              disabled={
+                loading ||
+                isApproving ||
+                isMinting ||
+                isInstallingAutopay ||
+                isRevokingAutopay
+              }
             >
-              {loading ? 'Processing...' : currentStep.actionLabel}
+              {loading ? "Processing..." : currentStep.actionLabel}
             </button>
           )}
 
-          {step === 'success' && (
+          {step === "success" && (
             <>
               {(autopayInstalledLocally || isAutopayInitialized) && (
                 <button
@@ -646,7 +700,7 @@ export function CheckoutModal({
                   onClick={handleRevokeAutopay}
                   disabled={isRevokingAutopay}
                 >
-                  {isRevokingAutopay ? 'Revoking...' : 'Revoke Autopay'}
+                  {isRevokingAutopay ? "Revoking..." : "Revoke Autopay"}
                 </button>
               )}
               <button className="meap-checkout-btn primary" onClick={onClose}>
@@ -655,7 +709,7 @@ export function CheckoutModal({
             </>
           )}
 
-          {step === 'error' && (
+          {step === "error" && (
             <button
               className="meap-checkout-btn secondary"
               onClick={() => {
@@ -664,14 +718,14 @@ export function CheckoutModal({
                 resetAutopayInstall();
                 resetAutopayUninstall();
                 setError(null);
-                setStep(isConnected ? 'account' : 'connect');
+                setStep(isConnected ? "account" : "connect");
               }}
             >
               Try Again
             </button>
           )}
         </div>
-        {step === 'success' && mintedTokenId > 0n && (
+        {step === "success" && mintedTokenId > 0n && (
           <div className="meap-checkout-body">
             <p>Subscription token minted: #{mintedTokenId.toString()}</p>
           </div>

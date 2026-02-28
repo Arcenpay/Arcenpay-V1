@@ -1,9 +1,20 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useAccount, useReadContract, useReadContracts, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import {
+  useAccount,
+  useReadContract,
+  useReadContracts,
+  useWriteContract,
+  useWaitForTransactionReceipt,
+} from "wagmi";
 import { parseUnits } from "viem";
-import { SessionVaultABI, getContractAddresses, TOKENS } from "@meap/core";
+import {
+  SessionVaultABI,
+  ERC7579AutopayModuleABI,
+  getContractAddresses,
+  TOKENS,
+} from "@meap/core";
 import {
   CHAIN_ID,
   FACILITATOR_BASE_URL,
@@ -21,7 +32,14 @@ export default function SessionsPage() {
   const [showDeposit, setShowDeposit] = useState(false);
   const [depositAmount, setDepositAmount] = useState("");
   const [usageBySession, setUsageBySession] = useState<
-    Record<string, { callCount: number; latestSettlementTxHash: string | null; source: string }>
+    Record<
+      string,
+      {
+        callCount: number;
+        latestSettlementTxHash: string | null;
+        source: string;
+      }
+    >
   >({});
   const [aggregatorStats, setAggregatorStats] = useState<{
     sessions: number;
@@ -97,7 +115,7 @@ export default function SessionsPage() {
   const sessionIdsKey = JSON.stringify((sessionIds as `0x${string}`[]) || []);
 
   useEffect(() => {
-    const ids = ((sessionIds as `0x${string}`[]) || []);
+    const ids = (sessionIds as `0x${string}`[]) || [];
     if (!address || ids.length === 0) {
       setUsageBySession({});
       setAggregatorStats(null);
@@ -110,11 +128,12 @@ export default function SessionsPage() {
 
     const loadFacilitatorData = async () => {
       try {
-        const [statsResponse, settlementResponse, ...usageResponses] = await Promise.all([
-          fetch(`${facilitatorBase}/api/aggregator/stats`),
-          fetch(`${facilitatorBase}/api/ops/settlement/status`),
-          ...ids.map((id) => fetch(`${facilitatorBase}/api/usage/${id}`)),
-        ]);
+        const [statsResponse, settlementResponse, ...usageResponses] =
+          await Promise.all([
+            fetch(`${facilitatorBase}/api/aggregator/stats`),
+            fetch(`${facilitatorBase}/api/ops/settlement/status`),
+            ...ids.map((id) => fetch(`${facilitatorBase}/api/usage/${id}`)),
+          ]);
 
         if (cancelled) return;
 
@@ -127,7 +146,9 @@ export default function SessionsPage() {
           setSettlementStatus({
             onchainEnabled: Boolean(status.onchainEnabled),
             signerAuthorized:
-              status.signerAuthorized === null ? null : Boolean(status.signerAuthorized),
+              status.signerAuthorized === null
+                ? null
+                : Boolean(status.signerAuthorized),
             signerAddress: status.signerAddress || null,
           });
         }
@@ -149,7 +170,11 @@ export default function SessionsPage() {
 
         const nextUsageState: Record<
           string,
-          { callCount: number; latestSettlementTxHash: string | null; source: string }
+          {
+            callCount: number;
+            latestSettlementTxHash: string | null;
+            source: string;
+          }
         > = {};
         for (const entry of usageEntries) {
           if (entry) {
@@ -200,9 +225,10 @@ export default function SessionsPage() {
     reset: resetFund,
   } = useWriteContract();
 
-  const { isSuccess: fundConfirmed, isLoading: fundConfirming } = useWaitForTransactionReceipt({
-    hash: fundHash,
-  });
+  const { isSuccess: fundConfirmed, isLoading: fundConfirming } =
+    useWaitForTransactionReceipt({
+      hash: fundHash,
+    });
 
   // Auto-call fundSession after approve confirms
   useEffect(() => {
@@ -236,9 +262,10 @@ export default function SessionsPage() {
     reset: resetWithdraw,
   } = useWriteContract();
 
-  const { isSuccess: withdrawConfirmed, isLoading: withdrawConfirming } = useWaitForTransactionReceipt({
-    hash: withdrawHash,
-  });
+  const { isSuccess: withdrawConfirmed, isLoading: withdrawConfirming } =
+    useWaitForTransactionReceipt({
+      hash: withdrawHash,
+    });
 
   useEffect(() => {
     if (withdrawConfirmed) {
@@ -246,21 +273,52 @@ export default function SessionsPage() {
     }
   }, [withdrawConfirmed, refetch]);
 
+  // Write: Revoke autopay
+  const {
+    writeContract: writeRevokeAutopay,
+    data: revokeAutopayHash,
+    isPending: isRevokingAutopay,
+    reset: resetRevokeAutopay,
+  } = useWriteContract();
+
+  const {
+    isSuccess: revokeAutopayConfirmed,
+    isLoading: revokeAutopayConfirming,
+  } = useWaitForTransactionReceipt({ hash: revokeAutopayHash });
+
+  useEffect(() => {
+    if (revokeAutopayConfirmed) {
+      refetch();
+    }
+  }, [revokeAutopayConfirmed, refetch]);
+
+  const handleRevokeAutopay = () => {
+    writeRevokeAutopay({
+      address: contracts.autopayModule as `0x${string}`,
+      abi: ERC7579AutopayModuleABI,
+      functionName: "onUninstall",
+      args: ["0x"],
+      chainId: CHAIN_ID,
+    });
+  };
+
   const handleDeposit = () => {
     if (!depositAmount || !USDC) return;
     const amount = parseUnits(depositAmount, 6);
     writeApprove({
       address: USDC,
-      abi: [{
-        type: "function",
-        name: "approve",
-        inputs: [
-          { name: "spender", type: "address" },
-          { name: "amount", type: "uint256" },
-        ],
-        outputs: [{ name: "", type: "bool" }],
-        stateMutability: "nonpayable",
-      }] as const,
+      abi: [
+        {
+          type: "function",
+          name: "approve",
+          inputs: [
+            { name: "spender", type: "address" },
+            { name: "amount", type: "uint256" },
+          ],
+          outputs: [{ name: "", type: "bool" }],
+          stateMutability: "nonpayable",
+        },
+      ] as const,
       functionName: "approve",
       args: [contracts.sessionVault as `0x${string}`, amount],
       chainId: CHAIN_ID,
@@ -283,7 +341,7 @@ export default function SessionsPage() {
       ? "confirming"
       : isApproving
         ? "pending"
-        : (approveError || fundError)
+        : approveError || fundError
           ? "error"
           : "idle";
 
@@ -300,7 +358,8 @@ export default function SessionsPage() {
           <div>
             <h1>ZKVUB Sessions</h1>
             <p>
-              Monitor active billing sessions, vault balances, and proof settlements
+              Monitor active billing sessions, vault balances, and proof
+              settlements
             </p>
           </div>
           <button
@@ -320,16 +379,20 @@ export default function SessionsPage() {
       )}
 
       {facilitatorError && (
-        <div className="alert alert-warning">
-          {facilitatorError}
-        </div>
+        <div className="alert alert-warning">{facilitatorError}</div>
       )}
 
-      {settlementStatus && settlementStatus.onchainEnabled && settlementStatus.signerAuthorized === false && (
-        <div className="alert alert-warning">
-          Facilitator signer {settlementStatus.signerAddress ? truncateAddress(settlementStatus.signerAddress) : "N/A"} is not an authorized SessionVault settler.
-        </div>
-      )}
+      {settlementStatus &&
+        settlementStatus.onchainEnabled &&
+        settlementStatus.signerAuthorized === false && (
+          <div className="alert alert-warning">
+            Facilitator signer{" "}
+            {settlementStatus.signerAddress
+              ? truncateAddress(settlementStatus.signerAddress)
+              : "N/A"}{" "}
+            is not an authorized SessionVault settler.
+          </div>
+        )}
 
       {/* Deposit Form */}
       {showDeposit && (
@@ -358,12 +421,7 @@ export default function SessionsPage() {
             </div>
             <div>
               <label className="form-label">Token</label>
-              <input
-                type="text"
-                className="form-input"
-                value="USDC"
-                disabled
-              />
+              <input type="text" className="form-input" value="USDC" disabled />
             </div>
             <div
               style={{
@@ -387,7 +445,9 @@ export default function SessionsPage() {
               <button
                 className="btn btn-primary"
                 onClick={handleDeposit}
-                disabled={!depositAmount || isApproving || isFunding || fundConfirming}
+                disabled={
+                  !depositAmount || isApproving || isFunding || fundConfirming
+                }
               >
                 {isApproving
                   ? "Approving USDC..."
@@ -402,7 +462,10 @@ export default function SessionsPage() {
                 txHash={fundHash || approveHash}
                 error={approveError || fundError}
                 chainId={CHAIN_ID}
-                onReset={() => { resetApprove(); resetFund(); }}
+                onReset={() => {
+                  resetApprove();
+                  resetFund();
+                }}
                 successMessage="Session funded on-chain!"
               />
             </div>
@@ -478,6 +541,7 @@ export default function SessionsPage() {
               <th>Usage Calls</th>
               <th>Last Settlement</th>
               <th>Status</th>
+              <th>Autopay</th>
               <th>Action</th>
             </tr>
           </thead>
@@ -501,7 +565,8 @@ export default function SessionsPage() {
                     padding: 40,
                   }}
                 >
-                  No ZKVUB sessions active. Click "Fund Session" to deposit USDC.
+                  No ZKVUB sessions active. Click "Fund Session" to deposit
+                  USDC.
                 </td>
               </tr>
             ) : (
@@ -528,7 +593,10 @@ export default function SessionsPage() {
                         target="_blank"
                         rel="noopener noreferrer"
                       >
-                        {truncateAddress(usageBySession[session!.id]!.latestSettlementTxHash!)} ↗
+                        {truncateAddress(
+                          usageBySession[session!.id]!.latestSettlementTxHash!,
+                        )}{" "}
+                        ↗
                       </a>
                     ) : (
                       <span style={{ color: "var(--text-muted)" }}>—</span>
@@ -542,14 +610,37 @@ export default function SessionsPage() {
                     </span>
                   </td>
                   <td>
+                    {session!.active && (
+                      <button
+                        className="btn"
+                        style={{
+                          fontSize: 12,
+                          padding: "4px 8px",
+                          borderColor: "var(--warning, #f59e0b)",
+                          color: "var(--warning, #f59e0b)",
+                        }}
+                        onClick={handleRevokeAutopay}
+                        disabled={isRevokingAutopay || revokeAutopayConfirming}
+                      >
+                        {isRevokingAutopay || revokeAutopayConfirming
+                          ? "Revoking..."
+                          : "Revoke"}
+                      </button>
+                    )}
+                  </td>
+                  <td>
                     {session!.active && session!.balance > 0n && (
                       <button
                         className="btn"
                         style={{ fontSize: 12, padding: "4px 8px" }}
-                        onClick={() => handleWithdraw(session!.id as `0x${string}`)}
+                        onClick={() =>
+                          handleWithdraw(session!.id as `0x${string}`)
+                        }
                         disabled={isWithdrawing || withdrawConfirming}
                       >
-                        {isWithdrawing || withdrawConfirming ? "..." : "Withdraw"}
+                        {isWithdrawing || withdrawConfirming
+                          ? "..."
+                          : "Withdraw"}
                       </button>
                     )}
                   </td>

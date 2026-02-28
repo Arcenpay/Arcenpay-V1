@@ -4,21 +4,26 @@
 //  Implements real EIP-712 signature validation per PRD §7.1
 // ============================================================
 
-import type { Request, Response, NextFunction } from 'express';
+import type { Request, Response, NextFunction } from "express";
 import type {
   X402Response,
   X402RejectionReason,
   X402VerifiedPaymentContext,
-} from '@meap/core';
-import { X402_VERSION, X402_SCHEME, SessionVaultABI, getContractAddresses } from '@meap/core';
+} from "@meap/core";
+import {
+  X402_VERSION,
+  X402_SCHEME,
+  SessionVaultABI,
+  getContractAddresses,
+} from "@meap/core";
 import {
   createPublicClient,
   http,
   recoverTypedDataAddress,
   isAddress,
   parseUnits,
-} from 'viem';
-import { sepolia, baseSepolia, base } from 'viem/chains';
+} from "viem";
+import { sepolia, baseSepolia, base } from "viem/chains";
 
 type X402SettlePaymentInput = {
   signer: `0x${string}`;
@@ -49,28 +54,42 @@ export interface X402MiddlewareOptions {
   /** Payment facilitator contract address */
   payTo?: string;
   /** Optional settlement hook. Called after payment verification succeeds. */
-  settlePayment?: (input: X402SettlePaymentInput) => Promise<X402SettlePaymentResult>;
+  settlePayment?: (
+    input: X402SettlePaymentInput,
+  ) => Promise<X402SettlePaymentResult>;
   /**
    * If true, allow requests when balance check RPC/contract read fails.
    * Default false for production-safe fail-closed behavior.
    */
   failOpenOnBalanceCheck?: boolean;
+  /**
+   * Maximum age of payment timestamp in milliseconds.
+   * Payments older than this window are rejected.
+   * Default: 300_000 (5 minutes).
+   */
+  maxPaymentAgeMs?: number;
+  /**
+   * TTL for nonce deduplication entries in milliseconds.
+   * Set to at least 2x maxPaymentAgeMs.
+   * Default: 600_000 (10 minutes).
+   */
+  nonceTtlMs?: number;
 }
 
 // EIP-712 domain and types for x402 Payment signature
 const PAYMENT_DOMAIN = {
-  name: 'MEAP x402 Payment',
-  version: '1',
+  name: "MEAP x402 Payment",
+  version: "1",
 } as const;
 
 const PAYMENT_TYPES = {
   Payment: [
-    { name: 'from', type: 'address' },
-    { name: 'amount', type: 'uint256' },
-    { name: 'resource', type: 'string' },
-    { name: 'sessionId', type: 'string' },
-    { name: 'nonce', type: 'uint256' },
-    { name: 'timestamp', type: 'uint256' },
+    { name: "from", type: "address" },
+    { name: "amount", type: "uint256" },
+    { name: "resource", type: "string" },
+    { name: "sessionId", type: "string" },
+    { name: "nonce", type: "uint256" },
+    { name: "timestamp", type: "uint256" },
   ],
 } as const;
 
@@ -80,14 +99,17 @@ const CHAIN_MAP: Record<number, any> = {
   8453: base,
 };
 
-function coerceBigInt(value: bigint | string | number, fallback: bigint): bigint {
+function coerceBigInt(
+  value: bigint | string | number,
+  fallback: bigint,
+): bigint {
   try {
-    if (typeof value === 'bigint') return value;
-    if (typeof value === 'number') {
+    if (typeof value === "bigint") return value;
+    if (typeof value === "number") {
       if (!Number.isFinite(value) || value < 0) return fallback;
       return BigInt(Math.trunc(value));
     }
-    if (typeof value === 'string' && value.trim()) return BigInt(value.trim());
+    if (typeof value === "string" && value.trim()) return BigInt(value.trim());
     return fallback;
   } catch {
     return fallback;
@@ -95,9 +117,9 @@ function coerceBigInt(value: bigint | string | number, fallback: bigint): bigint
 }
 
 function normalizeSessionId(value: unknown): string {
-  if (typeof value !== 'string') return 'default';
+  if (typeof value !== "string") return "default";
   const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : 'default';
+  return trimmed.length > 0 ? trimmed : "default";
 }
 
 function normalizeAmount(value: unknown, fallback: bigint): bigint {
@@ -118,7 +140,7 @@ function sendRejection(
   message: string,
   details?: Record<string, unknown>,
 ) {
-  res.setHeader('x-meap-rejection-reason', reason);
+  res.setHeader("x-meap-rejection-reason", reason);
   res.status(402).json({
     ok: false,
     rejectionReason: reason,
@@ -141,17 +163,45 @@ export function x402Middleware(options: X402MiddlewareOptions) {
   const {
     planId,
     ratePerCall,
-    network = 'base-sepolia',
+    network = "base-sepolia",
     chainId = 11155111,
     rpcUrl,
     payTo,
     settlePayment,
     failOpenOnBalanceCheck = false,
+    maxPaymentAgeMs = 300_000, // 5 minutes
+    nonceTtlMs = 600_000, // 10 minutes
   } = options;
+
+  // ── Nonce deduplication store ──────────────────────────────
+  // Tracks recently-seen nonces per signer to prevent replay attacks.
+  // Uses an in-memory Map with periodic TTL cleanup.
+  const seenNonces = new Map<string, number>(); // key: "signer:nonce" → timestamp
+
+  // Periodic cleanup of expired nonces (every 60s)
+  const nonceCleanupInterval = setInterval(() => {
+    const now = Date.now();
+    for (const [key, ts] of seenNonces) {
+      if (now - ts > nonceTtlMs) {
+        seenNonces.delete(key);
+      }
+    }
+  }, 60_000);
+
+  // Allow GC if middleware is discarded (for tests)
+  if (
+    typeof nonceCleanupInterval === "object" &&
+    "unref" in nonceCleanupInterval
+  ) {
+    nonceCleanupInterval.unref();
+  }
 
   const rateAtomicUnits = parseUnits(ratePerCall, 6);
   const contracts = getContractAddresses(chainId);
-  const payToAddress = payTo || contracts.feeCollector || '0x0000000000000000000000000000000000000000';
+  const payToAddress =
+    payTo ||
+    contracts.feeCollector ||
+    "0x0000000000000000000000000000000000000000";
 
   // Create viem public client for on-chain reads
   const chain = CHAIN_MAP[chainId] || sepolia;
@@ -161,7 +211,7 @@ export function x402Middleware(options: X402MiddlewareOptions) {
   });
 
   return async (req: Request, res: Response, next: NextFunction) => {
-    const paymentHeader = req.headers['x-payment'] as string | undefined;
+    const paymentHeader = req.headers["x-payment"] as string | undefined;
 
     if (!paymentHeader) {
       // No payment — return 402 with x402 payload
@@ -176,14 +226,14 @@ export function x402Middleware(options: X402MiddlewareOptions) {
             scheme: X402_SCHEME,
             network,
             maxAmountRequired: rateAtomicUnits.toString(),
-            resource: `${req.protocol}://${req.get('host')}${req.originalUrl}`,
+            resource: `${req.protocol}://${req.get("host")}${req.originalUrl}`,
             description: `Premium API access — Plan: ${planId}`,
-            mimeType: 'application/json',
+            mimeType: "application/json",
             payTo: payToAddress,
           },
         ],
-        error: 'Payment required for this resource',
-        rejectionReason: 'MISSING_PAYMENT_HEADER',
+        error: "Payment required for this resource",
+        rejectionReason: "MISSING_PAYMENT_HEADER",
       };
 
       res.status(402).json(x402Response);
@@ -198,29 +248,33 @@ export function x402Middleware(options: X402MiddlewareOptions) {
         if (!/^[A-Za-z0-9+/=]+$/.test(normalizedHeader)) {
           sendRejection(
             res,
-            'INVALID_PAYMENT_HEADER_ENCODING',
-            'X-PAYMENT header must be valid base64-encoded JSON',
+            "INVALID_PAYMENT_HEADER_ENCODING",
+            "X-PAYMENT header must be valid base64-encoded JSON",
           );
           return;
         }
 
-        const decoded = Buffer.from(paymentHeader, 'base64').toString('utf-8');
+        const decoded = Buffer.from(paymentHeader, "base64").toString("utf-8");
         paymentData = JSON.parse(decoded);
       } catch {
         sendRejection(
           res,
-          'INVALID_PAYMENT_HEADER_FORMAT',
-          'X-PAYMENT header must decode to a valid JSON object',
+          "INVALID_PAYMENT_HEADER_FORMAT",
+          "X-PAYMENT header must decode to a valid JSON object",
         );
         return;
       }
 
       const { signature, payload: payloadRaw } = paymentData;
-      if (typeof signature !== 'string' || !signature.startsWith('0x') || !payloadRaw) {
+      if (
+        typeof signature !== "string" ||
+        !signature.startsWith("0x") ||
+        !payloadRaw
+      ) {
         sendRejection(
           res,
-          'MALFORMED_PAYMENT_PAYLOAD',
-          'Payment must include valid signature and payload fields',
+          "MALFORMED_PAYMENT_PAYLOAD",
+          "Payment must include valid signature and payload fields",
         );
         return;
       }
@@ -228,25 +282,31 @@ export function x402Middleware(options: X402MiddlewareOptions) {
       // Parse the payload
       let payload: Record<string, unknown>;
       try {
-        const parsedPayload = typeof payloadRaw === 'string' ? JSON.parse(payloadRaw) : payloadRaw;
-        if (!parsedPayload || typeof parsedPayload !== 'object' || Array.isArray(parsedPayload)) {
-          throw new Error('payload must be an object');
+        const parsedPayload =
+          typeof payloadRaw === "string" ? JSON.parse(payloadRaw) : payloadRaw;
+        if (
+          !parsedPayload ||
+          typeof parsedPayload !== "object" ||
+          Array.isArray(parsedPayload)
+        ) {
+          throw new Error("payload must be an object");
         }
         payload = parsedPayload as Record<string, unknown>;
       } catch {
         sendRejection(
           res,
-          'MALFORMED_PAYMENT_PAYLOAD',
-          'Payment payload must be a valid JSON object',
+          "MALFORMED_PAYMENT_PAYLOAD",
+          "Payment payload must be a valid JSON object",
         );
         return;
       }
 
-      const signerClaimed = typeof payload.from === 'string' ? payload.from : '';
+      const signerClaimed =
+        typeof payload.from === "string" ? payload.from : "";
       if (!isAddress(signerClaimed)) {
         sendRejection(
           res,
-          'MALFORMED_PAYMENT_PAYLOAD',
+          "MALFORMED_PAYMENT_PAYLOAD",
           'Payment payload is missing a valid "from" address',
         );
         return;
@@ -261,11 +321,11 @@ export function x402Middleware(options: X402MiddlewareOptions) {
         recoveredSigner = await recoverTypedDataAddress({
           domain: { ...PAYMENT_DOMAIN, chainId: BigInt(chainId) },
           types: PAYMENT_TYPES,
-          primaryType: 'Payment',
+          primaryType: "Payment",
           message: {
             from: signerClaimed as `0x${string}`,
             amount: requestedAmount,
-            resource: String(payload.resource || ''),
+            resource: String(payload.resource || ""),
             sessionId,
             nonce: normalizeNonce(payload.nonce),
             timestamp: normalizeTimestamp(payload.timestamp),
@@ -275,8 +335,8 @@ export function x402Middleware(options: X402MiddlewareOptions) {
       } catch {
         sendRejection(
           res,
-          'INVALID_SIGNATURE',
-          'Unable to validate the payment signature',
+          "INVALID_SIGNATURE",
+          "Unable to validate the payment signature",
         );
         return;
       }
@@ -285,29 +345,58 @@ export function x402Middleware(options: X402MiddlewareOptions) {
       if (recoveredSigner.toLowerCase() !== signerClaimed.toLowerCase()) {
         sendRejection(
           res,
-          'SIGNER_MISMATCH',
-          'Recovered signer does not match the payment sender',
+          "SIGNER_MISMATCH",
+          "Recovered signer does not match the payment sender",
         );
         return;
       }
 
       const verifiedSigner = recoveredSigner as `0x${string}`;
 
+      // Step 3b: Timestamp window check — reject stale payments
+      const paymentTimestamp = normalizeTimestamp(payload.timestamp);
+      const paymentAgeMs = Date.now() - Number(paymentTimestamp);
+      if (paymentAgeMs > maxPaymentAgeMs || paymentAgeMs < -60_000) {
+        sendRejection(
+          res,
+          "PAYMENT_EXPIRED" as X402RejectionReason,
+          `Payment timestamp is outside the acceptable window (${Math.round(maxPaymentAgeMs / 1000)}s)`,
+          {
+            paymentTimestamp: paymentTimestamp.toString(),
+            serverTime: Date.now().toString(),
+          },
+        );
+        return;
+      }
+
+      // Step 3c: Nonce deduplication — reject replay attacks
+      const nonce = normalizeNonce(payload.nonce);
+      const nonceKey = `${verifiedSigner.toLowerCase()}:${nonce.toString()}`;
+      if (seenNonces.has(nonceKey)) {
+        sendRejection(
+          res,
+          "NONCE_ALREADY_USED" as X402RejectionReason,
+          "This payment nonce has already been used. Use a fresh nonce for each request.",
+        );
+        return;
+      }
+      seenNonces.set(nonceKey, Date.now());
+
       // Step 4: Check session vault balance
       if (verifiedSigner && contracts.sessionVault) {
         try {
-          const balance = await publicClient.readContract({
+          const balance = (await publicClient.readContract({
             address: contracts.sessionVault as `0x${string}`,
             abi: SessionVaultABI,
-            functionName: 'getAgentBalance',
+            functionName: "getAgentBalance",
             args: [verifiedSigner as `0x${string}`],
-          }) as bigint;
+          })) as bigint;
 
           if (balance < requestedAmount) {
             sendRejection(
               res,
-              'INSUFFICIENT_SESSION_BALANCE',
-              'Session balance is below the required amount',
+              "INSUFFICIENT_SESSION_BALANCE",
+              "Session balance is below the required amount",
               {
                 balance: balance.toString(),
                 required: requestedAmount.toString(),
@@ -317,12 +406,15 @@ export function x402Middleware(options: X402MiddlewareOptions) {
           }
         } catch (err) {
           if (failOpenOnBalanceCheck) {
-            console.warn('[x402] Session vault balance check failed (fail-open enabled):', err);
+            console.warn(
+              "[x402] Session vault balance check failed (fail-open enabled):",
+              err,
+            );
           } else {
             sendRejection(
               res,
-              'BALANCE_CHECK_FAILED',
-              'Unable to verify session balance on-chain',
+              "BALANCE_CHECK_FAILED",
+              "Unable to verify session balance on-chain",
             );
             return;
           }
@@ -344,13 +436,17 @@ export function x402Middleware(options: X402MiddlewareOptions) {
             payload,
             request: req,
           });
-          settledAmount = coerceBigInt(settlement.settledAmount, requestedAmount);
+          settledAmount = coerceBigInt(
+            settlement.settledAmount,
+            requestedAmount,
+          );
           settlementTxHash = settlement.settlementTxHash || null;
         } catch (err: any) {
           sendRejection(
             res,
-            'SETTLEMENT_FAILED',
-            err?.message || 'Payment verification succeeded but settlement failed',
+            "SETTLEMENT_FAILED",
+            err?.message ||
+              "Payment verification succeeded but settlement failed",
           );
           return;
         }
@@ -370,15 +466,17 @@ export function x402Middleware(options: X402MiddlewareOptions) {
         timestamp: Date.now(),
         rejectionReason: null,
       };
-      (req as Request & { meapPayment?: X402VerifiedPaymentContext }).meapPayment = verifiedContext;
+      (
+        req as Request & { meapPayment?: X402VerifiedPaymentContext }
+      ).meapPayment = verifiedContext;
 
       next();
     } catch (error: any) {
-      console.error('[x402] Payment processing error:', error);
+      console.error("[x402] Payment processing error:", error);
       sendRejection(
         res,
-        'PAYMENT_PROCESSING_FAILED',
-        error.message || 'Payment processing failed',
+        "PAYMENT_PROCESSING_FAILED",
+        error.message || "Payment processing failed",
       );
     }
   };

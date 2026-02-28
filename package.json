@@ -5,7 +5,8 @@
   "description": "Web3 Entitlement Layer — MEAP + ZKVUB Protocol",
   "workspaces": [
     "packages/*",
-    "apps/*"
+    "apps/*",
+    "subgraph"
   ],
   "scripts": {
     "build": "turbo run build",

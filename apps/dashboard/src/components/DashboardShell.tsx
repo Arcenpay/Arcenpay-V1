@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { href: "/subscribers", label: "Subscribers", icon: "👥" },
   { href: "/features", label: "Feature Flags", icon: "🚀" },
   { href: "/sessions", label: "ZKVUB Sessions", icon: "⚡" },
+  { href: "/webhooks", label: "Webhooks", icon: "🔔" },
   { href: "/settings", label: "Settings", icon: "⚙️" },
 ];
 

@@ -7,7 +7,7 @@ import "../interfaces/ISubscriptionRegistry.sol";
 /// @title MirrorRegistry
 /// @notice Cross-chain entitlement state mirror
 /// @dev Receives GMP messages and mirrors subscription state from primary chain
-/// @dev Phase 3 stub — will integrate Axelar GMP and Chainlink CCIP
+/// @dev Supports Axelar GMP (primary) and Chainlink CCIP (fallback) transport routes
 contract MirrorRegistry is Ownable {
     uint8 public constant ROUTE_AXELAR = 1;
     uint8 public constant ROUTE_CCIP = 2;

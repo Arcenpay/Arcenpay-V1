@@ -47,6 +47,12 @@ contract ERC7579AutopayModule is IERC7579AutopayModule, ReentrancyGuard {
     /// @notice Account address => initialization status
     mapping(address => bool) private _initialized;
 
+    /// @notice Destination chain ID for cross-chain GMP mirror updates (0 = disabled)
+    uint256 private _mirrorDestinationChainId;
+
+    /// @notice Emitted when cross-chain dispatch fails (non-reverting)
+    event CrossChainDispatchFailed(address indexed account, uint256 destinationChainId);
+
     // ============================================================
     //                        CONSTRUCTOR
     // ============================================================
@@ -168,7 +174,28 @@ contract ERC7579AutopayModule is IERC7579AutopayModule, ReentrancyGuard {
         );
 
         emit PaymentExecuted(account, config.merchant, amount, block.timestamp);
-        // TODO: Emit cross-chain GMP message to update MirrorRegistry
+
+        // Dispatch cross-chain GMP update to MirrorRegistry if destination is configured
+        if (_mirrorDestinationChainId != 0) {
+            uint256 tokenId = _getOrMintToken(account, config.planId);
+            if (tokenId != 0) {
+                try subscriptionRegistry.dispatchCrossChainUpdate{value: 0}(
+                    tokenId,
+                    _mirrorDestinationChainId,
+                    config.merchant
+                ) {} catch {
+                    // GMP dispatch failure should not revert the payment
+                    emit CrossChainDispatchFailed(account, _mirrorDestinationChainId);
+                }
+            }
+        }
+    }
+
+    /// @notice Sets the destination chain ID for cross-chain mirror updates
+    /// @param chainId The destination chain ID (0 to disable)
+    function setMirrorDestination(uint256 chainId) external {
+        require(_initialized[msg.sender], "AutopayModule: not initialized");
+        _mirrorDestinationChainId = chainId;
     }
 
     // ============================================================

@@ -218,13 +218,37 @@ export default function SubscribersPage() {
         </div>
         <div className="stat-card">
           <div className="label">Renewal Rate</div>
-          <div className="value">—</div>
-          <div className="change">Requires indexer</div>
+          <div className="value">
+            {loading ? (
+              <div className="skeleton" style={{ width: 40, height: 32 }} />
+            ) : subscribers.length > 0 ? (
+              `${((activeCount / subscribers.length) * 100).toFixed(1)}%`
+            ) : (
+              "—"
+            )}
+          </div>
+          <div className="change">
+            {!loading && subscribers.length > 0
+              ? `${activeCount} of ${subscribers.length} active`
+              : "No data yet"}
+          </div>
         </div>
         <div className="stat-card">
           <div className="label">Churn Rate</div>
-          <div className="value">—</div>
-          <div className="change">Requires indexer</div>
+          <div className="value">
+            {loading ? (
+              <div className="skeleton" style={{ width: 40, height: 32 }} />
+            ) : subscribers.length > 0 ? (
+              `${(((subscribers.length - activeCount) / subscribers.length) * 100).toFixed(1)}%`
+            ) : (
+              "—"
+            )}
+          </div>
+          <div className="change">
+            {!loading && subscribers.length > 0
+              ? `${subscribers.length - activeCount} expired or cancelled`
+              : "No data yet"}
+          </div>
         </div>
       </div>
 

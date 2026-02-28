@@ -4,15 +4,15 @@
 //  and delivers notifications to providers
 // ============================================================
 
-import express from 'express';
-import cors from 'cors';
+import express from "express";
+import cors from "cors";
 import {
   collectDefaultMetrics,
   Counter,
   Gauge,
   Histogram,
   Registry,
-} from 'prom-client';
+} from "prom-client";
 import {
   x402Middleware,
   UsageService,
@@ -25,7 +25,7 @@ import {
   EmailService,
   TablelandService,
   LitProtocolService,
-} from '@meap/node';
+} from "@meap/node";
 import {
   PlanFactoryABI,
   SessionVaultABI,
@@ -33,52 +33,53 @@ import {
   getContractAddresses,
   type PlanTier,
   type X402VerifiedPaymentContext,
-} from '@meap/core';
-import { createPublicClient, http } from 'viem';
+} from "@meap/core";
+import { createPublicClient, http } from "viem";
 
 const app = express();
 const PORT = process.env.PORT || 3402;
-const RPC_URL = process.env.RPC_URL || 'https://ethereum-sepolia-rpc.publicnode.com';
-const CHAIN_ID = parseInt(process.env.CHAIN_ID || '11155111');
+const RPC_URL =
+  process.env.RPC_URL || "https://ethereum-sepolia-rpc.publicnode.com";
+const CHAIN_ID = parseInt(process.env.CHAIN_ID || "11155111");
 const CONTRACTS = getContractAddresses(CHAIN_ID);
 const chainClient = createPublicClient({
   transport: http(RPC_URL),
 });
 
 const metricsRegistry = new Registry();
-collectDefaultMetrics({ register: metricsRegistry, prefix: 'facilitator_' });
+collectDefaultMetrics({ register: metricsRegistry, prefix: "facilitator_" });
 
 const x402RequestsTotal = new Counter({
-  name: 'x402_requests_total',
-  help: 'Total x402-gated requests handled by facilitator',
-  labelNames: ['endpoint', 'method', 'status'],
+  name: "x402_requests_total",
+  help: "Total x402-gated requests handled by facilitator",
+  labelNames: ["endpoint", "method", "status"],
   registers: [metricsRegistry],
 });
 
 const x402ValidationErrorsTotal = new Counter({
-  name: 'x402_validation_errors_total',
-  help: 'Total x402 validation failures by rejection reason',
-  labelNames: ['reason'],
+  name: "x402_validation_errors_total",
+  help: "Total x402 validation failures by rejection reason",
+  labelNames: ["reason"],
   registers: [metricsRegistry],
 });
 
 const onChainSubmissionsLatencySeconds = new Histogram({
-  name: 'on_chain_submissions_latency_seconds',
-  help: 'Latency of on-chain settlement submissions (seconds)',
-  labelNames: ['outcome'],
+  name: "on_chain_submissions_latency_seconds",
+  help: "Latency of on-chain settlement submissions (seconds)",
+  labelNames: ["outcome"],
   buckets: [0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10],
   registers: [metricsRegistry],
 });
 
 const aggregatorQueueDepth = new Gauge({
-  name: 'aggregator_queue_depth',
-  help: 'Number of sessions currently pending settlement threshold',
+  name: "aggregator_queue_depth",
+  help: "Number of sessions currently pending settlement threshold",
   registers: [metricsRegistry],
 });
 
 const proofGenerationDurationSeconds = new Histogram({
-  name: 'proof_generation_duration_seconds',
-  help: 'Duration of proof input generation pipeline (seconds)',
+  name: "proof_generation_duration_seconds",
+  help: "Duration of proof input generation pipeline (seconds)",
   buckets: [0.001, 0.005, 0.01, 0.05, 0.1, 0.25, 0.5, 1],
   registers: [metricsRegistry],
 });
@@ -100,13 +101,17 @@ function inMemoryRateLimit({
 }: InMemoryRateLimitOptions) {
   const hits = new Map<string, { count: number; resetAt: number }>();
 
-  return (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  return (
+    req: express.Request,
+    res: express.Response,
+    next: express.NextFunction,
+  ) => {
     const now = Date.now();
     const key =
       req.ip ||
-      String(req.headers['x-forwarded-for'] || '') ||
+      String(req.headers["x-forwarded-for"] || "") ||
       req.socket.remoteAddress ||
-      'unknown';
+      "unknown";
 
     const entry = hits.get(key);
     if (!entry || now >= entry.resetAt) {
@@ -115,7 +120,7 @@ function inMemoryRateLimit({
     }
 
     if (entry.count >= max) {
-      res.setHeader('Retry-After', Math.ceil((entry.resetAt - now) / 1000));
+      res.setHeader("Retry-After", Math.ceil((entry.resetAt - now) / 1000));
       return res.status(429).json(message);
     }
 
@@ -128,7 +133,7 @@ function inMemoryRateLimit({
 const apiLimiter = inMemoryRateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 100, // 100 req/min per IP
-  message: { error: 'Too many requests, please try again later.' },
+  message: { error: "Too many requests, please try again later." },
 });
 
 function extractWalletFromXPaymentHeader(
@@ -137,12 +142,14 @@ function extractWalletFromXPaymentHeader(
   if (!headerValue || Array.isArray(headerValue)) return null;
 
   try {
-    const decoded = Buffer.from(headerValue, 'base64').toString('utf-8');
+    const decoded = Buffer.from(headerValue, "base64").toString("utf-8");
     const parsed = JSON.parse(decoded) as { payload?: unknown };
     const payload =
-      typeof parsed.payload === 'string' ? JSON.parse(parsed.payload) : parsed.payload;
+      typeof parsed.payload === "string"
+        ? JSON.parse(parsed.payload)
+        : parsed.payload;
     const from = (payload as { from?: unknown })?.from;
-    if (typeof from !== 'string') return null;
+    if (typeof from !== "string") return null;
     return /^0x[a-fA-F0-9]{40}$/.test(from) ? from.toLowerCase() : null;
   } catch {
     return null;
@@ -155,17 +162,17 @@ type WalletRateLimitOptions = {
   message: Record<string, string>;
 };
 
-function walletRateLimit({
-  windowMs,
-  max,
-  message,
-}: WalletRateLimitOptions) {
+function walletRateLimit({ windowMs, max, message }: WalletRateLimitOptions) {
   const hits = new Map<string, { count: number; resetAt: number }>();
 
-  return (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  return (
+    req: express.Request,
+    res: express.Response,
+    next: express.NextFunction,
+  ) => {
     const now = Date.now();
-    const wallet = extractWalletFromXPaymentHeader(req.headers['x-payment']);
-    const key = wallet || req.ip || req.socket.remoteAddress || 'unknown';
+    const wallet = extractWalletFromXPaymentHeader(req.headers["x-payment"]);
+    const key = wallet || req.ip || req.socket.remoteAddress || "unknown";
 
     const entry = hits.get(key);
     if (!entry || now >= entry.resetAt) {
@@ -174,7 +181,7 @@ function walletRateLimit({
     }
 
     if (entry.count >= max) {
-      res.setHeader('Retry-After', Math.ceil((entry.resetAt - now) / 1000));
+      res.setHeader("Retry-After", Math.ceil((entry.resetAt - now) / 1000));
       return res.status(429).json(message);
     }
 
@@ -190,24 +197,30 @@ const x402WalletLimiter = walletRateLimit({
     const value = Number(process.env.X402_RATE_LIMIT_PER_WALLET || 300);
     return Number.isFinite(value) && value > 0 ? Math.trunc(value) : 300;
   })(),
-  message: { error: 'Too many x402 requests for this wallet. Try again shortly.' },
+  message: {
+    error: "Too many x402 requests for this wallet. Try again shortly.",
+  },
 });
 
 // ============================================================
 //  Global Middleware
 // ============================================================
 
-const corsOrigins = (process.env.CORS_ORIGINS ||
-  'http://localhost:3000,http://localhost:3002,http://127.0.0.1:3000,http://127.0.0.1:3002')
-  .split(',')
+const corsOrigins = (
+  process.env.CORS_ORIGINS ||
+  "http://localhost:3000,http://localhost:3002,http://127.0.0.1:3000,http://127.0.0.1:3002"
+)
+  .split(",")
   .map((origin) => origin.trim())
   .filter(Boolean);
 
-app.use(cors({
-  origin: corsOrigins.includes('*') ? '*' : corsOrigins,
-}));
-app.use(express.json({ limit: '50kb' })); // 50KB body limit (PRD §11.2)
-app.use('/api', apiLimiter);
+app.use(
+  cors({
+    origin: corsOrigins.includes("*") ? "*" : corsOrigins,
+  }),
+);
+app.use(express.json({ limit: "50kb" })); // 50KB body limit (PRD §11.2)
+app.use("/api", apiLimiter);
 
 // ============================================================
 //  Initialize Services
@@ -225,40 +238,51 @@ const settlementService = new SettlementService({
 
 function normalizePrivateKey(value: string): `0x${string}` {
   const trimmed = value.trim();
-  const hex = trimmed.startsWith('0x') ? trimmed : `0x${trimmed}`;
+  const hex = trimmed.startsWith("0x") ? trimmed : `0x${trimmed}`;
   if (!/^0x[a-fA-F0-9]{64}$/.test(hex)) {
-    throw new Error('PRIVATE_KEY must be a valid 32-byte hex string.');
+    throw new Error("PRIVATE_KEY must be a valid 32-byte hex string.");
   }
   return hex as `0x${string}`;
 }
 
 const enableOnchainSettlement =
-  process.env.X402_ENABLE_SETTLEMENT === 'true' || Boolean(process.env.PRIVATE_KEY);
+  process.env.X402_ENABLE_SETTLEMENT === "true" ||
+  Boolean(process.env.PRIVATE_KEY);
 
 let settlementWriter: SettlementWriterService | null = null;
 if (enableOnchainSettlement) {
   const privateKeyRaw = process.env.PRIVATE_KEY;
   if (!privateKeyRaw) {
-    console.warn('[Facilitator] On-chain settlement requested but PRIVATE_KEY is not set.');
+    console.warn(
+      "[Facilitator] On-chain settlement requested but PRIVATE_KEY is not set.",
+    );
   } else {
     try {
       settlementWriter = new SettlementWriterService({
         rpcUrl: RPC_URL,
         chainId: CHAIN_ID,
         privateKey: normalizePrivateKey(privateKeyRaw),
-        providerAddress: process.env.X402_PROVIDER_ADDRESS as `0x${string}` | undefined,
-        sessionVaultAddress: process.env.SESSION_VAULT_ADDRESS as `0x${string}` | undefined,
-        waitForReceipt: process.env.X402_WAIT_FOR_RECEIPT !== 'false',
+        providerAddress: process.env.X402_PROVIDER_ADDRESS as
+          | `0x${string}`
+          | undefined,
+        sessionVaultAddress: process.env.SESSION_VAULT_ADDRESS as
+          | `0x${string}`
+          | undefined,
+        waitForReceipt: process.env.X402_WAIT_FOR_RECEIPT !== "false",
       });
-      console.log('[Facilitator] x402 on-chain settlement writer active');
+      console.log("[Facilitator] x402 on-chain settlement writer active");
     } catch (err) {
-      console.error('[Facilitator] Failed to initialize settlement writer:', err);
+      console.error(
+        "[Facilitator] Failed to initialize settlement writer:",
+        err,
+      );
       settlementWriter = null;
     }
   }
 }
 
-const requireAuthorizedSettler = process.env.X402_REQUIRE_SETTLER_AUTH !== 'false';
+const requireAuthorizedSettler =
+  process.env.X402_REQUIRE_SETTLER_AUTH !== "false";
 
 const settlementAuthorizationState: {
   signerAddress: string | null;
@@ -298,7 +322,10 @@ async function refreshSettlementAuthorization(): Promise<boolean | null> {
     settlementAuthorizationState.authorized = null;
     settlementAuthorizationState.lastCheckedAt = new Date().toISOString();
     settlementAuthorizationState.lastError = err?.message || String(err);
-    console.error('[Facilitator] Failed to verify settlement signer authorization:', err);
+    console.error(
+      "[Facilitator] Failed to verify settlement signer authorization:",
+      err,
+    );
     return null;
   }
 }
@@ -312,15 +339,16 @@ let redisReady: Promise<void> | null = null;
 if (process.env.REDIS_URL) {
   redisUsageStore = new RedisUsageStore({
     url: process.env.REDIS_URL,
-    keyPrefix: process.env.REDIS_PREFIX || 'meap',
+    keyPrefix: process.env.REDIS_PREFIX || "meap",
     ttlSeconds: Number(process.env.REDIS_USAGE_TTL_SECONDS || 7 * 24 * 60 * 60),
   });
-  redisReady = redisUsageStore.connect()
+  redisReady = redisUsageStore
+    .connect()
     .then(() => {
-      console.log('[Facilitator] Redis usage store active');
+      console.log("[Facilitator] Redis usage store active");
     })
     .catch((err) => {
-      console.error('[Facilitator] Redis init failed:', err);
+      console.error("[Facilitator] Redis init failed:", err);
       redisUsageStore = null;
     });
 }
@@ -344,8 +372,8 @@ let emailService: EmailService | null = null;
 if (process.env.RESEND_API_KEY) {
   emailService = new EmailService({
     apiKey: process.env.RESEND_API_KEY,
-    fromAddress: process.env.EMAIL_FROM || 'noreply@arcenpay.io',
-    brandName: process.env.BRAND_NAME || 'ArcenPay',
+    fromAddress: process.env.EMAIL_FROM || "noreply@arcenpay.io",
+    brandName: process.env.BRAND_NAME || "ArcenPay",
   });
 }
 
@@ -368,10 +396,10 @@ if (process.env.TABLELAND_TABLE_NAME) {
   tablelandReady = tablelandService
     .initialize()
     .then(() => {
-      console.log('[Facilitator] Tableland service active');
+      console.log("[Facilitator] Tableland service active");
     })
     .catch((err) => {
-      console.error('[Facilitator] Tableland init failed:', err);
+      console.error("[Facilitator] Tableland init failed:", err);
       tablelandService = null;
     });
 }
@@ -381,23 +409,28 @@ let litService: LitProtocolService | null = null;
 let litReady: Promise<void> | null = null;
 if (process.env.LIT_NETWORK) {
   litService = new LitProtocolService({
-    network: process.env.LIT_NETWORK === 'habanero' ? 'habanero' : 'manzano',
+    network: process.env.LIT_NETWORK === "habanero" ? "habanero" : "manzano",
     registryAddress: CONTRACTS.subscriptionRegistry,
-    chain: CHAIN_ID === 8453 ? 'base' : CHAIN_ID === 84532 ? 'baseSepolia' : 'sepolia',
+    chain:
+      CHAIN_ID === 8453
+        ? "base"
+        : CHAIN_ID === 84532
+          ? "baseSepolia"
+          : "sepolia",
   });
   litReady = litService
     .connect()
     .then(() => {
-      console.log('[Facilitator] Lit service active');
+      console.log("[Facilitator] Lit service active");
     })
     .catch((err) => {
-      console.error('[Facilitator] Lit init failed:', err);
+      console.error("[Facilitator] Lit init failed:", err);
       litService = null;
     });
 }
 
 function getDefaultFlagsForTier(planTier: PlanTier): Record<string, boolean> {
-  if (planTier === 'enterprise') {
+  if (planTier === "enterprise") {
     return {
       webhook_integration: true,
       analytics_dashboard: true,
@@ -407,7 +440,7 @@ function getDefaultFlagsForTier(planTier: PlanTier): Record<string, boolean> {
       priority_support: true,
     };
   }
-  if (planTier === 'pro') {
+  if (planTier === "pro") {
     return {
       webhook_integration: true,
       analytics_dashboard: true,
@@ -442,21 +475,21 @@ async function getSubscriptionSnapshot(tokenId: bigint): Promise<{
   const planFeatures = (await chainClient.readContract({
     address: CONTRACTS.subscriptionRegistry as `0x${string}`,
     abi: SubscriptionRegistryABI,
-    functionName: 'getPlanFeatures',
+    functionName: "getPlanFeatures",
     args: [tokenId],
   })) as [bigint, string];
 
   const expiresAt = (await chainClient.readContract({
     address: CONTRACTS.subscriptionRegistry as `0x${string}`,
     abi: SubscriptionRegistryABI,
-    functionName: 'expiresAt',
+    functionName: "expiresAt",
     args: [tokenId],
   })) as bigint;
 
   const plan = (await chainClient.readContract({
     address: CONTRACTS.planFactory as `0x${string}`,
     abi: PlanFactoryABI,
-    functionName: 'getPlan',
+    functionName: "getPlan",
     args: [planFeatures[0]],
   })) as { billingInterval: number | bigint };
 
@@ -498,13 +531,29 @@ function parseSessionTuple(raw: unknown): {
     | undefined;
 
   return {
-    agent: String(tuple?.agent ?? tuple?.[0] ?? '0x0000000000000000000000000000000000000000'),
-    token: String(tuple?.token ?? tuple?.[1] ?? '0x0000000000000000000000000000000000000000'),
-    balance: BigInt((tuple?.balance ?? tuple?.[2] ?? 0n) as bigint | number | string),
-    totalFunded: BigInt((tuple?.totalFunded ?? tuple?.[3] ?? 0n) as bigint | number | string),
-    totalSettled: BigInt((tuple?.totalSettled ?? tuple?.[4] ?? 0n) as bigint | number | string),
+    agent: String(
+      tuple?.agent ??
+        tuple?.[0] ??
+        "0x0000000000000000000000000000000000000000",
+    ),
+    token: String(
+      tuple?.token ??
+        tuple?.[1] ??
+        "0x0000000000000000000000000000000000000000",
+    ),
+    balance: BigInt(
+      (tuple?.balance ?? tuple?.[2] ?? 0n) as bigint | number | string,
+    ),
+    totalFunded: BigInt(
+      (tuple?.totalFunded ?? tuple?.[3] ?? 0n) as bigint | number | string,
+    ),
+    totalSettled: BigInt(
+      (tuple?.totalSettled ?? tuple?.[4] ?? 0n) as bigint | number | string,
+    ),
     active: Boolean(tuple?.active ?? tuple?.[5] ?? false),
-    createdAt: BigInt((tuple?.createdAt ?? tuple?.[6] ?? 0n) as bigint | number | string),
+    createdAt: BigInt(
+      (tuple?.createdAt ?? tuple?.[6] ?? 0n) as bigint | number | string,
+    ),
   };
 }
 
@@ -513,7 +562,7 @@ function parseSessionTuple(raw: unknown): {
 // ============================================================
 
 // Watch all subscription events and forward to webhooks
-eventListener.on('*', async (event) => {
+eventListener.on("*", async (event) => {
   console.log(`[Facilitator] Event: ${event.type} tokenId=${event.tokenId}`);
 
   // Forward to webhook if configured
@@ -523,8 +572,10 @@ eventListener.on('*', async (event) => {
 });
 
 // Specific handlers for each event type
-eventListener.on('minted', async (event) => {
-  console.log(`[Facilitator] 🎉 New subscriber: ${event.subscriber} (Plan ${event.planId})`);
+eventListener.on("minted", async (event) => {
+  console.log(
+    `[Facilitator] 🎉 New subscriber: ${event.subscriber} (Plan ${event.planId})`,
+  );
   if (tablelandService && event.subscriber) {
     if (tablelandReady) {
       await tablelandReady;
@@ -535,14 +586,14 @@ eventListener.on('minted', async (event) => {
         const features = getDefaultFlagsForTier(snapshot.planTier);
         await tablelandService.syncSubscription({
           walletAddress: event.subscriber,
-          tokenId: toSafeNumber(event.tokenId, 'tokenId'),
+          tokenId: toSafeNumber(event.tokenId, "tokenId"),
           planTier: snapshot.planTier,
-          expiresAt: toSafeNumber(snapshot.expiresAt, 'expiresAt'),
+          expiresAt: toSafeNumber(snapshot.expiresAt, "expiresAt"),
           billingInterval: snapshot.billingInterval,
           features,
         });
       } catch (err) {
-        console.error('[Facilitator] Tableland sync failed on minted:', err);
+        console.error("[Facilitator] Tableland sync failed on minted:", err);
       }
     }
   }
@@ -553,17 +604,36 @@ eventListener.on('minted', async (event) => {
     if (litService && event.subscriber) {
       try {
         const acc = litService.buildSubscriptionACC(event.subscriber);
-        console.log(`[Facilitator] Lit ACC prepared for ${event.subscriber}: ${acc.length} rules`);
+        console.log(
+          `[Facilitator] Lit ACC prepared for ${event.subscriber}: ${acc.length} rules`,
+        );
       } catch (err) {
-        console.error('[Facilitator] Lit ACC generation failed:', err);
+        console.error("[Facilitator] Lit ACC generation failed:", err);
       }
     }
   }
-  // TODO: Send welcome email if subscriber email is known
+  // Send welcome email if subscriber email is known and email service is configured
+  if (emailService && event.subscriber) {
+    try {
+      await emailService.sendTemplate(
+        "welcome" as any,
+        { email: "", walletAddress: event.subscriber },
+        {
+          walletAddress: event.subscriber,
+          planId: event.planId?.toString() || "",
+          tokenId: event.tokenId?.toString() || "",
+        },
+      );
+    } catch (err) {
+      console.error("[Facilitator] Welcome email failed:", err);
+    }
+  }
 });
 
-eventListener.on('renewed', async (event) => {
-  console.log(`[Facilitator] 🔄 Renewed: tokenId=${event.tokenId} until ${event.expiration}`);
+eventListener.on("renewed", async (event) => {
+  console.log(
+    `[Facilitator] 🔄 Renewed: tokenId=${event.tokenId} until ${event.expiration}`,
+  );
   if (tablelandService) {
     if (tablelandReady) {
       await tablelandReady;
@@ -572,23 +642,23 @@ eventListener.on('renewed', async (event) => {
       try {
         const snapshot = await getSubscriptionSnapshot(event.tokenId);
         await tablelandService.updateEntitlementByTokenId(
-          toSafeNumber(event.tokenId, 'tokenId'),
+          toSafeNumber(event.tokenId, "tokenId"),
           {
             plan_tier: snapshot.planTier,
             feature_flags: getDefaultFlagsForTier(snapshot.planTier),
-            expires_at: toSafeNumber(snapshot.expiresAt, 'expiresAt'),
+            expires_at: toSafeNumber(snapshot.expiresAt, "expiresAt"),
             last_renewed: Math.floor(Date.now() / 1000),
             billing_interval: snapshot.billingInterval,
           },
         );
       } catch (err) {
-        console.error('[Facilitator] Tableland sync failed on renewed:', err);
+        console.error("[Facilitator] Tableland sync failed on renewed:", err);
       }
     }
   }
 });
 
-eventListener.on('cancelled', async (event) => {
+eventListener.on("cancelled", async (event) => {
   console.log(`[Facilitator] ❌ Cancelled: tokenId=${event.tokenId}`);
   if (tablelandService) {
     if (tablelandReady) {
@@ -597,21 +667,28 @@ eventListener.on('cancelled', async (event) => {
     if (tablelandService) {
       try {
         await tablelandService.revokeEntitlementByTokenId(
-          toSafeNumber(event.tokenId, 'tokenId'),
+          toSafeNumber(event.tokenId, "tokenId"),
         );
       } catch (err) {
-        console.error('[Facilitator] Tableland revoke failed on cancelled:', err);
+        console.error(
+          "[Facilitator] Tableland revoke failed on cancelled:",
+          err,
+        );
       }
     }
   }
   if (litService) {
-    console.log(`[Facilitator] Lit access revocation queued for token ${event.tokenId}`);
+    console.log(
+      `[Facilitator] Lit access revocation queued for token ${event.tokenId}`,
+    );
   }
 });
 
 // Watch for settlement events
 settlementService.watchSettlements((settlement) => {
-  console.log(`[Facilitator] 💰 Settlement: ${settlement.sessionId} — ${settlement.settlementAmount} (${settlement.callCount} calls)`);
+  console.log(
+    `[Facilitator] 💰 Settlement: ${settlement.sessionId} — ${settlement.settlementAmount} (${settlement.callCount} calls)`,
+  );
 });
 
 // Start event listener
@@ -621,13 +698,13 @@ eventListener.start(12000).catch(console.error);
 //  Health Check
 // ============================================================
 
-app.get('/metrics', async (_req, res) => {
+app.get("/metrics", async (_req, res) => {
   aggregatorQueueDepth.set(aggregatorService.getStats().pendingSettlements);
-  res.setHeader('Content-Type', metricsRegistry.contentType);
+  res.setHeader("Content-Type", metricsRegistry.contentType);
   res.end(await metricsRegistry.metrics());
 });
 
-app.get('/health', async (_req, res) => {
+app.get("/health", async (_req, res) => {
   let blockNumber: string | null = null;
   try {
     blockNumber = (await chainClient.getBlockNumber()).toString();
@@ -636,21 +713,21 @@ app.get('/health', async (_req, res) => {
   }
 
   res.json({
-    status: 'ok',
-    service: 'meap-facilitator',
-    version: '0.1.0',
+    status: "ok",
+    service: "meap-facilitator",
+    version: "0.1.0",
     chainId: CHAIN_ID,
     blockNumber,
     timestamp: new Date().toISOString(),
     services: {
-      eventListener: 'active',
-      webhook: webhookService ? 'active' : 'not configured',
-      email: emailService ? 'active' : 'not configured',
-      tableland: tablelandService ? 'active' : 'not configured',
-      lit: litService ? 'active' : 'not configured',
-      settlementWriter: settlementWriter ? 'active' : 'not configured',
-      aggregator: 'active',
-      redis: redisUsageStore ? 'active' : 'not configured',
+      eventListener: "active",
+      webhook: webhookService ? "active" : "not configured",
+      email: emailService ? "active" : "not configured",
+      tableland: tablelandService ? "active" : "not configured",
+      lit: litService ? "active" : "not configured",
+      settlementWriter: settlementWriter ? "active" : "not configured",
+      aggregator: "active",
+      redis: redisUsageStore ? "active" : "not configured",
     },
     settlement: {
       onchainEnabled: Boolean(settlementWriter),
@@ -668,13 +745,13 @@ app.get('/health', async (_req, res) => {
 //  Protocol Info
 // ============================================================
 
-app.get('/info', (_req, res) => {
+app.get("/info", (_req, res) => {
   res.json({
-    protocol: 'MEAP + ZKVUB',
-    version: '0.1.0',
-    x402Version: '1',
-    supportedNetworks: ['base-sepolia', 'base-mainnet'],
-    supportedTokens: ['USDC'],
+    protocol: "MEAP + ZKVUB",
+    version: "0.1.0",
+    x402Version: "1",
+    supportedNetworks: ["base-sepolia", "base-mainnet"],
+    supportedTokens: ["USDC"],
   });
 });
 
@@ -683,12 +760,14 @@ app.get('/info', (_req, res) => {
 // ============================================================
 
 app.use(
-  '/api/premium',
+  "/api/premium",
   (req, res, next) => {
     const startedAt = process.hrtime.bigint();
-    res.on('finish', () => {
+    res.on("finish", () => {
       const status = String(res.statusCode);
-      const endpoint = req.route?.path ? String(req.route.path) : req.path || '/api/premium';
+      const endpoint = req.route?.path
+        ? String(req.route.path)
+        : req.path || "/api/premium";
       x402RequestsTotal.inc({
         endpoint,
         method: req.method,
@@ -696,24 +775,29 @@ app.use(
       });
 
       if (res.statusCode === 402) {
-        const rejectionReason = String(res.getHeader('x-meap-rejection-reason') || 'unknown');
+        const rejectionReason = String(
+          res.getHeader("x-meap-rejection-reason") || "unknown",
+        );
         x402ValidationErrorsTotal.inc({ reason: rejectionReason });
       }
 
-      const durationSeconds = Number(process.hrtime.bigint() - startedAt) / 1_000_000_000;
+      const durationSeconds =
+        Number(process.hrtime.bigint() - startedAt) / 1_000_000_000;
       if (!Number.isNaN(durationSeconds) && durationSeconds >= 0) {
         // Keep queue depth fresh on every premium request.
-        aggregatorQueueDepth.set(aggregatorService.getStats().pendingSettlements);
+        aggregatorQueueDepth.set(
+          aggregatorService.getStats().pendingSettlements,
+        );
       }
     });
     next();
   },
   x402WalletLimiter,
   x402Middleware({
-    planId: 'demo',
-    ratePerCall: '0.001',
-    network: 'base-sepolia',
-    failOpenOnBalanceCheck: process.env.X402_FAIL_OPEN_BALANCE_CHECK === 'true',
+    planId: "demo",
+    ratePerCall: "0.001",
+    network: "base-sepolia",
+    failOpenOnBalanceCheck: process.env.X402_FAIL_OPEN_BALANCE_CHECK === "true",
     ...(settlementWriter
       ? {
           settlePayment: async ({
@@ -731,7 +815,7 @@ app.use(
                 const authorization = await refreshSettlementAuthorization();
                 if (authorization !== true) {
                   throw new Error(
-                    'Facilitator signer is not authorized to settle SessionVault funds.',
+                    "Facilitator signer is not authorized to settle SessionVault funds.",
                   );
                 }
               }
@@ -740,16 +824,18 @@ app.use(
                 signer,
                 amount,
                 sessionIdHint: sessionId,
-                providerAddress: process.env.X402_PROVIDER_ADDRESS as `0x${string}` | undefined,
+                providerAddress: process.env.X402_PROVIDER_ADDRESS as
+                  | `0x${string}`
+                  | undefined,
               });
 
-              observe({ outcome: 'success' });
+              observe({ outcome: "success" });
               return {
                 settledAmount: result.settledAmount,
                 settlementTxHash: result.transactionHash,
               };
             } catch (error) {
-              observe({ outcome: 'error' });
+              observe({ outcome: "error" });
               throw error;
             }
           },
@@ -758,29 +844,29 @@ app.use(
   }),
 );
 
-app.get('/api/premium/data', (req, res) => {
-  const payment = (req as express.Request & {
-    meapPayment?: X402VerifiedPaymentContext;
-  }).meapPayment;
-  let aggregation:
-    | {
-        totalEntries: number;
-        thresholdReached: boolean;
-      }
-    | null = null;
+app.get("/api/premium/data", (req, res) => {
+  const payment = (
+    req as express.Request & {
+      meapPayment?: X402VerifiedPaymentContext;
+    }
+  ).meapPayment;
+  let aggregation: {
+    totalEntries: number;
+    thresholdReached: boolean;
+  } | null = null;
 
   if (payment) {
     const usageTimestamp = Date.now();
-    usageService.logUsage(payment.sessionId || 'default', {
-      endpoint: '/api/premium/data',
-      method: 'GET',
+    usageService.logUsage(payment.sessionId || "default", {
+      endpoint: "/api/premium/data",
+      method: "GET",
       timestamp: usageTimestamp,
     });
 
     aggregation = aggregatorService.addEntry({
-      sessionId: payment.sessionId || 'default',
-      endpoint: '/api/premium/data',
-      method: 'GET',
+      sessionId: payment.sessionId || "default",
+      endpoint: "/api/premium/data",
+      method: "GET",
       timestamp: usageTimestamp,
       responseSize: 0,
       signature: payment.paymentHeader,
@@ -795,10 +881,10 @@ app.get('/api/premium/data', (req, res) => {
           if (!redisUsageStore) return;
 
           await redisUsageStore.appendUsage({
-            sessionId: payment.sessionId || 'default',
+            sessionId: payment.sessionId || "default",
             signer: payment.signer,
-            endpoint: '/api/premium/data',
-            method: 'GET',
+            endpoint: "/api/premium/data",
+            method: "GET",
             timestamp: usageTimestamp,
             amount: payment.settledAmount || payment.amount,
             settlementTxHash: payment.settlementTxHash,
@@ -806,24 +892,24 @@ app.get('/api/premium/data', (req, res) => {
 
           if (payment.settlementTxHash) {
             await redisUsageStore.setLatestSettlementTx(
-              payment.sessionId || 'default',
+              payment.sessionId || "default",
               payment.settlementTxHash,
             );
           }
         } catch (err) {
-          console.error('[Facilitator] Redis usage persist failed:', err);
+          console.error("[Facilitator] Redis usage persist failed:", err);
         }
       })();
     }
   }
 
   res.json({
-    message: 'Premium data accessed successfully',
+    message: "Premium data accessed successfully",
     data: {
       insights: [
-        { metric: 'active_users', value: 15234, change: '+12.5%' },
-        { metric: 'revenue_mrr', value: 45000, change: '+8.3%' },
-        { metric: 'churn_rate', value: 2.1, change: '-0.4%' },
+        { metric: "active_users", value: 15234, change: "+12.5%" },
+        { metric: "revenue_mrr", value: 45000, change: "+8.3%" },
+        { metric: "churn_rate", value: 2.1, change: "-0.4%" },
       ],
     },
     payment: {
@@ -843,7 +929,7 @@ app.get('/api/premium/data', (req, res) => {
 //  Usage Analytics Endpoint
 // ============================================================
 
-app.get('/api/usage/:sessionId', async (req, res) => {
+app.get("/api/usage/:sessionId", async (req, res) => {
   const { sessionId } = req.params;
   let count = usageService.getUsageCount(sessionId);
   let latestSettlementTxHash: string | null = null;
@@ -855,10 +941,11 @@ app.get('/api/usage/:sessionId', async (req, res) => {
       }
       if (redisUsageStore) {
         count = await redisUsageStore.getUsageCount(sessionId);
-        latestSettlementTxHash = await redisUsageStore.getLatestSettlementTx(sessionId);
+        latestSettlementTxHash =
+          await redisUsageStore.getLatestSettlementTx(sessionId);
       }
     } catch (err) {
-      console.error('[Facilitator] Redis usage read failed:', err);
+      console.error("[Facilitator] Redis usage read failed:", err);
     }
   }
 
@@ -866,14 +953,14 @@ app.get('/api/usage/:sessionId', async (req, res) => {
     sessionId,
     callCount: count,
     latestSettlementTxHash,
-    source: redisUsageStore ? 'redis' : 'memory',
+    source: redisUsageStore ? "redis" : "memory",
   });
 });
 
-app.get('/api/usage/:sessionId/report', (req, res) => {
+app.get("/api/usage/:sessionId/report", (req, res) => {
   const observe = proofGenerationDurationSeconds.startTimer();
   const { sessionId } = req.params;
-  let circuitInputs: ReturnType<AggregatorService['getCircuitInputs']>;
+  let circuitInputs: ReturnType<AggregatorService["getCircuitInputs"]>;
   try {
     circuitInputs = aggregatorService.getCircuitInputs(sessionId);
   } finally {
@@ -890,7 +977,7 @@ app.get('/api/usage/:sessionId/report', (req, res) => {
   });
 });
 
-app.get('/api/usage/:sessionId/logs', async (req, res) => {
+app.get("/api/usage/:sessionId/logs", async (req, res) => {
   const { sessionId } = req.params;
   const limitParam = Number(req.query.limit || 100);
   const limit = Number.isFinite(limitParam)
@@ -900,9 +987,10 @@ app.get('/api/usage/:sessionId/logs', async (req, res) => {
   if (!redisUsageStore) {
     return res.json({
       sessionId,
-      source: 'memory',
+      source: "memory",
       entries: [],
-      message: 'Redis usage store not configured. Set REDIS_URL to enable durable usage logs.',
+      message:
+        "Redis usage store not configured. Set REDIS_URL to enable durable usage logs.",
     });
   }
 
@@ -911,24 +999,24 @@ app.get('/api/usage/:sessionId/logs', async (req, res) => {
       await redisReady;
     }
     if (!redisUsageStore) {
-      return res.json({ sessionId, source: 'memory', entries: [] });
+      return res.json({ sessionId, source: "memory", entries: [] });
     }
     const entries = await redisUsageStore.getUsageEntries(sessionId, limit);
     return res.json({
       sessionId,
-      source: 'redis',
+      source: "redis",
       limit,
       count: entries.length,
       entries,
     });
   } catch (err: any) {
     return res.status(500).json({
-      error: err?.message || 'Failed to fetch usage logs.',
+      error: err?.message || "Failed to fetch usage logs.",
     });
   }
 });
 
-app.get('/api/aggregator/stats', (_req, res) => {
+app.get("/api/aggregator/stats", (_req, res) => {
   const stats = aggregatorService.getStats();
   aggregatorQueueDepth.set(stats.pendingSettlements);
   res.json({
@@ -937,7 +1025,7 @@ app.get('/api/aggregator/stats', (_req, res) => {
   });
 });
 
-app.get('/api/ops/settlement/status', async (_req, res) => {
+app.get("/api/ops/settlement/status", async (_req, res) => {
   await refreshSettlementAuthorization();
   return res.json({
     onchainEnabled: Boolean(settlementWriter),
@@ -954,12 +1042,12 @@ app.get('/api/ops/settlement/status', async (_req, res) => {
 //  Entitlement Flags Endpoint (Tableland + On-Chain fallback)
 // ============================================================
 
-app.get('/api/entitlements/:wallet/flags', async (req, res) => {
-  const wallet = String(req.params.wallet || '').trim();
+app.get("/api/entitlements/:wallet/flags", async (req, res) => {
+  const wallet = String(req.params.wallet || "").trim();
   if (!isValidAddress(wallet)) {
     return res.status(400).json({
       ok: false,
-      error: 'Invalid wallet address.',
+      error: "Invalid wallet address.",
     });
   }
 
@@ -975,7 +1063,7 @@ app.get('/api/entitlements/:wallet/flags', async (req, res) => {
         if (Object.keys(flags).length > 0) {
           return res.json({
             ok: true,
-            source: 'tableland',
+            source: "tableland",
             wallet: normalizedWallet,
             flags,
             updatedAt: Date.now(),
@@ -987,14 +1075,14 @@ app.get('/api/entitlements/:wallet/flags', async (req, res) => {
     const hasActive = (await chainClient.readContract({
       address: CONTRACTS.subscriptionRegistry as `0x${string}`,
       abi: SubscriptionRegistryABI,
-      functionName: 'hasActiveSubscription',
+      functionName: "hasActiveSubscription",
       args: [normalizedWallet],
     })) as boolean;
 
     if (!hasActive) {
       return res.json({
         ok: true,
-        source: 'onchain',
+        source: "onchain",
         wallet: normalizedWallet,
         flags: {},
         updatedAt: Date.now(),
@@ -1004,14 +1092,14 @@ app.get('/api/entitlements/:wallet/flags', async (req, res) => {
     const tokenId = (await chainClient.readContract({
       address: CONTRACTS.subscriptionRegistry as `0x${string}`,
       abi: SubscriptionRegistryABI,
-      functionName: 'getWalletSubscription',
+      functionName: "getWalletSubscription",
       args: [normalizedWallet],
     })) as bigint;
 
     if (tokenId <= 0n) {
       return res.json({
         ok: true,
-        source: 'onchain',
+        source: "onchain",
         wallet: normalizedWallet,
         flags: {},
         updatedAt: Date.now(),
@@ -1023,7 +1111,7 @@ app.get('/api/entitlements/:wallet/flags', async (req, res) => {
 
     return res.json({
       ok: true,
-      source: 'onchain',
+      source: "onchain",
       wallet: normalizedWallet,
       tokenId: tokenId.toString(),
       planTier: snapshot.planTier,
@@ -1033,7 +1121,7 @@ app.get('/api/entitlements/:wallet/flags', async (req, res) => {
   } catch (err: any) {
     return res.status(500).json({
       ok: false,
-      error: err?.message || 'Failed to resolve entitlement flags.',
+      error: err?.message || "Failed to resolve entitlement flags.",
     });
   }
 });
@@ -1042,12 +1130,14 @@ app.get('/api/entitlements/:wallet/flags', async (req, res) => {
 //  Session Balance Endpoint
 // ============================================================
 
-app.get('/api/session/:agentAddress/balance', async (req, res) => {
+app.get("/api/session/:agentAddress/balance", async (req, res) => {
   if (!isValidAddress(req.params.agentAddress)) {
-    return res.status(400).json({ error: 'Invalid agent address.' });
+    return res.status(400).json({ error: "Invalid agent address." });
   }
   try {
-    const balance = await settlementService.getSessionBalance(req.params.agentAddress);
+    const balance = await settlementService.getSessionBalance(
+      req.params.agentAddress,
+    );
     res.json({
       agentAddress: req.params.agentAddress,
       balance: balance.toString(),
@@ -1057,10 +1147,10 @@ app.get('/api/session/:agentAddress/balance', async (req, res) => {
   }
 });
 
-app.get('/api/session/:agentAddress', async (req, res) => {
+app.get("/api/session/:agentAddress", async (req, res) => {
   const { agentAddress } = req.params;
   if (!isValidAddress(agentAddress)) {
-    return res.status(400).json({ error: 'Invalid agent address.' });
+    return res.status(400).json({ error: "Invalid agent address." });
   }
 
   const limitParam = Number(req.query.limit || 20);
@@ -1072,7 +1162,7 @@ app.get('/api/session/:agentAddress', async (req, res) => {
     const sessionIds = (await chainClient.readContract({
       address: CONTRACTS.sessionVault as `0x${string}`,
       abi: SessionVaultABI,
-      functionName: 'getAgentSessions',
+      functionName: "getAgentSessions",
       args: [agentAddress as `0x${string}`],
     })) as string[];
 
@@ -1101,14 +1191,18 @@ app.get('/api/session/:agentAddress', async (req, res) => {
       sessions,
     });
   } catch (err: any) {
-    return res.status(500).json({ error: err?.message || 'Failed to fetch sessions.' });
+    return res
+      .status(500)
+      .json({ error: err?.message || "Failed to fetch sessions." });
   }
 });
 
-app.get('/api/session/details/:sessionId', async (req, res) => {
-  const sessionId = String(req.params.sessionId || '').trim();
+app.get("/api/session/details/:sessionId", async (req, res) => {
+  const sessionId = String(req.params.sessionId || "").trim();
   if (!isBytes32(sessionId)) {
-    return res.status(400).json({ error: 'sessionId must be a bytes32 hex value.' });
+    return res
+      .status(400)
+      .json({ error: "sessionId must be a bytes32 hex value." });
   }
 
   try {
@@ -1126,7 +1220,9 @@ app.get('/api/session/details/:sessionId', async (req, res) => {
       createdAt: details.createdAt.toString(),
     });
   } catch (err: any) {
-    return res.status(500).json({ error: err?.message || 'Failed to fetch session details.' });
+    return res
+      .status(500)
+      .json({ error: err?.message || "Failed to fetch session details." });
   }
 });
 
@@ -1134,13 +1230,92 @@ app.get('/api/session/details/:sessionId', async (req, res) => {
 //  Webhook Delivery Log Endpoint
 // ============================================================
 
-app.get('/api/webhooks/log', (_req, res) => {
+app.get("/api/webhooks/log", (_req, res) => {
   if (!webhookService) {
     return res.json({ configured: false, log: [] });
   }
   res.json({
     configured: true,
     log: webhookService.getDeliveryLog(),
+  });
+});
+
+app.post("/api/webhooks/replay/:deliveryId", async (req, res) => {
+  if (!webhookService) {
+    return res.status(503).json({ error: "Webhooks not configured" });
+  }
+  const log = webhookService.getDeliveryLog(200);
+  const entry = log.find((e) => e.id === req.params.deliveryId);
+  if (!entry) {
+    return res.status(404).json({ error: "Delivery not found" });
+  }
+  try {
+    await webhookService.deliver(
+      {
+        event: entry.event,
+        timestamp: Date.now(),
+        data: { replayed: true, originalId: entry.id },
+      },
+      1,
+    );
+    return res.json({ success: true, message: `Replayed webhook ${entry.id}` });
+  } catch (err: any) {
+    return res.status(500).json({ error: err?.message || "Replay failed" });
+  }
+});
+
+app.post("/api/webhooks/test", async (_req, res) => {
+  if (!webhookService) {
+    return res.status(503).json({ error: "Webhooks not configured" });
+  }
+  try {
+    await webhookService.deliver(
+      { event: "test.ping", timestamp: Date.now(), data: { test: true } },
+      1,
+    );
+    return res.json({ success: true, message: "Test webhook sent" });
+  } catch (err: any) {
+    return res.status(500).json({ error: err?.message || "Test failed" });
+  }
+});
+
+app.get("/api/email/templates", (_req, res) => {
+  const templates = [
+    {
+      id: "welcome",
+      name: "Welcome",
+      description: "Sent when a subscriber mints their first subscription NFT",
+    },
+    {
+      id: "renewal_receipt",
+      name: "Renewal Receipt",
+      description: "Sent after a successful subscription renewal",
+    },
+    {
+      id: "payment_failed",
+      name: "Payment Failed",
+      description: "Sent when an autopay charge fails",
+    },
+    {
+      id: "expiring_soon",
+      name: "Expiring Soon",
+      description: "Sent 3 days before subscription expiry",
+    },
+    {
+      id: "access_revoked",
+      name: "Access Revoked",
+      description: "Sent when a subscription is cancelled",
+    },
+    {
+      id: "low_balance",
+      name: "Low Session Balance",
+      description: "Sent when session vault balance drops below threshold",
+    },
+  ];
+  res.json({
+    configured: !!emailService,
+    brandName: process.env.BRAND_NAME || "MEAP",
+    templates,
   });
 });
 
@@ -1157,18 +1332,18 @@ app.listen(PORT, () => {
 ║   🔗  Chain: ${String(CHAIN_ID).padEnd(32)}║
 ║   💰  x402 Protocol: Active                 ║
 ║   📣  Events: Watching                      ║
-║   🔔  Webhooks: ${(webhookService ? 'Active' : 'Off').padEnd(28)}║
-║   ✉️   Email: ${(emailService ? 'Active' : 'Off').padEnd(30)}║
-║   ⛓️   Settlement: ${(settlementWriter ? 'On-chain' : 'Verify-only').padEnd(25)}║
-║   🧠  Redis Logs: ${(redisUsageStore ? 'Active' : 'Off').padEnd(27)}║
+║   🔔  Webhooks: ${(webhookService ? "Active" : "Off").padEnd(28)}║
+║   ✉️   Email: ${(emailService ? "Active" : "Off").padEnd(30)}║
+║   ⛓️   Settlement: ${(settlementWriter ? "On-chain" : "Verify-only").padEnd(25)}║
+║   🧠  Redis Logs: ${(redisUsageStore ? "Active" : "Off").padEnd(27)}║
 ║                                              ║
 ╚══════════════════════════════════════════════╝
   `);
 });
 
 // Graceful shutdown
-process.on('SIGTERM', () => {
-  console.log('[Facilitator] Shutting down...');
+process.on("SIGTERM", () => {
+  console.log("[Facilitator] Shutting down...");
   eventListener.stop();
   settlementService.stop();
   webhookService?.stop();
