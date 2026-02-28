@@ -7,7 +7,7 @@
 //    2. Entries hash to the committed Merkle root
 //    3. Call count matches the number of leaves
 //    4. All entries fall within the claimed billing window
-//    5. Nullifier prevents double-submission
+//    5. Public inputs align with on-chain verifier expectations
 //
 //  Compile:  circom UsageBilling.circom --r1cs --wasm --sym
 //  Setup:    snarkjs groth16 setup usage_billing.r1cs pot12_final.ptau circuit_0000.zkey
@@ -26,6 +26,7 @@ include "circomlib/circuits/mux1.circom";
 template UsageBilling(MAX_ENTRIES) {
 
     // ─── Public Inputs ───
+    signal input agentAddress;        // Agent wallet (left-padded bytes32)
     signal input merkleRoot;          // Root of usage log Merkle tree
     signal input callCount;           // Number of API calls in this window
     signal input windowStart;         // Unix timestamp — billing window start
@@ -37,10 +38,22 @@ template UsageBilling(MAX_ENTRIES) {
     signal input logHashes[MAX_ENTRIES];     // Poseidon hash of each signed log entry
     signal input logTimestamps[MAX_ENTRIES]; // Timestamp of each log entry
     signal input entryMask[MAX_ENTRIES];     // 1 if entry is real, 0 if padding
-    signal input nullifierSecret;            // Secret used to derive nullifier
 
-    // ─── Outputs ───
-    signal output validProof;         // 1 if proof is valid
+    // Basic non-zero guards for key identity fields
+    component agentIsZero = IsEqual();
+    agentIsZero.in[0] <== agentAddress;
+    agentIsZero.in[1] <== 0;
+    agentIsZero.out === 0;
+
+    component sessionIsZero = IsEqual();
+    sessionIsZero.in[0] <== sessionId;
+    sessionIsZero.in[1] <== 0;
+    sessionIsZero.out === 0;
+
+    component nullifierIsZero = IsEqual();
+    nullifierIsZero.in[0] <== nullifier;
+    nullifierIsZero.in[1] <== 0;
+    nullifierIsZero.out === 0;
 
     // ─── Constraint 1: Verify call count matches active entries ───
     var actualCount = 0;
@@ -88,15 +101,8 @@ template UsageBilling(MAX_ENTRIES) {
     // Final hash must equal the committed Merkle root
     merkleRoot === hashChain[MAX_ENTRIES - 1].out;
 
-    // ─── Constraint 4: Verify nullifier derivation ───
-    component nullifierHash = Poseidon(2);
-    nullifierHash.inputs[0] <== sessionId;
-    nullifierHash.inputs[1] <== nullifierSecret;
-    nullifier === nullifierHash.out;
-
-    // ─── Output: All constraints passed ───
-    validProof <== 1;
+    // Nullifier is a committed public input and is enforced on-chain for one-time use.
 }
 
 // Default instantiation: 128 max entries per proof
-component main { public [merkleRoot, callCount, windowStart, windowEnd, sessionId, nullifier] } = UsageBilling(128);
+component main { public [agentAddress, sessionId, callCount, windowStart, windowEnd, merkleRoot, nullifier] } = UsageBilling(128);

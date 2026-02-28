@@ -427,6 +427,64 @@ function getDefaultFlagsForTier(planTier: PlanTier): Record<string, boolean> {
   };
 }
 
+function isEmailAddress(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
+function getExplorerBaseUrl(chainId: number): string {
+  if (chainId === 8453) return 'https://basescan.org';
+  if (chainId === 84532) return 'https://sepolia.basescan.org';
+  return 'https://sepolia.etherscan.io';
+}
+
+function parseSubscriberEmailMap(): Map<string, string> {
+  const map = new Map<string, string>();
+
+  const jsonRaw = process.env.SUBSCRIBER_EMAIL_MAP_JSON;
+  if (jsonRaw) {
+    try {
+      const parsed = JSON.parse(jsonRaw) as Record<string, unknown>;
+      for (const [address, emailValue] of Object.entries(parsed || {})) {
+        const normalizedAddress = address.toLowerCase();
+        if (!isValidAddress(normalizedAddress) || typeof emailValue !== 'string') {
+          continue;
+        }
+        if (!isEmailAddress(emailValue)) {
+          continue;
+        }
+        map.set(normalizedAddress, emailValue.trim());
+      }
+    } catch (err) {
+      console.error('[Facilitator] Failed to parse SUBSCRIBER_EMAIL_MAP_JSON:', err);
+    }
+  }
+
+  const csvRaw = process.env.SUBSCRIBER_EMAILS;
+  if (csvRaw) {
+    for (const pair of csvRaw.split(',')) {
+      const [addressRaw, emailRaw] = pair.split('=');
+      if (!addressRaw || !emailRaw) {
+        continue;
+      }
+      const normalizedAddress = addressRaw.trim().toLowerCase();
+      const email = emailRaw.trim();
+      if (!isValidAddress(normalizedAddress) || !isEmailAddress(email)) {
+        continue;
+      }
+      map.set(normalizedAddress, email);
+    }
+  }
+
+  return map;
+}
+
+const subscriberEmailMap = parseSubscriberEmailMap();
+
+function resolveSubscriberEmail(address: string | undefined): string | null {
+  if (!address) return null;
+  return subscriberEmailMap.get(address.toLowerCase()) || null;
+}
+
 function toSafeNumber(value: bigint, field: string): number {
   if (value > BigInt(Number.MAX_SAFE_INTEGER)) {
     throw new Error(`[Facilitator] ${field} exceeds JS safe integer range.`);
@@ -525,13 +583,25 @@ eventListener.on('*', async (event) => {
 // Specific handlers for each event type
 eventListener.on('minted', async (event) => {
   console.log(`[Facilitator] 🎉 New subscriber: ${event.subscriber} (Plan ${event.planId})`);
+  let snapshot: Awaited<ReturnType<typeof getSubscriptionSnapshot>> | null = null;
+
+  if (event.subscriber && (tablelandService || emailService)) {
+    try {
+      snapshot = await getSubscriptionSnapshot(event.tokenId);
+    } catch (err) {
+      console.error('[Facilitator] Failed to load subscription snapshot on minted:', err);
+    }
+  }
+
   if (tablelandService && event.subscriber) {
     if (tablelandReady) {
       await tablelandReady;
     }
     if (tablelandService) {
       try {
-        const snapshot = await getSubscriptionSnapshot(event.tokenId);
+        if (!snapshot) {
+          snapshot = await getSubscriptionSnapshot(event.tokenId);
+        }
         const features = getDefaultFlagsForTier(snapshot.planTier);
         await tablelandService.syncSubscription({
           walletAddress: event.subscriber,
@@ -546,6 +616,7 @@ eventListener.on('minted', async (event) => {
       }
     }
   }
+
   if (litService) {
     if (litReady) {
       await litReady;
@@ -559,7 +630,38 @@ eventListener.on('minted', async (event) => {
       }
     }
   }
-  // TODO: Send welcome email if subscriber email is known
+
+  if (emailService && event.subscriber) {
+    const email = resolveSubscriberEmail(event.subscriber);
+    if (email) {
+      try {
+        const planTier = snapshot?.planTier || (event.planId ? `plan-${event.planId.toString()}` : 'unknown');
+        const expiresAtDate =
+          snapshot?.expiresAt !== undefined
+            ? new Date(Number(snapshot.expiresAt) * 1000)
+            : (event.expiration ? new Date(Number(event.expiration) * 1000) : null);
+        const txHash = event.transactionHash;
+
+        await emailService.sendTemplate(
+          'welcome',
+          {
+            email,
+            walletAddress: event.subscriber,
+          },
+          {
+            walletAddress: event.subscriber,
+            tokenId: event.tokenId.toString(),
+            planTier,
+            expiresAt: expiresAtDate ? expiresAtDate.toISOString() : 'N/A',
+            txHash,
+            explorerUrl: `${getExplorerBaseUrl(CHAIN_ID)}/tx/${txHash}`,
+          },
+        );
+      } catch (err) {
+        console.error('[Facilitator] Welcome email dispatch failed:', err);
+      }
+    }
+  }
 });
 
 eventListener.on('renewed', async (event) => {

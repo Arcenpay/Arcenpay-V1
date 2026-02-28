@@ -7,7 +7,7 @@
     "dev": "next dev --port 3003",
     "build": "next build",
     "start": "next start",
-    "typecheck": "next typegen && tsc --noEmit",
+    "typecheck": "mkdir -p .next/types && next typegen && tsc --noEmit",
     "clean": "rm -rf .next out"
   },
   "dependencies": {

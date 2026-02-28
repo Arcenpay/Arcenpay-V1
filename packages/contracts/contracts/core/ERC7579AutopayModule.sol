@@ -162,13 +162,18 @@ contract ERC7579AutopayModule is IERC7579AutopayModule, ReentrancyGuard {
         }
 
         // Renew subscription NFT
-        subscriptionRegistry.renew(
-            _getOrMintToken(account, config.planId),
-            uint64(config.interval)
-        );
+        uint256 tokenId = _getOrMintToken(account, config.planId);
+        subscriptionRegistry.renew(tokenId, uint64(config.interval));
 
         emit PaymentExecuted(account, config.merchant, amount, block.timestamp);
-        // TODO: Emit cross-chain GMP message to update MirrorRegistry
+        emit CrossChainSyncRequested(
+            account,
+            config.planId,
+            tokenId,
+            amount,
+            uint64(config.interval),
+            block.timestamp
+        );
     }
 
     // ============================================================

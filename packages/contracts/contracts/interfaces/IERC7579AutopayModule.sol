@@ -61,6 +61,16 @@ interface IERC7579AutopayModule is IERC7579Module {
         uint256 timestamp
     );
 
+    /// @notice Emitted when autopay execution requests cross-chain mirror sync
+    event CrossChainSyncRequested(
+        address indexed account,
+        uint256 indexed planId,
+        uint256 indexed tokenId,
+        uint256 amount,
+        uint64 interval,
+        uint256 timestamp
+    );
+
     /// @notice Emitted when autopay is revoked
     event AutopayRevoked(address indexed account);
 

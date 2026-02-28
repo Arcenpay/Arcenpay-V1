@@ -23,6 +23,7 @@
   "scripts": {
     "build": "tsup src/index.ts src/tableland.ts --format cjs,esm --dts",
     "dev": "tsup src/index.ts src/tableland.ts --format cjs,esm --dts --watch",
+    "test": "node --no-warnings=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types --test test/**/*.test.mjs",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist"
   },

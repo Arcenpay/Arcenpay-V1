@@ -42,7 +42,7 @@ export class RedisUsageStore {
     };
 
     this.client = createClient({ url: this.config.url });
-    this.client.on('error', (err) => {
+    this.client.on('error', (err: unknown) => {
       console.error('[RedisUsageStore] Redis error:', err);
     });
   }
@@ -78,14 +78,14 @@ export class RedisUsageStore {
     const upper = Math.max(0, limit - 1);
     const values = await this.client.lRange(sessionKey(this.config.keyPrefix, sessionId), 0, upper);
     return values
-      .map((value) => {
+      .map((value: string) => {
         try {
           return JSON.parse(value) as PersistedUsageEntry;
         } catch {
           return null;
         }
       })
-      .filter((value): value is PersistedUsageEntry => value !== null);
+      .filter((value: PersistedUsageEntry | null): value is PersistedUsageEntry => value !== null);
   }
 
   async setLatestSettlementTx(sessionId: string, txHash: string): Promise<void> {

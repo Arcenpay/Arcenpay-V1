@@ -12,6 +12,17 @@ interface State {
     error: Error | null;
 }
 
+declare global {
+    interface Window {
+        Sentry?: {
+            captureException?: (
+                error: unknown,
+                context?: { extra?: Record<string, unknown> },
+            ) => void;
+        };
+    }
+}
+
 /**
  * ErrorBoundary — Catch rendering errors in contract UI sections.
  * PRD §16 — React ErrorBoundary around all contract-dependent UI.
@@ -28,7 +39,13 @@ export class ErrorBoundary extends Component<Props, State> {
 
     componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
         console.error("[ErrorBoundary]", error, errorInfo);
-        // TODO: Send to Sentry when configured
+        if (typeof window !== "undefined" && window.Sentry?.captureException) {
+            window.Sentry.captureException(error, {
+                extra: {
+                    componentStack: errorInfo.componentStack,
+                },
+            });
+        }
     }
 
     render() {
