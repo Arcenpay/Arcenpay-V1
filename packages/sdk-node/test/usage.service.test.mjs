@@ -5,6 +5,15 @@ import { UsageService } from '../src/services/usage.ts';
 
 const ZERO_ROOT = `0x${'0'.repeat(64)}`;
 const DEFAULT_AGENT = `0x${'1'.repeat(40)}`;
+const SNARK_FIELD =
+  21888242871839275222246405745257275088548364400416034343698204186575808495617n;
+
+function fieldToBytes32(value) {
+  const asBigInt = BigInt(value);
+  let normalized = asBigInt % SNARK_FIELD;
+  if (normalized < 0n) normalized += SNARK_FIELD;
+  return `0x${normalized.toString(16).padStart(64, '0')}`;
+}
 
 test('logUsage signs entries and aggregateUsage includes signed logs', async () => {
   const usage = new UsageService({
@@ -111,11 +120,11 @@ test('generateProof uses configured circom prover output when enabled', async ()
     b: [[3n, 4n], [5n, 6n]],
     c: [7n, 8n],
   });
-  assert.equal(result.publicInputs.agentAddress, agentBytes32);
-  assert.equal(result.publicInputs.sessionId, sessionBytes32);
+  assert.equal(result.publicInputs.agentAddress, fieldToBytes32(BigInt(agentBytes32).toString()));
+  assert.equal(result.publicInputs.sessionId, fieldToBytes32(BigInt(sessionBytes32).toString()));
   assert.equal(result.publicInputs.callCount, 2n);
-  assert.equal(result.publicInputs.merkleRoot, merkleRoot);
-  assert.equal(result.publicInputs.nullifier, nullifier);
+  assert.equal(result.publicInputs.merkleRoot, fieldToBytes32(BigInt(merkleRoot).toString()));
+  assert.equal(result.publicInputs.nullifier, fieldToBytes32(BigInt(nullifier).toString()));
 });
 
 test('generateProof fails clearly when circom mode is forced without prover/artifacts', async () => {

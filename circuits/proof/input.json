@@ -1,0 +1,10 @@
+{
+  "agentAddress": "12345",
+  "sessionId": "67890",
+  "callCount": 3,
+  "windowStart": 1700000000,
+  "windowEnd": 1700000300,
+  "nullifier": "555",
+  "logHashes": ["101", "202", "303"],
+  "logTimestamps": [1700000001, 1700000002, 1700000003]
+}

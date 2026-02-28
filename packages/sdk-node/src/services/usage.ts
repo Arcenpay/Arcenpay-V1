@@ -105,6 +105,8 @@ const CHAIN_MAP: Record<number, any> = {
   8453: base,
 };
 
+const SNARK_FIELD =
+  21888242871839275222246405745257275088548364400416034343698204186575808495617n;
 const MAX_UINT64 = (1n << 64n) - 1n;
 
 /**
@@ -419,6 +421,7 @@ export class UsageService {
     const normalizedInputs = this.normalizeInputsForContract(basePublicInputs);
     const logHashes = aggregation.logs.map((entry) => this.hashEntry(entry));
     const logTimestamps = aggregation.logs.map((entry) => this.toFieldString(entry.callData.timestamp));
+    const commitment = this.computeCircomCommitment(logHashes, logTimestamps);
 
     const input: CircomProofInput = {
       agentAddress: this.toFieldString(normalizedInputs.agentAddress),
@@ -426,7 +429,7 @@ export class UsageService {
       callCount: this.toFieldString(normalizedInputs.callCount),
       windowStart: this.toFieldString(normalizedInputs.windowStart),
       windowEnd: this.toFieldString(normalizedInputs.windowEnd),
-      merkleRoot: this.toFieldString(normalizedInputs.merkleRoot),
+      merkleRoot: commitment,
       nullifier: this.toFieldString(normalizedInputs.nullifier),
       logHashes: logHashes.map((value) => this.toFieldString(value)),
       logTimestamps,
@@ -674,27 +677,49 @@ export class UsageService {
   }
 
   private toFieldString(value: string | bigint | number): string {
+    let parsed: bigint;
+
     if (typeof value === 'bigint' || typeof value === 'number') {
-      return BigInt(value).toString();
+      parsed = BigInt(value);
+    } else {
+      const normalized = value.trim();
+      if (/^0x[a-fA-F0-9]+$/.test(normalized)) {
+        parsed = BigInt(normalized);
+      } else if (/^-?[0-9]+$/.test(normalized)) {
+        parsed = BigInt(normalized);
+      } else {
+        throw new Error(`Invalid field value: ${value}`);
+      }
     }
 
-    const normalized = value.trim();
-    if (/^0x[a-fA-F0-9]+$/.test(normalized)) {
-      return BigInt(normalized).toString();
-    }
-    if (/^-?[0-9]+$/.test(normalized)) {
-      return BigInt(normalized).toString();
-    }
-
-    throw new Error(`Invalid field value: ${value}`);
+    const modded = this.modField(parsed);
+    return modded.toString();
   }
 
   private fieldToBytes32(value: string | bigint): `0x${string}` {
-    const asBigInt = BigInt(value);
+    const asBigInt = this.modField(BigInt(value));
     if (asBigInt < 0n) {
       throw new Error('Field value cannot be negative.');
     }
     return `0x${asBigInt.toString(16).padStart(64, '0')}` as `0x${string}`;
+  }
+
+  private modField(value: bigint): bigint {
+    let normalized = value % SNARK_FIELD;
+    if (normalized < 0n) {
+      normalized += SNARK_FIELD;
+    }
+    return normalized;
+  }
+
+  private computeCircomCommitment(logHashes: string[], logTimestamps: string[]): string {
+    let acc = 0n;
+    for (let i = 0; i < logHashes.length; i += 1) {
+      const logHash = this.modField(BigInt(this.toFieldString(logHashes[i])));
+      const timestamp = this.modField(BigInt(this.toFieldString(logTimestamps[i])));
+      acc = this.modField(acc + this.modField(logHash + timestamp));
+    }
+    return acc.toString();
   }
 
   private async readOnchainRatePerCall(): Promise<bigint> {

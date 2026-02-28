@@ -11,18 +11,54 @@ const crypto = require('crypto');
 const BUILD_DIR = path.join(__dirname, '..', 'build');
 const PROOF_DIR = path.join(__dirname, '..', 'proof');
 const FIELD_SAFE_BYTES = 31;
+const SNARK_FIELD =
+    21888242871839275222246405745257275088548364400416034343698204186575808495617n;
+
+function modField(value) {
+    let normalized = value % SNARK_FIELD;
+    if (normalized < 0n) normalized += SNARK_FIELD;
+    return normalized;
+}
+
+function modInverse(value, modulus = SNARK_FIELD) {
+    let a = modField(value);
+    if (a === 0n) {
+        throw new Error('Cannot invert zero in field');
+    }
+
+    let t = 0n;
+    let newT = 1n;
+    let r = modulus;
+    let newR = a;
+
+    while (newR !== 0n) {
+        const q = r / newR;
+        [t, newT] = [newT, t - q * newT];
+        [r, newR] = [newR, r - q * newR];
+    }
+
+    if (r > 1n) {
+        throw new Error('Value is not invertible in field');
+    }
+    if (t < 0n) {
+        t += modulus;
+    }
+    return t;
+}
 
 function toFieldString(value) {
     const normalized = `${value}`.trim();
+    let asBigInt;
 
     if (/^0x[a-fA-F0-9]+$/.test(normalized)) {
-        return BigInt(normalized).toString();
-    }
-    if (/^[0-9]+$/.test(normalized)) {
-        return BigInt(normalized).toString();
+        asBigInt = BigInt(normalized);
+    } else if (/^[0-9]+$/.test(normalized)) {
+        asBigInt = BigInt(normalized);
+    } else {
+        throw new Error(`Invalid field element input: ${normalized}`);
     }
 
-    throw new Error(`Invalid field element input: ${normalized}`);
+    return modField(asBigInt).toString();
 }
 
 function deriveNullifierSecret(overrideValue) {
@@ -69,6 +105,17 @@ function normalizeProofForContract(proof) {
     throw new Error('Unsupported proof format from snarkjs');
 }
 
+function computeCommitment(logHashes, logTimestamps, entryMask) {
+    let acc = 0n;
+    for (let i = 0; i < logHashes.length; i++) {
+        const mask = BigInt(entryMask[i] || 0);
+        const hash = BigInt(logHashes[i] || '0');
+        const ts = BigInt(logTimestamps[i] || '0');
+        acc = modField(acc + modField(hash + ts) * mask);
+    }
+    return acc.toString();
+}
+
 /**
  * Generate a Groth16 proof for a billing window
  *
@@ -82,7 +129,6 @@ function normalizeProofForContract(proof) {
  * @param {string} circuitInputs.nullifier
  * @param {string[]} circuitInputs.logHashes
  * @param {string[]} [circuitInputs.logTimestamps]
- * @param {string} [circuitInputs.nullifierSecret]
  */
 async function prove(circuitInputs) {
     const snarkjs = require('snarkjs');
@@ -117,18 +163,36 @@ async function prove(circuitInputs) {
         logTimestamps.push(0);
     }
 
+    const agentAddress = toFieldString(circuitInputs.agentAddress || '0');
+    const sessionId = toFieldString(circuitInputs.sessionId || '0');
+    const nullifier = toFieldString(circuitInputs.nullifier || '0');
+    const windowStart = toFieldString(circuitInputs.windowStart);
+    const windowEnd = toFieldString(circuitInputs.windowEnd);
+    const callCount = toFieldString(circuitInputs.callCount);
+    const commitment = computeCommitment(logHashes, logTimestamps, entryMask);
+
+    if (
+        circuitInputs.merkleRoot !== undefined
+        && toFieldString(circuitInputs.merkleRoot) !== commitment
+    ) {
+        throw new Error('Provided merkleRoot does not match computed circuit commitment.');
+    }
+
     const input = {
-        agentAddress: toFieldString(circuitInputs.agentAddress || '0'),
-        merkleRoot: toFieldString(circuitInputs.merkleRoot),
-        callCount: toFieldString(circuitInputs.callCount),
-        windowStart: toFieldString(circuitInputs.windowStart),
-        windowEnd: toFieldString(circuitInputs.windowEnd),
-        sessionId: toFieldString(circuitInputs.sessionId || '0'),
-        nullifier: toFieldString(circuitInputs.nullifier || '0'),
+        agentAddress,
+        sessionId,
+        callCount,
+        windowStart,
+        windowEnd,
+        merkleRoot: commitment,
+        nullifier,
         logHashes,
         logTimestamps,
         entryMask,
-        nullifierSecret: deriveNullifierSecret(circuitInputs.nullifierSecret),
+        agentAddressInv: modInverse(BigInt(agentAddress)).toString(),
+        sessionIdInv: modInverse(BigInt(sessionId)).toString(),
+        nullifierInv: modInverse(BigInt(nullifier)).toString(),
+        windowDeltaInv: modInverse(modField(BigInt(windowEnd) - BigInt(windowStart))).toString(),
     };
 
     try {
