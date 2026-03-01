@@ -50,3 +50,5 @@ export type {
   CCIPTransportConfig,
   CCIPDispatchResult,
 } from "./services/transport-ccip";
+export { BillingKeeper } from "./services/keeper";
+export type { BillingKeeperConfig } from "./services/keeper";

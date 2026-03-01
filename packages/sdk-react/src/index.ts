@@ -21,3 +21,7 @@ export { BillingHistory } from './components/BillingHistory';
 
 // Hooks
 export { useEntitlement } from './hooks/useEntitlement';
+
+// Utilities
+export { deploySmartAccount } from './lib/zerodev';
+export type { DeploySmartAccountConfig, SmartAccountResult } from './lib/zerodev';

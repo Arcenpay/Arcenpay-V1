@@ -25,6 +25,8 @@ import {
   EmailService,
   TablelandService,
   LitProtocolService,
+  ProofOrchestrator,
+  BillingKeeper,
 } from "@meap/node";
 import {
   PlanFactoryABI,
@@ -229,6 +231,12 @@ app.use("/api", apiLimiter);
 const usageService = new UsageService();
 const aggregatorService = new AggregatorService({
   settlementThreshold: Number(process.env.SETTLEMENT_THRESHOLD || 100),
+});
+
+const proofOrchestrator = new ProofOrchestrator({
+  autoSubmitThreshold: Number(process.env.SETTLEMENT_THRESHOLD || 100),
+  windowDurationSeconds: Number(process.env.PROOF_WINDOW_SECONDS || 3600),
+  maxRetries: Number(process.env.PROOF_MAX_RETRIES || 3),
 });
 
 const settlementService = new SettlementService({
@@ -519,27 +527,27 @@ function parseSessionTuple(raw: unknown): {
 } {
   const tuple = raw as
     | {
-        agent?: string;
-        token?: string;
-        balance?: bigint;
-        totalFunded?: bigint;
-        totalSettled?: bigint;
-        active?: boolean;
-        createdAt?: bigint;
-        [index: number]: unknown;
-      }
+      agent?: string;
+      token?: string;
+      balance?: bigint;
+      totalFunded?: bigint;
+      totalSettled?: bigint;
+      active?: boolean;
+      createdAt?: bigint;
+      [index: number]: unknown;
+    }
     | undefined;
 
   return {
     agent: String(
       tuple?.agent ??
-        tuple?.[0] ??
-        "0x0000000000000000000000000000000000000000",
+      tuple?.[0] ??
+      "0x0000000000000000000000000000000000000000",
     ),
     token: String(
       tuple?.token ??
-        tuple?.[1] ??
-        "0x0000000000000000000000000000000000000000",
+      tuple?.[1] ??
+      "0x0000000000000000000000000000000000000000",
     ),
     balance: BigInt(
       (tuple?.balance ?? tuple?.[2] ?? 0n) as bigint | number | string,
@@ -694,6 +702,57 @@ settlementService.watchSettlements((settlement) => {
 // Start event listener
 eventListener.start(12000).catch(console.error);
 
+// Start proof orchestrator auto-submission
+proofOrchestrator.startAutoSubmit();
+console.log("[Facilitator] ProofOrchestrator auto-submit active");
+
+// Optional: Billing Keeper (if private key is configured and explicitly enabled)
+let billingKeeper: BillingKeeper | null = null;
+if (
+  process.env.ENABLE_BILLING_KEEPER === "true" &&
+  process.env.PRIVATE_KEY
+) {
+  try {
+    billingKeeper = new BillingKeeper({
+      rpcUrl: RPC_URL,
+      chainId: CHAIN_ID,
+      privateKey: normalizePrivateKey(process.env.PRIVATE_KEY),
+      intervalMs: Number(process.env.KEEPER_INTERVAL_MS || 60000),
+      batchSize: Number(process.env.KEEPER_BATCH_SIZE || 20),
+      renewalBufferSeconds: Number(
+        process.env.KEEPER_RENEWAL_BUFFER_SECONDS || 86400,
+      ),
+    });
+
+    // Forward renewal events to webhooks
+    billingKeeper.onRenewal((result) => {
+      if (webhookService) {
+        void webhookService.deliver(
+          {
+            event: result.success
+              ? "subscription.auto_renewed"
+              : "subscription.renewal_failed",
+            timestamp: Date.now(),
+            data: {
+              tokenId: result.tokenId.toString(),
+              subscriber: result.subscriber,
+              txHash: result.txHash,
+              error: result.error,
+            },
+          },
+          1,
+        );
+      }
+    });
+
+    billingKeeper.start();
+    console.log("[Facilitator] BillingKeeper active");
+  } catch (err) {
+    console.error("[Facilitator] BillingKeeper init failed:", err);
+    billingKeeper = null;
+  }
+}
+
 // ============================================================
 //  Health Check
 // ============================================================
@@ -800,46 +859,46 @@ app.use(
     failOpenOnBalanceCheck: process.env.X402_FAIL_OPEN_BALANCE_CHECK === "true",
     ...(settlementWriter
       ? {
-          settlePayment: async ({
-            signer,
-            amount,
-            sessionId,
-          }: {
-            signer: `0x${string}`;
-            amount: bigint;
-            sessionId: string;
-          }) => {
-            const observe = onChainSubmissionsLatencySeconds.startTimer();
-            try {
-              if (requireAuthorizedSettler) {
-                const authorization = await refreshSettlementAuthorization();
-                if (authorization !== true) {
-                  throw new Error(
-                    "Facilitator signer is not authorized to settle SessionVault funds.",
-                  );
-                }
+        settlePayment: async ({
+          signer,
+          amount,
+          sessionId,
+        }: {
+          signer: `0x${string}`;
+          amount: bigint;
+          sessionId: string;
+        }) => {
+          const observe = onChainSubmissionsLatencySeconds.startTimer();
+          try {
+            if (requireAuthorizedSettler) {
+              const authorization = await refreshSettlementAuthorization();
+              if (authorization !== true) {
+                throw new Error(
+                  "Facilitator signer is not authorized to settle SessionVault funds.",
+                );
               }
-
-              const result = await settlementWriter!.settleForSigner({
-                signer,
-                amount,
-                sessionIdHint: sessionId,
-                providerAddress: process.env.X402_PROVIDER_ADDRESS as
-                  | `0x${string}`
-                  | undefined,
-              });
-
-              observe({ outcome: "success" });
-              return {
-                settledAmount: result.settledAmount,
-                settlementTxHash: result.transactionHash,
-              };
-            } catch (error) {
-              observe({ outcome: "error" });
-              throw error;
             }
-          },
-        }
+
+            const result = await settlementWriter!.settleForSigner({
+              signer,
+              amount,
+              sessionIdHint: sessionId,
+              providerAddress: process.env.X402_PROVIDER_ADDRESS as
+                | `0x${string}`
+                | undefined,
+            });
+
+            observe({ outcome: "success" });
+            return {
+              settledAmount: result.settledAmount,
+              settlementTxHash: result.transactionHash,
+            };
+          } catch (error) {
+            observe({ outcome: "error" });
+            throw error;
+          }
+        },
+      }
       : {}),
   }),
 );
@@ -857,7 +916,8 @@ app.get("/api/premium/data", (req, res) => {
 
   if (payment) {
     const usageTimestamp = Date.now();
-    usageService.logUsage(payment.sessionId || "default", {
+    // Route usage through ProofOrchestrator for auto proof generation
+    void proofOrchestrator.recordUsage(payment.sessionId || "default", {
       endpoint: "/api/premium/data",
       method: "GET",
       timestamp: usageTimestamp,
@@ -1320,6 +1380,49 @@ app.get("/api/email/templates", (_req, res) => {
 });
 
 // ============================================================
+//  Proof Orchestrator Monitoring
+// ============================================================
+
+app.get("/api/proofs/active", (_req, res) => {
+  const jobs = proofOrchestrator.getActiveJobs();
+  res.json({
+    count: jobs.length,
+    jobs: jobs.map((j) => ({
+      sessionId: j.sessionId,
+      status: j.status,
+      attempts: j.attempts,
+      windowEnd: j.windowEnd,
+      nullifier: j.nullifier,
+      error: j.error,
+      createdAt: j.createdAt,
+      lastAttemptAt: j.lastAttemptAt,
+    })),
+  });
+});
+
+app.get("/api/proofs/history", (req, res) => {
+  const limitParam = Number(req.query.limit || 50);
+  const limit = Number.isFinite(limitParam)
+    ? Math.max(1, Math.min(Math.trunc(limitParam), 200))
+    : 50;
+  const jobs = proofOrchestrator.getJobHistory(limit);
+  res.json({
+    count: jobs.length,
+    jobs: jobs.map((j) => ({
+      sessionId: j.sessionId,
+      status: j.status,
+      attempts: j.attempts,
+      windowEnd: j.windowEnd,
+      nullifier: j.nullifier,
+      txHash: j.txHash,
+      error: j.error,
+      createdAt: j.createdAt,
+      lastAttemptAt: j.lastAttemptAt,
+    })),
+  });
+});
+
+// ============================================================
 //  Start Server
 // ============================================================
 
@@ -1336,6 +1439,7 @@ app.listen(PORT, () => {
 ║   ✉️   Email: ${(emailService ? "Active" : "Off").padEnd(30)}║
 ║   ⛓️   Settlement: ${(settlementWriter ? "On-chain" : "Verify-only").padEnd(25)}║
 ║   🧠  Redis Logs: ${(redisUsageStore ? "Active" : "Off").padEnd(27)}║
+║   🔬  Proof Orchestrator: Active              ║
 ║                                              ║
 ╚══════════════════════════════════════════════╝
   `);
@@ -1346,6 +1450,8 @@ process.on("SIGTERM", () => {
   console.log("[Facilitator] Shutting down...");
   eventListener.stop();
   settlementService.stop();
+  proofOrchestrator.stop();
+  billingKeeper?.stop();
   webhookService?.stop();
   void redisUsageStore?.stop();
   process.exit(0);
