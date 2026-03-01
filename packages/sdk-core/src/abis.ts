@@ -225,6 +225,29 @@ export const PlanFactoryABI = [
       { name: "billingInterval", type: "uint32", indexed: false },
     ],
   },
+  {
+    type: "function",
+    name: "deactivatePlan",
+    inputs: [{ name: "planId", type: "uint256" }],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "updatePlan",
+    inputs: [
+      { name: "planId", type: "uint256" },
+      { name: "newPrice", type: "uint256" },
+      { name: "newInterval", type: "uint32" },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "event",
+    name: "PlanDeactivated",
+    inputs: [{ name: "planId", type: "uint256", indexed: true }],
+  },
 ] as const;
 
 export const ERC7579AutopayModuleABI = [

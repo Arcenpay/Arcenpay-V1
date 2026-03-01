@@ -244,8 +244,34 @@ export class ProofOrchestrator {
    */
   startAutoSubmit(): void {
     if (this.autoCheckInterval) return;
-    this.autoCheckInterval = setInterval(() => {
-      // Check is handled per-call in recordUsage
+    console.log(
+      `[ProofOrchestrator] Auto-submit started (threshold: ${this.config.autoSubmitThreshold} calls)`,
+    );
+    this.autoCheckInterval = setInterval(async () => {
+      try {
+        const sessions = this.usageService.getAllSessions();
+        for (const sessionId of sessions) {
+          const count = this.usageService.getUsageCount(sessionId);
+          if (count >= this.config.autoSubmitThreshold) {
+            const jobKey = Array.from(this.activeJobs.keys()).find((k) =>
+              k.startsWith(`${sessionId}:`),
+            );
+            if (!jobKey) {
+              console.log(
+                `[ProofOrchestrator] Auto-submit triggered for ${sessionId} (${count} calls)`,
+              );
+              void this.generateAndSubmit(sessionId).catch((err) =>
+                console.error(
+                  `[ProofOrchestrator] Auto-submit failed for ${sessionId}:`,
+                  err,
+                ),
+              );
+            }
+          }
+        }
+      } catch (err) {
+        console.error("[ProofOrchestrator] Auto-submit poll error:", err);
+      }
     }, 30_000);
     if (
       typeof this.autoCheckInterval === "object" &&

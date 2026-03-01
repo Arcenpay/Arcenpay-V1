@@ -10,6 +10,7 @@ import type {
   X402RejectionReason,
   X402VerifiedPaymentContext,
 } from "@meap/core";
+import type { NonceStore } from "../services/nonce-store";
 import {
   X402_VERSION,
   X402_SCHEME,
@@ -74,6 +75,12 @@ export interface X402MiddlewareOptions {
    * Default: 600_000 (10 minutes).
    */
   nonceTtlMs?: number;
+  /**
+   * Pluggable nonce store for durable anti-replay protection.
+   * Defaults to InMemoryNonceStore if not provided.
+   * Use RedisNonceStore for multi-instance production deployments.
+   */
+  nonceStore?: NonceStore;
 }
 
 // EIP-712 domain and types for x402 Payment signature
@@ -171,29 +178,19 @@ export function x402Middleware(options: X402MiddlewareOptions) {
     failOpenOnBalanceCheck = false,
     maxPaymentAgeMs = 300_000, // 5 minutes
     nonceTtlMs = 600_000, // 10 minutes
+    nonceStore: externalNonceStore,
   } = options;
 
   // ── Nonce deduplication store ──────────────────────────────
-  // Tracks recently-seen nonces per signer to prevent replay attacks.
-  // Uses an in-memory Map with periodic TTL cleanup.
-  const seenNonces = new Map<string, number>(); // key: "signer:nonce" → timestamp
-
-  // Periodic cleanup of expired nonces (every 60s)
-  const nonceCleanupInterval = setInterval(() => {
-    const now = Date.now();
-    for (const [key, ts] of seenNonces) {
-      if (now - ts > nonceTtlMs) {
-        seenNonces.delete(key);
-      }
-    }
-  }, 60_000);
-
-  // Allow GC if middleware is discarded (for tests)
-  if (
-    typeof nonceCleanupInterval === "object" &&
-    "unref" in nonceCleanupInterval
-  ) {
-    nonceCleanupInterval.unref();
+  // Uses pluggable NonceStore for durable anti-replay protection.
+  // Falls back to InMemoryNonceStore for backward compatibility.
+  let nonceStore: NonceStore;
+  if (externalNonceStore) {
+    nonceStore = externalNonceStore;
+  } else {
+    // Lazy import to avoid circular deps when NonceStore is unused
+    const { InMemoryNonceStore } = require("../services/nonce-store");
+    nonceStore = new InMemoryNonceStore();
   }
 
   const rateAtomicUnits = parseUnits(ratePerCall, 6);
@@ -372,7 +369,8 @@ export function x402Middleware(options: X402MiddlewareOptions) {
       // Step 3c: Nonce deduplication — reject replay attacks
       const nonce = normalizeNonce(payload.nonce);
       const nonceKey = `${verifiedSigner.toLowerCase()}:${nonce.toString()}`;
-      if (seenNonces.has(nonceKey)) {
+      const isFresh = await nonceStore.markUsed(nonceKey, nonceTtlMs);
+      if (!isFresh) {
         sendRejection(
           res,
           "NONCE_ALREADY_USED" as X402RejectionReason,
@@ -380,7 +378,6 @@ export function x402Middleware(options: X402MiddlewareOptions) {
         );
         return;
       }
-      seenNonces.set(nonceKey, Date.now());
 
       // Step 4: Check session vault balance
       if (verifiedSigner && contracts.sessionVault) {
@@ -446,7 +443,7 @@ export function x402Middleware(options: X402MiddlewareOptions) {
             res,
             "SETTLEMENT_FAILED",
             err?.message ||
-              "Payment verification succeeded but settlement failed",
+            "Payment verification succeeded but settlement failed",
           );
           return;
         }

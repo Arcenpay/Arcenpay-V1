@@ -155,6 +155,13 @@ export class UsageService {
   }
 
   /**
+   * Returns all session IDs with recorded usage
+   */
+  getAllSessions(): string[] {
+    return Array.from(this.logs.keys());
+  }
+
+  /**
    * Aggregates usage logs for a billing window
    */
   aggregateUsage(sessionId: string, windowEnd: number): UsageAggregation {
@@ -189,9 +196,9 @@ export class UsageService {
     const logHashes = aggregation.logs.map((log) =>
       BigInt(
         "0x" +
-          createHash("sha256")
-            .update(JSON.stringify({ ...log.callData, sig: log.signature }))
-            .digest("hex"),
+        createHash("sha256")
+          .update(JSON.stringify({ ...log.callData, sig: log.signature }))
+          .digest("hex"),
       ).toString(),
     );
 
@@ -199,9 +206,9 @@ export class UsageService {
     const merkleRoot =
       logHashes.length > 0
         ? BigInt(
-            "0x" +
-              createHash("sha256").update(logHashes.join(",")).digest("hex"),
-          ).toString()
+          "0x" +
+          createHash("sha256").update(logHashes.join(",")).digest("hex"),
+        ).toString()
         : "0";
 
     // 3. Generate secure nullifier
@@ -227,13 +234,13 @@ export class UsageService {
       const buildDir = this.config.circuitWasmPath
         ? path.dirname(this.config.circuitWasmPath)
         : path.resolve(
-            process.cwd(),
-            "..",
-            "..",
-            "circuits",
-            "build",
-            "UsageBilling_js",
-          );
+          process.cwd(),
+          "..",
+          "..",
+          "circuits",
+          "build",
+          "UsageBilling_js",
+        );
       const wasmPath =
         this.config.circuitWasmPath ||
         path.resolve(buildDir, "UsageBilling.wasm");
@@ -294,34 +301,34 @@ export class UsageService {
     // 5. Build proof and public inputs
     const proof: UsageProof = proofResult
       ? {
-          a: [
-            BigInt(proofResult.proof.pi_a[0]),
-            BigInt(proofResult.proof.pi_a[1]),
+        a: [
+          BigInt(proofResult.proof.pi_a[0]),
+          BigInt(proofResult.proof.pi_a[1]),
+        ],
+        b: [
+          [
+            BigInt(proofResult.proof.pi_b[0][0]),
+            BigInt(proofResult.proof.pi_b[0][1]),
           ],
-          b: [
-            [
-              BigInt(proofResult.proof.pi_b[0][0]),
-              BigInt(proofResult.proof.pi_b[0][1]),
-            ],
-            [
-              BigInt(proofResult.proof.pi_b[1][0]),
-              BigInt(proofResult.proof.pi_b[1][1]),
-            ],
+          [
+            BigInt(proofResult.proof.pi_b[1][0]),
+            BigInt(proofResult.proof.pi_b[1][1]),
           ],
-          c: [
-            BigInt(proofResult.proof.pi_c[0]),
-            BigInt(proofResult.proof.pi_c[1]),
-          ],
-        }
+        ],
+        c: [
+          BigInt(proofResult.proof.pi_c[0]),
+          BigInt(proofResult.proof.pi_c[1]),
+        ],
+      }
       : {
-          // Structured envelope when circuit artifacts aren't available
-          a: [0n, 0n],
-          b: [
-            [0n, 0n],
-            [0n, 0n],
-          ],
-          c: [0n, 0n],
-        };
+        // Structured envelope when circuit artifacts aren't available
+        a: [0n, 0n],
+        b: [
+          [0n, 0n],
+          [0n, 0n],
+        ],
+        c: [0n, 0n],
+      };
 
     const agentAddress = this.signerAccount
       ? this.signerAccount.address
@@ -352,7 +359,7 @@ export class UsageService {
     if (!this.walletClient) {
       throw new Error(
         "UsageService: Cannot submit proof — no signer private key configured. " +
-          "Set signerPrivateKey in UsageServiceConfig.",
+        "Set signerPrivateKey in UsageServiceConfig.",
       );
     }
 

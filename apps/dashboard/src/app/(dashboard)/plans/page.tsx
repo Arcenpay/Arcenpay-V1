@@ -273,12 +273,13 @@ export default function PlansPage() {
               <th>Price</th>
               <th>Interval</th>
               <th>Status</th>
+              <th>Manage</th>
             </tr>
           </thead>
           <tbody>
             {plansLoading ? (
               <tr>
-                <td colSpan={6} style={{ padding: 24 }}>
+                <td colSpan={7} style={{ padding: 24 }}>
                   <div
                     className="skeleton"
                     style={{ width: "100%", height: 20 }}
@@ -288,7 +289,7 @@ export default function PlansPage() {
             ) : plans.length === 0 ? (
               <tr>
                 <td
-                  colSpan={6}
+                  colSpan={7}
                   style={{
                     textAlign: "center",
                     color: "var(--text-muted)",
@@ -314,7 +315,33 @@ export default function PlansPage() {
                       className={`badge ${plan!.active ? "active" : "inactive"}`}
                     >
                       {plan!.active ? "Active" : "Inactive"}
-                    </span>
+                    </span
+                    >
+                  </td>
+                  <td>
+                    {plan!.active && (
+                      <button
+                        className="btn"
+                        style={{
+                          fontSize: 11,
+                          padding: "4px 10px",
+                          borderColor: "var(--danger)",
+                          color: "var(--danger)",
+                        }}
+                        onClick={() => {
+                          writeContract({
+                            address: contracts.planFactory as `0x${string}`,
+                            abi: PlanFactoryABI,
+                            functionName: "deactivatePlan",
+                            args: [BigInt(plan!.id)],
+                            chainId: CHAIN_ID,
+                          });
+                        }}
+                        disabled={isPending || isConfirming}
+                      >
+                        Deactivate
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))

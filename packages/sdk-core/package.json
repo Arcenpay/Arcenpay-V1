@@ -13,10 +13,14 @@
       "default": "./src/index.ts"
     }
   },
-  "files": ["dist", "src"],
+  "files": [
+    "dist",
+    "src"
+  ],
   "scripts": {
     "build": "tsup src/index.ts --format cjs,esm --dts",
     "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
+    "test": "echo 'no tests yet'",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist"
   },

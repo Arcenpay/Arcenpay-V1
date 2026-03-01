@@ -117,7 +117,6 @@ jobs:
   slither:
     name: Slither Analysis
     runs-on: ubuntu-latest
-    continue-on-error: true
 
     steps:
       - uses: actions/checkout@v4
@@ -144,7 +143,7 @@ jobs:
             --config-file slither.config.json \
             --fail-on high \
             --json slither-report.json \
-            --sarif slither-report.sarif || true
+            --sarif slither-report.sarif
 
       - name: Upload Slither report
         if: always()
@@ -176,8 +175,8 @@ jobs:
 
       - name: Subgraph codegen
         working-directory: subgraph
-        run: npx graph codegen || echo "Codegen completed with warnings"
+        run: npx graph codegen
 
       - name: Subgraph build
         working-directory: subgraph
-        run: npx graph build || echo "Build completed with warnings"
+        run: npx graph build

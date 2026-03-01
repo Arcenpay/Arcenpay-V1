@@ -52,3 +52,8 @@ export type {
 } from "./services/transport-ccip";
 export { BillingKeeper } from "./services/keeper";
 export type { BillingKeeperConfig } from "./services/keeper";
+export { InMemoryNonceStore, RedisNonceStore } from "./services/nonce-store";
+export type {
+  NonceStore,
+  RedisLike,
+} from "./services/nonce-store";
