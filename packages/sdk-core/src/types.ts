@@ -247,6 +247,14 @@ export interface UsageReport {
 export interface MEAPConfig {
   network: NetworkConfig;
   litNetwork?: 'manzano' | 'habanero';
+  litConfig?: {
+    /**
+     * Optional Lit decryption endpoint used by FeatureFlagGuard when
+     * `requireDecryption` is enabled.
+     * Supports `{wallet}` and `{feature}` tokens.
+     */
+    decryptEndpoint?: string;
+  };
   tablelandConfig?: {
     /** Facilitator or backend base URL, used by SDK clients to resolve entitlement endpoints. */
     providerUrl?: string;

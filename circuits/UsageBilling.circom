@@ -26,6 +26,7 @@ include "circomlib/circuits/mux1.circom";
 template UsageBilling(MAX_ENTRIES) {
 
     // ─── Public Inputs ───
+    signal input agentAddress;        // Facilitator signer (padded bytes32 as field)
     signal input merkleRoot;          // Root of usage log Merkle tree
     signal input callCount;           // Number of API calls in this window
     signal input windowStart;         // Unix timestamp — billing window start
@@ -37,7 +38,6 @@ template UsageBilling(MAX_ENTRIES) {
     signal input logHashes[MAX_ENTRIES];     // Poseidon hash of each signed log entry
     signal input logTimestamps[MAX_ENTRIES]; // Timestamp of each log entry
     signal input entryMask[MAX_ENTRIES];     // 1 if entry is real, 0 if padding
-    signal input nullifierSecret;            // Secret used to derive nullifier
 
     // ─── Outputs ───
     signal output validProof;         // 1 if proof is valid
@@ -91,7 +91,7 @@ template UsageBilling(MAX_ENTRIES) {
     // ─── Constraint 4: Verify nullifier derivation ───
     component nullifierHash = Poseidon(2);
     nullifierHash.inputs[0] <== sessionId;
-    nullifierHash.inputs[1] <== nullifierSecret;
+    nullifierHash.inputs[1] <== windowEnd;
     nullifier === nullifierHash.out;
 
     // ─── Output: All constraints passed ───
@@ -99,4 +99,4 @@ template UsageBilling(MAX_ENTRIES) {
 }
 
 // Default instantiation: 128 max entries per proof
-component main { public [merkleRoot, callCount, windowStart, windowEnd, sessionId, nullifier] } = UsageBilling(128);
+component main { public [agentAddress, sessionId, callCount, windowStart, windowEnd, merkleRoot, nullifier] } = UsageBilling(128);

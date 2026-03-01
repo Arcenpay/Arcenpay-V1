@@ -6,6 +6,8 @@
 
 import express from "express";
 import cors from "cors";
+import fs from "fs";
+import path from "path";
 import {
   collectDefaultMetrics,
   Counter,
@@ -15,7 +17,6 @@ import {
 } from "prom-client";
 import {
   x402Middleware,
-  UsageService,
   AggregatorService,
   SettlementService,
   SettlementWriterService,
@@ -47,6 +48,90 @@ const CONTRACTS = getContractAddresses(CHAIN_ID);
 const chainClient = createPublicClient({
   transport: http(RPC_URL),
 });
+const FACILITATOR_PROFILE = (
+  process.env.FACILITATOR_PROFILE || "development"
+).toLowerCase();
+const PROOF_MODE =
+  (process.env.PROOF_MODE ||
+    (FACILITATOR_PROFILE === "production" ? "strict" : "dev")) === "strict"
+    ? "strict"
+    : "dev";
+const PROOF_BUILD_DIR =
+  process.env.MEAP_CIRCUIT_BUILD_DIR ||
+  path.resolve(process.cwd(), "circuits", "build");
+const PROOF_WASM_PATH =
+  process.env.ZK_CIRCUIT_WASM_PATH ||
+  path.join(PROOF_BUILD_DIR, "UsageBilling_js", "UsageBilling.wasm");
+const PROOF_ZKEY_PATH =
+  process.env.ZK_CIRCUIT_ZKEY_PATH ||
+  path.join(PROOF_BUILD_DIR, "circuit_final.zkey");
+const PROOF_VKEY_PATH =
+  process.env.ZK_CIRCUIT_VKEY_PATH ||
+  path.join(PROOF_BUILD_DIR, "verification_key.json");
+const PROOF_SIGNER_PRIVATE_KEY =
+  process.env.PROOF_SIGNER_PRIVATE_KEY || process.env.PRIVATE_KEY;
+
+function isHexAddress(value: string | undefined | null): boolean {
+  return typeof value === "string" && /^0x[a-fA-F0-9]{40}$/.test(value);
+}
+
+function validateRuntimeConfig(): void {
+  const errors: string[] = [];
+  const verifierAddress = CONTRACTS.zkUsageVerifier;
+
+  const verifierInvalid =
+    !isHexAddress(verifierAddress) ||
+    verifierAddress === "0x0000000000000000000000000000000000000000";
+  if (verifierInvalid && FACILITATOR_PROFILE === "production") {
+    errors.push(
+      `Invalid ZKUsageVerifier address for chain ${CHAIN_ID}: ${String(verifierAddress)}`,
+    );
+  } else if (verifierInvalid) {
+    console.warn(
+      `[Facilitator] Warning: ZKUsageVerifier address is not configured for chain ${CHAIN_ID}.`,
+    );
+  }
+
+  if (FACILITATOR_PROFILE === "production") {
+    if (PROOF_MODE !== "strict") {
+      errors.push("PROOF_MODE must be 'strict' when FACILITATOR_PROFILE=production.");
+    }
+
+    if (!PROOF_SIGNER_PRIVATE_KEY) {
+      errors.push(
+        "PROOF_SIGNER_PRIVATE_KEY (or PRIVATE_KEY) is required in production for proof submission.",
+      );
+    }
+
+    for (const artifactPath of [PROOF_WASM_PATH, PROOF_ZKEY_PATH, PROOF_VKEY_PATH]) {
+      if (!fs.existsSync(artifactPath)) {
+        errors.push(`Missing proof artifact: ${artifactPath}`);
+      }
+    }
+
+    if (process.env.REDIS_REQUIRED === "true" && !process.env.REDIS_URL) {
+      errors.push("REDIS_URL is required when REDIS_REQUIRED=true.");
+    }
+  }
+
+  if (process.env.WEBHOOK_URL && !process.env.WEBHOOK_SIGNING_SECRET) {
+    errors.push("WEBHOOK_SIGNING_SECRET is required when WEBHOOK_URL is set.");
+  }
+
+  if (process.env.TABLELAND_TABLE_NAME && !process.env.TABLELAND_PRIVATE_KEY) {
+    errors.push(
+      "TABLELAND_PRIVATE_KEY is required when TABLELAND_TABLE_NAME is configured.",
+    );
+  }
+
+  if (errors.length > 0) {
+    throw new Error(
+      `[Facilitator] Runtime configuration invalid:\n- ${errors.join("\n- ")}`,
+    );
+  }
+}
+
+validateRuntimeConfig();
 
 const metricsRegistry = new Registry();
 collectDefaultMetrics({ register: metricsRegistry, prefix: "facilitator_" });
@@ -228,7 +313,6 @@ app.use("/api", apiLimiter);
 //  Initialize Services
 // ============================================================
 
-const usageService = new UsageService();
 const aggregatorService = new AggregatorService({
   settlementThreshold: Number(process.env.SETTLEMENT_THRESHOLD || 100),
 });
@@ -237,7 +321,15 @@ const proofOrchestrator = new ProofOrchestrator({
   autoSubmitThreshold: Number(process.env.SETTLEMENT_THRESHOLD || 100),
   windowDurationSeconds: Number(process.env.PROOF_WINDOW_SECONDS || 3600),
   maxRetries: Number(process.env.PROOF_MAX_RETRIES || 3),
+  chainId: CHAIN_ID,
+  rpcUrl: RPC_URL,
+  signerPrivateKey: PROOF_SIGNER_PRIVATE_KEY,
+  proofMode: PROOF_MODE,
+  circuitWasmPath: PROOF_WASM_PATH,
+  zkeyPath: PROOF_ZKEY_PATH,
+  verificationKeyPath: PROOF_VKEY_PATH,
 });
+const usageService = proofOrchestrator.getUsageService();
 
 const settlementService = new SettlementService({
   rpcUrl: RPC_URL,
@@ -775,6 +867,7 @@ app.get("/health", async (_req, res) => {
     status: "ok",
     service: "meap-facilitator",
     version: "0.1.0",
+    profile: FACILITATOR_PROFILE,
     chainId: CHAIN_ID,
     blockNumber,
     timestamp: new Date().toISOString(),
@@ -797,6 +890,7 @@ app.get("/health", async (_req, res) => {
       lastAuthorizationCheckAt: settlementAuthorizationState.lastCheckedAt,
       authorizationError: settlementAuthorizationState.lastError,
     },
+    proofRuntime: usageService.getProofRuntimeConfig(),
   });
 });
 
@@ -1098,6 +1192,13 @@ app.get("/api/ops/settlement/status", async (_req, res) => {
   });
 });
 
+app.get("/api/ops/proof/runtime", (_req, res) => {
+  return res.json({
+    profile: FACILITATOR_PROFILE,
+    ...usageService.getProofRuntimeConfig(),
+  });
+});
+
 // ============================================================
 //  Entitlement Flags Endpoint (Tableland + On-Chain fallback)
 // ============================================================
@@ -1182,6 +1283,84 @@ app.get("/api/entitlements/:wallet/flags", async (req, res) => {
     return res.status(500).json({
       ok: false,
       error: err?.message || "Failed to resolve entitlement flags.",
+    });
+  }
+});
+
+app.post("/api/lit/decrypt", async (req, res) => {
+  if (!litService) {
+    return res.status(503).json({
+      ok: false,
+      error: "Lit service not configured.",
+    });
+  }
+
+  const {
+    walletAddress,
+    ciphertext,
+    dataToEncryptHash,
+    minimumTier,
+    authSig,
+    sessionSigs,
+  } = req.body || {};
+
+  if (!isValidAddress(String(walletAddress || ""))) {
+    return res.status(400).json({
+      ok: false,
+      error: "walletAddress must be a valid EVM address.",
+    });
+  }
+  if (!ciphertext || !dataToEncryptHash) {
+    return res.status(400).json({
+      ok: false,
+      error: "ciphertext and dataToEncryptHash are required.",
+    });
+  }
+
+  try {
+    if (litReady) {
+      await litReady;
+    }
+    if (!litService) {
+      return res.status(503).json({ ok: false, error: "Lit service unavailable." });
+    }
+
+    const hasActive = (await chainClient.readContract({
+      address: CONTRACTS.subscriptionRegistry as `0x${string}`,
+      abi: SubscriptionRegistryABI,
+      functionName: "hasActiveSubscription",
+      args: [walletAddress.toLowerCase() as `0x${string}`],
+    })) as boolean;
+    if (!hasActive) {
+      return res.status(403).json({
+        ok: false,
+        error: "Active subscription required.",
+      });
+    }
+
+    const conditions =
+      minimumTier && ["starter", "pro", "enterprise"].includes(minimumTier)
+        ? litService.buildTierACC(minimumTier)
+        : litService.buildSubscriptionACC(walletAddress);
+
+    const content = await litService.decrypt(
+      String(ciphertext),
+      String(dataToEncryptHash),
+      conditions,
+      {
+        authSig,
+        sessionSigs,
+      },
+    );
+
+    return res.json({
+      ok: true,
+      content,
+    });
+  } catch (err: any) {
+    return res.status(500).json({
+      ok: false,
+      error: err?.message || "Lit decryption failed.",
     });
   }
 });
@@ -1391,6 +1570,8 @@ app.get("/api/proofs/active", (_req, res) => {
       sessionId: j.sessionId,
       status: j.status,
       attempts: j.attempts,
+      callCount: j.callCount,
+      windowStart: j.windowStart,
       windowEnd: j.windowEnd,
       nullifier: j.nullifier,
       error: j.error,
@@ -1412,8 +1593,11 @@ app.get("/api/proofs/history", (req, res) => {
       sessionId: j.sessionId,
       status: j.status,
       attempts: j.attempts,
+      callCount: j.callCount,
+      windowStart: j.windowStart,
       windowEnd: j.windowEnd,
       nullifier: j.nullifier,
+      settlementAmount: j.settlementAmount,
       txHash: j.txHash,
       error: j.error,
       createdAt: j.createdAt,
@@ -1439,7 +1623,8 @@ app.listen(PORT, () => {
 ║   ✉️   Email: ${(emailService ? "Active" : "Off").padEnd(30)}║
 ║   ⛓️   Settlement: ${(settlementWriter ? "On-chain" : "Verify-only").padEnd(25)}║
 ║   🧠  Redis Logs: ${(redisUsageStore ? "Active" : "Off").padEnd(27)}║
-║   🔬  Proof Orchestrator: Active              ║
+║   🔬  Proof Mode: ${PROOF_MODE.padEnd(31)}║
+║   🧪  Proof Orchestrator: Active            ║
 ║                                              ║
 ╚══════════════════════════════════════════════╝
   `);

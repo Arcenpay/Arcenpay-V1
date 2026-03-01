@@ -16,10 +16,11 @@ export default function ReactSDKPage() {
       <pre><code>{`import { MEAPProvider } from '@meap/react';
 
 <MEAPProvider
-  planRegistryAddress="0xc736f5..."  // SubscriptionRegistry address
-  chainId={11155111}                  // Sepolia
-  rpcUrl="https://..."                // RPC endpoint
-  litNetworkConfig={{ network: 'manzano' }}
+  chainId={11155111}
+  config={{
+    tablelandConfig: { providerUrl: 'http://localhost:3402' },
+    litConfig: { decryptEndpoint: 'http://localhost:3402/api/lit/decrypt' }
+  }}
 >`}</code></pre>
 
       <h2>Components</h2>
@@ -48,6 +49,8 @@ export default function ReactSDKPage() {
       <p>Conditionally renders premium content based on on-chain entitlement state.</p>
       <pre><code>{`<FeatureFlagGuard
   featureKey="analytics_dashboard"
+  walletAddress={address}
+  requireDecryption
   fallback={<UpgradePrompt />}
 >
   <PremiumContent />

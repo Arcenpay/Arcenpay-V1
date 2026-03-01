@@ -17,12 +17,13 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 BUILD_DIR="$ROOT_DIR/build"
 PTAU_DIR="$ROOT_DIR/ptau"
+ENSURE_SCRIPT="$SCRIPT_DIR/ensure-tooling.sh"
 
 # Powers of Tau parameters
 # pot17 supports circuits up to 2^17 = 131,072 constraints
 # For 128 entries, our circuit has ~85k constraints
-PTAU_FILE="$PTAU_DIR/pot17_final.ptau"
-PTAU_URL="https://storage.googleapis.com/zkevm/ptau/powersOfTau28_hez_final_17.ptau"
+PTAU_FILE="${PTAU_FILE:-$PTAU_DIR/pot17_final.ptau}"
+PTAU_URL="${PTAU_URL:-https://storage.googleapis.com/zkevm/ptau/powersOfTau28_hez_final_17.ptau}"
 
 echo "╔══════════════════════════════════════════════════════════╗"
 echo "║  ZKVUB Trusted Setup — UsageBilling Circuit             ║"
@@ -30,16 +31,13 @@ echo "╚═══════════════════════�
 echo ""
 
 # ── Step 0: Check prerequisites ──────────────────────────────
-command -v circom >/dev/null 2>&1 || {
-    echo "❌ circom not found. Install: https://docs.circom.io/getting-started/installation/"
-    exit 1
-}
-
-command -v snarkjs >/dev/null 2>&1 || {
-    echo "⚠️  snarkjs not in PATH, trying npx..."
-    SNARKJS="npx snarkjs"
-}
-SNARKJS="${SNARKJS:-snarkjs}"
+bash "$ENSURE_SCRIPT" circom
+bash "$ENSURE_SCRIPT" snarkjs
+if command -v snarkjs >/dev/null 2>&1; then
+    SNARKJS="snarkjs"
+else
+    SNARKJS="$ROOT_DIR/node_modules/.bin/snarkjs"
+fi
 
 # ── Step 1: Download Powers of Tau ────────────────────────────
 echo "📥 Step 1: Powers of Tau ceremony file"
@@ -48,8 +46,14 @@ mkdir -p "$PTAU_DIR"
 if [ -f "$PTAU_FILE" ]; then
     echo "   ✅ Already present: $PTAU_FILE"
 else
+    if ! command -v curl >/dev/null 2>&1; then
+        echo "❌ curl is required to download PTAU file."
+        echo "   Provide a local file via PTAU_FILE env var, e.g.:"
+        echo "   PTAU_FILE=/absolute/path/pot17_final.ptau npm run setup"
+        exit 1
+    fi
     echo "   Downloading from Hermez ceremony..."
-    curl -L -o "$PTAU_FILE" "$PTAU_URL"
+    curl -fL -o "$PTAU_FILE" "$PTAU_URL"
     echo "   ✅ Downloaded: $PTAU_FILE"
 fi
 

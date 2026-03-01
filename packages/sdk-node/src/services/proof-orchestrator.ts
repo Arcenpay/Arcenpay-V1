@@ -32,6 +32,9 @@ type ProofStatus =
 interface ProofJob {
   sessionId: string;
   windowEnd: number;
+  windowStart: number | null;
+  callCount: string | null;
+  settlementAmount: string | null;
   status: ProofStatus;
   attempts: number;
   nullifier: string | null;
@@ -133,6 +136,9 @@ export class ProofOrchestrator {
     const job: ProofJob = {
       sessionId,
       windowEnd,
+      windowStart: null,
+      callCount: null,
+      settlementAmount: null,
       status: "pending",
       attempts: 0,
       nullifier: null,
@@ -172,6 +178,8 @@ export class ProofOrchestrator {
           job.sessionId,
           job.windowEnd,
         );
+        job.windowStart = Number(publicInputs.windowStart);
+        job.callCount = publicInputs.callCount.toString();
 
         // Step 2: Nullifier deduplication check
         const nullifierKey = publicInputs.nullifier;
@@ -197,6 +205,7 @@ export class ProofOrchestrator {
         job.status = "settled";
         job.nullifier = nullifierKey;
         job.txHash = settlement.transactionHash;
+        job.settlementAmount = settlement.settlementAmount.toString();
         job.error = null;
 
         // Track nullifier

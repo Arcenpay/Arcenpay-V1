@@ -52,6 +52,18 @@ export default function SessionsPage() {
     signerAuthorized: boolean | null;
     signerAddress: string | null;
   } | null>(null);
+  const [proofHistory, setProofHistory] = useState<
+    Array<{
+      sessionId: string;
+      status: string;
+      callCount: string | null;
+      windowStart: number | null;
+      windowEnd: number;
+      settlementAmount: string | null;
+      txHash: string | null;
+      createdAt: number;
+    }>
+  >([]);
   const [facilitatorError, setFacilitatorError] = useState<string | null>(null);
   const [refreshSeq, setRefreshSeq] = useState(0);
 
@@ -128,10 +140,11 @@ export default function SessionsPage() {
 
     const loadFacilitatorData = async () => {
       try {
-        const [statsResponse, settlementResponse, ...usageResponses] =
+        const [statsResponse, settlementResponse, proofsResponse, ...usageResponses] =
           await Promise.all([
             fetch(`${facilitatorBase}/api/aggregator/stats`),
             fetch(`${facilitatorBase}/api/ops/settlement/status`),
+            fetch(`${facilitatorBase}/api/proofs/history?limit=10`),
             ...ids.map((id) => fetch(`${facilitatorBase}/api/usage/${id}`)),
           ]);
 
@@ -151,6 +164,34 @@ export default function SessionsPage() {
                 : Boolean(status.signerAuthorized),
             signerAddress: status.signerAddress || null,
           });
+        }
+
+        if (proofsResponse.ok) {
+          const payload = await proofsResponse.json();
+          const jobs = Array.isArray(payload.jobs) ? payload.jobs : [];
+          setProofHistory(
+            jobs.map((job: any) => ({
+              sessionId: String(job.sessionId || ""),
+              status: String(job.status || "unknown"),
+              callCount:
+                job.callCount === null || job.callCount === undefined
+                  ? null
+                  : String(job.callCount),
+              windowStart:
+                job.windowStart === null || job.windowStart === undefined
+                  ? null
+                  : Number(job.windowStart),
+              windowEnd: Number(job.windowEnd || 0),
+              settlementAmount:
+                job.settlementAmount === null || job.settlementAmount === undefined
+                  ? null
+                  : String(job.settlementAmount),
+              txHash: job.txHash ? String(job.txHash) : null,
+              createdAt: Number(job.createdAt || Date.now()),
+            })),
+          );
+        } else {
+          setProofHistory([]);
         }
 
         const usageEntries = await Promise.all(
@@ -548,7 +589,7 @@ export default function SessionsPage() {
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan={9} style={{ padding: 24 }}>
+                <td colSpan={10} style={{ padding: 24 }}>
                   <div
                     className="skeleton"
                     style={{ width: "100%", height: 20 }}
@@ -558,7 +599,7 @@ export default function SessionsPage() {
             ) : sessions.length === 0 ? (
               <tr>
                 <td
-                  colSpan={9}
+                  colSpan={10}
                   style={{
                     textAlign: "center",
                     color: "var(--text-muted)",
@@ -667,19 +708,55 @@ export default function SessionsPage() {
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <td
-                colSpan={6}
-                style={{
-                  textAlign: "center",
-                  color: "var(--text-muted)",
-                  padding: 40,
-                }}
-              >
-                No settlements yet. Proofs will appear after zk-SNARK
-                verification.
-              </td>
-            </tr>
+            {proofHistory.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={6}
+                  style={{
+                    textAlign: "center",
+                    color: "var(--text-muted)",
+                    padding: 40,
+                  }}
+                >
+                  No settlements yet. Proof submissions will appear here.
+                </td>
+              </tr>
+            ) : (
+              proofHistory.map((job) => (
+                <tr key={`${job.sessionId}-${job.createdAt}`}>
+                  <td>
+                    {job.txHash ? (
+                      <a
+                        href={getExplorerUrl(job.txHash, CHAIN_ID, "tx")}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {truncateAddress(job.txHash)} ↗
+                      </a>
+                    ) : (
+                      <span style={{ color: "var(--text-muted)" }}>
+                        {job.status.toUpperCase()}
+                      </span>
+                    )}
+                  </td>
+                  <td className="address" title={job.sessionId}>
+                    {truncateAddress(job.sessionId)}
+                  </td>
+                  <td>{job.callCount ?? "—"}</td>
+                  <td>
+                    {job.settlementAmount !== null
+                      ? `$${formatUSDC(BigInt(job.settlementAmount))}`
+                      : "—"}
+                  </td>
+                  <td>{job.txHash ? "On-chain" : "—"}</td>
+                  <td>
+                    {job.windowEnd
+                      ? new Date(job.windowEnd * 1000).toLocaleString()
+                      : new Date(job.createdAt).toLocaleString()}
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>

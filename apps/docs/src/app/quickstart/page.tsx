@@ -17,9 +17,15 @@ export default function QuickStartPage() {
 function App() {
   return (
     <MEAPProvider
-      planRegistryAddress="0xc736f5d91aC0039b97A4Fc3540B8f3d59E7FdBa6"
       chainId={11155111}
-      rpcUrl="https://ethereum-sepolia-rpc.publicnode.com"
+      config={{
+        tablelandConfig: {
+          providerUrl: 'http://localhost:3402'
+        },
+        litConfig: {
+          decryptEndpoint: 'http://localhost:3402/api/lit/decrypt'
+        }
+      }}
     >
       {/* Your app content */}
     </MEAPProvider>
@@ -59,9 +65,12 @@ function Checkout({ planId }) {
       <pre><code>{`import { FeatureFlagGuard } from '@meap/react';
 
 function PremiumContent() {
+  const walletAddress = '0x1234...';
   return (
     <FeatureFlagGuard
       featureKey="analytics_dashboard"
+      walletAddress={walletAddress}
+      requireDecryption
       fallback={<UpgradePrompt />}
     >
       <AnalyticsDashboard />

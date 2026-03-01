@@ -55,6 +55,20 @@ export default function OverviewPage() {
         args: [address!],
         chainId: CHAIN_ID,
       },
+      {
+        address: contracts.subscriptionRegistry as `0x${string}`,
+        abi: [
+          {
+            type: "function",
+            name: "totalSupply",
+            stateMutability: "view",
+            inputs: [],
+            outputs: [{ type: "uint256", name: "" }],
+          },
+        ] as const,
+        functionName: "totalSupply",
+        chainId: CHAIN_ID,
+      },
     ],
     query: { enabled: !!address },
   });
@@ -62,6 +76,7 @@ export default function OverviewPage() {
   const planIds = data?.[0]?.result as bigint[] | undefined;
   const totalFees = data?.[1]?.result as bigint | undefined;
   const sessionBalance = data?.[2]?.result as bigint | undefined;
+  const totalSubscribers = data?.[3]?.result as bigint | undefined;
 
   return (
     <>
@@ -101,8 +116,14 @@ export default function OverviewPage() {
         </div>
         <div className="stat-card">
           <div className="label">Subscribers</div>
-          <div className="value">—</div>
-          <div className="change">Indexer required</div>
+          <div className="value">
+            {isLoading ? (
+              <div className="skeleton" style={{ width: 40, height: 32 }} />
+            ) : (
+              Number(totalSubscribers ?? 0n)
+            )}
+          </div>
+          <div className="change">On-chain NFT supply</div>
         </div>
         <div className="stat-card">
           <div className="label">Protocol Fees</div>

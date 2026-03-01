@@ -12,8 +12,13 @@ This runbook covers the highest-risk on-call scenarios from the PRD for MEAP + Z
 ### Immediate Checks
 1. Check facilitator health: `GET /health`.
 2. Check settlement authorization: `GET /api/ops/settlement/status`.
-3. Confirm `SESSION_VAULT_ADDRESS` and `PRIVATE_KEY` are correct in facilitator env.
-4. Verify SessionVault settler authorization for facilitator wallet.
+3. Check proof runtime config: `GET /api/ops/proof/runtime`.
+4. Confirm `PROOF_MODE=strict` in production and verify proof artifacts:
+   - `ZK_CIRCUIT_WASM_PATH`
+   - `ZK_CIRCUIT_ZKEY_PATH`
+   - `ZK_CIRCUIT_VKEY_PATH`
+5. Confirm `SESSION_VAULT_ADDRESS` and `PRIVATE_KEY` are correct in facilitator env.
+6. Verify SessionVault settler authorization for facilitator wallet.
 
 ### Remediation
 1. If unauthorized settler: run

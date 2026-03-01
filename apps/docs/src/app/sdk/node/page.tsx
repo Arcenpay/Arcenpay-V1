@@ -32,7 +32,13 @@ app.get('/api/premium/data', (req, res) => {
       <p>Usage logging and zk-SNARK proof generation for ZKVUB sessions.</p>
       <pre><code>{`import { UsageService } from '@meap/node';
 
-const usage = new UsageService();
+const usage = new UsageService({
+  proofMode: 'strict',
+  circuitWasmPath: './circuits/build/UsageBilling_js/UsageBilling.wasm',
+  zkeyPath: './circuits/build/circuit_final.zkey',
+  verificationKeyPath: './circuits/build/verification_key.json',
+  signerPrivateKey: process.env.PRIVATE_KEY,
+});
 
 // Log API consumption
 await usage.logUsage(sessionId, {

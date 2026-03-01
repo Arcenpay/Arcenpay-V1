@@ -54,6 +54,15 @@ export interface SmartAccountResult {
     alreadyDeployed: boolean;
 }
 
+export interface RevokeAutopayConfig {
+    projectId: string;
+    chainId: number;
+    walletClient: WalletClient;
+    smartAccountAddress: `0x${string}`;
+    bundlerUrl?: string;
+    paymasterUrl?: string;
+}
+
 /**
  * Deploy a ZeroDev Kernel smart account and install the ERC-7579 AutopayModule.
  *
@@ -132,6 +141,24 @@ export async function deploySmartAccount(
 
     if (contracts.autopayModule) {
         try {
+            const initialized = await publicClient.readContract({
+                address: contracts.autopayModule as `0x${string}`,
+                abi: ERC7579AutopayModuleABI,
+                functionName: "isInitialized",
+                args: [smartAccountAddress],
+            }) as boolean;
+
+            if (initialized) {
+                console.log(
+                    `[ZeroDev] AutopayModule already initialized for ${smartAccountAddress}`,
+                );
+                return {
+                    smartAccountAddress,
+                    installTxHash,
+                    alreadyDeployed,
+                };
+            }
+
             // Encode the module installation call
             // ERC-7579 defines installModule(uint256 moduleType, address module, bytes initData)
             const installData = encodeFunctionData({
@@ -186,4 +213,87 @@ export async function deploySmartAccount(
         installTxHash,
         alreadyDeployed,
     };
+}
+
+/**
+ * Revoke autopay module state for an existing smart account.
+ * This calls module `onUninstall(0x)` through the smart account executor.
+ */
+export async function revokeAutopayModule(
+    config: RevokeAutopayConfig,
+): Promise<{ txHash?: `0x${string}`; alreadyRevoked: boolean }> {
+    const chain = CHAIN_MAP[config.chainId] || baseSepolia;
+    const contracts = getContractAddresses(config.chainId);
+
+    if (!contracts.autopayModule) {
+        throw new Error("Autopay module address not configured for this chain.");
+    }
+
+    const bundlerUrl =
+        config.bundlerUrl ||
+        `https://rpc.zerodev.app/api/v2/bundler/${config.projectId}`;
+    const paymasterUrl =
+        config.paymasterUrl ||
+        `https://rpc.zerodev.app/api/v2/paymaster/${config.projectId}`;
+
+    const publicClient = createPublicClient({
+        chain,
+        transport: http(),
+    }) as PublicClient;
+
+    const initialized = await publicClient.readContract({
+        address: contracts.autopayModule as `0x${string}`,
+        abi: ERC7579AutopayModuleABI,
+        functionName: "isInitialized",
+        args: [config.smartAccountAddress],
+    }) as boolean;
+
+    if (!initialized) {
+        return { alreadyRevoked: true };
+    }
+
+    const ecdsaValidator = await signerToEcdsaValidator(publicClient, {
+        signer: config.walletClient as any,
+        entryPoint: ENTRY_POINT_ADDRESS as any,
+        kernelVersion: "0.3.1",
+    });
+
+    const kernelAccount = await createKernelAccount(publicClient, {
+        plugins: { sudo: ecdsaValidator },
+        entryPoint: ENTRY_POINT_ADDRESS as any,
+    } as any);
+
+    const paymasterClient = createZeroDevPaymasterClient({
+        chain,
+        transport: http(paymasterUrl),
+        entryPoint: ENTRY_POINT_ADDRESS as any,
+    } as any);
+
+    const kernelClient = createKernelAccountClient({
+        account: kernelAccount,
+        chain,
+        bundlerTransport: http(bundlerUrl),
+        middleware: {
+            sponsorUserOperation: async ({ userOperation }: { userOperation: any }) => {
+                return (paymasterClient as any).sponsorUserOperation({
+                    userOperation,
+                    entryPoint: ENTRY_POINT_ADDRESS,
+                });
+            },
+        },
+    } as any);
+
+    const revokeData = encodeFunctionData({
+        abi: ERC7579AutopayModuleABI,
+        functionName: "onUninstall",
+        args: ["0x"],
+    });
+
+    const txHash = await (kernelClient as any).sendTransaction({
+        to: contracts.autopayModule as `0x${string}`,
+        data: revokeData,
+        value: 0n,
+    });
+
+    return { txHash, alreadyRevoked: false };
 }

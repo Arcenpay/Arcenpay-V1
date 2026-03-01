@@ -20,7 +20,7 @@
   "scripts": {
     "build": "tsup src/index.ts --format cjs,esm --dts --external react --external @zerodev/sdk --external @zerodev/ecdsa-validator",
     "dev": "tsup src/index.ts --format cjs,esm --dts --external react --external @zerodev/sdk --external @zerodev/ecdsa-validator --watch",
-    "test": "echo 'no tests yet'",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit --skipLibCheck",
     "clean": "rm -rf dist"
   },

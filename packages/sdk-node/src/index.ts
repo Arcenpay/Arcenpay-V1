@@ -8,6 +8,8 @@ export type { X402MiddlewareOptions } from "./middleware/x402";
 
 // Services
 export { UsageService } from "./services/usage";
+export type { ProofMode, UsageServiceConfig, UsageProofErrorCode } from "./services/usage";
+export { UsageProofError, UsageProofErrorCodes } from "./services/usage";
 export { SettlementService } from "./services/settlement";
 export { SettlementWriterService } from "./services/settlement-writer";
 export type {

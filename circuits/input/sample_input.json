@@ -3,6 +3,7 @@
   "callCount": 3,
   "windowStart": 1709200000,
   "windowEnd": 1709203600,
+  "agentAddress": "0x1234567890abcdef1234567890abcdef12345678",
   "sessionId": "0xaabbccdd11223344aabbccdd11223344aabbccdd11223344aabbccdd11223344",
   "logHashes": [
     "0x1111111111111111111111111111111111111111111111111111111111111111",
