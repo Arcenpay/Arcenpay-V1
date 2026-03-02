@@ -7,9 +7,11 @@ import { OverviewSection } from "@/components/dashboard/sections/overview";
 import { PlansSection } from "@/components/dashboard/sections/plans";
 import { SubscribersSection } from "@/components/dashboard/sections/subscribers";
 import { SessionsSection } from "@/components/dashboard/sections/sessions";
+import { FeaturesSection } from "@/components/dashboard/sections/features";
 import { SettingsSection } from "@/components/dashboard/sections/settings";
+import { SectionErrorBoundary } from "@/components/dashboard/section-error-boundary";
 
-export type Section = "overview" | "plans" | "subscribers" | "sessions" | "settings";
+export type Section = "overview" | "plans" | "subscribers" | "sessions" | "features" | "settings";
 
 export default function Dashboard() {
   const [activeSection, setActiveSection] = useState<Section>("overview");
@@ -18,17 +20,19 @@ export default function Dashboard() {
   const renderSection = () => {
     switch (activeSection) {
       case "overview":
-        return <OverviewSection />;
+        return <SectionErrorBoundary fallbackLabel="Overview failed to load"><OverviewSection /></SectionErrorBoundary>;
       case "plans":
-        return <PlansSection />;
+        return <SectionErrorBoundary fallbackLabel="Plans failed to load"><PlansSection /></SectionErrorBoundary>;
       case "subscribers":
-        return <SubscribersSection />;
+        return <SectionErrorBoundary fallbackLabel="Subscribers failed to load"><SubscribersSection /></SectionErrorBoundary>;
       case "sessions":
-        return <SessionsSection />;
+        return <SectionErrorBoundary fallbackLabel="Sessions failed to load"><SessionsSection /></SectionErrorBoundary>;
+      case "features":
+        return <SectionErrorBoundary fallbackLabel="Features failed to load"><FeaturesSection /></SectionErrorBoundary>;
       case "settings":
-        return <SettingsSection />;
+        return <SectionErrorBoundary fallbackLabel="Settings failed to load"><SettingsSection /></SectionErrorBoundary>;
       default:
-        return <OverviewSection />;
+        return <SectionErrorBoundary><OverviewSection /></SectionErrorBoundary>;
     }
   };
 

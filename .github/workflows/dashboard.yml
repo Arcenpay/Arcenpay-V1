@@ -2,38 +2,47 @@ name: Dashboard CI
 
 on:
   push:
+    branches: [main, nishar-end]
     paths:
-      - 'apps/dashboard/**'
+      - 'apps/arcen-dashboard/**'
+      - 'packages/sdk-core/**'
+      - 'packages/sdk-react/**'
   pull_request:
+    branches: [main]
     paths:
-      - 'apps/dashboard/**'
+      - 'apps/arcen-dashboard/**'
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/arcen-dashboard
 
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: "20"
           cache: npm
+          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
+        working-directory: .
         run: npm ci
 
-      - name: Build SDK dependencies
-        run: npx turbo run build --filter='./packages/*'
-
       - name: TypeScript check
-        run: npx turbo run typecheck --filter=@meap/dashboard
+        run: npx tsc --noEmit
 
       - name: Lint
-        run: npx turbo run lint --filter=@meap/dashboard
+        run: npm run lint --if-present
 
-      - name: Build dashboard
-        run: npx turbo run build --filter=@meap/dashboard
+      - name: Build
+        run: npm run build
         env:
-          NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || 'ci-placeholder' }}
+          NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID: ${{ secrets.WALLETCONNECT_PROJECT_ID || 'ci-placeholder' }}
           NEXT_PUBLIC_CHAIN_ID: '11155111'
+          NEXT_PUBLIC_GRAPH_URL: ${{ secrets.GRAPH_URL || '' }}
+          NEXT_PUBLIC_FACILITATOR_URL: 'http://localhost:3402'
+          SIWE_JWT_SECRET: 'ci-dev-secret'

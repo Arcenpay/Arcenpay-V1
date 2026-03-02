@@ -2,9 +2,12 @@
 
 import { cn } from "@/lib/utils";
 import type { Section } from "@/app/page";
-import { Bell, Search } from "lucide-react";
+import { Bell, Search, LogOut } from "lucide-react";
 import { useState } from "react";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 
 interface HeaderProps {
   activeSection: Section;
@@ -15,6 +18,7 @@ const sectionTitles: Record<Section, string> = {
   plans: "Plans",
   subscribers: "Subscribers",
   sessions: "Sessions",
+  features: "Features",
   settings: "Settings",
 };
 
@@ -23,11 +27,20 @@ const sectionDescriptions: Record<Section, string> = {
   plans: "Manage subscription plans",
   subscribers: "Track active subscribers",
   sessions: "ZKVUB agent sessions",
+  features: "Tableland + Lit Protocol feature flags",
   settings: "Provider configuration",
 };
 
 export function Header({ activeSection }: HeaderProps) {
   const [searchFocused, setSearchFocused] = useState(false);
+  const router = useRouter();
+
+  const handleSignOut = async () => {
+    await fetch("/api/auth/logout", { method: "POST" });
+    toast.success("Signed out");
+    router.push("/login");
+    router.refresh();
+  };
 
   return (
     <header className="h-16 border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-30 flex items-center justify-between px-6">
@@ -69,6 +82,17 @@ export function Header({ activeSection }: HeaderProps) {
           showBalance={false}
           accountStatus="address"
         />
+
+        {/* Sign Out */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleSignOut}
+          className="h-9 px-3 text-muted-foreground hover:text-foreground"
+          title="Sign out"
+        >
+          <LogOut className="w-4 h-4" />
+        </Button>
       </div>
     </header>
   );

@@ -1,64 +1,243 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+    DialogFooter,
+} from "@/components/ui/dialog";
 import {
     Cpu,
     DollarSign,
     Shield,
     Zap,
+    Plus,
+    Minus,
+    AlertCircle,
+    RefreshCw,
+    ExternalLink,
+    Copy,
+    Check,
 } from "lucide-react";
+import { useAccount, useChainId, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import { useQuery } from "@apollo/client";
+import { toast } from "sonner";
+import { GET_SESSIONS, GET_PROOF_SUBMISSIONS } from "@/lib/graphql";
+import { useContractAddresses, SessionVaultABI, SEPOLIA_USDC } from "@/lib/contracts";
+import {
+    formatUsdc,
+    truncateAddress,
+    formatRelativeTime,
+    getBlockExplorerUrl,
+    shortHash,
+} from "@/lib/format";
+
+interface GqlSession {
+    id: string;
+    agent: string;
+    totalFunded: string;
+    totalWithdrawn: string;
+    totalSettled: string;
+    currentBalance: string;
+    settlements: Array<{
+        id: string;
+        callCount: string;
+        settlementAmount: string;
+        timestamp: string;
+        txHash: string;
+    }>;
+}
+
+interface GqlProof {
+    id: string;
+    sessionId: string;
+    agentAddress: string;
+    callCount: string;
+    settlementAmount: string;
+    windowStart: string;
+    windowEnd: string;
+    txHash: string;
+    timestamp: string;
+}
+
+function SkeletonCard() {
+    return (
+        <Card className="border-border bg-card">
+            <CardContent className="p-4">
+                <div className="h-5 bg-secondary/80 rounded animate-pulse w-24 mb-2" />
+                <div className="h-7 bg-secondary/80 rounded animate-pulse w-20" />
+            </CardContent>
+        </Card>
+    );
+}
 
 export function SessionsSection() {
+    const { address, isConnected } = useAccount();
+    const chainId = useChainId();
+    const contractAddresses = useContractAddresses();
+
+    // Deposit dialog state
+    const [showDepositDialog, setShowDepositDialog] = useState(false);
+    const [depositAmount, setDepositAmount] = useState("");
+    const [depositTxHash, setDepositTxHash] = useState<string>("");
+    const [copiedHash, setCopiedHash] = useState<string | null>(null);
+
+    // Withdraw dialog state
+    const [showWithdrawDialog, setShowWithdrawDialog] = useState(false);
+    const [selectedSessionId, setSelectedSessionId] = useState<string>("");
+
+    const { data: sessionsData, loading: sessionsLoading, error: sessionsError, refetch } = useQuery(
+        GET_SESSIONS,
+        {
+            variables: { first: 50 },
+            skip: !isConnected,
+            pollInterval: 30_000, // refresh every 30s
+        }
+    );
+
+    const { data: proofsData, loading: proofsLoading } = useQuery(GET_PROOF_SUBMISSIONS, {
+        variables: { first: 20 },
+        skip: !isConnected,
+    });
+
+    const sessions: GqlSession[] = sessionsData?.sessions ?? [];
+    const proofs: GqlProof[] = proofsData?.proofSubmissions ?? [];
+
+    // Stats
+    const activeSessions = sessions.filter(
+        (s) => BigInt(s.currentBalance) > 0n
+    ).length;
+    const totalSettled = sessions.reduce(
+        (acc, s) => acc + BigInt(s.totalSettled),
+        0n
+    );
+    const pendingProofs = 0; // Would come from a facilitator API in real deployment
+
+    // ── Write: fund session (deposit) ────────────────────────
+    const { writeContractAsync: writeFundSession } = useWriteContract();
+    const { data: depositReceipt } = useWaitForTransactionReceipt({
+        hash: depositTxHash as `0x${string}` | undefined,
+        query: { enabled: !!depositTxHash },
+    });
+
+    useEffect(() => {
+        if (depositReceipt) {
+            toast.success("Session funded successfully!");
+            setDepositTxHash("");
+            setShowDepositDialog(false);
+            setDepositAmount("");
+            refetch();
+        }
+    }, [depositReceipt]);
+
+    // ── Write: withdraw from session ─────────────────────────
+    const { writeContractAsync: writeWithdraw } = useWriteContract();
+
+    const handleDeposit = async () => {
+        if (!depositAmount || !isConnected) return;
+        const amountRaw = BigInt(Math.round(parseFloat(depositAmount) * 1_000_000));
+        try {
+            const hash = await writeFundSession({
+                address: contractAddresses.sessionVault as `0x${string}`,
+                abi: SessionVaultABI,
+                functionName: "fundSession",
+                args: [amountRaw, SEPOLIA_USDC as `0x${string}`],
+            });
+            setDepositTxHash(hash);
+            toast.info("Transaction submitted…");
+        } catch (err: unknown) {
+            toast.error(err instanceof Error ? err.message : "Transaction failed");
+        }
+    };
+
+    const handleWithdraw = async (sessionId: string) => {
+        try {
+            await writeWithdraw({
+                address: contractAddresses.sessionVault as `0x${string}`,
+                abi: SessionVaultABI,
+                functionName: "withdraw",
+                args: [sessionId as `0x${string}`],
+            });
+            toast.success("Withdrawal initiated");
+            refetch();
+        } catch (err: unknown) {
+            toast.error(err instanceof Error ? err.message : "Withdrawal failed");
+        }
+    };
+
+    const handleCopyHash = (hash: string) => {
+        navigator.clipboard.writeText(hash);
+        setCopiedHash(hash);
+        setTimeout(() => setCopiedHash(null), 2000);
+    };
+
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div>
+            <div className="flex items-center justify-between">
                 <p className="text-sm text-muted-foreground">
                     Monitor ZKVUB agent sessions, vault balances, and proof settlements
                 </p>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center gap-2"
+                    onClick={() => setShowDepositDialog(true)}
+                    disabled={!isConnected}
+                >
+                    <Plus className="w-4 h-4" />
+                    Fund New Session
+                </Button>
             </div>
 
             {/* Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {[
-                    {
-                        label: "Active Sessions",
-                        value: "0",
-                        icon: Cpu,
-                        color: "text-chart-1",
-                    },
-                    {
-                        label: "Total Settled",
-                        value: "$0.00",
-                        icon: DollarSign,
-                        color: "text-accent",
-                    },
-                    {
-                        label: "Pending Proofs",
-                        value: "0",
-                        icon: Shield,
-                        color: "text-chart-3",
-                    },
-                ].map((stat, index) => (
-                    <Card
-                        key={stat.label}
-                        className="border-border bg-card hover:border-muted-foreground/30 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4"
-                        style={{ animationDelay: `${index * 75}ms`, animationFillMode: "both" }}
-                    >
-                        <CardContent className="p-4">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm text-muted-foreground">{stat.label}</p>
-                                    <p className={`text-2xl font-semibold mt-1 ${stat.color}`}>
-                                        {stat.value}
-                                    </p>
+                {sessionsLoading ? (
+                    Array.from({ length: 3 }).map((_, i) => <SkeletonCard key={i} />)
+                ) : (
+                    [
+                        { label: "Active Sessions", value: activeSessions.toString(), icon: Cpu, color: "text-chart-1" },
+                        { label: "Total Settled", value: formatUsdc(totalSettled), icon: DollarSign, color: "text-accent" },
+                        { label: "Pending Proofs", value: pendingProofs.toString(), icon: Shield, color: "text-chart-3" },
+                    ].map((stat, index) => (
+                        <Card
+                            key={stat.label}
+                            className="border-border bg-card hover:border-muted-foreground/30 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4"
+                            style={{ animationDelay: `${index * 75}ms`, animationFillMode: "both" }}
+                        >
+                            <CardContent className="p-4">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <p className="text-sm text-muted-foreground">{stat.label}</p>
+                                        <p className={`text-2xl font-semibold mt-1 ${stat.color}`}>{stat.value}</p>
+                                    </div>
+                                    <stat.icon className={`w-8 h-8 ${stat.color} opacity-50`} />
                                 </div>
-                                <stat.icon className={`w-8 h-8 ${stat.color} opacity-50`} />
-                            </div>
-                        </CardContent>
-                    </Card>
-                ))}
+                            </CardContent>
+                        </Card>
+                    ))
+                )}
             </div>
+
+            {/* Error */}
+            {sessionsError && (
+                <div className="flex items-center gap-3 p-4 rounded-xl bg-destructive/5 border border-destructive/20">
+                    <AlertCircle className="w-4 h-4 text-destructive shrink-0" />
+                    <p className="text-sm text-muted-foreground flex-1">{sessionsError.message}</p>
+                    <Button variant="ghost" size="sm" onClick={() => refetch()}>
+                        <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+                        Retry
+                    </Button>
+                </div>
+            )}
 
             {/* Sessions Table */}
             <div className="bg-card border border-border rounded-xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -66,44 +245,89 @@ export function SessionsSection() {
                     <table className="w-full">
                         <thead>
                             <tr className="border-b border-border bg-secondary/50">
-                                <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                                    Agent Address
-                                </th>
-                                <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                                    Vault Balance
-                                </th>
-                                <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                                    Call Count
-                                </th>
-                                <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                                    Proof Status
-                                </th>
-                                <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                                    Last Settlement
-                                </th>
+                                <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Agent Address</th>
+                                <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Vault Balance</th>
+                                <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Settled</th>
+                                <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Last Settlement</th>
+                                <th className="w-24"></th>
                             </tr>
                         </thead>
                         <tbody>
-                            {/* Empty — no mock data */}
+                            {sessionsLoading && Array.from({ length: 3 }).map((_, i) => (
+                                <tr key={i} className="border-b border-border">
+                                    {Array.from({ length: 4 }).map((__, j) => (
+                                        <td key={j} className="py-3 px-4">
+                                            <div className="h-4 bg-secondary/80 rounded animate-pulse w-24" />
+                                        </td>
+                                    ))}
+                                    <td className="py-3 px-4" />
+                                </tr>
+                            ))}
+                            {!sessionsLoading && sessions.map((session, index) => {
+                                const lastSettlement = session.settlements?.[0];
+                                return (
+                                    <tr
+                                        key={session.id}
+                                        className="border-b border-border last:border-0 hover:bg-secondary/20 transition-colors"
+                                        style={{ animationDelay: `${index * 40}ms` }}
+                                    >
+                                        <td className="py-3 px-4">
+                                            <code className="text-xs font-mono text-foreground">
+                                                {truncateAddress(session.agent)}
+                                            </code>
+                                        </td>
+                                        <td className="py-3 px-4">
+                                            <span className="text-sm font-medium text-foreground">
+                                                {formatUsdc(BigInt(session.currentBalance))}
+                                            </span>
+                                        </td>
+                                        <td className="py-3 px-4">
+                                            <span className="text-sm text-muted-foreground">
+                                                {formatUsdc(BigInt(session.totalSettled))}
+                                            </span>
+                                        </td>
+                                        <td className="py-3 px-4">
+                                            <span className="text-sm text-muted-foreground">
+                                                {lastSettlement
+                                                    ? formatRelativeTime(parseInt(lastSettlement.timestamp))
+                                                    : "—"}
+                                            </span>
+                                        </td>
+                                        <td className="py-3 px-4">
+                                            <div className="flex items-center gap-1">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="h-7 text-xs"
+                                                    onClick={() => handleWithdraw(session.id)}
+                                                >
+                                                    <Minus className="w-3.5 h-3.5 mr-1" />
+                                                    Withdraw
+                                                </Button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
                         </tbody>
                     </table>
                 </div>
 
-                {/* Empty state */}
-                <div className="flex flex-col items-center justify-center py-16 text-center">
-                    <div className="w-14 h-14 rounded-xl bg-secondary flex items-center justify-center mb-4">
-                        <Zap className="w-7 h-7 text-muted-foreground" />
+                {!sessionsLoading && sessions.length === 0 && (
+                    <div className="flex flex-col items-center justify-center py-16 text-center">
+                        <div className="w-14 h-14 rounded-xl bg-secondary flex items-center justify-center mb-4">
+                            <Zap className="w-7 h-7 text-muted-foreground" />
+                        </div>
+                        <p className="text-sm font-medium text-foreground mb-1">No active sessions</p>
+                        <p className="text-xs text-muted-foreground max-w-[360px]">
+                            Agent sessions will appear here once agents fund their session vaults and begin making x402 authenticated API calls
+                        </p>
                     </div>
-                    <p className="text-sm font-medium text-foreground mb-1">No active sessions</p>
-                    <p className="text-xs text-muted-foreground max-w-[360px]">
-                        Agent sessions will appear here once agents fund their session vaults and begin making x402 authenticated API calls
-                    </p>
-                </div>
+                )}
 
-                {/* Footer */}
                 <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-secondary/30">
                     <span className="text-sm text-muted-foreground">
-                        Showing 0 sessions
+                        Showing {sessions.length} session{sessions.length !== 1 ? "s" : ""}
                     </span>
                 </div>
             </div>
@@ -117,16 +341,118 @@ export function SessionsSection() {
                     </p>
                 </div>
 
-                <div className="flex flex-col items-center justify-center py-10 text-center">
-                    <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center mb-3">
-                        <Shield className="w-6 h-6 text-muted-foreground" />
+                {proofsLoading && (
+                    <div className="space-y-2">
+                        {Array.from({ length: 3 }).map((_, i) => (
+                            <div key={i} className="h-12 bg-secondary/50 rounded-lg animate-pulse" />
+                        ))}
                     </div>
-                    <p className="text-sm font-medium text-foreground mb-1">No proof submissions yet</p>
-                    <p className="text-xs text-muted-foreground max-w-[300px]">
-                        zk-SNARK proof settlements will be logged here
-                    </p>
-                </div>
+                )}
+
+                {!proofsLoading && proofs.length === 0 && (
+                    <div className="flex flex-col items-center justify-center py-10 text-center">
+                        <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center mb-3">
+                            <Shield className="w-6 h-6 text-muted-foreground" />
+                        </div>
+                        <p className="text-sm font-medium text-foreground mb-1">No proof submissions yet</p>
+                        <p className="text-xs text-muted-foreground max-w-[300px]">
+                            zk-SNARK proof settlements will be logged here
+                        </p>
+                    </div>
+                )}
+
+                {!proofsLoading && proofs.length > 0 && (
+                    <div className="space-y-2">
+                        {proofs.map((proof) => (
+                            <div
+                                key={proof.id}
+                                className="flex items-center justify-between p-3 rounded-lg bg-secondary/30 border border-border text-sm"
+                            >
+                                <div className="flex items-center gap-4">
+                                    <Badge variant="secondary" className="text-xs bg-success/10 text-success border-success/20">
+                                        Settled
+                                    </Badge>
+                                    <div>
+                                        <p className="text-xs text-muted-foreground">
+                                            Session <code className="font-mono">{shortHash(proof.sessionId)}</code>
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">
+                                            {proof.callCount} calls · {formatRelativeTime(parseInt(proof.timestamp))}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <span className="text-sm font-medium text-foreground">
+                                        {formatUsdc(BigInt(proof.settlementAmount))}
+                                    </span>
+                                    <div className="flex items-center gap-1">
+                                        <button
+                                            onClick={() => handleCopyHash(proof.txHash)}
+                                            className="text-muted-foreground hover:text-foreground transition-colors"
+                                        >
+                                            {copiedHash === proof.txHash
+                                                ? <Check className="w-3 h-3 text-success" />
+                                                : <Copy className="w-3 h-3" />}
+                                        </button>
+                                        <a
+                                            href={getBlockExplorerUrl(chainId, "tx", proof.txHash)}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-muted-foreground hover:text-foreground transition-colors"
+                                        >
+                                            <ExternalLink className="w-3 h-3" />
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
             </div>
+
+            {/* Fund Session Dialog */}
+            <Dialog open={showDepositDialog} onOpenChange={setShowDepositDialog}>
+                <DialogContent className="sm:max-w-sm">
+                    <DialogHeader>
+                        <DialogTitle>Fund Agent Session</DialogTitle>
+                        <DialogDescription>
+                            Deposit USDC to a new SessionVault session. The agent uses this balance to pay for API calls via x402.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-2">
+                        <div className="space-y-2">
+                            <Label htmlFor="depositAmount">Amount (USDC)</Label>
+                            <div className="relative">
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
+                                <Input
+                                    id="depositAmount"
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    placeholder="50.00"
+                                    value={depositAmount}
+                                    onChange={(e) => setDepositAmount(e.target.value)}
+                                    className="bg-secondary border-border pl-6"
+                                />
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                                Calls SessionVault.fundSession(amount, USDC). Make sure you have approved the SessionVault contract to spend your USDC.
+                            </p>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setShowDepositDialog(false)}>Cancel</Button>
+                        <Button
+                            className="bg-accent text-accent-foreground hover:bg-accent/90"
+                            onClick={handleDeposit}
+                            disabled={!depositAmount || parseFloat(depositAmount) <= 0}
+                        >
+                            <Plus className="w-4 h-4 mr-2" />
+                            Fund Session
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

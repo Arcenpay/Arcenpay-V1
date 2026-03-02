@@ -3,6 +3,7 @@
 import React from "react";
 import { cn } from "@/lib/utils";
 import type { Section } from "@/app/page";
+import { useAccount } from "wagmi";
 import {
   LayoutDashboard,
   Layers,
@@ -12,6 +13,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Hexagon,
+  Flag,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -26,6 +28,7 @@ const navItems: { id: Section; label: string; icon: React.ElementType }[] = [
   { id: "plans", label: "Plans", icon: Layers },
   { id: "subscribers", label: "Subscribers", icon: Users },
   { id: "sessions", label: "Sessions", icon: Cpu },
+  { id: "features", label: "Features", icon: Flag },
   { id: "settings", label: "Settings", icon: Settings },
 ];
 
@@ -35,6 +38,12 @@ export function Sidebar({
   collapsed,
   onCollapsedChange,
 }: SidebarProps) {
+  const { address, isConnected } = useAccount();
+
+  const shortAddress = address
+    ? `${address.slice(0, 6)}…${address.slice(-4)}`
+    : null;
+
   return (
     <aside
       className={cn(
@@ -102,15 +111,23 @@ export function Sidebar({
         })}
       </nav>
 
-      {/* Wallet status placeholder */}
+      {/* Wallet status */}
       <div className={cn(
         "mx-3 mb-3 p-3 rounded-lg bg-secondary/50 border border-border transition-all duration-300",
         collapsed ? "opacity-0 pointer-events-none" : "opacity-100"
       )}>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <div className="w-2 h-2 rounded-full bg-warning animate-pulse" />
-          <span>Wallet not connected</span>
+          <div className={cn(
+            "w-2 h-2 rounded-full shrink-0",
+            isConnected ? "bg-success animate-none" : "bg-warning animate-pulse"
+          )} />
+          <span className="truncate">
+            {isConnected && shortAddress ? shortAddress : "Wallet not connected"}
+          </span>
         </div>
+        {isConnected && (
+          <p className="text-xs text-muted-foreground/60 mt-0.5 truncate">Sepolia</p>
+        )}
       </div>
 
       {/* Collapse button */}

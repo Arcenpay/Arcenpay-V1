@@ -7,7 +7,9 @@
     "prepare:abis": "node scripts/sync-abis.mjs",
     "sync:sepolia": "node scripts/sync-addresses.mjs --deployment ../packages/contracts/deployments/sepolia-latest.json --network sepolia",
     "codegen": "graph codegen",
-    "build": "graph build"
+    "build": "graph build",
+    "deploy:studio": "graph deploy --studio meap-sepolia",
+    "deploy:hosted": "graph deploy --node https://api.thegraph.com/deploy/ @meap/meap-sepolia"
   },
   "devDependencies": {
     "@graphprotocol/graph-cli": "^0.98.1",
