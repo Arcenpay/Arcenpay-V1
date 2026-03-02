@@ -2,14 +2,14 @@
 //  Dashboard — Apollo Client + Subgraph Queries
 // ============================================================
 
-import { ApolloClient, InMemoryCache, gql } from "@apollo/client";
+import { ApolloClient, InMemoryCache, HttpLink, gql } from "@apollo/client";
 
 const GRAPH_URL =
   process.env.NEXT_PUBLIC_GRAPH_URL ||
   "https://api.studio.thegraph.com/query/placeholder/meap-sepolia/version/latest";
 
 export const apolloClient = new ApolloClient({
-  uri: GRAPH_URL,
+  link: new HttpLink({ uri: GRAPH_URL }),
   cache: new InMemoryCache(),
 });
 
