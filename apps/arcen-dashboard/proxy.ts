@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { COOKIE_NAME, verifySession } from "./lib/auth";
 
 // Paths that don't require authentication
-const PUBLIC_PATHS = ["/login", "/api/auth/nonce", "/api/auth/verify"];
+const PUBLIC_PATHS = ["/login", "/api/auth/nonce", "/api/auth/verify", "/api/auth/logout"];
 
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;

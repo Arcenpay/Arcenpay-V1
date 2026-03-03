@@ -6,6 +6,7 @@
 // ============================================================
 
 import * as Sentry from "@sentry/nextjs";
+import type { ErrorEvent, Exception, StackFrame } from "@sentry/nextjs";
 
 Sentry.init({
     dsn: process.env.SENTRY_DSN || process.env.NEXT_PUBLIC_SENTRY_DSN,
@@ -24,16 +25,16 @@ Sentry.init({
         "AbortError",
     ],
 
-    beforeSend(event) {
+    beforeSend(event: ErrorEvent) {
         // Strip stack trace internals from 500 error messages
         if (event.exception) {
-            event.exception.values = event.exception.values?.map((v) => ({
+            event.exception.values = event.exception.values?.map((v: Exception) => ({
                 ...v,
                 stacktrace: v.stacktrace
                     ? {
                         ...v.stacktrace,
                         frames: v.stacktrace.frames?.filter(
-                            (f) => !f.filename?.includes("node_modules"),
+                            (f: StackFrame) => !f.filename?.includes("node_modules"),
                         ),
                     }
                     : v.stacktrace,

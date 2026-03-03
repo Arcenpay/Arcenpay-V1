@@ -6,6 +6,7 @@
 // ============================================================
 
 import * as Sentry from "@sentry/nextjs";
+import type { ErrorEvent, Breadcrumb } from "@sentry/nextjs";
 
 Sentry.init({
     dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
@@ -33,10 +34,10 @@ Sentry.init({
     enabled: !!process.env.NEXT_PUBLIC_SENTRY_DSN,
 
     // Strip transaction queries and normalize paths with IDs
-    beforeSend(event) {
-        // Redact wallet addresses from breadcrumb data
+    beforeSend(event: ErrorEvent) {
+        // Redact wallet addresses from breadcrumb data — Sentry v8: breadcrumbs is Breadcrumb[]
         if (event.breadcrumbs) {
-            event.breadcrumbs.values = event.breadcrumbs.values?.map((b) => ({
+            event.breadcrumbs = event.breadcrumbs.map((b: Breadcrumb) => ({
                 ...b,
                 data: b.data
                     ? Object.fromEntries(
