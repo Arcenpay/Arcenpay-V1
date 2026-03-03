@@ -3,6 +3,11 @@
 import React, { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { useEntitlement } from '../hooks/useEntitlement';
 import { useMEAP } from '../providers/MEAPProvider';
+import {
+  getLitNodeClient,
+  getCachedSessionSigs,
+  cacheSessionSigs,
+} from '../lib/lit-client';
 
 interface FeatureFlagGuardProps {
   featureKey: string;
@@ -13,8 +18,9 @@ interface FeatureFlagGuardProps {
   /** Require a successful Lit decrypt probe in addition to feature entitlement. */
   requireDecryption?: boolean;
   /**
-   * Optional Lit decrypt endpoint.
+   * Optional Lit decrypt endpoint (HTTP proxy mode).
    * Supports `{wallet}` and `{feature}` placeholders.
+   * If omitted and requireDecryption=true, falls back to direct Lit SDK.
    */
   decryptEndpoint?: string;
   /** Optional request payload merged into the decryption request body. */
@@ -92,50 +98,99 @@ export function FeatureFlagGuard({
       return;
     }
 
-    if (!resolvedDecryptEndpoint) {
-      const err = new Error(
-        'FeatureFlagGuard: decryption required but no decrypt endpoint configured.',
-      );
-      setDecryptError(err);
-      setDecryptPassed(false);
-      onDecryptionError?.(err);
-      return;
-    }
-
     let cancelled = false;
     setDecrypting(true);
     setDecryptError(null);
 
     void (async () => {
       try {
-        const response = await fetch(resolvedDecryptEndpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-          },
-          body: JSON.stringify({
-            walletAddress,
-            featureKey,
-            ...decryptPayload,
-          }),
-        });
+        if (resolvedDecryptEndpoint) {
+          // ── Path A: HTTP proxy ────────────────────────────────────────────
+          const response = await fetch(resolvedDecryptEndpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Accept: 'application/json',
+            },
+            body: JSON.stringify({
+              walletAddress,
+              featureKey,
+              ...decryptPayload,
+            }),
+          });
 
-        if (!response.ok) {
-          throw new Error(`Decrypt request failed (${response.status})`);
+          if (!response.ok) {
+            throw new Error(`Decrypt request failed (${response.status})`);
+          }
+
+          const payload = (await response.json()) as {
+            ok?: boolean;
+            error?: string;
+          };
+          if (payload.ok !== true) {
+            throw new Error(payload.error || 'Decrypt request failed.');
+          }
+
+          if (cancelled) return;
+          setDecryptPassed(true);
+          onDecryptionSuccess?.(payload);
+        } else {
+          // ── Path B: Direct Lit Protocol SDK ──────────────────────────────
+          const litNetwork = (config.litNetwork as 'habanero' | 'manzano') ?? 'habanero';
+          const client = await getLitNodeClient(litNetwork);
+
+          // Retrieve or create session signatures (24h cache)
+          let sessionSigs = getCachedSessionSigs();
+          if (!sessionSigs) {
+            const authHelpers = await import('@lit-protocol/auth-helpers');
+            // generateAuthSig is the supported API in newer versions
+            const generateAuthSig =
+              (authHelpers as any).generateAuthSig ?? (authHelpers as any).checkAndSignAuthMessage;
+
+            if (!generateAuthSig) {
+              throw new Error(
+                '[FeatureFlagGuard] Install @lit-protocol/auth-helpers to use direct Lit SDK mode.',
+              );
+            }
+
+            const authSig = await generateAuthSig({ chain: 'ethereum' });
+
+            sessionSigs = await client.getSessionSigs({
+              chain: 'ethereum',
+              authNeededCallback: async (_params: unknown) => authSig,
+              expiration: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+              resourceAbilityRequests: [],
+            });
+            cacheSessionSigs(sessionSigs);
+          }
+
+          // Access Control Condition: wallet address must match
+          const accessControlConditions = [
+            {
+              contractAddress: '',
+              standardContractType: '',
+              chain: 'ethereum',
+              method: '',
+              parameters: [':userAddress'],
+              returnValueTest: {
+                comparator: '=',
+                value: walletAddress.toLowerCase(),
+              },
+            },
+          ];
+
+          await client.getEncryptionKey({
+            accessControlConditions,
+            toDecrypt: features[`${featureKey}_ciphertext`] as string | undefined,
+            chain: 'ethereum',
+            authSig: null,
+            sessionSigs,
+          });
+
+          if (cancelled) return;
+          setDecryptPassed(true);
+          onDecryptionSuccess?.({ ok: true, via: 'lit-sdk' });
         }
-
-        const payload = (await response.json()) as {
-          ok?: boolean;
-          error?: string;
-        };
-        if (payload.ok !== true) {
-          throw new Error(payload.error || 'Decrypt request failed.');
-        }
-
-        if (cancelled) return;
-        setDecryptPassed(true);
-        onDecryptionSuccess?.(payload);
       } catch (err) {
         if (cancelled) return;
         const normalized =
@@ -154,8 +209,10 @@ export function FeatureFlagGuard({
       cancelled = true;
     };
   }, [
+    config.litNetwork,
     decryptPayload,
     featureKey,
+    features,
     hasFeature,
     onDecryptionError,
     onDecryptionSuccess,

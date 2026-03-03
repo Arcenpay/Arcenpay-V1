@@ -79,3 +79,11 @@ export {
   AuthError,
 } from './errors';
 export type { MEAPErrorCode } from './errors';
+
+// Smart Account helpers (ZeroDev ERC-7579)
+export { createSmartAccount } from './accounts';
+export type { SmartAccountInput, SmartAccountResult } from './accounts';
+
+// Chain helpers
+export { getChain } from './chains';
+

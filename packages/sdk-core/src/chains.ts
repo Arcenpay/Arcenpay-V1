@@ -73,3 +73,23 @@ export const TOKENS = {
 
 // --- Default Chain ---
 export const DEFAULT_CHAIN_ID: SupportedChainId = 11155111; // Sepolia for development
+
+/**
+ * Resolves a viem Chain object from a numeric chainId.
+ * Throws if the chain is not supported.
+ */
+export function getChain(chainId: number): Chain {
+  const chainMap: Record<number, Chain> = {
+    11155111: sepolia,
+    84532: baseSepolia,
+    8453: baseMainnet,
+  };
+  const chain = chainMap[chainId];
+  if (!chain) {
+    throw new Error(
+      `[getChain] Unsupported chainId: ${chainId}. ` +
+      `Supported: ${Object.keys(chainMap).join(', ')}`
+    );
+  }
+  return chain;
+}

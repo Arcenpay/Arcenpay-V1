@@ -1,3 +1,5 @@
+import { withSentryConfig } from "@sentry/nextjs";
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   typescript: {
@@ -18,4 +20,17 @@ const nextConfig = {
   },
 }
 
-export default nextConfig
+export default withSentryConfig(nextConfig, {
+  // Sentry organization + project (set via SENTRY_ORG + SENTRY_PROJECT env vars)
+  silent: true,
+
+  // Upload source maps only when SENTRY_AUTH_TOKEN is available
+  sourcemaps: {
+    disable: !process.env.SENTRY_AUTH_TOKEN,
+  },
+
+  // Reduce bundle size by tree-shaking Sentry on the client
+  disableLogger: true,
+  automaticVercelMonitors: false,
+});
+

@@ -8,6 +8,7 @@ import {
   useWriteContract,
   useWaitForTransactionReceipt,
   usePublicClient,
+  useWalletClient,
 } from "wagmi";
 import { decodeEventLog, encodeAbiParameters, parseAbiParameters } from "viem";
 import {
@@ -16,6 +17,7 @@ import {
   ERC7579AutopayModuleABI,
   getContractAddresses,
   TOKENS,
+  createSmartAccount,
 } from "@meap/core";
 import { useMEAP } from "../providers/MEAPProvider";
 
@@ -27,6 +29,7 @@ import { useMEAP } from "../providers/MEAPProvider";
 
 type CheckoutStep =
   | "connect"
+  | "email"      // optional — between connect and account
   | "account"
   | "autopay"
   | "approve"
@@ -92,10 +95,12 @@ export function CheckoutModal({
   const { address, isConnected } = useAccount();
   const { connect, connectors } = useConnect();
   const publicClient = usePublicClient({ chainId: network.chainId });
+  const { data: walletClient } = useWalletClient({ chainId: network.chainId });
 
   const [step, setStep] = useState<CheckoutStep>("connect");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [subscriberEmail, setSubscriberEmail] = useState("");
   const [smartAccountAddress, setSmartAccountAddress] = useState<
     `0x${string}` | undefined
   >();
@@ -113,12 +118,13 @@ export function CheckoutModal({
   const registryAddress = contracts.subscriptionRegistry as `0x${string}`;
   const autopayAddress = contracts.autopayModule as `0x${string}`;
 
-  // Auto-advance past connect step if already connected
+  // Auto-advance past connect step to email collection step
   useEffect(() => {
     if (isConnected && step === "connect") {
-      setStep("account");
+      setStep("email");
     }
   }, [isConnected, step]);
+
 
   // Fetch plan details for pricing
   const { data: planData } = useReadContract({
@@ -367,51 +373,69 @@ export function CheckoutModal({
     setError(null);
     try {
       if (publicClient && address) {
+        // Check if already a smart account (getCode > 2 bytes)
         const code = await publicClient.getCode({ address });
         if (code && code.length > 2) {
           setSmartAccountAddress(address);
           setStep(isAutopayInitialized ? "approve" : "autopay");
-        } else {
-          const deploymentInput: SmartAccountDeploymentInput = {
+          return;
+        }
+
+        const deploymentInput: SmartAccountDeploymentInput = {
+          ownerAddress: address,
+          chainId: network.chainId,
+          zeroDevProjectId:
+            process.env.NEXT_PUBLIC_ZERODEV_PROJECT_ID || undefined,
+        };
+
+        let result: SmartAccountDeploymentResult | null = null;
+
+        if (deploySmartAccount) {
+          // 1. Caller-supplied deployer (custom integration)
+          result = await deploySmartAccount(deploymentInput);
+        } else if (deploymentInput.zeroDevProjectId) {
+          // 2. Built-in ZeroDev deployer (requires @zerodev/sdk installed)
+          if (!walletClient) {
+            throw new Error("Wallet client not available. Please reconnect your wallet.");
+          }
+          const zdResult = await createSmartAccount({
             ownerAddress: address,
             chainId: network.chainId,
-            zeroDevProjectId:
-              process.env.NEXT_PUBLIC_ZERODEV_PROJECT_ID || undefined,
+            zeroDevProjectId: deploymentInput.zeroDevProjectId,
+            walletClient: walletClient as any,
+          });
+          result = {
+            accountAddress: zdResult.accountAddress,
+            txHash: zdResult.txHash,
           };
-
-          let result: SmartAccountDeploymentResult | null = null;
-
-          if (deploySmartAccount) {
-            result = await deploySmartAccount(deploymentInput);
-          } else if (process.env.NEXT_PUBLIC_ZERODEV_DEPLOY_URL) {
-            const response = await fetch(
-              process.env.NEXT_PUBLIC_ZERODEV_DEPLOY_URL,
-              {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(deploymentInput),
-              },
-            );
-            if (response.ok) {
-              const data = await response.json();
-              result = {
-                accountAddress: data.smartAccountAddress,
-                txHash: data.txHash,
-              };
-            }
+        } else if (process.env.NEXT_PUBLIC_ZERODEV_DEPLOY_URL) {
+          // 3. Remote deploy API fallback
+          const response = await fetch(
+            process.env.NEXT_PUBLIC_ZERODEV_DEPLOY_URL,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(deploymentInput),
+            },
+          );
+          if (response.ok) {
+            const data = await response.json();
+            result = {
+              accountAddress: data.smartAccountAddress,
+              txHash: data.txHash,
+            };
           }
+        }
 
-          if (result?.accountAddress) {
-            setSmartAccountAddress(result.accountAddress);
-            setSmartAccountDeployTxHash(result.txHash);
-          } else {
-            // ERC-7579 smart account required — no EOA fallback
-            throw new Error(
-              "Smart account deployment required. Configure a deploySmartAccount callback " +
-                "or set NEXT_PUBLIC_ZERODEV_DEPLOY_URL to enable automated billing.",
-            );
-          }
+        if (result?.accountAddress) {
+          setSmartAccountAddress(result.accountAddress);
+          setSmartAccountDeployTxHash(result.txHash);
           setStep("autopay");
+        } else {
+          throw new Error(
+            "Smart account deployment failed. Set NEXT_PUBLIC_ZERODEV_PROJECT_ID " +
+            "or provide a deploySmartAccount callback to enable automated billing.",
+          );
         }
       }
     } catch (err: any) {
@@ -428,6 +452,7 @@ export function CheckoutModal({
     deploySmartAccount,
     network.chainId,
     isAutopayInitialized,
+    connectors,
   ]);
 
   const handleInstallAutopay = useCallback(() => {
@@ -557,6 +582,11 @@ export function CheckoutModal({
       description: "Connect your wallet to start the subscription process.",
       action: handleConnect,
       actionLabel: "Connect Wallet",
+    },
+    email: {
+      title: "Add Email (Optional)",
+      description: "Get billing updates and renewal reminders. You can skip this.",
+      actionLabel: "Continue",
     },
     account: {
       title: "Smart Account Check",

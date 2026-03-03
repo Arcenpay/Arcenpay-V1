@@ -73,6 +73,89 @@ function saveSettings(data: Record<string, unknown>) {
     localStorage.setItem(LS_KEY, JSON.stringify(data));
 }
 
+interface WebhookLogEntry {
+    id: string;
+    eventType: string;
+    status: "delivered" | "failed" | "pending";
+    retries: number;
+    createdAt: string;
+    responseCode?: number;
+}
+
+function WebhookLogCard() {
+    const [entries, setEntries] = useState<WebhookLogEntry[]>([]);
+    const [isRefreshing, setIsRefreshing] = useState(false);
+
+    const fetchLog = async () => {
+        setIsRefreshing(true);
+        try {
+            const res = await fetch("/api/webhooks/log?limit=20");
+            if (res.ok) {
+                const data = await res.json();
+                setEntries(data.entries || []);
+            }
+        } catch {
+            // Silent — facilitator may not be running in dev
+        } finally {
+            setIsRefreshing(false);
+        }
+    };
+
+    useEffect(() => { void fetchLog(); }, []);
+
+    const statusColor = (status: string) => {
+        if (status === "delivered") return "bg-success/10 text-success border-success/20";
+        if (status === "failed") return "bg-destructive/10 text-destructive border-destructive/20";
+        return "bg-warning/10 text-warning border-warning/20";
+    };
+
+    return (
+        <Card className="border-border bg-card">
+            <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                    <CardTitle className="text-base font-medium">Webhook Delivery Log</CardTitle>
+                    <CardDescription>Recent webhook delivery attempts with status and retry count</CardDescription>
+                </div>
+                <Button variant="outline" size="sm" onClick={fetchLog} disabled={isRefreshing}>
+                    <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${isRefreshing ? "animate-spin" : ""}`} />
+                    Refresh
+                </Button>
+            </CardHeader>
+            <CardContent>
+                {entries.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground text-sm">
+                        {isRefreshing ? "Loading..." : "No webhook deliveries yet. Configure a webhook URL above and trigger a test event."}
+                    </div>
+                ) : (
+                    <div className="space-y-1">
+                        <div className="grid grid-cols-[1fr,90px,90px,70px] gap-3 pb-2 border-b border-border text-xs text-muted-foreground font-medium">
+                            <span>Event</span>
+                            <span>Status</span>
+                            <span>Time</span>
+                            <span className="text-right">Retries</span>
+                        </div>
+                        {entries.map((entry) => (
+                            <div
+                                key={entry.id}
+                                className="grid grid-cols-[1fr,90px,90px,70px] gap-3 py-2.5 border-b border-border/50 last:border-0 text-sm items-center"
+                            >
+                                <span className="text-foreground font-mono text-xs truncate">{entry.eventType}</span>
+                                <Badge variant="secondary" className={`text-xs ${statusColor(entry.status)}`}>
+                                    {entry.status}
+                                </Badge>
+                                <span className="text-muted-foreground text-xs">
+                                    {new Date(entry.createdAt).toLocaleTimeString()}
+                                </span>
+                                <span className="text-right text-muted-foreground text-xs">{entry.retries}</span>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </CardContent>
+        </Card>
+    );
+}
+
 export function SettingsSection() {
     const { address, isConnected } = useAccount();
     const chainId = useChainId();
@@ -276,10 +359,10 @@ export function SettingsSection() {
                                             {chainId === 11155111
                                                 ? "Sepolia Testnet"
                                                 : chainId === 8453
-                                                ? "Base Mainnet"
-                                                : chainId === 84532
-                                                ? "Base Sepolia"
-                                                : "Unknown"}{" "}
+                                                    ? "Base Mainnet"
+                                                    : chainId === 84532
+                                                        ? "Base Sepolia"
+                                                        : "Unknown"}{" "}
                                             (Chain ID: {chainId})
                                         </span>
                                     </div>
@@ -385,11 +468,10 @@ export function SettingsSection() {
                                     <button
                                         key={p}
                                         onClick={() => setEmailProvider(p)}
-                                        className={`px-4 py-1.5 rounded-lg text-xs font-medium border transition-all duration-200 ${
-                                            emailProvider === p
-                                                ? "bg-accent text-accent-foreground border-accent"
-                                                : "bg-secondary border-border text-muted-foreground hover:text-foreground"
-                                        }`}
+                                        className={`px-4 py-1.5 rounded-lg text-xs font-medium border transition-all duration-200 ${emailProvider === p
+                                            ? "bg-accent text-accent-foreground border-accent"
+                                            : "bg-secondary border-border text-muted-foreground hover:text-foreground"
+                                            }`}
                                     >
                                         {p === "resend" ? "Resend" : "SendGrid"}
                                     </button>
@@ -538,7 +620,11 @@ export function SettingsSection() {
                             </div>
                         </CardContent>
                     </Card>
+
+                    {/* Webhook Delivery Log */}
+                    <WebhookLogCard />
                 </TabsContent>
+
 
                 {/* GMP Gas Tab */}
                 <TabsContent value="gmp" className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
