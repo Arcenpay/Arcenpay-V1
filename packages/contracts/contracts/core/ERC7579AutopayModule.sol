@@ -167,17 +167,15 @@ contract ERC7579AutopayModule is IERC7579AutopayModule, ReentrancyGuard {
             IFeeCollector(feeCollector).receiveFee(config.token, protocolFee);
         }
 
-        // Renew subscription NFT
-        subscriptionRegistry.renew(
-            _getOrMintToken(account, config.planId),
-            uint64(config.interval)
-        );
+        (uint256 tokenId, bool mintedNow) = _getOrMintToken(account, config.planId);
+        if (!mintedNow) {
+            subscriptionRegistry.renew(tokenId, uint64(config.interval));
+        }
 
         emit PaymentExecuted(account, config.merchant, amount, block.timestamp);
 
         // Dispatch cross-chain GMP update to MirrorRegistry if destination is configured
         if (_mirrorDestinationChainId != 0) {
-            uint256 tokenId = _getOrMintToken(account, config.planId);
             if (tokenId != 0) {
                 try subscriptionRegistry.dispatchCrossChainUpdate{value: 0}(
                     tokenId,
@@ -245,14 +243,16 @@ contract ERC7579AutopayModule is IERC7579AutopayModule, ReentrancyGuard {
         require(config.maxAmount <= plan.price, "AutopayModule: amount exceeds plan price");
     }
 
-    function _getOrMintToken(address account, uint256 planId) internal returns (uint256) {
-        // Try to get existing token for this wallet
-        // This is a simplified version — in production, would check for plan-specific tokens
-        try subscriptionRegistry.mint(account, planId, uint64(_configs[account].interval)) returns (uint256 tokenId) {
-            return tokenId;
-        } catch {
-            // If mint fails (e.g., already has token), the registry handles renewal internally
-            return 0;
+    function _getOrMintToken(address account, uint256 planId) internal returns (uint256 tokenId, bool mintedNow) {
+        uint256 walletToken = subscriptionRegistry.getWalletSubscription(account);
+        if (walletToken != 0) {
+            (uint256 tokenPlanId,) = subscriptionRegistry.getPlanFeatures(walletToken);
+            if (tokenPlanId == planId) {
+                return (walletToken, false);
+            }
         }
+
+        tokenId = subscriptionRegistry.mint(account, planId, uint64(_configs[account].interval));
+        return (tokenId, true);
     }
 }

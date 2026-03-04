@@ -11,28 +11,32 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: packages/contracts
 
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@v1
+      - uses: actions/setup-node@v4
         with:
-          version: nightly
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Compile contracts (Hardhat)
+        run: npm run -w packages/contracts build
 
       - name: Forge Build
-        run: forge build --sizes
+        run: npm run -w packages/contracts forge:build:docker
 
       - name: Forge Test
-        run: forge test -vvv
+        run: npm run -w packages/contracts test:forge:docker
 
       - name: Forge Coverage
-        run: forge coverage --report summary
+        run: npm run -w packages/contracts forge:coverage:docker
 
       - name: Forge Gas Snapshot
-        run: forge snapshot --check
+        run: npm run -w packages/contracts forge:snapshot:docker

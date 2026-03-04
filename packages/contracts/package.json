@@ -5,7 +5,12 @@
   "description": "MEAP + ZKVUB Protocol Smart Contracts",
   "scripts": {
     "build": "hardhat compile",
-    "test": "forge test -vvv",
+    "test": "npm run test:forge:docker",
+    "test:forge:local": "forge test -vvv",
+    "test:forge:docker": "docker run --rm -v $(pwd)/../..:/repo -w /repo/packages/contracts ghcr.io/foundry-rs/foundry:stable \"forge test -vvv\"",
+    "forge:build:docker": "docker run --rm -v $(pwd)/../..:/repo -w /repo/packages/contracts ghcr.io/foundry-rs/foundry:stable \"forge build --sizes\"",
+    "forge:coverage:docker": "docker run --rm -v $(pwd)/../..:/repo -w /repo/packages/contracts ghcr.io/foundry-rs/foundry:stable \"forge coverage --report summary\"",
+    "forge:snapshot:docker": "docker run --rm -v $(pwd)/../..:/repo -w /repo/packages/contracts ghcr.io/foundry-rs/foundry:stable \"forge snapshot --check\"",
     "test:hardhat": "hardhat test",
     "clean": "hardhat clean && forge clean",
     "deploy:sepolia": "hardhat run script/deploy.ts --network baseSepolia",

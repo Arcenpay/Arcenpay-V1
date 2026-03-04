@@ -12,12 +12,69 @@ import {
 } from "recharts";
 import { BarChart3 } from "lucide-react";
 
+type ProofHistoryJob = {
+  settlementAmount?: string;
+  createdAt?: number;
+};
+
+type RevenuePoint = {
+  time: string;
+  revenue: number;
+};
+
+const FACILITATOR_URL =
+  process.env.NEXT_PUBLIC_FACILITATOR_BASE_URL ||
+  process.env.NEXT_PUBLIC_FACILITATOR_URL ||
+  "http://localhost:3402";
+
 export function RevenueChart() {
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [data, setData] = useState<RevenuePoint[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoaded(true), 300);
-    return () => clearTimeout(timer);
+    let cancelled = false;
+
+    const fetchRevenue = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch(`${FACILITATOR_URL}/api/proofs/history?limit=12`);
+        if (!response.ok) return;
+        const payload = await response.json();
+        const jobs = Array.isArray(payload.jobs) ? (payload.jobs as ProofHistoryJob[]) : [];
+        const points = jobs
+          .filter((job) => job.settlementAmount && job.createdAt)
+          .map((job) => ({
+            time: new Date(Number(job.createdAt)).toLocaleDateString(undefined, {
+              month: "short",
+              day: "numeric",
+            }),
+            revenue: Number(job.settlementAmount) / 1e6,
+          }))
+          .reverse();
+
+        if (!cancelled) {
+          setData(points);
+        }
+      } catch {
+        if (!cancelled) {
+          setData([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void fetchRevenue();
+    const interval = setInterval(() => {
+      void fetchRevenue();
+    }, 30_000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
   }, []);
 
   return (
@@ -35,16 +92,50 @@ export function RevenueChart() {
         </div>
       </div>
 
-      {/* Empty state */}
-      <div className="flex flex-col items-center justify-center h-[280px] text-center">
-        <div className="w-14 h-14 rounded-xl bg-secondary flex items-center justify-center mb-4">
-          <BarChart3 className="w-7 h-7 text-muted-foreground" />
+      {loading ? (
+        <div className="flex flex-col items-center justify-center h-[280px] text-center">
+          <p className="text-sm text-muted-foreground">Loading revenue trend...</p>
         </div>
-        <p className="text-sm font-medium text-foreground mb-1">No revenue data yet</p>
-        <p className="text-xs text-muted-foreground max-w-[280px]">
-          Revenue data will populate as subscribers are billed through the protocol
-        </p>
-      </div>
+      ) : data.length === 0 ? (
+        <div className="flex flex-col items-center justify-center h-[280px] text-center">
+          <div className="w-14 h-14 rounded-xl bg-secondary flex items-center justify-center mb-4">
+            <BarChart3 className="w-7 h-7 text-muted-foreground" />
+          </div>
+          <p className="text-sm font-medium text-foreground mb-1">No revenue data yet</p>
+          <p className="text-xs text-muted-foreground max-w-[280px]">
+            Revenue data will populate as subscribers are billed through the protocol
+          </p>
+        </div>
+      ) : (
+        <div className="h-[280px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={data}>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+              <XAxis dataKey="time" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+              <YAxis
+                stroke="hsl(var(--muted-foreground))"
+                fontSize={12}
+                tickFormatter={(value) => `$${Number(value).toFixed(2)}`}
+              />
+              <Tooltip
+                formatter={(value: number) => [`$${Number(value).toFixed(2)}`, "Revenue"]}
+                contentStyle={{
+                  backgroundColor: "hsl(var(--card))",
+                  border: "1px solid hsl(var(--border))",
+                  borderRadius: "8px",
+                }}
+              />
+              <Area
+                type="monotone"
+                dataKey="revenue"
+                stroke="hsl(var(--chart-1))"
+                fill="hsl(var(--chart-1) / 0.2)"
+                strokeWidth={2}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      )}
     </div>
   );
 }

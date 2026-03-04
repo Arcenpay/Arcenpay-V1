@@ -28,12 +28,28 @@ export async function POST(req: NextRequest) {
     const { message, signature, address, chainId, nonce } = parsed.data;
 
     // Validate nonce (one-time use, 5-minute TTL)
-    if (!consumeNonce(nonce)) {
+    const nonceRecord = consumeNonce(nonce);
+    if (!nonceRecord) {
       return NextResponse.json({ error: "Invalid or expired nonce" }, { status: 401 });
     }
 
-    // Verify SIWE message signature
-    const expectedMessage = buildSIWEMessage({ address, chainId, nonce });
+    const domain = req.headers.get("host") || "arcenpay.xyz";
+    const uri = req.nextUrl.origin || `https://${domain}`;
+
+    // Verify exact SIWE message shape to avoid arbitrary signed-message reuse.
+    const expectedMessage = buildSIWEMessage({
+      address,
+      chainId,
+      nonce,
+      domain,
+      uri,
+      issuedAt: nonceRecord.issuedAt,
+    });
+
+    if (message !== expectedMessage) {
+      return NextResponse.json({ error: "SIWE message mismatch" }, { status: 401 });
+    }
+
     const isValid = await verifyMessage({
       address: address as `0x${string}`,
       message: expectedMessage,
@@ -41,15 +57,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (!isValid) {
-      // Also try verifying the raw message in case the frontend constructed it differently
-      const isValidRaw = await verifyMessage({
-        address: address as `0x${string}`,
-        message,
-        signature: signature as `0x${string}`,
-      });
-      if (!isValidRaw) {
-        return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
-      }
+      return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
     }
 
     // Issue JWT + set HttpOnly cookie

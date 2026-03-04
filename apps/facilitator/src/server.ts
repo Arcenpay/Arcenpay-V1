@@ -511,8 +511,13 @@ if (process.env.TABLELAND_TABLE_NAME) {
     .catch((err) => {
       console.error("[Facilitator] Tableland init failed:", err);
       tablelandService = null;
-    });
+  });
 }
+
+const subscriberEmailsByWallet = new Map<
+  string,
+  { email: string; planId?: string; updatedAt: number }
+>();
 
 // Optional: Lit Protocol service
 let litService: LitProtocolService | null = null;
@@ -618,6 +623,71 @@ function isBytes32(value: string): boolean {
   return /^0x[a-fA-F0-9]{64}$/.test(value);
 }
 
+function isValidEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+const PROVIDER_TIERS = ["starter", "pro", "enterprise"] as const;
+type ProviderTier = (typeof PROVIDER_TIERS)[number];
+type ProviderFlagType = "boolean" | "string" | "number";
+
+function normalizeProviderTier(value: string): ProviderTier {
+  const normalized = value.toLowerCase().trim();
+  if (normalized === "enterprise") return "enterprise";
+  if (normalized === "pro") return "pro";
+  return "starter";
+}
+
+function inferFlagType(value: unknown): ProviderFlagType {
+  if (typeof value === "number") return "number";
+  if (typeof value === "string") return "string";
+  return "boolean";
+}
+
+function formatFlagLabel(key: string): string {
+  return key
+    .split("_")
+    .filter(Boolean)
+    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join(" ");
+}
+
+function buildProviderFlagCatalog(
+  matrix: Record<string, Record<string, boolean | string | number>>,
+): Array<{
+  key: string;
+  label: string;
+  type: ProviderFlagType;
+  planTiers: string[];
+  enabledCount: number;
+  totalCount: number;
+}> {
+  const keys = new Set<string>();
+  for (const tier of PROVIDER_TIERS) {
+    const flags = matrix[tier] || {};
+    for (const key of Object.keys(flags)) {
+      keys.add(key);
+    }
+  }
+
+  return Array.from(keys).map((key) => {
+    const planTiers = PROVIDER_TIERS.filter((tier) => {
+      const value = matrix[tier]?.[key];
+      return value === true || value === 1 || value === "true";
+    });
+    const sample =
+      matrix.enterprise?.[key] ?? matrix.pro?.[key] ?? matrix.starter?.[key] ?? false;
+    return {
+      key,
+      label: formatFlagLabel(key),
+      type: inferFlagType(sample),
+      planTiers,
+      enabledCount: planTiers.length,
+      totalCount: PROVIDER_TIERS.length,
+    };
+  });
+}
+
 function parseSessionTuple(raw: unknown): {
   agent: string;
   token: string;
@@ -686,6 +756,8 @@ eventListener.on("minted", async (event) => {
   console.log(
     `[Facilitator] 🎉 New subscriber: ${event.subscriber} (Plan ${event.planId})`,
   );
+  let snapshotForEmail: Awaited<ReturnType<typeof getSubscriptionSnapshot>> | null =
+    null;
   if (tablelandService && event.subscriber) {
     if (tablelandReady) {
       await tablelandReady;
@@ -693,6 +765,7 @@ eventListener.on("minted", async (event) => {
     if (tablelandService) {
       try {
         const snapshot = await getSubscriptionSnapshot(event.tokenId);
+        snapshotForEmail = snapshot;
         const features = getDefaultFlagsForTier(snapshot.planTier);
         await tablelandService.syncSubscription({
           walletAddress: event.subscriber,
@@ -724,14 +797,23 @@ eventListener.on("minted", async (event) => {
   }
   // Send welcome email if subscriber email is known and email service is configured
   if (emailService && event.subscriber) {
+    const subscriberEmail =
+      subscriberEmailsByWallet.get(event.subscriber.toLowerCase())?.email;
+    if (!subscriberEmail) {
+      return;
+    }
     try {
       await emailService.sendTemplate(
         "welcome" as any,
-        { email: "", walletAddress: event.subscriber },
+        { email: subscriberEmail, walletAddress: event.subscriber },
         {
           walletAddress: event.subscriber,
           planId: event.planId?.toString() || "",
           tokenId: event.tokenId?.toString() || "",
+          planTier: snapshotForEmail?.planTier || "",
+          expiresAt: snapshotForEmail?.expiresAt
+            ? new Date(Number(snapshotForEmail.expiresAt) * 1000).toISOString()
+            : "",
         },
       );
     } catch (err) {
@@ -1297,6 +1379,272 @@ app.get("/api/entitlements/:wallet/flags", async (req, res) => {
   }
 });
 
+app.get("/api/entitlements/provider/:provider/flags", async (req, res) => {
+  const provider = String(req.params.provider || "").trim();
+  if (!isValidAddress(provider)) {
+    return res.status(400).json({
+      ok: false,
+      error: "Invalid provider address.",
+    });
+  }
+
+  const normalizedProvider = provider.toLowerCase() as `0x${string}`;
+
+  try {
+    if (tablelandService) {
+      if (tablelandReady) {
+        await tablelandReady;
+      }
+      if (tablelandService) {
+        const matrix = await tablelandService.listTierFeatureFlags(normalizedProvider);
+        return res.json({
+          ok: true,
+          source: "tableland",
+          storageReady: true,
+          provider: normalizedProvider,
+          planTiers: [...PROVIDER_TIERS],
+          flags: buildProviderFlagCatalog(matrix),
+          matrix,
+          updatedAt: Date.now(),
+        });
+      }
+    }
+
+    const fallbackMatrix = {
+      starter: getDefaultFlagsForTier("starter"),
+      pro: getDefaultFlagsForTier("pro"),
+      enterprise: getDefaultFlagsForTier("enterprise"),
+    } satisfies Record<ProviderTier, Record<string, boolean | string | number>>;
+
+    return res.json({
+      ok: true,
+      source: "default",
+      storageReady: false,
+      provider: normalizedProvider,
+      planTiers: [...PROVIDER_TIERS],
+      flags: buildProviderFlagCatalog(fallbackMatrix),
+      matrix: fallbackMatrix,
+      updatedAt: Date.now(),
+    });
+  } catch (err: any) {
+    return res.status(500).json({
+      ok: false,
+      error: err?.message || "Failed to resolve provider flags.",
+    });
+  }
+});
+
+app.post("/api/entitlements/provider/:provider/flags/bootstrap", async (req, res) => {
+  const provider = String(req.params.provider || "").trim();
+  if (!isValidAddress(provider)) {
+    return res.status(400).json({
+      ok: false,
+      error: "Invalid provider address.",
+    });
+  }
+
+  if (!tablelandService) {
+    return res.status(503).json({
+      ok: false,
+      error:
+        "Tableland service not configured. Set TABLELAND_TABLE_NAME + TABLELAND_PRIVATE_KEY.",
+    });
+  }
+
+  try {
+    if (tablelandReady) {
+      await tablelandReady;
+    }
+    if (!tablelandService) {
+      return res.status(503).json({ ok: false, error: "Tableland service unavailable." });
+    }
+
+    const normalizedProvider = provider.toLowerCase();
+    for (const tier of PROVIDER_TIERS) {
+      await tablelandService.setTierFeatureFlags(
+        normalizedProvider,
+        tier,
+        getDefaultFlagsForTier(tier),
+      );
+    }
+
+    return res.json({
+      ok: true,
+      provider: normalizedProvider,
+      initialized: true,
+    });
+  } catch (err: any) {
+    return res.status(500).json({
+      ok: false,
+      error: err?.message || "Failed to initialize provider feature flags.",
+    });
+  }
+});
+
+app.put("/api/entitlements/provider/:provider/flags/:flagKey", async (req, res) => {
+  const provider = String(req.params.provider || "").trim();
+  const flagKey = String(req.params.flagKey || "").trim().toLowerCase();
+  if (!isValidAddress(provider)) {
+    return res.status(400).json({ ok: false, error: "Invalid provider address." });
+  }
+  if (!/^[a-z0-9_]+$/.test(flagKey)) {
+    return res.status(400).json({
+      ok: false,
+      error: "flagKey must be lowercase alphanumeric with underscores.",
+    });
+  }
+  if (!tablelandService) {
+    return res.status(503).json({
+      ok: false,
+      error:
+        "Tableland service not configured. Set TABLELAND_TABLE_NAME + TABLELAND_PRIVATE_KEY.",
+    });
+  }
+
+  const requestedTiersRaw = Array.isArray(req.body?.planTiers)
+    ? (req.body.planTiers as unknown[])
+    : [];
+  const enabledTiers = new Set(
+    requestedTiersRaw
+      .filter((tier): tier is string => typeof tier === "string")
+      .map((tier) => normalizeProviderTier(tier)),
+  );
+
+  try {
+    if (tablelandReady) {
+      await tablelandReady;
+    }
+    if (!tablelandService) {
+      return res.status(503).json({ ok: false, error: "Tableland service unavailable." });
+    }
+
+    const normalizedProvider = provider.toLowerCase();
+    const matrix = await tablelandService.listTierFeatureFlags(normalizedProvider);
+
+    for (const tier of PROVIDER_TIERS) {
+      const nextFlags = { ...(matrix[tier] || {}) };
+      nextFlags[flagKey] = enabledTiers.has(tier);
+      await tablelandService.setTierFeatureFlags(normalizedProvider, tier, nextFlags);
+    }
+
+    return res.json({
+      ok: true,
+      provider: normalizedProvider,
+      key: flagKey,
+      planTiers: Array.from(enabledTiers),
+    });
+  } catch (err: any) {
+    return res.status(500).json({
+      ok: false,
+      error: err?.message || "Failed to upsert provider feature flag.",
+    });
+  }
+});
+
+app.patch("/api/entitlements/provider/:provider/flags/:flagKey", async (req, res) => {
+  const provider = String(req.params.provider || "").trim();
+  const flagKey = String(req.params.flagKey || "").trim().toLowerCase();
+  const tier = normalizeProviderTier(String(req.body?.tier || "starter"));
+  const enabled = Boolean(req.body?.enabled);
+
+  if (!isValidAddress(provider)) {
+    return res.status(400).json({ ok: false, error: "Invalid provider address." });
+  }
+  if (!/^[a-z0-9_]+$/.test(flagKey)) {
+    return res.status(400).json({
+      ok: false,
+      error: "flagKey must be lowercase alphanumeric with underscores.",
+    });
+  }
+  if (!tablelandService) {
+    return res.status(503).json({
+      ok: false,
+      error:
+        "Tableland service not configured. Set TABLELAND_TABLE_NAME + TABLELAND_PRIVATE_KEY.",
+    });
+  }
+
+  try {
+    if (tablelandReady) {
+      await tablelandReady;
+    }
+    if (!tablelandService) {
+      return res.status(503).json({ ok: false, error: "Tableland service unavailable." });
+    }
+
+    const normalizedProvider = provider.toLowerCase();
+    const matrix = await tablelandService.listTierFeatureFlags(normalizedProvider);
+    const nextFlags = { ...(matrix[tier] || {}) };
+    nextFlags[flagKey] = enabled;
+    await tablelandService.setTierFeatureFlags(normalizedProvider, tier, nextFlags);
+
+    return res.json({
+      ok: true,
+      provider: normalizedProvider,
+      key: flagKey,
+      tier,
+      enabled,
+    });
+  } catch (err: any) {
+    return res.status(500).json({
+      ok: false,
+      error: err?.message || "Failed to update provider feature flag.",
+    });
+  }
+});
+
+app.delete("/api/entitlements/provider/:provider/flags/:flagKey", async (req, res) => {
+  const provider = String(req.params.provider || "").trim();
+  const flagKey = String(req.params.flagKey || "").trim().toLowerCase();
+
+  if (!isValidAddress(provider)) {
+    return res.status(400).json({ ok: false, error: "Invalid provider address." });
+  }
+  if (!/^[a-z0-9_]+$/.test(flagKey)) {
+    return res.status(400).json({
+      ok: false,
+      error: "flagKey must be lowercase alphanumeric with underscores.",
+    });
+  }
+  if (!tablelandService) {
+    return res.status(503).json({
+      ok: false,
+      error:
+        "Tableland service not configured. Set TABLELAND_TABLE_NAME + TABLELAND_PRIVATE_KEY.",
+    });
+  }
+
+  try {
+    if (tablelandReady) {
+      await tablelandReady;
+    }
+    if (!tablelandService) {
+      return res.status(503).json({ ok: false, error: "Tableland service unavailable." });
+    }
+
+    const normalizedProvider = provider.toLowerCase();
+    const matrix = await tablelandService.listTierFeatureFlags(normalizedProvider);
+
+    for (const tier of PROVIDER_TIERS) {
+      const nextFlags = { ...(matrix[tier] || {}) };
+      delete nextFlags[flagKey];
+      await tablelandService.setTierFeatureFlags(normalizedProvider, tier, nextFlags);
+    }
+
+    return res.json({
+      ok: true,
+      provider: normalizedProvider,
+      key: flagKey,
+      deleted: true,
+    });
+  } catch (err: any) {
+    return res.status(500).json({
+      ok: false,
+      error: err?.message || "Failed to delete provider feature flag.",
+    });
+  }
+});
+
 app.post("/api/lit/decrypt", async (req, res) => {
   if (!litService) {
     return res.status(503).json({
@@ -1476,16 +1824,50 @@ app.get("/api/session/details/:sessionId", async (req, res) => {
 });
 
 // ============================================================
+//  Subscriber Email Capture Endpoint
+// ============================================================
+
+app.post("/api/subscriber/email", (req, res) => {
+  const walletAddress = String(req.body?.walletAddress || "").trim();
+  const email = String(req.body?.email || "").trim().toLowerCase();
+  const planId =
+    typeof req.body?.planId === "string" ? String(req.body.planId).trim() : undefined;
+
+  if (!isValidAddress(walletAddress)) {
+    return res.status(400).json({ ok: false, error: "Invalid walletAddress." });
+  }
+  if (!isValidEmail(email)) {
+    return res.status(400).json({ ok: false, error: "Invalid email address." });
+  }
+
+  subscriberEmailsByWallet.set(walletAddress.toLowerCase(), {
+    email,
+    planId,
+    updatedAt: Date.now(),
+  });
+
+  return res.status(201).json({
+    ok: true,
+    walletAddress: walletAddress.toLowerCase(),
+    email,
+    planId: planId || null,
+  });
+});
+
+// ============================================================
 //  Webhook Delivery Log Endpoint
 // ============================================================
 
 app.get("/api/webhooks/log", (_req, res) => {
   if (!webhookService) {
-    return res.json({ configured: false, log: [] });
+    return res.json({ configured: false, entries: [], log: [] });
   }
+  const entries = webhookService.getDeliveryLog();
   res.json({
     configured: true,
-    log: webhookService.getDeliveryLog(),
+    entries,
+    // deprecated alias retained for compatibility with older dashboard clients
+    log: entries,
   });
 });
 

@@ -59,7 +59,9 @@ const FLAG_TYPE_ICONS: Record<FlagType, React.ElementType> = {
 };
 
 const FACILITATOR_URL =
-    process.env.NEXT_PUBLIC_FACILITATOR_URL || "http://localhost:3402";
+    process.env.NEXT_PUBLIC_FACILITATOR_BASE_URL ||
+    process.env.NEXT_PUBLIC_FACILITATOR_URL ||
+    "http://localhost:3402";
 
 async function apiFetch(path: string, options?: RequestInit) {
     const res = await fetch(`${FACILITATOR_URL}${path}`, {
@@ -77,7 +79,7 @@ export function FeaturesSection() {
     const { address, isConnected } = useAccount();
 
     const [flags, setFlags] = useState<FeatureFlag[]>([]);
-    const [planTiers, setPlanTiers] = useState<string[]>(["Starter", "Pro", "Enterprise"]);
+    const [planTiers, setPlanTiers] = useState<string[]>(["starter", "pro", "enterprise"]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [tableExists, setTableExists] = useState<boolean | null>(null);
@@ -94,9 +96,9 @@ export function FeaturesSection() {
         setLoading(true);
         setError(null);
         try {
-            const data = await apiFetch(`/api/tableland/flags?provider=${address}`);
+            const data = await apiFetch(`/api/entitlements/provider/${address}/flags`);
             setFlags(data.flags ?? []);
-            setTableExists(data.tableExists ?? true);
+            setTableExists(data.storageReady ?? true);
             if (data.planTiers) setPlanTiers(data.planTiers);
         } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : "Failed to load feature flags";
@@ -120,14 +122,13 @@ export function FeaturesSection() {
     const handleDeployTable = async () => {
         setIsSaving(true);
         try {
-            await apiFetch("/api/tableland/create-table", {
+            await apiFetch(`/api/entitlements/provider/${address}/flags/bootstrap`, {
                 method: "POST",
-                body: JSON.stringify({ provider: address }),
             });
             setTableExists(true);
-            toast.success("Tableland table deployed!");
+            toast.success("Entitlement storage initialized");
         } catch (err: unknown) {
-            toast.error(err instanceof Error ? err.message : "Failed to deploy table");
+            toast.error(err instanceof Error ? err.message : "Failed to initialize storage");
         } finally {
             setIsSaving(false);
         }
@@ -158,11 +159,15 @@ export function FeaturesSection() {
 
         setIsSaving(true);
         try {
-            await apiFetch("/api/tableland/flags", {
-                method: "POST",
-                body: JSON.stringify({ provider: address, flag: flagData }),
+            await apiFetch(`/api/entitlements/provider/${address}/flags/${flagData.key}`, {
+                method: "PUT",
+                body: JSON.stringify({
+                    label: flagData.label,
+                    type: flagData.type,
+                    planTiers: flagData.planTiers,
+                }),
             });
-            setFlags((prev) => [...prev, flagData]);
+            setFlags((prev) => [...prev.filter((f) => f.key !== flagData.key), flagData]);
             toast.success(`Flag "${flagData.key}" created`);
         } catch {
             // If facilitator not running, add locally
@@ -179,7 +184,7 @@ export function FeaturesSection() {
 
     const handleDeleteFlag = async (key: string) => {
         try {
-            await apiFetch(`/api/tableland/flags/${key}?provider=${address}`, {
+            await apiFetch(`/api/entitlements/provider/${address}/flags/${key}`, {
                 method: "DELETE",
             });
             toast.success(`Flag "${key}" deleted`);
@@ -191,9 +196,12 @@ export function FeaturesSection() {
 
     const handleBulkToggle = async (enable: boolean, flagKey: string, tier: string) => {
         try {
-            await apiFetch("/api/tableland/flags/bulk", {
+            await apiFetch(`/api/entitlements/provider/${address}/flags/${flagKey}`, {
                 method: "PATCH",
-                body: JSON.stringify({ provider: address, flagKey, tier, enabled: enable }),
+                body: JSON.stringify({
+                    tier: tier.toLowerCase(),
+                    enabled: enable,
+                }),
             });
             toast.success(`${enable ? "Enabled" : "Disabled"} "${flagKey}" for ${tier} tier`);
         } catch (err: unknown) {
@@ -228,7 +236,7 @@ export function FeaturesSection() {
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
                     <p className="text-sm text-muted-foreground">
-                        Manage cryptographic feature flags gated by Tableland + Lit Protocol
+                        Manage entitlement feature flags served by the facilitator.
                     </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -241,7 +249,7 @@ export function FeaturesSection() {
                             disabled={isSaving || !isConnected}
                         >
                             <Database className="w-4 h-4" />
-                            Deploy Tableland Table
+                            Initialize Storage
                         </Button>
                     )}
                     <Button
@@ -260,10 +268,10 @@ export function FeaturesSection() {
                 <Info className="w-4 h-4 text-accent shrink-0 mt-0.5" />
                 <div>
                     <p className="text-sm font-medium text-foreground">
-                        Feature flags are stored on Tableland and enforced by Lit Protocol MPC
+                        Feature flags are persisted by facilitator storage and enforced by your entitlement checks.
                     </p>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                        Each flag maps to an Access Control Condition (ACC) that checks the subscriber's on-chain entitlement. Connect your wallet and deploy a Tableland table to activate.
+                        Each flag can be toggled by plan tier. Connect your wallet to configure provider-level gating rules.
                     </p>
                 </div>
             </div>

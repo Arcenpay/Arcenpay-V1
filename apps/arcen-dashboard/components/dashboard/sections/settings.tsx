@@ -92,7 +92,29 @@ function WebhookLogCard() {
             const res = await fetch("/api/webhooks/log?limit=20");
             if (res.ok) {
                 const data = await res.json();
-                setEntries(data.entries || []);
+                const rows = Array.isArray(data.entries)
+                    ? data.entries
+                    : Array.isArray(data.log)
+                        ? data.log
+                        : [];
+                const normalized: WebhookLogEntry[] = rows.map((entry: Record<string, unknown>, index: number) => ({
+                    // Support both facilitator-native log shape and legacy dashboard proxy shape.
+                    id: String(entry.id || `entry-${index}`),
+                    eventType: String(entry.event || entry.eventType || "unknown"),
+                    status: entry.success === true
+                        ? "delivered"
+                        : entry.success === false
+                            ? "failed"
+                            : "pending",
+                    retries: Math.max(0, Number(entry.attemptNumber || entry.retries || 1) - 1),
+                    createdAt: typeof entry.createdAt === "string"
+                        ? entry.createdAt
+                        : new Date(
+                            Number(entry.deliveredAt || entry.createdAt || Date.now()),
+                        ).toISOString(),
+                    responseCode: Number(entry.statusCode || entry.responseCode || 0) || undefined,
+                }));
+                setEntries(normalized);
             }
         } catch {
             // Silent — facilitator may not be running in dev
@@ -243,7 +265,10 @@ export function SettingsSection() {
             return;
         }
         try {
-            const facilitatorUrl = process.env.NEXT_PUBLIC_FACILITATOR_URL || "http://localhost:3402";
+            const facilitatorUrl =
+                process.env.NEXT_PUBLIC_FACILITATOR_BASE_URL ||
+                process.env.NEXT_PUBLIC_FACILITATOR_URL ||
+                "http://localhost:3402";
             await fetch(`${facilitatorUrl}/api/webhooks/test`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },

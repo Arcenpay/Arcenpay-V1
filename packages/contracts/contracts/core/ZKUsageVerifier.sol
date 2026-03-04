@@ -31,6 +31,12 @@ contract ZKUsageVerifier is IZKUsageVerifier, Ownable, ReentrancyGuard {
     /// @notice Plan ID => rate per API call (in stablecoin base units)
     mapping(uint256 => uint256) private _rateSchedules;
 
+    /// @notice Session ID => settlement plan routing
+    mapping(bytes32 => uint256) private _sessionPlanIds;
+
+    /// @notice Session ID => explicit payout recipient
+    mapping(bytes32 => address) private _sessionProviders;
+
     /// @notice snarkjs-exported Groth16 verifier contract
     address public groth16Verifier;
 
@@ -65,6 +71,21 @@ contract ZKUsageVerifier is IZKUsageVerifier, Ownable, ReentrancyGuard {
     }
 
     /// @inheritdoc IZKUsageVerifier
+    function setSessionSettlementConfig(
+        bytes32 sessionId,
+        uint256 planId,
+        address provider
+    ) external onlyOwner {
+        require(sessionId != bytes32(0), "ZKVerifier: zero session");
+        if (provider == address(0) && planId != 0) {
+            provider = planFactory.getPlan(planId).provider;
+        }
+        _sessionPlanIds[sessionId] = planId;
+        _sessionProviders[sessionId] = provider;
+        emit SessionSettlementConfigured(sessionId, planId, provider);
+    }
+
+    /// @inheritdoc IZKUsageVerifier
     function setGroth16Verifier(address verifier) external onlyOwner {
         require(verifier != address(0), "ZKVerifier: zero verifier");
         groth16Verifier = verifier;
@@ -92,9 +113,12 @@ contract ZKUsageVerifier is IZKUsageVerifier, Ownable, ReentrancyGuard {
         _usedNullifiers[inputs.nullifier] = true;
 
         // 4. Calculate settlement amount
-        // For MVP, we use a simplified approach — will be replaced with proper
-        // plan-specific rate lookup once PlanFactory is fully integrated
-        uint256 ratePerCall = _rateSchedules[0]; // Default rate
+        uint256 sessionPlanId = _sessionPlanIds[inputs.sessionId];
+        uint256 ratePerCall = _rateSchedules[sessionPlanId];
+        if (ratePerCall == 0 && sessionPlanId != 0) {
+            // Backward-compatible fallback for sessions without explicit plan rates configured.
+            ratePerCall = _rateSchedules[0];
+        }
         require(ratePerCall > 0, "ZKVerifier: no rate configured");
 
         uint256 settlementAmount = inputs.callCount * ratePerCall;
@@ -104,9 +128,14 @@ contract ZKUsageVerifier is IZKUsageVerifier, Ownable, ReentrancyGuard {
         uint256 providerAmount = settlementAmount - protocolFee;
 
         // 6. Execute settlement from session vault
-        // The provider address is derived from the session configuration
-        // For MVP, settlement goes to contract owner (provider)
-        sessionVault.settle(inputs.sessionId, providerAmount, owner());
+        address provider = _sessionProviders[inputs.sessionId];
+        if (provider == address(0) && sessionPlanId != 0) {
+            provider = planFactory.getPlan(sessionPlanId).provider;
+        }
+        if (provider == address(0)) {
+            provider = owner();
+        }
+        sessionVault.settle(inputs.sessionId, providerAmount, provider);
 
         // 7. Emit settlement event
         emit BillingSettled(

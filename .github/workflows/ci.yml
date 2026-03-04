@@ -32,34 +32,23 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@v1
-        with:
-          version: nightly
-
       - name: Install Node dependencies
-        working-directory: packages/contracts
         run: npm ci
 
       - name: Compile contracts (Hardhat)
-        working-directory: packages/contracts
-        run: npx hardhat compile
+        run: npm run -w packages/contracts build
 
       - name: Run Foundry tests
-        working-directory: packages/contracts
-        run: forge test -vvv
+        run: npm run -w packages/contracts test:forge:docker
 
       - name: Check contract sizes
-        working-directory: packages/contracts
-        run: forge build --sizes
+        run: npm run -w packages/contracts forge:build:docker
 
       - name: Coverage summary
-        working-directory: packages/contracts
-        run: forge coverage --report summary
+        run: npm run -w packages/contracts forge:coverage:docker
 
       - name: Gas snapshot check
-        working-directory: packages/contracts
-        run: forge snapshot --check
+        run: npm run -w packages/contracts forge:snapshot:docker
 
   # ============================================================
   #  SDK Build & Type Check
@@ -110,6 +99,9 @@ jobs:
 
       - name: Format check
         run: npx prettier --check "**/*.{ts,tsx,js,jsx,json,md}"
+
+      - name: Turbo lint
+        run: npm run lint
 
   # ============================================================
   #  Static Analysis — Slither

@@ -141,6 +141,17 @@ function normalizeTimestamp(value: unknown): bigint {
   return coerceBigInt(value as bigint | string | number, BigInt(Date.now()));
 }
 
+/**
+ * Accept both unix seconds and unix milliseconds.
+ * Historical SDK clients sent seconds; newer flows send milliseconds.
+ */
+export function normalizePaymentTimestampMs(timestamp: bigint): bigint {
+  if (timestamp < 1_000_000_000_000n) {
+    return timestamp * 1000n;
+  }
+  return timestamp;
+}
+
 function sendRejection(
   res: Response,
   reason: X402RejectionReason,
@@ -351,7 +362,8 @@ export function x402Middleware(options: X402MiddlewareOptions) {
       const verifiedSigner = recoveredSigner as `0x${string}`;
 
       // Step 3b: Timestamp window check — reject stale payments
-      const paymentTimestamp = normalizeTimestamp(payload.timestamp);
+      const rawPaymentTimestamp = normalizeTimestamp(payload.timestamp);
+      const paymentTimestamp = normalizePaymentTimestampMs(rawPaymentTimestamp);
       const paymentAgeMs = Date.now() - Number(paymentTimestamp);
       if (paymentAgeMs > maxPaymentAgeMs || paymentAgeMs < -60_000) {
         sendRejection(
@@ -359,6 +371,7 @@ export function x402Middleware(options: X402MiddlewareOptions) {
           "PAYMENT_EXPIRED" as X402RejectionReason,
           `Payment timestamp is outside the acceptable window (${Math.round(maxPaymentAgeMs / 1000)}s)`,
           {
+            rawPaymentTimestamp: rawPaymentTimestamp.toString(),
             paymentTimestamp: paymentTimestamp.toString(),
             serverTime: Date.now().toString(),
           },

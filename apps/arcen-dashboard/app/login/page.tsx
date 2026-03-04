@@ -30,7 +30,7 @@ function LoginForm() {
     try {
       // 1. Fetch nonce
       const nonceRes = await fetch("/api/auth/nonce");
-      const { nonce } = await nonceRes.json();
+      const { nonce, issuedAt } = await nonceRes.json();
 
       // 2. Build SIWE message
       const message = buildSIWEMessage({
@@ -39,6 +39,7 @@ function LoginForm() {
         nonce,
         domain: typeof window !== "undefined" ? window.location.host : "arcenpay.xyz",
         uri: typeof window !== "undefined" ? window.location.origin : "https://arcenpay.xyz",
+        issuedAt,
       });
 
       // 3. Request signature from wallet

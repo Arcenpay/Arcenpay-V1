@@ -290,7 +290,7 @@ export class MEAPAgent {
    * Constructs a signed X-PAYMENT header using EIP-712 typed data
    */
   private async constructPayment(option: X402Response['accepts'][0]): Promise<string> {
-    const timestamp = BigInt(Math.floor(Date.now() / 1000));
+    const timestamp = BigInt(Date.now());
 
     const message = {
       from: this.account.address,

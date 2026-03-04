@@ -61,7 +61,7 @@ export default function ReactSDKPage() {
       <pre><code>{`<UsageDashboard
   sessionId="session_..."
   planId="1"
-  facilitatorUrl="http://localhost:3001"
+  facilitatorUrl="http://localhost:3402"
   pollInterval={5000}
 />`}</code></pre>
 

@@ -9,29 +9,40 @@ import { SignJWT, jwtVerify } from "jose";
 const JWT_SECRET_KEY = process.env.SIWE_JWT_SECRET || "dev_secret_change_in_production";
 export const COOKIE_NAME = "meap-session";
 const JWT_EXPIRY = "24h";
+const NONCE_TTL_MS = 5 * 60 * 1000;
 
 // In-memory nonce store — swap for Redis in production
-const nonceStore = new Map<string, number>();
+type NonceRecord = {
+  issuedAt: string;
+  expiresAt: number;
+};
+const nonceStore = new Map<string, NonceRecord>();
+
+function randomHex(bytes: number): string {
+  const arr = new Uint8Array(bytes);
+  globalThis.crypto.getRandomValues(arr);
+  return Array.from(arr, (value) => value.toString(16).padStart(2, "0")).join("");
+}
 
 /** Generates a cryptographically random nonce and stores it for 5 minutes */
-export function generateNonce(): string {
-  const nonce = Array.from({ length: 16 }, () =>
-    Math.random().toString(36)[2]
-  ).join("") + Date.now().toString(36);
-  nonceStore.set(nonce, Date.now() + 5 * 60 * 1000);
-  return nonce;
+export function generateNonce(): NonceRecord & { nonce: string } {
+  const nonce = randomHex(16);
+  const issuedAt = new Date().toISOString();
+  const expiresAt = Date.now() + NONCE_TTL_MS;
+  nonceStore.set(nonce, { issuedAt, expiresAt });
+  return { nonce, issuedAt, expiresAt };
 }
 
 /** Validates and consumes a nonce (one-time use) */
-export function consumeNonce(nonce: string): boolean {
-  const expiresAt = nonceStore.get(nonce);
-  if (!expiresAt) return false;
-  if (Date.now() > expiresAt) {
+export function consumeNonce(nonce: string): NonceRecord | null {
+  const record = nonceStore.get(nonce);
+  if (!record) return null;
+  if (Date.now() > record.expiresAt) {
     nonceStore.delete(nonce);
-    return false;
+    return null;
   }
   nonceStore.delete(nonce);
-  return true;
+  return record;
 }
 
 /** Issues a signed JWT */
@@ -62,9 +73,16 @@ export function buildSIWEMessage(params: {
   nonce: string;
   domain?: string;
   uri?: string;
+  issuedAt?: string;
 }): string {
-  const { address, chainId, nonce, domain = "arcenpay.xyz", uri = "https://arcenpay.xyz" } = params;
-  const now = new Date().toISOString();
+  const {
+    address,
+    chainId,
+    nonce,
+    domain = "arcenpay.xyz",
+    uri = "https://arcenpay.xyz",
+    issuedAt = new Date().toISOString(),
+  } = params;
   return [
     `${domain} wants you to sign in with your Ethereum account:`,
     address,
@@ -75,6 +93,6 @@ export function buildSIWEMessage(params: {
     "Version: 1",
     `Chain ID: ${chainId}`,
     `Nonce: ${nonce}`,
-    `Issued At: ${now}`,
+    `Issued At: ${issuedAt}`,
   ].join("\n");
 }

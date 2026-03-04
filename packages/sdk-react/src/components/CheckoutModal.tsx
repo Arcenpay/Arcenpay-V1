@@ -70,6 +70,10 @@ export interface CheckoutModalProps {
   className?: string;
 }
 
+export function getCheckoutStepOrder(): CheckoutStep[] {
+  return ["connect", "email", "account", "autopay", "approve", "subscribe", "success"];
+}
+
 /**
  * CheckoutModal — Full subscription checkout flow
  *
@@ -455,6 +459,41 @@ export function CheckoutModal({
     connectors,
   ]);
 
+  const handleEmailContinue = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    const email = subscriberEmail.trim();
+    if (email) {
+      const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+      if (!isEmailValid) {
+        const invalidEmailError = new Error("Enter a valid email address or leave it blank.");
+        setError(invalidEmailError.message);
+        setStep("error");
+        setLoading(false);
+        onError?.(invalidEmailError);
+        return;
+      }
+
+      try {
+        await fetch("/api/subscriber/email", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            walletAddress: address,
+            email,
+            planId: planId.toString(),
+          }),
+        });
+      } catch {
+        // Email capture is best-effort; checkout should not be blocked if backend is unreachable.
+      }
+    }
+
+    setStep("account");
+    setLoading(false);
+  }, [subscriberEmail, address, planId, onError]);
+
   const handleInstallAutopay = useCallback(() => {
     if (
       !paymentAccount ||
@@ -586,6 +625,7 @@ export function CheckoutModal({
     email: {
       title: "Add Email (Optional)",
       description: "Get billing updates and renewal reminders. You can skip this.",
+      action: handleEmailContinue,
       actionLabel: "Continue",
     },
     account: {
@@ -636,8 +676,15 @@ export function CheckoutModal({
   };
 
   const currentStep = STEP_CONFIG[step];
-  const stepNumber =
-    ["connect", "account", "autopay", "approve", "subscribe"].indexOf(step) + 1;
+  const progressSteps: CheckoutStep[] = [
+    "connect",
+    "email",
+    "account",
+    "autopay",
+    "approve",
+    "subscribe",
+  ];
+  const stepNumber = progressSteps.indexOf(step) + 1;
   const latestTxHash =
     mintHash || approveHash || autopayInstallHash || smartAccountDeployTxHash;
 
@@ -655,7 +702,7 @@ export function CheckoutModal({
         {/* Progress */}
         {step !== "success" && step !== "error" && (
           <div className="meap-checkout-progress">
-            {["connect", "account", "autopay", "approve", "subscribe"].map(
+            {progressSteps.map(
               (s, i) => (
                 <div
                   key={s}
@@ -673,6 +720,20 @@ export function CheckoutModal({
         {/* Body */}
         <div className="meap-checkout-body">
           <p>{currentStep.description}</p>
+
+          {step === "email" && (
+            <div className="meap-email-input-group">
+              <label htmlFor="meap-subscriber-email">Email (optional)</label>
+              <input
+                id="meap-subscriber-email"
+                type="email"
+                placeholder="you@company.com"
+                value={subscriberEmail}
+                onChange={(event) => setSubscriberEmail(event.target.value)}
+                className="meap-email-input"
+              />
+            </div>
+          )}
 
           {isTestnet && (
             <div className="meap-testnet-badge">

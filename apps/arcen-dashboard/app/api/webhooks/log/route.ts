@@ -9,9 +9,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth.server";
 
 const FACILITATOR_URL =
+    process.env.FACILITATOR_BASE_URL ||
     process.env.FACILITATOR_URL ||
+    process.env.NEXT_PUBLIC_FACILITATOR_BASE_URL ||
     process.env.NEXT_PUBLIC_FACILITATOR_URL ||
-    "http://localhost:3001";
+    "http://localhost:3402";
 
 export async function GET(request: NextRequest) {
     // Require a valid session
@@ -47,7 +49,18 @@ export async function GET(request: NextRequest) {
         }
 
         const data = await response.json();
-        return NextResponse.json(data);
+        const entries = Array.isArray(data.entries)
+            ? data.entries
+            : Array.isArray(data.log)
+                ? data.log
+                : [];
+
+        return NextResponse.json({
+            configured: data.configured !== false,
+            entries,
+            // deprecated alias retained for compatibility with legacy clients
+            log: entries,
+        });
     } catch (err) {
         console.error("[api/webhooks/log]", err);
         // Return empty list — don't break Settings page if facilitator is down

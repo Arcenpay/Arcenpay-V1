@@ -1,11 +1,13 @@
 {
-  "name": "my-v0-project",
+  "name": "@meap/dashboard",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "build": "next build --webpack",
     "dev": "next dev",
-    "lint": "eslint .",
+    "lint": "next typegen && tsc --noEmit",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
     "start": "next start"
   },
   "dependencies": {

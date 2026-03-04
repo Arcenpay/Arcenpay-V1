@@ -43,6 +43,13 @@ interface IZKUsageVerifier {
     /// @notice Emitted when Groth16 verifier address is updated
     event Groth16VerifierSet(address indexed verifier);
 
+    /// @notice Emitted when a session's settlement plan/provider is configured
+    event SessionSettlementConfigured(
+        bytes32 indexed sessionId,
+        uint256 indexed planId,
+        address indexed provider
+    );
+
     // ============================================================
     //                     CORE FUNCTIONS
     // ============================================================
@@ -70,4 +77,14 @@ interface IZKUsageVerifier {
     /// @param agent The agent address
     /// @return The current session vault balance
     function getPendingBalance(address agent) external view returns (uint256);
+
+    /// @notice Sets settlement routing metadata for a session
+    /// @param sessionId The session identifier
+    /// @param planId The plan identifier used for pricing
+    /// @param provider The payout recipient (set to zero address to derive from plan)
+    function setSessionSettlementConfig(
+        bytes32 sessionId,
+        uint256 planId,
+        address provider
+    ) external;
 }

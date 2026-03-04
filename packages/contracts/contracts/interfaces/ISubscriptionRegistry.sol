@@ -106,4 +106,9 @@ interface ISubscriptionRegistry {
         uint256 destinationChainId,
         address refundAddress
     ) external payable returns (bytes32 messageId, uint8 routeUsed);
+
+    /// @notice Returns active subscription token ID for a wallet
+    /// @param wallet The wallet address
+    /// @return tokenId The token ID (0 if none)
+    function getWalletSubscription(address wallet) external view returns (uint256 tokenId);
 }

@@ -9,9 +9,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
 const FACILITATOR_URL =
+    process.env.FACILITATOR_BASE_URL ||
     process.env.FACILITATOR_URL ||
+    process.env.NEXT_PUBLIC_FACILITATOR_BASE_URL ||
     process.env.NEXT_PUBLIC_FACILITATOR_URL ||
-    "http://localhost:3001";
+    "http://localhost:3402";
 
 const EmailSchema = z.object({
     walletAddress: z
