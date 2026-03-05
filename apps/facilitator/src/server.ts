@@ -80,6 +80,7 @@ const PROOF_VKEY_PATH =
   path.join(PROOF_BUILD_DIR, "verification_key.json");
 const PROOF_SIGNER_PRIVATE_KEY =
   process.env.PROOF_SIGNER_PRIVATE_KEY || process.env.PRIVATE_KEY;
+const FACILITATOR_SECRET = (process.env.FACILITATOR_SECRET || "").trim();
 
 function isHexAddress(value: string | undefined | null): boolean {
   return typeof value === "string" && /^0x[a-fA-F0-9]{40}$/.test(value);
@@ -625,6 +626,26 @@ function isBytes32(value: string): boolean {
 
 function isValidEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+function requireFacilitatorSecretIfConfigured(
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction,
+) {
+  if (!FACILITATOR_SECRET) {
+    return next();
+  }
+
+  const expected = `Bearer ${FACILITATOR_SECRET}`;
+  if (req.headers.authorization !== expected) {
+    return res.status(401).json({
+      ok: false,
+      error: "Unauthorized",
+    });
+  }
+
+  return next();
 }
 
 const PROVIDER_TIERS = ["starter", "pro", "enterprise"] as const;
@@ -1434,7 +1455,10 @@ app.get("/api/entitlements/provider/:provider/flags", async (req, res) => {
   }
 });
 
-app.post("/api/entitlements/provider/:provider/flags/bootstrap", async (req, res) => {
+app.post(
+  "/api/entitlements/provider/:provider/flags/bootstrap",
+  requireFacilitatorSecretIfConfigured,
+  async (req, res) => {
   const provider = String(req.params.provider || "").trim();
   if (!isValidAddress(provider)) {
     return res.status(400).json({
@@ -1479,9 +1503,13 @@ app.post("/api/entitlements/provider/:provider/flags/bootstrap", async (req, res
       error: err?.message || "Failed to initialize provider feature flags.",
     });
   }
-});
+  },
+);
 
-app.put("/api/entitlements/provider/:provider/flags/:flagKey", async (req, res) => {
+app.put(
+  "/api/entitlements/provider/:provider/flags/:flagKey",
+  requireFacilitatorSecretIfConfigured,
+  async (req, res) => {
   const provider = String(req.params.provider || "").trim();
   const flagKey = String(req.params.flagKey || "").trim().toLowerCase();
   if (!isValidAddress(provider)) {
@@ -1539,9 +1567,13 @@ app.put("/api/entitlements/provider/:provider/flags/:flagKey", async (req, res) 
       error: err?.message || "Failed to upsert provider feature flag.",
     });
   }
-});
+  },
+);
 
-app.patch("/api/entitlements/provider/:provider/flags/:flagKey", async (req, res) => {
+app.patch(
+  "/api/entitlements/provider/:provider/flags/:flagKey",
+  requireFacilitatorSecretIfConfigured,
+  async (req, res) => {
   const provider = String(req.params.provider || "").trim();
   const flagKey = String(req.params.flagKey || "").trim().toLowerCase();
   const tier = normalizeProviderTier(String(req.body?.tier || "starter"));
@@ -1591,9 +1623,13 @@ app.patch("/api/entitlements/provider/:provider/flags/:flagKey", async (req, res
       error: err?.message || "Failed to update provider feature flag.",
     });
   }
-});
+  },
+);
 
-app.delete("/api/entitlements/provider/:provider/flags/:flagKey", async (req, res) => {
+app.delete(
+  "/api/entitlements/provider/:provider/flags/:flagKey",
+  requireFacilitatorSecretIfConfigured,
+  async (req, res) => {
   const provider = String(req.params.provider || "").trim();
   const flagKey = String(req.params.flagKey || "").trim().toLowerCase();
 
@@ -1643,7 +1679,8 @@ app.delete("/api/entitlements/provider/:provider/flags/:flagKey", async (req, re
       error: err?.message || "Failed to delete provider feature flag.",
     });
   }
-});
+  },
+);
 
 app.post("/api/lit/decrypt", async (req, res) => {
   if (!litService) {

@@ -152,6 +152,19 @@ export function normalizePaymentTimestampMs(timestamp: bigint): bigint {
   return timestamp;
 }
 
+export function normalizeResourceUrl(value: string): string | null {
+  try {
+    const parsed = new URL(value);
+    return `${parsed.origin}${parsed.pathname}${parsed.search}`;
+  } catch {
+    return null;
+  }
+}
+
+export function buildRequestResource(req: Request): string {
+  return `${req.protocol}://${req.get("host")}${req.originalUrl}`;
+}
+
 function sendRejection(
   res: Response,
   reason: X402RejectionReason,
@@ -322,6 +335,40 @@ export function x402Middleware(options: X402MiddlewareOptions) {
 
       const requestedAmount = normalizeAmount(payload.amount, rateAtomicUnits);
       const sessionId = normalizeSessionId(payload.sessionId);
+      const expectedResource = normalizeResourceUrl(buildRequestResource(req));
+      const paymentResourceRaw =
+        typeof payload.resource === "string" ? payload.resource : "";
+      const paymentResource = normalizeResourceUrl(paymentResourceRaw);
+
+      if (
+        !expectedResource ||
+        !paymentResource ||
+        paymentResource !== expectedResource
+      ) {
+        sendRejection(
+          res,
+          "RESOURCE_MISMATCH",
+          "Payment resource does not match the requested endpoint",
+          {
+            paymentResource: paymentResourceRaw || null,
+            expectedResource: expectedResource || null,
+          },
+        );
+        return;
+      }
+
+      if (requestedAmount < rateAtomicUnits) {
+        sendRejection(
+          res,
+          "PAYMENT_AMOUNT_TOO_LOW",
+          "Payment amount is below the required endpoint rate",
+          {
+            providedAmount: requestedAmount.toString(),
+            requiredAmount: rateAtomicUnits.toString(),
+          },
+        );
+        return;
+      }
 
       // Step 2: Verify EIP-712 signature (recover signer)
       let recoveredSigner: string;

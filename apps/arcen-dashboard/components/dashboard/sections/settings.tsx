@@ -265,15 +265,14 @@ export function SettingsSection() {
             return;
         }
         try {
-            const facilitatorUrl =
-                process.env.NEXT_PUBLIC_FACILITATOR_BASE_URL ||
-                process.env.NEXT_PUBLIC_FACILITATOR_URL ||
-                "http://localhost:3402";
-            await fetch(`${facilitatorUrl}/api/webhooks/test`, {
+            const response = await fetch("/api/webhooks/test", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ url: webhookUrl, secret: webhookSecret }),
             });
+            if (!response.ok) {
+                throw new Error("Webhook test failed");
+            }
             toast.success("Test event sent to webhook");
         } catch {
             toast.error("Could not reach facilitator server");

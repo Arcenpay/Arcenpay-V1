@@ -5,8 +5,9 @@
   "description": "MEAP + ZKVUB Protocol Smart Contracts",
   "scripts": {
     "build": "hardhat compile",
-    "test": "npm run test:forge:docker",
-    "test:forge:local": "forge test -vvv",
+    "test": "npm run test:forge:auto",
+    "test:forge:auto": "sh -c 'if docker info >/dev/null 2>&1; then npm run test:forge:docker; else echo \"[contracts] docker unavailable; falling back to local forge --offline\"; npm run test:forge:local; fi'",
+    "test:forge:local": "forge test --offline -vvv",
     "test:forge:docker": "docker run --rm -v $(pwd)/../..:/repo -w /repo/packages/contracts ghcr.io/foundry-rs/foundry:stable \"forge test -vvv\"",
     "forge:build:docker": "docker run --rm -v $(pwd)/../..:/repo -w /repo/packages/contracts ghcr.io/foundry-rs/foundry:stable \"forge build --sizes\"",
     "forge:coverage:docker": "docker run --rm -v $(pwd)/../..:/repo -w /repo/packages/contracts ghcr.io/foundry-rs/foundry:stable \"forge coverage --report summary\"",

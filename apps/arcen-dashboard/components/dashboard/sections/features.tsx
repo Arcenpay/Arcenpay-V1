@@ -58,13 +58,8 @@ const FLAG_TYPE_ICONS: Record<FlagType, React.ElementType> = {
     number: Hash,
 };
 
-const FACILITATOR_URL =
-    process.env.NEXT_PUBLIC_FACILITATOR_BASE_URL ||
-    process.env.NEXT_PUBLIC_FACILITATOR_URL ||
-    "http://localhost:3402";
-
 async function apiFetch(path: string, options?: RequestInit) {
-    const res = await fetch(`${FACILITATOR_URL}${path}`, {
+    const res = await fetch(path, {
         headers: { "Content-Type": "application/json" },
         ...options,
     });

@@ -5,9 +5,9 @@
   "scripts": {
     "build": "next build --webpack",
     "dev": "next dev",
-    "lint": "next typegen && tsc --noEmit",
+    "lint": "next typegen && tsc --noEmit --incremental false",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "next typegen && tsc --noEmit --incremental false",
     "start": "next start"
   },
   "dependencies": {

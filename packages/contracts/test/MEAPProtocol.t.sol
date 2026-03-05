@@ -6,6 +6,8 @@ import "../contracts/core/PlanFactory.sol";
 import "../contracts/core/FeeCollector.sol";
 import "../contracts/core/SubscriptionRegistry.sol";
 import "../contracts/core/SessionVault.sol";
+import "../contracts/core/ERC7579AutopayModule.sol";
+import "../contracts/interfaces/IERC7579AutopayModule.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 /// @notice Mock USDC token for testing
@@ -34,6 +36,7 @@ contract MEAPProtocolTest is Test {
     FeeCollector public feeCollector;
     SubscriptionRegistry public registry;
     SessionVault public sessionVault;
+    ERC7579AutopayModule public autopayModule;
     MockUSDC public usdc;
 
     address public owner = address(this);
@@ -71,6 +74,11 @@ contract MEAPProtocolTest is Test {
 
         // Deploy SessionVault
         sessionVault = new SessionVault();
+        autopayModule = new ERC7579AutopayModule(
+            address(planFactory),
+            address(registry),
+            address(feeCollector)
+        );
 
         // Fund test accounts
         usdc.mint(subscriber, 1_000 * 10 ** 6);
@@ -81,6 +89,8 @@ contract MEAPProtocolTest is Test {
 
         // Authorize this contract as biller on registry
         registry.authorizeBiller(address(this));
+        registry.authorizeBiller(address(autopayModule));
+        feeCollector.authorizeCollector(address(autopayModule));
     }
 
     // ============================================================
@@ -418,5 +428,56 @@ contract MEAPProtocolTest is Test {
 
         // 6. Provider received payments
         assertEq(usdc.balanceOf(provider), 40 * 10 ** 6);
+    }
+
+    function test_autopayMirrorPath_singleRenewalPerCycle() public {
+        vm.prank(provider);
+        uint256 planId = planFactory.createPlan(
+            "Pro Plan",
+            "pro",
+            PLAN_PRICE,
+            MONTHLY,
+            address(usdc),
+            "ipfs://pro-plan"
+        );
+
+        vm.prank(subscriber);
+        usdc.approve(address(autopayModule), type(uint256).max);
+
+        uint64 startTime = uint64(block.timestamp + 5);
+        IERC7579AutopayModule.AutopayConfig memory config = IERC7579AutopayModule
+            .AutopayConfig({
+                merchant: provider,
+                maxAmount: PLAN_PRICE,
+                token: address(usdc),
+                interval: MONTHLY,
+                startTime: startTime,
+                planId: planId
+            });
+
+        vm.prank(subscriber);
+        autopayModule.onInstall(abi.encode(config));
+
+        vm.prank(subscriber);
+        autopayModule.setMirrorDestination(8453);
+
+        vm.warp(startTime + 1);
+        vm.prank(provider);
+        autopayModule.execute(subscriber, PLAN_PRICE);
+
+        uint256 tokenId = registry.getWalletSubscription(subscriber);
+        assertGt(tokenId, 0, "token must be minted on first pull");
+        uint64 expiryAfterFirstBilling = registry.expiresAt(tokenId);
+
+        vm.warp(block.timestamp + MONTHLY);
+        vm.prank(provider);
+        autopayModule.execute(subscriber, PLAN_PRICE);
+
+        uint64 expiryAfterSecondBilling = registry.expiresAt(tokenId);
+        assertEq(
+            expiryAfterSecondBilling,
+            expiryAfterFirstBilling + MONTHLY,
+            "autopay renew should happen only once per cycle"
+        );
     }
 }

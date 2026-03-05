@@ -22,11 +22,6 @@ type RevenuePoint = {
   revenue: number;
 };
 
-const FACILITATOR_URL =
-  process.env.NEXT_PUBLIC_FACILITATOR_BASE_URL ||
-  process.env.NEXT_PUBLIC_FACILITATOR_URL ||
-  "http://localhost:3402";
-
 export function RevenueChart() {
   const [data, setData] = useState<RevenuePoint[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,7 +32,7 @@ export function RevenueChart() {
     const fetchRevenue = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`${FACILITATOR_URL}/api/proofs/history?limit=12`);
+        const response = await fetch("/api/proofs/history?limit=12");
         if (!response.ok) return;
         const payload = await response.json();
         const jobs = Array.isArray(payload.jobs) ? (payload.jobs as ProofHistoryJob[]) : [];

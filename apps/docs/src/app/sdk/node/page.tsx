@@ -84,7 +84,7 @@ cd apps/facilitator
 docker-compose up -d
 
 # Or run directly
-PORT=3001 npm run dev`}</code></pre>
+PORT=3402 npm run dev`}</code></pre>
     </>
   );
 }

@@ -12,11 +12,6 @@ type ProofHistoryJob = {
     txHash?: string;
 };
 
-const FACILITATOR_URL =
-    process.env.NEXT_PUBLIC_FACILITATOR_BASE_URL ||
-    process.env.NEXT_PUBLIC_FACILITATOR_URL ||
-    "http://localhost:3402";
-
 export function RecentActivity() {
     const [jobs, setJobs] = useState<ProofHistoryJob[]>([]);
     const [loading, setLoading] = useState(true);
@@ -27,7 +22,7 @@ export function RecentActivity() {
         const fetchActivity = async () => {
             try {
                 setLoading(true);
-                const response = await fetch(`${FACILITATOR_URL}/api/proofs/history?limit=8`);
+                const response = await fetch("/api/proofs/history?limit=8");
                 if (!response.ok) return;
                 const payload = await response.json();
                 if (!cancelled) {

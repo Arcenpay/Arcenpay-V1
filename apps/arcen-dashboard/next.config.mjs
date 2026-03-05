@@ -10,6 +10,11 @@ const nextConfig = {
   },
   turbopack: {},
   webpack: (config) => {
+    config.resolve.alias = {
+      ...(config.resolve.alias || {}),
+      // MetaMask SDK optional RN dependency is not needed for web builds.
+      "@react-native-async-storage/async-storage": false,
+    };
     config.resolve.fallback = {
       fs: false,
       net: false,
@@ -20,7 +25,12 @@ const nextConfig = {
   },
 }
 
-export default withSentryConfig(nextConfig, {
+const sentryBuildEnabled = Boolean(
+  process.env.SENTRY_AUTH_TOKEN &&
+    (process.env.SENTRY_DSN || process.env.NEXT_PUBLIC_SENTRY_DSN),
+);
+
+const sentryWrappedConfig = withSentryConfig(nextConfig, {
   // Sentry organization + project (set via SENTRY_ORG + SENTRY_PROJECT env vars)
   silent: true,
 
@@ -33,3 +43,5 @@ export default withSentryConfig(nextConfig, {
   disableLogger: true,
   automaticVercelMonitors: false,
 });
+
+export default sentryBuildEnabled ? sentryWrappedConfig : nextConfig;
