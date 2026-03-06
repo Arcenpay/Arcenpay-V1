@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import type { Section } from "@/app/page";
 import { Bell, Search, LogOut } from "lucide-react";
 import { useState } from "react";
-import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { useAppKit, useAppKitAccount, useAppKitNetwork } from "@reown/appkit/react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -34,6 +34,9 @@ const sectionDescriptions: Record<Section, string> = {
 export function Header({ activeSection }: HeaderProps) {
   const [searchFocused, setSearchFocused] = useState(false);
   const router = useRouter();
+  const { open } = useAppKit();
+  const { address } = useAppKitAccount();
+  const { chainId } = useAppKitNetwork();
 
   const handleSignOut = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -76,12 +79,29 @@ export function Header({ activeSection }: HeaderProps) {
           <Bell className="w-5 h-5" />
         </button>
 
-        {/* RainbowKit Connect Button */}
-        <ConnectButton
-          chainStatus="icon"
-          showBalance={false}
-          accountStatus="address"
-        />
+        {/* Network Switcher */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => open({ view: "Networks" })}
+          className="h-9 px-3 text-muted-foreground hover:text-foreground"
+          title="Switch network"
+        >
+          {chainId ? `Chain ${chainId}` : "Network"}
+        </Button>
+
+        {/* Account */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => open()}
+          className="h-9 px-3 text-muted-foreground hover:text-foreground font-mono text-xs"
+          title="Wallet"
+        >
+          {address
+            ? `${address.slice(0, 6)}…${address.slice(-4)}`
+            : "Connect"}
+        </Button>
 
         {/* Sign Out */}
         <Button

@@ -3,7 +3,7 @@
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAccount, useChainId, useSignMessage } from "wagmi";
-import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { useAppKit } from "@reown/appkit/react";
 import { buildSIWEMessage } from "@/lib/auth";
 import { Loader2, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,7 @@ function LoginForm() {
   const chainId = useChainId();
   const { signMessageAsync } = useSignMessage();
 
+  const { open } = useAppKit();
   const [isSigningIn, setIsSigningIn] = useState(false);
 
   const handleSignIn = async () => {
@@ -124,9 +125,12 @@ function LoginForm() {
           {/* Action */}
           <div className="space-y-3">
             {!isConnected ? (
-              <div className="flex justify-center">
-                <ConnectButton />
-              </div>
+              <Button
+                className="w-full bg-accent text-accent-foreground hover:bg-accent/90"
+                onClick={() => open()}
+              >
+                Connect Wallet
+              </Button>
             ) : (
               <Button
                 className="w-full bg-accent text-accent-foreground hover:bg-accent/90"
@@ -139,7 +143,7 @@ function LoginForm() {
                     Signing…
                   </>
                 ) : (
-                  "Sign In with Ethereum"
+                  "Sign In"
                 )}
               </Button>
             )}
