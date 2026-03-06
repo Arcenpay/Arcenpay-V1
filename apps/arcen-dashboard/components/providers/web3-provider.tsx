@@ -13,24 +13,24 @@ import "@rainbow-me/rainbowkit/styles.css";
 const queryClient = new QueryClient();
 
 export function Web3Provider({ children }: { children: React.ReactNode }) {
-    return (
-        <WagmiProvider config={wagmiConfig}>
-            <QueryClientProvider client={queryClient}>
-                <ApolloProvider client={apolloClient}>
-                    <RainbowKitProvider
-                        theme={lightTheme({
-                            accentColor: "#0000ff",
-                            accentColorForeground: "white",
-                            borderRadius: "medium",
-                            fontStack: "system",
-                        })}
-                        modalSize="compact"
-                    >
-                        {children}
-                        <Toaster richColors position="bottom-right" />
-                    </RainbowKitProvider>
-                </ApolloProvider>
-            </QueryClientProvider>
-        </WagmiProvider>
-    );
+  return (
+    <WagmiProvider config={wagmiConfig}>
+      <QueryClientProvider client={queryClient}>
+        <ApolloProvider client={apolloClient}>
+          <RainbowKitProvider
+            theme={lightTheme({
+              accentColor: "#0000ff",
+              accentColorForeground: "white",
+              borderRadius: "medium",
+              fontStack: "system",
+            })}
+            modalSize="compact"
+          >
+            {children}
+            <Toaster richColors position="bottom-right" />
+          </RainbowKitProvider>
+        </ApolloProvider>
+      </QueryClientProvider>
+    </WagmiProvider>
+  );
 }
