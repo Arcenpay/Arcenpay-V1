@@ -22,7 +22,8 @@ export function truncateAddress(address: string, start = 6, end = 4): string {
 
 /** Format a Unix timestamp (seconds) to a relative string like "3 hours ago" */
 export function formatRelativeTime(unixSeconds: number | bigint): string {
-  const ts = typeof unixSeconds === "bigint" ? Number(unixSeconds) : unixSeconds;
+  const ts =
+    typeof unixSeconds === "bigint" ? Number(unixSeconds) : unixSeconds;
   const now = Date.now() / 1000;
   const diff = now - ts;
 
@@ -39,7 +40,8 @@ export function formatRelativeTime(unixSeconds: number | bigint): string {
 
 /** Format a Unix timestamp to an absolute date string for tooltip/hover */
 export function formatAbsoluteTime(unixSeconds: number | bigint): string {
-  const ts = typeof unixSeconds === "bigint" ? Number(unixSeconds) : unixSeconds;
+  const ts =
+    typeof unixSeconds === "bigint" ? Number(unixSeconds) : unixSeconds;
   return new Date(ts * 1000).toLocaleString("en-US", {
     month: "short",
     day: "numeric",
@@ -54,7 +56,7 @@ export function formatAbsoluteTime(unixSeconds: number | bigint): string {
 export function getBlockExplorerUrl(
   chainId: number,
   type: "tx" | "address" | "block",
-  hash: string
+  hash: string,
 ): string {
   const BASE_URLS: Record<number, string> = {
     1: "https://etherscan.io",
@@ -64,6 +66,17 @@ export function getBlockExplorerUrl(
   };
   const base = BASE_URLS[chainId] ?? "https://sepolia.etherscan.io";
   return `${base}/${type}/${hash}`;
+}
+
+/** Returns the block explorer base URL for the given chain */
+export function getBlockExplorerBase(chainId: number): string {
+  const BASE_URLS: Record<number, string> = {
+    1: "https://etherscan.io",
+    11155111: "https://sepolia.etherscan.io",
+    8453: "https://basescan.org",
+    84532: "https://sepolia.basescan.org",
+  };
+  return BASE_URLS[chainId] ?? "https://sepolia.etherscan.io";
 }
 
 /** Shorten a transaction hash: "0x1234…5678" */

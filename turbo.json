@@ -6,10 +6,6 @@
       "dependsOn": ["^build"],
       "outputs": ["dist/**", ".next/**", "!.next/cache/**", "artifacts/**", "typechain-types/**"]
     },
-    "dev": {
-      "cache": false,
-      "persistent": true
-    },
     "test": {
       "dependsOn": ["build"],
       "outputs": []
@@ -24,6 +20,10 @@
     },
     "clean": {
       "cache": false
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
     }
   }
 }

@@ -81,6 +81,7 @@ const PROOF_VKEY_PATH =
 const PROOF_SIGNER_PRIVATE_KEY =
   process.env.PROOF_SIGNER_PRIVATE_KEY || process.env.PRIVATE_KEY;
 const FACILITATOR_SECRET = (process.env.FACILITATOR_SECRET || "").trim();
+const DASHBOARD_URL = (process.env.DASHBOARD_URL || "").replace(/\/$/, "");
 
 function isHexAddress(value: string | undefined | null): boolean {
   return typeof value === "string" && /^0x[a-fA-F0-9]{40}$/.test(value);
@@ -105,7 +106,9 @@ function validateRuntimeConfig(): void {
 
   if (FACILITATOR_PROFILE === "production") {
     if (PROOF_MODE !== "strict") {
-      errors.push("PROOF_MODE must be 'strict' when FACILITATOR_PROFILE=production.");
+      errors.push(
+        "PROOF_MODE must be 'strict' when FACILITATOR_PROFILE=production.",
+      );
     }
 
     if (!PROOF_SIGNER_PRIVATE_KEY) {
@@ -114,7 +117,11 @@ function validateRuntimeConfig(): void {
       );
     }
 
-    for (const artifactPath of [PROOF_WASM_PATH, PROOF_ZKEY_PATH, PROOF_VKEY_PATH]) {
+    for (const artifactPath of [
+      PROOF_WASM_PATH,
+      PROOF_ZKEY_PATH,
+      PROOF_VKEY_PATH,
+    ]) {
       if (!fs.existsSync(artifactPath)) {
         errors.push(`Missing proof artifact: ${artifactPath}`);
       }
@@ -512,13 +519,91 @@ if (process.env.TABLELAND_TABLE_NAME) {
     .catch((err) => {
       console.error("[Facilitator] Tableland init failed:", err);
       tablelandService = null;
-  });
+    });
 }
 
 const subscriberEmailsByWallet = new Map<
   string,
   { email: string; planId?: string; updatedAt: number }
 >();
+
+// Cache tokenId → subscriber wallet, populated from minted events.
+// Used by renewed/cancelled handlers which don't emit subscriber address.
+const tokenIdToSubscriber = new Map<string, string>();
+
+/**
+ * Look up a subscriber's email address.
+ *
+ * Priority:
+ *   1. In-memory cache (populated when subscriber registers via POST /api/subscriber/email)
+ *   2. Dashboard DB via GET /api/subscriber/lookup?wallet=… (if DASHBOARD_URL is set)
+ *
+ * Results from the remote lookup are cached in memory to avoid repeated API calls
+ * within the same process lifetime.
+ */
+async function lookupSubscriberEmail(
+  walletAddress: string,
+): Promise<string | null> {
+  const key = walletAddress.toLowerCase();
+
+  // 1 — check memory first
+  const cached = subscriberEmailsByWallet.get(key);
+  if (cached) return cached.email;
+
+  // 2 — fall back to dashboard lookup
+  if (!DASHBOARD_URL) return null;
+  try {
+    const url = `${DASHBOARD_URL}/api/subscriber/lookup?wallet=${encodeURIComponent(key)}`;
+    const headers: Record<string, string> = {};
+    if (FACILITATOR_SECRET)
+      headers["Authorization"] = `Bearer ${FACILITATOR_SECRET}`;
+    const res = await fetch(url, { headers });
+    if (!res.ok) return null;
+    const data = (await res.json()) as {
+      email?: string | null;
+      planId?: string | null;
+    };
+    if (data.email) {
+      // populate cache for subsequent calls
+      subscriberEmailsByWallet.set(key, {
+        email: data.email,
+        planId: data.planId ?? undefined,
+        updatedAt: Date.now(),
+      });
+      return data.email;
+    }
+  } catch {
+    // network error — non-fatal
+  }
+  return null;
+}
+
+/**
+ * Resolve the current owner (subscriber) of an NFT token ID via ownerOf().
+ * Returns the checksummed address or null on failure.
+ */
+async function getTokenOwner(tokenId: bigint): Promise<string | null> {
+  const ownerOfAbi = [
+    {
+      name: "ownerOf",
+      type: "function",
+      inputs: [{ name: "tokenId", type: "uint256" }],
+      outputs: [{ name: "", type: "address" }],
+      stateMutability: "view",
+    },
+  ] as const;
+  try {
+    const owner = (await chainClient.readContract({
+      address: CONTRACTS.subscriptionRegistry as `0x${string}`,
+      abi: ownerOfAbi,
+      functionName: "ownerOf",
+      args: [tokenId],
+    })) as string;
+    return owner;
+  } catch {
+    return null;
+  }
+}
 
 // Optional: Lit Protocol service
 let litService: LitProtocolService | null = null;
@@ -697,7 +782,10 @@ function buildProviderFlagCatalog(
       return value === true || value === 1 || value === "true";
     });
     const sample =
-      matrix.enterprise?.[key] ?? matrix.pro?.[key] ?? matrix.starter?.[key] ?? false;
+      matrix.enterprise?.[key] ??
+      matrix.pro?.[key] ??
+      matrix.starter?.[key] ??
+      false;
     return {
       key,
       label: formatFlagLabel(key),
@@ -720,27 +808,27 @@ function parseSessionTuple(raw: unknown): {
 } {
   const tuple = raw as
     | {
-      agent?: string;
-      token?: string;
-      balance?: bigint;
-      totalFunded?: bigint;
-      totalSettled?: bigint;
-      active?: boolean;
-      createdAt?: bigint;
-      [index: number]: unknown;
-    }
+        agent?: string;
+        token?: string;
+        balance?: bigint;
+        totalFunded?: bigint;
+        totalSettled?: bigint;
+        active?: boolean;
+        createdAt?: bigint;
+        [index: number]: unknown;
+      }
     | undefined;
 
   return {
     agent: String(
       tuple?.agent ??
-      tuple?.[0] ??
-      "0x0000000000000000000000000000000000000000",
+        tuple?.[0] ??
+        "0x0000000000000000000000000000000000000000",
     ),
     token: String(
       tuple?.token ??
-      tuple?.[1] ??
-      "0x0000000000000000000000000000000000000000",
+        tuple?.[1] ??
+        "0x0000000000000000000000000000000000000000",
     ),
     balance: BigInt(
       (tuple?.balance ?? tuple?.[2] ?? 0n) as bigint | number | string,
@@ -777,8 +865,13 @@ eventListener.on("minted", async (event) => {
   console.log(
     `[Facilitator] 🎉 New subscriber: ${event.subscriber} (Plan ${event.planId})`,
   );
-  let snapshotForEmail: Awaited<ReturnType<typeof getSubscriptionSnapshot>> | null =
-    null;
+  // Cache tokenId → subscriber for use in renewed/cancelled handlers
+  if (event.tokenId != null && event.subscriber) {
+    tokenIdToSubscriber.set(event.tokenId.toString(), event.subscriber);
+  }
+  let snapshotForEmail: Awaited<
+    ReturnType<typeof getSubscriptionSnapshot>
+  > | null = null;
   if (tablelandService && event.subscriber) {
     if (tablelandReady) {
       await tablelandReady;
@@ -818,27 +911,27 @@ eventListener.on("minted", async (event) => {
   }
   // Send welcome email if subscriber email is known and email service is configured
   if (emailService && event.subscriber) {
-    const subscriberEmail =
-      subscriberEmailsByWallet.get(event.subscriber.toLowerCase())?.email;
-    if (!subscriberEmail) {
-      return;
-    }
-    try {
-      await emailService.sendTemplate(
-        "welcome" as any,
-        { email: subscriberEmail, walletAddress: event.subscriber },
-        {
-          walletAddress: event.subscriber,
-          planId: event.planId?.toString() || "",
-          tokenId: event.tokenId?.toString() || "",
-          planTier: snapshotForEmail?.planTier || "",
-          expiresAt: snapshotForEmail?.expiresAt
-            ? new Date(Number(snapshotForEmail.expiresAt) * 1000).toISOString()
-            : "",
-        },
-      );
-    } catch (err) {
-      console.error("[Facilitator] Welcome email failed:", err);
+    const subscriberEmail = await lookupSubscriberEmail(event.subscriber);
+    if (subscriberEmail) {
+      try {
+        await emailService.sendTemplate(
+          "welcome" as any,
+          { email: subscriberEmail, walletAddress: event.subscriber },
+          {
+            walletAddress: event.subscriber,
+            planId: event.planId?.toString() || "",
+            tokenId: event.tokenId?.toString() || "",
+            planTier: snapshotForEmail?.planTier || "",
+            expiresAt: snapshotForEmail?.expiresAt
+              ? new Date(
+                  Number(snapshotForEmail.expiresAt) * 1000,
+                ).toISOString()
+              : "",
+          },
+        );
+      } catch (err) {
+        console.error("[Facilitator] Welcome email failed:", err);
+      }
     }
   }
 });
@@ -869,10 +962,45 @@ eventListener.on("renewed", async (event) => {
       }
     }
   }
+  // Send renewal receipt email
+  if (emailService) {
+    const subscriberWallet =
+      tokenIdToSubscriber.get(event.tokenId.toString()) ||
+      (await getTokenOwner(event.tokenId));
+    if (subscriberWallet) {
+      const subscriberEmail = await lookupSubscriberEmail(subscriberWallet);
+      if (subscriberEmail) {
+        try {
+          const expiresAt = event.expiration
+            ? new Date(Number(event.expiration) * 1000).toISOString()
+            : undefined;
+          await emailService.sendTemplate(
+            "renewal_receipt" as any,
+            { email: subscriberEmail, walletAddress: subscriberWallet },
+            {
+              walletAddress: subscriberWallet,
+              tokenId: event.tokenId?.toString() || "",
+              expiresAt: expiresAt ?? "",
+              amount: event.amountPaid
+                ? String(Number(event.amountPaid) / 1e6)
+                : "",
+            },
+          );
+        } catch (err) {
+          console.error("[Facilitator] Renewal receipt email failed:", err);
+        }
+      }
+    }
+  }
 });
 
 eventListener.on("cancelled", async (event) => {
   console.log(`[Facilitator] ❌ Cancelled: tokenId=${event.tokenId}`);
+  // Resolve subscriber before Tableland/Lit so we can email even if NFT is burned
+  const cancelledSubscriberWallet =
+    tokenIdToSubscriber.get(event.tokenId.toString()) ||
+    (await getTokenOwner(event.tokenId));
+
   if (tablelandService) {
     if (tablelandReady) {
       await tablelandReady;
@@ -895,6 +1023,28 @@ eventListener.on("cancelled", async (event) => {
       `[Facilitator] Lit access revocation queued for token ${event.tokenId}`,
     );
   }
+  // Send access revoked email
+  if (emailService && cancelledSubscriberWallet) {
+    const subscriberEmail = await lookupSubscriberEmail(
+      cancelledSubscriberWallet,
+    );
+    if (subscriberEmail) {
+      try {
+        await emailService.sendTemplate(
+          "access_revoked" as any,
+          { email: subscriberEmail, walletAddress: cancelledSubscriberWallet },
+          {
+            walletAddress: cancelledSubscriberWallet,
+            tokenId: event.tokenId?.toString() || "",
+          },
+        );
+      } catch (err) {
+        console.error("[Facilitator] Access revoked email failed:", err);
+      }
+    }
+    // Remove from cache — subscription is over
+    tokenIdToSubscriber.delete(event.tokenId.toString());
+  }
 });
 
 // Watch for settlement events
@@ -913,10 +1063,7 @@ console.log("[Facilitator] ProofOrchestrator auto-submit active");
 
 // Optional: Billing Keeper (if private key is configured and explicitly enabled)
 let billingKeeper: BillingKeeper | null = null;
-if (
-  process.env.ENABLE_BILLING_KEEPER === "true" &&
-  process.env.PRIVATE_KEY
-) {
+if (process.env.ENABLE_BILLING_KEEPER === "true" && process.env.PRIVATE_KEY) {
   try {
     billingKeeper = new BillingKeeper({
       rpcUrl: RPC_URL,
@@ -1066,46 +1213,46 @@ app.use(
     failOpenOnBalanceCheck: process.env.X402_FAIL_OPEN_BALANCE_CHECK === "true",
     ...(settlementWriter
       ? {
-        settlePayment: async ({
-          signer,
-          amount,
-          sessionId,
-        }: {
-          signer: `0x${string}`;
-          amount: bigint;
-          sessionId: string;
-        }) => {
-          const observe = onChainSubmissionsLatencySeconds.startTimer();
-          try {
-            if (requireAuthorizedSettler) {
-              const authorization = await refreshSettlementAuthorization();
-              if (authorization !== true) {
-                throw new Error(
-                  "Facilitator signer is not authorized to settle SessionVault funds.",
-                );
+          settlePayment: async ({
+            signer,
+            amount,
+            sessionId,
+          }: {
+            signer: `0x${string}`;
+            amount: bigint;
+            sessionId: string;
+          }) => {
+            const observe = onChainSubmissionsLatencySeconds.startTimer();
+            try {
+              if (requireAuthorizedSettler) {
+                const authorization = await refreshSettlementAuthorization();
+                if (authorization !== true) {
+                  throw new Error(
+                    "Facilitator signer is not authorized to settle SessionVault funds.",
+                  );
+                }
               }
+
+              const result = await settlementWriter!.settleForSigner({
+                signer,
+                amount,
+                sessionIdHint: sessionId,
+                providerAddress: process.env.X402_PROVIDER_ADDRESS as
+                  | `0x${string}`
+                  | undefined,
+              });
+
+              observe({ outcome: "success" });
+              return {
+                settledAmount: result.settledAmount,
+                settlementTxHash: result.transactionHash,
+              };
+            } catch (error) {
+              observe({ outcome: "error" });
+              throw error;
             }
-
-            const result = await settlementWriter!.settleForSigner({
-              signer,
-              amount,
-              sessionIdHint: sessionId,
-              providerAddress: process.env.X402_PROVIDER_ADDRESS as
-                | `0x${string}`
-                | undefined,
-            });
-
-            observe({ outcome: "success" });
-            return {
-              settledAmount: result.settledAmount,
-              settlementTxHash: result.transactionHash,
-            };
-          } catch (error) {
-            observe({ outcome: "error" });
-            throw error;
-          }
-        },
-      }
+          },
+        }
       : {}),
   }),
 );
@@ -1417,7 +1564,8 @@ app.get("/api/entitlements/provider/:provider/flags", async (req, res) => {
         await tablelandReady;
       }
       if (tablelandService) {
-        const matrix = await tablelandService.listTierFeatureFlags(normalizedProvider);
+        const matrix =
+          await tablelandService.listTierFeatureFlags(normalizedProvider);
         return res.json({
           ok: true,
           source: "tableland",
@@ -1459,50 +1607,52 @@ app.post(
   "/api/entitlements/provider/:provider/flags/bootstrap",
   requireFacilitatorSecretIfConfigured,
   async (req, res) => {
-  const provider = String(req.params.provider || "").trim();
-  if (!isValidAddress(provider)) {
-    return res.status(400).json({
-      ok: false,
-      error: "Invalid provider address.",
-    });
-  }
-
-  if (!tablelandService) {
-    return res.status(503).json({
-      ok: false,
-      error:
-        "Tableland service not configured. Set TABLELAND_TABLE_NAME + TABLELAND_PRIVATE_KEY.",
-    });
-  }
-
-  try {
-    if (tablelandReady) {
-      await tablelandReady;
+    const provider = String(req.params.provider || "").trim();
+    if (!isValidAddress(provider)) {
+      return res.status(400).json({
+        ok: false,
+        error: "Invalid provider address.",
+      });
     }
+
     if (!tablelandService) {
-      return res.status(503).json({ ok: false, error: "Tableland service unavailable." });
+      return res.status(503).json({
+        ok: false,
+        error:
+          "Tableland service not configured. Set TABLELAND_TABLE_NAME + TABLELAND_PRIVATE_KEY.",
+      });
     }
 
-    const normalizedProvider = provider.toLowerCase();
-    for (const tier of PROVIDER_TIERS) {
-      await tablelandService.setTierFeatureFlags(
-        normalizedProvider,
-        tier,
-        getDefaultFlagsForTier(tier),
-      );
-    }
+    try {
+      if (tablelandReady) {
+        await tablelandReady;
+      }
+      if (!tablelandService) {
+        return res
+          .status(503)
+          .json({ ok: false, error: "Tableland service unavailable." });
+      }
 
-    return res.json({
-      ok: true,
-      provider: normalizedProvider,
-      initialized: true,
-    });
-  } catch (err: any) {
-    return res.status(500).json({
-      ok: false,
-      error: err?.message || "Failed to initialize provider feature flags.",
-    });
-  }
+      const normalizedProvider = provider.toLowerCase();
+      for (const tier of PROVIDER_TIERS) {
+        await tablelandService.setTierFeatureFlags(
+          normalizedProvider,
+          tier,
+          getDefaultFlagsForTier(tier),
+        );
+      }
+
+      return res.json({
+        ok: true,
+        provider: normalizedProvider,
+        initialized: true,
+      });
+    } catch (err: any) {
+      return res.status(500).json({
+        ok: false,
+        error: err?.message || "Failed to initialize provider feature flags.",
+      });
+    }
   },
 );
 
@@ -1510,63 +1660,74 @@ app.put(
   "/api/entitlements/provider/:provider/flags/:flagKey",
   requireFacilitatorSecretIfConfigured,
   async (req, res) => {
-  const provider = String(req.params.provider || "").trim();
-  const flagKey = String(req.params.flagKey || "").trim().toLowerCase();
-  if (!isValidAddress(provider)) {
-    return res.status(400).json({ ok: false, error: "Invalid provider address." });
-  }
-  if (!/^[a-z0-9_]+$/.test(flagKey)) {
-    return res.status(400).json({
-      ok: false,
-      error: "flagKey must be lowercase alphanumeric with underscores.",
-    });
-  }
-  if (!tablelandService) {
-    return res.status(503).json({
-      ok: false,
-      error:
-        "Tableland service not configured. Set TABLELAND_TABLE_NAME + TABLELAND_PRIVATE_KEY.",
-    });
-  }
-
-  const requestedTiersRaw = Array.isArray(req.body?.planTiers)
-    ? (req.body.planTiers as unknown[])
-    : [];
-  const enabledTiers = new Set(
-    requestedTiersRaw
-      .filter((tier): tier is string => typeof tier === "string")
-      .map((tier) => normalizeProviderTier(tier)),
-  );
-
-  try {
-    if (tablelandReady) {
-      await tablelandReady;
+    const provider = String(req.params.provider || "").trim();
+    const flagKey = String(req.params.flagKey || "")
+      .trim()
+      .toLowerCase();
+    if (!isValidAddress(provider)) {
+      return res
+        .status(400)
+        .json({ ok: false, error: "Invalid provider address." });
+    }
+    if (!/^[a-z0-9_]+$/.test(flagKey)) {
+      return res.status(400).json({
+        ok: false,
+        error: "flagKey must be lowercase alphanumeric with underscores.",
+      });
     }
     if (!tablelandService) {
-      return res.status(503).json({ ok: false, error: "Tableland service unavailable." });
+      return res.status(503).json({
+        ok: false,
+        error:
+          "Tableland service not configured. Set TABLELAND_TABLE_NAME + TABLELAND_PRIVATE_KEY.",
+      });
     }
 
-    const normalizedProvider = provider.toLowerCase();
-    const matrix = await tablelandService.listTierFeatureFlags(normalizedProvider);
+    const requestedTiersRaw = Array.isArray(req.body?.planTiers)
+      ? (req.body.planTiers as unknown[])
+      : [];
+    const enabledTiers = new Set(
+      requestedTiersRaw
+        .filter((tier): tier is string => typeof tier === "string")
+        .map((tier) => normalizeProviderTier(tier)),
+    );
 
-    for (const tier of PROVIDER_TIERS) {
-      const nextFlags = { ...(matrix[tier] || {}) };
-      nextFlags[flagKey] = enabledTiers.has(tier);
-      await tablelandService.setTierFeatureFlags(normalizedProvider, tier, nextFlags);
+    try {
+      if (tablelandReady) {
+        await tablelandReady;
+      }
+      if (!tablelandService) {
+        return res
+          .status(503)
+          .json({ ok: false, error: "Tableland service unavailable." });
+      }
+
+      const normalizedProvider = provider.toLowerCase();
+      const matrix =
+        await tablelandService.listTierFeatureFlags(normalizedProvider);
+
+      for (const tier of PROVIDER_TIERS) {
+        const nextFlags = { ...(matrix[tier] || {}) };
+        nextFlags[flagKey] = enabledTiers.has(tier);
+        await tablelandService.setTierFeatureFlags(
+          normalizedProvider,
+          tier,
+          nextFlags,
+        );
+      }
+
+      return res.json({
+        ok: true,
+        provider: normalizedProvider,
+        key: flagKey,
+        planTiers: Array.from(enabledTiers),
+      });
+    } catch (err: any) {
+      return res.status(500).json({
+        ok: false,
+        error: err?.message || "Failed to upsert provider feature flag.",
+      });
     }
-
-    return res.json({
-      ok: true,
-      provider: normalizedProvider,
-      key: flagKey,
-      planTiers: Array.from(enabledTiers),
-    });
-  } catch (err: any) {
-    return res.status(500).json({
-      ok: false,
-      error: err?.message || "Failed to upsert provider feature flag.",
-    });
-  }
   },
 );
 
@@ -1574,55 +1735,66 @@ app.patch(
   "/api/entitlements/provider/:provider/flags/:flagKey",
   requireFacilitatorSecretIfConfigured,
   async (req, res) => {
-  const provider = String(req.params.provider || "").trim();
-  const flagKey = String(req.params.flagKey || "").trim().toLowerCase();
-  const tier = normalizeProviderTier(String(req.body?.tier || "starter"));
-  const enabled = Boolean(req.body?.enabled);
+    const provider = String(req.params.provider || "").trim();
+    const flagKey = String(req.params.flagKey || "")
+      .trim()
+      .toLowerCase();
+    const tier = normalizeProviderTier(String(req.body?.tier || "starter"));
+    const enabled = Boolean(req.body?.enabled);
 
-  if (!isValidAddress(provider)) {
-    return res.status(400).json({ ok: false, error: "Invalid provider address." });
-  }
-  if (!/^[a-z0-9_]+$/.test(flagKey)) {
-    return res.status(400).json({
-      ok: false,
-      error: "flagKey must be lowercase alphanumeric with underscores.",
-    });
-  }
-  if (!tablelandService) {
-    return res.status(503).json({
-      ok: false,
-      error:
-        "Tableland service not configured. Set TABLELAND_TABLE_NAME + TABLELAND_PRIVATE_KEY.",
-    });
-  }
-
-  try {
-    if (tablelandReady) {
-      await tablelandReady;
+    if (!isValidAddress(provider)) {
+      return res
+        .status(400)
+        .json({ ok: false, error: "Invalid provider address." });
+    }
+    if (!/^[a-z0-9_]+$/.test(flagKey)) {
+      return res.status(400).json({
+        ok: false,
+        error: "flagKey must be lowercase alphanumeric with underscores.",
+      });
     }
     if (!tablelandService) {
-      return res.status(503).json({ ok: false, error: "Tableland service unavailable." });
+      return res.status(503).json({
+        ok: false,
+        error:
+          "Tableland service not configured. Set TABLELAND_TABLE_NAME + TABLELAND_PRIVATE_KEY.",
+      });
     }
 
-    const normalizedProvider = provider.toLowerCase();
-    const matrix = await tablelandService.listTierFeatureFlags(normalizedProvider);
-    const nextFlags = { ...(matrix[tier] || {}) };
-    nextFlags[flagKey] = enabled;
-    await tablelandService.setTierFeatureFlags(normalizedProvider, tier, nextFlags);
+    try {
+      if (tablelandReady) {
+        await tablelandReady;
+      }
+      if (!tablelandService) {
+        return res
+          .status(503)
+          .json({ ok: false, error: "Tableland service unavailable." });
+      }
 
-    return res.json({
-      ok: true,
-      provider: normalizedProvider,
-      key: flagKey,
-      tier,
-      enabled,
-    });
-  } catch (err: any) {
-    return res.status(500).json({
-      ok: false,
-      error: err?.message || "Failed to update provider feature flag.",
-    });
-  }
+      const normalizedProvider = provider.toLowerCase();
+      const matrix =
+        await tablelandService.listTierFeatureFlags(normalizedProvider);
+      const nextFlags = { ...(matrix[tier] || {}) };
+      nextFlags[flagKey] = enabled;
+      await tablelandService.setTierFeatureFlags(
+        normalizedProvider,
+        tier,
+        nextFlags,
+      );
+
+      return res.json({
+        ok: true,
+        provider: normalizedProvider,
+        key: flagKey,
+        tier,
+        enabled,
+      });
+    } catch (err: any) {
+      return res.status(500).json({
+        ok: false,
+        error: err?.message || "Failed to update provider feature flag.",
+      });
+    }
   },
 );
 
@@ -1630,55 +1802,66 @@ app.delete(
   "/api/entitlements/provider/:provider/flags/:flagKey",
   requireFacilitatorSecretIfConfigured,
   async (req, res) => {
-  const provider = String(req.params.provider || "").trim();
-  const flagKey = String(req.params.flagKey || "").trim().toLowerCase();
+    const provider = String(req.params.provider || "").trim();
+    const flagKey = String(req.params.flagKey || "")
+      .trim()
+      .toLowerCase();
 
-  if (!isValidAddress(provider)) {
-    return res.status(400).json({ ok: false, error: "Invalid provider address." });
-  }
-  if (!/^[a-z0-9_]+$/.test(flagKey)) {
-    return res.status(400).json({
-      ok: false,
-      error: "flagKey must be lowercase alphanumeric with underscores.",
-    });
-  }
-  if (!tablelandService) {
-    return res.status(503).json({
-      ok: false,
-      error:
-        "Tableland service not configured. Set TABLELAND_TABLE_NAME + TABLELAND_PRIVATE_KEY.",
-    });
-  }
-
-  try {
-    if (tablelandReady) {
-      await tablelandReady;
+    if (!isValidAddress(provider)) {
+      return res
+        .status(400)
+        .json({ ok: false, error: "Invalid provider address." });
+    }
+    if (!/^[a-z0-9_]+$/.test(flagKey)) {
+      return res.status(400).json({
+        ok: false,
+        error: "flagKey must be lowercase alphanumeric with underscores.",
+      });
     }
     if (!tablelandService) {
-      return res.status(503).json({ ok: false, error: "Tableland service unavailable." });
+      return res.status(503).json({
+        ok: false,
+        error:
+          "Tableland service not configured. Set TABLELAND_TABLE_NAME + TABLELAND_PRIVATE_KEY.",
+      });
     }
 
-    const normalizedProvider = provider.toLowerCase();
-    const matrix = await tablelandService.listTierFeatureFlags(normalizedProvider);
+    try {
+      if (tablelandReady) {
+        await tablelandReady;
+      }
+      if (!tablelandService) {
+        return res
+          .status(503)
+          .json({ ok: false, error: "Tableland service unavailable." });
+      }
 
-    for (const tier of PROVIDER_TIERS) {
-      const nextFlags = { ...(matrix[tier] || {}) };
-      delete nextFlags[flagKey];
-      await tablelandService.setTierFeatureFlags(normalizedProvider, tier, nextFlags);
+      const normalizedProvider = provider.toLowerCase();
+      const matrix =
+        await tablelandService.listTierFeatureFlags(normalizedProvider);
+
+      for (const tier of PROVIDER_TIERS) {
+        const nextFlags = { ...(matrix[tier] || {}) };
+        delete nextFlags[flagKey];
+        await tablelandService.setTierFeatureFlags(
+          normalizedProvider,
+          tier,
+          nextFlags,
+        );
+      }
+
+      return res.json({
+        ok: true,
+        provider: normalizedProvider,
+        key: flagKey,
+        deleted: true,
+      });
+    } catch (err: any) {
+      return res.status(500).json({
+        ok: false,
+        error: err?.message || "Failed to delete provider feature flag.",
+      });
     }
-
-    return res.json({
-      ok: true,
-      provider: normalizedProvider,
-      key: flagKey,
-      deleted: true,
-    });
-  } catch (err: any) {
-    return res.status(500).json({
-      ok: false,
-      error: err?.message || "Failed to delete provider feature flag.",
-    });
-  }
   },
 );
 
@@ -1717,7 +1900,9 @@ app.post("/api/lit/decrypt", async (req, res) => {
       await litReady;
     }
     if (!litService) {
-      return res.status(503).json({ ok: false, error: "Lit service unavailable." });
+      return res
+        .status(503)
+        .json({ ok: false, error: "Lit service unavailable." });
     }
 
     const hasActive = (await chainClient.readContract({
@@ -1866,9 +2051,13 @@ app.get("/api/session/details/:sessionId", async (req, res) => {
 
 app.post("/api/subscriber/email", (req, res) => {
   const walletAddress = String(req.body?.walletAddress || "").trim();
-  const email = String(req.body?.email || "").trim().toLowerCase();
+  const email = String(req.body?.email || "")
+    .trim()
+    .toLowerCase();
   const planId =
-    typeof req.body?.planId === "string" ? String(req.body.planId).trim() : undefined;
+    typeof req.body?.planId === "string"
+      ? String(req.body.planId).trim()
+      : undefined;
 
   if (!isValidAddress(walletAddress)) {
     return res.status(400).json({ ok: false, error: "Invalid walletAddress." });

@@ -1,17 +1,19 @@
 // ============================================================
-//  Dashboard — SIWE Auth helpers
+//  Dashboard — Auth helpers
 //  Client-safe: can be imported by both server and client code.
 //  No next/headers imports here.
 // ============================================================
 
 import { SignJWT, jwtVerify } from "jose";
 
-const JWT_SECRET_KEY = process.env.SIWE_JWT_SECRET || "dev_secret_change_in_production";
+const JWT_SECRET_KEY =
+  process.env.SIWE_JWT_SECRET || "dev_secret_change_in_production";
 export const COOKIE_NAME = "meap-session";
 const JWT_EXPIRY = "24h";
 const NONCE_TTL_MS = 5 * 60 * 1000;
 
-// In-memory nonce store — swap for Redis in production
+// ── Nonce store (in-memory; swap for Redis in production) ─────────────────────
+
 type NonceRecord = {
   issuedAt: string;
   expiresAt: number;
@@ -21,7 +23,9 @@ const nonceStore = new Map<string, NonceRecord>();
 function randomHex(bytes: number): string {
   const arr = new Uint8Array(bytes);
   globalThis.crypto.getRandomValues(arr);
-  return Array.from(arr, (value) => value.toString(16).padStart(2, "0")).join("");
+  return Array.from(arr, (value) => value.toString(16).padStart(2, "0")).join(
+    "",
+  );
 }
 
 /** Generates a cryptographically random nonce and stores it for 5 minutes */
@@ -45,28 +49,114 @@ export function consumeNonce(nonce: string): NonceRecord | null {
   return record;
 }
 
-/** Issues a signed JWT */
-export async function createSession(address: string, chainId: number): Promise<string> {
+// ── Session payload types ─────────────────────────────────────────────────────
+
+export type TeamRole = "OWNER" | "ADMIN" | "MEMBER";
+
+export type SessionPayload =
+  | {
+      authMethod: "siwe";
+      address: string;
+      chainId: number;
+      userId?: string;
+      email?: string;
+      /** Active team for this session */
+      teamId?: string;
+      teamRole?: TeamRole;
+      /**
+       * True when the user just signed in with wallet but has no email yet.
+       * The login page uses this to show the "add email" step.
+       */
+      needsEmail?: boolean;
+      isProvider: boolean;
+    }
+  | {
+      authMethod: "magic";
+      userId: string;
+      email: string;
+      address?: string;
+      teamId?: string;
+      teamRole?: TeamRole;
+      isProvider: boolean;
+    };
+
+// ── JWT helpers ───────────────────────────────────────────────────────────────
+
+export type SIWEExtras = {
+  userId?: string;
+  email?: string;
+  teamId?: string;
+  teamRole?: TeamRole;
+  needsEmail?: boolean;
+};
+
+/** Issues a signed JWT for a wallet (SIWE) session */
+export async function createSession(
+  address: string,
+  chainId: number,
+  extras: SIWEExtras = {},
+): Promise<string> {
   const secret = new TextEncoder().encode(JWT_SECRET_KEY);
-  return new SignJWT({ address, chainId, isProvider: true })
+  const payload: SessionPayload = {
+    authMethod: "siwe",
+    address,
+    chainId,
+    isProvider: true,
+    ...extras,
+  };
+  return new SignJWT(payload as Record<string, unknown>)
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime(JWT_EXPIRY)
     .sign(secret);
 }
 
-/** Verifies a JWT token string — returns null if invalid */
-export async function verifySession(token: string) {
+export type EmailExtras = {
+  linkedWallet?: string;
+  teamId?: string;
+  teamRole?: TeamRole;
+};
+
+/** Issues a signed JWT for a magic-link (email) session */
+export async function createEmailSession(
+  userId: string,
+  email: string,
+  extras: EmailExtras = {},
+): Promise<string> {
+  const secret = new TextEncoder().encode(JWT_SECRET_KEY);
+  const { linkedWallet, teamId, teamRole } = extras;
+  const payload: SessionPayload = {
+    authMethod: "magic",
+    userId,
+    email,
+    isProvider: true,
+    ...(linkedWallet ? { address: linkedWallet } : {}),
+    ...(teamId ? { teamId } : {}),
+    ...(teamRole ? { teamRole } : {}),
+  };
+  return new SignJWT(payload as Record<string, unknown>)
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
+    .setExpirationTime(JWT_EXPIRY)
+    .sign(secret);
+}
+
+/** Verifies a JWT — returns null if invalid or expired */
+export async function verifySession(
+  token: string,
+): Promise<SessionPayload | null> {
   try {
     const secret = new TextEncoder().encode(JWT_SECRET_KEY);
     const { payload } = await jwtVerify(token, secret);
-    return payload as { address: string; chainId: number; isProvider: boolean };
+    return payload as unknown as SessionPayload;
   } catch {
     return null;
   }
 }
 
-/** Builds a SIWE (EIP-4361) message string — safe to call client-side */
+// ── SIWE message builder ──────────────────────────────────────────────────────
+
+/** Builds a SIWE (EIP-4361) message — safe to call client-side */
 export function buildSIWEMessage(params: {
   address: string;
   chainId: number;
@@ -95,4 +185,15 @@ export function buildSIWEMessage(params: {
     `Nonce: ${nonce}`,
     `Issued At: ${issuedAt}`,
   ].join("\n");
+}
+
+// ── Team helpers ──────────────────────────────────────────────────────────────
+
+/** Generates a URL-safe slug from a display name */
+export function slugify(name: string): string {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 }

@@ -5,8 +5,19 @@ import { useQuery } from "@apollo/client";
 import { MetricCard } from "@/components/dashboard/metric-card";
 import { RevenueChart } from "@/components/dashboard/charts/revenue-chart";
 import { RecentActivity } from "@/components/dashboard/recent-activity";
-import { DollarSign, Users, Layers, Receipt, AlertTriangle } from "lucide-react";
-import { useContractAddresses, FeeCollectorABI, PlanFactoryABI, SEPOLIA_USDC } from "@/lib/contracts";
+import {
+  DollarSign,
+  Users,
+  Layers,
+  Receipt,
+  AlertTriangle,
+} from "lucide-react";
+import {
+  useContractAddresses,
+  FeeCollectorABI,
+  PlanFactoryABI,
+  SEPOLIA_USDC,
+} from "@/lib/contracts";
 import { GET_PROTOCOL_STATS } from "@/lib/graphql";
 import { formatUsdc } from "@/lib/format";
 
@@ -37,9 +48,12 @@ export function OverviewSection() {
   });
 
   // The Graph for subscriber + revenue stats
-  const { data: graphData, loading: graphLoading } = useQuery(GET_PROTOCOL_STATS, {
-    skip: !isConnected,
-  });
+  const { data: graphData, loading: graphLoading } = useQuery(
+    GET_PROTOCOL_STATS,
+    {
+      skip: !isConnected,
+    },
+  );
 
   const isLoading = contractsLoading || graphLoading;
 
@@ -49,7 +63,10 @@ export function OverviewSection() {
 
   const metrics = {
     activeSubscribers: stats?.activeSubscriptions?.toString() ?? "—",
-    mrr: stats?.totalRevenue != null ? formatUsdc(BigInt(stats.totalRevenue)) : "—",
+    mrr:
+      stats?.totalRevenue != null
+        ? formatUsdc(BigInt(stats.totalRevenue))
+        : "—",
     feesCollected: feesCollected != null ? formatUsdc(feesCollected) : "—",
     activePlans: planIds?.length?.toString() ?? "—",
   };
@@ -61,7 +78,7 @@ export function OverviewSection() {
         <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-warning/5 border border-warning/20 animate-in fade-in slide-in-from-top-2 duration-300">
           <AlertTriangle className="w-4 h-4 text-warning shrink-0" />
           <p className="text-sm text-muted-foreground">
-            Connect your wallet to load live contract data from PlanFactory, SubscriptionRegistry, and FeeCollector.
+            Connect your wallet to load live dashboard data.
           </p>
         </div>
       )}

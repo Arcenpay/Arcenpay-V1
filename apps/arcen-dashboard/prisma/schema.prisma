@@ -1,0 +1,149 @@
+// ArcenPay Dashboard — Prisma Schema
+// Tables:
+//   User              — unified identity (email or wallet or both)
+//   MagicToken        — passwordless email login tokens
+//   Team              — workspace / organisation (provider account)
+//   TeamMember        — user ↔ team junction with role
+//   ProviderProfile   — extra settings / API keys per team
+//   SubscriberEmail   — email registry for on-chain subscribers (notifications)
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Core identity ────────────────────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Web2 identity
+  email         String?  @unique
+  emailVerified Boolean  @default(false)
+
+  // Web3 identity — can be null for pure-email accounts
+  walletAddress String?  @unique
+
+  // The team this user currently has active in their session
+  currentTeamId String?
+
+  magicTokens MagicToken[]
+  teams       TeamMember[]
+
+  @@index([email])
+  @@index([walletAddress])
+}
+
+// ─── Passwordless email login ─────────────────────────────────────────────────
+
+model MagicToken {
+  id        String    @id @default(cuid())
+  createdAt DateTime  @default(now())
+
+  token     String    @unique
+  email     String
+  expiresAt DateTime
+  usedAt    DateTime?
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([email])
+}
+
+// ─── Teams (workspaces / organisations) ──────────────────────────────────────
+// A Team is the top-level billable entity — like a "company" in SchematicHQ.
+// API keys, webhooks, and subscription plans belong to a Team, not a User.
+
+enum TeamRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+model Team {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  name String
+  // URL-safe identifier, e.g. "acme-corp"
+  slug String @unique
+
+  members         TeamMember[]
+  providerProfile ProviderProfile?
+
+  @@index([slug])
+}
+
+model TeamMember {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  role   TeamRole @default(MEMBER)
+  userId String
+  teamId String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, teamId])
+  @@index([userId])
+  @@index([teamId])
+}
+
+// ─── Provider settings (per-team) ────────────────────────────────────────────
+
+model ProviderProfile {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  notifyEmail   Boolean @default(true)
+  notifyWebhook Boolean @default(false)
+  webhookUrl    String?
+
+  // API key stored as a hash; prefix shown in the UI (e.g. "ak_live_xxxx…")
+  apiKeyHash   String? @unique
+  apiKeyPrefix String?
+
+  teamId String @unique
+  team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([teamId])
+}
+
+// ─── Subscriber email registry ────────────────────────────────────────────────
+// Stores email addresses for on-chain subscribers so the facilitator/email
+// service can send billing notifications, renewal reminders, and invoices.
+
+model SubscriberEmail {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  walletAddress String  @unique
+  email         String
+  planId        String?
+
+  @@index([walletAddress])
+  @@index([email])
+}
+
+// ─── SIWE nonce store (DB-backed so dev HMR never loses it) ──────────────────
+
+model AuthNonce {
+  nonce     String    @id
+  issuedAt  String
+  expiresAt DateTime
+  usedAt    DateTime?
+
+  @@index([expiresAt])
+}

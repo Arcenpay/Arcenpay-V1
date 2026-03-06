@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import type { Section } from "@/app/page";
 import { useAccount } from "wagmi";
@@ -14,6 +14,7 @@ import {
   ChevronRight,
   Hexagon,
   Flag,
+  Building2,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -39,6 +40,16 @@ export function Sidebar({
   onCollapsedChange,
 }: SidebarProps) {
   const { address, isConnected } = useAccount();
+  const [teamName, setTeamName] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/team")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.name) setTeamName(data.name);
+      })
+      .catch(() => {});
+  }, []);
 
   const shortAddress = address
     ? `${address.slice(0, 6)}…${address.slice(-4)}`
@@ -48,7 +59,7 @@ export function Sidebar({
     <aside
       className={cn(
         "fixed left-0 top-0 z-40 h-screen bg-sidebar border-r border-sidebar-border transition-all duration-300 ease-out flex flex-col",
-        collapsed ? "w-[72px]" : "w-[260px]"
+        collapsed ? "w-[72px]" : "w-[260px]",
       )}
     >
       {/* Logo */}
@@ -60,7 +71,7 @@ export function Sidebar({
           <span
             className={cn(
               "font-semibold text-lg text-sidebar-foreground whitespace-nowrap transition-all duration-300",
-              collapsed ? "opacity-0 w-0" : "opacity-100 w-auto"
+              collapsed ? "opacity-0 w-0" : "opacity-100 w-auto",
             )}
           >
             ArcenPay
@@ -82,26 +93,26 @@ export function Sidebar({
                 "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group relative",
                 isActive
                   ? "bg-sidebar-accent text-sidebar-foreground"
-                  : "text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
+                  : "text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent/50",
               )}
             >
               {/* Active indicator */}
               <span
                 className={cn(
                   "absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full bg-accent transition-all duration-300",
-                  isActive ? "opacity-100" : "opacity-0"
+                  isActive ? "opacity-100" : "opacity-0",
                 )}
               />
               <Icon
                 className={cn(
                   "w-5 h-5 shrink-0 transition-transform duration-200",
-                  isActive ? "text-accent" : "group-hover:scale-110"
+                  isActive ? "text-accent" : "group-hover:scale-110",
                 )}
               />
               <span
                 className={cn(
                   "whitespace-nowrap transition-all duration-300",
-                  collapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"
+                  collapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100",
                 )}
               >
                 {item.label}
@@ -111,22 +122,40 @@ export function Sidebar({
         })}
       </nav>
 
-      {/* Wallet status */}
-      <div className={cn(
-        "mx-3 mb-3 p-3 rounded-lg bg-secondary/50 border border-border transition-all duration-300",
-        collapsed ? "opacity-0 pointer-events-none" : "opacity-100"
-      )}>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <div className={cn(
-            "w-2 h-2 rounded-full shrink-0",
-            isConnected ? "bg-success animate-none" : "bg-warning animate-pulse"
-          )} />
+      {/* Team + Wallet status */}
+      <div
+        className={cn(
+          "mx-3 mb-3 rounded-lg bg-secondary/50 border border-border transition-all duration-300 overflow-hidden",
+          collapsed ? "opacity-0 pointer-events-none" : "opacity-100",
+        )}
+      >
+        {teamName && (
+          <div className="flex items-center gap-2 px-3 pt-3 pb-2 border-b border-border/50">
+            <Building2 className="w-3.5 h-3.5 text-accent shrink-0" />
+            <span className="text-xs font-medium text-foreground truncate">
+              {teamName}
+            </span>
+          </div>
+        )}
+        <div className="flex items-center gap-2 text-xs text-muted-foreground p-3">
+          <div
+            className={cn(
+              "w-2 h-2 rounded-full shrink-0",
+              isConnected
+                ? "bg-success animate-none"
+                : "bg-warning animate-pulse",
+            )}
+          />
           <span className="truncate">
-            {isConnected && shortAddress ? shortAddress : "Wallet not connected"}
+            {isConnected && shortAddress
+              ? shortAddress
+              : "Wallet not connected"}
           </span>
         </div>
         {isConnected && (
-          <p className="text-xs text-muted-foreground/60 mt-0.5 truncate">Sepolia</p>
+          <p className="text-xs text-muted-foreground/60 px-3 pb-2 -mt-1 truncate">
+            Sepolia
+          </p>
         )}
       </div>
 
