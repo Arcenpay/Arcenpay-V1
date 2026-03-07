@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/lib/auth.server";
+import { getSession, getDbUser } from "@/lib/auth.server";
 
 const FACILITATOR_URL =
   process.env.FACILITATOR_BASE_URL ||
@@ -23,22 +23,35 @@ async function forwardRequest(
   context: { params: Promise<RouteParams> },
 ) {
   const session = await getSession();
-  if (!session?.address) {
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const dbUser = await getDbUser(session.clerkUserId);
+  if (!dbUser?.walletAddress) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const { provider, segments = [] } = await context.params;
-  const normalizedProvider = String(provider || "").trim().toLowerCase();
+  const normalizedProvider = String(provider || "")
+    .trim()
+    .toLowerCase();
   if (!isAddress(normalizedProvider)) {
-    return NextResponse.json({ error: "Invalid provider address" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Invalid provider address" },
+      { status: 400 },
+    );
   }
 
-  if (session.address.toLowerCase() !== normalizedProvider) {
+  if (dbUser.walletAddress.toLowerCase() !== normalizedProvider) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const encodedSegments = segments.map((segment) => encodeURIComponent(segment));
-  const pathSuffix = encodedSegments.length > 0 ? `/${encodedSegments.join("/")}` : "";
+  const encodedSegments = segments.map((segment) =>
+    encodeURIComponent(segment),
+  );
+  const pathSuffix =
+    encodedSegments.length > 0 ? `/${encodedSegments.join("/")}` : "";
   const targetUrl = `${FACILITATOR_URL}/api/entitlements/provider/${normalizedProvider}/flags${pathSuffix}${request.nextUrl.search}`;
 
   if (method === "POST" && segments[0] !== "bootstrap") {
@@ -54,7 +67,8 @@ async function forwardRequest(
       Accept: "application/json",
       ...(bodyText
         ? {
-            "Content-Type": request.headers.get("content-type") || "application/json",
+            "Content-Type":
+              request.headers.get("content-type") || "application/json",
           }
         : {}),
       ...(process.env.FACILITATOR_SECRET

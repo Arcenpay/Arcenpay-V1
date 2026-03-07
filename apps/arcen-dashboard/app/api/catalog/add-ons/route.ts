@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import {
-  requirePermission,
-  isErrorResponse,
-} from "@/lib/api-auth";
+import { requirePermission, isErrorResponse } from "@/lib/api-auth";
 import { writeAuditEvent } from "@/lib/audit";
 
 const createSchema = z.object({
   name: z.string().min(1),
-  code: z.string().min(1).regex(/^[a-z0-9_\-]+$/i),
+  code: z
+    .string()
+    .min(1)
+    .regex(/^[a-z0-9_\-]+$/i),
   description: z.string().optional(),
   billingType: z.enum(["ONE_TIME", "RECURRING"]).default("ONE_TIME"),
   price: z.coerce.number().positive(),
@@ -20,7 +20,11 @@ const createSchema = z.object({
 const updateSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1).optional(),
-  code: z.string().min(1).regex(/^[a-z0-9_\-]+$/i).optional(),
+  code: z
+    .string()
+    .min(1)
+    .regex(/^[a-z0-9_\-]+$/i)
+    .optional(),
   description: z.string().nullable().optional(),
   billingType: z.enum(["ONE_TIME", "RECURRING"]).optional(),
   price: z.coerce.number().positive().optional(),
@@ -33,7 +37,8 @@ export async function GET(request: NextRequest) {
   const auth = await requirePermission("catalog:read");
   if (isErrorResponse(auth)) return auth;
 
-  const environmentMode = request.nextUrl.searchParams.get("environmentMode") || undefined;
+  const environmentMode =
+    request.nextUrl.searchParams.get("environmentMode") || undefined;
   const status = request.nextUrl.searchParams.get("status") || undefined;
 
   const addOns = await db.catalogAddOn.findMany({
@@ -95,7 +100,8 @@ export async function POST(request: NextRequest) {
   await writeAuditEvent({
     request,
     teamId: auth.team.teamId,
-    session: auth.session,
+    clerkUserId: auth.team.userId,
+    walletAddress: auth.team.walletAddress,
     action: "catalog.addon.create",
     resourceType: "CatalogAddOn",
     resourceId: addOn.id,
@@ -165,7 +171,8 @@ export async function PUT(request: NextRequest) {
   await writeAuditEvent({
     request,
     teamId: auth.team.teamId,
-    session: auth.session,
+    clerkUserId: auth.team.userId,
+    walletAddress: auth.team.walletAddress,
     action: "catalog.addon.update",
     resourceType: "CatalogAddOn",
     resourceId: updated.id,

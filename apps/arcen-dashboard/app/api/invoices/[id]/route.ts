@@ -89,7 +89,8 @@ export async function PATCH(request: NextRequest, context: Params) {
   await writeAuditEvent({
     request,
     teamId: auth.team.teamId,
-    session: auth.session,
+    clerkUserId: auth.team.userId,
+    walletAddress: auth.team.walletAddress,
     action: `invoice.status.${parsed.data.status.toLowerCase()}`,
     resourceType: "Invoice",
     resourceId: invoice.id,

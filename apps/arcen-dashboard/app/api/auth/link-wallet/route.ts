@@ -1,22 +1,17 @@
 // ============================================================
-//  Dashboard API — Link Wallet to Email Account
+//  Dashboard API — Link Wallet to Clerk Account
 //  POST /api/auth/link-wallet
 //
-//  Must be called with an active magic-link session.
-//  Accepts a SIWE proof and associates the wallet with the DB user,
-//  then re-issues the session JWT with the wallet address included.
+//  Called after Clerk sign-in to link a wallet address to the
+//  authenticated user's DB record via SIWE proof.
 // ============================================================
 
 import { NextRequest, NextResponse } from "next/server";
+import { auth, clerkClient, currentUser } from "@clerk/nextjs/server";
 import { verifyMessage } from "viem";
 import { z } from "zod";
-import { getSession } from "@/lib/auth.server";
 import { db } from "@/lib/db";
-import {
-  buildSIWEMessage,
-  createEmailSession,
-  COOKIE_NAME,
-} from "@/lib/auth";
+import { buildSIWEMessage, slugify, type TeamRole } from "@/lib/auth";
 import { consumeNonce } from "@/lib/nonce.server";
 
 const Schema = z.object({
@@ -27,20 +22,64 @@ const Schema = z.object({
   nonce: z.string().min(1),
 });
 
+async function ensureTeam(
+  userId: string,
+  walletAddress: string,
+  clerkUserId: string,
+): Promise<{ teamId: string; teamRole: TeamRole }> {
+  const existing = await db.teamMember.findFirst({
+    where: { userId },
+    orderBy: { createdAt: "asc" },
+  });
+  if (existing) {
+    return { teamId: existing.teamId, teamRole: existing.role as TeamRole };
+  }
+
+  let slug = slugify(`workspace-${walletAddress.slice(2, 8).toLowerCase()}`);
+  if (await db.team.findUnique({ where: { slug } })) {
+    slug = `${slug}-${Date.now()}`;
+  }
+
+  // Create Clerk org for this personal workspace
+  const client = await clerkClient();
+  let clerkOrgId: string | undefined;
+  try {
+    const org = await client.organizations.createOrganization({
+      name: "My Workspace",
+      createdBy: clerkUserId,
+    });
+    clerkOrgId = org.id;
+  } catch (err) {
+    // Non-fatal: team still works without Clerk org linkage
+    console.warn("[link-wallet] Could not create Clerk org:", err);
+  }
+
+  const team = await db.team.create({
+    data: {
+      name: "My Workspace",
+      slug,
+      clerkOrgId: clerkOrgId ?? null,
+      members: { create: { userId, role: "OWNER" } },
+    },
+  });
+
+  await db.user.update({
+    where: { id: userId },
+    data: { currentTeamId: team.id },
+  });
+
+  return { teamId: team.id, teamRole: "OWNER" };
+}
+
 export async function POST(req: NextRequest) {
   try {
-    const session = await getSession();
-
-    if (!session || session.authMethod !== "magic") {
-      return NextResponse.json(
-        { error: "Requires magic-link session" },
-        { status: 401 },
-      );
+    const { userId: clerkUserId } = await auth();
+    if (!clerkUserId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = await req.json();
     const parsed = Schema.safeParse(body);
-
     if (!parsed.success) {
       return NextResponse.json(
         {
@@ -62,19 +101,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Rebuild and verify SIWE message
     const host = req.headers.get("host") || "arcenpay.xyz";
     const isLocal = host.includes("localhost") || host.includes("127.0.0.1");
     const proto =
       req.headers.get("x-forwarded-proto") || (isLocal ? "http" : "https");
-    const domain = host;
-    const uri = `${proto}://${host}`;
-
     const expectedMessage = buildSIWEMessage({
       address,
       chainId,
       nonce,
-      domain,
-      uri,
+      domain: host,
+      uri: `${proto}://${host}`,
       issuedAt: nonceRecord.issuedAt,
     });
 
@@ -90,45 +127,64 @@ export async function POST(req: NextRequest) {
       message: expectedMessage,
       signature: signature as `0x${string}`,
     });
-
     if (!isValid) {
       return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
     }
 
-    // Check the wallet isn't already claimed by another account
-    const existingWallet = await db.user.findUnique({
+    // Check if wallet is already claimed by a different Clerk user
+    const walletOwner = await db.user.findUnique({
       where: { walletAddress: address },
     });
-    if (existingWallet && existingWallet.id !== session.userId) {
+    if (
+      walletOwner &&
+      walletOwner.clerkUserId &&
+      walletOwner.clerkUserId !== clerkUserId
+    ) {
       return NextResponse.json(
-        { error: "This wallet is already linked to a different account" },
+        { error: "This wallet is already linked to another account" },
         { status: 409 },
       );
     }
 
-    // Link the wallet
-    await db.user.update({
-      where: { id: session.userId },
-      data: { walletAddress: address },
-    });
+    // Fetch Clerk user to get email
+    const clerkUser = await currentUser();
+    const email = clerkUser?.emailAddresses?.[0]?.emailAddress ?? undefined;
 
-    // Re-issue the JWT with the wallet address included
-    const jwt = await createEmailSession(session.userId, session.email, {
-      linkedWallet: address,
-      teamId: session.teamId,
-      teamRole: session.teamRole,
-    });
+    let dbUser: { id: string };
 
-    const response = NextResponse.json({ ok: true, address });
-    response.cookies.set(COOKIE_NAME, jwt, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      maxAge: 24 * 60 * 60,
-    });
+    if (walletOwner && !walletOwner.clerkUserId) {
+      // Existing wallet-first user — attach Clerk ID
+      dbUser = await db.user.update({
+        where: { id: walletOwner.id },
+        data: { clerkUserId, ...(email ? { email, emailVerified: true } : {}) },
+      });
+    } else {
+      // New or Clerk-first user — upsert by clerkUserId
+      dbUser = await db.user.upsert({
+        where: { clerkUserId },
+        create: {
+          clerkUserId,
+          walletAddress: address,
+          ...(email ? { email, emailVerified: true } : {}),
+        },
+        update: { walletAddress: address },
+      });
+    }
 
-    return response;
+    // Ensure personal workspace team exists
+    await ensureTeam(dbUser.id, address, clerkUserId);
+
+    // Mark wallet as linked in Clerk metadata
+    try {
+      const client = await clerkClient();
+      await client.users.updateUserMetadata(clerkUserId, {
+        publicMetadata: { walletLinked: true, walletAddress: address },
+      });
+    } catch (err) {
+      console.warn("[link-wallet] Could not update Clerk metadata:", err);
+    }
+
+    return NextResponse.json({ ok: true, address });
   } catch (err) {
     console.error("[api/auth/link-wallet]", err);
     return NextResponse.json(

@@ -5,17 +5,23 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth.server";
+import { resolveTeamContext } from "@/lib/team-session";
 import { db } from "@/lib/db";
 import { writeAuditEvent } from "@/lib/audit";
 
 export async function DELETE(req: NextRequest) {
   try {
     const session = await getSession();
-    if (!session?.teamId) {
+    if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (session.teamRole !== "OWNER" && session.teamRole !== "ADMIN") {
+    const teamCtx = await resolveTeamContext(session);
+    if (!teamCtx) {
+      return NextResponse.json({ error: "No team found" }, { status: 403 });
+    }
+
+    if (teamCtx.teamRole !== "OWNER" && teamCtx.teamRole !== "ADMIN") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -29,7 +35,7 @@ export async function DELETE(req: NextRequest) {
 
     // Can't remove the team owner
     const member = await db.teamMember.findFirst({
-      where: { teamId: session.teamId, userId },
+      where: { teamId: teamCtx.teamId, userId },
     });
 
     if (!member) {
@@ -47,8 +53,9 @@ export async function DELETE(req: NextRequest) {
 
     await writeAuditEvent({
       request: req,
-      teamId: session.teamId,
-      session,
+      teamId: teamCtx.teamId,
+      clerkUserId: teamCtx.userId,
+      walletAddress: teamCtx.walletAddress,
       action: "team.member.remove",
       resourceType: "TeamMember",
       resourceId: member.id,

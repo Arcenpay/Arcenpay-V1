@@ -89,6 +89,7 @@ model User {
   email         String? @unique
   emailVerified Boolean @default(false)
   walletAddress String? @unique
+  clerkUserId   String? @unique
 
   currentTeamId String?
 
@@ -97,6 +98,7 @@ model User {
 
   @@index([email])
   @@index([walletAddress])
+  @@index([clerkUserId])
 }
 
 // ─── Passwordless email login ─────────────────────────────────────────────────
@@ -127,6 +129,7 @@ model Team {
   slug            String          @unique
   environmentMode EnvironmentMode @default(DEVELOPMENT)
   invoicePrefix   String?
+  clerkOrgId      String?         @unique
 
   members         TeamMember[]
   providerProfile ProviderProfile?
@@ -148,6 +151,7 @@ model Team {
   webhookDeliveries WebhookDelivery[]
 
   @@index([slug])
+  @@index([clerkOrgId])
 }
 
 model TeamMember {

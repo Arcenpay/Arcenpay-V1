@@ -103,7 +103,8 @@ export async function POST(request: NextRequest, context: Params) {
   await writeAuditEvent({
     request,
     teamId: auth.team.teamId,
-    session: auth.session,
+    clerkUserId: auth.team.userId,
+    walletAddress: auth.team.walletAddress,
     action: "invoice.creditnote.create",
     resourceType: "CreditNote",
     resourceId: creditNote.id,

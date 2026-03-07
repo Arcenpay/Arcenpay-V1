@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createHash, randomBytes } from "crypto";
 import { getSession } from "@/lib/auth.server";
+import { resolveTeamContext } from "@/lib/team-session";
 import { db } from "@/lib/db";
 import { writeAuditEvent } from "@/lib/audit";
 
@@ -20,17 +21,8 @@ function hashApiKey(key: string): string {
 async function resolveTeamId(
   session: NonNullable<Awaited<ReturnType<typeof getSession>>>,
 ): Promise<string | null> {
-  if (session.teamId) return session.teamId;
-
-  const userId =
-    "userId" in session && session.userId ? session.userId : undefined;
-  if (!userId) return null;
-
-  const membership = await db.teamMember.findFirst({
-    where: { userId },
-    orderBy: { createdAt: "asc" },
-  });
-  return membership?.teamId ?? null;
+  const ctx = await resolveTeamContext(session);
+  return ctx?.teamId ?? null;
 }
 
 // ── POST — generate key ───────────────────────────────────────────────────────
@@ -57,7 +49,7 @@ export async function POST(request: NextRequest) {
   await writeAuditEvent({
     request,
     teamId,
-    session,
+    clerkUserId: session.clerkUserId,
     action: "provider.api_key.generate",
     resourceType: "ProviderProfile",
     resourceId: teamId,
@@ -86,7 +78,7 @@ export async function DELETE(request: NextRequest) {
   await writeAuditEvent({
     request,
     teamId,
-    session,
+    clerkUserId: session.clerkUserId,
     action: "provider.api_key.revoke",
     resourceType: "ProviderProfile",
     resourceId: teamId,

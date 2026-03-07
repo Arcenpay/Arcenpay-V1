@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@apollo/client": "^3.14.0",
+    "@clerk/nextjs": "^7.0.1",
     "@hookform/resolvers": "^3.10.0",
     "@meap/core": "*",
     "@meap/react": "*",
@@ -62,7 +63,6 @@
     "embla-carousel-react": "8.5.1",
     "graphql": "^16.11.0",
     "input-otp": "1.4.1",
-    "jose": "^6.1.3",
     "lightningcss-darwin-arm64": "1.31.1",
     "lucide-react": "^0.454.0",
     "next": "16.0.10",
@@ -78,6 +78,7 @@
     "recharts": "2.15.4",
     "resend": "^6.9.3",
     "sonner": "^1.7.4",
+    "svix": "^1.84.1",
     "tailwind-merge": "^3.3.1",
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^1.1.2",

@@ -10,7 +10,7 @@ const FACILITATOR_URL =
 
 export async function POST(request: NextRequest) {
   const session = await getSession();
-  if (!session?.address) {
+  if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -22,7 +22,8 @@ export async function POST(request: NextRequest) {
         Accept: "application/json",
         ...(body
           ? {
-              "Content-Type": request.headers.get("content-type") || "application/json",
+              "Content-Type":
+                request.headers.get("content-type") || "application/json",
             }
           : {}),
         ...(process.env.FACILITATOR_SECRET
@@ -42,6 +43,9 @@ export async function POST(request: NextRequest) {
     return response;
   } catch (err) {
     console.error("[api/webhooks/test]", err);
-    return NextResponse.json({ error: "Facilitator unavailable" }, { status: 503 });
+    return NextResponse.json(
+      { error: "Facilitator unavailable" },
+      { status: 503 },
+    );
   }
 }

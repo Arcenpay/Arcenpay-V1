@@ -1,12 +1,12 @@
 import type { NextRequest } from "next/server";
-import type { SessionPayload } from "@/lib/auth.server";
 import { db } from "@/lib/db";
 import { toPrismaNullableJson } from "@/lib/prisma-json";
 
 export type AuditInput = {
   request: NextRequest;
   teamId: string;
-  session: SessionPayload;
+  clerkUserId?: string;
+  walletAddress?: string;
   action: string;
   resourceType: string;
   resourceId?: string;
@@ -14,10 +14,6 @@ export type AuditInput = {
   afterData?: unknown;
   metadata?: unknown;
 };
-
-function getActorType(session: SessionPayload): "USER" | "API" {
-  return session.authMethod === "magic" ? "USER" : "API";
-}
 
 export function buildRequestId(request: NextRequest): string {
   return (
@@ -28,16 +24,24 @@ export function buildRequestId(request: NextRequest): string {
 }
 
 export async function writeAuditEvent(input: AuditInput): Promise<void> {
-  const { request, teamId, session, action, resourceType, resourceId } = input;
+  const {
+    request,
+    teamId,
+    clerkUserId,
+    walletAddress,
+    action,
+    resourceType,
+    resourceId,
+  } = input;
   const requestId = buildRequestId(request);
 
   try {
     await db.auditEvent.create({
       data: {
         teamId,
-        actorType: getActorType(session),
-        actorUserId: "userId" in session ? session.userId : undefined,
-        actorAddress: session.address,
+        actorType: "USER",
+        actorUserId: clerkUserId,
+        actorAddress: walletAddress,
         action,
         resourceType,
         resourceId,

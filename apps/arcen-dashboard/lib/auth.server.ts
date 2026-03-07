@@ -1,34 +1,27 @@
 // ============================================================
-//  Dashboard — Server-only auth helpers
+//  Dashboard — Server-only auth helpers (Clerk-based)
 //  Only import this in API routes / Server Components.
 // ============================================================
 
-import { cookies } from "next/headers";
-import { COOKIE_NAME, verifySession, type SessionPayload } from "./auth";
+import { auth } from "@clerk/nextjs/server";
+import { db } from "@/lib/db";
 
-export type { SessionPayload };
+export type ClerkSession = {
+  clerkUserId: string;
+  orgId: string | null;
+};
 
-/** Reads the session cookie and verifies the JWT — server-only */
-export async function getSession(): Promise<SessionPayload | null> {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(COOKIE_NAME)?.value;
-  if (!token) return null;
-  return verifySession(token);
+/** Reads the Clerk session — server-only. Returns null if unauthenticated. */
+export async function getSession(): Promise<ClerkSession | null> {
+  const { userId, orgId } = await auth();
+  if (!userId) return null;
+  return { clerkUserId: userId, orgId: orgId ?? null };
 }
 
-/**
- * Returns the wallet address from a session regardless of auth method.
- * SIWE sessions always have an address; magic-link sessions may have one
- * if the user has linked their wallet.
- */
-export function getSessionAddress(session: SessionPayload): string | undefined {
-  return session.address;
+/** Fetches the DB User record for the given Clerk user ID. */
+export async function getDbUser(clerkUserId: string) {
+  return db.user.findUnique({ where: { clerkUserId } });
 }
 
-/**
- * Returns the email from a session regardless of auth method.
- */
-export function getSessionEmail(session: SessionPayload): string | undefined {
-  if (session.authMethod === "magic") return session.email;
-  return session.email;
-}
+// SessionPayload alias for any files that still import it by the old name
+export type SessionPayload = ClerkSession;

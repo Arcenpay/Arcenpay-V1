@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSession } from "@/lib/auth.server";
+import { resolveTeamContext } from "@/lib/team-session";
 import { db } from "@/lib/db";
 import { writeAuditEvent } from "@/lib/audit";
 
@@ -31,17 +32,8 @@ const UpdateSchema = z.object({
 async function resolveTeamId(
   session: NonNullable<Awaited<ReturnType<typeof getSession>>>,
 ): Promise<string | null> {
-  if (session.teamId) return session.teamId;
-
-  const userId =
-    "userId" in session && session.userId ? session.userId : undefined;
-  if (!userId) return null;
-
-  const membership = await db.teamMember.findFirst({
-    where: { userId },
-    orderBy: { createdAt: "asc" },
-  });
-  return membership?.teamId ?? null;
+  const ctx = await resolveTeamContext(session);
+  return ctx?.teamId ?? null;
 }
 
 // ── GET ───────────────────────────────────────────────────────────────────────
@@ -124,7 +116,7 @@ export async function PUT(req: NextRequest) {
   await writeAuditEvent({
     request: req,
     teamId,
-    session,
+    clerkUserId: session.clerkUserId,
     action: "provider.profile.update",
     resourceType: "ProviderProfile",
     resourceId: teamId,

@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { getSession, type SessionPayload } from "@/lib/auth.server";
+import { getSession, type ClerkSession } from "@/lib/auth.server";
 import { resolveTeamContext, type TeamContext } from "@/lib/team-session";
 import { hasPermission, type Permission } from "@/lib/rbac";
 
 export type AuthorizedContext = {
-  session: SessionPayload;
+  session: ClerkSession;
   team: TeamContext;
 };
 

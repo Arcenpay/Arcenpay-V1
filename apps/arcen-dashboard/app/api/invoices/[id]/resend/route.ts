@@ -30,7 +30,10 @@ export async function POST(request: NextRequest, context: Params) {
 
   const prior = invoice.deliveries[0];
   try {
-    const { downloadUrl } = await ensureInvoicePdfForTeam(auth.team.teamId, invoice.id);
+    const { downloadUrl } = await ensureInvoicePdfForTeam(
+      auth.team.teamId,
+      invoice.id,
+    );
 
     await sendInvoiceEmail({
       to: invoice.customerEmail,
@@ -55,7 +58,8 @@ export async function POST(request: NextRequest, context: Params) {
     await writeAuditEvent({
       request,
       teamId: auth.team.teamId,
-      session: auth.session,
+      clerkUserId: auth.team.userId,
+      walletAddress: auth.team.walletAddress,
       action: "invoice.resend",
       resourceType: "InvoiceDelivery",
       resourceId: delivery.id,
@@ -78,7 +82,8 @@ export async function POST(request: NextRequest, context: Params) {
     await writeAuditEvent({
       request,
       teamId: auth.team.teamId,
-      session: auth.session,
+      clerkUserId: auth.team.userId,
+      walletAddress: auth.team.walletAddress,
       action: "invoice.resend.failed",
       resourceType: "InvoiceDelivery",
       resourceId: delivery.id,

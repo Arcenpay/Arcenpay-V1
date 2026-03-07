@@ -10,7 +10,7 @@ const FACILITATOR_URL =
 
 export async function GET(request: NextRequest) {
   const session = await getSession();
-  if (!session?.address) {
+  if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -21,16 +21,19 @@ export async function GET(request: NextRequest) {
       ? Math.max(1, Math.min(Math.trunc(rawLimit), 200))
       : 12;
 
-    const upstream = await fetch(`${FACILITATOR_URL}/api/proofs/history?limit=${limit}`, {
-      method: "GET",
-      headers: {
-        Accept: "application/json",
-        ...(process.env.FACILITATOR_SECRET
-          ? { Authorization: `Bearer ${process.env.FACILITATOR_SECRET}` }
-          : {}),
+    const upstream = await fetch(
+      `${FACILITATOR_URL}/api/proofs/history?limit=${limit}`,
+      {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          ...(process.env.FACILITATOR_SECRET
+            ? { Authorization: `Bearer ${process.env.FACILITATOR_SECRET}` }
+            : {}),
+        },
+        cache: "no-store",
       },
-      cache: "no-store",
-    });
+    );
 
     if (!upstream.ok) {
       return NextResponse.json({ count: 0, jobs: [] });

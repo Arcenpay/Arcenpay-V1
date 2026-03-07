@@ -11,84 +11,86 @@ import { resolveTeamContext } from "@/lib/team-session";
 import { db } from "@/lib/db";
 
 const FACILITATOR_URL =
-    process.env.FACILITATOR_BASE_URL ||
-    process.env.FACILITATOR_URL ||
-    process.env.NEXT_PUBLIC_FACILITATOR_BASE_URL ||
-    process.env.NEXT_PUBLIC_FACILITATOR_URL ||
-    "http://localhost:3402";
+  process.env.FACILITATOR_BASE_URL ||
+  process.env.FACILITATOR_URL ||
+  process.env.NEXT_PUBLIC_FACILITATOR_BASE_URL ||
+  process.env.NEXT_PUBLIC_FACILITATOR_URL ||
+  "http://localhost:3402";
 
 export async function GET(request: NextRequest) {
-    // Require a valid session
-    const session = await getSession();
-    if (!session) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  // Require a valid session
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const team = await resolveTeamContext(session);
+  if (team) {
+    const limitParam = Number(
+      request.nextUrl.searchParams.get("limit") || "50",
+    );
+    const limit = Number.isFinite(limitParam)
+      ? Math.max(1, Math.min(Math.trunc(limitParam), 200))
+      : 50;
+
+    const entries = await db.webhookDelivery.findMany({
+      where: { teamId: team.teamId },
+      orderBy: { deliveredAt: "desc" },
+      take: limit,
+    });
+
+    if (entries.length > 0) {
+      return NextResponse.json({
+        configured: true,
+        entries,
+        log: entries,
+        source: "database",
+      });
     }
+  }
 
-    const team = await resolveTeamContext(session);
-    if (team) {
-        const limitParam = Number(request.nextUrl.searchParams.get("limit") || "50");
-        const limit = Number.isFinite(limitParam)
-            ? Math.max(1, Math.min(Math.trunc(limitParam), 200))
-            : 50;
+  try {
+    const { searchParams } = new URL(request.url);
+    const limit = searchParams.get("limit") || "50";
 
-        const entries = await db.webhookDelivery.findMany({
-            where: { teamId: team.teamId },
-            orderBy: { deliveredAt: "desc" },
-            take: limit,
-        });
+    const response = await fetch(
+      `${FACILITATOR_URL}/api/webhooks/log?limit=${limit}&provider=${team?.walletAddress ?? ""}`,
+      {
+        headers: {
+          "Content-Type": "application/json",
+          // Internal facilitator auth token
+          ...(process.env.FACILITATOR_SECRET
+            ? { Authorization: `Bearer ${process.env.FACILITATOR_SECRET}` }
+            : {}),
+        },
+        next: { revalidate: 0 },
+      },
+    );
 
-        if (entries.length > 0) {
-            return NextResponse.json({
-                configured: true,
-                entries,
-                log: entries,
-                source: "database",
-            });
-        }
-    }
-
-    try {
-        const { searchParams } = new URL(request.url);
-        const limit = searchParams.get("limit") || "50";
-
-        const response = await fetch(
-            `${FACILITATOR_URL}/api/webhooks/log?limit=${limit}&provider=${session.address}`,
-            {
-                headers: {
-                    "Content-Type": "application/json",
-                    // Internal facilitator auth token
-                    ...(process.env.FACILITATOR_SECRET
-                        ? { Authorization: `Bearer ${process.env.FACILITATOR_SECRET}` }
-                        : {}),
-                },
-                next: { revalidate: 0 },
-            },
-        );
-
-        if (!response.ok) {
-            // Facilitator not available — return empty list gracefully
-            if (response.status === 404 || response.status === 503) {
-                return NextResponse.json({ entries: [] });
-            }
-            throw new Error(`Facilitator returned ${response.status}`);
-        }
-
-        const data = await response.json();
-        const entries = Array.isArray(data.entries)
-            ? data.entries
-            : Array.isArray(data.log)
-                ? data.log
-                : [];
-
-        return NextResponse.json({
-            configured: data.configured !== false,
-            entries,
-            // deprecated alias retained for compatibility with legacy clients
-            log: entries,
-        });
-    } catch (err) {
-        console.error("[api/webhooks/log]", err);
-        // Return empty list — don't break Settings page if facilitator is down
+    if (!response.ok) {
+      // Facilitator not available — return empty list gracefully
+      if (response.status === 404 || response.status === 503) {
         return NextResponse.json({ entries: [] });
+      }
+      throw new Error(`Facilitator returned ${response.status}`);
     }
+
+    const data = await response.json();
+    const entries = Array.isArray(data.entries)
+      ? data.entries
+      : Array.isArray(data.log)
+        ? data.log
+        : [];
+
+    return NextResponse.json({
+      configured: data.configured !== false,
+      entries,
+      // deprecated alias retained for compatibility with legacy clients
+      log: entries,
+    });
+  } catch (err) {
+    console.error("[api/webhooks/log]", err);
+    // Return empty list — don't break Settings page if facilitator is down
+    return NextResponse.json({ entries: [] });
+  }
 }

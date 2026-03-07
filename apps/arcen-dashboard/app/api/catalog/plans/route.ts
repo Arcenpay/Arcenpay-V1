@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import {
-  requirePermission,
-  isErrorResponse,
-} from "@/lib/api-auth";
+import { requirePermission, isErrorResponse } from "@/lib/api-auth";
 import { writeAuditEvent } from "@/lib/audit";
 import { toPrismaNullableJson } from "@/lib/prisma-json";
 
@@ -111,7 +108,8 @@ export async function POST(request: NextRequest) {
   await writeAuditEvent({
     request,
     teamId: auth.team.teamId,
-    session: auth.session,
+    clerkUserId: auth.team.userId,
+    walletAddress: auth.team.walletAddress,
     action: "catalog.plan.create",
     resourceType: "CatalogPlan",
     resourceId: plan.id,
@@ -185,7 +183,8 @@ export async function PUT(request: NextRequest) {
   await writeAuditEvent({
     request,
     teamId: auth.team.teamId,
-    session: auth.session,
+    clerkUserId: auth.team.userId,
+    walletAddress: auth.team.walletAddress,
     action: "catalog.plan.update",
     resourceType: "CatalogPlan",
     resourceId: updated.id,

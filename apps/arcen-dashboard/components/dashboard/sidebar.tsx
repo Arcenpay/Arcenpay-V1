@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
-import type { Section } from "@/app/page";
+import type { Section } from "@/app/(dashboard)/page";
 import { useAccount } from "wagmi";
 import {
   LayoutDashboard,

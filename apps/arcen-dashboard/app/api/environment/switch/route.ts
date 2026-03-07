@@ -53,7 +53,10 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (parsed.data.environmentMode === "PRODUCTION" && hasZeroAddress(addresses)) {
+  if (
+    parsed.data.environmentMode === "PRODUCTION" &&
+    hasZeroAddress(addresses)
+  ) {
     return NextResponse.json(
       {
         error:
@@ -63,7 +66,9 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const previous = await db.team.findUnique({ where: { id: auth.team.teamId } });
+  const previous = await db.team.findUnique({
+    where: { id: auth.team.teamId },
+  });
   if (!previous) {
     return NextResponse.json({ error: "Team not found" }, { status: 404 });
   }
@@ -76,7 +81,8 @@ export async function POST(request: NextRequest) {
   await writeAuditEvent({
     request,
     teamId: auth.team.teamId,
-    session: auth.session,
+    clerkUserId: auth.team.userId,
+    walletAddress: auth.team.walletAddress,
     action: "environment.switch",
     resourceType: "Team",
     resourceId: team.id,

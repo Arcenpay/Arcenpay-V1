@@ -1,16 +1,15 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import type { Section } from "@/app/page";
-import { Bell, Search, LogOut } from "lucide-react";
+import type { Section } from "@/app/(dashboard)/page";
+import { Bell, Search } from "lucide-react";
 import { useState } from "react";
 import {
   useAppKit,
   useAppKitAccount,
   useAppKitNetwork,
 } from "@reown/appkit/react";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+import { UserButton, OrganizationSwitcher } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useEnvironment } from "@/contexts/environment-context";
@@ -29,6 +28,7 @@ const sectionTitles: Record<Section, string> = {
   invoices: "Invoices",
   sessions: "Sessions",
   features: "Features",
+  components: "Components",
   "audit-log": "Audit Log",
   settings: "Settings",
 };
@@ -43,24 +43,17 @@ const sectionDescriptions: Record<Section, string> = {
   invoices: "Search, download, and resend invoices",
   sessions: "ZKVUB agent sessions",
   features: "Tableland + Lit Protocol feature flags",
+  components: "UI component library",
   "audit-log": "Immutable record of all team actions",
   settings: "Provider configuration",
 };
 
 export function Header({ activeSection }: HeaderProps) {
   const [searchFocused, setSearchFocused] = useState(false);
-  const router = useRouter();
   const { open } = useAppKit();
   const { address } = useAppKitAccount();
   const { chainId } = useAppKitNetwork();
   const { envMode } = useEnvironment();
-
-  const handleSignOut = async () => {
-    await fetch("/api/auth/logout", { method: "POST" });
-    toast.success("Signed out");
-    router.push("/login");
-    router.refresh();
-  };
 
   return (
     <header className="h-16 border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-30 flex items-center justify-between px-6">
@@ -120,7 +113,7 @@ export function Header({ activeSection }: HeaderProps) {
           {chainId ? `Chain ${chainId}` : "Network"}
         </Button>
 
-        {/* Account */}
+        {/* Wallet button */}
         <Button
           variant="ghost"
           size="sm"
@@ -131,16 +124,22 @@ export function Header({ activeSection }: HeaderProps) {
           {address ? `${address.slice(0, 6)}…${address.slice(-4)}` : "Connect"}
         </Button>
 
-        {/* Sign Out */}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleSignOut}
-          className="h-9 px-3 text-muted-foreground hover:text-foreground"
-          title="Sign out"
-        >
-          <LogOut className="w-4 h-4" />
-        </Button>
+        {/* Team / Org switcher */}
+        <OrganizationSwitcher
+          hidePersonal
+          afterSelectOrganizationUrl="/"
+          afterCreateOrganizationUrl="/"
+          appearance={{
+            elements: {
+              rootBox: "flex items-center",
+              organizationSwitcherTrigger:
+                "h-9 px-3 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-secondary border-0 focus:ring-0",
+            },
+          }}
+        />
+
+        {/* User account + sign out */}
+        <UserButton />
       </div>
     </header>
   );

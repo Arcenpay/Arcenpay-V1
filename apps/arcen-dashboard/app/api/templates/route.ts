@@ -7,7 +7,10 @@ import { toPrismaJson } from "@/lib/prisma-json";
 
 const createSchema = z.object({
   name: z.string().min(1),
-  slug: z.string().min(1).regex(/^[a-z0-9\-]+$/),
+  slug: z
+    .string()
+    .min(1)
+    .regex(/^[a-z0-9\-]+$/),
   description: z.string().optional(),
   schemaJson: z.record(z.unknown()),
   reactBlocks: z.array(z.record(z.unknown())),
@@ -89,7 +92,8 @@ export async function POST(request: NextRequest) {
   await writeAuditEvent({
     request,
     teamId: auth.team.teamId,
-    session: auth.session,
+    clerkUserId: auth.team.userId,
+    walletAddress: auth.team.walletAddress,
     action: "template.create",
     resourceType: "BillingTemplate",
     resourceId: template.id,
@@ -132,7 +136,8 @@ export async function PUT(request: NextRequest) {
   await writeAuditEvent({
     request,
     teamId: auth.team.teamId,
-    session: auth.session,
+    clerkUserId: auth.team.userId,
+    walletAddress: auth.team.walletAddress,
     action: "template.status.update",
     resourceType: "BillingTemplate",
     resourceId: updated.id,

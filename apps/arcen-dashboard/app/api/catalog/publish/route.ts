@@ -54,7 +54,8 @@ export async function POST(request: NextRequest) {
   await writeAuditEvent({
     request,
     teamId: auth.team.teamId,
-    session: auth.session,
+    clerkUserId: auth.team.userId,
+    walletAddress: auth.team.walletAddress,
     action: "catalog.publish",
     resourceType: "Catalog",
     metadata: {

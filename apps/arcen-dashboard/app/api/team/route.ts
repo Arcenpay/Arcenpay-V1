@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSession } from "@/lib/auth.server";
+import { resolveTeamContext } from "@/lib/team-session";
 import { db } from "@/lib/db";
 import { slugify } from "@/lib/auth";
 import { writeAuditEvent } from "@/lib/audit";
@@ -14,12 +15,17 @@ import { writeAuditEvent } from "@/lib/audit";
 export async function GET() {
   try {
     const session = await getSession();
-    if (!session?.teamId) {
+    if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const teamCtx = await resolveTeamContext(session);
+    if (!teamCtx) {
+      return NextResponse.json({ error: "No team found" }, { status: 403 });
+    }
+
     const team = await db.team.findUnique({
-      where: { id: session.teamId },
+      where: { id: teamCtx.teamId },
       include: {
         members: {
           include: {
@@ -49,7 +55,7 @@ export async function GET() {
       slug: team.slug,
       createdAt: team.createdAt,
       members,
-      myRole: session.teamRole,
+      myRole: teamCtx.teamRole,
     });
   } catch (err) {
     console.error("[api/team GET]", err);
@@ -67,11 +73,16 @@ const PutSchema = z.object({
 export async function PUT(req: NextRequest) {
   try {
     const session = await getSession();
-    if (!session?.teamId) {
+    if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (session.teamRole !== "OWNER" && session.teamRole !== "ADMIN") {
+    const teamCtx = await resolveTeamContext(session);
+    if (!teamCtx) {
+      return NextResponse.json({ error: "No team found" }, { status: 403 });
+    }
+
+    if (teamCtx.teamRole !== "OWNER" && teamCtx.teamRole !== "ADMIN") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -92,24 +103,25 @@ export async function PUT(req: NextRequest) {
 
     // Check slug collision (only if it changed)
     const existing = await db.team.findUnique({
-      where: { id: session.teamId },
+      where: { id: teamCtx.teamId },
     });
     if (existing && slugify(existing.name) !== slug) {
       const clash = await db.team.findFirst({
-        where: { slug, id: { not: session.teamId } },
+        where: { slug, id: { not: teamCtx.teamId } },
       });
       if (clash) slug = `${slug}-${Date.now()}`;
     }
 
     const team = await db.team.update({
-      where: { id: session.teamId },
+      where: { id: teamCtx.teamId },
       data: { name, slug },
     });
 
     await writeAuditEvent({
       request: req,
-      teamId: session.teamId,
-      session,
+      teamId: teamCtx.teamId,
+      clerkUserId: teamCtx.userId,
+      walletAddress: teamCtx.walletAddress,
       action: "team.update",
       resourceType: "Team",
       resourceId: team.id,

@@ -2,24 +2,18 @@
 //  Dashboard API — Invite Member by Email
 //  POST /api/team/invite
 //
-//  Adds the invited user to the team and sends them a magic-link
-//  email so they can sign in and access the workspace immediately.
+//  Sends a Clerk Organization invitation. The webhook
+//  (organizationMembership.created) will create the DB TeamMember
+//  when the invitee accepts.
 // ============================================================
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { clerkClient } from "@clerk/nextjs/server";
 import { getSession } from "@/lib/auth.server";
+import { resolveTeamContext } from "@/lib/team-session";
 import { db } from "@/lib/db";
-import { sendTeamInviteEmail } from "@/lib/email";
 import { writeAuditEvent } from "@/lib/audit";
-
-const MAGIC_TOKEN_TTL_MS = 15 * 60 * 1000; // 15 minutes
-
-function randomHex(bytes: number): string {
-  const arr = new Uint8Array(bytes);
-  globalThis.crypto.getRandomValues(arr);
-  return Array.from(arr, (v) => v.toString(16).padStart(2, "0")).join("");
-}
 
 const InviteSchema = z.object({
   email: z.string().email(),
@@ -31,11 +25,16 @@ const InviteSchema = z.object({
 export async function POST(req: NextRequest) {
   try {
     const session = await getSession();
-    if (!session?.teamId) {
+    if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (session.teamRole !== "OWNER" && session.teamRole !== "ADMIN") {
+    const team = await resolveTeamContext(session);
+    if (!team) {
+      return NextResponse.json({ error: "No team found" }, { status: 403 });
+    }
+
+    if (team.teamRole !== "OWNER" && team.teamRole !== "ADMIN") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -53,76 +52,58 @@ export async function POST(req: NextRequest) {
 
     const { email, role } = parsed.data;
 
-    // Fetch team name for the email
-    const team = await db.team.findUnique({
-      where: { id: session.teamId },
-      select: { name: true },
+    // Get team record to find Clerk org ID
+    const dbTeam = await db.team.findUnique({
+      where: { id: team.teamId },
+      select: { name: true, clerkOrgId: true },
     });
 
-    // Find or create the user by email
-    let user = await db.user.findUnique({ where: { email } });
-    if (!user) {
-      user = await db.user.create({ data: { email } });
-    }
-
-    // Check if already a member
-    const existing = await db.teamMember.findFirst({
-      where: { teamId: session.teamId, userId: user.id },
-    });
-    if (existing) {
+    if (!dbTeam?.clerkOrgId) {
       return NextResponse.json(
-        { error: "User is already a team member" },
-        { status: 409 },
+        {
+          error:
+            "Team is not linked to a Clerk organization. Please contact support.",
+        },
+        { status: 400 },
       );
     }
 
-    // Add them to the team
-    await db.teamMember.create({
-      data: {
-        teamId: session.teamId,
-        userId: user.id,
-        role,
-      },
+    // Check if user is already a member
+    const existingUser = await db.user.findFirst({
+      where: { email },
+      select: { id: true },
     });
-
-    // Invalidate any existing unused magic tokens for this email
-    await db.magicToken.updateMany({
-      where: { email, usedAt: null },
-      data: { usedAt: new Date(0) },
-    });
-
-    // Create a fresh magic token so the invite link signs them in directly
-    const token = randomHex(32);
-    await db.magicToken.create({
-      data: {
-        token,
-        email,
-        expiresAt: new Date(Date.now() + MAGIC_TOKEN_TTL_MS),
-        userId: user.id,
-      },
-    });
-
-    // Send invitation email — non-fatal so team membership is still created
-    const inviterEmail =
-      session.authMethod === "magic" ? session.email : session.email ?? null;
-    try {
-      await sendTeamInviteEmail(
-        email,
-        token,
-        team?.name ?? "the team",
-        inviterEmail ?? null,
-      );
-    } catch (emailErr) {
-      console.error("[api/team/invite] Email send failed:", emailErr);
+    if (existingUser) {
+      const existingMember = await db.teamMember.findFirst({
+        where: { teamId: team.teamId, userId: existingUser.id },
+      });
+      if (existingMember) {
+        return NextResponse.json(
+          { error: "User is already a team member" },
+          { status: 409 },
+        );
+      }
     }
+
+    // Send Clerk org invitation — Clerk sends the invite email automatically.
+    // The `dbRole` on publicMetadata is read by the webhook handler to set
+    // the correct fine-grained role when the invite is accepted.
+    const client = await clerkClient();
+    await client.organizations.createOrganizationInvitation({
+      organizationId: dbTeam.clerkOrgId,
+      emailAddress: email,
+      role: "org:member",
+      inviterUserId: session.clerkUserId,
+      publicMetadata: { dbRole: role },
+    });
 
     await writeAuditEvent({
       request: req,
-      teamId: session.teamId,
-      session,
+      teamId: team.teamId,
+      clerkUserId: team.userId,
+      walletAddress: team.walletAddress,
       action: "team.invite",
       resourceType: "TeamMember",
-      resourceId: user.id,
       metadata: { email, role },
     });
 
