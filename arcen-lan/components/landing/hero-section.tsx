@@ -79,28 +79,7 @@ export function HeroSection() {
           </Button>
         </div>
 
-        {/* Stats */}
-        <div
-          className={`grid grid-cols-2 lg:grid-cols-4 gap-px bg-border rounded-xl overflow-hidden card-shadow transition-all duration-700 delay-400 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
-            }`}
-        >
-          {[
-            { value: "7", label: "smart contracts deployed.", company: "SEPOLIA" },
-            { value: "ERC-7579", label: "modular smart accounts.", company: "ZERODEV" },
-            { value: "6 chains", label: "cross-chain entitlements.", company: "AXELAR" },
-            { value: "0.5%", label: "protocol settlement fee.", company: "USDC" },
-          ].map((stat) => (
-            <div key={stat.company} className="p-6 lg:p-8 flex justify-between min-h-[140px] bg-black shadow-none lg:py-8 flex-col">
-              <div>
-                <span className="text-xl lg:text-2xl font-semibold">{stat.value}</span>
-                <span className="text-muted-foreground text-sm lg:text-base"> {stat.label}</span>
-              </div>
-              <div className="font-mono text-xs text-muted-foreground/60 tracking-widest mt-4">
-                {stat.company}
-              </div>
-            </div>
-          ))}
-        </div>
+
       </div>
     </section>
   );
