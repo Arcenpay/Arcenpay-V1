@@ -11,6 +11,7 @@ import { z } from "zod";
 import { getSession } from "@/lib/auth.server";
 import { db } from "@/lib/db";
 import { sendTeamInviteEmail } from "@/lib/email";
+import { writeAuditEvent } from "@/lib/audit";
 
 const MAGIC_TOKEN_TTL_MS = 15 * 60 * 1000; // 15 minutes
 
@@ -22,7 +23,9 @@ function randomHex(bytes: number): string {
 
 const InviteSchema = z.object({
   email: z.string().email(),
-  role: z.enum(["ADMIN", "MEMBER"]).default("MEMBER"),
+  role: z
+    .enum(["ADMIN", "MEMBER", "FINANCE", "DEVELOPER", "SUPPORT"])
+    .default("MEMBER"),
 });
 
 export async function POST(req: NextRequest) {
@@ -112,6 +115,16 @@ export async function POST(req: NextRequest) {
     } catch (emailErr) {
       console.error("[api/team/invite] Email send failed:", emailErr);
     }
+
+    await writeAuditEvent({
+      request: req,
+      teamId: session.teamId,
+      session,
+      action: "team.invite",
+      resourceType: "TeamMember",
+      resourceId: user.id,
+      metadata: { email, role },
+    });
 
     return NextResponse.json({ ok: true, email, role });
   } catch (err) {

@@ -49,7 +49,7 @@ import { toast } from "sonner";
 import {
   useContractAddresses,
   PlanFactoryABI,
-  SEPOLIA_USDC,
+  TOKENS,
 } from "@/lib/contracts";
 import {
   formatUsdc,
@@ -104,6 +104,8 @@ export function PlansSection() {
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
   const contractAddresses = useContractAddresses();
+  const chainUsdc =
+    TOKENS[chainId as keyof typeof TOKENS]?.USDC || TOKENS[11155111].USDC;
 
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<
@@ -119,6 +121,7 @@ export function PlansSection() {
     priceUsdc: "",
     interval: "monthly" as BillingInterval,
     features: "",
+    acceptedToken: chainUsdc,
   });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [txStep, setTxStep] = useState<TransactionStep>("idle");
@@ -195,7 +198,7 @@ export function PlansSection() {
     ? BigInt(Math.round(parseFloat(newPlan.priceUsdc) * 1_000_000))
     : 0n;
 
-  const { data: simulateData, error: simulateError } = useSimulateContract({
+  const { error: simulateError } = useSimulateContract({
     address: contractAddresses.planFactory as `0x${string}`,
     abi: PlanFactoryABI,
     functionName: "createPlan",
@@ -204,7 +207,7 @@ export function PlansSection() {
       newPlan.name, // tier = name as default
       priceInUnits,
       INTERVAL_SECONDS[newPlan.interval],
-      SEPOLIA_USDC as `0x${string}`,
+      newPlan.acceptedToken as `0x${string}`,
       "",
     ],
     query: {
@@ -239,10 +242,15 @@ export function PlansSection() {
           priceUsdc: "",
           interval: "monthly",
           features: "",
+          acceptedToken: chainUsdc,
         });
       }, 2500);
     }
-  }, [createReceipt]);
+  }, [createReceipt, chainUsdc]);
+
+  useEffect(() => {
+    setNewPlan((prev) => ({ ...prev, acceptedToken: chainUsdc }));
+  }, [chainUsdc]);
 
   // ── Write: deactivate plan ────────────────────────────────
   const { writeContractAsync: writeDeactivate } = useWriteContract();
@@ -303,7 +311,7 @@ export function PlansSection() {
           newPlan.name,
           priceInUnits,
           INTERVAL_SECONDS[newPlan.interval],
-          SEPOLIA_USDC as `0x${string}`,
+          newPlan.acceptedToken as `0x${string}`,
           "",
         ],
       });
@@ -357,7 +365,13 @@ export function PlansSection() {
     setTxError("");
     setFormErrors({});
     setTxHashCreate("");
-    setNewPlan({ name: "", priceUsdc: "", interval: "monthly", features: "" });
+    setNewPlan({
+      name: "",
+      priceUsdc: "",
+      interval: "monthly",
+      features: "",
+      acceptedToken: chainUsdc,
+    });
   };
 
   return (
@@ -669,6 +683,20 @@ export function PlansSection() {
                   ))}
                 </div>
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="acceptedToken">Accepted Token</Label>
+              <Input
+                id="acceptedToken"
+                value={`USDC (${truncateAddress(newPlan.acceptedToken)})`}
+                readOnly
+                className="bg-secondary border-border text-muted-foreground"
+              />
+              <p className="text-xs text-muted-foreground">
+                Token is resolved from active chain configuration (USDC-first
+                GA policy).
+              </p>
             </div>
 
             {/* Features */}

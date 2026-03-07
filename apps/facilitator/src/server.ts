@@ -33,6 +33,8 @@ import {
   RedisUsageStore,
   EventListenerService,
   WebhookService,
+  type WebhookDeliveryLog,
+  type WebhookPayload,
   EmailService,
   TablelandService,
   LitProtocolService,
@@ -82,6 +84,7 @@ const PROOF_SIGNER_PRIVATE_KEY =
   process.env.PROOF_SIGNER_PRIVATE_KEY || process.env.PRIVATE_KEY;
 const FACILITATOR_SECRET = (process.env.FACILITATOR_SECRET || "").trim();
 const DASHBOARD_URL = (process.env.DASHBOARD_URL || "").replace(/\/$/, "");
+const DASHBOARD_TEAM_ID = (process.env.DASHBOARD_TEAM_ID || "").trim();
 
 function isHexAddress(value: string | undefined | null): boolean {
   return typeof value === "string" && /^0x[a-fA-F0-9]{40}$/.test(value);
@@ -482,6 +485,7 @@ if (process.env.WEBHOOK_URL && process.env.WEBHOOK_SIGNING_SECRET) {
   webhookService = new WebhookService({
     url: process.env.WEBHOOK_URL,
     secret: process.env.WEBHOOK_SIGNING_SECRET,
+    onDelivery: persistWebhookDelivery,
   });
 }
 
@@ -530,6 +534,84 @@ const subscriberEmailsByWallet = new Map<
 // Cache tokenId → subscriber wallet, populated from minted events.
 // Used by renewed/cancelled handlers which don't emit subscriber address.
 const tokenIdToSubscriber = new Map<string, string>();
+const billingBridgeStats: {
+  sent: number;
+  failed: number;
+  lastSentAt: string | null;
+  lastError: string | null;
+} = {
+  sent: 0,
+  failed: 0,
+  lastSentAt: null,
+  lastError: null,
+};
+
+async function postToDashboard(pathname: string, payload: unknown): Promise<boolean> {
+  if (!DASHBOARD_URL) return false;
+  try {
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (FACILITATOR_SECRET) {
+      headers.Authorization = `Bearer ${FACILITATOR_SECRET}`;
+    }
+    const response = await fetch(`${DASHBOARD_URL}${pathname}`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) {
+      billingBridgeStats.failed += 1;
+      billingBridgeStats.lastError = `HTTP ${response.status}`;
+      return false;
+    }
+    billingBridgeStats.sent += 1;
+    billingBridgeStats.lastSentAt = new Date().toISOString();
+    billingBridgeStats.lastError = null;
+    return true;
+  } catch (err) {
+    billingBridgeStats.failed += 1;
+    billingBridgeStats.lastError = err instanceof Error ? err.message : String(err);
+    console.error(`[Facilitator] Failed posting to dashboard ${pathname}:`, err);
+    return false;
+  }
+}
+
+async function persistWebhookDelivery(
+  entry: WebhookDeliveryLog,
+  payload: WebhookPayload,
+): Promise<void> {
+  if (!DASHBOARD_TEAM_ID) return;
+  await postToDashboard("/api/webhooks/delivery", {
+    teamId: DASHBOARD_TEAM_ID,
+    deliveryId: entry.id,
+    event: entry.event,
+    url: entry.url,
+    statusCode: entry.statusCode,
+    attemptNumber: entry.attemptNumber,
+    deliveredAt: new Date(entry.deliveredAt).toISOString(),
+    success: entry.success,
+    error: entry.error,
+    payload,
+  });
+}
+
+async function persistBillingEvent(
+  eventType: "SUBSCRIPTION_MINTED" | "SUBSCRIPTION_RENEWED" | "SUBSCRIPTION_CANCELLED",
+  idempotencyKey: string,
+  payload: Record<string, unknown>,
+  triggerInvoice = false,
+): Promise<void> {
+  if (!DASHBOARD_TEAM_ID) return;
+  await postToDashboard("/api/billing/events", {
+    teamId: DASHBOARD_TEAM_ID,
+    eventType,
+    idempotencyKey,
+    payload,
+    triggerInvoice,
+    source: "facilitator",
+  });
+}
 
 /**
  * Look up a subscriber's email address.
@@ -865,6 +947,17 @@ eventListener.on("minted", async (event) => {
   console.log(
     `[Facilitator] 🎉 New subscriber: ${event.subscriber} (Plan ${event.planId})`,
   );
+  await persistBillingEvent(
+    "SUBSCRIPTION_MINTED",
+    `minted:${event.transactionHash || event.tokenId.toString()}`,
+    {
+      tokenId: event.tokenId.toString(),
+      planId: event.planId?.toString(),
+      subscriber: event.subscriber,
+      txHash: event.transactionHash,
+      timestamp: event.timestamp?.toString(),
+    },
+  );
   // Cache tokenId → subscriber for use in renewed/cancelled handlers
   if (event.tokenId != null && event.subscriber) {
     tokenIdToSubscriber.set(event.tokenId.toString(), event.subscriber);
@@ -940,6 +1033,18 @@ eventListener.on("renewed", async (event) => {
   console.log(
     `[Facilitator] 🔄 Renewed: tokenId=${event.tokenId} until ${event.expiration}`,
   );
+  await persistBillingEvent(
+    "SUBSCRIPTION_RENEWED",
+    `renewed:${event.transactionHash || event.tokenId.toString()}:${event.expiration?.toString() || ""}`,
+    {
+      tokenId: event.tokenId.toString(),
+      expiration: event.expiration?.toString(),
+      amount: event.amountPaid ? String(Number(event.amountPaid) / 1e6) : "0",
+      txHash: event.transactionHash,
+      timestamp: event.timestamp?.toString(),
+    },
+    true,
+  );
   if (tablelandService) {
     if (tablelandReady) {
       await tablelandReady;
@@ -996,6 +1101,15 @@ eventListener.on("renewed", async (event) => {
 
 eventListener.on("cancelled", async (event) => {
   console.log(`[Facilitator] ❌ Cancelled: tokenId=${event.tokenId}`);
+  await persistBillingEvent(
+    "SUBSCRIPTION_CANCELLED",
+    `cancelled:${event.transactionHash || event.tokenId.toString()}`,
+    {
+      tokenId: event.tokenId.toString(),
+      txHash: event.transactionHash,
+      timestamp: event.timestamp?.toString(),
+    },
+  );
   // Resolve subscriber before Tableland/Lit so we can email even if NFT is burned
   const cancelledSubscriberWallet =
     tokenIdToSubscriber.get(event.tokenId.toString()) ||
@@ -1140,6 +1254,15 @@ app.get("/health", async (_req, res) => {
       settlementWriter: settlementWriter ? "active" : "not configured",
       aggregator: "active",
       redis: redisUsageStore ? "active" : "not configured",
+      dashboardBridge: DASHBOARD_URL ? "active" : "not configured",
+    },
+    queues: {
+      aggregationPending: aggregatorService.getStats().pendingSettlements,
+      webhookFailuresLast200: webhookService
+        ? webhookService
+            .getDeliveryLog(200)
+            .filter((entry) => !entry.success).length
+        : 0,
     },
     settlement: {
       onchainEnabled: Boolean(settlementWriter),
@@ -2173,6 +2296,13 @@ app.get("/api/email/templates", (_req, res) => {
     configured: !!emailService,
     brandName: process.env.BRAND_NAME || "MEAP",
     templates,
+  });
+});
+
+app.get("/api/invoices/status", (_req, res) => {
+  res.json({
+    dashboardBridgeConfigured: Boolean(DASHBOARD_URL && DASHBOARD_TEAM_ID),
+    bridgeStats: billingBridgeStats,
   });
 });
 

@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSession } from "@/lib/auth.server";
 import { db } from "@/lib/db";
+import { writeAuditEvent } from "@/lib/audit";
 
 const EMPTY_PROFILE = {
   notifyEmail: true,
@@ -98,6 +99,16 @@ export async function PUT(req: NextRequest) {
     }),
   };
 
+  const before = await db.providerProfile.findUnique({
+    where: { teamId },
+    select: {
+      notifyEmail: true,
+      notifyWebhook: true,
+      webhookUrl: true,
+      apiKeyPrefix: true,
+    },
+  });
+
   const profile = await db.providerProfile.upsert({
     where: { teamId },
     update: data,
@@ -108,6 +119,17 @@ export async function PUT(req: NextRequest) {
       webhookUrl: true,
       apiKeyPrefix: true,
     },
+  });
+
+  await writeAuditEvent({
+    request: req,
+    teamId,
+    session,
+    action: "provider.profile.update",
+    resourceType: "ProviderProfile",
+    resourceId: teamId,
+    beforeData: before ?? null,
+    afterData: profile,
   });
 
   return NextResponse.json(profile);

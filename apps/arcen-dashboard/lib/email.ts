@@ -141,3 +141,64 @@ export async function sendTeamInviteEmail(
 </html>`,
   });
 }
+
+type InvoiceEmailInput = {
+  to: string;
+  invoiceNumber: string;
+  total: string;
+  currency: string;
+  dueDate?: string | null;
+  downloadUrl?: string | null;
+};
+
+/** Sends an invoice email to a subscriber/customer */
+export async function sendInvoiceEmail(input: InvoiceEmailInput): Promise<void> {
+  const dueDate = input.dueDate
+    ? new Date(input.dueDate).toLocaleDateString()
+    : "On receipt";
+  const downloadUrl =
+    input.downloadUrl ||
+    `${APP_URL}/invoices/${encodeURIComponent(input.invoiceNumber)}`;
+
+  await resend.emails.send({
+    from: FROM,
+    to: input.to,
+    subject: `Invoice ${input.invoiceNumber} from ArcenPay`,
+    html: `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Invoice ${input.invoiceNumber}</title>
+</head>
+<body style="margin:0;padding:0;background:#f5f7fa;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 16px;">
+    <tr><td align="center">
+      <table width="520" cellpadding="0" cellspacing="0"
+             style="background:#ffffff;border:1px solid #d8dde6;border-radius:12px;padding:32px;">
+        <tr><td>
+          <p style="margin:0 0 24px;font-size:22px;font-weight:700;color:#0f172a;">ArcenPay</p>
+          <h1 style="margin:0 0 10px;font-size:20px;font-weight:600;color:#111827;">
+            Invoice ${input.invoiceNumber}
+          </h1>
+          <p style="margin:0 0 20px;font-size:14px;color:#4b5563;">
+            Amount due: <strong>${input.total} ${input.currency}</strong><br />
+            Due date: <strong>${dueDate}</strong>
+          </p>
+          <a href="${downloadUrl}"
+             style="display:inline-block;padding:11px 22px;background:#1d4ed8;color:#fff;
+                    text-decoration:none;border-radius:8px;font-size:14px;font-weight:600;">
+            View Invoice
+          </a>
+          <p style="margin:18px 0 0;font-size:12px;color:#6b7280;">
+            If the button does not work, open: <a href="${downloadUrl}" style="color:#1d4ed8;">${downloadUrl}</a>
+          </p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`,
+  });
+}

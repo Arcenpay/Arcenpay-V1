@@ -8,6 +8,15 @@ const GRAPH_URL =
   process.env.NEXT_PUBLIC_GRAPH_URL ||
   "https://api.studio.thegraph.com/query/placeholder/meap-sepolia/version/latest";
 
+if (
+  process.env.NODE_ENV === "production" &&
+  GRAPH_URL.includes("/placeholder/")
+) {
+  throw new Error(
+    "NEXT_PUBLIC_GRAPH_URL must be configured for production (placeholder URL is not allowed).",
+  );
+}
+
 export const apolloClient = new ApolloClient({
   link: new HttpLink({ uri: GRAPH_URL }),
   cache: new InMemoryCache(),

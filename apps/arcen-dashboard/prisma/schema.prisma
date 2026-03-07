@@ -1,11 +1,8 @@
 // ArcenPay Dashboard — Prisma Schema
-// Tables:
-//   User              — unified identity (email or wallet or both)
-//   MagicToken        — passwordless email login tokens
-//   Team              — workspace / organisation (provider account)
-//   TeamMember        — user ↔ team junction with role
-//   ProviderProfile   — extra settings / API keys per team
-//   SubscriberEmail   — email registry for on-chain subscribers (notifications)
+// Core entities:
+//   User / Team / TeamMember / ProviderProfile
+// Added production domains:
+//   Catalog, Templates, Invoices, Audit, Billing/Webhook durability
 
 generator client {
   provider = "prisma-client"
@@ -16,6 +13,72 @@ datasource db {
   provider = "postgresql"
 }
 
+// ─── Enums ───────────────────────────────────────────────────────────────────
+
+enum TeamRole {
+  OWNER
+  ADMIN
+  FINANCE
+  DEVELOPER
+  SUPPORT
+  MEMBER
+}
+
+enum EnvironmentMode {
+  DEVELOPMENT
+  PRODUCTION
+}
+
+enum CatalogEntityType {
+  PLAN
+  ADDON
+  CREDIT
+}
+
+enum CatalogStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum AddOnBillingType {
+  ONE_TIME
+  RECURRING
+}
+
+enum TemplateInstallStatus {
+  INSTALLED
+  UNINSTALLED
+}
+
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  PAID
+  VOID
+  OVERDUE
+}
+
+enum InvoiceDeliveryStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+enum BillingEventType {
+  SUBSCRIPTION_MINTED
+  SUBSCRIPTION_RENEWED
+  SUBSCRIPTION_CANCELLED
+  PAYMENT_FAILED
+  CREDIT_ISSUED
+}
+
+enum AuditActorType {
+  USER
+  API
+  SYSTEM
+}
+
 // ─── Core identity ────────────────────────────────────────────────────────────
 
 model User {
@@ -23,14 +86,10 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Web2 identity
-  email         String?  @unique
-  emailVerified Boolean  @default(false)
+  email         String? @unique
+  emailVerified Boolean @default(false)
+  walletAddress String? @unique
 
-  // Web3 identity — can be null for pure-email accounts
-  walletAddress String?  @unique
-
-  // The team this user currently has active in their session
   currentTeamId String?
 
   magicTokens MagicToken[]
@@ -43,42 +102,50 @@ model User {
 // ─── Passwordless email login ─────────────────────────────────────────────────
 
 model MagicToken {
-  id        String    @id @default(cuid())
-  createdAt DateTime  @default(now())
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
 
-  token     String    @unique
+  token     String   @unique
   email     String
   expiresAt DateTime
   usedAt    DateTime?
 
   userId String?
-  user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user   User? @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([token])
   @@index([email])
 }
 
-// ─── Teams (workspaces / organisations) ──────────────────────────────────────
-// A Team is the top-level billable entity — like a "company" in SchematicHQ.
-// API keys, webhooks, and subscription plans belong to a Team, not a User.
-
-enum TeamRole {
-  OWNER
-  ADMIN
-  MEMBER
-}
+// ─── Teams / Workspaces ───────────────────────────────────────────────────────
 
 model Team {
-  id        String   @id @default(cuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  name String
-  // URL-safe identifier, e.g. "acme-corp"
-  slug String @unique
+  id              String          @id @default(cuid())
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  name            String
+  slug            String          @unique
+  environmentMode EnvironmentMode @default(DEVELOPMENT)
+  invoicePrefix   String?
 
   members         TeamMember[]
   providerProfile ProviderProfile?
+
+  catalogPlans       CatalogPlan[]
+  catalogAddOns      CatalogAddOn[]
+  catalogCreditTypes CatalogCreditType[]
+  catalogVersions    CatalogVersion[]
+
+  billingTemplates BillingTemplate[]
+  templateInstalls TemplateInstall[]
+
+  invoices         Invoice[]
+  taxProfile       TaxProfile?
+  invoiceSequences InvoiceSequence[]
+
+  auditEvents       AuditEvent[]
+  billingEvents     BillingEvent[]
+  webhookDeliveries WebhookDelivery[]
 
   @@index([slug])
 }
@@ -99,18 +166,16 @@ model TeamMember {
   @@index([teamId])
 }
 
-// ─── Provider settings (per-team) ────────────────────────────────────────────
-
 model ProviderProfile {
   id        String   @id @default(cuid())
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  notifyEmail   Boolean @default(true)
-  notifyWebhook Boolean @default(false)
-  webhookUrl    String?
+  notifyEmail         Boolean @default(true)
+  notifyWebhook       Boolean @default(false)
+  webhookUrl          String?
+  webhookSigningSecret String?
 
-  // API key stored as a hash; prefix shown in the UI (e.g. "ak_live_xxxx…")
   apiKeyHash   String? @unique
   apiKeyPrefix String?
 
@@ -121,15 +186,13 @@ model ProviderProfile {
 }
 
 // ─── Subscriber email registry ────────────────────────────────────────────────
-// Stores email addresses for on-chain subscribers so the facilitator/email
-// service can send billing notifications, renewal reminders, and invoices.
 
 model SubscriberEmail {
   id        String   @id @default(cuid())
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  walletAddress String  @unique
+  walletAddress String @unique
   email         String
   planId        String?
 
@@ -137,13 +200,345 @@ model SubscriberEmail {
   @@index([email])
 }
 
-// ─── SIWE nonce store (DB-backed so dev HMR never loses it) ──────────────────
+// ─── Auth nonce store ─────────────────────────────────────────────────────────
 
 model AuthNonce {
-  nonce     String    @id
+  nonce     String   @id
   issuedAt  String
   expiresAt DateTime
   usedAt    DateTime?
 
   @@index([expiresAt])
+}
+
+// ─── Catalog (Plans / Add-ons / Credits) ─────────────────────────────────────
+
+model CatalogPlan {
+  id              String          @id @default(cuid())
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  teamId          String
+  environmentMode EnvironmentMode @default(DEVELOPMENT)
+  status          CatalogStatus   @default(DRAFT)
+
+  name           String
+  tier           String
+  description    String?
+  price          Decimal          @db.Decimal(20, 6)
+  billingInterval Int
+  acceptedToken  String
+  metadata       Json?
+
+  active      Boolean   @default(true)
+  version     Int       @default(1)
+  publishedAt DateTime?
+
+  onChainPlanId String?
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([teamId, environmentMode, status])
+  @@index([teamId, name])
+}
+
+model CatalogAddOn {
+  id              String          @id @default(cuid())
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  teamId          String
+  environmentMode EnvironmentMode @default(DEVELOPMENT)
+  status          CatalogStatus   @default(DRAFT)
+
+  name        String
+  code        String
+  description String?
+  billingType AddOnBillingType @default(ONE_TIME)
+  price       Decimal          @db.Decimal(20, 6)
+  acceptedToken String
+
+  active      Boolean   @default(true)
+  version     Int       @default(1)
+  publishedAt DateTime?
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, code, environmentMode])
+  @@index([teamId, environmentMode, status])
+}
+
+model CatalogCreditType {
+  id              String          @id @default(cuid())
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  teamId          String
+  environmentMode EnvironmentMode @default(DEVELOPMENT)
+  status          CatalogStatus   @default(DRAFT)
+
+  name         String
+  code         String
+  unitName     String
+  unitsPerPack Int
+  price        Decimal @db.Decimal(20, 6)
+  acceptedToken String
+
+  active      Boolean   @default(true)
+  version     Int       @default(1)
+  publishedAt DateTime?
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, code, environmentMode])
+  @@index([teamId, environmentMode, status])
+}
+
+model CatalogVersion {
+  id              String          @id @default(cuid())
+  createdAt       DateTime        @default(now())
+  publishedAt     DateTime?
+  teamId          String
+  environmentMode EnvironmentMode @default(DEVELOPMENT)
+  entityType      CatalogEntityType
+  entityId        String
+  version         Int
+  status          CatalogStatus   @default(DRAFT)
+  snapshot        Json
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, entityType, entityId, version])
+  @@index([teamId, environmentMode, status])
+}
+
+// ─── Template Library ─────────────────────────────────────────────────────────
+
+model BillingTemplate {
+  id            String       @id @default(cuid())
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  teamId        String
+  name          String
+  slug          String
+  description   String?
+  status        CatalogStatus @default(DRAFT)
+  currentVersion Int          @default(1)
+
+  team     Team                     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  versions BillingTemplateVersion[]
+  installs TemplateInstall[]
+
+  @@unique([teamId, slug])
+  @@index([teamId, status])
+}
+
+model BillingTemplateVersion {
+  id            String   @id @default(cuid())
+  createdAt     DateTime @default(now())
+  templateId    String
+  version       Int
+  schemaJson    Json
+  reactBlocks   Json
+  styleTokens   Json
+  compatibility Json
+
+  template BillingTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@unique([templateId, version])
+  @@index([templateId])
+}
+
+model TemplateInstall {
+  id              String              @id @default(cuid())
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  teamId          String
+  templateId      String
+  installedVersion Int
+  environmentMode EnvironmentMode     @default(DEVELOPMENT)
+  chainId         Int
+  status          TemplateInstallStatus @default(INSTALLED)
+
+  team     Team            @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  template BillingTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([teamId, environmentMode, status])
+  @@unique([teamId, templateId, environmentMode, chainId])
+}
+
+// ─── Invoices ─────────────────────────────────────────────────────────────────
+
+model TaxProfile {
+  id           String   @id @default(cuid())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  teamId       String   @unique
+  legalName    String
+  country      String
+  taxId        String?
+  gstin        String?
+  addressJson  Json
+  taxRegime    String
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+}
+
+model InvoiceSequence {
+  id         String   @id @default(cuid())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  teamId     String
+  year       Int
+  lastNumber Int      @default(0)
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, year])
+  @@index([teamId])
+}
+
+model Invoice {
+  id              String          @id @default(cuid())
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  teamId          String
+  environmentMode EnvironmentMode @default(DEVELOPMENT)
+  status          InvoiceStatus   @default(DRAFT)
+
+  number         String? @unique
+  currency       String  @default("USDC")
+  customerEmail  String?
+  customerWallet String?
+
+  subtotal Decimal @default(0) @db.Decimal(20, 6)
+  taxTotal  Decimal @default(0) @db.Decimal(20, 6)
+  total     Decimal @default(0) @db.Decimal(20, 6)
+
+  dueAt      DateTime?
+  issuedAt   DateTime?
+  paidAt     DateTime?
+  externalRef String?
+  planId      String?
+  metadata    Json?
+
+  team       Team              @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  lineItems  InvoiceLine[]
+  deliveries InvoiceDelivery[]
+  creditNotes CreditNote[]
+
+  @@index([teamId, status, issuedAt])
+  @@index([teamId, environmentMode])
+}
+
+model InvoiceLine {
+  id         String   @id @default(cuid())
+  createdAt  DateTime @default(now())
+  invoiceId  String
+  description String
+  quantity   Int      @default(1)
+
+  unitAmount Decimal @db.Decimal(20, 6)
+  taxRate    Decimal @default(0) @db.Decimal(8, 4)
+  lineSubtotal Decimal @db.Decimal(20, 6)
+  lineTax      Decimal @default(0) @db.Decimal(20, 6)
+  lineTotal    Decimal @db.Decimal(20, 6)
+
+  metadata Json?
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+}
+
+model InvoiceDelivery {
+  id                String               @id @default(cuid())
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  invoiceId         String
+  provider          String               @default("resend")
+  method            String               @default("email")
+  status            InvoiceDeliveryStatus @default(PENDING)
+  attempts          Int                  @default(0)
+  externalMessageId String?
+  errorMessage      String?
+  sentAt            DateTime?
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId, status])
+}
+
+model CreditNote {
+  id         String   @id @default(cuid())
+  createdAt  DateTime @default(now())
+  invoiceId  String
+  noteNumber String   @unique
+  reason     String
+  amount     Decimal  @db.Decimal(20, 6)
+  metadata   Json?
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+}
+
+// ─── Audit / Durable event logs ───────────────────────────────────────────────
+
+model AuditEvent {
+  id          String         @id @default(cuid())
+  createdAt   DateTime       @default(now())
+  teamId      String
+  actorType   AuditActorType
+  actorUserId String?
+  actorAddress String?
+  action      String
+  resourceType String
+  resourceId   String?
+  requestId    String
+  ip           String?
+  userAgent    String?
+  beforeData   Json?
+  afterData    Json?
+  metadata     Json?
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([teamId, createdAt])
+  @@index([teamId, action])
+  @@index([requestId])
+}
+
+model BillingEvent {
+  id             String           @id @default(cuid())
+  createdAt      DateTime         @default(now())
+  teamId         String
+  eventType      BillingEventType
+  idempotencyKey String           @unique
+  source         String           @default("facilitator")
+  payload        Json
+  processed      Boolean          @default(false)
+  processedAt    DateTime?
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([teamId, createdAt])
+  @@index([teamId, processed])
+}
+
+model WebhookDelivery {
+  id            String   @id @default(cuid())
+  createdAt     DateTime @default(now())
+  teamId        String
+  deliveryId    String   @unique
+  event         String
+  url           String
+  statusCode    Int?
+  attemptNumber Int
+  deliveredAt   DateTime
+  success       Boolean
+  error         String?
+  payload       Json?
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([teamId, deliveredAt])
+  @@index([teamId, success])
 }

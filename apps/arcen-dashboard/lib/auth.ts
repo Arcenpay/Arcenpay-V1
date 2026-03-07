@@ -51,7 +51,13 @@ export function consumeNonce(nonce: string): NonceRecord | null {
 
 // ── Session payload types ─────────────────────────────────────────────────────
 
-export type TeamRole = "OWNER" | "ADMIN" | "MEMBER";
+export type TeamRole =
+  | "OWNER"
+  | "ADMIN"
+  | "FINANCE"
+  | "DEVELOPER"
+  | "SUPPORT"
+  | "MEMBER";
 
 export type SessionPayload =
   | {

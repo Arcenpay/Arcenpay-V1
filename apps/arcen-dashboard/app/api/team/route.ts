@@ -9,6 +9,7 @@ import { z } from "zod";
 import { getSession } from "@/lib/auth.server";
 import { db } from "@/lib/db";
 import { slugify } from "@/lib/auth";
+import { writeAuditEvent } from "@/lib/audit";
 
 export async function GET() {
   try {
@@ -103,6 +104,17 @@ export async function PUT(req: NextRequest) {
     const team = await db.team.update({
       where: { id: session.teamId },
       data: { name, slug },
+    });
+
+    await writeAuditEvent({
+      request: req,
+      teamId: session.teamId,
+      session,
+      action: "team.update",
+      resourceType: "Team",
+      resourceId: team.id,
+      beforeData: existing,
+      afterData: { id: team.id, name: team.name, slug: team.slug },
     });
 
     return NextResponse.json({ id: team.id, name: team.name, slug: team.slug });

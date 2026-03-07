@@ -32,8 +32,26 @@ export {
 export function useContractAddresses() {
   const chainId = useChainId();
   try {
-    return getContractAddresses(chainId);
+    const addresses = getContractAddresses(chainId);
+    if (process.env.NODE_ENV === "production") {
+      const hasZero = Object.values(addresses).some(
+        (value) =>
+          typeof value === "string" &&
+          value.toLowerCase() === "0x0000000000000000000000000000000000000000",
+      );
+      if (hasZero) {
+        throw new Error(
+          `Chain ${chainId} has incomplete contract addresses; production fallback is disabled.`,
+        );
+      }
+    }
+    return addresses;
   } catch {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error(
+        `Unsupported chain ${chainId}. Configure supported production chain before enabling this workspace.`,
+      );
+    }
     return getContractAddresses(11155111);
   }
 }

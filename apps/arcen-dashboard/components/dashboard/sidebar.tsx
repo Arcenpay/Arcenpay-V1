@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   Layers,
   Users,
+  ReceiptText,
   Cpu,
   Settings,
   ChevronLeft,
@@ -15,7 +16,13 @@ import {
   Hexagon,
   Flag,
   Building2,
+  ClipboardList,
+  LayoutTemplate,
+  Package,
+  Coins,
+  SlidersHorizontal,
 } from "lucide-react";
+import { useEnvironment } from "@/contexts/environment-context";
 
 interface SidebarProps {
   activeSection: Section;
@@ -24,13 +31,46 @@ interface SidebarProps {
   onCollapsedChange: (collapsed: boolean) => void;
 }
 
-const navItems: { id: Section; label: string; icon: React.ElementType }[] = [
-  { id: "overview", label: "Overview", icon: LayoutDashboard },
-  { id: "plans", label: "Plans", icon: Layers },
-  { id: "subscribers", label: "Subscribers", icon: Users },
-  { id: "sessions", label: "Sessions", icon: Cpu },
-  { id: "features", label: "Features", icon: Flag },
-  { id: "settings", label: "Settings", icon: Settings },
+type NavItem = { id: Section; label: string; icon: React.ElementType };
+type NavGroup = { label: string; items: NavItem[] };
+
+const navGroups: NavGroup[] = [
+  {
+    label: "",
+    items: [{ id: "overview", label: "Overview", icon: LayoutDashboard }],
+  },
+  {
+    label: "Catalog",
+    items: [
+      { id: "catalog-plans", label: "Plans", icon: Layers },
+      { id: "catalog-addons", label: "Add-Ons", icon: Package },
+      { id: "catalog-credits", label: "Credits", icon: Coins },
+      { id: "catalog-config", label: "Configuration", icon: SlidersHorizontal },
+    ],
+  },
+  {
+    label: "Manage",
+    items: [{ id: "invoices", label: "Invoices", icon: ReceiptText }],
+  },
+  {
+    label: "Customers",
+    items: [{ id: "subscribers", label: "Subscribers", icon: Users }],
+  },
+  {
+    label: "Developer",
+    items: [
+      { id: "sessions", label: "Sessions", icon: Cpu },
+      { id: "features", label: "Features", icon: Flag },
+      { id: "components", label: "Components", icon: LayoutTemplate },
+    ],
+  },
+  {
+    label: "Admin",
+    items: [
+      { id: "audit-log", label: "Audit Log", icon: ClipboardList },
+      { id: "settings", label: "Settings", icon: Settings },
+    ],
+  },
 ];
 
 export function Sidebar({
@@ -41,6 +81,7 @@ export function Sidebar({
 }: SidebarProps) {
   const { address, isConnected } = useAccount();
   const [teamName, setTeamName] = useState<string | null>(null);
+  const { envMode } = useEnvironment();
 
   useEffect(() => {
     fetch("/api/team")
@@ -55,23 +96,27 @@ export function Sidebar({
     ? `${address.slice(0, 6)}…${address.slice(-4)}`
     : null;
 
+  const networkLabel = envMode === "PRODUCTION" ? "Mainnet" : "Testnet";
+
   return (
     <aside
       className={cn(
         "fixed left-0 top-0 z-40 h-screen bg-sidebar border-r border-sidebar-border transition-all duration-300 ease-out flex flex-col",
-        collapsed ? "w-[72px]" : "w-[260px]",
+        collapsed ? "w-[64px]" : "w-[220px]",
       )}
     >
       {/* Logo */}
-      <div className="h-16 flex items-center px-4 border-b border-sidebar-border">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 bg-gradient-to-br from-accent to-chart-1">
-            <Hexagon className="w-5 h-5 text-accent-foreground" />
+      <div className="h-14 flex items-center px-3 border-b border-sidebar-border shrink-0">
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-gradient-to-br from-accent to-chart-1">
+            <Hexagon className="w-3.5 h-3.5 text-accent-foreground" />
           </div>
           <span
             className={cn(
-              "font-semibold text-lg text-sidebar-foreground whitespace-nowrap transition-all duration-300",
-              collapsed ? "opacity-0 w-0" : "opacity-100 w-auto",
+              "font-semibold text-sm text-sidebar-foreground whitespace-nowrap transition-all duration-300",
+              collapsed
+                ? "opacity-0 w-0 overflow-hidden"
+                : "opacity-100 w-auto",
             )}
           >
             ArcenPay
@@ -80,96 +125,121 @@ export function Sidebar({
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-3 py-4 space-y-1 overflow-hidden">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = activeSection === item.id;
-
-          return (
-            <button
-              key={item.id}
-              onClick={() => onSectionChange(item.id)}
-              className={cn(
-                "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group relative",
-                isActive
-                  ? "bg-sidebar-accent text-sidebar-foreground"
-                  : "text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent/50",
-              )}
-            >
-              {/* Active indicator */}
-              <span
+      <nav className="flex-1 px-2 py-3 overflow-y-auto overflow-x-hidden">
+        {navGroups.map((group, gi) => (
+          <div key={gi} className={gi > 0 ? "mt-4" : ""}>
+            {/* Group label — visible when expanded */}
+            {group.label && (
+              <p
                 className={cn(
-                  "absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full bg-accent transition-all duration-300",
-                  isActive ? "opacity-100" : "opacity-0",
-                )}
-              />
-              <Icon
-                className={cn(
-                  "w-5 h-5 shrink-0 transition-transform duration-200",
-                  isActive ? "text-accent" : "group-hover:scale-110",
-                )}
-              />
-              <span
-                className={cn(
-                  "whitespace-nowrap transition-all duration-300",
-                  collapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100",
+                  "px-2 mb-1 text-[10px] font-semibold uppercase tracking-widest select-none transition-all duration-300",
+                  collapsed
+                    ? "opacity-0 h-0 overflow-hidden mb-0"
+                    : "opacity-100 text-muted-foreground/60",
                 )}
               >
-                {item.label}
-              </span>
-            </button>
-          );
-        })}
+                {group.label}
+              </p>
+            )}
+            {/* Divider in collapsed state (only for labelled groups) */}
+            {group.label && collapsed && (
+              <div className="mx-2 h-px bg-sidebar-border mb-2" />
+            )}
+
+            <div className="space-y-0.5">
+              {group.items.map((item) => {
+                const Icon = item.icon;
+                const isActive = activeSection === item.id;
+
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => onSectionChange(item.id)}
+                    title={collapsed ? item.label : undefined}
+                    className={cn(
+                      "w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md text-sm font-medium transition-all duration-150 relative",
+                      isActive
+                        ? "bg-sidebar-accent text-sidebar-foreground"
+                        : "text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent/50",
+                    )}
+                  >
+                    {/* Active pill */}
+                    <span
+                      className={cn(
+                        "absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 rounded-r-full bg-accent transition-all duration-200",
+                        isActive ? "opacity-100" : "opacity-0",
+                      )}
+                    />
+                    <Icon
+                      className={cn(
+                        "w-4 h-4 shrink-0",
+                        isActive ? "text-accent" : "",
+                      )}
+                    />
+                    <span
+                      className={cn(
+                        "whitespace-nowrap text-xs transition-all duration-300",
+                        collapsed
+                          ? "opacity-0 w-0 overflow-hidden"
+                          : "opacity-100",
+                      )}
+                    >
+                      {item.label}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
 
       {/* Team + Wallet status */}
       <div
         className={cn(
-          "mx-3 mb-3 rounded-lg bg-secondary/50 border border-border transition-all duration-300 overflow-hidden",
-          collapsed ? "opacity-0 pointer-events-none" : "opacity-100",
+          "mx-2 mb-2 rounded-md bg-secondary/50 border border-border transition-all duration-300",
+          collapsed
+            ? "opacity-0 pointer-events-none h-0 mb-0 overflow-hidden"
+            : "opacity-100",
         )}
       >
         {teamName && (
-          <div className="flex items-center gap-2 px-3 pt-3 pb-2 border-b border-border/50">
-            <Building2 className="w-3.5 h-3.5 text-accent shrink-0" />
-            <span className="text-xs font-medium text-foreground truncate">
+          <div className="flex items-center gap-2 px-2.5 pt-2.5 pb-2 border-b border-border/50">
+            <Building2 className="w-3 h-3 text-accent shrink-0" />
+            <span className="text-[11px] font-medium text-foreground truncate">
               {teamName}
             </span>
           </div>
         )}
-        <div className="flex items-center gap-2 text-xs text-muted-foreground p-3">
+        <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground p-2.5">
           <div
             className={cn(
-              "w-2 h-2 rounded-full shrink-0",
-              isConnected
-                ? "bg-success animate-none"
-                : "bg-warning animate-pulse",
+              "w-1.5 h-1.5 rounded-full shrink-0",
+              isConnected ? "bg-success" : "bg-warning animate-pulse",
             )}
           />
           <span className="truncate">
-            {isConnected && shortAddress
-              ? shortAddress
-              : "Wallet not connected"}
+            {isConnected && shortAddress ? shortAddress : "Not connected"}
           </span>
         </div>
         {isConnected && (
-          <p className="text-xs text-muted-foreground/60 px-3 pb-2 -mt-1 truncate">
-            Sepolia
+          <p className="text-[10px] text-muted-foreground/50 px-2.5 pb-2 -mt-1 truncate">
+            {networkLabel}
           </p>
         )}
       </div>
 
       {/* Collapse button */}
-      <div className="p-3 border-t border-sidebar-border">
+      <div className="p-2 border-t border-sidebar-border">
         <button
           onClick={() => onCollapsedChange(!collapsed)}
-          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-all duration-200"
+          className="w-full flex items-center justify-center gap-2 px-2 py-1.5 rounded-md text-xs text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-all duration-150"
         >
           {collapsed ? (
-            <ChevronRight className="w-5 h-5" />
+            <ChevronRight className="w-4 h-4" />
           ) : (
             <>
-              <ChevronLeft className="w-5 h-5" />
+              <ChevronLeft className="w-4 h-4" />
               <span>Collapse</span>
             </>
           )}

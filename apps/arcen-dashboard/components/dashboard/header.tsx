@@ -4,10 +4,16 @@ import { cn } from "@/lib/utils";
 import type { Section } from "@/app/page";
 import { Bell, Search, LogOut } from "lucide-react";
 import { useState } from "react";
-import { useAppKit, useAppKitAccount, useAppKitNetwork } from "@reown/appkit/react";
+import {
+  useAppKit,
+  useAppKitAccount,
+  useAppKitNetwork,
+} from "@reown/appkit/react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { useEnvironment } from "@/contexts/environment-context";
 
 interface HeaderProps {
   activeSection: Section;
@@ -15,19 +21,29 @@ interface HeaderProps {
 
 const sectionTitles: Record<Section, string> = {
   overview: "Overview",
-  plans: "Plans",
+  "catalog-plans": "Plans",
+  "catalog-addons": "Add-Ons",
+  "catalog-credits": "Credits",
+  "catalog-config": "Configuration",
   subscribers: "Subscribers",
+  invoices: "Invoices",
   sessions: "Sessions",
   features: "Features",
+  "audit-log": "Audit Log",
   settings: "Settings",
 };
 
 const sectionDescriptions: Record<Section, string> = {
   overview: "Protocol health at a glance",
-  plans: "Manage subscription plans",
+  "catalog-plans": "Create and manage blockchain subscription plans",
+  "catalog-addons": "Create and publish add-on products",
+  "catalog-credits": "Create and publish credit pack types",
+  "catalog-config": "Environment mode and chain configuration",
   subscribers: "Track active subscribers",
+  invoices: "Search, download, and resend invoices",
   sessions: "ZKVUB agent sessions",
   features: "Tableland + Lit Protocol feature flags",
+  "audit-log": "Immutable record of all team actions",
   settings: "Provider configuration",
 };
 
@@ -37,6 +53,7 @@ export function Header({ activeSection }: HeaderProps) {
   const { open } = useAppKit();
   const { address } = useAppKitAccount();
   const { chainId } = useAppKitNetwork();
+  const { envMode } = useEnvironment();
 
   const handleSignOut = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -57,11 +74,24 @@ export function Header({ activeSection }: HeaderProps) {
       </div>
 
       <div className="flex items-center gap-4">
+        {/* Environment Badge */}
+        <Badge
+          variant="outline"
+          className={cn(
+            "text-xs font-medium px-2.5 py-1",
+            envMode === "PRODUCTION"
+              ? "border-orange-400/50 text-orange-400 bg-orange-400/5"
+              : "border-blue-400/50 text-blue-400 bg-blue-400/5",
+          )}
+        >
+          {envMode === "PRODUCTION" ? "Mainnet" : "Testnet"}
+        </Badge>
+
         {/* Search */}
         <div
           className={cn(
             "relative flex items-center transition-all duration-300",
-            searchFocused ? "w-64" : "w-48"
+            searchFocused ? "w-64" : "w-48",
           )}
         >
           <Search className="absolute left-3 w-4 h-4 text-muted-foreground pointer-events-none" />
@@ -98,9 +128,7 @@ export function Header({ activeSection }: HeaderProps) {
           className="h-9 px-3 text-muted-foreground hover:text-foreground font-mono text-xs"
           title="Wallet"
         >
-          {address
-            ? `${address.slice(0, 6)}…${address.slice(-4)}`
-            : "Connect"}
+          {address ? `${address.slice(0, 6)}…${address.slice(-4)}` : "Connect"}
         </Button>
 
         {/* Sign Out */}

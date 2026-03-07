@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth.server";
 import { db } from "@/lib/db";
+import { writeAuditEvent } from "@/lib/audit";
 
 export async function DELETE(req: NextRequest) {
   try {
@@ -43,6 +44,16 @@ export async function DELETE(req: NextRequest) {
     }
 
     await db.teamMember.delete({ where: { id: member.id } });
+
+    await writeAuditEvent({
+      request: req,
+      teamId: session.teamId,
+      session,
+      action: "team.member.remove",
+      resourceType: "TeamMember",
+      resourceId: member.id,
+      metadata: { userId },
+    });
 
     return NextResponse.json({ ok: true });
   } catch (err) {

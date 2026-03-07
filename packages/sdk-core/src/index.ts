@@ -6,6 +6,11 @@
 export type {
   Plan,
   PlanTier,
+  EnvironmentMode,
+  PaymentToken,
+  BillingTemplate,
+  InvoiceSummary,
+  AuditEvent,
   Subscription,
   SubscriptionEvent,
   Entitlement,
@@ -86,4 +91,3 @@ export type { SmartAccountInput, SmartAccountResult } from './accounts';
 
 // Chain helpers
 export { getChain } from './chains';
-

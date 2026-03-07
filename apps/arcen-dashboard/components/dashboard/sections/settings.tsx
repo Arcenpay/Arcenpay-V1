@@ -104,6 +104,7 @@ const GMP_DESTINATIONS = [
 const LS_KEY = "meap_provider_settings";
 
 function loadSettings() {
+  if (process.env.NODE_ENV !== "development") return null;
   if (typeof window === "undefined") return null;
   try {
     const raw = localStorage.getItem(LS_KEY);
@@ -114,6 +115,7 @@ function loadSettings() {
 }
 
 function saveSettings(data: Record<string, unknown>) {
+  if (process.env.NODE_ENV !== "development") return;
   if (typeof window === "undefined") return;
   localStorage.setItem(LS_KEY, JSON.stringify(data));
 }
@@ -259,7 +261,7 @@ function WebhookLogCard() {
 interface TeamMember {
   id: string;
   userId: string;
-  role: "OWNER" | "ADMIN" | "MEMBER";
+  role: "OWNER" | "ADMIN" | "FINANCE" | "DEVELOPER" | "SUPPORT" | "MEMBER";
   email: string | null;
   walletAddress: string | null;
   joinedAt: string;
@@ -271,7 +273,7 @@ interface TeamInfo {
   slug: string;
   createdAt: string;
   members: TeamMember[];
-  myRole: "OWNER" | "ADMIN" | "MEMBER";
+  myRole: "OWNER" | "ADMIN" | "FINANCE" | "DEVELOPER" | "SUPPORT" | "MEMBER";
 }
 
 function TeamSection() {
@@ -280,7 +282,9 @@ function TeamSection() {
   const [teamName, setTeamName] = useState("");
   const [isSavingName, setIsSavingName] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState<"ADMIN" | "MEMBER">("MEMBER");
+  const [inviteRole, setInviteRole] = useState<
+    "ADMIN" | "MEMBER" | "FINANCE" | "DEVELOPER" | "SUPPORT"
+  >("MEMBER");
   const [isInviting, setIsInviting] = useState(false);
 
   const fetchTeam = async () => {
@@ -559,7 +563,9 @@ function TeamSection() {
               <div className="space-y-2">
                 <Label>Role</Label>
                 <div className="flex gap-2">
-                  {(["MEMBER", "ADMIN"] as const).map((r) => (
+                  {(
+                    ["MEMBER", "ADMIN", "FINANCE", "DEVELOPER", "SUPPORT"] as const
+                  ).map((r) => (
                     <button
                       key={r}
                       onClick={() => setInviteRole(r)}
@@ -610,6 +616,9 @@ export function SettingsSection() {
   const [notifications, setNotifications] = useState(NOTIFICATION_DEFAULTS);
   const [isSaving, setIsSaving] = useState(false);
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
+  const [environmentMode, setEnvironmentMode] = useState<
+    "DEVELOPMENT" | "PRODUCTION"
+  >("DEVELOPMENT");
 
   // Profile
   const [providerName, setProviderName] = useState("");
@@ -644,6 +653,18 @@ export function SettingsSection() {
         if (!profile) return;
         if (profile.webhookUrl) setWebhookUrl(profile.webhookUrl);
         if (profile.apiKeyPrefix) setApiKeyPrefix(profile.apiKeyPrefix);
+      })
+      .catch(() => {});
+    fetch("/api/team")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((team) => {
+        if (!team) return;
+        if (
+          team.environmentMode === "DEVELOPMENT" ||
+          team.environmentMode === "PRODUCTION"
+        ) {
+          setEnvironmentMode(team.environmentMode);
+        }
       })
       .catch(() => {});
   }, []);
@@ -714,6 +735,41 @@ export function SettingsSection() {
       setIsSaving(false);
       toast.success("Settings saved");
     }, 400);
+  };
+
+  const handleSwitchEnvironment = async (
+    nextMode: "DEVELOPMENT" | "PRODUCTION",
+  ) => {
+    if (nextMode === environmentMode) return;
+    const confirmText = window.prompt(
+      `Switch workspace mode to ${nextMode}? Type CONFIRM to continue.`,
+      "",
+    );
+    if (confirmText !== "CONFIRM") {
+      toast.error("Environment switch cancelled");
+      return;
+    }
+
+    try {
+      const chainIdHint = nextMode === "PRODUCTION" ? 8453 : 11155111;
+      const res = await fetch("/api/environment/switch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          environmentMode: nextMode,
+          chainId: chainIdHint,
+          confirmText,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Environment switch failed");
+      }
+      setEnvironmentMode(nextMode);
+      toast.success(`Workspace now in ${nextMode} mode`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Environment switch failed");
+    }
   };
 
   const handleSaveWebhookConfig = async () => {
@@ -961,6 +1017,41 @@ export function SettingsSection() {
                             : "Unknown"}{" "}
                       (Chain ID: {chainId})
                     </span>
+                  </div>
+                </div>
+              </div>
+              <div className="rounded-lg border border-border bg-secondary/30 p-4">
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">
+                      Workspace Environment Mode
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Current mode:{" "}
+                      <span className="font-mono text-foreground">
+                        {environmentMode}
+                      </span>
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant={
+                        environmentMode === "DEVELOPMENT" ? "default" : "outline"
+                      }
+                      size="sm"
+                      onClick={() => handleSwitchEnvironment("DEVELOPMENT")}
+                    >
+                      Development
+                    </Button>
+                    <Button
+                      variant={
+                        environmentMode === "PRODUCTION" ? "default" : "outline"
+                      }
+                      size="sm"
+                      onClick={() => handleSwitchEnvironment("PRODUCTION")}
+                    >
+                      Production
+                    </Button>
                   </div>
                 </div>
               </div>

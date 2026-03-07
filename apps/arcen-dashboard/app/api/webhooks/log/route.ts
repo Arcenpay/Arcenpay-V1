@@ -7,6 +7,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth.server";
+import { resolveTeamContext } from "@/lib/team-session";
+import { db } from "@/lib/db";
 
 const FACILITATOR_URL =
     process.env.FACILITATOR_BASE_URL ||
@@ -20,6 +22,29 @@ export async function GET(request: NextRequest) {
     const session = await getSession();
     if (!session) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const team = await resolveTeamContext(session);
+    if (team) {
+        const limitParam = Number(request.nextUrl.searchParams.get("limit") || "50");
+        const limit = Number.isFinite(limitParam)
+            ? Math.max(1, Math.min(Math.trunc(limitParam), 200))
+            : 50;
+
+        const entries = await db.webhookDelivery.findMany({
+            where: { teamId: team.teamId },
+            orderBy: { deliveredAt: "desc" },
+            take: limit,
+        });
+
+        if (entries.length > 0) {
+            return NextResponse.json({
+                configured: true,
+                entries,
+                log: entries,
+                source: "database",
+            });
+        }
     }
 
     try {

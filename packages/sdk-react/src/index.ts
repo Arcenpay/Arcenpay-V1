@@ -18,6 +18,10 @@ export { SubscriptionStatus } from './components/SubscriptionStatus';
 export { FeatureFlagGuard } from './components/FeatureFlagGuard';
 export { UsageDashboard } from './components/UsageDashboard';
 export { BillingHistory } from './components/BillingHistory';
+export { TemplateRenderer } from './components/TemplateRenderer';
+export type { TemplateRendererProps, TemplateBlock } from './components/TemplateRenderer';
+export { InvoiceList } from './components/InvoiceList';
+export type { InvoiceListProps } from './components/InvoiceList';
 
 // Hooks
 export { useEntitlement } from './hooks/useEntitlement';

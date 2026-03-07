@@ -7,10 +7,11 @@
 //  in plaintext. Only a SHA-256 hash + display prefix is saved.
 // ============================================================
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createHash, randomBytes } from "crypto";
 import { getSession } from "@/lib/auth.server";
 import { db } from "@/lib/db";
+import { writeAuditEvent } from "@/lib/audit";
 
 function hashApiKey(key: string): string {
   return createHash("sha256").update(key).digest("hex");
@@ -34,7 +35,7 @@ async function resolveTeamId(
 
 // ── POST — generate key ───────────────────────────────────────────────────────
 
-export async function POST() {
+export async function POST(request: NextRequest) {
   const session = await getSession();
   if (!session)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -53,12 +54,22 @@ export async function POST() {
     create: { teamId, apiKeyHash: keyHash, apiKeyPrefix: prefix },
   });
 
+  await writeAuditEvent({
+    request,
+    teamId,
+    session,
+    action: "provider.api_key.generate",
+    resourceType: "ProviderProfile",
+    resourceId: teamId,
+    metadata: { prefix },
+  });
+
   return NextResponse.json({ key: rawKey, prefix });
 }
 
 // ── DELETE — revoke key ───────────────────────────────────────────────────────
 
-export async function DELETE() {
+export async function DELETE(request: NextRequest) {
   const session = await getSession();
   if (!session)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -70,6 +81,15 @@ export async function DELETE() {
   await db.providerProfile.updateMany({
     where: { teamId },
     data: { apiKeyHash: null, apiKeyPrefix: null },
+  });
+
+  await writeAuditEvent({
+    request,
+    teamId,
+    session,
+    action: "provider.api_key.revoke",
+    resourceType: "ProviderProfile",
+    resourceId: teamId,
   });
 
   return NextResponse.json({ ok: true });

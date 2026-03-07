@@ -6,8 +6,28 @@ import { POST } from "./route";
 vi.mock("viem", () => ({
   verifyMessage: vi.fn(),
 }));
+vi.mock("@/lib/nonce.server", () => ({
+  consumeNonce: vi.fn(),
+}));
+vi.mock("@/lib/db", () => ({
+  db: {
+    user: {
+      upsert: vi.fn(),
+      update: vi.fn(),
+    },
+    teamMember: {
+      findFirst: vi.fn(),
+    },
+    team: {
+      findUnique: vi.fn(),
+      create: vi.fn(),
+    },
+  },
+}));
 
 import { verifyMessage } from "viem";
+import { consumeNonce } from "@/lib/nonce.server";
+import { db } from "@/lib/db";
 
 const address = "0x1234567890123456789012345678901234567890";
 const chainId = 11155111;
@@ -26,14 +46,56 @@ function buildVerifyRequest(body: Record<string, unknown>) {
 }
 
 describe("POST /api/auth/verify", () => {
+  const nonceStore = new Map<string, string>();
+  const baseDate = new Date("2026-01-01T00:00:00.000Z");
+
   beforeEach(() => {
     vi.clearAllMocks();
+    nonceStore.clear();
+
+    vi.mocked(consumeNonce).mockImplementation(async (nonce: string) => {
+      const issuedAt = nonceStore.get(nonce);
+      if (!issuedAt) return null;
+      nonceStore.delete(nonce);
+      return { issuedAt };
+    });
+
+    vi.mocked(db.user.upsert).mockResolvedValue({
+      id: "user_1",
+      walletAddress: address,
+      email: null,
+      emailVerified: false,
+      currentTeamId: null,
+      createdAt: baseDate,
+      updatedAt: baseDate,
+    });
+    vi.mocked(db.user.update).mockResolvedValue({
+      id: "user_1",
+      walletAddress: address,
+      email: null,
+      emailVerified: false,
+      currentTeamId: "team_1",
+      createdAt: baseDate,
+      updatedAt: baseDate,
+    });
+    vi.mocked(db.teamMember.findFirst).mockResolvedValue(null);
+    vi.mocked(db.team.findUnique).mockResolvedValue(null);
+    vi.mocked(db.team.create).mockResolvedValue({
+      id: "team_1",
+      name: "My Workspace",
+      slug: "my-workspace",
+      environmentMode: "DEVELOPMENT",
+      invoicePrefix: null,
+      createdAt: baseDate,
+      updatedAt: baseDate,
+    });
   });
 
   it("accepts a valid SIWE message once", async () => {
     vi.mocked(verifyMessage).mockResolvedValue(true);
 
     const nonceRecord = generateNonce();
+    nonceStore.set(nonceRecord.nonce, nonceRecord.issuedAt);
     const message = buildSIWEMessage({
       address,
       chainId,
@@ -63,6 +125,7 @@ describe("POST /api/auth/verify", () => {
     vi.mocked(verifyMessage).mockResolvedValue(true);
 
     const nonceRecord = generateNonce();
+    nonceStore.set(nonceRecord.nonce, nonceRecord.issuedAt);
     const message = buildSIWEMessage({
       address,
       chainId,
@@ -94,6 +157,7 @@ describe("POST /api/auth/verify", () => {
     vi.mocked(verifyMessage).mockResolvedValue(true);
 
     const nonceRecord = generateNonce();
+    nonceStore.set(nonceRecord.nonce, nonceRecord.issuedAt);
     const message = buildSIWEMessage({
       address,
       chainId,

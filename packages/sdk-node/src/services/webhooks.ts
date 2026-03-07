@@ -16,6 +16,8 @@ export interface WebhookConfig {
     maxRetries?: number;
     /** Retry delays in ms (exponential backoff) */
     retryDelays?: number[];
+    /** Optional callback invoked on every delivery attempt (success or failure). */
+    onDelivery?: (entry: WebhookDeliveryLog, payload: WebhookPayload) => Promise<void> | void;
 }
 
 export interface WebhookPayload {
@@ -48,7 +50,7 @@ const DEFAULT_RETRY_DELAYS = [1000, 5000, 30000, 300000, 1800000]; // 1s, 5s, 30
  *   HMAC-SHA256(JSON.stringify(payload), signingSecret) → X-MEAP-Signature header
  */
 export class WebhookService {
-    private config: Required<WebhookConfig>;
+    private config: Required<Omit<WebhookConfig, 'onDelivery'>> & Pick<WebhookConfig, 'onDelivery'>;
     private deliveryLog: WebhookDeliveryLog[] = [];
     private pendingRetries: Map<string, ReturnType<typeof setTimeout>> = new Map();
 
@@ -111,6 +113,7 @@ export class WebhookService {
                 deliveredAt: Date.now(),
                 success: response.ok,
             });
+            await this.persistDelivery(this.deliveryLog[this.deliveryLog.length - 1], payload);
 
             if (!response.ok && attempt < this.config.maxRetries) {
                 await this.scheduleRetry(payload, attempt);
@@ -126,6 +129,7 @@ export class WebhookService {
                 success: false,
                 error: err.message,
             });
+            await this.persistDelivery(this.deliveryLog[this.deliveryLog.length - 1], payload);
 
             if (attempt < this.config.maxRetries) {
                 await this.scheduleRetry(payload, attempt);
@@ -167,6 +171,15 @@ export class WebhookService {
             this.deliveryLog = this.deliveryLog.slice(-500);
         }
         console.log(`[Webhook] ${entry.success ? '✅' : '❌'} ${entry.event} → ${entry.statusCode} (attempt ${entry.attemptNumber})`);
+    }
+
+    private async persistDelivery(entry: WebhookDeliveryLog | undefined, payload: WebhookPayload): Promise<void> {
+        if (!entry || !this.config.onDelivery) return;
+        try {
+            await this.config.onDelivery(entry, payload);
+        } catch (err) {
+            console.error('[Webhook] onDelivery callback failed:', err);
+        }
     }
 
     /**

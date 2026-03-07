@@ -19,6 +19,54 @@ export interface Plan {
 
 export type PlanTier = 'starter' | 'pro' | 'enterprise' | string;
 
+// --- Billing/Catalog Types ---
+
+export type EnvironmentMode = 'DEVELOPMENT' | 'PRODUCTION';
+
+export interface PaymentToken {
+  symbol: string;
+  address: string;
+  chainId: number;
+  decimals: number;
+}
+
+export interface BillingTemplate {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+  currentVersion: number;
+}
+
+export interface InvoiceSummary {
+  id: string;
+  number?: string | null;
+  status: 'DRAFT' | 'ISSUED' | 'PAID' | 'VOID' | 'OVERDUE';
+  currency: string;
+  customerEmail?: string | null;
+  customerWallet?: string | null;
+  subtotal: string;
+  taxTotal: string;
+  total: string;
+  issuedAt?: string | null;
+  dueAt?: string | null;
+  environmentMode: EnvironmentMode;
+}
+
+export interface AuditEvent {
+  id: string;
+  createdAt: string;
+  actorType: 'USER' | 'API' | 'SYSTEM';
+  actorUserId?: string | null;
+  actorAddress?: string | null;
+  action: string;
+  resourceType: string;
+  resourceId?: string | null;
+  requestId: string;
+  metadata?: Record<string, unknown> | null;
+}
+
 // --- Subscription Types ---
 
 export interface Subscription {
