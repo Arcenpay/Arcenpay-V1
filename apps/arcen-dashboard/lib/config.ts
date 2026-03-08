@@ -12,7 +12,10 @@
 //    let it reach a production runtime
 // ============================================================
 
-const isProd = process.env.NODE_ENV === "production";
+const isProd =
+  process.env.NODE_ENV === "production" &&
+  process.env.NEXT_PHASE !== "phase-production-build";
+
 
 function requireInProd(name: string, value: string | undefined): string {
   if (!value && isProd) {

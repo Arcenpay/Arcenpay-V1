@@ -7,7 +7,7 @@
     "prepare:abis": "node scripts/sync-abis.mjs",
     "sync:sepolia": "node scripts/sync-addresses.mjs --deployment ../packages/contracts/deployments/sepolia-latest.json --network sepolia",
     "codegen": "graph codegen",
-    "build": "graph build",
+    "build": "graph codegen && graph build",
     "lint": "echo \"No subgraph lint configured\"",
     "test": "echo \"No subgraph tests implemented yet\"",
     "deploy:studio": "graph deploy --studio meap-sepolia",
