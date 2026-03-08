@@ -3,7 +3,7 @@
 import { cn } from "@/lib/utils";
 import type { Section } from "@/app/(dashboard)/page";
 import { Bell, Search } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   useAppKit,
   useAppKitAccount,
@@ -50,10 +50,15 @@ const sectionDescriptions: Record<Section, string> = {
 
 export function Header({ activeSection }: HeaderProps) {
   const [searchFocused, setSearchFocused] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const { open } = useAppKit();
   const { address } = useAppKitAccount();
   const { chainId } = useAppKitNetwork();
   const { envMode } = useEnvironment();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <header className="h-16 border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-30 flex items-center justify-between px-6">
@@ -72,12 +77,12 @@ export function Header({ activeSection }: HeaderProps) {
           variant="outline"
           className={cn(
             "text-xs font-medium px-2.5 py-1",
-            envMode === "PRODUCTION"
+            mounted && envMode === "PRODUCTION"
               ? "border-orange-400/50 text-orange-400 bg-orange-400/5"
               : "border-blue-400/50 text-blue-400 bg-blue-400/5",
           )}
         >
-          {envMode === "PRODUCTION" ? "Mainnet" : "Testnet"}
+          {mounted && envMode === "PRODUCTION" ? "Mainnet" : "Testnet"}
         </Badge>
 
         {/* Search */}
@@ -110,7 +115,7 @@ export function Header({ activeSection }: HeaderProps) {
           className="h-9 px-3 text-muted-foreground hover:text-foreground"
           title="Switch network"
         >
-          {chainId ? `Chain ${chainId}` : "Network"}
+          {mounted && chainId ? `Chain ${chainId}` : "Network"}
         </Button>
 
         {/* Wallet button */}
@@ -121,7 +126,9 @@ export function Header({ activeSection }: HeaderProps) {
           className="h-9 px-3 text-muted-foreground hover:text-foreground font-mono text-xs"
           title="Wallet"
         >
-          {address ? `${address.slice(0, 6)}…${address.slice(-4)}` : "Connect"}
+          {mounted && address
+            ? `${address.slice(0, 6)}…${address.slice(-4)}`
+            : "Connect"}
         </Button>
 
         {/* Team / Org switcher */}

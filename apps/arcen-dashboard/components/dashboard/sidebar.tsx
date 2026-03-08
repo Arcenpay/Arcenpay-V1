@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { cn } from "@/lib/utils";
 import type { Section } from "@/app/(dashboard)/page";
+import { useOrganization } from "@clerk/nextjs";
 import { useAccount } from "wagmi";
 import {
   LayoutDashboard,
@@ -80,17 +81,11 @@ export function Sidebar({
   onCollapsedChange,
 }: SidebarProps) {
   const { address, isConnected } = useAccount();
-  const [teamName, setTeamName] = useState<string | null>(null);
+  const { organization } = useOrganization();
   const { envMode } = useEnvironment();
 
-  useEffect(() => {
-    fetch("/api/team")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (data?.name) setTeamName(data.name);
-      })
-      .catch(() => {});
-  }, []);
+  // Show org name from Clerk directly — always in sync when workspace switches
+  const teamName = organization?.name ?? null;
 
   const shortAddress = address
     ? `${address.slice(0, 6)}…${address.slice(-4)}`

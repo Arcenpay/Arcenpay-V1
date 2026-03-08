@@ -13,6 +13,56 @@ import { db } from "@/lib/db";
 import { slugify } from "@/lib/auth";
 import type { TeamRole } from "@/lib/auth";
 
+
+/**
+ * Map Clerk's role string to our TeamRole enum.
+ * Clerk uses "org:admin", "org:member", etc.
+ * Falls back to an explicit dbRole stored in public_metadata (custom override).
+ */
+function resolveTeamRole(
+  clerkRole: string | undefined,
+  dbRoleOverride: TeamRole | undefined,
+): TeamRole {
+  if (dbRoleOverride) return dbRoleOverride;
+  switch (clerkRole) {
+    case "org:owner":
+      return "OWNER";
+    case "org:admin":
+    case "admin":
+      return "ADMIN";
+    default:
+      return "MEMBER";
+  }
+}
+
+/**
+ * Upsert a user by clerkUserId. If the email already belongs to a different
+ * record (P2002 unique violation), update that existing record's clerkUserId
+ * so both identities are merged.
+ */
+async function upsertUserByClerk(
+  clerkUserId: string,
+  email: string | undefined,
+) {
+  try {
+    return await db.user.upsert({
+      where: { clerkUserId },
+      create: { clerkUserId, ...(email ? { email } : {}) },
+      update: { ...(email ? { email } : {}) },
+    });
+  } catch (err) {
+    // P2002 = unique constraint violation — email belongs to another record
+    const prismaErr = err as { code?: string } | null;
+    if (prismaErr?.code === "P2002" && email) {
+      return await db.user.update({
+        where: { email },
+        data: { clerkUserId },
+      });
+    }
+    throw err;
+  }
+}
+
 type ClerkWebhookEvent = {
   type: string;
   data: Record<string, unknown>;
@@ -75,11 +125,7 @@ async function handleEvent(event: ClerkWebhookEvent) {
       const firstName = (data.first_name as string) || "";
       const lastName = (data.last_name as string) || "";
 
-      await db.user.upsert({
-        where: { clerkUserId },
-        create: { clerkUserId, ...(email ? { email } : {}) },
-        update: { ...(email ? { email } : {}) },
-      });
+      await upsertUserByClerk(clerkUserId, email);
 
       // Auto-create a personal Clerk organization for every new user.
       // Clerk will fire organization.created + organizationMembership.created
@@ -106,11 +152,15 @@ async function handleEvent(event: ClerkWebhookEvent) {
         (data.email_addresses as Array<{ email_address: string }>) ?? [];
       const email = emailAddresses[0]?.email_address ?? undefined;
 
-      await db.user.upsert({
-        where: { clerkUserId },
-        create: { clerkUserId, ...(email ? { email } : {}) },
-        update: { ...(email ? { email } : {}) },
-      });
+      await upsertUserByClerk(clerkUserId, email);
+      break;
+    }
+
+    case "user.deleted": {
+      const clerkUserId = data.id as string;
+      if (!clerkUserId) break;
+      // Cascade deletes TeamMember + MagicToken via Prisma relations
+      await db.user.deleteMany({ where: { clerkUserId } });
       break;
     }
 
@@ -130,28 +180,46 @@ async function handleEvent(event: ClerkWebhookEvent) {
       break;
     }
 
+    case "organization.updated": {
+      const clerkOrgId = data.id as string;
+      const name = (data.name as string) || "Workspace";
+      if (!clerkOrgId) break;
+      await db.team.updateMany({
+        where: { clerkOrgId },
+        data: { name },
+      });
+      break;
+    }
+
     case "organizationMembership.created": {
       const orgId = (data.organization as Record<string, unknown>)
         ?.id as string;
       const memberClerkUserId = (
         data.public_user_data as Record<string, unknown>
       )?.user_id as string;
-      const dbRole = (data.public_metadata as Record<string, unknown>)
+      const clerkRole = data.role as string | undefined;
+      const dbRoleOverride = (data.public_metadata as Record<string, unknown>)
         ?.dbRole as TeamRole | undefined;
+      const role = resolveTeamRole(clerkRole, dbRoleOverride);
 
       if (!orgId || !memberClerkUserId) break;
 
-      const [team, user] = await Promise.all([
+      const [team, existingUser] = await Promise.all([
         db.team.findUnique({ where: { clerkOrgId: orgId } }),
         db.user.findUnique({ where: { clerkUserId: memberClerkUserId } }),
       ]);
 
-      if (!team || !user) break;
+      if (!team) break;
+
+      // Race condition guard: if user.created webhook hasn't been processed yet,
+      // create a minimal DB record now so the membership is not lost.
+      const user =
+        existingUser ?? (await upsertUserByClerk(memberClerkUserId, undefined));
 
       await db.teamMember.upsert({
         where: { userId_teamId: { userId: user.id, teamId: team.id } },
-        create: { userId: user.id, teamId: team.id, role: dbRole ?? "MEMBER" },
-        update: { role: dbRole ?? "MEMBER" },
+        create: { userId: user.id, teamId: team.id, role },
+        update: { role },
       });
 
       // Set currentTeamId to the invited org's team if the user doesn't have one.
@@ -162,6 +230,33 @@ async function handleEvent(event: ClerkWebhookEvent) {
           data: { currentTeamId: team.id },
         });
       }
+      break;
+    }
+
+    case "organizationMembership.updated": {
+      const orgId = (data.organization as Record<string, unknown>)
+        ?.id as string;
+      const memberClerkUserId = (
+        data.public_user_data as Record<string, unknown>
+      )?.user_id as string;
+      const clerkRole = data.role as string | undefined;
+      const dbRoleOverride = (data.public_metadata as Record<string, unknown>)
+        ?.dbRole as TeamRole | undefined;
+      const role = resolveTeamRole(clerkRole, dbRoleOverride);
+
+      if (!orgId || !memberClerkUserId) break;
+
+      const [team, user] = await Promise.all([
+        db.team.findUnique({ where: { clerkOrgId: orgId } }),
+        db.user.findUnique({ where: { clerkUserId: memberClerkUserId } }),
+      ]);
+
+      if (!team || !user) break;
+
+      await db.teamMember.updateMany({
+        where: { userId: user.id, teamId: team.id },
+        data: { role },
+      });
       break;
     }
 
