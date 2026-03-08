@@ -5,14 +5,10 @@
 // ============================================================
 
 import { Resend } from "resend";
+import { RESEND_API_KEY, EMAIL_FROM, APP_URL } from "@/lib/config";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM = process.env.EMAIL_FROM || "noreply@arcenpay.xyz";
-const APP_URL =
-  process.env.NEXTAUTH_URL ??
-  (process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : "http://localhost:3000");
+const resend = new Resend(RESEND_API_KEY);
+const FROM = EMAIL_FROM;
 
 /** Sends a magic link email for passwordless login */
 export async function sendMagicLinkEmail(
@@ -150,6 +146,58 @@ type InvoiceEmailInput = {
   dueDate?: string | null;
   downloadUrl?: string | null;
 };
+
+type CreditNoteEmailInput = {
+  to: string;
+  invoiceNumber: string;
+  noteNumber: string;
+  amount: string;
+  currency: string;
+  reason: string;
+};
+
+/** Sends a credit note notification email to a subscriber/customer */
+export async function sendCreditNoteEmail(input: CreditNoteEmailInput): Promise<void> {
+  await resend.emails.send({
+    from: FROM,
+    to: input.to,
+    subject: `Credit Note ${input.noteNumber} issued for Invoice ${input.invoiceNumber}`,
+    html: `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Credit Note ${input.noteNumber}</title>
+</head>
+<body style="margin:0;padding:0;background:#f5f7fa;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 16px;">
+    <tr><td align="center">
+      <table width="520" cellpadding="0" cellspacing="0"
+             style="background:#ffffff;border:1px solid #d8dde6;border-radius:12px;padding:32px;">
+        <tr><td>
+          <p style="margin:0 0 24px;font-size:22px;font-weight:700;color:#0f172a;">ArcenPay</p>
+          <h1 style="margin:0 0 10px;font-size:20px;font-weight:600;color:#111827;">
+            Credit Note Issued
+          </h1>
+          <p style="margin:0 0 20px;font-size:14px;color:#4b5563;">
+            A credit note has been applied to your invoice
+            <strong>${input.invoiceNumber}</strong>.<br /><br />
+            Credit Note #: <strong>${input.noteNumber}</strong><br />
+            Amount credited: <strong>${input.amount} ${input.currency}</strong><br />
+            Reason: ${input.reason}
+          </p>
+          <p style="margin:18px 0 0;font-size:12px;color:#6b7280;">
+            If you have any questions, please contact your service provider.
+          </p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`,
+  });
+}
 
 /** Sends an invoice email to a subscriber/customer */
 export async function sendInvoiceEmail(input: InvoiceEmailInput): Promise<void> {

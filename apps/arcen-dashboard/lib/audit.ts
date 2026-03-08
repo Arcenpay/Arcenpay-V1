@@ -5,7 +5,7 @@ import { toPrismaNullableJson } from "@/lib/prisma-json";
 export type AuditInput = {
   request: NextRequest;
   teamId: string;
-  clerkUserId?: string;
+  userId?: string;
   walletAddress?: string;
   action: string;
   resourceType: string;
@@ -27,7 +27,7 @@ export async function writeAuditEvent(input: AuditInput): Promise<void> {
   const {
     request,
     teamId,
-    clerkUserId,
+    userId,
     walletAddress,
     action,
     resourceType,
@@ -40,7 +40,7 @@ export async function writeAuditEvent(input: AuditInput): Promise<void> {
       data: {
         teamId,
         actorType: "USER",
-        actorUserId: clerkUserId,
+        actorUserId: userId,
         actorAddress: walletAddress,
         action,
         resourceType,

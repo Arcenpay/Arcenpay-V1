@@ -97,24 +97,6 @@ const GMP_DESTINATIONS = [
   { chain: "Arbitrum", estimatedGas: "0.0009 ETH" },
 ];
 
-const LS_KEY = "meap_provider_settings";
-
-function loadSettings() {
-  if (process.env.NODE_ENV !== "development") return null;
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = localStorage.getItem(LS_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-}
-
-function saveSettings(data: Record<string, unknown>) {
-  if (process.env.NODE_ENV !== "development") return;
-  if (typeof window === "undefined") return;
-  localStorage.setItem(LS_KEY, JSON.stringify(data));
-}
 
 interface WebhookLogEntry {
   id: string;
@@ -286,20 +268,25 @@ export function SettingsSection() {
   const [gmpTopUpAmount, setGmpTopUpAmount] = useState("");
 
   useEffect(() => {
-    const saved = loadSettings();
-    if (saved) {
-      if (saved.providerName) setProviderName(saved.providerName);
-      if (saved.website) setWebsite(saved.website);
-      if (saved.contactEmail) setContactEmail(saved.contactEmail);
-      if (saved.webhookSecret) setWebhookSecret(saved.webhookSecret);
-      if (saved.notifications) setNotifications(saved.notifications);
-    }
+    // Load all profile fields from the server — localStorage is no longer used
     fetch("/api/provider/profile")
       .then((r) => (r.ok ? r.json() : null))
       .then((profile) => {
         if (!profile) return;
+        if (profile.providerName) setProviderName(profile.providerName);
+        if (profile.website) setWebsite(profile.website);
+        if (profile.contactEmail) setContactEmail(profile.contactEmail);
         if (profile.webhookUrl) setWebhookUrl(profile.webhookUrl);
         if (profile.apiKeyPrefix) setApiKeyPrefix(profile.apiKeyPrefix);
+      })
+      .catch(() => {});
+    // Load notification preferences from server (source of truth — not localStorage)
+    fetch("/api/provider/notifications")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.notifications && Array.isArray(data.notifications) && data.notifications.length > 0) {
+          setNotifications(data.notifications);
+        }
       })
       .catch(() => {});
     fetch("/api/team")
@@ -369,19 +356,25 @@ export function SettingsSection() {
     description: string;
   }>;
 
-  const handleSaveProfile = () => {
+  const handleSaveProfile = async () => {
     setIsSaving(true);
-    saveSettings({
-      providerName,
-      website,
-      contactEmail,
-      webhookSecret,
-      notifications,
-    });
-    setTimeout(() => {
+    try {
+      const res = await fetch("/api/provider/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          providerName: providerName || undefined,
+          website: website || undefined,
+          contactEmail: contactEmail || undefined,
+        }),
+      });
+      if (!res.ok) throw new Error("Save failed");
+      toast.success("Profile saved");
+    } catch {
+      toast.error("Could not save profile");
+    } finally {
       setIsSaving(false);
-      toast.success("Settings saved");
-    }, 400);
+    }
   };
 
   const handleSwitchEnvironment = async (
@@ -431,6 +424,8 @@ export function SettingsSection() {
           webhookUrl: webhookUrl || "",
           notifyEmail,
           notifyWebhook,
+          // Only send if user has entered a new secret (min 16 chars)
+          ...(webhookSecret.length >= 16 && { webhookSigningSecret: webhookSecret }),
         }),
       });
       if (!res.ok) throw new Error("Save failed");
@@ -440,13 +435,6 @@ export function SettingsSection() {
     } finally {
       setIsSaving(false);
     }
-    saveSettings({
-      providerName,
-      website,
-      contactEmail,
-      webhookSecret,
-      notifications,
-    });
   };
 
   const handleGenerateApiKey = async () => {
@@ -507,13 +495,12 @@ export function SettingsSection() {
       n.id === id ? { ...n, [type]: !n[type] } : n,
     );
     setNotifications(updated);
-    saveSettings({
-      providerName,
-      website,
-      contactEmail,
-      webhookSecret,
-      notifications: updated,
-    });
+    // Persist to server — fire-and-forget, UI already updated optimistically
+    fetch("/api/provider/notifications", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ notifications: updated }),
+    }).catch(() => {});
   };
 
   const handleCopyAddress = (name: string, addr: string) => {

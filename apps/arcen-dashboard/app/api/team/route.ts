@@ -120,7 +120,7 @@ export async function PUT(req: NextRequest) {
     await writeAuditEvent({
       request: req,
       teamId: teamCtx.teamId,
-      clerkUserId: teamCtx.userId,
+      userId: teamCtx.userId,
       walletAddress: teamCtx.walletAddress,
       action: "team.update",
       resourceType: "Team",

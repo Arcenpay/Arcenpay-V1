@@ -3,32 +3,12 @@ import { promises as fs } from "fs";
 import path from "path";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { db } from "@/lib/db";
-
-const APP_URL =
-  process.env.NEXTAUTH_URL ??
-  (process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : "http://localhost:3000");
-
-function getStorageDir(): string {
-  const configured = process.env.INVOICE_STORAGE_DIR;
-  if (process.env.NODE_ENV === "production" && !configured) {
-    throw new Error("INVOICE_STORAGE_DIR must be set in production.");
-  }
-  return configured || "/tmp/arcenpay/invoices";
-}
-
-function getSigningSecret(): string {
-  const explicit = process.env.INVOICE_DOWNLOAD_SIGNING_SECRET;
-  if (explicit) return explicit;
-
-  if (process.env.NODE_ENV === "production") {
-    throw new Error(
-      "INVOICE_DOWNLOAD_SIGNING_SECRET must be set in production.",
-    );
-  }
-  return process.env.SIWE_JWT_SECRET || "dev_invoice_download_secret";
-}
+import {
+  APP_URL,
+  INVOICE_STORAGE_DIR,
+  INVOICE_DOWNLOAD_SIGNING_SECRET,
+  INVOICE_DOWNLOAD_URL_TTL_SECONDS,
+} from "@/lib/config";
 
 function sanitizePathSegment(value: string): string {
   return value.replace(/[^a-zA-Z0-9_\-]/g, "_");
@@ -44,8 +24,7 @@ function base64Url(value: Buffer): string {
 }
 
 function signPayload(payload: string): string {
-  const secret = getSigningSecret();
-  return base64Url(createHmac("sha256", secret).update(payload).digest());
+  return base64Url(createHmac("sha256", INVOICE_DOWNLOAD_SIGNING_SECRET).update(payload).digest());
 }
 
 function makeSignedPayload(invoiceId: string, objectKey: string, exp: number): string {
@@ -55,7 +34,7 @@ function makeSignedPayload(invoiceId: string, objectKey: string, exp: number): s
 export function createInvoiceDownloadUrl(
   invoiceId: string,
   objectKey: string,
-  expiresInSeconds = Number(process.env.INVOICE_DOWNLOAD_URL_TTL_SECONDS || 86400),
+  expiresInSeconds = INVOICE_DOWNLOAD_URL_TTL_SECONDS,
 ): string {
   const exp = Math.floor(Date.now() / 1000) + expiresInSeconds;
   const payload = makeSignedPayload(invoiceId, objectKey, exp);
@@ -88,7 +67,7 @@ async function ensureDirForObjectKey(objectKey: string): Promise<string> {
   if (objectKey.includes("..")) {
     throw new Error("Invalid object key");
   }
-  const absPath = path.join(getStorageDir(), objectKey);
+  const absPath = path.join(INVOICE_STORAGE_DIR, objectKey);
   await fs.mkdir(path.dirname(absPath), { recursive: true });
   return absPath;
 }
@@ -100,7 +79,7 @@ async function writeObject(objectKey: string, bytes: Uint8Array): Promise<void> 
 
 export async function readObject(objectKey: string): Promise<Buffer | null> {
   try {
-    const absPath = path.join(getStorageDir(), objectKey);
+    const absPath = path.join(INVOICE_STORAGE_DIR, objectKey);
     if (objectKey.includes("..")) return null;
     return await fs.readFile(absPath);
   } catch {

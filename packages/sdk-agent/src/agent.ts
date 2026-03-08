@@ -234,7 +234,16 @@ export class MEAPAgent {
     // Step 6: Construct and sign payment with EIP-712
     const paymentHeader = await this.constructPayment(paymentOption);
 
-    // Step 7: Resubmit request with X-PAYMENT header
+    // Step 7: Check balance before attempting payment
+    const balance = await this.getBalance();
+    if (balance < requiredAmount) {
+      throw new Error(
+        `[MEAPAgent] Insufficient session balance: have ${balance}, need ${requiredAmount}. ` +
+        `Call fundSession() to top up before retrying.`,
+      );
+    }
+
+    // Step 8: Resubmit request with X-PAYMENT header
     const paidResponse = await globalThis.fetch(url, {
       ...fetchOptions,
       headers: {
@@ -243,9 +252,17 @@ export class MEAPAgent {
       },
     });
 
-    this.totalSpent += requiredAmount;
-    this.nonce += 1n;
-    console.log(`[MEAPAgent] Payment successful. Total spent: ${this.totalSpent}`);
+    // Only advance nonce and record spend on a successful settlement response
+    if (paidResponse.ok) {
+      this.totalSpent += requiredAmount;
+      this.nonce += 1n;
+      console.log(`[MEAPAgent] Payment settled. Total spent: ${this.totalSpent}, nonce: ${this.nonce}`);
+    } else {
+      console.warn(
+        `[MEAPAgent] Paid request returned non-2xx (${paidResponse.status}). ` +
+        `Nonce NOT advanced to allow retry.`,
+      );
+    }
 
     return paidResponse;
   }

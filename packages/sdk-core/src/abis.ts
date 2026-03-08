@@ -591,3 +591,71 @@ export const FeeCollectorABI = [
     stateMutability: "nonpayable",
   },
 ] as const;
+
+// ── MirrorRegistry ──────────────────────────────────────────
+
+export const MirrorRegistryABI = [
+  // Query functions (read-only)
+  {
+    type: "function",
+    name: "isValid",
+    inputs: [{ name: "subscriber", type: "address" }],
+    outputs: [{ name: "", type: "bool" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "getMirror",
+    inputs: [{ name: "subscriber", type: "address" }],
+    outputs: [
+      {
+        name: "",
+        type: "tuple",
+        components: [
+          { name: "subscriber", type: "address" },
+          { name: "planId", type: "uint256" },
+          { name: "planTier", type: "string" },
+          { name: "expiration", type: "uint64" },
+          { name: "sourceChainId", type: "uint256" },
+          { name: "sourceTokenId", type: "uint256" },
+          { name: "sourceUpdatedAt", type: "uint64" },
+          { name: "lastUpdated", type: "uint64" },
+        ],
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "expiresAt",
+    inputs: [{ name: "subscriber", type: "address" }],
+    outputs: [{ name: "", type: "uint64" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "getPlanTier",
+    inputs: [{ name: "subscriber", type: "address" }],
+    outputs: [{ name: "", type: "string" }],
+    stateMutability: "view",
+  },
+  // Events
+  {
+    type: "event",
+    name: "SubscriptionMirrored",
+    inputs: [
+      { name: "subscriber", type: "address", indexed: true },
+      { name: "sourceTokenId", type: "uint256", indexed: true },
+      { name: "sourceChainId", type: "uint256", indexed: false },
+      { name: "expiration", type: "uint64", indexed: false },
+    ],
+  },
+  {
+    type: "event",
+    name: "RoutedMessageProcessed",
+    inputs: [
+      { name: "messageId", type: "bytes32", indexed: true },
+      { name: "route", type: "uint8", indexed: true },
+    ],
+  },
+] as const;

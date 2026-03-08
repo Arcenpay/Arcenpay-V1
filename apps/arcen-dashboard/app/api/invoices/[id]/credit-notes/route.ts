@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { requirePermission, isErrorResponse } from "@/lib/api-auth";
 import { writeAuditEvent } from "@/lib/audit";
 import { toPrismaNullableJson } from "@/lib/prisma-json";
+import { sendCreditNoteEmail } from "@/lib/email";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -103,7 +104,7 @@ export async function POST(request: NextRequest, context: Params) {
   await writeAuditEvent({
     request,
     teamId: auth.team.teamId,
-    clerkUserId: auth.team.userId,
+    userId: auth.team.userId,
     walletAddress: auth.team.walletAddress,
     action: "invoice.creditnote.create",
     resourceType: "CreditNote",
@@ -115,6 +116,20 @@ export async function POST(request: NextRequest, context: Params) {
       reason: parsed.data.reason,
     },
   });
+
+  // Deliver credit note notification email if the invoice has a customer email
+  if (invoice.customerEmail) {
+    sendCreditNoteEmail({
+      to: invoice.customerEmail,
+      invoiceNumber: invoice.number || invoice.id,
+      noteNumber,
+      amount: parsed.data.amount.toFixed(2),
+      currency: invoice.currency,
+      reason: parsed.data.reason,
+    }).catch((err) => {
+      console.error("[credit-notes] email delivery failed:", err);
+    });
+  }
 
   return NextResponse.json({ creditNote }, { status: 201 });
 }

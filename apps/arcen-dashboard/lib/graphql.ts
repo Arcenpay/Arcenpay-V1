@@ -1,24 +1,20 @@
 // ============================================================
 //  Dashboard — Apollo Client + Subgraph Queries
+//
+//  Read-path policy:
+//    USE SUBGRAPH for: analytics, aggregates, paginated history,
+//      billing events, plan/subscriber lists.  Eventual consistency
+//      (1-2 block lag) is acceptable for these.
+//    USE chain-reader.ts for: live subscription status, session
+//      balances, cross-chain entitlement — anywhere correctness
+//      matters more than speed.
 // ============================================================
 
 import { ApolloClient, InMemoryCache, HttpLink, gql } from "@apollo/client";
-
-const GRAPH_URL =
-  process.env.NEXT_PUBLIC_GRAPH_URL ||
-  "https://api.studio.thegraph.com/query/placeholder/meap-sepolia/version/latest";
-
-if (
-  process.env.NODE_ENV === "production" &&
-  GRAPH_URL.includes("/placeholder/")
-) {
-  throw new Error(
-    "NEXT_PUBLIC_GRAPH_URL must be configured for production (placeholder URL is not allowed).",
-  );
-}
+import { GRAPH_URL } from "@/lib/config";
 
 export const apolloClient = new ApolloClient({
-  link: new HttpLink({ uri: GRAPH_URL }),
+  link: new HttpLink({ uri: GRAPH_URL || undefined }),
   cache: new InMemoryCache(),
 });
 
@@ -137,3 +133,100 @@ export const GET_PROTOCOL_STATS = gql`
     }
   }
 `;
+
+// ── Subscription history (analytics only — use chain-reader for live status) ──
+
+/**
+ * Returns on-chain subscription history for a token ID from the subgraph.
+ * NOTE: This may lag 1-2 blocks behind chain tip.
+ * For gate-keeping and live entitlement checks use getSubscriptionStatus()
+ * from lib/chain-reader.ts which reads directly from the contract.
+ */
+export const GET_SUBSCRIPTION_HISTORY = gql`
+  query GetSubscriptionHistory($tokenId: String!) {
+    subscription(id: $tokenId) {
+      id
+      subscriber
+      plan {
+        id
+        name
+        tier
+        price
+        billingInterval
+      }
+      expiration
+      isActive
+      mintedAt
+      amountPaid
+      txHash
+    }
+  }
+`;
+
+// ── Subgraph health check ──────────────────────────────────────────────────────
+
+export interface SubgraphHealth {
+  healthy: boolean;
+  /** Seconds the subgraph is behind chain tip; null if unavailable */
+  lagSeconds: number | null;
+  /** Latest indexed block number; null if unavailable */
+  latestBlock: number | null;
+  error?: string;
+}
+
+/**
+ * Checks The Graph indexing health for the MEAP subgraph.
+ * Uses the Graph Node status API (`_meta` field).
+ *
+ * A lag > 60s is considered degraded; > 300s is considered unhealthy.
+ * Returns healthy=true even with moderate lag so callers can decide their own threshold.
+ */
+export async function checkSubgraphHealth(): Promise<SubgraphHealth> {
+  if (!GRAPH_URL) {
+    return { healthy: false, lagSeconds: null, latestBlock: null, error: "GRAPH_URL not configured" };
+  }
+
+  try {
+    const result = await apolloClient.query<{
+      _meta: {
+        block: { number: number; timestamp: number | null };
+        hasIndexingErrors: boolean;
+      };
+    }>({
+      query: gql`
+        query SubgraphMeta {
+          _meta {
+            block {
+              number
+              timestamp
+            }
+            hasIndexingErrors
+          }
+        }
+      `,
+      fetchPolicy: "no-cache",
+    });
+
+    const meta = result.data._meta;
+    const latestBlock = meta.block.number;
+    const blockTimestamp = meta.block.timestamp;
+
+    const lagSeconds =
+      blockTimestamp != null
+        ? Math.max(0, Math.floor(Date.now() / 1000) - blockTimestamp)
+        : null;
+
+    return {
+      healthy: !meta.hasIndexingErrors,
+      lagSeconds,
+      latestBlock,
+    };
+  } catch (err) {
+    return {
+      healthy: false,
+      lagSeconds: null,
+      latestBlock: null,
+      error: err instanceof Error ? err.message : String(err),
+    };
+  }
+}

@@ -26,7 +26,7 @@ export interface UsageDashboardProps {
 export function UsageDashboard({
   sessionId,
   planId,
-  facilitatorUrl = 'http://localhost:3402',
+  facilitatorUrl,
   pollInterval = 5000,
   className = '',
 }: UsageDashboardProps) {

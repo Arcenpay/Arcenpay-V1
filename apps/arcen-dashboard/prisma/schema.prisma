@@ -41,6 +41,13 @@ enum CatalogStatus {
   ARCHIVED
 }
 
+enum ChainSyncStatus {
+  PENDING
+  SYNCED
+  FAILED
+  NOT_APPLICABLE
+}
+
 enum AddOnBillingType {
   ONE_TIME
   RECURRING
@@ -175,10 +182,18 @@ model ProviderProfile {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  providerName  String?
+  website       String?
+  contactEmail  String?
+
   notifyEmail         Boolean @default(true)
   notifyWebhook       Boolean @default(false)
   webhookUrl          String?
   webhookSigningSecret String?
+
+  // Per-event notification preferences stored as JSON array of
+  // { id: string, email: boolean, webhook: boolean }
+  notificationPreferences Json?
 
   apiKeyHash   String? @unique
   apiKeyPrefix String?
@@ -237,7 +252,11 @@ model CatalogPlan {
   version     Int       @default(1)
   publishedAt DateTime?
 
-  onChainPlanId String?
+  onChainPlanId   String?
+  chainSyncStatus ChainSyncStatus @default(NOT_APPLICABLE)
+  chainTxHash     String?
+  chainSyncError  String?
+  chainSyncedAt   DateTime?
 
   team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
 
@@ -260,9 +279,13 @@ model CatalogAddOn {
   price       Decimal          @db.Decimal(20, 6)
   acceptedToken String
 
-  active      Boolean   @default(true)
-  version     Int       @default(1)
-  publishedAt DateTime?
+  active          Boolean         @default(true)
+  version         Int             @default(1)
+  publishedAt     DateTime?
+  chainSyncStatus ChainSyncStatus @default(NOT_APPLICABLE)
+  chainTxHash     String?
+  chainSyncError  String?
+  chainSyncedAt   DateTime?
 
   team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
 
@@ -285,9 +308,13 @@ model CatalogCreditType {
   price        Decimal @db.Decimal(20, 6)
   acceptedToken String
 
-  active      Boolean   @default(true)
-  version     Int       @default(1)
-  publishedAt DateTime?
+  active          Boolean         @default(true)
+  version         Int             @default(1)
+  publishedAt     DateTime?
+  chainSyncStatus ChainSyncStatus @default(NOT_APPLICABLE)
+  chainTxHash     String?
+  chainSyncError  String?
+  chainSyncedAt   DateTime?
 
   team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
 

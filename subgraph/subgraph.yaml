@@ -12,7 +12,7 @@ dataSources:
     source:
       address: "0xf45A9E5280F72260a713c50b0Ca4e4FB1e22Cc8A"
       abi: SubscriptionRegistry
-      startBlock: 0
+      startBlock: 7500000
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -40,7 +40,7 @@ dataSources:
     source:
       address: "0xc736f5d91aC0039b97A4Fc3540B8f3d59E7FdBa6"
       abi: PlanFactory
-      startBlock: 0
+      startBlock: 7500000
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -68,7 +68,7 @@ dataSources:
     source:
       address: "0x2dccEaad8551a620E4Fc736bb4d0fbb8D1A17D7C"
       abi: SessionVault
-      startBlock: 0
+      startBlock: 7500000
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -95,7 +95,7 @@ dataSources:
     source:
       address: "0x265E0dC80b00044d183AFa83237F5976bB4d585c"
       abi: ZKUsageVerifier
-      startBlock: 0
+      startBlock: 7500000
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -118,7 +118,7 @@ dataSources:
     source:
       address: "0x513fab5218045790364b33A38D95FE8E17403BAe"
       abi: FeeCollector
-      startBlock: 0
+      startBlock: 7500000
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7

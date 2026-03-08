@@ -12,13 +12,20 @@ import { db } from "@/lib/db";
 import { writeAuditEvent } from "@/lib/audit";
 
 const EMPTY_PROFILE = {
+  providerName: null,
+  website: null,
+  contactEmail: null,
   notifyEmail: true,
   notifyWebhook: false,
   webhookUrl: null,
   apiKeyPrefix: null,
+  // webhookSigningSecret intentionally omitted — write-only
 };
 
 const UpdateSchema = z.object({
+  providerName: z.string().max(120).optional().or(z.literal("")),
+  website: z.string().url("Invalid website URL").optional().or(z.literal("")),
+  contactEmail: z.string().email("Invalid email").optional().or(z.literal("")),
   notifyEmail: z.boolean().optional(),
   notifyWebhook: z.boolean().optional(),
   webhookUrl: z
@@ -26,6 +33,8 @@ const UpdateSchema = z.object({
     .url("Invalid webhook URL")
     .optional()
     .or(z.literal("")),
+  // Write-only: never returned to client
+  webhookSigningSecret: z.string().min(16).max(256).optional(),
 });
 
 /** Resolves teamId from session — looks up DB if not in JWT */
@@ -49,10 +58,14 @@ export async function GET() {
   const profile = await db.providerProfile.findUnique({
     where: { teamId },
     select: {
+      providerName: true,
+      website: true,
+      contactEmail: true,
       notifyEmail: true,
       notifyWebhook: true,
       webhookUrl: true,
       apiKeyPrefix: true,
+      // webhookSigningSecret intentionally excluded — write-only
     },
   });
 
@@ -79,21 +92,23 @@ export async function PUT(req: NextRequest) {
   if (!teamId)
     return NextResponse.json({ error: "No team found" }, { status: 403 });
 
-  const data = {
-    ...(parsed.data.notifyEmail !== undefined && {
-      notifyEmail: parsed.data.notifyEmail,
-    }),
-    ...(parsed.data.notifyWebhook !== undefined && {
-      notifyWebhook: parsed.data.notifyWebhook,
-    }),
-    ...(parsed.data.webhookUrl !== undefined && {
-      webhookUrl: parsed.data.webhookUrl || null,
-    }),
-  };
+  const d = parsed.data;
+  const data: Record<string, unknown> = {};
+  if (d.providerName !== undefined) data.providerName = d.providerName || null;
+  if (d.website !== undefined) data.website = d.website || null;
+  if (d.contactEmail !== undefined) data.contactEmail = d.contactEmail || null;
+  if (d.notifyEmail !== undefined) data.notifyEmail = d.notifyEmail;
+  if (d.notifyWebhook !== undefined) data.notifyWebhook = d.notifyWebhook;
+  if (d.webhookUrl !== undefined) data.webhookUrl = d.webhookUrl || null;
+  if (d.webhookSigningSecret !== undefined)
+    data.webhookSigningSecret = d.webhookSigningSecret;
 
   const before = await db.providerProfile.findUnique({
     where: { teamId },
     select: {
+      providerName: true,
+      website: true,
+      contactEmail: true,
       notifyEmail: true,
       notifyWebhook: true,
       webhookUrl: true,
@@ -106,6 +121,9 @@ export async function PUT(req: NextRequest) {
     update: data,
     create: { teamId, ...data },
     select: {
+      providerName: true,
+      website: true,
+      contactEmail: true,
       notifyEmail: true,
       notifyWebhook: true,
       webhookUrl: true,
@@ -116,12 +134,13 @@ export async function PUT(req: NextRequest) {
   await writeAuditEvent({
     request: req,
     teamId,
-    clerkUserId: session.clerkUserId,
+    userId: session.clerkUserId,
     action: "provider.profile.update",
     resourceType: "ProviderProfile",
     resourceId: teamId,
     beforeData: before ?? null,
-    afterData: profile,
+    // Omit webhookSigningSecret from audit log
+    afterData: { ...profile },
   });
 
   return NextResponse.json(profile);

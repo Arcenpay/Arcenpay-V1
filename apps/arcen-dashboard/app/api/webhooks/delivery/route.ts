@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { toPrismaNullableJson } from "@/lib/prisma-json";
-
-const FACILITATOR_SECRET = process.env.FACILITATOR_SECRET;
+import { FACILITATOR_SECRET } from "@/lib/config";
 
 const deliverySchema = z.object({
   teamId: z.string().min(1),

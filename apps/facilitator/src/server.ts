@@ -50,6 +50,8 @@ import {
   type X402VerifiedPaymentContext,
 } from "@meap/core";
 import { createPublicClient, http } from "viem";
+import { DurableJobQueue } from "./queue.js";
+import { X402ReplayProtection } from "./replay-protection.js";
 
 const app = express();
 const PORT = process.env.PORT || 3402;
@@ -108,6 +110,24 @@ function validateRuntimeConfig(): void {
   }
 
   if (FACILITATOR_PROFILE === "production") {
+    if (!process.env.RPC_URL) {
+      errors.push(
+        "RPC_URL must be explicitly set in production. The public Sepolia fallback is rate-limited and unreliable.",
+      );
+    }
+
+    if (!process.env.CHAIN_ID) {
+      errors.push(
+        "CHAIN_ID must be explicitly set in production.",
+      );
+    }
+
+    if (!FACILITATOR_SECRET) {
+      errors.push(
+        "FACILITATOR_SECRET is required in production to authenticate dashboard → facilitator requests.",
+      );
+    }
+
     if (PROOF_MODE !== "strict") {
       errors.push(
         "PROOF_MODE must be 'strict' when FACILITATOR_PROFILE=production.",
@@ -189,6 +209,26 @@ const proofGenerationDurationSeconds = new Histogram({
   name: "proof_generation_duration_seconds",
   help: "Duration of proof input generation pipeline (seconds)",
   buckets: [0.001, 0.005, 0.01, 0.05, 0.1, 0.25, 0.5, 1],
+  registers: [metricsRegistry],
+});
+
+const durableQueuePendingDepth = new Gauge({
+  name: "durable_queue_pending_depth",
+  help: "Number of pending jobs in durable queue by queue name",
+  labelNames: ["queue"],
+  registers: [metricsRegistry],
+});
+
+const durableQueueDeadLetterDepth = new Gauge({
+  name: "durable_queue_dead_letter_depth",
+  help: "Number of dead-lettered jobs by queue name",
+  labelNames: ["queue"],
+  registers: [metricsRegistry],
+});
+
+const x402ReplayRejections = new Counter({
+  name: "x402_replay_rejections_total",
+  help: "Total x402 requests rejected as replays",
   registers: [metricsRegistry],
 });
 
@@ -474,6 +514,72 @@ if (process.env.REDIS_URL) {
     });
 }
 
+// ── Durable Job Queue ──────────────────────────────────────────────────────
+// Provides Redis-backed billing event + webhook delivery queues with
+// exponential backoff retry and dead-letter handling.
+// NOTE: Redis persistence for the queue is activated when the optional
+// `ioredis` package is installed and REDIS_URL is set. Until then the
+// queue provides in-memory retry / dead-letter semantics.
+
+const jobQueue = new DurableJobQueue({
+  keyPrefix: `${process.env.REDIS_PREFIX || "meap"}:queue`,
+});
+
+if (process.env.REDIS_URL) {
+  // Dynamically load ioredis if available to avoid a hard dependency.
+  // ioredis is an optional dep — add it with `npm install ioredis` to enable
+  // queue crash recovery. Without it the queue runs in-memory only.
+  void (async () => {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const ioredis = require("ioredis") as {
+        default?: new (url: string, opts?: object) => import("./queue.js").IRedisQueue & { connect(): Promise<void> };
+        new (url: string, opts?: object): import("./queue.js").IRedisQueue & { connect(): Promise<void> };
+      };
+      const Ctor = ioredis.default ?? ioredis;
+      const client = new Ctor(process.env.REDIS_URL!, {
+        enableReadyCheck: false,
+        lazyConnect: true,
+        maxRetriesPerRequest: 2,
+      });
+      await client.connect();
+      jobQueue.setRedis(client);
+      console.log("[Facilitator] Queue Redis connected — enabling crash recovery");
+      await jobQueue.recoverFromRedis("billing");
+      await jobQueue.recoverFromRedis("webhooks");
+    } catch {
+      // ioredis not installed or Redis unreachable — queue runs in-memory only
+      console.warn("[Facilitator] Queue Redis unavailable — using in-memory queue (no crash recovery)");
+    }
+  })();
+}
+
+// Workers process enqueued jobs with exponential backoff
+jobQueue.startWorker<{ pathname: string; payload: unknown }>(
+  "billing",
+  async (job) => {
+    if (!DASHBOARD_URL) return;
+    const { pathname, payload } = job.payload;
+    const ok = await postToDashboard(pathname, payload);
+    if (!ok) throw new Error(`Dashboard POST ${pathname} returned non-2xx`);
+  },
+);
+
+jobQueue.startWorker<{ pathname: string; payload: unknown }>(
+  "webhooks",
+  async (job) => {
+    if (!DASHBOARD_URL) return;
+    const { pathname, payload } = job.payload;
+    const ok = await postToDashboard(pathname, payload);
+    if (!ok) throw new Error(`Dashboard webhook delivery to ${pathname} returned non-2xx`);
+  },
+);
+
+// ── x402 Replay Protection ─────────────────────────────────────────────────
+const replayProtection = new X402ReplayProtection(
+  Number(process.env.X402_REPLAY_WINDOW_MS || 10 * 60 * 1000),
+);
+
 const eventListener = new EventListenerService({
   rpcUrl: RPC_URL,
   chainId: CHAIN_ID,
@@ -582,18 +688,26 @@ async function persistWebhookDelivery(
   payload: WebhookPayload,
 ): Promise<void> {
   if (!DASHBOARD_TEAM_ID) return;
-  await postToDashboard("/api/webhooks/delivery", {
-    teamId: DASHBOARD_TEAM_ID,
-    deliveryId: entry.id,
-    event: entry.event,
-    url: entry.url,
-    statusCode: entry.statusCode,
-    attemptNumber: entry.attemptNumber,
-    deliveredAt: new Date(entry.deliveredAt).toISOString(),
-    success: entry.success,
-    error: entry.error,
-    payload,
-  });
+  await jobQueue.enqueue(
+    "webhooks",
+    "webhook_delivery",
+    {
+      pathname: "/api/webhooks/delivery",
+      payload: {
+        teamId: DASHBOARD_TEAM_ID,
+        deliveryId: entry.id,
+        event: entry.event,
+        url: entry.url,
+        statusCode: entry.statusCode,
+        attemptNumber: entry.attemptNumber,
+        deliveredAt: new Date(entry.deliveredAt).toISOString(),
+        success: entry.success,
+        error: entry.error,
+        payload,
+      },
+    },
+    { idempotencyKey: `webhook:${entry.id}` },
+  );
 }
 
 async function persistBillingEvent(
@@ -603,14 +717,22 @@ async function persistBillingEvent(
   triggerInvoice = false,
 ): Promise<void> {
   if (!DASHBOARD_TEAM_ID) return;
-  await postToDashboard("/api/billing/events", {
-    teamId: DASHBOARD_TEAM_ID,
-    eventType,
-    idempotencyKey,
-    payload,
-    triggerInvoice,
-    source: "facilitator",
-  });
+  await jobQueue.enqueue(
+    "billing",
+    "billing_event",
+    {
+      pathname: "/api/billing/events",
+      payload: {
+        teamId: DASHBOARD_TEAM_ID,
+        eventType,
+        idempotencyKey,
+        payload,
+        triggerInvoice,
+        source: "facilitator",
+      },
+    },
+    { idempotencyKey: `billing:${idempotencyKey}` },
+  );
 }
 
 /**
@@ -1033,6 +1155,13 @@ eventListener.on("renewed", async (event) => {
   console.log(
     `[Facilitator] 🔄 Renewed: tokenId=${event.tokenId} until ${event.expiration}`,
   );
+  // Look up subscriber email so invoice generation can proceed
+  const renewedSubscriberWallet =
+    tokenIdToSubscriber.get(event.tokenId.toString()) ||
+    (await getTokenOwner(event.tokenId));
+  const renewedSubscriberEmail = renewedSubscriberWallet
+    ? await lookupSubscriberEmail(renewedSubscriberWallet)
+    : null;
   await persistBillingEvent(
     "SUBSCRIPTION_RENEWED",
     `renewed:${event.transactionHash || event.tokenId.toString()}:${event.expiration?.toString() || ""}`,
@@ -1042,6 +1171,9 @@ eventListener.on("renewed", async (event) => {
       amount: event.amountPaid ? String(Number(event.amountPaid) / 1e6) : "0",
       txHash: event.transactionHash,
       timestamp: event.timestamp?.toString(),
+      // Include email so /api/billing/events can generate an invoice
+      ...(renewedSubscriberEmail && { email: renewedSubscriberEmail }),
+      description: "Subscription renewal",
     },
     true,
   );
@@ -1225,6 +1357,12 @@ if (process.env.ENABLE_BILLING_KEEPER === "true" && process.env.PRIVATE_KEY) {
 
 app.get("/metrics", async (_req, res) => {
   aggregatorQueueDepth.set(aggregatorService.getStats().pendingSettlements);
+  // Durable queue gauges
+  for (const queueName of ["billing", "webhooks"]) {
+    const stats = jobQueue.getStats(queueName);
+    durableQueuePendingDepth.set({ queue: queueName }, stats.pending);
+    durableQueueDeadLetterDepth.set({ queue: queueName }, stats.deadLetter);
+  }
   res.setHeader("Content-Type", metricsRegistry.contentType);
   res.end(await metricsRegistry.metrics());
 });
@@ -1263,6 +1401,8 @@ app.get("/health", async (_req, res) => {
             .getDeliveryLog(200)
             .filter((entry) => !entry.success).length
         : 0,
+      billingBridge: jobQueue.getStats("billing"),
+      webhookDelivery: jobQueue.getStats("webhooks"),
     },
     settlement: {
       onchainEnabled: Boolean(settlementWriter),
@@ -1273,7 +1413,48 @@ app.get("/health", async (_req, res) => {
       lastAuthorizationCheckAt: settlementAuthorizationState.lastCheckedAt,
       authorizationError: settlementAuthorizationState.lastError,
     },
+    replayProtection: replayProtection.getStats(),
     proofRuntime: usageService.getProofRuntimeConfig(),
+    slo: (() => {
+      const billingStats = jobQueue.getStats("billing");
+      const webhookStats = jobQueue.getStats("webhooks");
+      const webhookFailures = webhookService
+        ? webhookService.getDeliveryLog(200).filter((e) => !e.success).length
+        : 0;
+
+      const breaches: string[] = [];
+
+      // SLO 1: Billing queue dead-letter must stay at 0
+      if (billingStats.deadLetter > 0) {
+        breaches.push(`billing_dead_letter: ${billingStats.deadLetter} jobs require manual replay`);
+      }
+      // SLO 2: Webhook dead-letter must stay at 0
+      if (webhookStats.deadLetter > 0) {
+        breaches.push(`webhook_dead_letter: ${webhookStats.deadLetter} jobs require manual replay`);
+      }
+      // SLO 3: Billing queue backlog < 50 (indicates dashboard bridge is lagging)
+      if (billingStats.pending > 50) {
+        breaches.push(`billing_backlog: ${billingStats.pending} pending (SLO: <50)`);
+      }
+      // SLO 4: Webhook failure rate < 10 in last 200 deliveries
+      if (webhookFailures > 10) {
+        breaches.push(`webhook_failure_rate: ${webhookFailures}/200 recent deliveries failed (SLO: <10)`);
+      }
+      // SLO 5: RPC connectivity — block number must be available
+      if (!blockNumber) {
+        breaches.push("rpc_connectivity: unable to read latest block — check RPC_URL");
+      }
+      // SLO 6: Settler authorization must be valid when on-chain settlement is enabled
+      if (settlementWriter && !settlementAuthorizationState.authorized) {
+        breaches.push("settler_authorization: on-chain settler is not authorized — settlement will fail");
+      }
+
+      return {
+        ok: breaches.length === 0,
+        breachCount: breaches.length,
+        breaches,
+      };
+    })(),
   });
 });
 
@@ -1326,6 +1507,22 @@ app.use(
         );
       }
     });
+    next();
+  },
+  // ── Replay protection — reject replayed x402 payment headers ────────────
+  (req, res, next) => {
+    const rawHeader = req.headers["x-payment"];
+    if (typeof rawHeader === "string" && rawHeader) {
+      const paymentId = X402ReplayProtection.paymentIdFromHeader(rawHeader);
+      if (replayProtection.checkAndRecord(paymentId)) {
+        x402ReplayRejections.inc();
+        res.setHeader("x-meap-rejection-reason", "replay_detected");
+        return res.status(402).json({
+          error: "Payment replay detected. Each x-payment header may only be used once.",
+          code: "REPLAY_DETECTED",
+        });
+      }
+    }
     next();
   },
   x402WalletLimiter,
@@ -2303,8 +2500,64 @@ app.get("/api/invoices/status", (_req, res) => {
   res.json({
     dashboardBridgeConfigured: Boolean(DASHBOARD_URL && DASHBOARD_TEAM_ID),
     bridgeStats: billingBridgeStats,
+    queueStats: {
+      billing: jobQueue.getStats("billing"),
+      webhooks: jobQueue.getStats("webhooks"),
+    },
   });
 });
+
+// ============================================================
+//  Operator — Durable Queue Management
+//  Requires FACILITATOR_SECRET if configured.
+// ============================================================
+
+// GET  /api/ops/queue/:name/dead-letter    — list dead-letter jobs
+// POST /api/ops/queue/:name/dead-letter/:jobId/replay — replay one job
+// POST /api/ops/queue/:name/dead-letter/replay-all    — replay all dead-letter jobs
+
+app.get(
+  "/api/ops/queue/:name/dead-letter",
+  requireFacilitatorSecretIfConfigured,
+  (req, res) => {
+    const name = String(req.params.name);
+    const jobs = jobQueue.getDeadLetterJobs(name);
+    res.json({ queue: name, count: jobs.length, jobs });
+  },
+);
+
+app.post(
+  "/api/ops/queue/:name/dead-letter/replay-all",
+  requireFacilitatorSecretIfConfigured,
+  (req, res) => {
+    const name = String(req.params.name);
+    const count = jobQueue.replayAllDeadLetter(name);
+    res.json({ ok: true, queue: name, requeued: count });
+  },
+);
+
+app.post(
+  "/api/ops/queue/:name/dead-letter/:jobId/replay",
+  requireFacilitatorSecretIfConfigured,
+  (req, res) => {
+    const name = String(req.params.name);
+    const jobId = String(req.params.jobId);
+    const replayed = jobQueue.replayDeadLetterJob(name, jobId);
+    if (!replayed) {
+      return res.status(404).json({ error: "Job not found in dead-letter queue" });
+    }
+    res.json({ ok: true, queue: name, jobId, message: "Job re-enqueued for retry" });
+  },
+);
+
+// GET /api/ops/replay-protection/stats — x402 replay protection stats
+app.get(
+  "/api/ops/replay-protection/stats",
+  requireFacilitatorSecretIfConfigured,
+  (_req, res) => {
+    res.json(replayProtection.getStats());
+  },
+);
 
 // ============================================================
 //  Proof Orchestrator Monitoring
@@ -2387,6 +2640,8 @@ process.on("SIGTERM", () => {
   billingKeeper?.stop();
   webhookService?.stop();
   void redisUsageStore?.stop();
+  jobQueue.stop();
+  replayProtection.stop();
   process.exit(0);
 });
 

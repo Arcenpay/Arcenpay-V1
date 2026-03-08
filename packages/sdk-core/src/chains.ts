@@ -75,6 +75,23 @@ export const TOKENS = {
 export const DEFAULT_CHAIN_ID: SupportedChainId = 11155111; // Sepolia for development
 
 /**
+ * Returns the block explorer transaction URL for a given chainId and tx hash.
+ * Falls back to an empty string if the chainId is unknown.
+ */
+export function getBlockExplorerUrl(chainId: number, txHash: string): string {
+  const chainMap: Record<number, Chain> = {
+    11155111: sepolia,
+    84532: baseSepolia,
+    8453: baseMainnet,
+  };
+  const chain = chainMap[chainId];
+  if (!chain) return '';
+  const explorerUrl = chain.blockExplorers?.default?.url;
+  if (!explorerUrl) return '';
+  return `${explorerUrl}/tx/${txHash}`;
+}
+
+/**
  * Resolves a viem Chain object from a numeric chainId.
  * Throws if the chain is not supported.
  */

@@ -9,8 +9,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-
-const FACILITATOR_SECRET = process.env.FACILITATOR_SECRET;
+import { FACILITATOR_SECRET } from "@/lib/config";
 
 export async function GET(req: NextRequest) {
   // Auth check — require the shared secret header

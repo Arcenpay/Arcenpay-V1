@@ -22,7 +22,7 @@ export type {
   SubscriptionEventData,
   SubscriptionEventType,
 } from "./services/events";
-export { WebhookService } from "./services/webhooks";
+export { WebhookService, verifyWebhookSignature } from "./services/webhooks";
 export type {
   WebhookConfig,
   WebhookPayload,

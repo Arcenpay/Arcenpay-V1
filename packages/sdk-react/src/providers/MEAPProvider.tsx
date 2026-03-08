@@ -58,15 +58,30 @@ export function MEAPProvider({
         ? (process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID ?? "")
         : "");
 
+    // Allow per-chain RPC URL overrides via env vars:
+    // NEXT_PUBLIC_RPC_URL_<chainId> takes precedence, then NEXT_PUBLIC_RPC_URL as a global fallback.
+    const getRpcTransport = (id: number) => {
+      const specific =
+        typeof process !== "undefined"
+          ? process.env[`NEXT_PUBLIC_RPC_URL_${id}`]
+          : undefined;
+      const global_ =
+        typeof process !== "undefined"
+          ? process.env.NEXT_PUBLIC_RPC_URL
+          : undefined;
+      const url = specific ?? global_;
+      return url ? http(url) : http();
+    };
+
     return createConfig({
       chains: [sepolia, baseSepolia, base],
       connectors: projectId
         ? [injected(), walletConnect({ projectId })]
         : [injected()],
       transports: {
-        [sepolia.id]: http(),
-        [baseSepolia.id]: http(),
-        [base.id]: http(),
+        [sepolia.id]: getRpcTransport(sepolia.id),
+        [baseSepolia.id]: getRpcTransport(baseSepolia.id),
+        [base.id]: getRpcTransport(base.id),
       },
       ssr: true,
     });
@@ -97,9 +112,16 @@ export function MEAPProvider({
       contracts,
     };
 
+    const litNetwork: MEAPConfig["litNetwork"] =
+      userConfig?.litNetwork ??
+      ((typeof process !== "undefined"
+        ? process.env.NEXT_PUBLIC_LIT_NETWORK
+        : undefined) as MEAPConfig["litNetwork"] | undefined) ??
+      "manzano";
+
     const config: MEAPConfig = {
       network,
-      litNetwork: userConfig?.litNetwork ?? "manzano",
+      litNetwork,
       ...userConfig,
     };
 

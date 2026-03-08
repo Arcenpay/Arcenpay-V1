@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
   await writeAuditEvent({
     request,
     teamId: auth.team.teamId,
-    clerkUserId: auth.team.userId,
+    userId: auth.team.userId,
     walletAddress: auth.team.walletAddress,
     action: "catalog.credit.create",
     resourceType: "CatalogCreditType",
@@ -174,7 +174,7 @@ export async function PUT(request: NextRequest) {
   await writeAuditEvent({
     request,
     teamId: auth.team.teamId,
-    clerkUserId: auth.team.userId,
+    userId: auth.team.userId,
     walletAddress: auth.team.walletAddress,
     action: "catalog.credit.update",
     resourceType: "CatalogCreditType",

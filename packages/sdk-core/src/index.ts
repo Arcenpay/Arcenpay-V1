@@ -59,6 +59,7 @@ export {
   SessionVaultABI,
   ZKUsageVerifierABI,
   FeeCollectorABI,
+  MirrorRegistryABI,
 } from './abis';
 
 // Constants
@@ -90,4 +91,4 @@ export { createSmartAccount } from './accounts';
 export type { SmartAccountInput, SmartAccountResult } from './accounts';
 
 // Chain helpers
-export { getChain } from './chains';
+export { getChain, getBlockExplorerUrl } from './chains';

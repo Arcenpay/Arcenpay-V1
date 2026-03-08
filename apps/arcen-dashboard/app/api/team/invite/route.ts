@@ -14,6 +14,11 @@ import { getSession } from "@/lib/auth.server";
 import { resolveTeamContext } from "@/lib/team-session";
 import { db } from "@/lib/db";
 import { writeAuditEvent } from "@/lib/audit";
+import { rateLimit, applyRateLimitHeaders } from "@/lib/rate-limit";
+
+// 5 invites per team per hour — prevents invite spam
+const INVITE_LIMIT = 5;
+const INVITE_WINDOW_MS = 60 * 60 * 1000;
 
 const InviteSchema = z.object({
   email: z.string().email(),
@@ -36,6 +41,16 @@ export async function POST(req: NextRequest) {
 
     if (team.teamRole !== "OWNER" && team.teamRole !== "ADMIN") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const rl = rateLimit(`invite:${team.teamId}`, INVITE_LIMIT, INVITE_WINDOW_MS);
+    if (!rl.ok) {
+      const res = NextResponse.json(
+        { error: "Too many invitations sent. Please wait before sending more." },
+        { status: 429 },
+      );
+      applyRateLimitHeaders(res.headers, rl, INVITE_LIMIT);
+      return res;
     }
 
     const body = await req.json();
@@ -100,7 +115,7 @@ export async function POST(req: NextRequest) {
     await writeAuditEvent({
       request: req,
       teamId: team.teamId,
-      clerkUserId: team.userId,
+      userId: team.userId,
       walletAddress: team.walletAddress,
       action: "team.invite",
       resourceType: "TeamMember",

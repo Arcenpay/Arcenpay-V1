@@ -190,7 +190,20 @@ export class WebhookService {
     }
 
     /**
-     * Verify an incoming webhook signature (for consumers)
+     * Verify an incoming webhook signature (for consumers).
+     *
+     * @example
+     * ```ts
+     * import { verifyWebhookSignature } from '@meap/node';
+     *
+     * app.post('/webhooks/meap', (req, res) => {
+     *   const raw = JSON.stringify(req.body);
+     *   const sig = req.headers['x-meap-signature'] as string;
+     *   if (!verifyWebhookSignature(raw, sig, process.env.MEAP_WEBHOOK_SECRET!)) {
+     *     return res.status(401).json({ error: 'Invalid signature' });
+     *   }
+     * });
+     * ```
      */
     static verifySignature(body: string, signature: string, secret: string): boolean {
         const expected = createHmac('sha256', secret).update(body).digest('hex');
@@ -206,4 +219,20 @@ export class WebhookService {
         }
         this.pendingRetries.clear();
     }
+}
+
+/**
+ * Standalone helper for verifying incoming MEAP webhook signatures.
+ * Equivalent to `WebhookService.verifySignature()` — exported for tree-shaking convenience.
+ *
+ * @param body      - Raw request body string (before any JSON.parse)
+ * @param signature - Value from the `X-MEAP-Signature` request header
+ * @param secret    - Shared HMAC signing secret configured on the provider's webhook endpoint
+ */
+export function verifyWebhookSignature(
+    body: string,
+    signature: string,
+    secret: string,
+): boolean {
+    return WebhookService.verifySignature(body, signature, secret);
 }

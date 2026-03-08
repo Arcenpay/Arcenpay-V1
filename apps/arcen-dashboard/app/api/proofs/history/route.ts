@@ -1,12 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth.server";
-
-const FACILITATOR_URL =
-  process.env.FACILITATOR_BASE_URL ||
-  process.env.FACILITATOR_URL ||
-  process.env.NEXT_PUBLIC_FACILITATOR_BASE_URL ||
-  process.env.NEXT_PUBLIC_FACILITATOR_URL ||
-  "http://localhost:3402";
+import { FACILITATOR_URL, FACILITATOR_SECRET } from "@/lib/config";
 
 export async function GET(request: NextRequest) {
   const session = await getSession();
@@ -27,8 +21,8 @@ export async function GET(request: NextRequest) {
         method: "GET",
         headers: {
           Accept: "application/json",
-          ...(process.env.FACILITATOR_SECRET
-            ? { Authorization: `Bearer ${process.env.FACILITATOR_SECRET}` }
+          ...(FACILITATOR_SECRET
+            ? { Authorization: `Bearer ${FACILITATOR_SECRET}` }
             : {}),
         },
         cache: "no-store",

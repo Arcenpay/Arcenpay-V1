@@ -7,6 +7,7 @@ import { writeAuditEvent } from "@/lib/audit";
 import { toPrismaNullableJson } from "@/lib/prisma-json";
 import { ensureInvoicePdfForTeam } from "@/lib/invoice-documents";
 import { sendInvoiceEmail } from "@/lib/email";
+import { billingAddressSchema } from "@/lib/invoice-tax";
 
 const listSchema = z.object({
   status: z.enum(["DRAFT", "ISSUED", "PAID", "VOID", "OVERDUE"]).optional(),
@@ -25,6 +26,8 @@ const createSchema = z.object({
   dueAt: z.string().datetime().optional(),
   planId: z.string().optional(),
   metadata: z.record(z.unknown()).optional(),
+  /** Billing address with country-specific tax field validation (US: state/zip/EIN; India: GSTIN/HSN) */
+  billingAddress: billingAddressSchema.optional(),
   lines: z
     .array(
       z.object({
@@ -153,7 +156,10 @@ export async function POST(request: NextRequest) {
       dueAt: parsed.data.dueAt ? new Date(parsed.data.dueAt) : undefined,
       issuedAt: new Date(),
       planId: parsed.data.planId,
-      metadata: toPrismaNullableJson(parsed.data.metadata),
+      metadata: toPrismaNullableJson({
+        ...parsed.data.metadata,
+        ...(parsed.data.billingAddress && { billingAddress: parsed.data.billingAddress }),
+      }),
       lineItems: {
         createMany: { data: lines },
       },
@@ -205,7 +211,7 @@ export async function POST(request: NextRequest) {
   await writeAuditEvent({
     request,
     teamId: auth.team.teamId,
-    clerkUserId: auth.team.userId,
+    userId: auth.team.userId,
     walletAddress: auth.team.walletAddress,
     action: "invoice.create",
     resourceType: "Invoice",

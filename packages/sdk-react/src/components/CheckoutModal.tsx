@@ -16,6 +16,7 @@ import {
   SubscriptionRegistryABI,
   ERC7579AutopayModuleABI,
   getContractAddresses,
+  getBlockExplorerUrl,
   TOKENS,
   createSmartAccount,
 } from "@meap/core";
@@ -67,6 +68,8 @@ export interface CheckoutModalProps {
   deploySmartAccount?: (
     input: SmartAccountDeploymentInput,
   ) => Promise<SmartAccountDeploymentResult>;
+  /** Endpoint for capturing subscriber email. If omitted, email capture is skipped. */
+  subscriberEmailEndpoint?: string;
   className?: string;
 }
 
@@ -92,6 +95,7 @@ export function CheckoutModal({
   onCheckoutComplete,
   onError,
   deploySmartAccount,
+  subscriberEmailEndpoint,
   className = "",
 }: CheckoutModalProps) {
   const { network, isTestnet } = useMEAP();
@@ -475,18 +479,20 @@ export function CheckoutModal({
         return;
       }
 
-      try {
-        await fetch("/api/subscriber/email", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            walletAddress: address,
-            email,
-            planId: planId.toString(),
-          }),
-        });
-      } catch {
-        // Email capture is best-effort; checkout should not be blocked if backend is unreachable.
+      if (subscriberEmailEndpoint) {
+        try {
+          await fetch(subscriberEmailEndpoint, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              walletAddress: address,
+              email,
+              planId: planId.toString(),
+            }),
+          });
+        } catch {
+          // Email capture is best-effort; checkout should not be blocked if backend is unreachable.
+        }
       }
     }
 
@@ -755,7 +761,7 @@ export function CheckoutModal({
           {latestTxHash && (
             <div className="meap-tx-hash">
               <a
-                href={`https://sepolia.etherscan.io/tx/${latestTxHash}`}
+                href={getBlockExplorerUrl(network.chainId, latestTxHash)}
                 target="_blank"
                 rel="noreferrer"
               >

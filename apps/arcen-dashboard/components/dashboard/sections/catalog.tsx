@@ -20,6 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import {
   DropdownMenu,
@@ -46,6 +47,9 @@ import {
   Coins,
 } from "lucide-react";
 import { useEnvironment } from "@/contexts/environment-context";
+import { useWriteContract, useChainId } from "wagmi";
+import { toast } from "sonner";
+import { PlanFactoryABI, getContractAddresses, TOKENS } from "@meap/core";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -66,6 +70,9 @@ interface CatalogPlan {
   version: number;
   publishedAt?: string | null;
   updatedAt: string;
+  chainSyncStatus?: "PENDING" | "SYNCED" | "FAILED" | "NOT_APPLICABLE";
+  onChainPlanId?: string | null;
+  chainSyncError?: string | null;
 }
 
 interface CatalogAddOn {
@@ -137,10 +144,38 @@ const NEXT_STATUS: Partial<Record<CatalogStatus, CatalogStatus[]>> = {
 
 // ─── Publish Summary Dialog ────────────────────────────────────────────────────
 
+type ChainSyncStatus = "PENDING" | "SYNCED" | "FAILED" | "NOT_APPLICABLE";
+
+interface PublishedEntity {
+  id: string;
+  name: string;
+  chainSyncStatus: ChainSyncStatus;
+  onChainPlanId?: string | null;
+  code?: string;
+  tier?: string;
+}
+
 interface PublishResult {
-  plans: number;
-  addOns: number;
-  credits: number;
+  plans: PublishedEntity[];
+  addOns: PublishedEntity[];
+  credits: PublishedEntity[];
+}
+
+interface ChainSyncInfo {
+  required: boolean;
+  pendingCount: number;
+  pendingPlanIds: string[];
+  message: string;
+}
+
+function ChainSyncBadge({ status }: { status: ChainSyncStatus }) {
+  if (status === "SYNCED")
+    return <Badge variant="default" className="bg-green-600 text-white text-xs">On-chain</Badge>;
+  if (status === "PENDING")
+    return <Badge variant="secondary" className="text-yellow-600 border-yellow-400 text-xs">Needs sync</Badge>;
+  if (status === "FAILED")
+    return <Badge variant="destructive" className="text-xs">Sync failed</Badge>;
+  return <Badge variant="outline" className="text-xs text-muted-foreground">Off-chain</Badge>;
 }
 
 function PublishButton({
@@ -152,10 +187,13 @@ function PublishButton({
 }) {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<PublishResult | null>(null);
+  const [chainSync, setChainSync] = useState<ChainSyncInfo | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
 
   async function handlePublish() {
     setLoading(true);
+    setError(null);
     try {
       const res = await fetch("/api/catalog/publish", {
         method: "POST",
@@ -165,13 +203,21 @@ function PublishButton({
       const data = await res.json();
       if (res.ok) {
         setResult(data.published);
+        setChainSync(data.chainSync ?? null);
         setOpen(true);
         onPublished();
+      } else {
+        setError(data.error ?? "Publish failed");
       }
     } finally {
       setLoading(false);
     }
   }
+
+  const totalPublished =
+    (result?.plans.length ?? 0) +
+    (result?.addOns.length ?? 0) +
+    (result?.credits.length ?? 0);
 
   return (
     <>
@@ -186,30 +232,68 @@ function PublishButton({
           ? "Publishing…"
           : `Publish Drafts (${env === "DEVELOPMENT" ? "Dev" : "Prod"})`}
       </Button>
+      {error && (
+        <p className="text-xs text-destructive mt-1">{error}</p>
+      )}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Catalog Published</DialogTitle>
+            <DialogDescription>
+              {totalPublished} item{totalPublished !== 1 ? "s" : ""} published to{" "}
+              <strong>{env}</strong>.
+            </DialogDescription>
           </DialogHeader>
           {result && (
-            <div className="space-y-2 text-sm">
-              <p>
-                All DRAFT items in <strong>{env}</strong> have been published.
-              </p>
-              <ul className="list-disc list-inside text-muted-foreground space-y-1">
-                <li>
-                  {result.plans} plan{result.plans !== 1 ? "s" : ""}
-                </li>
-                <li>
-                  {result.addOns} add-on{result.addOns !== 1 ? "s" : ""}
-                </li>
-                <li>
-                  {result.credits} credit type{result.credits !== 1 ? "s" : ""}
-                </li>
-              </ul>
+            <div className="space-y-4 text-sm max-h-72 overflow-y-auto">
+              {result.plans.length > 0 && (
+                <div>
+                  <p className="font-medium text-muted-foreground mb-1">Plans ({result.plans.length})</p>
+                  <ul className="space-y-1">
+                    {result.plans.map((p) => (
+                      <li key={p.id} className="flex items-center justify-between gap-2">
+                        <span className="truncate">{p.name} <span className="text-muted-foreground">({p.tier})</span></span>
+                        <ChainSyncBadge status={p.chainSyncStatus} />
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {result.addOns.length > 0 && (
+                <div>
+                  <p className="font-medium text-muted-foreground mb-1">Add-ons ({result.addOns.length})</p>
+                  <ul className="space-y-1">
+                    {result.addOns.map((a) => (
+                      <li key={a.id} className="flex items-center justify-between gap-2">
+                        <span className="truncate">{a.name}</span>
+                        <ChainSyncBadge status={a.chainSyncStatus} />
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {result.credits.length > 0 && (
+                <div>
+                  <p className="font-medium text-muted-foreground mb-1">Credit types ({result.credits.length})</p>
+                  <ul className="space-y-1">
+                    {result.credits.map((c) => (
+                      <li key={c.id} className="flex items-center justify-between gap-2">
+                        <span className="truncate">{c.name}</span>
+                        <ChainSyncBadge status={c.chainSyncStatus} />
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           )}
-          <Button onClick={() => setOpen(false)}>Close</Button>
+          {chainSync?.required && (
+            <div className="rounded-md border border-yellow-400/30 bg-yellow-400/5 p-3 text-xs text-yellow-600 space-y-1">
+              <p className="font-medium">{chainSync.pendingCount} plan(s) need on-chain registration</p>
+              <p className="text-muted-foreground">{chainSync.message}</p>
+            </div>
+          )}
+          <Button onClick={() => setOpen(false)}>Done</Button>
         </DialogContent>
       </Dialog>
     </>
@@ -876,6 +960,9 @@ function PlansTable({ env, refresh }: { env: EnvMode; refresh: number }) {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<CatalogStatus | "">("");
   const [updating, setUpdating] = useState<string | null>(null);
+  const [syncingPlanId, setSyncingPlanId] = useState<string | null>(null);
+  const { writeContractAsync } = useWriteContract();
+  const chainId = useChainId();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -907,6 +994,51 @@ function PlansTable({ env, refresh }: { env: EnvMode; refresh: number }) {
       if (res.ok) load();
     } finally {
       setUpdating(null);
+    }
+  }
+
+  async function registerOnChain(plan: CatalogPlan) {
+    setSyncingPlanId(plan.id);
+    try {
+      const contracts = getContractAddresses(chainId);
+      const planFactoryAddress = contracts.planFactory as `0x${string}`;
+      if (!planFactoryAddress || planFactoryAddress === "0x0000000000000000000000000000000000000000") {
+        toast.error("PlanFactory not deployed on this chain");
+        return;
+      }
+      const priceInUsdc = BigInt(Math.round(parseFloat(plan.price) * 1_000_000));
+      const billingIntervalSeconds = plan.billingInterval * 86400;
+      const usdcAddress = (
+        TOKENS[chainId as keyof typeof TOKENS]?.USDC ?? plan.acceptedToken
+      ) as `0x${string}`;
+      const txHash = await writeContractAsync({
+        address: planFactoryAddress,
+        abi: PlanFactoryABI,
+        functionName: "createPlan",
+        args: [plan.name, plan.tier, priceInUsdc, billingIntervalSeconds, usdcAddress, ""],
+      });
+      await fetch("/api/catalog/chain-sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ planId: plan.id, txHash, success: true }),
+      });
+      toast.success(`Plan registered on-chain: ${txHash.slice(0, 10)}…`);
+      load();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Registration failed";
+      await fetch("/api/catalog/chain-sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          planId: plan.id,
+          txHash: "0x" + "0".repeat(64),
+          success: false,
+          errorMessage: message,
+        }),
+      }).catch(() => {});
+      toast.error(message);
+    } finally {
+      setSyncingPlanId(null);
     }
   }
 
@@ -956,6 +1088,7 @@ function PlansTable({ env, refresh }: { env: EnvMode; refresh: number }) {
               <TableHead>Interval</TableHead>
               <TableHead>Token</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Chain</TableHead>
               <TableHead>v</TableHead>
               <TableHead />
             </TableRow>
@@ -963,6 +1096,9 @@ function PlansTable({ env, refresh }: { env: EnvMode; refresh: number }) {
           <TableBody>
             {plans.map((plan) => {
               const transitions = NEXT_STATUS[plan.status] ?? [];
+              const needsChainSync =
+                plan.status === "PUBLISHED" &&
+                (plan.chainSyncStatus === "PENDING" || plan.chainSyncStatus === "FAILED");
               return (
                 <TableRow key={plan.id}>
                   <TableCell className="font-medium">{plan.name}</TableCell>
@@ -977,33 +1113,48 @@ function PlansTable({ env, refresh }: { env: EnvMode; refresh: number }) {
                   <TableCell>
                     <StatusBadge status={plan.status} />
                   </TableCell>
+                  <TableCell>
+                    {plan.chainSyncStatus && plan.chainSyncStatus !== "NOT_APPLICABLE" ? (
+                      <ChainSyncBadge status={plan.chainSyncStatus} />
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
                   <TableCell className="text-xs text-muted-foreground">
                     v{plan.version}
                   </TableCell>
                   <TableCell>
-                    {transitions.length > 0 && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            disabled={updating === plan.id}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          disabled={updating === plan.id || syncingPlanId === plan.id}
+                        >
+                          <MoreHorizontal className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {transitions.map((s) => (
+                          <DropdownMenuItem
+                            key={s}
+                            onClick={() => updateStatus(plan.id, s)}
                           >
-                            <MoreHorizontal className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          {transitions.map((s) => (
-                            <DropdownMenuItem
-                              key={s}
-                              onClick={() => updateStatus(plan.id, s)}
-                            >
-                              Mark as {s}
-                            </DropdownMenuItem>
-                          ))}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
+                            Mark as {s}
+                          </DropdownMenuItem>
+                        ))}
+                        {needsChainSync && (
+                          <DropdownMenuItem
+                            onClick={() => registerOnChain(plan)}
+                            disabled={syncingPlanId === plan.id}
+                          >
+                            {syncingPlanId === plan.id
+                              ? "Registering…"
+                              : "Register On-Chain"}
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </TableCell>
                 </TableRow>
               );

@@ -11,11 +11,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
-
-const FACILITATOR_URL =
-  process.env.FACILITATOR_URL ||
-  process.env.FACILITATOR_BASE_URL ||
-  "http://localhost:3402";
+import { FACILITATOR_URL, FACILITATOR_SECRET } from "@/lib/config";
 
 const EmailSchema = z.object({
   walletAddress: z
@@ -54,8 +50,8 @@ export async function POST(request: NextRequest) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        ...(process.env.FACILITATOR_SECRET
-          ? { Authorization: `Bearer ${process.env.FACILITATOR_SECRET}` }
+        ...(FACILITATOR_SECRET
+          ? { Authorization: `Bearer ${FACILITATOR_SECRET}` }
           : {}),
       },
       body: JSON.stringify({ walletAddress, email, planId }),

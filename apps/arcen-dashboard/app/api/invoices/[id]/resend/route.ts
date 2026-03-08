@@ -4,6 +4,11 @@ import { requirePermission, isErrorResponse } from "@/lib/api-auth";
 import { sendInvoiceEmail } from "@/lib/email";
 import { writeAuditEvent } from "@/lib/audit";
 import { ensureInvoicePdfForTeam } from "@/lib/invoice-documents";
+import { rateLimit, applyRateLimitHeaders } from "@/lib/rate-limit";
+
+// 3 resends per invoice per hour — prevents accidental email flooding
+const RESEND_LIMIT = 3;
+const RESEND_WINDOW_MS = 60 * 60 * 1000;
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -12,6 +17,16 @@ export async function POST(request: NextRequest, context: Params) {
   if (isErrorResponse(auth)) return auth;
 
   const { id } = await context.params;
+
+  const rl = rateLimit(`resend:${id}`, RESEND_LIMIT, RESEND_WINDOW_MS);
+  if (!rl.ok) {
+    const res = NextResponse.json(
+      { error: "This invoice has been resent too many times recently. Please wait before retrying." },
+      { status: 429 },
+    );
+    applyRateLimitHeaders(res.headers, rl, RESEND_LIMIT);
+    return res;
+  }
   const invoice = await db.invoice.findFirst({
     where: { id, teamId: auth.team.teamId },
     include: { deliveries: { orderBy: { createdAt: "desc" }, take: 1 } },
@@ -58,7 +73,7 @@ export async function POST(request: NextRequest, context: Params) {
     await writeAuditEvent({
       request,
       teamId: auth.team.teamId,
-      clerkUserId: auth.team.userId,
+      userId: auth.team.userId,
       walletAddress: auth.team.walletAddress,
       action: "invoice.resend",
       resourceType: "InvoiceDelivery",
@@ -82,7 +97,7 @@ export async function POST(request: NextRequest, context: Params) {
     await writeAuditEvent({
       request,
       teamId: auth.team.teamId,
-      clerkUserId: auth.team.userId,
+      userId: auth.team.userId,
       walletAddress: auth.team.walletAddress,
       action: "invoice.resend.failed",
       resourceType: "InvoiceDelivery",

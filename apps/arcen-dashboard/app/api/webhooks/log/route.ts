@@ -9,13 +9,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth.server";
 import { resolveTeamContext } from "@/lib/team-session";
 import { db } from "@/lib/db";
-
-const FACILITATOR_URL =
-  process.env.FACILITATOR_BASE_URL ||
-  process.env.FACILITATOR_URL ||
-  process.env.NEXT_PUBLIC_FACILITATOR_BASE_URL ||
-  process.env.NEXT_PUBLIC_FACILITATOR_URL ||
-  "http://localhost:3402";
+import { FACILITATOR_URL, FACILITATOR_SECRET } from "@/lib/config";
 
 export async function GET(request: NextRequest) {
   // Require a valid session
@@ -59,8 +53,8 @@ export async function GET(request: NextRequest) {
         headers: {
           "Content-Type": "application/json",
           // Internal facilitator auth token
-          ...(process.env.FACILITATOR_SECRET
-            ? { Authorization: `Bearer ${process.env.FACILITATOR_SECRET}` }
+          ...(FACILITATOR_SECRET
+            ? { Authorization: `Bearer ${FACILITATOR_SECRET}` }
             : {}),
         },
         next: { revalidate: 0 },

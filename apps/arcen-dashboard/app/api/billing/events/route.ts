@@ -5,8 +5,7 @@ import { allocateInvoiceNumber, toSix } from "@/lib/invoices";
 import { toPrismaJson } from "@/lib/prisma-json";
 import { ensureInvoicePdfForTeam } from "@/lib/invoice-documents";
 import { sendInvoiceEmail } from "@/lib/email";
-
-const FACILITATOR_SECRET = process.env.FACILITATOR_SECRET;
+import { FACILITATOR_SECRET } from "@/lib/config";
 
 const eventSchema = z.object({
   teamId: z.string().min(1),

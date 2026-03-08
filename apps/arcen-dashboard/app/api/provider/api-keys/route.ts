@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
   await writeAuditEvent({
     request,
     teamId,
-    clerkUserId: session.clerkUserId,
+    userId: session.clerkUserId,
     action: "provider.api_key.generate",
     resourceType: "ProviderProfile",
     resourceId: teamId,
@@ -78,7 +78,7 @@ export async function DELETE(request: NextRequest) {
   await writeAuditEvent({
     request,
     teamId,
-    clerkUserId: session.clerkUserId,
+    userId: session.clerkUserId,
     action: "provider.api_key.revoke",
     resourceType: "ProviderProfile",
     resourceId: teamId,

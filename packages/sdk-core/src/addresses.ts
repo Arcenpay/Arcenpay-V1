@@ -1,6 +1,14 @@
 // ============================================================
 //  @meap/core — Contract Addresses
 //  Deployed contract address registry per network
+//
+//  Runtime override: set MEAP_CONTRACT_<chainId>_<key> to inject
+//  addresses without redeploying the package — e.g.:
+//    MEAP_CONTRACT_8453_planFactory=0xAbCd...
+//
+//  Zero-address guard: calling getContractAddresses() for a chain
+//  whose addresses are all zero-address placeholders throws in
+//  NODE_ENV=production so misconfigured deployments fail fast.
 // ============================================================
 
 import type { ContractAddresses } from './types';
@@ -17,7 +25,7 @@ const ADDRESSES: Record<number, ContractAddresses> = {
     zkUsageVerifier: '0x265E0dC80b00044d183AFa83237F5976bB4d585c',
     mirrorRegistry: '0x05BdaB1b4A87a4a5DF3Af1Ebb9Da853A0d31592E',
   },
-  // Base Sepolia (Testnet) — future deployment
+  // Base Sepolia (Testnet) — set MEAP_CONTRACT_84532_* env vars after deployment
   84532: {
     subscriptionRegistry: '0x0000000000000000000000000000000000000000',
     autopayModule: '0x0000000000000000000000000000000000000000',
@@ -25,8 +33,9 @@ const ADDRESSES: Record<number, ContractAddresses> = {
     feeCollector: '0x0000000000000000000000000000000000000000',
     sessionVault: '0x0000000000000000000000000000000000000000',
     zkUsageVerifier: '0x0000000000000000000000000000000000000000',
+    mirrorRegistry: '0x0000000000000000000000000000000000000000',
   },
-  // Base Mainnet — populated after audit + mainnet deployment
+  // Base Mainnet — set MEAP_CONTRACT_8453_* env vars after audit + deployment
   8453: {
     subscriptionRegistry: '0x0000000000000000000000000000000000000000',
     autopayModule: '0x0000000000000000000000000000000000000000',
@@ -34,24 +43,79 @@ const ADDRESSES: Record<number, ContractAddresses> = {
     feeCollector: '0x0000000000000000000000000000000000000000',
     sessionVault: '0x0000000000000000000000000000000000000000',
     zkUsageVerifier: '0x0000000000000000000000000000000000000000',
+    mirrorRegistry: '0x0000000000000000000000000000000000000000',
   },
 };
 
+const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
+
+const CONTRACT_KEYS: (keyof ContractAddresses)[] = [
+  'subscriptionRegistry',
+  'autopayModule',
+  'planFactory',
+  'feeCollector',
+  'sessionVault',
+  'zkUsageVerifier',
+];
+
 /**
- * Returns contract addresses for a given chain
+ * Applies MEAP_CONTRACT_<chainId>_<key> env var overrides to a base addresses object.
+ * This allows injecting deployed addresses for new chains without redeploying the package.
+ */
+function applyEnvOverrides(chainId: number, base: ContractAddresses): ContractAddresses {
+  if (typeof process === 'undefined') return base;
+  const result = { ...base };
+  for (const key of CONTRACT_KEYS) {
+    const envKey = `MEAP_CONTRACT_${chainId}_${key}`;
+    const override = process.env[envKey];
+    if (override && override.startsWith('0x')) {
+      (result as unknown as Record<string, string>)[key] = override;
+    }
+  }
+  // mirrorRegistry is optional — check separately
+  const mirrorOverride = process.env[`MEAP_CONTRACT_${chainId}_mirrorRegistry`];
+  if (mirrorOverride && mirrorOverride.startsWith('0x')) {
+    result.mirrorRegistry = mirrorOverride;
+  }
+  return result;
+}
+
+/**
+ * Returns contract addresses for a given chain.
+ *
+ * In NODE_ENV=production, throws if all core contract addresses are still
+ * zero-address placeholders — the chain has not been deployed to.
+ *
  * @param chainId - The chain ID
- * @returns Contract addresses for the chain
+ * @returns Contract addresses for the chain, with any env var overrides applied
  */
 export function getContractAddresses(chainId: number): ContractAddresses {
-  const addresses = ADDRESSES[chainId];
-  if (!addresses) {
+  const base = ADDRESSES[chainId];
+  if (!base) {
     throw new Error(`No contract addresses configured for chain ${chainId}`);
   }
+
+  const addresses = applyEnvOverrides(chainId, base);
+
+  // In production, reject chains with only zero-address placeholders.
+  // A chain is considered undeployed if ALL core contracts are zero.
+  if (typeof process !== 'undefined' && process.env.NODE_ENV === 'production') {
+    const allZero = CONTRACT_KEYS.every(
+      (k) => (addresses as unknown as Record<string, string>)[k] === ZERO_ADDRESS,
+    );
+    if (allZero) {
+      throw new Error(
+        `[getContractAddresses] Chain ${chainId} has no deployed contracts. ` +
+          `Set MEAP_CONTRACT_${chainId}_<key> env vars or deploy contracts before using this chain in production.`,
+      );
+    }
+  }
+
   return addresses;
 }
 
 /**
- * Updates contract addresses (used in tests and after deployment)
+ * Updates contract addresses (used in tests and after deployment).
  */
 export function setContractAddresses(chainId: number, addresses: Partial<ContractAddresses>): void {
   ADDRESSES[chainId] = {

@@ -207,11 +207,21 @@ export function x402Middleware(options: X402MiddlewareOptions) {
 
   // ── Nonce deduplication store ──────────────────────────────
   // Uses pluggable NonceStore for durable anti-replay protection.
-  // Falls back to InMemoryNonceStore for backward compatibility.
+  // Falls back to InMemoryNonceStore for single-instance / dev use only.
   let nonceStore: NonceStore;
   if (externalNonceStore) {
     nonceStore = externalNonceStore;
   } else {
+    // Warn in production: InMemoryNonceStore does not survive restarts and
+    // is not safe for multi-instance deployments.  Provide a RedisNonceStore
+    // via the `nonceStore` option to suppress this warning.
+    if (process.env.NODE_ENV === "production") {
+      console.warn(
+        "[x402] WARNING: Using InMemoryNonceStore in production. " +
+          "This does not survive process restarts and is unsafe for multi-instance deployments. " +
+          "Pass a RedisNonceStore (or compatible NonceStore) via the `nonceStore` option.",
+      );
+    }
     // Lazy import to avoid circular deps when NonceStore is unused
     const { InMemoryNonceStore } = require("../services/nonce-store");
     nonceStore = new InMemoryNonceStore();
