@@ -27,6 +27,7 @@ async function ensureTeam(
   walletAddress: string,
   clerkUserId: string,
 ): Promise<{ teamId: string; teamRole: TeamRole }> {
+  // ── 1. Fast path: DB membership already exists ────────────────────────────
   const existing = await db.teamMember.findFirst({
     where: { userId },
     orderBy: { createdAt: "asc" },
@@ -35,14 +36,65 @@ async function ensureTeam(
     return { teamId: existing.teamId, teamRole: existing.role as TeamRole };
   }
 
-  let slug = slugify(`workspace-${walletAddress.slice(2, 8).toLowerCase()}`);
-  if (await db.team.findUnique({ where: { slug } })) {
-    slug = `${slug}-${Date.now()}`;
-  }
-
-  // Create Clerk org for this personal workspace
+  // ── 2. Look up the user's existing Clerk org (auto-create may have fired) ─
+  //    This prevents creating a duplicate DB team with a null clerkOrgId when
+  //    the organizationMembership.created webhook hasn't processed yet.
   const client = await clerkClient();
   let clerkOrgId: string | undefined;
+  let orgName = "My Workspace";
+
+  try {
+    const memberships = await client.users.getOrganizationMembershipList({
+      userId: clerkUserId,
+    });
+    if (memberships.data.length > 0) {
+      const clerkOrg = memberships.data[0].organization;
+      clerkOrgId = clerkOrg.id;
+      orgName = clerkOrg.name;
+    }
+  } catch (err) {
+    console.warn("[link-wallet] Could not fetch Clerk org memberships:", err);
+  }
+
+  // ── 3. If we found a Clerk org, use or create the matching DB team ────────
+  if (clerkOrgId) {
+    const existingTeam = await db.team.findUnique({ where: { clerkOrgId } });
+    if (existingTeam) {
+      // Webhook already created the team — just ensure the membership row exists.
+      await db.teamMember.upsert({
+        where: { userId_teamId: { userId, teamId: existingTeam.id } },
+        create: { userId, teamId: existingTeam.id, role: "OWNER" },
+        update: {},
+      });
+      await db.user.update({
+        where: { id: userId },
+        data: { currentTeamId: existingTeam.id },
+      });
+      return { teamId: existingTeam.id, teamRole: "OWNER" };
+    }
+
+    // Webhook hasn't processed yet — create the DB team now with the real
+    // clerkOrgId so it links up when the webhook does eventually arrive.
+    let slug = slugify(orgName);
+    if (await db.team.findUnique({ where: { slug } })) {
+      slug = `${slug}-${Date.now()}`;
+    }
+    const team = await db.team.create({
+      data: {
+        name: orgName,
+        slug,
+        clerkOrgId,
+        members: { create: { userId, role: "OWNER" } },
+      },
+    });
+    await db.user.update({
+      where: { id: userId },
+      data: { currentTeamId: team.id },
+    });
+    return { teamId: team.id, teamRole: "OWNER" };
+  }
+
+  // ── 4. No Clerk org at all — create one (fallback for edge cases) ─────────
   try {
     const org = await client.organizations.createOrganization({
       name: "My Workspace",
@@ -50,10 +102,13 @@ async function ensureTeam(
     });
     clerkOrgId = org.id;
   } catch (err) {
-    // Non-fatal: team still works without Clerk org linkage
     console.warn("[link-wallet] Could not create Clerk org:", err);
   }
 
+  let slug = slugify(`workspace-${walletAddress.slice(2, 8).toLowerCase()}`);
+  if (await db.team.findUnique({ where: { slug } })) {
+    slug = `${slug}-${Date.now()}`;
+  }
   const team = await db.team.create({
     data: {
       name: "My Workspace",
@@ -62,12 +117,10 @@ async function ensureTeam(
       members: { create: { userId, role: "OWNER" } },
     },
   });
-
   await db.user.update({
     where: { id: userId },
     data: { currentTeamId: team.id },
   });
-
   return { teamId: team.id, teamRole: "OWNER" };
 }
 

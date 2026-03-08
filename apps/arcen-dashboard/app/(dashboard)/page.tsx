@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useOrganization } from "@clerk/nextjs";
+import { useOrganization, useOrganizationList } from "@clerk/nextjs";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { Header } from "@/components/dashboard/header";
 import { OverviewSection } from "@/components/dashboard/sections/overview";
@@ -39,7 +39,10 @@ export type Section =
 export default function Dashboard() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { organization } = useOrganization();
+  const { organization, isLoaded: orgLoaded } = useOrganization();
+  const { isLoaded: listLoaded } = useOrganizationList({
+    userMemberships: { infinite: false },
+  });
   const [activeSection, setActiveSection] = useState<Section>("overview");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
@@ -56,6 +59,41 @@ export default function Dashboard() {
     setActiveSection(section);
     router.push(`/?section=${section}`, { scroll: false });
   };
+
+  // ── Org loading / pending state ──────────────────────────────────────────
+  // orgLoaded: false  →  Clerk is still initialising (show spinner)
+  // orgLoaded: true, organization: null  →  org exists in DB but hasn't synced
+  //   to Clerk's client session yet (webhook race).  Auto-refresh will resolve.
+  if (!orgLoaded || !listLoaded) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full border-2 border-accent border-t-transparent animate-spin" />
+      </div>
+    );
+  }
+
+  if (!organization) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-6">
+        <div className="text-center space-y-4 max-w-sm">
+          <div className="w-10 h-10 rounded-full border-2 border-accent border-t-transparent animate-spin mx-auto" />
+          <h2 className="text-lg font-semibold text-foreground">
+            Loading your workspace…
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Just a moment while we set up your workspace.
+          </p>
+          <button
+            onClick={() => router.refresh()}
+            className="text-sm text-accent hover:underline"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+  // ─────────────────────────────────────────────────────────────────────────
 
   const renderSection = () => {
     switch (activeSection) {
@@ -140,9 +178,8 @@ export default function Dashboard() {
     }
   };
 
-  // Use org ID as key so the entire dashboard remounts when workspace switches,
-  // forcing all data fetches to re-run against the new org context.
-  const orgKey = organization?.id ?? "personal";
+  // organization is guaranteed non-null by the guard above
+  const orgKey = organization.id;
 
   return (
     <EnvironmentProvider key={orgKey}>

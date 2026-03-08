@@ -131,16 +131,20 @@ export function Header({ activeSection }: HeaderProps) {
             : "Connect"}
         </Button>
 
-        {/* Team / Org switcher */}
+        {/* Team / Org switcher — creation disabled (1 org per user, enforced in Clerk) */}
         <OrganizationSwitcher
           hidePersonal
           afterSelectOrganizationUrl="/"
-          afterCreateOrganizationUrl="/"
           appearance={{
             elements: {
               rootBox: "flex items-center",
               organizationSwitcherTrigger:
                 "h-9 px-3 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-secondary border-0 focus:ring-0",
+              // Hide the "Create organization" action since Clerk enforces
+              // a maximum of 1 org per user in this application.
+              organizationSwitcherPopoverActionButton__createOrganization: {
+                display: "none",
+              },
             },
           }}
         />

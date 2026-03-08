@@ -39,7 +39,10 @@ export default async function RootLayout({
   const cookies = headersObj.get("cookie");
 
   return (
-    <ClerkProvider afterSignOutUrl="/sign-in">
+    <ClerkProvider
+      afterSignOutUrl="/sign-in"
+      signUpForceRedirectUrl="/onboarding/wallet"
+    >
       <html lang="en">
         <body className={`font-sans antialiased`}>
           <Web3Provider cookies={cookies}>{children}</Web3Provider>

@@ -8,11 +8,9 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { Webhook } from "svix";
-import { clerkClient } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
 import { slugify } from "@/lib/auth";
 import type { TeamRole } from "@/lib/auth";
-
 
 /**
  * Map Clerk's role string to our TeamRole enum.
@@ -122,27 +120,15 @@ async function handleEvent(event: ClerkWebhookEvent) {
       const emailAddresses =
         (data.email_addresses as Array<{ email_address: string }>) ?? [];
       const email = emailAddresses[0]?.email_address ?? undefined;
-      const firstName = (data.first_name as string) || "";
-      const lastName = (data.last_name as string) || "";
 
       await upsertUserByClerk(clerkUserId, email);
 
-      // Auto-create a personal Clerk organization for every new user.
-      // Clerk will fire organization.created + organizationMembership.created
-      // which syncs the team + owner membership to the DB automatically.
-      try {
-        const orgName =
-          [firstName, lastName].filter(Boolean).join(" ").trim() ||
-          (email ? email.split("@")[0] : null) ||
-          "My Workspace";
-        const client = await clerkClient();
-        await client.organizations.createOrganization({
-          name: `${orgName}'s Workspace`,
-          createdBy: clerkUserId,
-        });
-      } catch (err) {
-        console.warn("[clerk-webhook] Could not create personal org:", err);
-      }
+      // Clerk's "create first organization automatically" setting handles org
+      // creation for every new user.  The resulting organization.created and
+      // organizationMembership.created events will sync the team and owner
+      // membership to the DB, so no manual createOrganization call is needed
+      // here (attempting one would fail with 403 because the user is already at
+      // the org limit).
       break;
     }
 
