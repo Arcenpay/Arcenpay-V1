@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useAccount, useChainId, useReadContracts } from "wagmi";
 import { useQuery } from "@apollo/client";
 import { MetricCard } from "@/components/dashboard/metric-card";
@@ -24,6 +25,11 @@ import { formatUsdc } from "@/lib/format";
 export function OverviewSection() {
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   const contractAddresses = useContractAddresses();
 
   // Batch on-chain reads
@@ -44,14 +50,14 @@ export function OverviewSection() {
         chainId,
       },
     ],
-    query: { enabled: isConnected && !!address },
+    query: { enabled: mounted && isConnected && !!address },
   });
 
   // The Graph for subscriber + revenue stats
   const { data: graphData, loading: graphLoading } = useQuery(
     GET_PROTOCOL_STATS,
     {
-      skip: !isConnected,
+      skip: !mounted || !isConnected,
     },
   );
 
@@ -73,8 +79,8 @@ export function OverviewSection() {
 
   return (
     <div className="space-y-6">
-      {/* Wallet disconnected banner */}
-      {!isConnected && (
+      {/* Wallet disconnected banner — only after mount to avoid SSR/client mismatch */}
+      {mounted && !isConnected && (
         <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-warning/5 border border-warning/20 animate-in fade-in slide-in-from-top-2 duration-300">
           <AlertTriangle className="w-4 h-4 text-warning shrink-0" />
           <p className="text-sm text-muted-foreground">
@@ -87,35 +93,35 @@ export function OverviewSection() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard
           title="Active Subscribers"
-          value={isConnected ? metrics.activeSubscribers : "—"}
+          value={mounted && isConnected ? metrics.activeSubscribers : "—"}
           changeType="neutral"
           icon={Users}
           delay={0}
-          loading={isLoading && isConnected}
+          loading={mounted && isLoading && isConnected}
         />
         <MetricCard
           title="Monthly Recurring Revenue"
-          value={isConnected ? metrics.mrr : "—"}
+          value={mounted && isConnected ? metrics.mrr : "—"}
           changeType="neutral"
           icon={DollarSign}
           delay={1}
-          loading={isLoading && isConnected}
+          loading={mounted && isLoading && isConnected}
         />
         <MetricCard
           title="Protocol Fees Collected"
-          value={isConnected ? metrics.feesCollected : "—"}
+          value={mounted && isConnected ? metrics.feesCollected : "—"}
           changeType="neutral"
           icon={Receipt}
           delay={2}
-          loading={isLoading && isConnected}
+          loading={mounted && isLoading && isConnected}
         />
         <MetricCard
           title="Active Plans"
-          value={isConnected ? metrics.activePlans : "—"}
+          value={mounted && isConnected ? metrics.activePlans : "—"}
           changeType="neutral"
           icon={Layers}
           delay={3}
-          loading={isLoading && isConnected}
+          loading={mounted && isLoading && isConnected}
         />
       </div>
 

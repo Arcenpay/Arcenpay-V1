@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import type { Section } from "@/app/(dashboard)/page";
 import { useOrganization } from "@clerk/nextjs";
@@ -83,6 +83,11 @@ export function Sidebar({
   const { address, isConnected } = useAccount();
   const { organization } = useOrganization();
   const { envMode } = useEnvironment();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Show org name from Clerk directly — always in sync when workspace switches
   const teamName = organization?.name ?? null;
@@ -210,14 +215,14 @@ export function Sidebar({
           <div
             className={cn(
               "w-1.5 h-1.5 rounded-full shrink-0",
-              isConnected ? "bg-success" : "bg-warning animate-pulse",
+              mounted && isConnected ? "bg-success" : "bg-warning animate-pulse",
             )}
           />
           <span className="truncate">
-            {isConnected && shortAddress ? shortAddress : "Not connected"}
+            {mounted && isConnected && shortAddress ? shortAddress : "Not connected"}
           </span>
         </div>
-        {isConnected && (
+        {mounted && isConnected && (
           <p className="text-[10px] text-muted-foreground/50 px-2.5 pb-2 -mt-1 truncate">
             {networkLabel}
           </p>
