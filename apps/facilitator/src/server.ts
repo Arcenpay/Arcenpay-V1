@@ -73,6 +73,8 @@ const chainClient = createPublicClient({
 const FACILITATOR_PROFILE = (
   process.env.FACILITATOR_PROFILE || "development"
 ).toLowerCase();
+const QUEUE_REDIS_REQUIRED =
+  FACILITATOR_PROFILE === "production" || process.env.REDIS_REQUIRED === "true";
 const PROOF_MODE =
   (process.env.PROOF_MODE ||
     (FACILITATOR_PROFILE === "production" ? "strict" : "dev")) === "strict"
@@ -177,8 +179,10 @@ function validateRuntimeConfig(): void {
       );
     }
 
-    if (process.env.REDIS_REQUIRED === "true" && !process.env.REDIS_URL) {
-      errors.push("REDIS_URL is required when REDIS_REQUIRED=true.");
+    if (QUEUE_REDIS_REQUIRED && !process.env.REDIS_URL) {
+      errors.push(
+        "REDIS_URL is required in production (or when REDIS_REQUIRED=true).",
+      );
     }
   }
 
@@ -554,34 +558,46 @@ const jobQueue = new DurableJobQueue({
   keyPrefix: `${process.env.REDIS_PREFIX || "meap"}:queue`,
 });
 
-if (process.env.REDIS_URL) {
-  // Dynamically load ioredis if available to avoid a hard dependency.
-  // ioredis is an optional dep — add it with `npm install ioredis` to enable
-  // queue crash recovery. Without it the queue runs in-memory only.
-  void (async () => {
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const ioredis = require("ioredis") as {
-        default?: new (url: string, opts?: object) => import("./queue.js").IRedisQueue & { connect(): Promise<void> };
-        new (url: string, opts?: object): import("./queue.js").IRedisQueue & { connect(): Promise<void> };
-      };
-      const Ctor = ioredis.default ?? ioredis;
-      const client = new Ctor(process.env.REDIS_URL!, {
-        enableReadyCheck: false,
-        lazyConnect: true,
-        maxRetriesPerRequest: 2,
-      });
-      await client.connect();
-      jobQueue.setRedis(client);
-      console.log("[Facilitator] Queue Redis connected — enabling crash recovery");
-      await jobQueue.recoverFromRedis("billing");
-      await jobQueue.recoverFromRedis("webhooks");
-    } catch {
-      // ioredis not installed or Redis unreachable — queue runs in-memory only
-      console.warn("[Facilitator] Queue Redis unavailable — using in-memory queue (no crash recovery)");
+const queueRedisReady = (async (): Promise<void> => {
+  if (!process.env.REDIS_URL) {
+    if (QUEUE_REDIS_REQUIRED) {
+      throw new Error(
+        "[Facilitator] Queue Redis is required but REDIS_URL is not set.",
+      );
     }
-  })();
-}
+    return;
+  }
+
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const ioredis = require("ioredis") as {
+      default?: new (url: string, opts?: object) => import("./queue.js").IRedisQueue & { connect(): Promise<void> };
+      new (url: string, opts?: object): import("./queue.js").IRedisQueue & { connect(): Promise<void> };
+    };
+    const Ctor = ioredis.default ?? ioredis;
+    const client = new Ctor(process.env.REDIS_URL, {
+      enableReadyCheck: false,
+      lazyConnect: true,
+      maxRetriesPerRequest: 2,
+    });
+    await client.connect();
+    jobQueue.setRedis(client);
+    console.log("[Facilitator] Queue Redis connected — enabling crash recovery");
+    await jobQueue.recoverFromRedis("billing");
+    await jobQueue.recoverFromRedis("webhooks");
+  } catch (err) {
+    if (QUEUE_REDIS_REQUIRED) {
+      throw new Error(
+        `[Facilitator] Queue Redis initialization failed in required mode: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      );
+    }
+    console.warn(
+      "[Facilitator] Queue Redis unavailable — using in-memory queue (no crash recovery)",
+    );
+  }
+})();
 
 // Workers process enqueued jobs with exponential backoff
 jobQueue.startWorker<{ pathname: string; payload: unknown }>(
@@ -2746,7 +2762,7 @@ app.get("/api/proofs/history", (req, res) => {
 //  Start Server
 // ============================================================
 
-app.listen(PORT, () => {
+function logStartupBanner() {
   console.log(`
 ╔══════════════════════════════════════════════╗
 ║                                              ║
@@ -2764,7 +2780,23 @@ app.listen(PORT, () => {
 ║                                              ║
 ╚══════════════════════════════════════════════╝
   `);
-});
+}
+
+void (async () => {
+  try {
+    if (redisReady) {
+      await redisReady;
+    }
+    await queueRedisReady;
+
+    app.listen(PORT, () => {
+      logStartupBanner();
+    });
+  } catch (err) {
+    console.error("[Facilitator] Startup failed:", err);
+    process.exit(1);
+  }
+})();
 
 // Graceful shutdown
 process.on("SIGTERM", () => {

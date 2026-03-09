@@ -151,7 +151,7 @@ export async function GET(request: NextRequest) {
     description: "No production catalog plans are waiting for on-chain registration",
     passed: pendingChainSync === 0,
     detail: pendingChainSync > 0
-      ? `${pendingChainSync} plan(s) in PENDING state. Run PlanFactory.createPlan() and POST /api/catalog/chain-sync.`
+      ? `${pendingChainSync} plan(s) in PENDING state. Run PlanFactory.createPlan() and POST /api/catalog/plans/:id/chain-confirm.`
       : undefined,
   });
 

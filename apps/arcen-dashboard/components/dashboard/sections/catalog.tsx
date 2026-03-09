@@ -1017,20 +1017,19 @@ function PlansTable({ env, refresh }: { env: EnvMode; refresh: number }) {
         functionName: "createPlan",
         args: [plan.name, plan.tier, priceInUsdc, billingIntervalSeconds, usdcAddress, ""],
       });
-      await fetch("/api/catalog/chain-sync", {
+      await fetch(`/api/catalog/plans/${plan.id}/chain-confirm`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ planId: plan.id, txHash, success: true }),
+        body: JSON.stringify({ txHash, success: true }),
       });
       toast.success(`Plan registered on-chain: ${txHash.slice(0, 10)}…`);
       load();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Registration failed";
-      await fetch("/api/catalog/chain-sync", {
+      await fetch(`/api/catalog/plans/${plan.id}/chain-confirm`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          planId: plan.id,
           txHash: "0x" + "0".repeat(64),
           success: false,
           errorMessage: message,
@@ -1510,36 +1509,124 @@ const CHAIN_INFO: Record<
   PRODUCTION: { chainId: 8453, name: "Base Mainnet", color: "bg-orange-400" },
 };
 
+type CatalogConfigSettings = {
+  initialPlan: string;
+  fallbackPlan: string;
+  showBillingPeriodToggle: boolean;
+  freePlanPriceDisplay: boolean;
+  hideCredits: boolean;
+  yearlyDiscountDisplay: boolean;
+  showFeatureDescriptions: boolean;
+  showHardLimits: boolean;
+  upgradeImmediately: boolean;
+  downgradeImmediately: boolean;
+  preventDowngradeOverLimit: boolean;
+  disallowSelfServiceDowngrade: boolean;
+};
+
+const DEFAULT_CONFIG_SETTINGS: CatalogConfigSettings = {
+  initialPlan: "Free",
+  fallbackPlan: "none",
+  showBillingPeriodToggle: true,
+  freePlanPriceDisplay: true,
+  hideCredits: false,
+  yearlyDiscountDisplay: true,
+  showFeatureDescriptions: true,
+  showHardLimits: true,
+  upgradeImmediately: true,
+  downgradeImmediately: false,
+  preventDowngradeOverLimit: true,
+  disallowSelfServiceDowngrade: false,
+};
+
 function ConfigurationTab() {
   const { envMode, setEnvMode } = useEnvironment();
-  const [loadingEnv, setLoadingEnv] = useState(false);
   const [switchTarget, setSwitchTarget] = useState<EnvMode>("DEVELOPMENT");
   const [confirmText, setConfirmText] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [switching, setSwitching] = useState(false);
   const [switchResult, setSwitchResult] = useState<string | null>(null);
   const [switchError, setSwitchError] = useState<string | null>(null);
+  const [loadingConfig, setLoadingConfig] = useState(false);
+  const [savingConfig, setSavingConfig] = useState(false);
+  const [configError, setConfigError] = useState<string | null>(null);
+  const [configSavedMessage, setConfigSavedMessage] = useState<string | null>(null);
 
   // Configuration settings state
-  const [settings, setSettings] = useState({
-    // Initial Plan
-    initialPlan: "Free",
-    fallbackPlan: "none",
+  const [settings, setSettings] = useState<CatalogConfigSettings>(
+    DEFAULT_CONFIG_SETTINGS,
+  );
 
-    // Component Display Settings
-    showBillingPeriodToggle: true,
-    freePlanPriceDisplay: true,
-    hideCredits: false,
-    yearlyDiscountDisplay: true,
-    showFeatureDescriptions: true,
-    showHardLimits: true,
+  useEffect(() => {
+    let cancelled = false;
+    async function loadConfig() {
+      setLoadingConfig(true);
+      setConfigError(null);
+      try {
+        const res = await fetch(
+          `/api/catalog/config?environmentMode=${envMode}`,
+          { cache: "no-store" },
+        );
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(data.error || "Failed to load configuration");
+        }
+        if (cancelled) return;
 
-    // Plan Change Rules
-    upgradeImmediately: true,
-    downgradeImmediately: false,
-    preventDowngradeOverLimit: true,
-    disallowSelfServiceDowngrade: false,
-  });
+        const config = (data.config ?? {}) as Partial<CatalogConfigSettings> & {
+          fallbackPlan?: string | null;
+        };
+        setSettings({
+          ...DEFAULT_CONFIG_SETTINGS,
+          ...config,
+          fallbackPlan: config.fallbackPlan || "none",
+        });
+      } catch (err: unknown) {
+        if (cancelled) return;
+        setConfigError(
+          err instanceof Error ? err.message : "Failed to load configuration",
+        );
+      } finally {
+        if (!cancelled) setLoadingConfig(false);
+      }
+    }
+
+    void loadConfig();
+    return () => {
+      cancelled = true;
+    };
+  }, [envMode]);
+
+  async function handleSaveSettings() {
+    setSavingConfig(true);
+    setConfigError(null);
+    setConfigSavedMessage(null);
+    try {
+      const res = await fetch("/api/catalog/config", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...settings,
+          environmentMode: envMode,
+          fallbackPlan:
+            settings.fallbackPlan === "none" ? null : settings.fallbackPlan,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to save configuration");
+      }
+      setConfigSavedMessage(
+        `Configuration saved for ${envMode === "PRODUCTION" ? "Mainnet" : "Testnet"}.`,
+      );
+    } catch (err: unknown) {
+      setConfigError(
+        err instanceof Error ? err.message : "Failed to save configuration",
+      );
+    } finally {
+      setSavingConfig(false);
+    }
+  }
 
   async function handleSwitch(e: React.FormEvent) {
     e.preventDefault();
@@ -1574,6 +1661,46 @@ function ConfigurationTab() {
 
   return (
     <div className="max-w-5xl space-y-8">
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            setSettings(DEFAULT_CONFIG_SETTINGS);
+            setConfigSavedMessage(null);
+            setConfigError(null);
+          }}
+          disabled={loadingConfig || savingConfig}
+        >
+          Reset
+        </Button>
+        <Button
+          size="sm"
+          onClick={handleSaveSettings}
+          disabled={loadingConfig || savingConfig}
+          className="gap-2"
+        >
+          {savingConfig ? (
+            <>
+              <RefreshCw className="h-4 w-4 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            "Save configuration"
+          )}
+        </Button>
+      </div>
+      {configError && (
+        <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+          {configError}
+        </div>
+      )}
+      {configSavedMessage && (
+        <div className="rounded-md border border-green-500/30 bg-green-500/5 p-3 text-sm text-green-600 dark:text-green-400">
+          {configSavedMessage}
+        </div>
+      )}
+
       {/* Active Environment */}
       <div className="rounded-xl border border-border/50 bg-linear-to-br from-card to-card/50 p-6 shadow-sm space-y-4">
         <div className="flex items-center justify-between">

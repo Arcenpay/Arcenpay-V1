@@ -6,6 +6,7 @@ import { toPrismaJson } from "@/lib/prisma-json";
 import { ensureInvoicePdfForTeam } from "@/lib/invoice-documents";
 import { sendInvoiceEmail } from "@/lib/email";
 import { FACILITATOR_SECRET } from "@/lib/config";
+import { writeAuditEvent } from "@/lib/audit";
 
 const eventSchema = z.object({
   teamId: z.string().min(1),
@@ -146,6 +147,21 @@ export async function POST(request: NextRequest) {
     },
   });
 
+  await writeAuditEvent({
+    request,
+    teamId: data.teamId,
+    action: "billing.event.ingest",
+    resourceType: "BillingEvent",
+    resourceId: event.id,
+    afterData: {
+      id: event.id,
+      eventType: event.eventType,
+      idempotencyKey: event.idempotencyKey,
+      source: event.source,
+      processed: event.processed,
+    },
+  });
+
   let invoiceId: string | null = null;
 
   if (data.triggerInvoice) {
@@ -263,6 +279,15 @@ export async function POST(request: NextRequest) {
   await db.billingEvent.update({
     where: { id: event.id },
     data: { processed: true, processedAt: new Date() },
+  });
+
+  await writeAuditEvent({
+    request,
+    teamId: data.teamId,
+    action: "billing.event.processed",
+    resourceType: "BillingEvent",
+    resourceId: event.id,
+    metadata: { triggerInvoice: data.triggerInvoice, invoiceId },
   });
 
   return NextResponse.json({ ok: true, eventId: event.id, invoiceId });

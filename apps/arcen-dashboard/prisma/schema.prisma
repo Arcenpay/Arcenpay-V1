@@ -145,6 +145,7 @@ model Team {
   catalogAddOns      CatalogAddOn[]
   catalogCreditTypes CatalogCreditType[]
   catalogVersions    CatalogVersion[]
+  catalogConfigs     CatalogConfig[]
 
   billingTemplates BillingTemplate[]
   templateInstalls TemplateInstall[]
@@ -338,6 +339,32 @@ model CatalogVersion {
 
   @@unique([teamId, entityType, entityId, version])
   @@index([teamId, environmentMode, status])
+}
+
+model CatalogConfig {
+  id              String          @id @default(cuid())
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  teamId          String
+  environmentMode EnvironmentMode @default(DEVELOPMENT)
+
+  initialPlan                 String  @default("Free")
+  fallbackPlan                String?
+  showBillingPeriodToggle     Boolean @default(true)
+  freePlanPriceDisplay        Boolean @default(true)
+  hideCredits                 Boolean @default(false)
+  yearlyDiscountDisplay       Boolean @default(true)
+  showFeatureDescriptions     Boolean @default(true)
+  showHardLimits              Boolean @default(true)
+  upgradeImmediately          Boolean @default(true)
+  downgradeImmediately        Boolean @default(false)
+  preventDowngradeOverLimit   Boolean @default(true)
+  disallowSelfServiceDowngrade Boolean @default(false)
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, environmentMode])
+  @@index([teamId, environmentMode])
 }
 
 // ─── Template Library ─────────────────────────────────────────────────────────

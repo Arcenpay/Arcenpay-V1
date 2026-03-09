@@ -53,6 +53,7 @@ export async function GET() {
       id: team.id,
       name: team.name,
       slug: team.slug,
+      environmentMode: team.environmentMode,
       createdAt: team.createdAt,
       members,
       myRole: teamCtx.teamRole,

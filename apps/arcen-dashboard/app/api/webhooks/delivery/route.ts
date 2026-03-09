@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { toPrismaNullableJson } from "@/lib/prisma-json";
 import { FACILITATOR_SECRET } from "@/lib/config";
+import { writeAuditEvent } from "@/lib/audit";
 
 const deliverySchema = z.object({
   teamId: z.string().min(1),
@@ -38,6 +39,9 @@ export async function POST(request: NextRequest) {
   }
 
   const d = parsed.data;
+  const existing = await db.webhookDelivery.findUnique({
+    where: { deliveryId: d.deliveryId },
+  });
   const row = await db.webhookDelivery.upsert({
     where: { deliveryId: d.deliveryId },
     update: {
@@ -59,6 +63,31 @@ export async function POST(request: NextRequest) {
       success: d.success,
       error: d.error,
       payload: toPrismaNullableJson(d.payload),
+    },
+  });
+
+  await writeAuditEvent({
+    request,
+    teamId: d.teamId,
+    action: existing ? "webhook.delivery.update" : "webhook.delivery.create",
+    resourceType: "WebhookDelivery",
+    resourceId: row.id,
+    beforeData: existing
+      ? {
+          id: existing.id,
+          statusCode: existing.statusCode,
+          attemptNumber: existing.attemptNumber,
+          success: existing.success,
+          error: existing.error,
+        }
+      : undefined,
+    afterData: {
+      id: row.id,
+      deliveryId: row.deliveryId,
+      statusCode: row.statusCode,
+      attemptNumber: row.attemptNumber,
+      success: row.success,
+      error: row.error,
     },
   });
 
