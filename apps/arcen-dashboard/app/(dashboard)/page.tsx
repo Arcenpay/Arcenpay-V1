@@ -19,12 +19,8 @@ import {
   CatalogConfigSection,
 } from "@/components/dashboard/sections/catalog";
 import { ComponentsSection } from "@/components/dashboard/sections/components";
-import { TemplatesSection } from "@/components/dashboard/sections/templates";
 import { SectionErrorBoundary } from "@/components/dashboard/section-error-boundary";
 import { EnvironmentProvider } from "@/contexts/environment-context";
-
-const EXPERIMENTAL_COMPONENTS_ENABLED =
-  process.env.NEXT_PUBLIC_ENABLE_EXPERIMENTAL_COMPONENTS === "true";
 
 export type Section =
   | "overview"
@@ -32,7 +28,6 @@ export type Section =
   | "catalog-addons"
   | "catalog-credits"
   | "catalog-config"
-  | "templates"
   | "subscribers"
   | "invoices"
   | "sessions"
@@ -50,40 +45,14 @@ export default function Dashboard() {
 
   // Read section from URL on mount
   useEffect(() => {
-    const section = searchParams.get("section");
-    if (!section) return;
-
-    const allSections: Section[] = [
-      "overview",
-      "catalog-plans",
-      "catalog-addons",
-      "catalog-credits",
-      "catalog-config",
-      "templates",
-      "subscribers",
-      "invoices",
-      "sessions",
-      "features",
-      "components",
-      "audit-log",
-      "settings",
-    ];
-    if (allSections.includes(section as Section)) {
-      if (section === "components" && !EXPERIMENTAL_COMPONENTS_ENABLED) {
-        setActiveSection("overview");
-        return;
-      }
+    const section = searchParams.get("section") as Section;
+    if (section) {
       setActiveSection(section as Section);
     }
   }, [searchParams]);
 
   // Update URL when section changes
   const handleSectionChange = (section: Section) => {
-    if (section === "components" && !EXPERIMENTAL_COMPONENTS_ENABLED) {
-      setActiveSection("overview");
-      router.push("/?section=overview", { scroll: false });
-      return;
-    }
     setActiveSection(section);
     router.push(`/?section=${section}`, { scroll: false });
   };
@@ -120,12 +89,6 @@ export default function Dashboard() {
             <CatalogConfigSection />
           </SectionErrorBoundary>
         );
-      case "templates":
-        return (
-          <SectionErrorBoundary fallbackLabel="Templates failed to load">
-            <TemplatesSection />
-          </SectionErrorBoundary>
-        );
       case "subscribers":
         return (
           <SectionErrorBoundary fallbackLabel="Subscribers failed to load">
@@ -151,13 +114,6 @@ export default function Dashboard() {
           </SectionErrorBoundary>
         );
       case "components":
-        if (!EXPERIMENTAL_COMPONENTS_ENABLED) {
-          return (
-            <SectionErrorBoundary>
-              <OverviewSection />
-            </SectionErrorBoundary>
-          );
-        }
         return (
           <SectionErrorBoundary fallbackLabel="Components failed to load">
             <ComponentsSection />

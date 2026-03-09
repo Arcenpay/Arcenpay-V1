@@ -35,9 +35,6 @@ interface SidebarProps {
 type NavItem = { id: Section; label: string; icon: React.ElementType };
 type NavGroup = { label: string; items: NavItem[] };
 
-const EXPERIMENTAL_COMPONENTS_ENABLED =
-  process.env.NEXT_PUBLIC_ENABLE_EXPERIMENTAL_COMPONENTS === "true";
-
 const navGroups: NavGroup[] = [
   {
     label: "",
@@ -50,7 +47,6 @@ const navGroups: NavGroup[] = [
       { id: "catalog-addons", label: "Add-Ons", icon: Package },
       { id: "catalog-credits", label: "Credits", icon: Coins },
       { id: "catalog-config", label: "Configuration", icon: SlidersHorizontal },
-      { id: "templates", label: "Templates", icon: LayoutTemplate },
     ],
   },
   {
@@ -66,15 +62,7 @@ const navGroups: NavGroup[] = [
     items: [
       { id: "sessions", label: "Sessions", icon: Cpu },
       { id: "features", label: "Features", icon: Flag },
-      ...(EXPERIMENTAL_COMPONENTS_ENABLED
-        ? ([
-            {
-              id: "components",
-              label: "Components",
-              icon: LayoutTemplate,
-            },
-          ] as NavItem[])
-        : []),
+      { id: "components", label: "Components", icon: LayoutTemplate },
     ],
   },
   {
