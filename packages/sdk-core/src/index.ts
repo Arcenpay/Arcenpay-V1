@@ -32,6 +32,9 @@ export type {
   MirroredSubscription,
   NetworkConfig,
   ContractAddresses,
+  ChainServiceEndpoints,
+  ChainEnvironmentManifest,
+  EnvironmentManifest,
   MEAPConfig,
   TablelandEntitlement,
   UsageReport,
@@ -50,6 +53,15 @@ export type { SupportedChainId } from './chains';
 
 // Contract addresses
 export { getContractAddresses, setContractAddresses } from './addresses';
+export {
+  ENVIRONMENT_MANIFEST_VERSION,
+  ZERO_ADDRESS,
+  getChainEnvironment,
+  getEnvironmentManifest,
+  validateChainEnvironment,
+  isZeroAddress,
+} from './environment';
+export type { ValidateChainEnvironmentOptions } from './environment';
 
 // ABIs
 export {
@@ -73,6 +85,7 @@ export {
   MODULE_TYPES,
   X402_VERSION,
   X402_SCHEME,
+  INTERFACE_VERSIONS,
 } from './constants';
 
 // Error mapping

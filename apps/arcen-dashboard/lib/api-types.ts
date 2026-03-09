@@ -40,6 +40,18 @@ export interface BillingEventShape {
     | "SUBSCRIPTION_CANCELLED"
     | "PAYMENT_FAILED"
     | "CREDIT_ISSUED";
+  eventName?:
+    | "subscription.minted"
+    | "subscription.renewed"
+    | "subscription.cancelled"
+    | "proof.generated"
+    | "proof.submitted"
+    | "proof.settled"
+    | "invoice.issued"
+    | "invoice.delivery_failed"
+    | "invoice.paid";
+  schemaVersion?: string;
+  occurredAt?: string;
   idempotencyKey: string;
   source: string;
   processed: boolean;

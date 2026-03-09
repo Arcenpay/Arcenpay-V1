@@ -1,168 +1,125 @@
 // @ts-ignore -- ethers is injected by @nomicfoundation/hardhat-toolbox at runtime
-import { ethers } from "hardhat";
+import { ethers, network } from "hardhat";
+import fs from "node:fs";
+import path from "node:path";
 
-/**
- * ============================================================
- *  MEAP Protocol — Full Deployment Script
- *  Deploys all core contracts in correct dependency order:
- *    1. PlanFactory
- *    2. FeeCollector
- *    3. SubscriptionRegistry
- *    4. SessionVault
- *    5. ZKUsageVerifier
- *    6. ERC7579AutopayModule
- *    7. MirrorRegistry
- * ============================================================
- */
+type ChainConfig = {
+  slug: string;
+  usdc: string;
+  explorerBase: string;
+};
+
+const CHAIN_CONFIGS: Record<number, ChainConfig> = {
+  11155111: {
+    slug: "sepolia",
+    usdc: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+    explorerBase: "https://sepolia.etherscan.io/address",
+  },
+  84532: {
+    slug: "baseSepolia",
+    usdc: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+    explorerBase: "https://sepolia.basescan.org/address",
+  },
+  8453: {
+    slug: "baseMainnet",
+    usdc: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+    explorerBase: "https://basescan.org/address",
+  },
+};
 
 async function main() {
   const [deployer] = await ethers.getSigners();
-  const network = await ethers.provider.getNetwork();
+  const chain = await ethers.provider.getNetwork();
+  const chainId = Number(chain.chainId);
+  const chainConfig = CHAIN_CONFIGS[chainId];
 
-  console.log(`
-╔══════════════════════════════════════════════════════════════╗
-║                MEAP Protocol Deployment                      ║
-╠══════════════════════════════════════════════════════════════╣
-║  Network:  ${network.name.padEnd(48)}║
-║  Chain ID: ${String(network.chainId).padEnd(48)}║
-║  Deployer: ${deployer.address.padEnd(48)}║
-╚══════════════════════════════════════════════════════════════╝
-  `);
-
-  const balance = await ethers.provider.getBalance(deployer.address);
-  console.log(`  💰 Deployer balance: ${ethers.formatEther(balance)} ETH\n`);
-
-  if (balance === 0n) {
-    throw new Error("Deployer has 0 ETH — cannot deploy. Fund the wallet first.");
+  if (!chainConfig) {
+    throw new Error(`Unsupported chain ${chainId}. Add chain config before deploying.`);
   }
 
-  console.log("  ─── Deploying Contracts ───\n");
+  const usdcAddress = process.env.USDC_ADDRESS || chainConfig.usdc;
+  if (!ethers.isAddress(usdcAddress)) {
+    throw new Error(`Invalid USDC_ADDRESS: ${usdcAddress}`);
+  }
 
-  // ===============================
-  // 1. Deploy PlanFactory
-  // ===============================
+  console.log(`\n[deploy] Network=${network.name} chainId=${chainId} deployer=${deployer.address}`);
+  const balance = await ethers.provider.getBalance(deployer.address);
+  console.log(`[deploy] Balance=${ethers.formatEther(balance)} ETH`);
+  if (balance === 0n) {
+    throw new Error("Deployer has 0 ETH — cannot deploy.");
+  }
 
-  // For Sepolia testnet, we use a mock USDC address (or deploy one)
-  // Using well-known Sepolia USDC: 0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238
-  const USDC_ADDRESS = "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238";
-
-  console.log("  [1/7] Deploying PlanFactory...");
+  // 1) PlanFactory
   const PlanFactory = await ethers.getContractFactory("PlanFactory");
-  const planFactory = await PlanFactory.deploy([USDC_ADDRESS]);
+  const planFactory = await PlanFactory.deploy([usdcAddress]);
   await planFactory.waitForDeployment();
   const planFactoryAddr = await planFactory.getAddress();
-  console.log(`  ✅  PlanFactory:           ${planFactoryAddr}`);
+  console.log(`[deploy] PlanFactory=${planFactoryAddr}`);
 
-  // ===============================
-  // 2. Deploy FeeCollector
-  // ===============================
-
-  // Treasury = deployer for now (change later)
-  console.log("  [2/7] Deploying FeeCollector...");
+  // 2) FeeCollector
   const FeeCollector = await ethers.getContractFactory("FeeCollector");
   const feeCollector = await FeeCollector.deploy(deployer.address);
   await feeCollector.waitForDeployment();
   const feeCollectorAddr = await feeCollector.getAddress();
-  console.log(`  ✅  FeeCollector:          ${feeCollectorAddr}`);
+  console.log(`[deploy] FeeCollector=${feeCollectorAddr}`);
 
-  // ===============================
-  // 3. Deploy SubscriptionRegistry
-  // ===============================
-
-  console.log("  [3/7] Deploying SubscriptionRegistry...");
+  // 3) SubscriptionRegistry
   const SubscriptionRegistry = await ethers.getContractFactory("SubscriptionRegistry");
   const registry = await SubscriptionRegistry.deploy(
     "MEAP Subscription",
     "MEAP-SUB",
-    planFactoryAddr
+    planFactoryAddr,
   );
   await registry.waitForDeployment();
   const registryAddr = await registry.getAddress();
-  console.log(`  ✅  SubscriptionRegistry:  ${registryAddr}`);
+  console.log(`[deploy] SubscriptionRegistry=${registryAddr}`);
 
-  // ===============================
-  // 4. Deploy SessionVault
-  // ===============================
-
-  console.log("  [4/7] Deploying SessionVault...");
+  // 4) SessionVault
   const SessionVault = await ethers.getContractFactory("SessionVault");
   const sessionVault = await SessionVault.deploy();
   await sessionVault.waitForDeployment();
   const sessionVaultAddr = await sessionVault.getAddress();
-  console.log(`  ✅  SessionVault:          ${sessionVaultAddr}`);
+  console.log(`[deploy] SessionVault=${sessionVaultAddr}`);
 
-  // ===============================
-  // 5. Deploy ZKUsageVerifier
-  // ===============================
-
-  console.log("  [5/7] Deploying ZKUsageVerifier...");
+  // 5) ZKUsageVerifier
   const ZKUsageVerifier = await ethers.getContractFactory("ZKUsageVerifier");
   const zkVerifier = await ZKUsageVerifier.deploy(
     sessionVaultAddr,
     feeCollectorAddr,
-    planFactoryAddr
+    planFactoryAddr,
   );
   await zkVerifier.waitForDeployment();
   const zkVerifierAddr = await zkVerifier.getAddress();
-  console.log(`  ✅  ZKUsageVerifier:       ${zkVerifierAddr}`);
+  console.log(`[deploy] ZKUsageVerifier=${zkVerifierAddr}`);
 
-  // ===============================
-  // 6. Deploy ERC7579AutopayModule
-  // ===============================
-
-  console.log("  [6/7] Deploying ERC7579AutopayModule...");
+  // 6) ERC7579AutopayModule
   const AutopayModule = await ethers.getContractFactory("ERC7579AutopayModule");
   const autopayModule = await AutopayModule.deploy(
     planFactoryAddr,
     registryAddr,
-    feeCollectorAddr
+    feeCollectorAddr,
   );
   await autopayModule.waitForDeployment();
   const autopayModuleAddr = await autopayModule.getAddress();
-  console.log(`  ✅  ERC7579AutopayModule:  ${autopayModuleAddr}`);
+  console.log(`[deploy] ERC7579AutopayModule=${autopayModuleAddr}`);
 
-  // ===============================
-  // 7. Deploy MirrorRegistry
-  // ===============================
-
-  console.log("  [7/7] Deploying MirrorRegistry...");
+  // 7) MirrorRegistry
   const MirrorRegistry = await ethers.getContractFactory("MirrorRegistry");
   const mirrorRegistry = await MirrorRegistry.deploy();
   await mirrorRegistry.waitForDeployment();
   const mirrorRegistryAddr = await mirrorRegistry.getAddress();
-  console.log(`  ✅  MirrorRegistry:        ${mirrorRegistryAddr}`);
+  console.log(`[deploy] MirrorRegistry=${mirrorRegistryAddr}`);
 
-  // ===============================
-  //  Post-Deployment Configuration
-  // ===============================
-
-  console.log("\n  ─── Post-Deployment Configuration ───\n");
-
-  // Authorize AutopayModule as biller on SubscriptionRegistry
-  console.log("  • Authorizing AutopayModule as biller on SubscriptionRegistry...");
-  const authBillerTx = await registry.authorizeBiller(autopayModuleAddr);
-  await authBillerTx.wait();
-  console.log("  ✅  AutopayModule authorized as biller");
-
-  // Authorize FeeCollector for AutopayModule
-  console.log("  • Authorizing AutopayModule as collector on FeeCollector...");
-  const authCollectorTx = await feeCollector.authorizeCollector(autopayModuleAddr);
-  await authCollectorTx.wait();
-  console.log("  ✅  AutopayModule authorized as fee collector");
-
-  // Authorize ZKUsageVerifier as settler on SessionVault
-  console.log("  • Authorizing ZKUsageVerifier as settler on SessionVault...");
-  const authSettlerTx = await sessionVault.authorizeSettler(zkVerifierAddr);
-  await authSettlerTx.wait();
-  console.log("  ✅  ZKUsageVerifier authorized as settler");
-
-  // ===============================
-  //  Summary
-  // ===============================
+  // Post-deploy role wiring
+  await (await registry.authorizeBiller(autopayModuleAddr)).wait();
+  await (await feeCollector.authorizeCollector(autopayModuleAddr)).wait();
+  await (await feeCollector.authorizeCollector(zkVerifierAddr)).wait();
+  await (await sessionVault.authorizeSettler(zkVerifierAddr)).wait();
+  console.log("[deploy] Role wiring complete");
 
   const summary = {
     network: network.name,
-    chainId: Number(network.chainId),
+    chainId,
     deployer: deployer.address,
     contracts: {
       PlanFactory: planFactoryAddr,
@@ -174,52 +131,29 @@ async function main() {
       MirrorRegistry: mirrorRegistryAddr,
     },
     config: {
-      USDC: USDC_ADDRESS,
+      USDC: usdcAddress,
       treasury: deployer.address,
     },
+    deployedAt: new Date().toISOString(),
   };
 
-  console.log(`
-╔══════════════════════════════════════════════════════════════╗
-║                 DEPLOYMENT COMPLETE ✅                        ║
-╠══════════════════════════════════════════════════════════════╣
-║  PlanFactory:           ${planFactoryAddr}  ║
-║  FeeCollector:          ${feeCollectorAddr}  ║
-║  SubscriptionRegistry:  ${registryAddr}  ║
-║  SessionVault:          ${sessionVaultAddr}  ║
-║  ZKUsageVerifier:       ${zkVerifierAddr}  ║
-║  ERC7579AutopayModule:  ${autopayModuleAddr}  ║
-║  MirrorRegistry:        ${mirrorRegistryAddr}  ║
-╠══════════════════════════════════════════════════════════════╣
-║  Explorer: https://sepolia.etherscan.io/address/<addr>       ║
-╚══════════════════════════════════════════════════════════════╝
-  `);
-
-  // Write deployment addresses to JSON for SDK consumption
-  const fs = await import("fs");
-  const path = await import("path");
   const deploymentsDir = path.join(__dirname, "..", "deployments");
+  fs.mkdirSync(deploymentsDir, { recursive: true });
 
-  if (!fs.existsSync(deploymentsDir)) {
-    fs.mkdirSync(deploymentsDir, { recursive: true });
-  }
-
-  const outputPath = path.join(
-    deploymentsDir,
-    `sepolia-${new Date().toISOString().split("T")[0]}.json`
-  );
-  fs.writeFileSync(outputPath, JSON.stringify(summary, null, 2));
-  console.log(`  📄 Deployment data saved to: ${outputPath}\n`);
-
-  // Also write a latest.json for easy SDK consumption
-  const latestPath = path.join(deploymentsDir, "sepolia-latest.json");
+  const dateStamp = new Date().toISOString().split("T")[0];
+  const datedPath = path.join(deploymentsDir, `${chainConfig.slug}-${dateStamp}.json`);
+  const latestPath = path.join(deploymentsDir, `${chainConfig.slug}-latest.json`);
+  fs.writeFileSync(datedPath, JSON.stringify(summary, null, 2));
   fs.writeFileSync(latestPath, JSON.stringify(summary, null, 2));
-  console.log(`  📄 Latest deployment: ${latestPath}\n`);
+
+  console.log(`[deploy] Deployment file: ${datedPath}`);
+  console.log(`[deploy] Latest file: ${latestPath}`);
+  console.log(`[deploy] Explorer base: ${chainConfig.explorerBase}`);
 }
 
 main()
   .then(() => process.exit(0))
   .catch((error) => {
-    console.error("\n❌ Deployment failed:", error);
+    console.error("\n[deploy] Failed:", error);
     process.exit(1);
   });

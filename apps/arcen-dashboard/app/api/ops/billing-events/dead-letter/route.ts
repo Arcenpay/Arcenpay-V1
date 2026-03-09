@@ -111,6 +111,18 @@ export async function POST(request: NextRequest) {
           teamId: event.teamId,
           eventType: event.eventType,
           idempotencyKey: `retry:${event.idempotencyKey}:${Date.now()}`,
+          eventName:
+            typeof (event.payload as any)?._event?.name === "string"
+              ? (event.payload as any)._event.name
+              : undefined,
+          schemaVersion:
+            typeof (event.payload as any)?._event?.schemaVersion === "string"
+              ? (event.payload as any)._event.schemaVersion
+              : undefined,
+          occurredAt:
+            typeof (event.payload as any)?._event?.occurredAt === "string"
+              ? (event.payload as any)._event.occurredAt
+              : undefined,
           payload: event.payload,
           source: "ops-replay",
           triggerInvoice: false,

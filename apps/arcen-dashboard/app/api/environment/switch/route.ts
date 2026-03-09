@@ -16,7 +16,7 @@ import { getContractAddresses } from "@meap/core";
 import { db } from "@/lib/db";
 import { requirePermission, isErrorResponse } from "@/lib/api-auth";
 import { writeAuditEvent } from "@/lib/audit";
-import { getRpcUrl } from "@/lib/config";
+import { FACILITATOR_URL, GRAPH_URL, getRpcUrl } from "@/lib/config";
 
 const switchSchema = z.object({
   environmentMode: z.enum(["DEVELOPMENT", "PRODUCTION"]),
@@ -127,6 +127,21 @@ export async function POST(request: NextRequest) {
       },
       { status: 409 },
     );
+  }
+
+  if (parsed.data.environmentMode === "PRODUCTION") {
+    const missingServices: string[] = [];
+    if (!GRAPH_URL) missingServices.push("NEXT_PUBLIC_GRAPH_URL");
+    if (!FACILITATOR_URL) missingServices.push("FACILITATOR_URL");
+    if (missingServices.length > 0) {
+      return NextResponse.json(
+        {
+          error: "Production switch blocked: required service endpoints are missing.",
+          missingServices,
+        },
+        { status: 409 },
+      );
+    }
   }
 
   // ── Contract health preflight ────────────────────────────────────────────────

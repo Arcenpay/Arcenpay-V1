@@ -16,6 +16,21 @@ const eventSchema = z.object({
     "PAYMENT_FAILED",
     "CREDIT_ISSUED",
   ]),
+  eventName: z
+    .enum([
+      "subscription.minted",
+      "subscription.renewed",
+      "subscription.cancelled",
+      "proof.generated",
+      "proof.submitted",
+      "proof.settled",
+      "invoice.issued",
+      "invoice.delivery_failed",
+      "invoice.paid",
+    ])
+    .optional(),
+  schemaVersion: z.string().min(1).optional(),
+  occurredAt: z.coerce.date().optional(),
   idempotencyKey: z.string().min(1),
   payload: z.record(z.unknown()),
   source: z.string().default("facilitator"),
@@ -95,6 +110,16 @@ export async function POST(request: NextRequest) {
 
   const data = parsed.data;
 
+  const canonicalEventName =
+    data.eventName ||
+    ({
+      SUBSCRIPTION_MINTED: "subscription.minted",
+      SUBSCRIPTION_RENEWED: "subscription.renewed",
+      SUBSCRIPTION_CANCELLED: "subscription.cancelled",
+      PAYMENT_FAILED: "invoice.delivery_failed",
+      CREDIT_ISSUED: "invoice.issued",
+    } as const)[data.eventType];
+
   // Idempotency: return the existing event if already processed
   const existing = await db.billingEvent.findUnique({
     where: { idempotencyKey: data.idempotencyKey },
@@ -108,7 +133,14 @@ export async function POST(request: NextRequest) {
       teamId: data.teamId,
       eventType: data.eventType,
       idempotencyKey: data.idempotencyKey,
-      payload: toPrismaJson(data.payload),
+      payload: toPrismaJson({
+        ...data.payload,
+        _event: {
+          name: canonicalEventName,
+          schemaVersion: data.schemaVersion || "legacy",
+          occurredAt: (data.occurredAt || new Date()).toISOString(),
+        },
+      }),
       source: data.source,
       processed: false,
     },

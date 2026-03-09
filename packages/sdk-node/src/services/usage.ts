@@ -43,6 +43,7 @@ export type ProofMode = "strict" | "dev";
 export const UsageProofErrorCodes = {
   TOOLING_UNAVAILABLE: "TOOLING_UNAVAILABLE",
   ARTIFACTS_MISSING: "ARTIFACTS_MISSING",
+  ARTIFACT_VERSION_MISMATCH: "ARTIFACT_VERSION_MISMATCH",
   INVALID_VERIFICATION_KEY: "INVALID_VERIFICATION_KEY",
   INVALID_INPUT: "INVALID_INPUT",
   PROOF_GENERATION_FAILED: "PROOF_GENERATION_FAILED",
@@ -75,6 +76,8 @@ export interface UsageServiceConfig {
   zkeyPath?: string;
   verificationKeyPath?: string;
   proveScriptPath?: string;
+  artifactVersion?: string;
+  artifactManifestPath?: string;
 }
 
 const CHAIN_MAP: Record<number, any> = {
@@ -100,6 +103,8 @@ export class UsageService {
       | "zkeyPath"
       | "verificationKeyPath"
       | "proveScriptPath"
+      | "artifactVersion"
+      | "artifactManifestPath"
     >
   > &
     Pick<UsageServiceConfig, "signerPrivateKey">;
@@ -136,6 +141,14 @@ export class UsageService {
       proveScriptPath:
         config.proveScriptPath ||
         path.join(circuitsRootDir, "scripts", "prove.js"),
+      artifactVersion:
+        config.artifactVersion ||
+        process.env.MEAP_PROOF_ARTIFACT_VERSION ||
+        "",
+      artifactManifestPath:
+        config.artifactManifestPath ||
+        process.env.MEAP_PROOF_ARTIFACT_MANIFEST_PATH ||
+        path.join(circuitsRootDir, "artifact-manifest.json"),
       signerPrivateKey: config.signerPrivateKey,
     };
 
@@ -178,6 +191,8 @@ export class UsageService {
     circuitWasmPath: string;
     zkeyPath: string;
     verificationKeyPath: string;
+    artifactVersion: string;
+    artifactManifestPath: string;
   } {
     return {
       proofMode: this.config.proofMode,
@@ -185,6 +200,8 @@ export class UsageService {
       circuitWasmPath: this.config.circuitWasmPath,
       zkeyPath: this.config.zkeyPath,
       verificationKeyPath: this.config.verificationKeyPath,
+      artifactVersion: this.config.artifactVersion,
+      artifactManifestPath: this.config.artifactManifestPath,
     };
   }
 
@@ -479,6 +496,43 @@ export class UsageService {
       throw new UsageProofError(
         UsageProofErrorCodes.ARTIFACTS_MISSING,
         `Missing proof artifact(s): ${missing.join(", ")}`,
+      );
+    }
+    this.assertArtifactVersion();
+  }
+
+  private assertArtifactVersion(): void {
+    const expectedVersion = this.config.artifactVersion?.trim();
+    const manifestPath = this.config.artifactManifestPath;
+
+    if (!fs.existsSync(manifestPath)) {
+      if (expectedVersion && this.config.proofMode === "strict") {
+        throw new UsageProofError(
+          UsageProofErrorCodes.ARTIFACTS_MISSING,
+          `Artifact version set (${expectedVersion}) but manifest missing: ${manifestPath}`,
+        );
+      }
+      return;
+    }
+
+    let manifestVersion = "";
+    try {
+      const raw = fs.readFileSync(manifestPath, "utf8");
+      const parsed = JSON.parse(raw) as { version?: string };
+      manifestVersion = String(parsed.version || "").trim();
+    } catch (err) {
+      throw new UsageProofError(
+        UsageProofErrorCodes.ARTIFACTS_MISSING,
+        `Invalid artifact manifest JSON: ${manifestPath}`,
+        err,
+      );
+    }
+
+    if (!expectedVersion) return;
+    if (!manifestVersion || manifestVersion !== expectedVersion) {
+      throw new UsageProofError(
+        UsageProofErrorCodes.ARTIFACT_VERSION_MISMATCH,
+        `Artifact version mismatch (expected ${expectedVersion}, got ${manifestVersion || "missing"})`,
       );
     }
   }

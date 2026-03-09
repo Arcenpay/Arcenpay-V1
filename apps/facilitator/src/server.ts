@@ -40,12 +40,17 @@ import {
   LitProtocolService,
   ProofOrchestrator,
   BillingKeeper,
+  buildEventIdempotencyKey,
+  createProtocolEvent,
+  mapProtocolEventToBillingType,
+  type ProtocolEventName,
 } from "@meap/node";
 import {
   PlanFactoryABI,
   SessionVaultABI,
   SubscriptionRegistryABI,
-  getContractAddresses,
+  getChainEnvironment,
+  validateChainEnvironment,
   type PlanTier,
   type X402VerifiedPaymentContext,
 } from "@meap/core";
@@ -55,10 +60,13 @@ import { X402ReplayProtection } from "./replay-protection.js";
 
 const app = express();
 const PORT = process.env.PORT || 3402;
+const CHAIN_ID = parseInt(process.env.CHAIN_ID || "11155111", 10);
+const CHAIN_ENV = getChainEnvironment(CHAIN_ID);
 const RPC_URL =
-  process.env.RPC_URL || "https://ethereum-sepolia-rpc.publicnode.com";
-const CHAIN_ID = parseInt(process.env.CHAIN_ID || "11155111");
-const CONTRACTS = getContractAddresses(CHAIN_ID);
+  process.env.RPC_URL ||
+  CHAIN_ENV.services.rpcUrl ||
+  "https://ethereum-sepolia-rpc.publicnode.com";
+const CONTRACTS = CHAIN_ENV.contracts;
 const chainClient = createPublicClient({
   transport: http(RPC_URL),
 });
@@ -82,6 +90,10 @@ const PROOF_ZKEY_PATH =
 const PROOF_VKEY_PATH =
   process.env.ZK_CIRCUIT_VKEY_PATH ||
   path.join(PROOF_BUILD_DIR, "verification_key.json");
+const PROOF_ARTIFACT_VERSION = process.env.MEAP_PROOF_ARTIFACT_VERSION || "";
+const PROOF_ARTIFACT_MANIFEST_PATH =
+  process.env.MEAP_PROOF_ARTIFACT_MANIFEST_PATH ||
+  path.resolve(process.cwd(), "circuits", "artifact-manifest.json");
 const PROOF_SIGNER_PRIVATE_KEY =
   process.env.PROOF_SIGNER_PRIVATE_KEY || process.env.PRIVATE_KEY;
 const FACILITATOR_SECRET = (process.env.FACILITATOR_SECRET || "").trim();
@@ -95,6 +107,15 @@ function isHexAddress(value: string | undefined | null): boolean {
 function validateRuntimeConfig(): void {
   const errors: string[] = [];
   const verifierAddress = CONTRACTS.zkUsageVerifier;
+
+  try {
+    validateChainEnvironment(CHAIN_ID, {
+      production: FACILITATOR_PROFILE === "production",
+      requiredServices: ["rpcUrl"],
+    });
+  } catch (err) {
+    errors.push(err instanceof Error ? err.message : String(err));
+  }
 
   const verifierInvalid =
     !isHexAddress(verifierAddress) ||
@@ -148,6 +169,12 @@ function validateRuntimeConfig(): void {
       if (!fs.existsSync(artifactPath)) {
         errors.push(`Missing proof artifact: ${artifactPath}`);
       }
+    }
+
+    if (PROOF_ARTIFACT_VERSION && !fs.existsSync(PROOF_ARTIFACT_MANIFEST_PATH)) {
+      errors.push(
+        `MEAP_PROOF_ARTIFACT_VERSION is set but artifact manifest is missing: ${PROOF_ARTIFACT_MANIFEST_PATH}`,
+      );
     }
 
     if (process.env.REDIS_REQUIRED === "true" && !process.env.REDIS_URL) {
@@ -389,6 +416,8 @@ const proofOrchestrator = new ProofOrchestrator({
   circuitWasmPath: PROOF_WASM_PATH,
   zkeyPath: PROOF_ZKEY_PATH,
   verificationKeyPath: PROOF_VKEY_PATH,
+  artifactVersion: PROOF_ARTIFACT_VERSION,
+  artifactManifestPath: PROOF_ARTIFACT_MANIFEST_PATH,
 });
 const usageService = proofOrchestrator.getUsageService();
 
@@ -711,12 +740,19 @@ async function persistWebhookDelivery(
 }
 
 async function persistBillingEvent(
-  eventType: "SUBSCRIPTION_MINTED" | "SUBSCRIPTION_RENEWED" | "SUBSCRIPTION_CANCELLED",
+  eventName: ProtocolEventName,
   idempotencyKey: string,
   payload: Record<string, unknown>,
   triggerInvoice = false,
+  occurredAt?: string | number | Date,
 ): Promise<void> {
   if (!DASHBOARD_TEAM_ID) return;
+  const eventEnvelope = createProtocolEvent(eventName, payload, {
+    source: "facilitator",
+    idempotencyKey,
+    chainId: CHAIN_ID,
+    occurredAt,
+  });
   await jobQueue.enqueue(
     "billing",
     "billing_event",
@@ -724,14 +760,17 @@ async function persistBillingEvent(
       pathname: "/api/billing/events",
       payload: {
         teamId: DASHBOARD_TEAM_ID,
-        eventType,
-        idempotencyKey,
-        payload,
+        eventType: mapProtocolEventToBillingType(eventName),
+        eventName: eventEnvelope.name,
+        schemaVersion: eventEnvelope.schemaVersion,
+        occurredAt: eventEnvelope.occurredAt,
+        idempotencyKey: eventEnvelope.idempotencyKey,
+        payload: eventEnvelope.payload,
         triggerInvoice,
-        source: "facilitator",
+        source: eventEnvelope.source,
       },
     },
-    { idempotencyKey: `billing:${idempotencyKey}` },
+    { idempotencyKey: `billing:${eventEnvelope.idempotencyKey}` },
   );
 }
 
@@ -1070,8 +1109,10 @@ eventListener.on("minted", async (event) => {
     `[Facilitator] 🎉 New subscriber: ${event.subscriber} (Plan ${event.planId})`,
   );
   await persistBillingEvent(
-    "SUBSCRIPTION_MINTED",
-    `minted:${event.transactionHash || event.tokenId.toString()}`,
+    "subscription.minted",
+    buildEventIdempotencyKey("subscription.minted", [
+      event.transactionHash || event.tokenId.toString(),
+    ]),
     {
       tokenId: event.tokenId.toString(),
       planId: event.planId?.toString(),
@@ -1079,6 +1120,8 @@ eventListener.on("minted", async (event) => {
       txHash: event.transactionHash,
       timestamp: event.timestamp?.toString(),
     },
+    false,
+    event.timestamp ? Number(event.timestamp) * 1000 : undefined,
   );
   // Cache tokenId → subscriber for use in renewed/cancelled handlers
   if (event.tokenId != null && event.subscriber) {
@@ -1163,8 +1206,11 @@ eventListener.on("renewed", async (event) => {
     ? await lookupSubscriberEmail(renewedSubscriberWallet)
     : null;
   await persistBillingEvent(
-    "SUBSCRIPTION_RENEWED",
-    `renewed:${event.transactionHash || event.tokenId.toString()}:${event.expiration?.toString() || ""}`,
+    "subscription.renewed",
+    buildEventIdempotencyKey("subscription.renewed", [
+      event.transactionHash || event.tokenId.toString(),
+      event.expiration?.toString() || "",
+    ]),
     {
       tokenId: event.tokenId.toString(),
       expiration: event.expiration?.toString(),
@@ -1176,6 +1222,7 @@ eventListener.on("renewed", async (event) => {
       description: "Subscription renewal",
     },
     true,
+    event.timestamp ? Number(event.timestamp) * 1000 : undefined,
   );
   if (tablelandService) {
     if (tablelandReady) {
@@ -1234,13 +1281,17 @@ eventListener.on("renewed", async (event) => {
 eventListener.on("cancelled", async (event) => {
   console.log(`[Facilitator] ❌ Cancelled: tokenId=${event.tokenId}`);
   await persistBillingEvent(
-    "SUBSCRIPTION_CANCELLED",
-    `cancelled:${event.transactionHash || event.tokenId.toString()}`,
+    "subscription.cancelled",
+    buildEventIdempotencyKey("subscription.cancelled", [
+      event.transactionHash || event.tokenId.toString(),
+    ]),
     {
       tokenId: event.tokenId.toString(),
       txHash: event.transactionHash,
       timestamp: event.timestamp?.toString(),
     },
+    false,
+    event.timestamp ? Number(event.timestamp) * 1000 : undefined,
   );
   // Resolve subscriber before Tableland/Lit so we can email even if NFT is burned
   const cancelledSubscriberWallet =
@@ -2399,6 +2450,90 @@ app.post("/api/subscriber/email", (req, res) => {
     planId: planId || null,
   });
 });
+
+app.post(
+  "/api/billing/events",
+  requireFacilitatorSecretIfConfigured,
+  async (req, res) => {
+    if (!DASHBOARD_URL) {
+      return res
+        .status(503)
+        .json({ ok: false, error: "DASHBOARD_URL is not configured." });
+    }
+
+    const eventType = String(req.body?.eventType || "").trim();
+    const idempotencyKey = String(req.body?.idempotencyKey || "").trim();
+    const payload =
+      req.body?.payload && typeof req.body.payload === "object"
+        ? (req.body.payload as Record<string, unknown>)
+        : {};
+    const source = String(req.body?.source || "ops-replay");
+    const triggerInvoice = Boolean(req.body?.triggerInvoice);
+    const teamId = String(req.body?.teamId || DASHBOARD_TEAM_ID || "").trim();
+    const eventName =
+      typeof req.body?.eventName === "string" ? req.body.eventName : undefined;
+    const schemaVersion =
+      typeof req.body?.schemaVersion === "string"
+        ? req.body.schemaVersion
+        : undefined;
+    const occurredAt =
+      typeof req.body?.occurredAt === "string" ? req.body.occurredAt : undefined;
+
+    const allowedEventTypes = new Set([
+      "SUBSCRIPTION_MINTED",
+      "SUBSCRIPTION_RENEWED",
+      "SUBSCRIPTION_CANCELLED",
+      "PAYMENT_FAILED",
+      "CREDIT_ISSUED",
+    ]);
+
+    if (!teamId) {
+      return res.status(400).json({
+        ok: false,
+        error: "teamId is required when DASHBOARD_TEAM_ID is not configured.",
+      });
+    }
+    if (!allowedEventTypes.has(eventType)) {
+      return res.status(400).json({
+        ok: false,
+        error: "eventType is invalid.",
+      });
+    }
+    if (!idempotencyKey) {
+      return res.status(400).json({
+        ok: false,
+        error: "idempotencyKey is required.",
+      });
+    }
+
+    await jobQueue.enqueue(
+      "billing",
+      "billing_event",
+      {
+        pathname: "/api/billing/events",
+        payload: {
+          teamId,
+          eventType,
+          eventName,
+          schemaVersion,
+          occurredAt,
+          idempotencyKey,
+          payload,
+          triggerInvoice,
+          source,
+        },
+      },
+      { idempotencyKey: `billing:${idempotencyKey}` },
+    );
+
+    return res.status(202).json({
+      ok: true,
+      queued: true,
+      idempotencyKey,
+      queue: "billing",
+    });
+  },
+);
 
 // ============================================================
 //  Webhook Delivery Log Endpoint

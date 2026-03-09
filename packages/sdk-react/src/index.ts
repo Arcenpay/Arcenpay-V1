@@ -11,8 +11,13 @@ export { CheckoutModal } from './components/CheckoutModal';
 export type {
   CheckoutModalProps,
   CheckoutResult,
+  CheckoutErrorCode,
   SmartAccountDeploymentInput,
   SmartAccountDeploymentResult,
+} from './components/CheckoutModal';
+export {
+  CHECKOUT_ERROR_CODES,
+  CheckoutFlowError,
 } from './components/CheckoutModal';
 export { SubscriptionStatus } from './components/SubscriptionStatus';
 export { FeatureFlagGuard } from './components/FeatureFlagGuard';
@@ -25,6 +30,11 @@ export type { InvoiceListProps } from './components/InvoiceList';
 
 // Hooks
 export { useEntitlement } from './hooks/useEntitlement';
+export {
+  ENTITLEMENT_ERROR_CODES,
+  EntitlementError,
+} from './hooks/useEntitlement';
+export type { EntitlementErrorCode } from './hooks/useEntitlement';
 
 // Utilities
 export { deploySmartAccount } from './lib/zerodev';

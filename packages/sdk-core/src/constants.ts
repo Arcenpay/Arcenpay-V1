@@ -33,3 +33,13 @@ export const X402_VERSION = '1';
 
 /** x402 payment scheme */
 export const X402_SCHEME = 'exact';
+
+/** Locked interface version set for GA coordination */
+export const INTERFACE_VERSIONS = {
+  contractsAbi: 'v1',
+  facilitatorApi: 'v1',
+  dashboardApi: 'v1',
+  sdkCore: 'v1',
+  sdkReact: 'v1',
+  sdkNode: 'v1',
+} as const;

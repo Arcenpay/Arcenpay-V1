@@ -13,11 +13,9 @@ import { injected, walletConnect } from "wagmi/connectors";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { MEAPConfig, ContractAddresses, NetworkConfig } from "@meap/core";
 import {
-  getContractAddresses,
+  getChainEnvironment,
   DEFAULT_CHAIN_ID,
-  baseSepolia as meapBaseSepolia,
-  baseMainnet as meapBaseMainnet,
-  sepolia as meapSepolia,
+  validateChainEnvironment,
 } from "@meap/core";
 
 // ============================================================
@@ -69,7 +67,8 @@ export function MEAPProvider({
         typeof process !== "undefined"
           ? process.env.NEXT_PUBLIC_RPC_URL
           : undefined;
-      const url = specific ?? global_;
+      const manifestRpc = getChainEnvironment(id).services.rpcUrl;
+      const url = specific ?? global_ ?? manifestRpc;
       return url ? http(url) : http();
     };
 
@@ -97,18 +96,20 @@ export function MEAPProvider({
   );
 
   const contextValue = useMemo<MEAPContextValue>(() => {
-    const chain =
-      chainId === 8453
-        ? meapBaseMainnet
-        : chainId === 11155111
-          ? meapSepolia
-          : meapBaseSepolia;
-    const contracts = getContractAddresses(chainId as any);
+    if (typeof process !== "undefined" && process.env.NODE_ENV === "production") {
+      validateChainEnvironment(chainId, {
+        production: true,
+        requiredServices: ["rpcUrl"],
+      });
+    }
+
+    const manifest = getChainEnvironment(chainId);
+    const contracts = manifest.contracts;
 
     const network: NetworkConfig = {
       chainId,
-      name: chain.name,
-      rpcUrl: chain.rpcUrls.default.http[0],
+      name: manifest.chainName,
+      rpcUrl: manifest.services.rpcUrl,
       contracts,
     };
 
@@ -120,16 +121,22 @@ export function MEAPProvider({
       "manzano";
 
     const config: MEAPConfig = {
+      ...userConfig,
       network,
       litNetwork,
-      ...userConfig,
+      tablelandConfig: {
+        providerUrl:
+          userConfig?.tablelandConfig?.providerUrl ??
+          manifest.services.facilitatorUrl,
+        featureFlagsEndpoint: userConfig?.tablelandConfig?.featureFlagsEndpoint,
+      },
     };
 
     return {
       config,
       contracts,
       network,
-      isTestnet: chainId !== 8453,
+      isTestnet: manifest.isTestnet,
     };
   }, [chainId, userConfig]);
 

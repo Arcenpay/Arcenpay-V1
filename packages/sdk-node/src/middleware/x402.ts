@@ -15,7 +15,7 @@ import {
   X402_VERSION,
   X402_SCHEME,
   SessionVaultABI,
-  getContractAddresses,
+  getChainEnvironment,
 } from "@meap/core";
 import {
   createPublicClient,
@@ -228,7 +228,8 @@ export function x402Middleware(options: X402MiddlewareOptions) {
   }
 
   const rateAtomicUnits = parseUnits(ratePerCall, 6);
-  const contracts = getContractAddresses(chainId);
+  const chainEnv = getChainEnvironment(chainId);
+  const contracts = chainEnv.contracts;
   const payToAddress =
     payTo ||
     contracts.feeCollector ||
@@ -238,7 +239,7 @@ export function x402Middleware(options: X402MiddlewareOptions) {
   const chain = CHAIN_MAP[chainId] || sepolia;
   const publicClient = createPublicClient({
     chain,
-    transport: http(rpcUrl || chain.rpcUrls.default.http[0]),
+    transport: http(rpcUrl || chainEnv.services.rpcUrl || chain.rpcUrls.default.http[0]),
   });
 
   return async (req: Request, res: Response, next: NextFunction) => {

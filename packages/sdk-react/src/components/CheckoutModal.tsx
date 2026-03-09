@@ -38,6 +38,41 @@ type CheckoutStep =
   | "success"
   | "error";
 
+export const CHECKOUT_ERROR_CODES = {
+  WALLET_NOT_CONNECTED: "WALLET_NOT_CONNECTED",
+  WALLET_CLIENT_UNAVAILABLE: "WALLET_CLIENT_UNAVAILABLE",
+  INVALID_EMAIL: "INVALID_EMAIL",
+  PLAN_NOT_AVAILABLE: "PLAN_NOT_AVAILABLE",
+  SMART_ACCOUNT_DEPLOYMENT_FAILED: "SMART_ACCOUNT_DEPLOYMENT_FAILED",
+  AUTOPAY_INSTALL_FAILED: "AUTOPAY_INSTALL_FAILED",
+  AUTOPAY_REVOKE_FAILED: "AUTOPAY_REVOKE_FAILED",
+  TOKEN_APPROVAL_FAILED: "TOKEN_APPROVAL_FAILED",
+  SUBSCRIPTION_MINT_FAILED: "SUBSCRIPTION_MINT_FAILED",
+  CHECKOUT_STATE_INVALID: "CHECKOUT_STATE_INVALID",
+  UNKNOWN: "UNKNOWN",
+} as const;
+
+export type CheckoutErrorCode =
+  (typeof CHECKOUT_ERROR_CODES)[keyof typeof CHECKOUT_ERROR_CODES];
+
+export class CheckoutFlowError extends Error {
+  readonly code: CheckoutErrorCode;
+  readonly cause?: unknown;
+
+  constructor(code: CheckoutErrorCode, message: string, cause?: unknown) {
+    super(message);
+    this.name = "CheckoutFlowError";
+    this.code = code;
+    this.cause = cause;
+  }
+}
+
+function normalizeErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message) return error.message;
+  if (typeof error === "string" && error.trim()) return error;
+  return "An unexpected checkout error occurred.";
+}
+
 export interface CheckoutResult {
   tokenId: bigint;
   paymentAccount: `0x${string}`;
@@ -65,6 +100,7 @@ export interface CheckoutModalProps {
   onSuccess?: (tokenId: bigint) => void;
   onCheckoutComplete?: (result: CheckoutResult) => void;
   onError?: (error: Error) => void;
+  onErrorCode?: (code: CheckoutErrorCode, error: Error) => void;
   deploySmartAccount?: (
     input: SmartAccountDeploymentInput,
   ) => Promise<SmartAccountDeploymentResult>;
@@ -94,6 +130,7 @@ export function CheckoutModal({
   onSuccess,
   onCheckoutComplete,
   onError,
+  onErrorCode,
   deploySmartAccount,
   subscriberEmailEndpoint,
   className = "",
@@ -108,6 +145,7 @@ export function CheckoutModal({
   const [step, setStep] = useState<CheckoutStep>("connect");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorCode, setErrorCode] = useState<CheckoutErrorCode | null>(null);
   const [subscriberEmail, setSubscriberEmail] = useState("");
   const [smartAccountAddress, setSmartAccountAddress] = useState<
     `0x${string}` | undefined
@@ -217,6 +255,23 @@ export function CheckoutModal({
     useWaitForTransactionReceipt({
       hash: mintHash,
     });
+
+  const emitCheckoutError = useCallback(
+    (code: CheckoutErrorCode, err: unknown) => {
+      const message = normalizeErrorMessage(err);
+      const typedError =
+        err instanceof CheckoutFlowError
+          ? err
+          : new CheckoutFlowError(code, message, err);
+      setErrorCode(typedError.code);
+      setError(typedError.message);
+      setStep("error");
+      setLoading(false);
+      onError?.(typedError);
+      onErrorCode?.(typedError.code, typedError);
+    },
+    [onError, onErrorCode],
+  );
 
   useEffect(() => {
     if (autopayInstallHash) {
@@ -328,39 +383,33 @@ export function CheckoutModal({
   // Handle errors from contract writes
   useEffect(() => {
     if (approveError) {
-      setError(approveError.message);
-      setStep("error");
-      setLoading(false);
-      onError?.(approveError);
+      emitCheckoutError(CHECKOUT_ERROR_CODES.TOKEN_APPROVAL_FAILED, approveError);
     }
-  }, [approveError, onError]);
+  }, [approveError, emitCheckoutError]);
 
   useEffect(() => {
     if (mintError) {
-      setError(mintError.message);
-      setStep("error");
-      setLoading(false);
-      onError?.(mintError);
+      emitCheckoutError(CHECKOUT_ERROR_CODES.SUBSCRIPTION_MINT_FAILED, mintError);
     }
-  }, [mintError, onError]);
+  }, [mintError, emitCheckoutError]);
 
   useEffect(() => {
     if (autopayInstallError) {
-      setError(autopayInstallError.message);
-      setStep("error");
-      setLoading(false);
-      onError?.(autopayInstallError);
+      emitCheckoutError(
+        CHECKOUT_ERROR_CODES.AUTOPAY_INSTALL_FAILED,
+        autopayInstallError,
+      );
     }
-  }, [autopayInstallError, onError]);
+  }, [autopayInstallError, emitCheckoutError]);
 
   useEffect(() => {
     if (autopayUninstallError) {
-      setError(autopayUninstallError.message);
-      setStep("error");
-      setLoading(false);
-      onError?.(autopayUninstallError);
+      emitCheckoutError(
+        CHECKOUT_ERROR_CODES.AUTOPAY_REVOKE_FAILED,
+        autopayUninstallError,
+      );
     }
-  }, [autopayUninstallError, onError]);
+  }, [autopayUninstallError, emitCheckoutError]);
 
   const handleConnect = useCallback(() => {
     try {
@@ -368,13 +417,16 @@ export function CheckoutModal({
         connectors.find((c) => c.id === "injected") || connectors[0];
       if (injectedConnector) {
         connect({ connector: injectedConnector });
+      } else {
+        throw new CheckoutFlowError(
+          CHECKOUT_ERROR_CODES.WALLET_NOT_CONNECTED,
+          "No compatible wallet connector was found.",
+        );
       }
-    } catch (err: any) {
-      setError(err.message);
-      setStep("error");
-      onError?.(err);
+    } catch (err) {
+      emitCheckoutError(CHECKOUT_ERROR_CODES.WALLET_NOT_CONNECTED, err);
     }
-  }, [connect, connectors, onError]);
+  }, [connect, connectors, emitCheckoutError]);
 
   const handleDeployAccount = useCallback(async () => {
     setLoading(true);
@@ -404,7 +456,10 @@ export function CheckoutModal({
         } else if (deploymentInput.zeroDevProjectId) {
           // 2. Built-in ZeroDev deployer (requires @zerodev/sdk installed)
           if (!walletClient) {
-            throw new Error("Wallet client not available. Please reconnect your wallet.");
+            throw new CheckoutFlowError(
+              CHECKOUT_ERROR_CODES.WALLET_CLIENT_UNAVAILABLE,
+              "Wallet client not available. Please reconnect your wallet.",
+            );
           }
           const zdResult = await createSmartAccount({
             ownerAddress: address,
@@ -440,16 +495,15 @@ export function CheckoutModal({
           setSmartAccountDeployTxHash(result.txHash);
           setStep("autopay");
         } else {
-          throw new Error(
+          throw new CheckoutFlowError(
+            CHECKOUT_ERROR_CODES.SMART_ACCOUNT_DEPLOYMENT_FAILED,
             "Smart account deployment failed. Set NEXT_PUBLIC_ZERODEV_PROJECT_ID " +
-            "or provide a deploySmartAccount callback to enable automated billing.",
+              "or provide a deploySmartAccount callback to enable automated billing.",
           );
         }
       }
-    } catch (err: any) {
-      setError(err.message);
-      setStep("error");
-      onError?.(err);
+    } catch (err) {
+      emitCheckoutError(CHECKOUT_ERROR_CODES.SMART_ACCOUNT_DEPLOYMENT_FAILED, err);
     } finally {
       setLoading(false);
     }
@@ -460,7 +514,7 @@ export function CheckoutModal({
     deploySmartAccount,
     network.chainId,
     isAutopayInitialized,
-    connectors,
+    emitCheckoutError,
   ]);
 
   const handleEmailContinue = useCallback(async () => {
@@ -471,11 +525,11 @@ export function CheckoutModal({
     if (email) {
       const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
       if (!isEmailValid) {
-        const invalidEmailError = new Error("Enter a valid email address or leave it blank.");
-        setError(invalidEmailError.message);
-        setStep("error");
-        setLoading(false);
-        onError?.(invalidEmailError);
+        const invalidEmailError = new CheckoutFlowError(
+          CHECKOUT_ERROR_CODES.INVALID_EMAIL,
+          "Enter a valid email address or leave it blank.",
+        );
+        emitCheckoutError(CHECKOUT_ERROR_CODES.INVALID_EMAIL, invalidEmailError);
         return;
       }
 
@@ -498,7 +552,7 @@ export function CheckoutModal({
 
     setStep("account");
     setLoading(false);
-  }, [subscriberEmail, address, planId, onError]);
+  }, [subscriberEmail, address, planId, emitCheckoutError, subscriberEmailEndpoint]);
 
   const handleInstallAutopay = useCallback(() => {
     if (
@@ -508,6 +562,10 @@ export function CheckoutModal({
       !planInterval ||
       !USDC_ADDRESS
     ) {
+      emitCheckoutError(
+        CHECKOUT_ERROR_CODES.CHECKOUT_STATE_INVALID,
+        new Error("Plan details are incomplete. Refresh and try again."),
+      );
       return;
     }
     setLoading(true);
@@ -546,6 +604,7 @@ export function CheckoutModal({
     writeAutopayInstall,
     autopayAddress,
     network.chainId,
+    emitCheckoutError,
   ]);
 
   const handleRevokeAutopay = useCallback(() => {
@@ -677,7 +736,9 @@ export function CheckoutModal({
     },
     error: {
       title: "Something went wrong",
-      description: error || "An unexpected error occurred. Please try again.",
+      description:
+        (errorCode ? `[${errorCode}] ` : "") +
+        (error || "An unexpected error occurred. Please try again."),
     },
   };
 
@@ -815,6 +876,7 @@ export function CheckoutModal({
                 resetAutopayInstall();
                 resetAutopayUninstall();
                 setError(null);
+                setErrorCode(null);
                 setStep(isConnected ? "account" : "connect");
               }}
             >

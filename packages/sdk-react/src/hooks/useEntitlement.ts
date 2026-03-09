@@ -27,6 +27,28 @@ interface UseEntitlementReturn {
   refetch: () => void;
 }
 
+export const ENTITLEMENT_ERROR_CODES = {
+  INVALID_WALLET_ADDRESS: "INVALID_WALLET_ADDRESS",
+  ONCHAIN_READ_FAILED: "ONCHAIN_READ_FAILED",
+  TABLELAND_FETCH_FAILED: "TABLELAND_FETCH_FAILED",
+  UNKNOWN: "UNKNOWN",
+} as const;
+
+export type EntitlementErrorCode =
+  (typeof ENTITLEMENT_ERROR_CODES)[keyof typeof ENTITLEMENT_ERROR_CODES];
+
+export class EntitlementError extends Error {
+  readonly code: EntitlementErrorCode;
+  readonly cause?: unknown;
+
+  constructor(code: EntitlementErrorCode, message: string, cause?: unknown) {
+    super(message);
+    this.name = "EntitlementError";
+    this.code = code;
+    this.cause = cause;
+  }
+}
+
 /**
  * useEntitlement — Programmatic access to entitlement state
  *
@@ -59,6 +81,8 @@ export function useEntitlement(
   const [tablelandUpdatedAt, setTablelandUpdatedAt] = useState<number | null>(null);
   const [tablelandLoading, setTablelandLoading] = useState(false);
   const [tablelandError, setTablelandError] = useState<Error | null>(null);
+  const walletInvalid =
+    Boolean(walletAddress) && !/^0x[a-fA-F0-9]{40}$/.test(walletAddress || "");
 
   const tablelandFeatureFlagsUrl = useMemo(() => {
     if (!walletAddress) return null;
@@ -322,12 +346,29 @@ export function useEntitlement(
   const subscriptionError = (subscriptionData as Array<{ error?: unknown }> | undefined)
     ?.find((entry) => entry?.error)?.error;
   const error = tokenError
-      ? new Error(String(tokenError))
+      ? new EntitlementError(
+          ENTITLEMENT_ERROR_CODES.ONCHAIN_READ_FAILED,
+          String(tokenError),
+          tokenError,
+        )
     : subscriptionError
-      ? new Error(String(subscriptionError))
+      ? new EntitlementError(
+          ENTITLEMENT_ERROR_CODES.ONCHAIN_READ_FAILED,
+          String(subscriptionError),
+          subscriptionError,
+        )
       : tablelandError
-        ? tablelandError
-      : null;
+        ? new EntitlementError(
+            ENTITLEMENT_ERROR_CODES.TABLELAND_FETCH_FAILED,
+            tablelandError.message,
+            tablelandError,
+          )
+        : walletInvalid
+          ? new EntitlementError(
+              ENTITLEMENT_ERROR_CODES.INVALID_WALLET_ADDRESS,
+              "Wallet address is invalid.",
+            )
+          : null;
 
   const onChainLastUpdatedAt =
     tokenIdUpdatedAt || subscriptionUpdatedAt

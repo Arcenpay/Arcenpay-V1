@@ -77,7 +77,13 @@ const inAddressSchema = z.object({
 // ── Generic / other countries ─────────────────────────────────
 
 const genericAddressSchema = z.object({
-  country: z.string().length(2).transform((v) => v.toUpperCase()),
+  country: z
+    .string()
+    .length(2)
+    .transform((v) => v.toUpperCase())
+    .refine((v) => v !== "US" && v !== "IN", {
+      message: "Use country-specific schema for US/IN addresses",
+    }),
   line1: z.string().min(1).max(200),
   line2: z.string().max(200).optional(),
   city: z.string().min(1).max(100),

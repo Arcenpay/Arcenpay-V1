@@ -98,13 +98,8 @@ export function FeaturesSection() {
         } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : "Failed to load feature flags";
             setError(msg);
-            // Fall back to local state if facilitator is not running
-            setFlags([
-                { key: "advanced_analytics", label: "Advanced Analytics", type: "boolean", planTiers: ["Pro", "Enterprise"], enabledCount: 0, totalCount: 0 },
-                { key: "api_rate_limit", label: "API Rate Limit", type: "number", planTiers: ["Starter", "Pro", "Enterprise"], enabledCount: 0, totalCount: 0 },
-                { key: "custom_domain", label: "Custom Domain", type: "string", planTiers: ["Enterprise"], enabledCount: 0, totalCount: 0 },
-            ]);
-            setTableExists(true);
+            setFlags([]);
+            setTableExists(null);
         } finally {
             setLoading(false);
         }
@@ -164,10 +159,10 @@ export function FeaturesSection() {
             });
             setFlags((prev) => [...prev.filter((f) => f.key !== flagData.key), flagData]);
             toast.success(`Flag "${flagData.key}" created`);
-        } catch {
-            // If facilitator not running, add locally
-            setFlags((prev) => [...prev, flagData]);
-            toast.success(`Flag "${flagData.key}" created locally`);
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : `Failed to create "${flagData.key}"`;
+            toast.error(msg);
+            return;
         } finally {
             setIsSaving(false);
         }
@@ -182,11 +177,12 @@ export function FeaturesSection() {
             await apiFetch(`/api/entitlements/provider/${address}/flags/${key}`, {
                 method: "DELETE",
             });
+            setFlags((prev) => prev.filter((f) => f.key !== key));
             toast.success(`Flag "${key}" deleted`);
-        } catch {
-            // optimistic delete
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : `Failed to delete "${key}"`;
+            toast.error(msg);
         }
-        setFlags((prev) => prev.filter((f) => f.key !== key));
     };
 
     const handleBulkToggle = async (enable: boolean, flagKey: string, tier: string) => {
@@ -276,7 +272,7 @@ export function FeaturesSection() {
                 <div className="flex items-center gap-3 p-4 rounded-xl bg-warning/5 border border-warning/20">
                     <AlertCircle className="w-4 h-4 text-warning shrink-0" />
                     <p className="text-sm text-muted-foreground flex-1">
-                        Facilitator offline — showing local state. {error}
+                        Facilitator unavailable. {error}
                     </p>
                     <Button variant="ghost" size="sm" onClick={fetchFlags}>
                         <RefreshCw className="w-3.5 h-3.5 mr-1.5" />

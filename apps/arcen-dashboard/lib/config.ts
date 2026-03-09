@@ -12,9 +12,54 @@
 //    let it reach a production runtime
 // ============================================================
 
+import * as MEAPCore from "@meap/core";
+
 const isProd =
   process.env.NODE_ENV === "production" &&
   process.env.NEXT_PHASE !== "phase-production-build";
+
+const DEFAULT_CHAIN_ID = Number(
+  process.env.MEAP_DEFAULT_CHAIN_ID ||
+    process.env.CHAIN_ID ||
+    process.env.NEXT_PUBLIC_CHAIN_ID ||
+    "11155111",
+);
+
+function resolveDefaultChainEnvironment() {
+  try {
+    return getChainEnvironmentCompat(DEFAULT_CHAIN_ID);
+  } catch {
+    return getChainEnvironmentCompat(11155111);
+  }
+}
+
+const DEFAULT_CHAIN_ENV = resolveDefaultChainEnvironment();
+
+function getChainEnvironmentCompat(chainId: number) {
+  const maybe = (MEAPCore as unknown as {
+    getChainEnvironment?: (id: number) => {
+      services: { rpcUrl: string; subgraphUrl?: string; facilitatorUrl?: string };
+    };
+  }).getChainEnvironment;
+  if (typeof maybe === "function") {
+    return maybe(chainId);
+  }
+
+  // Backward compatibility for stale @meap/core dist builds that don't yet
+  // export getChainEnvironment.
+  const chain = MEAPCore.getChain(chainId);
+  return {
+    chainId,
+    chainName: chain.name,
+    isTestnet: Boolean(chain.testnet),
+    contracts: MEAPCore.getContractAddresses(chainId),
+    services: {
+      rpcUrl: chain.rpcUrls.default.http[0] || "",
+      subgraphUrl: "",
+      facilitatorUrl: "",
+    },
+  };
+}
 
 
 function requireInProd(name: string, value: string | undefined): string {
@@ -36,11 +81,17 @@ function requireInProd(name: string, value: string | undefined): string {
  */
 export const FACILITATOR_URL: string = (() => {
   const val =
+    process.env[`FACILITATOR_BASE_URL_${DEFAULT_CHAIN_ID}`] ||
+    process.env[`FACILITATOR_URL_${DEFAULT_CHAIN_ID}`] ||
     process.env.FACILITATOR_BASE_URL ||
     process.env.FACILITATOR_URL ||
     process.env.NEXT_PUBLIC_FACILITATOR_BASE_URL ||
     process.env.NEXT_PUBLIC_FACILITATOR_URL;
-  return requireInProd("FACILITATOR_URL / FACILITATOR_BASE_URL", val) || "http://localhost:3402";
+  return (
+    requireInProd("FACILITATOR_URL / FACILITATOR_BASE_URL", val) ||
+    DEFAULT_CHAIN_ENV.services.facilitatorUrl ||
+    "http://localhost:3402"
+  );
 })();
 
 // ── Application base URL ──────────────────────────────────────────────────────
@@ -65,7 +116,12 @@ export const APP_URL: string = (() => {
  * Required in production (placeholder URL is explicitly rejected).
  */
 export const GRAPH_URL: string = (() => {
-  const val = process.env.NEXT_PUBLIC_GRAPH_URL;
+  const val =
+    process.env[`NEXT_PUBLIC_GRAPH_URL_${DEFAULT_CHAIN_ID}`] ||
+    process.env.NEXT_PUBLIC_GRAPH_URL ||
+    process.env[`MEAP_SUBGRAPH_URL_${DEFAULT_CHAIN_ID}`] ||
+    process.env.MEAP_SUBGRAPH_URL ||
+    DEFAULT_CHAIN_ENV.services.subgraphUrl;
   if (!val) {
     if (isProd) {
       throw new Error(
@@ -167,6 +223,14 @@ export function getRpcUrl(chainId: number): string {
   if (specific) return specific;
   const global_ = process.env.RPC_URL;
   if (global_) return global_;
+  const manifestSpecific = (() => {
+    try {
+      return getChainEnvironmentCompat(chainId).services.rpcUrl;
+    } catch {
+      return "";
+    }
+  })();
+  if (manifestSpecific) return manifestSpecific;
   if (isProd) {
     throw new Error(
       `[config] RPC_URL_${chainId} (or RPC_URL) must be set in production.`,

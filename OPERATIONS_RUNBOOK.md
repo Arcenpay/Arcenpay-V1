@@ -17,6 +17,8 @@ This runbook covers the highest-risk on-call scenarios from the PRD for MEAP + Z
    - `ZK_CIRCUIT_WASM_PATH`
    - `ZK_CIRCUIT_ZKEY_PATH`
    - `ZK_CIRCUIT_VKEY_PATH`
+   - `MEAP_PROOF_ARTIFACT_MANIFEST_PATH`
+   - `MEAP_PROOF_ARTIFACT_VERSION` matches manifest `version`
 5. Confirm `SESSION_VAULT_ADDRESS` and `PRIVATE_KEY` are correct in facilitator env.
 6. Verify SessionVault settler authorization for facilitator wallet.
 
@@ -26,6 +28,12 @@ This runbook covers the highest-risk on-call scenarios from the PRD for MEAP + Z
 2. If Redis unavailable: restore Redis and confirm `REDIS_URL` connectivity.
 3. If queue is stale: restart facilitator process and monitor queue drain.
 4. If proofs are malformed: quarantine affected batches and re-generate proof inputs.
+5. If deployment/config drift is suspected:
+   - Re-export deployment manifest:
+     - `npm --workspace @meap/contracts run deploy:export-manifest`
+   - Run per-chain smoke:
+     - `npm --workspace @meap/contracts run smoke:sepolia`
+     - `npm --workspace @meap/contracts run smoke:base-sepolia`
 
 ### Exit Criteria
 - New `BillingSettled` events observed.
@@ -74,6 +82,9 @@ This runbook covers the highest-risk on-call scenarios from the PRD for MEAP + Z
 2. RPC reachability and chain head progress.
 3. Redis connectivity.
 4. Signer wallet balance for gas.
+5. Verify chain manifest resolution:
+   - `RPC_URL_<chainId>` or shared manifest RPC is valid.
+   - Facilitator and subgraph URLs are present for production.
 
 ### Remediation
 1. Restart facilitator service.

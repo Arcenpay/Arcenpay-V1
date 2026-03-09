@@ -267,6 +267,25 @@ export interface ContractAddresses {
   mirrorRegistry?: string;
 }
 
+export interface ChainServiceEndpoints {
+  rpcUrl: string;
+  subgraphUrl?: string;
+  facilitatorUrl?: string;
+}
+
+export interface ChainEnvironmentManifest {
+  chainId: number;
+  chainName: string;
+  isTestnet: boolean;
+  contracts: ContractAddresses;
+  services: ChainServiceEndpoints;
+}
+
+export interface EnvironmentManifest {
+  manifestVersion: string;
+  chains: Record<number, ChainEnvironmentManifest>;
+}
+
 // --- Tableland Entitlement Types (PRD Section 3.1.2) ---
 
 export interface TablelandEntitlement {
