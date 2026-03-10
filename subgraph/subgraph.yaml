@@ -126,10 +126,15 @@ dataSources:
       entities:
         - FeeEvent
         - BillingEvent
+        - ProviderTierChange
       abis:
         - name: FeeCollector
           file: ./abis/FeeCollector.json
       eventHandlers:
         - event: FeeCollected(indexed address,uint256,uint256,string)
           handler: handleFeeCollected
+        - event: ProviderTierSynced(indexed address,uint8,uint256,uint256)
+          handler: handleProviderTierSynced
+        - event: ProviderFeeRateSet(indexed address,uint256,uint256)
+          handler: handleProviderFeeRateSet
       file: ./src/fee-collector.ts

@@ -19,6 +19,21 @@ interface IFeeCollector {
     /// @notice Emitted when fees are withdrawn to treasury
     event FeesWithdrawn(address indexed treasury, uint256 amount);
 
+    /// @notice Emitted when a provider's fee override is set
+    event ProviderFeeRateSet(
+        address indexed provider,
+        uint256 subFeeBps,
+        uint256 settleFeeBps
+    );
+
+    /// @notice Emitted when a provider's tier is synced
+    event ProviderTierSynced(
+        address indexed provider,
+        uint8 tier,
+        uint256 subFeeBps,
+        uint256 settleFeeBps
+    );
+
     // ============================================================
     //                     CORE FUNCTIONS
     // ============================================================
@@ -54,4 +69,51 @@ interface IFeeCollector {
     /// @notice Withdraws accumulated fees to the protocol treasury
     /// @param token The token address to withdraw
     function withdrawFees(address token) external;
+
+    // ============================================================
+    //                  PROVIDER-SPECIFIC FEES
+    // ============================================================
+
+    /// @notice Collects subscription fee using the provider-specific rate override
+    /// @param amount The total transaction amount
+    /// @param provider The provider whose rate to use
+    /// @return feeAmount The fee amount collected
+    function collectSubscriptionFeeFor(uint256 amount, address provider) external returns (uint256 feeAmount);
+
+    /// @notice Collects settlement fee using the provider-specific rate override
+    /// @param amount The total settlement amount
+    /// @param provider The provider whose rate to use
+    /// @return feeAmount The fee amount collected
+    function collectSettlementFeeFor(uint256 amount, address provider) external returns (uint256 feeAmount);
+
+    /// @notice Returns the effective subscription fee rate for a provider
+    /// @param provider The provider wallet address
+    /// @return The fee rate in basis points
+    function getProviderSubFeeBps(address provider) external view returns (uint256);
+
+    /// @notice Returns the effective settlement fee rate for a provider
+    /// @param provider The provider wallet address
+    /// @return The fee rate in basis points
+    function getProviderSettleFeeBps(address provider) external view returns (uint256);
+
+    // ============================================================
+    //                     TIER MANAGEMENT
+    // ============================================================
+
+    /// @notice Sets fee rate overrides for a specific provider
+    /// @param provider The provider wallet address
+    /// @param subFeeBps Subscription fee in basis points
+    /// @param settleFeeBps Settlement fee in basis points
+    function setProviderFeeRates(address provider, uint256 subFeeBps, uint256 settleFeeBps) external;
+
+    /// @notice Syncs a provider's fee rates based on their platform tier
+    /// @param provider The provider wallet address
+    /// @param tier The platform tier (0=FREE, 1=PLUS, 2=PRO)
+    function syncProviderTier(address provider, uint8 tier) external;
+
+    /// @notice Updates the default fee rates for a platform tier
+    /// @param tier The tier (0=FREE, 1=PLUS, 2=PRO)
+    /// @param subFeeBps Subscription fee in basis points
+    /// @param settleFeeBps Settlement fee in basis points
+    function setTierFeeRates(uint8 tier, uint256 subFeeBps, uint256 settleFeeBps) external;
 }

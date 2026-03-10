@@ -150,8 +150,8 @@ contract ERC7579AutopayModule is IERC7579AutopayModule, ReentrancyGuard {
         // Update last pull time BEFORE external calls (checks-effects-interactions)
         _lastPullTimes[account] = uint64(block.timestamp);
 
-        // Calculate protocol fee
-        uint256 protocolFee = feeCollector.collectSubscriptionFee(amount);
+        // Calculate protocol fee using provider-specific tier rate
+        uint256 protocolFee = feeCollector.collectSubscriptionFeeFor(amount, config.merchant);
         uint256 merchantAmount = amount - protocolFee;
 
         // Execute token transfer from smart account

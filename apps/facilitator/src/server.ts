@@ -2851,6 +2851,125 @@ app.get("/api/proofs/history", (req, res) => {
 });
 
 // ============================================================
+//  Paymaster Relay — Gas Sponsorship Evaluation
+// ============================================================
+
+interface PaymasterEvalRequest {
+  teamId: string;
+  chainId: number;
+  walletAddress: string;
+  txType: string;
+  to: string;
+  data?: string;
+}
+
+app.post("/api/paymaster/evaluate", async (req, res) => {
+  const body = req.body as PaymasterEvalRequest;
+
+  if (!body.teamId || !body.chainId || !body.walletAddress || !body.txType) {
+    res.status(400).json({
+      sponsored: false,
+      reason: "Missing required fields: teamId, chainId, walletAddress, txType",
+    });
+    return;
+  }
+
+  // Only L2 chains are eligible for sponsorship
+  const sponsoredChains = new Set([8453, 84532]);
+  if (!sponsoredChains.has(body.chainId)) {
+    res.status(200).json({
+      sponsored: false,
+      reason: `Chain ${body.chainId} is not eligible for gas sponsorship (L2 only)`,
+    });
+    return;
+  }
+
+  // Only specific tx types can be sponsored
+  const sponsoredTxTypes = new Set(["subscribe", "renew", "deposit"]);
+  if (!sponsoredTxTypes.has(body.txType)) {
+    res.status(200).json({
+      sponsored: false,
+      reason: `Transaction type "${body.txType}" is not eligible for sponsorship`,
+    });
+    return;
+  }
+
+  // Check gas budget with dashboard
+  if (!DASHBOARD_URL) {
+    res.status(200).json({
+      sponsored: false,
+      reason: "Gas budget service not configured (DASHBOARD_URL missing)",
+    });
+    return;
+  }
+
+  try {
+    const budgetRes = await fetch(
+      `${DASHBOARD_URL}/api/platform/gas-budget?teamId=${encodeURIComponent(body.teamId)}`,
+      {
+        headers: FACILITATOR_SECRET
+          ? { Authorization: `Bearer ${FACILITATOR_SECRET}` }
+          : {},
+      },
+    );
+
+    if (!budgetRes.ok) {
+      res.status(200).json({
+        sponsored: false,
+        reason: `Budget check failed: HTTP ${budgetRes.status}`,
+      });
+      return;
+    }
+
+    const budgetData = (await budgetRes.json()) as {
+      budget?: { remainingUsd?: number; budgetExhausted?: boolean };
+    };
+
+    if (budgetData.budget?.budgetExhausted || (budgetData.budget?.remainingUsd ?? 0) <= 0) {
+      res.status(200).json({
+        sponsored: false,
+        reason: "Daily gas budget exhausted",
+        remainingUsd: budgetData.budget?.remainingUsd ?? 0,
+      });
+      return;
+    }
+
+    // Budget approved — in production, this would forward to an ERC-4337 bundler
+    // (Pimlico, Biconomy, etc.) and return paymasterAndData.
+    // For now, return approval with a placeholder.
+    res.status(200).json({
+      sponsored: true,
+      chainId: body.chainId,
+      walletAddress: body.walletAddress,
+      txType: body.txType,
+      remainingBudgetUsd: budgetData.budget?.remainingUsd,
+      // TODO: Integrate with ERC-4337 bundler to return actual paymasterAndData
+      paymasterAndData: null,
+      message: "Gas sponsorship approved. ERC-4337 bundler integration pending.",
+    });
+
+    // Record the gas spend (fire-and-forget)
+    postToDashboard("/api/platform/gas-spend", {
+      teamId: body.teamId,
+      chainId: body.chainId,
+      txHash: "pending", // Will be updated after tx is mined
+      gasUsed: 0, // Will be updated after tx is mined
+      gasCostUsd: 0, // Estimated; updated after tx
+      walletAddress: body.walletAddress,
+      txType: body.txType,
+    }).catch(() => {
+      // Non-fatal
+    });
+  } catch (err) {
+    console.error("[Facilitator] Paymaster evaluate error:", err);
+    res.status(500).json({
+      sponsored: false,
+      reason: "Internal error during gas budget evaluation",
+    });
+  }
+});
+
+// ============================================================
 //  Start Server
 // ============================================================
 

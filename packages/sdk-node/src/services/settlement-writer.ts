@@ -6,7 +6,7 @@
 import { createPublicClient, createWalletClient, http, isAddress, type Hex } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { sepolia, baseSepolia, base } from 'viem/chains';
-import { SessionVaultABI, getContractAddresses } from '@meap/core';
+import { SessionVaultABI, FeeCollectorABI, getContractAddresses } from '@meap/core';
 
 const CHAIN_MAP: Record<number, any> = {
   11155111: sepolia,
@@ -29,6 +29,7 @@ export interface SettlementWriterConfig {
   privateKey: `0x${string}`;
   chainId?: number;
   sessionVaultAddress?: `0x${string}`;
+  feeCollectorAddress?: `0x${string}`;
   providerAddress?: `0x${string}`;
   waitForReceipt?: boolean;
 }
@@ -93,6 +94,7 @@ function normalizeSession(raw: unknown): SessionState {
 export class SettlementWriterService {
   private readonly chainId: number;
   private readonly sessionVaultAddress: `0x${string}`;
+  private readonly feeCollectorAddress: `0x${string}`;
   private readonly providerAddress: `0x${string}`;
   private readonly signerAddress: `0x${string}`;
   private readonly waitForReceipt: boolean;
@@ -105,6 +107,7 @@ export class SettlementWriterService {
     const contracts = getContractAddresses(this.chainId);
 
     this.sessionVaultAddress = (config.sessionVaultAddress || contracts.sessionVault) as `0x${string}`;
+    this.feeCollectorAddress = (config.feeCollectorAddress || contracts.feeCollector) as `0x${string}`;
 
     const account = privateKeyToAccount(config.privateKey);
     this.signerAddress = account.address;
@@ -229,6 +232,25 @@ export class SettlementWriterService {
 
     if (this.waitForReceipt) {
       await this.publicClient.waitForTransactionReceipt({ hash: txHash });
+    }
+
+    // Collect protocol fee using provider-specific tier rate
+    if (isAddress(this.feeCollectorAddress)) {
+      try {
+        const feeTxHash = (await this.walletClient.writeContract({
+          address: this.feeCollectorAddress,
+          abi: FeeCollectorABI,
+          functionName: 'collectSettlementFeeFor',
+          args: [input.amount, providerAddress],
+        })) as `0x${string}`;
+
+        if (this.waitForReceipt) {
+          await this.publicClient.waitForTransactionReceipt({ hash: feeTxHash });
+        }
+      } catch (err) {
+        // Fee collection failure should not revert the settlement
+        console.warn('[SettlementWriter] Fee collection failed (non-fatal):', err);
+      }
     }
 
     return {

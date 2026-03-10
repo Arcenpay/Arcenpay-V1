@@ -10,7 +10,9 @@ export type Permission =
   | "invoices:write"
   | "invoices:send"
   | "audit:read"
-  | "environment:switch";
+  | "environment:switch"
+  | "support:read"
+  | "support:write";
 
 const ALL_PERMISSIONS: Permission[] = [
   "catalog:read",
@@ -23,6 +25,8 @@ const ALL_PERMISSIONS: Permission[] = [
   "invoices:send",
   "audit:read",
   "environment:switch",
+  "support:read",
+  "support:write",
 ];
 
 const ROLE_PERMISSIONS: Record<TeamRole, Permission[]> = {
@@ -48,7 +52,7 @@ const ROLE_PERMISSIONS: Record<TeamRole, Permission[]> = {
     "templates:install",
     "invoices:read",
   ],
-  SUPPORT: ["catalog:read", "templates:read", "invoices:read", "audit:read"],
+  SUPPORT: ["catalog:read", "templates:read", "invoices:read", "audit:read", "support:read"],
   MEMBER: ["catalog:read", "templates:read", "invoices:read"],
 };
 

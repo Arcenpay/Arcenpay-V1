@@ -114,6 +114,17 @@ type FeeEvent @entity(immutable: true) {
   timestamp: BigInt!
 }
 
+type ProviderTierChange @entity(immutable: true) {
+  id: ID! # txHash-logIndex
+  provider: Bytes!
+  tier: Int!
+  subFeeBps: BigInt!
+  settleFeeBps: BigInt!
+  txHash: Bytes!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+}
+
 # Protocol-wide aggregates
 type ProtocolStats @entity(immutable: false) {
   id: ID! # global

@@ -16,7 +16,7 @@ import { PlatformTier } from "@/src/generated/prisma/client";
 // ── GET: List support tickets ────────────────────────────────────────────────
 
 export async function GET(request: NextRequest) {
-    const auth = await requirePermission("catalog:read");
+    const auth = await requirePermission("support:read");
     if (isErrorResponse(auth)) return auth;
 
     const statusFilter = request.nextUrl.searchParams.get("status");
@@ -49,7 +49,7 @@ const createSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-    const auth = await requirePermission("catalog:write");
+    const auth = await requirePermission("support:write");
     if (isErrorResponse(auth)) return auth;
 
     // Check team tier — only PLUS (priority) and PRO (dedicated) can create tickets

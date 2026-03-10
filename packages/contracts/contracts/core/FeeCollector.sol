@@ -55,20 +55,7 @@ contract FeeCollector is IFeeCollector, Ownable, ReentrancyGuard {
     mapping(uint8 => uint256) public tierSubFeeBps;
     mapping(uint8 => uint256) public tierSettleFeeBps;
 
-    /// @notice Emitted when a provider's fee override is set
-    event ProviderFeeRateSet(
-        address indexed provider,
-        uint256 subFeeBps,
-        uint256 settleFeeBps
-    );
-
-    /// @notice Emitted when a provider's tier is synced
-    event ProviderTierSynced(
-        address indexed provider,
-        uint8 tier,
-        uint256 subFeeBps,
-        uint256 settleFeeBps
-    );
+    // Events ProviderFeeRateSet and ProviderTierSynced are inherited from IFeeCollector
 
     // ============================================================
     //                        CONSTRUCTOR

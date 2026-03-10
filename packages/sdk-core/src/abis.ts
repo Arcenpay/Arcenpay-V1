@@ -548,6 +548,7 @@ export const ZKUsageVerifierABI = [
 ] as const;
 
 export const FeeCollectorABI = [
+  // ── Core fee collection ──
   {
     type: "function",
     name: "collectSubscriptionFee",
@@ -562,6 +563,28 @@ export const FeeCollectorABI = [
     outputs: [{ name: "feeAmount", type: "uint256" }],
     stateMutability: "nonpayable",
   },
+  // ── Provider-specific fee collection ──
+  {
+    type: "function",
+    name: "collectSubscriptionFeeFor",
+    inputs: [
+      { name: "amount", type: "uint256" },
+      { name: "provider", type: "address" },
+    ],
+    outputs: [{ name: "feeAmount", type: "uint256" }],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "collectSettlementFeeFor",
+    inputs: [
+      { name: "amount", type: "uint256" },
+      { name: "provider", type: "address" },
+    ],
+    outputs: [{ name: "feeAmount", type: "uint256" }],
+    stateMutability: "nonpayable",
+  },
+  // ── Fee rate queries ──
   {
     type: "function",
     name: "subscriptionFeeRate",
@@ -578,6 +601,68 @@ export const FeeCollectorABI = [
   },
   {
     type: "function",
+    name: "getProviderSubFeeBps",
+    inputs: [{ name: "provider", type: "address" }],
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "getProviderSettleFeeBps",
+    inputs: [{ name: "provider", type: "address" }],
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "view",
+  },
+  // ── Tier management ──
+  {
+    type: "function",
+    name: "syncProviderTier",
+    inputs: [
+      { name: "provider", type: "address" },
+      { name: "tier", type: "uint8" },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "setTierFeeRates",
+    inputs: [
+      { name: "tier", type: "uint8" },
+      { name: "subFeeBps", type: "uint256" },
+      { name: "settleFeeBps", type: "uint256" },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "setProviderFeeRates",
+    inputs: [
+      { name: "provider", type: "address" },
+      { name: "subFeeBps", type: "uint256" },
+      { name: "settleFeeBps", type: "uint256" },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "tierSubFeeBps",
+    inputs: [{ name: "tier", type: "uint8" }],
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "tierSettleFeeBps",
+    inputs: [{ name: "tier", type: "uint8" }],
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "view",
+  },
+  // ── Treasury ──
+  {
+    type: "function",
     name: "accumulatedFees",
     inputs: [{ name: "token", type: "address" }],
     outputs: [{ name: "", type: "uint256" }],
@@ -589,6 +674,44 @@ export const FeeCollectorABI = [
     inputs: [{ name: "token", type: "address" }],
     outputs: [],
     stateMutability: "nonpayable",
+  },
+  // ── Events ──
+  {
+    type: "event",
+    name: "FeeCollected",
+    inputs: [
+      { name: "from", type: "address", indexed: true },
+      { name: "amount", type: "uint256", indexed: false },
+      { name: "feeAmount", type: "uint256", indexed: false },
+      { name: "feeType", type: "string", indexed: false },
+    ],
+  },
+  {
+    type: "event",
+    name: "FeesWithdrawn",
+    inputs: [
+      { name: "treasury", type: "address", indexed: true },
+      { name: "amount", type: "uint256", indexed: false },
+    ],
+  },
+  {
+    type: "event",
+    name: "ProviderFeeRateSet",
+    inputs: [
+      { name: "provider", type: "address", indexed: true },
+      { name: "subFeeBps", type: "uint256", indexed: false },
+      { name: "settleFeeBps", type: "uint256", indexed: false },
+    ],
+  },
+  {
+    type: "event",
+    name: "ProviderTierSynced",
+    inputs: [
+      { name: "provider", type: "address", indexed: true },
+      { name: "tier", type: "uint8", indexed: false },
+      { name: "subFeeBps", type: "uint256", indexed: false },
+      { name: "settleFeeBps", type: "uint256", indexed: false },
+    ],
   },
 ] as const;
 
