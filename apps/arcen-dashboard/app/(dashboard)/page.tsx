@@ -19,6 +19,7 @@ import {
   CatalogConfigSection,
 } from "@/components/dashboard/sections/catalog";
 import { ComponentsSection } from "@/components/dashboard/sections/components";
+import { BillingSection } from "@/components/dashboard/sections/billing";
 import { SectionErrorBoundary } from "@/components/dashboard/section-error-boundary";
 import { SubgraphLagBanner } from "@/components/dashboard/subgraph-lag-banner";
 import { EnvironmentProvider } from "@/contexts/environment-context";
@@ -34,6 +35,7 @@ export type Section =
   | "sessions"
   | "features"
   | "components"
+  | "billing"
   | "audit-log"
   | "settings";
 
@@ -124,6 +126,12 @@ export default function Dashboard() {
         return (
           <SectionErrorBoundary fallbackLabel="Settings failed to load">
             <SettingsSection />
+          </SectionErrorBoundary>
+        );
+      case "billing":
+        return (
+          <SectionErrorBoundary fallbackLabel="Billing failed to load">
+            <BillingSection />
           </SectionErrorBoundary>
         );
       case "audit-log":

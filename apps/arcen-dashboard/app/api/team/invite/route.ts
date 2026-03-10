@@ -15,6 +15,7 @@ import { resolveTeamContext } from "@/lib/team-session";
 import { db } from "@/lib/db";
 import { writeAuditEvent } from "@/lib/audit";
 import { rateLimit, applyRateLimitHeaders } from "@/lib/rate-limit";
+import { assertCanInviteMember } from "@/lib/tier-guard";
 
 // 5 invites per team per hour — prevents invite spam
 const INVITE_LIMIT = 5;
@@ -41,6 +42,21 @@ export async function POST(req: NextRequest) {
 
     if (team.teamRole !== "OWNER" && team.teamRole !== "ADMIN") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    // ── Tier limit enforcement ──────────────────────────────────────────────
+    const tierCheck = await assertCanInviteMember(team.teamId);
+    if (!tierCheck.allowed) {
+      return NextResponse.json(
+        {
+          error: "Team member limit reached",
+          reason: tierCheck.reason,
+          limit: tierCheck.limit,
+          current: tierCheck.current,
+          upgradeRequired: tierCheck.upgradeRequired,
+        },
+        { status: 403 },
+      );
     }
 
     const rl = rateLimit(`invite:${team.teamId}`, INVITE_LIMIT, INVITE_WINDOW_MS);

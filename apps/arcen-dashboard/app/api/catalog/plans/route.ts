@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { requirePermission, isErrorResponse } from "@/lib/api-auth";
 import { writeAuditEvent } from "@/lib/audit";
 import { toPrismaNullableJson } from "@/lib/prisma-json";
+import { assertCanCreatePlan } from "@/lib/tier-guard";
 
 const listSchema = z.object({
   environmentMode: z.enum(["DEVELOPMENT", "PRODUCTION"]).optional(),
@@ -76,6 +77,22 @@ export async function POST(request: NextRequest) {
   }
 
   const data = parsed.data;
+
+  // ── Tier limit enforcement ──────────────────────────────────────────────────
+  const tierCheck = await assertCanCreatePlan(auth.team.teamId);
+  if (!tierCheck.allowed) {
+    return NextResponse.json(
+      {
+        error: "Plan limit reached",
+        reason: tierCheck.reason,
+        limit: tierCheck.limit,
+        current: tierCheck.current,
+        upgradeRequired: tierCheck.upgradeRequired,
+      },
+      { status: 403 },
+    );
+  }
+
   const plan = await db.catalogPlan.create({
     data: {
       teamId: auth.team.teamId,

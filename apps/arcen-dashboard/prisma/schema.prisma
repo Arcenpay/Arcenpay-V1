@@ -86,6 +86,27 @@ enum AuditActorType {
   SYSTEM
 }
 
+enum SupportTicketStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING_ON_CUSTOMER
+  RESOLVED
+  CLOSED
+}
+
+enum SupportTicketPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum PlatformTier {
+  FREE
+  PLUS
+  PRO
+}
+
 // ─── Core identity ────────────────────────────────────────────────────────────
 
 model User {
@@ -138,6 +159,11 @@ model Team {
   invoicePrefix   String?
   clerkOrgId      String?         @unique
 
+  // Platform tier (ArcenPay's own billing tier for this workspace)
+  platformTier       PlatformTier @default(FREE)
+  tierExpiresAt      DateTime?
+  tierSubscriptionId String?      // On-chain subscription tokenId for self-billing
+
   members         TeamMember[]
   providerProfile ProviderProfile?
 
@@ -154,12 +180,16 @@ model Team {
   taxProfile       TaxProfile?
   invoiceSequences InvoiceSequence[]
 
-  auditEvents       AuditEvent[]
-  billingEvents     BillingEvent[]
-  webhookDeliveries WebhookDelivery[]
+  auditEvents        AuditEvent[]
+  billingEvents      BillingEvent[]
+  webhookDeliveries  WebhookDelivery[]
+  gasSpends          GasSpend[]
+  tierHistory        TierUpgradeHistory[]
+  supportTickets     SupportTicket[]
 
   @@index([slug])
   @@index([clerkOrgId])
+  @@index([platformTier])
 }
 
 model TeamMember {
@@ -599,4 +629,81 @@ model WebhookDelivery {
 
   @@index([teamId, deliveredAt])
   @@index([teamId, success])
+}
+
+// ─── Platform Tier Configuration ──────────────────────────────────────────────
+
+model PlatformTierConfig {
+  id              String       @id @default(cuid())
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  tier            PlatformTier @unique
+
+  maxWorkspaces     Int     @default(1)
+  maxPlans          Int     @default(1)
+  maxSubscribers    Int     @default(100)
+  maxTeamMembers    Int     @default(1)
+  maxFeatureFlags   Int     @default(3)
+  maxChains         Int     @default(1)
+  platformFeeBps    Int     @default(200)      // 2.0% for Free
+  gasSponsored      Boolean @default(true)
+  gasDailyBudgetUsd Decimal @default(0.50) @db.Decimal(10, 2)
+}
+
+// ─── Gas Sponsorship Tracking ─────────────────────────────────────────────────
+
+model GasSpend {
+  id            String   @id @default(cuid())
+  createdAt     DateTime @default(now())
+  teamId        String
+  chainId       Int
+  txHash        String   @unique
+  gasUsedWei    String
+  gasCostUsd    Decimal  @db.Decimal(20, 8)
+  walletAddress String?
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([teamId, createdAt])
+  @@index([teamId, walletAddress, createdAt])
+}
+
+// ─── Tier Upgrade History ─────────────────────────────────────────────────
+
+model TierUpgradeHistory {
+  id        String       @id @default(cuid())
+  createdAt DateTime     @default(now())
+  teamId    String
+  fromTier  PlatformTier
+  toTier    PlatformTier
+  txHash    String?
+  amountUsd Decimal?     @db.Decimal(10, 2)
+  userId    String
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([teamId, createdAt])
+}
+
+// ─── Pro Support Tickets ──────────────────────────────────────────────────
+
+model SupportTicket {
+  id         String                @id @default(cuid())
+  createdAt  DateTime              @default(now())
+  updatedAt  DateTime              @updatedAt
+  teamId     String
+  userId     String
+  subject    String
+  body       String
+  status     SupportTicketStatus   @default(OPEN)
+  priority   SupportTicketPriority @default(NORMAL)
+  category   String?
+  assignee   String?
+  resolvedAt DateTime?
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([teamId, status])
+  @@index([teamId, createdAt])
+  @@index([status, priority])
 }

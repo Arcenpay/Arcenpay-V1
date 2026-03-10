@@ -29,6 +29,7 @@ const sectionTitles: Record<Section, string> = {
   sessions: "Sessions",
   features: "Features",
   components: "Components",
+  billing: "Billing & Plan",
   "audit-log": "Audit Log",
   settings: "Settings",
 };
@@ -44,6 +45,7 @@ const sectionDescriptions: Record<Section, string> = {
   sessions: "ZKVUB agent sessions",
   features: "Tableland + Lit Protocol feature flags",
   components: "UI component library",
+  billing: "Manage your platform tier, gas budget, and support",
   "audit-log": "Immutable record of all team actions",
   settings: "Provider configuration",
 };

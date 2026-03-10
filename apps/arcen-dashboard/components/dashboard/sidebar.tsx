@@ -22,6 +22,7 @@ import {
   Package,
   Coins,
   SlidersHorizontal,
+  CreditCard,
 } from "lucide-react";
 import { useEnvironment } from "@/contexts/environment-context";
 
@@ -68,6 +69,7 @@ const navGroups: NavGroup[] = [
   {
     label: "Admin",
     items: [
+      { id: "billing", label: "Billing & Plan", icon: CreditCard },
       { id: "audit-log", label: "Audit Log", icon: ClipboardList },
       { id: "settings", label: "Settings", icon: Settings },
     ],
