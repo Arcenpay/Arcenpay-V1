@@ -265,6 +265,8 @@ export interface ContractAddresses {
   sessionVault: string;
   zkUsageVerifier: string;
   mirrorRegistry?: string;
+  /** Optional ERC-4626 yield vault — set MEAP_CONTRACT_<chainId>_yieldSessionVault to enable */
+  yieldSessionVault?: string;
 }
 
 export interface ChainServiceEndpoints {
@@ -336,4 +338,17 @@ export interface MEAPConfig {
      */
     featureFlagsEndpoint?: string;
   };
+  /**
+   * Optional fallback feature map used by `useEntitlement` when Tableland is not
+   * configured. Keys are plan tiers ('starter' | 'pro' | 'enterprise'), values
+   * are feature key → value maps. Replaces the SDK's built-in hardcoded defaults.
+   *
+   * @example
+   * tierFeatureFallback: {
+   *   starter: { api_access: false, webhooks: true },
+   *   pro:     { api_access: true,  webhooks: true },
+   *   enterprise: { api_access: true, webhooks: true, sso: true },
+   * }
+   */
+  tierFeatureFallback?: Record<string, Record<string, boolean | string | number>>;
 }

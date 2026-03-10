@@ -659,3 +659,97 @@ export const MirrorRegistryABI = [
     ],
   },
 ] as const;
+
+// ── YieldSessionVault (ERC4626 yield-bearing session vault) ──────────────────
+
+export const YieldSessionVaultABI = [
+  {
+    type: "function",
+    name: "fundSession",
+    inputs: [{ name: "amount", type: "uint256" }],
+    outputs: [{ name: "sessionId", type: "bytes32" }],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "closeSession",
+    inputs: [
+      { name: "sessionId", type: "bytes32" },
+      { name: "agent", type: "address" },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "getSession",
+    inputs: [{ name: "sessionId", type: "bytes32" }],
+    outputs: [
+      {
+        name: "",
+        type: "tuple",
+        components: [
+          { name: "shares", type: "uint256" },
+          { name: "depositedAssets", type: "uint256" },
+          { name: "active", type: "bool" },
+          { name: "createdAt", type: "uint64" },
+        ],
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "getSessionBalance",
+    inputs: [{ name: "sessionId", type: "bytes32" }],
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "totalAssets",
+    inputs: [],
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "yieldStrategy",
+    inputs: [],
+    outputs: [{ name: "", type: "address" }],
+    stateMutability: "view",
+  },
+  {
+    type: "event",
+    name: "SessionCreated",
+    inputs: [
+      { name: "agent", type: "address", indexed: true },
+      { name: "sessionId", type: "bytes32", indexed: true },
+      { name: "shares", type: "uint256", indexed: false },
+      { name: "assets", type: "uint256", indexed: false },
+    ],
+  },
+  {
+    type: "event",
+    name: "SessionSettled",
+    inputs: [
+      { name: "sessionId", type: "bytes32", indexed: true },
+      { name: "amount", type: "uint256", indexed: false },
+      { name: "provider", type: "address", indexed: false },
+    ],
+  },
+  {
+    type: "event",
+    name: "SessionClosed",
+    inputs: [
+      { name: "sessionId", type: "bytes32", indexed: true },
+      { name: "sharesRedeemed", type: "uint256", indexed: false },
+      { name: "assetsReturned", type: "uint256", indexed: false },
+    ],
+  },
+  {
+    type: "event",
+    name: "YieldHarvested",
+    inputs: [{ name: "amount", type: "uint256", indexed: false }],
+  },
+] as const;

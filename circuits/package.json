@@ -12,6 +12,8 @@
     "prove": "node scripts/prove.js input/sample_input.json",
     "prove:input": "node scripts/prove.js",
     "verify": "snarkjs groth16 verify build/verification_key.json proof/public.json proof/proof.json",
+    "deploy-artifacts": "bash scripts/deploy-artifacts.sh",
+    "build:all": "npm run compile && npm run setup && npm run export-vkey && npm run deploy-artifacts",
     "test": "mocha test/**/*.test.js --timeout 120000"
   },
   "dependencies": {

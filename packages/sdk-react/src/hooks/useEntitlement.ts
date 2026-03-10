@@ -58,17 +58,22 @@ export class EntitlementError extends Error {
  * 3. expiresAt(tokenId)
  * 4. getPlanFeatures(tokenId) → { planId, planTier }
  *
+ * Feature flags are resolved from Tableland (if configured) with on-chain tier
+ * as fallback. When featureKey is provided, the resolved features map is filtered
+ * to that single key — useful for lightweight gating checks.
+ *
  * @param walletAddress - The wallet address to check
- * @param _featureKey - Optional specific feature to check (reserved for Tableland integration)
+ * @param featureKey - Optional: restrict resolved features to this single key
  *
  * @example
  * ```tsx
  * const { isSubscribed, planTier, expiresAt } = useEntitlement(address);
+ * const { features } = useEntitlement(address, 'analytics_dashboard');
  * ```
  */
 export function useEntitlement(
   walletAddress?: string,
-  _featureKey?: string,
+  featureKey?: string,
 ): UseEntitlementReturn {
   const ONCHAIN_STALE_AFTER_MS = 30_000;
   const { network, config } = useMEAP();
@@ -214,38 +219,28 @@ export function useEntitlement(
 
   const planTier = planFeatures?.[1] as PlanTier | undefined;
 
-  // Build features map from plan tier (basic tier-based features until Tableland)
+  // Build features map from plan tier. Uses provider-supplied `tierFeatureFallback`
+  // from MEAPProvider config when Tableland is not configured, falling back to an
+  // empty map so custom provider feature keys are never silently replaced.
   const onChainTierFeatures = useMemo<Record<string, boolean | string | number>>(() => {
     if (!planTier) return {};
-    // Basic tier-based feature mapping
-    const tierFeatures: Record<string, Record<string, boolean>> = {
-      starter: {
-        webhook_integration: true,
-      },
-      pro: {
-        webhook_integration: true,
-        analytics_dashboard: true,
-        api_access: true,
-        multi_user: true,
-      },
-      enterprise: {
-        webhook_integration: true,
-        analytics_dashboard: true,
-        api_access: true,
-        multi_user: true,
-        custom_branding: true,
-        priority_support: true,
-      },
-    };
-    return tierFeatures[planTier] || {};
-  }, [planTier]);
+    const fallback = config.tierFeatureFallback;
+    if (fallback) {
+      return (fallback[planTier] as Record<string, boolean | string | number> | undefined) ?? {};
+    }
+    return {};
+  }, [planTier, config.tierFeatureFallback]);
 
   const features = useMemo<Record<string, boolean | string | number>>(() => {
-    if (Object.keys(tablelandFeatures).length > 0) {
-      return tablelandFeatures;
+    const allFeatures = Object.keys(tablelandFeatures).length > 0
+      ? tablelandFeatures
+      : onChainTierFeatures;
+    if (featureKey) {
+      const value = allFeatures[featureKey];
+      return value !== undefined ? { [featureKey]: value } : {};
     }
-    return onChainTierFeatures;
-  }, [tablelandFeatures, onChainTierFeatures]);
+    return allFeatures;
+  }, [tablelandFeatures, onChainTierFeatures, featureKey]);
 
   // Watch for real-time contract events to auto-refetch
   useWatchContractEvent({

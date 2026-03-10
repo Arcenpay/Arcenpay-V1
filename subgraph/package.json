@@ -6,12 +6,17 @@
   "scripts": {
     "prepare:abis": "node scripts/sync-abis.mjs",
     "sync:sepolia": "node scripts/sync-addresses.mjs --deployment ../packages/contracts/deployments/sepolia-latest.json --network sepolia",
+    "sync:base-sepolia": "node scripts/sync-addresses.mjs --deployment ../packages/contracts/deployments/base-sepolia-latest.json --network base-sepolia --config subgraph.base-sepolia.yaml",
     "codegen": "graph codegen",
+    "codegen:base-sepolia": "graph codegen --config subgraph.base-sepolia.yaml",
     "build": "graph codegen && graph build",
+    "build:base-sepolia": "graph codegen --config subgraph.base-sepolia.yaml && graph build --config subgraph.base-sepolia.yaml",
     "lint": "echo \"No subgraph lint configured\"",
     "test": "echo \"No subgraph tests implemented yet\"",
     "deploy:studio": "graph deploy --studio meap-sepolia",
-    "deploy:hosted": "graph deploy --node https://api.thegraph.com/deploy/ @meap/meap-sepolia"
+    "deploy:studio:base-sepolia": "graph deploy --studio meap-base-sepolia --config subgraph.base-sepolia.yaml",
+    "deploy:hosted": "graph deploy --node https://api.thegraph.com/deploy/ @meap/meap-sepolia",
+    "deploy:hosted:base-sepolia": "graph deploy --node https://api.thegraph.com/deploy/ @meap/meap-base-sepolia --config subgraph.base-sepolia.yaml"
   },
   "devDependencies": {
     "@graphprotocol/graph-cli": "^0.98.1",

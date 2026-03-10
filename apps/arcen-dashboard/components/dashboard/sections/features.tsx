@@ -85,6 +85,7 @@ export function FeaturesSection() {
     const [newFlag, setNewFlag] = useState({ key: "", label: "", type: "boolean" as FlagType, planTiers: [] as string[] });
     const [newFlagError, setNewFlagError] = useState("");
     const [isSaving, setIsSaving] = useState(false);
+    const [isBootstrapping, setIsBootstrapping] = useState(false);
 
     const fetchFlags = useCallback(async () => {
         if (!isConnected || !address) return;
@@ -108,6 +109,24 @@ export function FeaturesSection() {
     useEffect(() => {
         fetchFlags();
     }, [fetchFlags]);
+
+    // Auto-bootstrap entitlement storage on first load when Tableland is configured
+    // but the provider's flag table doesn't exist yet (storageReady === false).
+    useEffect(() => {
+        if (tableExists !== false || !isConnected || !address || isBootstrapping) return;
+        setIsBootstrapping(true);
+        apiFetch(`/api/entitlements/provider/${address}/flags/bootstrap`, { method: "POST" })
+            .then(() => {
+                setTableExists(true);
+                void fetchFlags();
+            })
+            .catch(() => {
+                // Bootstrap silently fails when Tableland isn't configured server-side.
+                // The manual "Initialize Storage" button remains visible so the provider
+                // can act once they configure TABLELAND_TABLE_NAME + TABLELAND_PRIVATE_KEY.
+            })
+            .finally(() => setIsBootstrapping(false));
+    }, [tableExists, isConnected, address, isBootstrapping, fetchFlags]);
 
     const handleDeployTable = async () => {
         setIsSaving(true);
@@ -231,7 +250,13 @@ export function FeaturesSection() {
                     </p>
                 </div>
                 <div className="flex items-center gap-2">
-                    {tableExists === false && (
+                    {isBootstrapping && (
+                        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                            Setting up storage…
+                        </span>
+                    )}
+                    {tableExists === false && !isBootstrapping && (
                         <Button
                             variant="outline"
                             size="sm"

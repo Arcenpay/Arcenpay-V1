@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,12 +26,17 @@ import {
     ExternalLink,
     Copy,
     Check,
+    Clock,
+    CheckCircle2,
+    XCircle,
+    Loader2,
+    TrendingUp,
 } from "lucide-react";
-import { useAccount, useChainId, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import { useAccount, useChainId, useWriteContract, useWaitForTransactionReceipt, useReadContract } from "wagmi";
 import { useQuery } from "@apollo/client";
 import { toast } from "sonner";
 import { GET_SESSIONS, GET_PROOF_SUBMISSIONS } from "@/lib/graphql";
-import { useContractAddresses, SessionVaultABI, SEPOLIA_USDC } from "@/lib/contracts";
+import { useContractAddresses, SessionVaultABI, YieldSessionVaultABI, SEPOLIA_USDC } from "@/lib/contracts";
 import {
     formatUsdc,
     truncateAddress,
@@ -66,6 +71,19 @@ interface GqlProof {
     windowEnd: string;
     txHash: string;
     timestamp: string;
+}
+
+interface ActiveProofJob {
+    sessionId: string;
+    status: "pending" | "generating" | "submitting" | "done" | "failed";
+    attempts: number;
+    callCount: number;
+    windowStart: number;
+    windowEnd: number;
+    nullifier?: string;
+    error?: string;
+    createdAt: string;
+    lastAttemptAt?: string;
 }
 
 function SkeletonCard() {
@@ -119,7 +137,28 @@ export function SessionsSection() {
         (acc, s) => acc + BigInt(s.totalSettled),
         0n
     );
-    const pendingProofs = 0; // Would come from a facilitator API in real deployment
+    const [pendingProofs, setPendingProofs] = useState(0);
+    const [activeProofJobs, setActiveProofJobs] = useState<ActiveProofJob[]>([]);
+
+    const fetchPendingProofs = useCallback(async () => {
+        try {
+            const res = await fetch("/api/proofs/active");
+            if (res.ok) {
+                const data = await res.json();
+                setPendingProofs(Number(data.count) || 0);
+                setActiveProofJobs(Array.isArray(data.jobs) ? data.jobs : []);
+            }
+        } catch {
+            // silently ignore — count stays at last known value
+        }
+    }, []);
+
+    useEffect(() => {
+        if (!isConnected) return;
+        void fetchPendingProofs();
+        const id = setInterval(() => void fetchPendingProofs(), 30_000);
+        return () => clearInterval(id);
+    }, [isConnected, fetchPendingProofs]);
 
     // ── Write: fund session (deposit) ────────────────────────
     const { writeContractAsync: writeFundSession } = useWriteContract();
@@ -172,6 +211,23 @@ export function SessionsSection() {
             toast.error(err instanceof Error ? err.message : "Withdrawal failed");
         }
     };
+
+    // ── Read: YieldSessionVault stats ────────────────────────
+    const yieldVaultAddress = contractAddresses.yieldSessionVault as `0x${string}` | undefined;
+
+    const { data: yieldTotalAssets } = useReadContract({
+        address: yieldVaultAddress,
+        abi: YieldSessionVaultABI,
+        functionName: "totalAssets",
+        query: { enabled: !!yieldVaultAddress },
+    });
+
+    const { data: yieldStrategy } = useReadContract({
+        address: yieldVaultAddress,
+        abi: YieldSessionVaultABI,
+        functionName: "yieldStrategy",
+        query: { enabled: !!yieldVaultAddress },
+    });
 
     const handleCopyHash = (hash: string) => {
         navigator.clipboard.writeText(hash);
@@ -332,6 +388,67 @@ export function SessionsSection() {
                 </div>
             </div>
 
+            {/* Active Proof Jobs */}
+            {activeProofJobs.length > 0 && (
+                <div className="bg-card border border-border rounded-xl p-5 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div className="flex items-center justify-between mb-4">
+                        <div>
+                            <h3 className="text-base font-semibold text-foreground">Active Proof Jobs</h3>
+                            <p className="text-sm text-muted-foreground mt-0.5">
+                                ZK proof generation in progress
+                            </p>
+                        </div>
+                        <Button variant="ghost" size="sm" onClick={() => void fetchPendingProofs()}>
+                            <RefreshCw className="w-3.5 h-3.5" />
+                        </Button>
+                    </div>
+                    <div className="space-y-2">
+                        {activeProofJobs.map((job) => {
+                            const StatusIcon =
+                                job.status === "done" ? CheckCircle2 :
+                                job.status === "failed" ? XCircle :
+                                job.status === "generating" || job.status === "submitting" ? Loader2 :
+                                Clock;
+                            const statusColor =
+                                job.status === "done" ? "text-success" :
+                                job.status === "failed" ? "text-destructive" :
+                                "text-yellow-500";
+                            return (
+                                <div
+                                    key={job.sessionId}
+                                    className="flex items-center justify-between p-3 rounded-lg bg-secondary/30 border border-border text-sm"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <StatusIcon className={`w-4 h-4 shrink-0 ${statusColor} ${job.status === "generating" || job.status === "submitting" ? "animate-spin" : ""}`} />
+                                        <div>
+                                            <p className="text-xs font-mono text-foreground">
+                                                {shortHash(job.sessionId)}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground">
+                                                {job.callCount} calls · attempt {job.attempts}
+                                                {job.error && (
+                                                    <span className="text-destructive ml-1">· {job.error}</span>
+                                                )}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <Badge
+                                        variant="secondary"
+                                        className={`text-xs capitalize ${
+                                            job.status === "done" ? "bg-success/10 text-success border-success/20" :
+                                            job.status === "failed" ? "bg-destructive/10 text-destructive border-destructive/20" :
+                                            "bg-yellow-500/10 text-yellow-600 border-yellow-500/20"
+                                        }`}
+                                    >
+                                        {job.status}
+                                    </Badge>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+
             {/* Proof Submission Log */}
             <div className="bg-card border border-border rounded-xl p-5 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-200">
                 <div className="mb-5">
@@ -409,6 +526,72 @@ export function SessionsSection() {
                     </div>
                 )}
             </div>
+
+            {/* Yield Vault Panel — only when YieldSessionVault address is configured */}
+            {!yieldVaultAddress && (
+                <div className="flex items-start gap-3 p-4 rounded-xl bg-secondary/50 border border-border">
+                    <AlertCircle className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
+                    <div>
+                        <p className="text-sm font-medium text-foreground">Yield Session Vault not configured</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                            The ERC-4626 yield vault is optional. To enable it, deploy{" "}
+                            <code className="font-mono">YieldSessionVault.sol</code> and set{" "}
+                            <code className="font-mono">MEAP_CONTRACT_{chainId}_yieldSessionVault</code> in your environment.
+                        </p>
+                    </div>
+                </div>
+            )}
+            {yieldVaultAddress && (
+                <div className="bg-card border border-border rounded-xl p-5 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-300">
+                    <div className="flex items-center justify-between mb-4">
+                        <div>
+                            <h3 className="text-base font-semibold text-foreground flex items-center gap-2">
+                                <TrendingUp className="w-4 h-4 text-chart-1" />
+                                Yield Session Vault
+                            </h3>
+                            <p className="text-sm text-muted-foreground mt-0.5">
+                                ERC-4626 vault generating yield on idle session balances
+                            </p>
+                        </div>
+                        <Badge variant="secondary" className="text-xs bg-chart-1/10 text-chart-1 border-chart-1/20">
+                            Live
+                        </Badge>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="rounded-lg bg-secondary/30 border border-border p-4">
+                            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Total Assets Under Management</p>
+                            <p className="text-xl font-semibold text-foreground">
+                                {yieldTotalAssets !== undefined
+                                    ? formatUsdc(yieldTotalAssets as bigint)
+                                    : "—"}
+                            </p>
+                        </div>
+                        <div className="rounded-lg bg-secondary/30 border border-border p-4">
+                            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Yield Strategy Contract</p>
+                            <p className="text-sm font-mono text-foreground break-all">
+                                {yieldStrategy
+                                    ? truncateAddress(yieldStrategy as string)
+                                    : "—"}
+                            </p>
+                            {yieldStrategy && (
+                                <a
+                                    href={getBlockExplorerUrl(chainId, "address", yieldStrategy as string)}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground mt-1 transition-colors"
+                                >
+                                    View on Explorer
+                                    <ExternalLink className="w-3 h-3" />
+                                </a>
+                            )}
+                        </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-3">
+                        Vault address: <code className="font-mono">{truncateAddress(yieldVaultAddress)}</code>
+                        {" · "}Set <code className="font-mono">MEAP_CONTRACT_{chainId}_yieldSessionVault</code> to configure
+                    </p>
+                </div>
+            )}
 
             {/* Fund Session Dialog */}
             <Dialog open={showDepositDialog} onOpenChange={setShowDepositDialog}>

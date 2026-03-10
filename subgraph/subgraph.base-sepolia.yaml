@@ -1,0 +1,141 @@
+specVersion: 0.0.5
+description: MEAP + ZKVUB Protocol — Subscription and Usage Billing Indexer (Base Sepolia)
+repository: https://github.com/arcenpay/arcenpay
+
+schema:
+  file: ./schema.graphql
+
+# ── Base Sepolia datasources ──────────────────────────────────────────────────
+# Contract addresses below are placeholders.
+# After deploying to Base Sepolia, update these addresses and set startBlock
+# to the block at which contracts were deployed (avoids re-indexing genesis).
+# Run: npm run sync:base-sepolia  (updates from deployments/base-sepolia-latest.json)
+
+dataSources:
+  - kind: ethereum
+    name: SubscriptionRegistry
+    network: base-sepolia
+    source:
+      address: "0x0000000000000000000000000000000000000000"
+      abi: SubscriptionRegistry
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Subscription
+        - Plan
+        - Subscriber
+        - BillingEvent
+      abis:
+        - name: SubscriptionRegistry
+          file: ./abis/SubscriptionRegistry.json
+      eventHandlers:
+        - event: SubscriptionMinted(indexed address,indexed uint256,indexed uint256,uint64)
+          handler: handleSubscriptionMinted
+        - event: SubscriptionRenewed(indexed uint256,uint64,uint256)
+          handler: handleSubscriptionRenewed
+        - event: SubscriptionCancelled(indexed uint256)
+          handler: handleSubscriptionCancelled
+      file: ./src/subscription-registry.ts
+
+  - kind: ethereum
+    name: PlanFactory
+    network: base-sepolia
+    source:
+      address: "0x0000000000000000000000000000000000000000"
+      abi: PlanFactory
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Provider
+        - Plan
+      abis:
+        - name: PlanFactory
+          file: ./abis/PlanFactory.json
+      eventHandlers:
+        - event: ProviderRegistered(indexed address)
+          handler: handleProviderRegistered
+        - event: PlanCreated(indexed uint256,indexed address,string,uint256,uint32)
+          handler: handlePlanCreated
+        - event: PlanUpdated(indexed uint256)
+          handler: handlePlanUpdated
+        - event: PlanDeactivated(indexed uint256)
+          handler: handlePlanDeactivated
+      file: ./src/plan-factory.ts
+
+  - kind: ethereum
+    name: SessionVault
+    network: base-sepolia
+    source:
+      address: "0x0000000000000000000000000000000000000000"
+      abi: SessionVault
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Session
+        - FundEvent
+        - BillingEvent
+      abis:
+        - name: SessionVault
+          file: ./abis/SessionVault.json
+      eventHandlers:
+        - event: SessionFunded(indexed address,indexed bytes32,uint256,address)
+          handler: handleSessionFunded
+        - event: SessionWithdrawn(indexed bytes32,uint256,indexed address)
+          handler: handleSessionWithdrawn
+        - event: SessionSettled(indexed bytes32,uint256,indexed address)
+          handler: handleSessionSettled
+      file: ./src/session-vault.ts
+
+  - kind: ethereum
+    name: ZKUsageVerifier
+    network: base-sepolia
+    source:
+      address: "0x0000000000000000000000000000000000000000"
+      abi: ZKUsageVerifier
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Settlement
+        - ProofSubmission
+        - BillingEvent
+      abis:
+        - name: ZKUsageVerifier
+          file: ./abis/ZKUsageVerifier.json
+      eventHandlers:
+        - event: BillingSettled(indexed bytes32,indexed bytes32,uint256,uint256,uint64,uint64)
+          handler: handleBillingSettled
+      file: ./src/zk-usage-verifier.ts
+
+  - kind: ethereum
+    name: FeeCollector
+    network: base-sepolia
+    source:
+      address: "0x0000000000000000000000000000000000000000"
+      abi: FeeCollector
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - FeeEvent
+        - BillingEvent
+      abis:
+        - name: FeeCollector
+          file: ./abis/FeeCollector.json
+      eventHandlers:
+        - event: FeeCollected(indexed address,uint256,uint256,string)
+          handler: handleFeeCollected
+      file: ./src/fee-collector.ts

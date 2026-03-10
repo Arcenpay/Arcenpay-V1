@@ -13,6 +13,7 @@ import {
   SessionVaultABI,
   ZKUsageVerifierABI,
   ERC7579AutopayModuleABI,
+  YieldSessionVaultABI,
   TOKENS,
 } from "@meap/core";
 
@@ -24,6 +25,7 @@ export {
   SessionVaultABI,
   ZKUsageVerifierABI,
   ERC7579AutopayModuleABI,
+  YieldSessionVaultABI,
   TOKENS,
 };
 

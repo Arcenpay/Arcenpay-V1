@@ -72,10 +72,14 @@ function applyEnvOverrides(chainId: number, base: ContractAddresses): ContractAd
       (result as unknown as Record<string, string>)[key] = override;
     }
   }
-  // mirrorRegistry is optional — check separately
+  // optional extension contracts — check separately
   const mirrorOverride = process.env[`MEAP_CONTRACT_${chainId}_mirrorRegistry`];
   if (mirrorOverride && mirrorOverride.startsWith('0x')) {
     result.mirrorRegistry = mirrorOverride;
+  }
+  const yieldOverride = process.env[`MEAP_CONTRACT_${chainId}_yieldSessionVault`];
+  if (yieldOverride && yieldOverride.startsWith('0x')) {
+    result.yieldSessionVault = yieldOverride;
   }
   return result;
 }

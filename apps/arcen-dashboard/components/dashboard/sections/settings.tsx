@@ -40,8 +40,8 @@ import {
   Plus,
   Info,
 } from "lucide-react";
-import { useAccount, useChainId, useBalance, useSendTransaction } from "wagmi";
-import { parseEther } from "viem";
+import { useAccount, useChainId, useBalance, useSendTransaction, useReadContracts, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import { parseEther, isAddress } from "viem";
 import { toast } from "sonner";
 import { useContractAddresses } from "@/lib/contracts";
 import { getBlockExplorerUrl } from "@/lib/format";
@@ -91,11 +91,12 @@ const NOTIFICATION_DEFAULTS = [
   },
 ];
 
-const GMP_DESTINATIONS = [
-  { chain: "Base", estimatedGas: "0.0012 ETH" },
-  { chain: "Polygon", estimatedGas: "0.0008 ETH" },
-  { chain: "Arbitrum", estimatedGas: "0.0009 ETH" },
-];
+// Minimal ABI for SubscriptionRegistry public transport getters and setCrossChainTransports
+const REGISTRY_GMP_ABI = [
+  { name: "axelarTransport", type: "function", stateMutability: "view", inputs: [], outputs: [{ type: "address" }] },
+  { name: "ccipTransport", type: "function", stateMutability: "view", inputs: [], outputs: [{ type: "address" }] },
+  { name: "setCrossChainTransports", type: "function", stateMutability: "nonpayable", inputs: [{ name: "axelarTransport", type: "address" }, { name: "ccipTransport", type: "address" }], outputs: [] },
+] as const;
 
 
 interface WebhookLogEntry {
@@ -266,6 +267,66 @@ export function SettingsSection() {
 
   // GMP
   const [gmpTopUpAmount, setGmpTopUpAmount] = useState("");
+  const [newAxelarTransport, setNewAxelarTransport] = useState("");
+  const [newCcipTransport, setNewCcipTransport] = useState("");
+  const [isSettingTransports, setIsSettingTransports] = useState(false);
+
+  const registryAddress = contractAddresses.subscriptionRegistry as `0x${string}`;
+
+  const { data: transportData, refetch: refetchTransports } = useReadContracts({
+    contracts: [
+      { address: registryAddress, abi: REGISTRY_GMP_ABI, functionName: "axelarTransport" },
+      { address: registryAddress, abi: REGISTRY_GMP_ABI, functionName: "ccipTransport" },
+    ],
+    query: { enabled: isConnected && !!registryAddress },
+  });
+
+  const axelarTransportAddr = transportData?.[0]?.result as `0x${string}` | undefined;
+  const ccipTransportAddr = transportData?.[1]?.result as `0x${string}` | undefined;
+  const ZERO = "0x0000000000000000000000000000000000000000";
+  const axelarConfigured = !!axelarTransportAddr && axelarTransportAddr !== ZERO;
+  const ccipConfigured = !!ccipTransportAddr && ccipTransportAddr !== ZERO;
+
+  const { writeContractAsync: writeSetTransports } = useWriteContract();
+  const [setTransportsTxHash, setSetTransportsTxHash] = useState<`0x${string}` | undefined>();
+  const { data: setTransportsReceipt } = useWaitForTransactionReceipt({
+    hash: setTransportsTxHash,
+    query: { enabled: !!setTransportsTxHash },
+  });
+
+  useEffect(() => {
+    if (setTransportsReceipt) {
+      toast.success("Cross-chain transports updated");
+      setSetTransportsTxHash(undefined);
+      setNewAxelarTransport("");
+      setNewCcipTransport("");
+      setIsSettingTransports(false);
+      void refetchTransports();
+    }
+  }, [setTransportsReceipt, refetchTransports]);
+
+  const handleSetTransports = async () => {
+    const axelar = newAxelarTransport.trim() || ZERO;
+    const ccip = newCcipTransport.trim() || ZERO;
+    if (!isAddress(axelar) || !isAddress(ccip)) {
+      toast.error("Both addresses must be valid EVM addresses (or leave blank to clear)");
+      return;
+    }
+    setIsSettingTransports(true);
+    try {
+      const hash = await writeSetTransports({
+        address: registryAddress,
+        abi: REGISTRY_GMP_ABI,
+        functionName: "setCrossChainTransports",
+        args: [axelar as `0x${string}`, ccip as `0x${string}`],
+      });
+      setSetTransportsTxHash(hash);
+      toast.info("Transaction submitted…");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Transaction failed");
+      setIsSettingTransports(false);
+    }
+  };
 
   useEffect(() => {
     // Load all profile fields from the server — localStorage is no longer used
@@ -1160,28 +1221,69 @@ export function SettingsSection() {
 
               <div className="space-y-2">
                 <p className="text-sm font-medium text-foreground">
-                  Per-Chain Cost Estimates
+                  Configured Transport Adapters
                 </p>
-                {GMP_DESTINATIONS.map((dest) => (
+                {[
+                  { label: "Axelar (Primary)", addr: axelarTransportAddr, configured: axelarConfigured },
+                  { label: "CCIP (Fallback)", addr: ccipTransportAddr, configured: ccipConfigured },
+                ].map(({ label, addr, configured }) => (
                   <div
-                    key={dest.chain}
+                    key={label}
                     className="flex items-center justify-between p-3 rounded-lg bg-secondary/30 border border-border text-sm"
                   >
-                    <span className="text-foreground font-medium">
-                      {dest.chain}
-                    </span>
-                    <div className="flex items-center gap-4 text-right">
-                      <div>
-                        <p className="text-xs text-muted-foreground">
-                          Est. per message
-                        </p>
-                        <p className="font-medium text-foreground">
-                          {dest.estimatedGas}
-                        </p>
-                      </div>
+                    <span className="text-foreground font-medium">{label}</span>
+                    <div className="flex items-center gap-2">
+                      <Badge
+                        variant="secondary"
+                        className={configured ? "bg-success/10 text-success border-success/20" : "bg-warning/10 text-warning border-warning/20"}
+                      >
+                        {configured ? "Configured" : "Not Set"}
+                      </Badge>
+                      {configured && addr && (
+                        <span className="font-mono text-xs text-muted-foreground">
+                          {addr.slice(0, 6)}…{addr.slice(-4)}
+                        </span>
+                      )}
                     </div>
                   </div>
                 ))}
+              </div>
+
+              <div className="space-y-3 pt-2 border-t border-border">
+                <p className="text-sm font-medium text-foreground">Update Transport Adapters</p>
+                <p className="text-xs text-muted-foreground">
+                  Set the Axelar and CCIP adapter contract addresses. Requires contract owner wallet. Leave blank to clear.
+                </p>
+                <div className="space-y-2">
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Axelar Transport Address</Label>
+                    <Input
+                      placeholder="0x… (leave blank to clear)"
+                      value={newAxelarTransport}
+                      onChange={(e) => setNewAxelarTransport(e.target.value)}
+                      className="bg-secondary border-border focus:border-accent font-mono text-sm"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">CCIP Transport Address</Label>
+                    <Input
+                      placeholder="0x… (leave blank to clear)"
+                      value={newCcipTransport}
+                      onChange={(e) => setNewCcipTransport(e.target.value)}
+                      className="bg-secondary border-border focus:border-accent font-mono text-sm"
+                    />
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center gap-2"
+                    onClick={handleSetTransports}
+                    disabled={!isConnected || isSettingTransports || !!setTransportsTxHash}
+                  >
+                    <Globe className="w-3.5 h-3.5" />
+                    {isSettingTransports ? "Submitting…" : "Set Transports"}
+                  </Button>
+                </div>
               </div>
 
               <div className="space-y-3 pt-2 border-t border-border">

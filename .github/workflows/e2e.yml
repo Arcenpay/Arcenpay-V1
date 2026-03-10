@@ -1,0 +1,91 @@
+name: Dashboard E2E Tests
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/arcen-dashboard/**'
+  pull_request:
+    paths:
+      - 'apps/arcen-dashboard/**'
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: 'Dashboard URL to test against (leave empty for localhost)'
+        required: false
+        default: ''
+
+jobs:
+  e2e:
+    name: Playwright E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      # Use the input URL if provided (for staging/preview), otherwise localhost
+      PLAYWRIGHT_BASE_URL: ${{ github.event.inputs.base_url || 'http://localhost:3000' }}
+      # Session cookie injected for authenticated tests (set in GitHub Secrets)
+      PLAYWRIGHT_SESSION_COOKIE: ${{ secrets.PLAYWRIGHT_SESSION_COOKIE }}
+      # Dashboard environment — use test DB / test subgraph
+      DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
+      NEXT_PUBLIC_GRAPH_URL: ${{ secrets.TEST_GRAPH_URL || 'http://localhost:9999/mock-subgraph' }}
+      # Facilitator URL — Playwright intercepts calls to this address; no real server needed in CI
+      NEXT_PUBLIC_FACILITATOR_URL: 'http://localhost:3402'
+      JWT_SECRET: ${{ secrets.TEST_JWT_SECRET || 'playwright-test-secret-do-not-use-in-prod' }}
+      NODE_ENV: test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npm run -w @meap/dashboard db:generate
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium webkit
+        working-directory: apps/arcen-dashboard
+
+      - name: Build dashboard
+        run: npm run -w @meap/dashboard build
+        env:
+          SKIP_ENV_VALIDATION: 'true'
+          DATABASE_URL: ${{ secrets.TEST_DATABASE_URL || 'postgresql://test:test@localhost:5432/test' }}
+
+      # Start the built server if testing against localhost
+      - name: Start dashboard server
+        if: ${{ !github.event.inputs.base_url }}
+        run: |
+          npm run -w @meap/dashboard start &
+          npx wait-on http://localhost:3000 --timeout 30000
+        env:
+          PORT: 3000
+          DATABASE_URL: ${{ secrets.TEST_DATABASE_URL || 'postgresql://test:test@localhost:5432/test' }}
+
+      - name: Run Playwright tests
+        run: npm run -w @meap/dashboard test:e2e
+        env:
+          CI: 'true'
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ github.run_id }}
+          path: apps/arcen-dashboard/playwright-report/
+          retention-days: 30
+
+      - name: Upload test results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results-${{ github.run_id }}
+          path: apps/arcen-dashboard/test-results/
+          retention-days: 7

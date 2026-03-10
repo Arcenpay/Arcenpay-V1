@@ -20,6 +20,7 @@ import {
 } from "@/components/dashboard/sections/catalog";
 import { ComponentsSection } from "@/components/dashboard/sections/components";
 import { SectionErrorBoundary } from "@/components/dashboard/section-error-boundary";
+import { SubgraphLagBanner } from "@/components/dashboard/subgraph-lag-banner";
 import { EnvironmentProvider } from "@/contexts/environment-context";
 
 export type Section =
@@ -159,6 +160,7 @@ export default function Dashboard() {
           }`}
         >
           <Header activeSection={activeSection} />
+          <SubgraphLagBanner />
           <main className="flex-1 p-6 overflow-auto">
             <div
               key={activeSection}

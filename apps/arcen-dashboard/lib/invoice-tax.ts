@@ -45,10 +45,16 @@ const usAddressSchema = z.object({
 // ── India ─────────────────────────────────────────────────────
 
 /**
- * GSTIN format: 2 digit state code + 10 char PAN + 1 entity number + 1 check digit.
- * Pattern: \d{2}[A-Z]{5}\d{4}[A-Z]\d[Z][A-Z\d]
+ * GSTIN format (15 chars):
+ *   pos 1-2:   2-digit state code
+ *   pos 3-12:  10-char PAN (5 alpha + 4 digits + 1 alpha)
+ *   pos 13:    1 entity number (digit 1-9 or alpha A-Z)
+ *   pos 14:    always 'Z' (default sub-type)
+ *   pos 15:    1 check digit (digit or alpha)
+ *
+ * Pattern: \d{2}[A-Z]{5}\d{4}[A-Z][A-Z\d]Z[A-Z\d]
  */
-const GSTIN_REGEX = /^\d{2}[A-Z]{5}\d{4}[A-Z][A-Z\d][Z][A-Z\d]$/;
+const GSTIN_REGEX = /^\d{2}[A-Z]{5}\d{4}[A-Z][A-Z\d]Z[A-Z\d]$/;
 
 const inAddressSchema = z.object({
   country: z.literal("IN"),

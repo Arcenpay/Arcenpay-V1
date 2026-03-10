@@ -10,6 +10,8 @@ import {
   ChevronDown,
   X,
   GripVertical,
+  History,
+  CheckCircle2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -48,11 +50,15 @@ type Block = {
 };
 
 type TemplateVersion = {
+  id: string;
   version: number;
   reactBlocks: unknown;
   schemaJson: unknown;
   styleTokens: unknown;
   compatibility: unknown;
+  createdAt?: string;
+  isCurrent?: boolean;
+  changedFields?: string[] | null;
 };
 
 type TemplateItem = {
@@ -610,6 +616,7 @@ function TemplateCard({
 }) {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [installOpen, setInstallOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const nextStatuses: TemplateStatus[] =
@@ -686,6 +693,17 @@ function TemplateCard({
               Preview
             </Button>
 
+            {template.currentVersion > 1 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setHistoryOpen(true)}
+              >
+                <History className="w-3.5 h-3.5 mr-1" />
+                History
+              </Button>
+            )}
+
             {template.status === "PUBLISHED" && (
               <Button
                 variant="outline"
@@ -732,7 +750,141 @@ function TemplateCard({
         onClose={() => setInstallOpen(false)}
         onInstalled={onRefresh}
       />
+      <VersionHistoryDialog
+        templateId={template.id}
+        open={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+      />
     </>
+  );
+}
+
+// ─── Version History Dialog ───────────────────────────────────────────────────
+
+function VersionHistoryDialog({
+  templateId,
+  open,
+  onClose,
+}: {
+  templateId: string;
+  open: boolean;
+  onClose: () => void;
+}) {
+  const [versions, setVersions] = useState<
+    (TemplateVersion & { isCurrent: boolean; changedFields: string[] | null })[]
+  >([]);
+  const [loading, setLoading] = useState(false);
+  const [currentVersion, setCurrentVersion] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    setLoading(true);
+    fetch(`/api/templates/${templateId}/versions`)
+      .then((r) => r.json())
+      .then((data) => {
+        setVersions(data.versions ?? []);
+        setCurrentVersion(data.currentVersion ?? null);
+      })
+      .catch(() => toast.error("Failed to load version history"))
+      .finally(() => setLoading(false));
+  }, [open, templateId]);
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="sm:max-w-lg max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Version History</DialogTitle>
+        </DialogHeader>
+
+        {loading && (
+          <div className="py-8 text-center text-sm text-muted-foreground">
+            Loading…
+          </div>
+        )}
+
+        {!loading && versions.length === 0 && (
+          <p className="py-8 text-center text-sm text-muted-foreground">
+            No version history available.
+          </p>
+        )}
+
+        {!loading && versions.length > 0 && (
+          <div className="space-y-3 pt-2">
+            {versions.map((v) => (
+              <div
+                key={v.version}
+                className="p-3 rounded-lg border border-border bg-secondary/20 text-sm"
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono font-medium text-foreground">
+                      v{v.version}
+                    </span>
+                    {v.version === currentVersion && (
+                      <Badge
+                        variant="secondary"
+                        className="text-xs bg-success/10 text-success border-success/20"
+                      >
+                        <CheckCircle2 className="w-3 h-3 mr-1" />
+                        current
+                      </Badge>
+                    )}
+                  </div>
+                  {v.createdAt && (
+                    <span className="text-xs text-muted-foreground">
+                      {new Date(v.createdAt).toLocaleDateString()}
+                    </span>
+                  )}
+                </div>
+
+                {v.changedFields && v.changedFields.length > 0 ? (
+                  <div className="mt-1.5">
+                    <p className="text-xs text-muted-foreground mb-1">
+                      Changed fields vs previous version:
+                    </p>
+                    <div className="flex flex-wrap gap-1">
+                      {v.changedFields.map((f) => (
+                        <span
+                          key={f}
+                          className="px-1.5 py-0.5 rounded text-xs bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border border-yellow-500/20 font-mono"
+                        >
+                          {f}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ) : v.version === 1 ? (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Initial version
+                  </p>
+                ) : (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    No schema changes vs previous version
+                  </p>
+                )}
+
+                {v.compatibility && typeof v.compatibility === "object" && (
+                  <div className="mt-2 pt-2 border-t border-border/50">
+                    <p className="text-xs text-muted-foreground">
+                      Compatibility:{" "}
+                      <span className="font-mono">
+                        {JSON.stringify(v.compatibility)}
+                      </span>
+                    </p>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Close
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

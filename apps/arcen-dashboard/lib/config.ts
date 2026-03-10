@@ -214,28 +214,50 @@ export const FACILITATOR_SECRET: string = (() => {
 // ── RPC URLs ──────────────────────────────────────────────────────────────────
 
 /**
- * Returns the server-side RPC URL for a given chainId.
- * Checks RPC_URL_<chainId> first, then falls back to RPC_URL global, then public endpoints (dev only).
- * Required in production for any chain that will be switched to.
+ * Parses a comma-separated RPC URL string into an ordered list.
+ * e.g. "https://alchemy.com/key,https://infura.io/key" → ["https://alchemy.com/key", "https://infura.io/key"]
+ */
+function parseRpcList(raw: string): string[] {
+  return raw
+    .split(",")
+    .map((u) => u.trim())
+    .filter(Boolean);
+}
+
+// Per-chain round-robin cursor (server-side, resets on cold start)
+const rpcRotationCursors: Record<number, number> = {};
+
+/**
+ * Returns the next RPC URL for a given chainId using round-robin rotation across
+ * a comma-separated list. Falls back to public endpoints in development only.
+ *
+ * Set RPC_URL_<chainId> to a comma-separated list for automatic failover:
+ *   RPC_URL_11155111=https://alchemy.../key,https://infura.../key
  */
 export function getRpcUrl(chainId: number): string {
-  const specific = process.env[`RPC_URL_${chainId}`];
-  if (specific) return specific;
-  const global_ = process.env.RPC_URL;
-  if (global_) return global_;
-  const manifestSpecific = (() => {
-    try {
-      return getChainEnvironmentCompat(chainId).services.rpcUrl;
-    } catch {
-      return "";
-    }
+  const rawSpecific = process.env[`RPC_URL_${chainId}`];
+  const rawGlobal = process.env.RPC_URL;
+  const rawManifest = (() => {
+    try { return getChainEnvironmentCompat(chainId).services.rpcUrl; } catch { return ""; }
   })();
-  if (manifestSpecific) return manifestSpecific;
+
+  const candidates = parseRpcList(rawSpecific ?? rawGlobal ?? rawManifest ?? "");
+
+  if (candidates.length > 0) {
+    if (candidates.length === 1) return candidates[0];
+    // Round-robin: advance cursor on each call so callers naturally spread load
+    const cursor = (rpcRotationCursors[chainId] ?? 0) % candidates.length;
+    rpcRotationCursors[chainId] = cursor + 1;
+    return candidates[cursor];
+  }
+
   if (isProd) {
     throw new Error(
-      `[config] RPC_URL_${chainId} (or RPC_URL) must be set in production.`,
+      `[config] RPC_URL_${chainId} (or RPC_URL) must be set in production. ` +
+      `Comma-separate multiple URLs for automatic failover.`,
     );
   }
+
   // Public fallback endpoints — development only
   const publicRpcs: Record<number, string> = {
     11155111: "https://rpc.sepolia.org",
@@ -244,6 +266,24 @@ export function getRpcUrl(chainId: number): string {
     1: "https://cloudflare-eth.com",
   };
   return publicRpcs[chainId] ?? "";
+}
+
+/**
+ * Returns ALL configured RPC URLs for a chain (for use with viem fallback transport).
+ * Returns a single-element array if only one is configured.
+ */
+export function getAllRpcUrls(chainId: number): string[] {
+  const rawSpecific = process.env[`RPC_URL_${chainId}`];
+  const rawGlobal = process.env.RPC_URL;
+  const rawManifest = (() => {
+    try { return getChainEnvironmentCompat(chainId).services.rpcUrl; } catch { return ""; }
+  })();
+
+  const candidates = parseRpcList(rawSpecific ?? rawGlobal ?? rawManifest ?? "");
+  if (candidates.length > 0) return candidates;
+
+  const fallback = getRpcUrl(chainId);
+  return fallback ? [fallback] : [];
 }
 
 // ── WalletConnect ─────────────────────────────────────────────────────────────

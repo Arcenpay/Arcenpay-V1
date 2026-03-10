@@ -72,6 +72,7 @@ export {
   ZKUsageVerifierABI,
   FeeCollectorABI,
   MirrorRegistryABI,
+  YieldSessionVaultABI,
 } from './abis';
 
 // Constants

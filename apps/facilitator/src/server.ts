@@ -43,6 +43,8 @@ import {
   buildEventIdempotencyKey,
   createProtocolEvent,
   mapProtocolEventToBillingType,
+  AxelarTransport,
+  CCIPTransport,
   type ProtocolEventName,
 } from "@meap/node";
 import {
@@ -526,6 +528,14 @@ async function refreshSettlementAuthorization(): Promise<boolean | null> {
 
 if (settlementWriter) {
   void refreshSettlementAuthorization();
+  // Refresh every 5 minutes so revocation is detected without waiting for the
+  // next settlement attempt.
+  const SETTLEMENT_AUTH_POLL_MS = Number(
+    process.env.SETTLEMENT_AUTH_POLL_MS || 5 * 60 * 1000,
+  );
+  setInterval(() => {
+    void refreshSettlementAuthorization();
+  }, SETTLEMENT_AUTH_POLL_MS);
 }
 
 let redisUsageStore: RedisUsageStore | null = null;
@@ -675,6 +685,40 @@ if (process.env.TABLELAND_TABLE_NAME) {
       console.error("[Facilitator] Tableland init failed:", err);
       tablelandService = null;
     });
+}
+
+// Optional: Axelar GMP transport (cross-chain subscription mirroring)
+let axelarTransport: AxelarTransport | null = null;
+if (
+  process.env.AXELAR_GATEWAY_ADDRESS &&
+  process.env.AXELAR_GAS_SERVICE_ADDRESS &&
+  PROOF_SIGNER_PRIVATE_KEY
+) {
+  axelarTransport = new AxelarTransport({
+    gatewayAddress: process.env.AXELAR_GATEWAY_ADDRESS as `0x${string}`,
+    gasServiceAddress: process.env.AXELAR_GAS_SERVICE_ADDRESS as `0x${string}`,
+    rpcUrl: RPC_URL,
+    privateKey: normalizePrivateKey(PROOF_SIGNER_PRIVATE_KEY),
+    chainId: CHAIN_ID,
+    mirrorRegistryAddress: CONTRACTS.mirrorRegistry as `0x${string}`,
+  });
+  console.log("[Facilitator] Axelar GMP transport initialized");
+}
+
+// Optional: CCIP transport fallback (cross-chain subscription mirroring)
+let ccipTransport: CCIPTransport | null = null;
+if (process.env.CCIP_ROUTER_ADDRESS && PROOF_SIGNER_PRIVATE_KEY) {
+  ccipTransport = new CCIPTransport({
+    routerAddress: process.env.CCIP_ROUTER_ADDRESS as `0x${string}`,
+    rpcUrl: RPC_URL,
+    privateKey: normalizePrivateKey(PROOF_SIGNER_PRIVATE_KEY),
+    chainId: CHAIN_ID,
+    mirrorRegistryAddress: CONTRACTS.mirrorRegistry as `0x${string}`,
+    ...(process.env.CCIP_LINK_TOKEN_ADDRESS && {
+      linkTokenAddress: process.env.CCIP_LINK_TOKEN_ADDRESS as `0x${string}`,
+    }),
+  });
+  console.log("[Facilitator] CCIP GMP transport initialized");
 }
 
 const subscriberEmailsByWallet = new Map<
@@ -1360,6 +1404,53 @@ eventListener.on("cancelled", async (event) => {
   }
 });
 
+// Watch for cross-chain dispatch requests and relay via Axelar/CCIP (PRD §7.2)
+if (axelarTransport || ccipTransport) {
+  chainClient.watchContractEvent({
+    address: CONTRACTS.subscriptionRegistry as `0x${string}`,
+    abi: SubscriptionRegistryABI,
+    eventName: "CrossChainDispatchRequested",
+    onLogs: async (logs) => {
+      for (const log of logs) {
+        const { tokenId, destinationChainId, route } = log.args as {
+          tokenId: bigint;
+          destinationChainId: bigint;
+          route: number;
+          messageId: `0x${string}`;
+        };
+        const destChainId = Number(destinationChainId);
+        // Build minimal payload: ABI-encode tokenId for MirrorRegistry
+        const payload = `0x${tokenId.toString(16).padStart(64, "0")}` as `0x${string}`;
+        const refundAddress = (CONTRACTS.sessionVault || "0x0000000000000000000000000000000000000000") as `0x${string}`;
+        // route 0 = Axelar (primary), route 1 = CCIP (fallback)
+        const useAxelar = route === 0 && axelarTransport !== null;
+        const transport = useAxelar ? axelarTransport : ccipTransport;
+        if (!transport) {
+          console.warn(
+            `[Facilitator] GMP dispatch for tokenId=${tokenId} route=${route} — transport not configured`,
+          );
+          continue;
+        }
+        try {
+          const result = await transport.dispatch(destChainId, payload, refundAddress);
+          console.log(
+            `[Facilitator] GMP dispatched tokenId=${tokenId} → chain ${destChainId} via ${useAxelar ? "Axelar" : "CCIP"} txHash=${result.transactionHash}`,
+          );
+        } catch (err) {
+          console.error(
+            `[Facilitator] GMP dispatch failed for tokenId=${tokenId}:`,
+            err,
+          );
+        }
+      }
+    },
+    onError: (err) => {
+      console.error("[Facilitator] CrossChainDispatchRequested watcher error:", err);
+    },
+  });
+  console.log("[Facilitator] Cross-chain dispatch watcher active");
+}
+
 // Watch for settlement events
 settlementService.watchSettlements((settlement) => {
   console.log(
@@ -1367,8 +1458,9 @@ settlementService.watchSettlements((settlement) => {
   );
 });
 
-// Start event listener
-eventListener.start(12000).catch(console.error);
+// eventListener.start() is called inside the startup IIFE so the banner
+// reflects actual start success/failure.
+let eventListenerActive = false;
 
 // Start proof orchestrator auto-submission
 proofOrchestrator.startAutoSubmit();
@@ -2770,7 +2862,7 @@ function logStartupBanner() {
 ║   📡  Port: ${String(PORT).padEnd(33)}║
 ║   🔗  Chain: ${String(CHAIN_ID).padEnd(32)}║
 ║   💰  x402 Protocol: Active                 ║
-║   📣  Events: Watching                      ║
+║   📣  Events: ${(eventListenerActive ? "Watching" : "Failed").padEnd(29)}║
 ║   🔔  Webhooks: ${(webhookService ? "Active" : "Off").padEnd(28)}║
 ║   ✉️   Email: ${(emailService ? "Active" : "Off").padEnd(30)}║
 ║   ⛓️   Settlement: ${(settlementWriter ? "On-chain" : "Verify-only").padEnd(25)}║
@@ -2788,6 +2880,16 @@ void (async () => {
       await redisReady;
     }
     await queueRedisReady;
+
+    // Start event listener before printing the banner so status is accurate
+    try {
+      await eventListener.start(12000);
+      eventListenerActive = true;
+      console.log("[Facilitator] EventListener started — watching on-chain events");
+    } catch (err) {
+      eventListenerActive = false;
+      console.error("[Facilitator] EventListener failed to start:", err);
+    }
 
     app.listen(PORT, () => {
       logStartupBanner();
