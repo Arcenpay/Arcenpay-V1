@@ -863,7 +863,7 @@ function VersionHistoryDialog({
                   </p>
                 )}
 
-                {v.compatibility && typeof v.compatibility === "object" && (
+                {!!v.compatibility && typeof v.compatibility === "object" && (
                   <div className="mt-2 pt-2 border-t border-border/50">
                     <p className="text-xs text-muted-foreground">
                       Compatibility:{" "}

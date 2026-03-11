@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
             teamId,
             chainId,
             txHash,
-            gasUsed,
+            gasUsedWei: String(gasUsed),
             gasCostUsd,
             walletAddress,
         },
