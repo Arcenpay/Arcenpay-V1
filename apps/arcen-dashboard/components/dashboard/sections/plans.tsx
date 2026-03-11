@@ -13,6 +13,7 @@ import {
   CheckCircle2,
   Copy,
   Check,
+  ChevronDown,
 } from "lucide-react";
 import {
   Dialog,
@@ -60,6 +61,27 @@ import {
 } from "@/lib/format";
 
 type BillingInterval = "monthly" | "quarterly" | "annual";
+
+const USDC_OPTIONS = [
+  {
+    chainId: 11155111,
+    label: "Sepolia",
+    tag: "testnet",
+    address: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238" as `0x${string}`,
+  },
+  {
+    chainId: 84532,
+    label: "Base Sepolia",
+    tag: "testnet",
+    address: "0x036CbD53842c5426634e7929541eC2318f3dCF7e" as `0x${string}`,
+  },
+  {
+    chainId: 8453,
+    label: "Base",
+    tag: "mainnet",
+    address: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913" as `0x${string}`,
+  },
+] as const;
 
 interface Plan {
   id: string;
@@ -121,7 +143,7 @@ export function PlansSection() {
     priceUsdc: "",
     interval: "monthly" as BillingInterval,
     features: "",
-    acceptedToken: chainUsdc,
+    acceptedToken: chainUsdc as `0x${string}`,
   });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [txStep, setTxStep] = useState<TransactionStep>("idle");
@@ -686,17 +708,89 @@ export function PlansSection() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="acceptedToken">Accepted Token</Label>
-              <Input
-                id="acceptedToken"
-                value={`USDC (${truncateAddress(newPlan.acceptedToken)})`}
-                readOnly
-                className="bg-secondary border-border text-muted-foreground"
-              />
-              <p className="text-xs text-muted-foreground">
-                Token is resolved from active chain configuration (USDC-first
-                GA policy).
-              </p>
+              <Label>Accepted Token</Label>
+              {(() => {
+                const selected = USDC_OPTIONS.find(
+                  (o) => o.address === newPlan.acceptedToken,
+                );
+                return (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        type="button"
+                        disabled={txStep !== "idle"}
+                        className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-secondary border border-border text-left hover:bg-secondary/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-foreground">
+                            USDC —{" "}
+                            {selected?.label ?? "Select chain"}
+                          </span>
+                          {selected && (
+                            <span
+                              className={cn(
+                                "text-[10px] font-medium uppercase px-1.5 py-0.5 rounded",
+                                selected.tag === "mainnet"
+                                  ? "bg-success/10 text-success"
+                                  : "bg-secondary text-muted-foreground border border-border",
+                              )}
+                            >
+                              {selected.tag}
+                            </span>
+                          )}
+                          {selected && (
+                            <span className="text-xs font-mono text-muted-foreground">
+                              {truncateAddress(selected.address)}
+                            </span>
+                          )}
+                        </div>
+                        <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width]">
+                      {USDC_OPTIONS.map((opt) => {
+                        const isSelected = newPlan.acceptedToken === opt.address;
+                        return (
+                          <DropdownMenuItem
+                            key={opt.chainId}
+                            onClick={() =>
+                              setNewPlan((p) => ({
+                                ...p,
+                                acceptedToken: opt.address,
+                              }))
+                            }
+                            className="flex items-center justify-between gap-3 py-2.5"
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium">
+                                USDC — {opt.label}
+                              </span>
+                              <span
+                                className={cn(
+                                  "text-[10px] font-medium uppercase px-1.5 py-0.5 rounded",
+                                  opt.tag === "mainnet"
+                                    ? "bg-success/10 text-success"
+                                    : "bg-secondary text-muted-foreground border border-border",
+                                )}
+                              >
+                                {opt.tag}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-mono text-muted-foreground">
+                                {truncateAddress(opt.address)}
+                              </span>
+                              {isSelected && (
+                                <Check className="w-3.5 h-3.5 text-accent shrink-0" />
+                              )}
+                            </div>
+                          </DropdownMenuItem>
+                        );
+                      })}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                );
+              })()}
             </div>
 
             {/* Features */}
