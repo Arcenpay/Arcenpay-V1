@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { keepPreviousData } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import {
   Plus,
@@ -14,6 +15,8 @@ import {
   Copy,
   Check,
   ChevronDown,
+  RefreshCw,
+  Pencil,
 } from "lucide-react";
 import {
   Dialog,
@@ -43,8 +46,7 @@ import {
   useChainId,
   useReadContracts,
   useWriteContract,
-  useWaitForTransactionReceipt,
-  useSimulateContract,
+  usePublicClient,
 } from "wagmi";
 import { toast } from "sonner";
 import {
@@ -136,6 +138,26 @@ export function PlansSection() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [pendingArchiveId, setPendingArchiveId] = useState<string | null>(null);
+  const [dbLoading, setDbLoading] = useState(false);
+  const [dbPlans, setDbPlans] = useState<Array<{
+    id: string;
+    name: string;
+    tier: string;
+    price: string;
+    billingInterval: number;
+    active: boolean;
+    status: string;
+    acceptedToken: string;
+    onChainPlanId?: string | null;
+    chainSyncStatus?: string;
+  }>>([]);
+
+  // Edit plan state
+  const [editingPlan, setEditingPlan] = useState<{
+    id: string; name: string; tier: string; priceUsdc: string;
+    billingInterval: string; acceptedToken: string;
+  } | null>(null);
+  const [editLoading, setEditLoading] = useState(false);
 
   // Create plan form state
   const [newPlan, setNewPlan] = useState({
@@ -185,8 +207,54 @@ export function PlansSection() {
     refetch: refetchPlans,
   } = useReadContracts({
     contracts: planContracts,
-    query: { enabled: planIds.length > 0 },
+    query: { enabled: planIds.length > 0, placeholderData: keepPreviousData },
   });
+
+  // Keep a stable ref so the effect below can always call the latest refetch
+  // without needing it as a dependency (avoids circular updates).
+  const refetchPlansRef = useRef(refetchPlans);
+  refetchPlansRef.current = refetchPlans;
+
+  const refetchPlanIdsRef = useRef(refetchPlanIds);
+  refetchPlanIdsRef.current = refetchPlanIds;
+
+  // ── Database-backed plan list ─────────────────────────────
+  // The on-chain reads (getProviderPlans) rely on wagmi's cache,
+  // which has complex invalidation. Load from the DB API as primary source.
+  const fetchDbPlans = useCallback(async () => {
+    setDbLoading(true);
+    try {
+      const res = await fetch("/api/catalog/plans");
+      if (res.ok) {
+        const data = await res.json();
+        setDbPlans(Array.isArray(data.plans) ? data.plans : []);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setDbLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchDbPlans();
+  }, [fetchDbPlans]);
+
+  // When planIds changes (new plan created), refetch plan details with the
+  // updated planContracts. React Query auto-invalidates the old query key but
+  // we must explicitly trigger the fetch for the new key.
+  const planIdsKey = planIds.map(String).join(",");
+  useEffect(() => {
+    if (planIds.length > 0) void refetchPlansRef.current();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [planIdsKey]);
+
+  // Manual refresh: re-fetch from DB + chain
+  const handleManualRefresh = useCallback(async () => {
+    fetchDbPlans();
+    await refetchPlanIdsRef.current();
+    setTimeout(() => void refetchPlansRef.current(), 500);
+  }, [fetchDbPlans]);
 
   const plans: Plan[] = (plansRawData ?? [])
     .map((result, i) => {
@@ -213,62 +281,33 @@ export function PlansSection() {
     })
     .filter(Boolean) as Plan[];
 
-  const isLoading = planIdsLoading || plansLoading;
+  // Merge on-chain plans with DB plans.
+  // DB plans are the primary source; on-chain provides real-time status.
+  const mergedPlans = dbPlans.map((dbPlan) => {
+    const onChainMatch = plans.find(
+      (p) => p.id === dbPlan.onChainPlanId || p.name === dbPlan.name
+    );
+    return {
+      id: dbPlan.id,
+      onChainId: dbPlan.onChainPlanId ?? onChainMatch?.id ?? null,
+      name: dbPlan.name,
+      tier: dbPlan.tier,
+      priceRaw: onChainMatch?.priceRaw ?? BigInt(Math.round(parseFloat(dbPlan.price) * 1_000_000)),
+      billingInterval: onChainMatch?.billingInterval ?? (dbPlan.billingInterval * 86400),
+      active: onChainMatch?.active ?? (dbPlan.status !== "ARCHIVED" && dbPlan.active),
+      status: dbPlan.status,
+    };
+  });
+
+  const isLoading = (planIdsLoading || plansLoading) && dbLoading;
 
   // ── Write: create plan ────────────────────────────────────
   const priceInUnits = newPlan.priceUsdc
     ? BigInt(Math.round(parseFloat(newPlan.priceUsdc) * 1_000_000))
     : 0n;
 
-  const { error: simulateError } = useSimulateContract({
-    address: contractAddresses.planFactory as `0x${string}`,
-    abi: PlanFactoryABI,
-    functionName: "createPlan",
-    args: [
-      newPlan.name,
-      newPlan.name, // tier = name as default
-      priceInUnits,
-      INTERVAL_SECONDS[newPlan.interval],
-      newPlan.acceptedToken as `0x${string}`,
-      "",
-    ],
-    query: {
-      enabled:
-        showCreateDialog &&
-        txStep === "simulating" &&
-        !!newPlan.name &&
-        priceInUnits > 0n,
-    },
-  });
-
+  const publicClient = usePublicClient();
   const { writeContractAsync } = useWriteContract();
-
-  const { data: createReceipt, isLoading: waitingForReceipt } =
-    useWaitForTransactionReceipt({
-      hash: txHashCreate as `0x${string}` | undefined,
-      query: { enabled: !!txHashCreate },
-    });
-
-  useEffect(() => {
-    if (createReceipt) {
-      setTxStep("success");
-      refetchPlanIds();
-      refetchPlans();
-      toast.success("Plan deployed on-chain!");
-      setTimeout(() => {
-        setShowCreateDialog(false);
-        setTxStep("idle");
-        setTxHashCreate("");
-        setNewPlan({
-          name: "",
-          priceUsdc: "",
-          interval: "monthly",
-          features: "",
-          acceptedToken: chainUsdc,
-        });
-      }, 2500);
-    }
-  }, [createReceipt, chainUsdc]);
 
   useEffect(() => {
     setNewPlan((prev) => ({ ...prev, acceptedToken: chainUsdc }));
@@ -277,7 +316,7 @@ export function PlansSection() {
   // ── Write: deactivate plan ────────────────────────────────
   const { writeContractAsync: writeDeactivate } = useWriteContract();
 
-  const filtered = plans.filter((p) => {
+  const filtered = mergedPlans.filter((p) => {
     const matchesSearch = p.name
       .toLowerCase()
       .includes(searchQuery.toLowerCase());
@@ -310,17 +349,7 @@ export function PlansSection() {
       return;
     }
 
-    setTxStep("simulating");
     setTxError("");
-
-    // Wait briefly for simulation query to run
-    await new Promise((r) => setTimeout(r, 1000));
-
-    if (simulateError) {
-      setTxStep("error");
-      setTxError(simulateError.message);
-      return;
-    }
 
     try {
       setTxStep("pending");
@@ -336,36 +365,127 @@ export function PlansSection() {
           newPlan.acceptedToken as `0x${string}`,
           "",
         ],
+        gas: 500_000n,
       });
       setTxHashCreate(hash);
       setTxStep("inflight");
+
+      await publicClient!.waitForTransactionReceipt({
+        hash,
+        pollingInterval: 2_000,  // poll every 2s (Sepolia ~12s blocks)
+        timeout: 120_000,        // 2 minute total timeout
+      });
+
+      setTxStep("success");
+
+      // ── Persist plan to database ────────────────────────────────────────────
+      // The on-chain read (getProviderPlans) has a multi-render cycle delay.
+      // Saving to our DB immediately gives an instant, reliable list update.
+      try {
+        const intervalDays = Math.round(INTERVAL_SECONDS[newPlan.interval] / 86400);
+        await fetch("/api/catalog/plans", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: newPlan.name,
+            tier: newPlan.name,
+            price: Number(newPlan.priceUsdc),
+            billingInterval: intervalDays,
+            acceptedToken: newPlan.acceptedToken,
+            environmentMode: "DEVELOPMENT",
+          }),
+        });
+      } catch {
+        // non-critical – the plan is on-chain regardless
+      }
+
+      // Refresh both DB list and chain reads
+      await fetchDbPlans();
+      await refetchPlanIds();
+      setTimeout(() => void refetchPlansRef.current(), 300);
+
+      toast.success("Plan deployed on-chain!");
+      setTimeout(() => {
+        setShowCreateDialog(false);
+        setTxStep("idle");
+        setTxHashCreate("");
+        setNewPlan({
+          name: "",
+          priceUsdc: "",
+          interval: "monthly",
+          features: "",
+          acceptedToken: chainUsdc,
+        });
+      }, 3000);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
+      const raw = err instanceof Error ? err.message : String(err);
+      const msg = raw.includes("could not be found") || raw.includes("timed out")
+        ? "Transaction submitted but receipt not found yet — check the block explorer to confirm."
+        : raw;
       setTxStep("error");
       setTxError(msg);
-      toast.error("Transaction rejected");
+      toast.error(raw.includes("User rejected") ? "Transaction rejected" : "Transaction failed");
     }
   };
 
-  const handleArchivePlan = async (planId: string) => {
-    if (!isConnected) return;
-    setPendingArchiveId(planId);
+  const handleArchivePlan = async (plan: { id: string; onChainId: string | null; name: string }) => {
+    setPendingArchiveId(plan.id);
     try {
-      await writeDeactivate({
-        address: contractAddresses.planFactory as `0x${string}`,
-        abi: PlanFactoryABI,
-        functionName: "deactivatePlan",
-        args: [BigInt(planId)],
+      // If we have an actual on-chain numeric ID, call the contract
+      if (plan.onChainId && /^\d+$/.test(plan.onChainId) && isConnected) {
+        await writeDeactivate({
+          address: contractAddresses.planFactory as `0x${string}`,
+          abi: PlanFactoryABI,
+          functionName: "deactivatePlan",
+          args: [BigInt(plan.onChainId)],
+        });
+      }
+      // Always update DB status to ARCHIVED
+      await fetch("/api/catalog/plans", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: plan.id, status: "ARCHIVED", active: false }),
       });
-      toast.success("Plan deactivated");
+      toast.success(`"${plan.name}" archived`);
+      await fetchDbPlans();
       refetchPlanIds();
       refetchPlans();
     } catch (err: unknown) {
-      const msg =
-        err instanceof Error ? err.message : "Failed to deactivate plan";
+      const msg = err instanceof Error ? err.message : "Failed to archive plan";
       toast.error(msg);
     } finally {
       setPendingArchiveId(null);
+    }
+  };
+
+  const handleEditSave = async () => {
+    if (!editingPlan) return;
+    setEditLoading(true);
+    try {
+      const res = await fetch("/api/catalog/plans", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: editingPlan.id,
+          name: editingPlan.name,
+          tier: editingPlan.tier,
+          price: Number(editingPlan.priceUsdc),
+          billingInterval: Number(editingPlan.billingInterval),
+          acceptedToken: editingPlan.acceptedToken,
+        }),
+      });
+      if (res.ok) {
+        toast.success("Plan updated");
+        setEditingPlan(null);
+        await fetchDbPlans();
+      } else {
+        const data = await res.json();
+        toast.error(data.error || "Failed to update plan");
+      }
+    } catch {
+      toast.error("Failed to update plan");
+    } finally {
+      setEditLoading(false);
     }
   };
 
@@ -405,14 +525,27 @@ export function PlansSection() {
             Create and manage your subscription plans on-chain
           </p>
         </div>
-        <Button
-          className="flex items-center gap-2 bg-accent text-accent-foreground hover:bg-accent/90"
-          onClick={() => setShowCreateDialog(true)}
-          disabled={!isConnected}
-        >
-          <Plus className="w-4 h-4" />
-          Create Plan
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex items-center gap-2"
+            onClick={handleManualRefresh}
+            disabled={isLoading}
+            title="Refresh plans from chain"
+          >
+            <RefreshCw className={cn("w-4 h-4", isLoading && "animate-spin")} />
+            Refresh
+          </Button>
+          <Button
+            className="flex items-center gap-2 bg-accent text-accent-foreground hover:bg-accent/90"
+            onClick={() => setShowCreateDialog(true)}
+            disabled={!isConnected}
+          >
+            <Plus className="w-4 h-4" />
+            Create Plan
+          </Button>
+        </div>
       </div>
 
       {/* Search + Filter */}
@@ -497,9 +630,11 @@ export function PlansSection() {
                         <p className="text-sm font-medium text-foreground">
                           {plan.name}
                         </p>
-                        <code className="text-xs text-muted-foreground font-mono">
-                          ID: {plan.id}
-                        </code>
+                        {plan.onChainId && (
+                          <code className="text-xs text-muted-foreground font-mono">
+                            On-chain ID: {plan.onChainId}
+                          </code>
+                        )}
                       </div>
                     </td>
                     <td className="py-3 px-4">
@@ -537,6 +672,24 @@ export function PlansSection() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem
+                            onClick={() => {
+                              // find the original DB plan to pre-fill
+                              const dbPlan = dbPlans.find(p => p.id === plan.id);
+                              setEditingPlan({
+                                id: plan.id,
+                                name: plan.name,
+                                tier: plan.tier,
+                                priceUsdc: dbPlan ? parseFloat(dbPlan.price).toFixed(2) : "",
+                                billingInterval: dbPlan ? String(dbPlan.billingInterval) : "30",
+                                acceptedToken: dbPlan?.acceptedToken ?? "",
+                              });
+                            }}
+                            className="flex items-center gap-2 text-sm"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                            Edit Plan
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
                             onClick={() => handleCopyPlanId(plan.id)}
                             className="flex items-center gap-2 text-sm"
                           >
@@ -566,8 +719,8 @@ export function PlansSection() {
                             <>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
-                                onClick={() => handleArchivePlan(plan.id)}
-                                className="flex items-center gap-2 text-sm text-muted-foreground"
+                                onClick={() => handleArchivePlan(plan)}
+                                className="flex items-center gap-2 text-sm text-destructive focus:text-destructive"
                               >
                                 <Archive className="w-3.5 h-3.5" />
                                 Archive Plan
@@ -826,7 +979,7 @@ export function PlansSection() {
             {/* Transaction flow */}
             <TransactionFlow
               step={txStep}
-              txHash={txHashCreate || createReceipt?.transactionHash}
+              txHash={txHashCreate}
               blockExplorerUrl={getBlockExplorerBase(chainId)}
               gasEstimate="~120k gas"
               errorMessage={txError}
@@ -884,6 +1037,84 @@ export function PlansSection() {
                   Deploy Plan
                 </>
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Plan Dialog */}
+      <Dialog open={!!editingPlan} onOpenChange={(open) => { if (!open) setEditingPlan(null); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Plan</DialogTitle>
+            <DialogDescription>Update the plan details stored in the catalog.</DialogDescription>
+          </DialogHeader>
+          {editingPlan && (
+            <div className="space-y-4 py-2">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="editName">Plan Name</Label>
+                  <Input
+                    id="editName"
+                    value={editingPlan.name}
+                    onChange={(e) => setEditingPlan(p => p ? { ...p, name: e.target.value } : p)}
+                    className="bg-secondary border-border focus:border-accent"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="editTier">Tier</Label>
+                  <Input
+                    id="editTier"
+                    value={editingPlan.tier}
+                    onChange={(e) => setEditingPlan(p => p ? { ...p, tier: e.target.value } : p)}
+                    className="bg-secondary border-border focus:border-accent"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="editPrice">Price (USDC)</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
+                    <Input
+                      id="editPrice"
+                      type="number" min="0" step="0.01"
+                      value={editingPlan.priceUsdc}
+                      onChange={(e) => setEditingPlan(p => p ? { ...p, priceUsdc: e.target.value } : p)}
+                      className="bg-secondary border-border focus:border-accent pl-6"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="editInterval">Billing Interval (days)</Label>
+                  <Input
+                    id="editInterval"
+                    type="number" min="1"
+                    value={editingPlan.billingInterval}
+                    onChange={(e) => setEditingPlan(p => p ? { ...p, billingInterval: e.target.value } : p)}
+                    className="bg-secondary border-border focus:border-accent"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="editToken">Accepted Token</Label>
+                <Input
+                  id="editToken"
+                  value={editingPlan.acceptedToken}
+                  onChange={(e) => setEditingPlan(p => p ? { ...p, acceptedToken: e.target.value } : p)}
+                  className="bg-secondary border-border focus:border-accent"
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingPlan(null)}>Cancel</Button>
+            <Button
+              className="bg-accent text-accent-foreground hover:bg-accent/90"
+              onClick={handleEditSave}
+              disabled={editLoading}
+            >
+              {editLoading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving…</> : "Save Changes"}
             </Button>
           </DialogFooter>
         </DialogContent>

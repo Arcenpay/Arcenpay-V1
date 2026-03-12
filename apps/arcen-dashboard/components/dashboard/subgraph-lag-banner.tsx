@@ -12,9 +12,13 @@ export function SubgraphLagBanner() {
   const [health, setHealth] = useState<SubgraphHealth | null>(null);
   const [dismissed, setDismissed] = useState(false);
   const [lastChecked, setLastChecked] = useState<Date | null>(null);
+  const [hasEverConnected, setHasEverConnected] = useState(false);
 
   const check = useCallback(async () => {
     const result = await checkSubgraphHealth();
+    if (!result.error && result.latestBlock !== null) {
+      setHasEverConnected(true);
+    }
     setHealth(result);
     setLastChecked(new Date());
     // Auto-un-dismiss if the problem clears
@@ -30,6 +34,10 @@ export function SubgraphLagBanner() {
   }, [check]);
 
   if (!health || dismissed) return null;
+
+  // Don't show connectivity errors if the subgraph has never responded —
+  // avoids noisy red banners in dev environments without a deployed subgraph.
+  if (health.error && !hasEverConnected) return null;
 
   const lag = health.lagSeconds ?? 0;
   const isUnhealthy = !health.healthy || lag >= UNHEALTHY_LAG_SECONDS;
