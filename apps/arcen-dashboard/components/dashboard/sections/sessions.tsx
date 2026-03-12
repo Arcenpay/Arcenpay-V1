@@ -406,13 +406,13 @@ export function SessionsSection() {
                         {activeProofJobs.map((job) => {
                             const StatusIcon =
                                 job.status === "done" ? CheckCircle2 :
-                                job.status === "failed" ? XCircle :
-                                job.status === "generating" || job.status === "submitting" ? Loader2 :
-                                Clock;
+                                    job.status === "failed" ? XCircle :
+                                        job.status === "generating" || job.status === "submitting" ? Loader2 :
+                                            Clock;
                             const statusColor =
                                 job.status === "done" ? "text-success" :
-                                job.status === "failed" ? "text-destructive" :
-                                "text-yellow-500";
+                                    job.status === "failed" ? "text-destructive" :
+                                        "text-yellow-500";
                             return (
                                 <div
                                     key={job.sessionId}
@@ -434,11 +434,10 @@ export function SessionsSection() {
                                     </div>
                                     <Badge
                                         variant="secondary"
-                                        className={`text-xs capitalize ${
-                                            job.status === "done" ? "bg-success/10 text-success border-success/20" :
-                                            job.status === "failed" ? "bg-destructive/10 text-destructive border-destructive/20" :
-                                            "bg-yellow-500/10 text-yellow-600 border-yellow-500/20"
-                                        }`}
+                                        className={`text-xs capitalize ${job.status === "done" ? "bg-success/10 text-success border-success/20" :
+                                                job.status === "failed" ? "bg-destructive/10 text-destructive border-destructive/20" :
+                                                    "bg-yellow-500/10 text-yellow-600 border-yellow-500/20"
+                                            }`}
                                     >
                                         {job.status}
                                     </Badge>
