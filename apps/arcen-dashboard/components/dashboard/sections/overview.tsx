@@ -16,7 +16,6 @@ import {
 import {
   useContractAddresses,
   FeeCollectorABI,
-  PlanFactoryABI,
   SEPOLIA_USDC,
 } from "@/lib/contracts";
 import { GET_PROTOCOL_STATS } from "@/lib/graphql";
@@ -27,31 +26,51 @@ export function OverviewSection() {
   const chainId = useChainId();
   const [mounted, setMounted] = useState(false);
 
+  // DB-sourced metrics (primary source — reliable, instant)
+  const [dbActivePlans, setDbActivePlans] = useState<number | null>(null);
+
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Load active plans count from the catalog DB API on mount
+  useEffect(() => {
+    async function loadDbMetrics() {
+      try {
+        const res = await fetch("/api/catalog/plans");
+        if (res.ok) {
+          const data = await res.json();
+          const plans: Array<{ active: boolean; status: string }> =
+            data.plans ?? [];
+          const activeCount = plans.filter(
+            (p) => p.active && p.status !== "ARCHIVED",
+          ).length;
+          setDbActivePlans(activeCount);
+        }
+      } catch {
+        // non-critical — fall back to on-chain read
+      }
+    }
+    loadDbMetrics();
+  }, []);
+
   const contractAddresses = useContractAddresses();
 
-  // Batch on-chain reads
-  const { data: contractData, isLoading: contractsLoading } = useReadContracts({
-    contracts: [
-      {
-        address: contractAddresses.feeCollector as `0x${string}`,
-        abi: FeeCollectorABI,
-        functionName: "accumulatedFees",
-        args: [SEPOLIA_USDC as `0x${string}`],
-        chainId,
-      },
-      {
-        address: contractAddresses.planFactory as `0x${string}`,
-        abi: PlanFactoryABI,
-        functionName: "getProviderPlans",
-        args: [address ?? "0x0000000000000000000000000000000000000000"],
-        chainId,
-      },
-    ],
-    query: { enabled: mounted && isConnected && !!address },
-  });
+  // Batch on-chain reads (fees + plan IDs as fallback)
+  const { data: contractData, isLoading: contractsLoading } = useReadContracts(
+    {
+      contracts: [
+        {
+          address: contractAddresses.feeCollector as `0x${string}`,
+          abi: FeeCollectorABI,
+          functionName: "accumulatedFees",
+          args: [SEPOLIA_USDC as `0x${string}`],
+          chainId,
+        },
+      ],
+      query: { enabled: mounted && isConnected && !!address },
+    },
+  );
 
   // The Graph for subscriber + revenue stats
   const { data: graphData, loading: graphLoading } = useQuery(
@@ -64,7 +83,6 @@ export function OverviewSection() {
   const isLoading = contractsLoading || graphLoading;
 
   const feesCollected = contractData?.[0]?.result as bigint | undefined;
-  const planIds = contractData?.[1]?.result as bigint[] | undefined;
   const stats = graphData?.protocolStats;
 
   const metrics = {
@@ -74,12 +92,13 @@ export function OverviewSection() {
         ? formatUsdc(BigInt(stats.totalRevenue))
         : "—",
     feesCollected: feesCollected != null ? formatUsdc(feesCollected) : "—",
-    activePlans: planIds?.length?.toString() ?? "—",
+    // DB count is authoritative; will show immediately without wallet/chain dependency
+    activePlans: dbActivePlans != null ? String(dbActivePlans) : "—",
   };
 
   return (
     <div className="space-y-6">
-      {/* Wallet disconnected banner — only after mount to avoid SSR/client mismatch */}
+      {/* Wallet disconnected banner */}
       {mounted && !isConnected && (
         <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-warning/5 border border-warning/20 animate-in fade-in slide-in-from-top-2 duration-300">
           <AlertTriangle className="w-4 h-4 text-warning shrink-0" />
@@ -117,11 +136,11 @@ export function OverviewSection() {
         />
         <MetricCard
           title="Active Plans"
-          value={mounted && isConnected ? metrics.activePlans : "—"}
+          value={mounted ? metrics.activePlans : "—"}
           changeType="neutral"
           icon={Layers}
           delay={3}
-          loading={mounted && isLoading && isConnected}
+          loading={mounted && dbActivePlans === null}
         />
       </div>
 
