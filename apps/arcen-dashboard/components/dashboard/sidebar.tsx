@@ -23,6 +23,7 @@ import {
   Coins,
   SlidersHorizontal,
   CreditCard,
+  BookOpen,
 } from "lucide-react";
 import { useEnvironment } from "@/contexts/environment-context";
 
@@ -72,6 +73,12 @@ const navGroups: NavGroup[] = [
       { id: "billing", label: "Billing & Plan", icon: CreditCard },
       { id: "audit-log", label: "Audit Log", icon: ClipboardList },
       { id: "settings", label: "Settings", icon: Settings },
+    ],
+  },
+  {
+    label: "Help",
+    items: [
+      { id: "docs", label: "Docs", icon: BookOpen },
     ],
   },
 ];

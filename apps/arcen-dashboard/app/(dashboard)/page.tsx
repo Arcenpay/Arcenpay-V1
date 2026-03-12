@@ -20,6 +20,7 @@ import {
 } from "@/components/dashboard/sections/catalog";
 import { ComponentsSection } from "@/components/dashboard/sections/components";
 import { BillingSection } from "@/components/dashboard/sections/billing";
+import { DocsSection } from "@/components/dashboard/sections/docs";
 import { SectionErrorBoundary } from "@/components/dashboard/section-error-boundary";
 import { SubgraphLagBanner } from "@/components/dashboard/subgraph-lag-banner";
 import { EnvironmentProvider } from "@/contexts/environment-context";
@@ -37,7 +38,8 @@ export type Section =
   | "components"
   | "billing"
   | "audit-log"
-  | "settings";
+  | "settings"
+  | "docs";
 
 export default function Dashboard() {
   const router = useRouter();
@@ -138,6 +140,12 @@ export default function Dashboard() {
         return (
           <SectionErrorBoundary fallbackLabel="Audit Log failed to load">
             <AuditLogSection />
+          </SectionErrorBoundary>
+        );
+      case "docs":
+        return (
+          <SectionErrorBoundary fallbackLabel="Docs failed to load">
+            <DocsSection />
           </SectionErrorBoundary>
         );
       default:

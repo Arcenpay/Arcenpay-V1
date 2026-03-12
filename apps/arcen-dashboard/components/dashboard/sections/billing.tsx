@@ -108,15 +108,15 @@ const TIER_CONFIG = {
         color: "text-blue-500",
         bgColor: "bg-blue-500/10",
         borderColor: "border-blue-500/30",
-        label: "Plus",
-        description: "Scale with more features",
+        label: "Pro",
+        description: "Scale with advanced features",
     },
     PRO: {
         icon: Rocket,
         color: "text-purple-500",
         bgColor: "bg-purple-500/10",
         borderColor: "border-purple-500/30",
-        label: "Pro",
+        label: "Enterprise",
         description: "Full power with dedicated support",
     },
 };
@@ -144,6 +144,7 @@ export function BillingSection() {
     const [upgradeDialogOpen, setUpgradeDialogOpen] = useState(false);
     const [selectedTier, setSelectedTier] = useState<string | null>(null);
     const [upgrading, setUpgrading] = useState(false);
+    const [billingInterval, setBillingInterval] = useState<"monthly" | "yearly">("monthly");
 
     const fetchData = useCallback(async () => {
         try {
@@ -358,7 +359,35 @@ export function BillingSection() {
 
             {/* Tier Comparison */}
             <div>
-                <h3 className="text-lg font-semibold mb-4">Compare Plans</h3>
+                <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold">Compare Plans</h3>
+                    {/* Monthly / Yearly toggle */}
+                    <div className="flex items-center gap-1 p-1 rounded-lg bg-secondary border border-border">
+                        <button
+                            onClick={() => setBillingInterval("monthly")}
+                            className={`px-3 py-1 rounded-md text-sm font-medium transition-all duration-200 ${
+                                billingInterval === "monthly"
+                                    ? "bg-background text-foreground shadow-sm"
+                                    : "text-muted-foreground hover:text-foreground"
+                            }`}
+                        >
+                            Monthly
+                        </button>
+                        <button
+                            onClick={() => setBillingInterval("yearly")}
+                            className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-sm font-medium transition-all duration-200 ${
+                                billingInterval === "yearly"
+                                    ? "bg-background text-foreground shadow-sm"
+                                    : "text-muted-foreground hover:text-foreground"
+                            }`}
+                        >
+                            Yearly
+                            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-green-500/15 text-green-600 dark:text-green-400">
+                                -20%
+                            </span>
+                        </button>
+                    </div>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {allTiers.map((tierInfo) => {
                         const config = TIER_CONFIG[tierInfo.tier as keyof typeof TIER_CONFIG];
@@ -367,6 +396,12 @@ export function BillingSection() {
                         const isCurrent = tierInfo.tier === currentTier?.tier;
                         const isUpgrade = tierIndex > currentTierIndex;
                         const isDowngrade = tierIndex < currentTierIndex;
+
+                        const monthlyPrice = tierInfo.pricing.priceUsdc;
+                        const displayPrice =
+                            billingInterval === "yearly"
+                                ? Math.floor(monthlyPrice * 0.8)
+                                : monthlyPrice;
 
                         return (
                             <Card
@@ -393,12 +428,22 @@ export function BillingSection() {
                                             </CardDescription>
                                         </div>
                                     </div>
-                                    <div className="pt-2">
+                                    <div className="pt-2 flex items-end gap-1">
                                         <span className="text-3xl font-bold">
-                                            ${tierInfo.pricing.priceUsdc}
+                                            ${displayPrice}
                                         </span>
-                                        <span className="text-sm text-muted-foreground">/mo</span>
+                                        <span className="text-sm text-muted-foreground mb-0.5">/mo</span>
+                                        {billingInterval === "yearly" && monthlyPrice > 0 && (
+                                            <span className="text-xs text-muted-foreground line-through mb-0.5 ml-1">
+                                                ${monthlyPrice}
+                                            </span>
+                                        )}
                                     </div>
+                                    {billingInterval === "yearly" && monthlyPrice > 0 && (
+                                        <p className="text-[11px] text-green-600 dark:text-green-400 -mt-1">
+                                            Billed ${Math.floor(monthlyPrice * 0.8 * 12)}/yr
+                                        </p>
+                                    )}
                                 </CardHeader>
                                 <CardContent className="space-y-3">
                                     {/* Limits */}

@@ -32,6 +32,7 @@ const sectionTitles: Record<Section, string> = {
   billing: "Billing & Plan",
   "audit-log": "Audit Log",
   settings: "Settings",
+  docs: "Documentation",
 };
 
 const sectionDescriptions: Record<Section, string> = {
@@ -48,6 +49,7 @@ const sectionDescriptions: Record<Section, string> = {
   billing: "Manage your platform tier, gas budget, and support",
   "audit-log": "Immutable record of all team actions",
   settings: "Provider configuration",
+  docs: "Platform guides, SDK reference, and contract addresses",
 };
 
 export function Header({ activeSection }: HeaderProps) {
