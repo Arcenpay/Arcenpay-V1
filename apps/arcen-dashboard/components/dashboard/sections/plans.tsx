@@ -17,6 +17,12 @@ import {
   ChevronDown,
   RefreshCw,
   Pencil,
+  List,
+  ToggleLeft,
+  Hash,
+  Package,
+  Trash2,
+  ChevronRight,
 } from "lucide-react";
 import {
   Dialog,
@@ -37,6 +43,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
 import {
   TransactionFlow,
   type TransactionStep,
@@ -495,6 +509,221 @@ export function PlansSection() {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  // ── Entitlements sheet ───────────────────────────────────────────────────────
+  interface Entitlement {
+    featureName: string;
+    featureKey: string;
+    type: "BOOLEAN" | "NUMERIC" | "UNLIMITED";
+    value?: boolean | number | null;
+    enabled: boolean;
+  }
+
+  interface FeatureFlag {
+    key: string;
+    label: string;
+    type: string;
+    planTiers: string[];
+    enabledCount: number;
+    totalCount: number;
+  }
+
+  const [entPlan, setEntPlan] = useState<{ id: string; name: string } | null>(null);
+  const [entitlements, setEntitlements] = useState<Entitlement[]>([]);
+  const [entLoading, setEntLoading] = useState(false);
+  const [deletingKey, setDeletingKey] = useState<string | null>(null);
+  const [togglingKey, setTogglingKey] = useState<string | null>(null);
+  const [entSearch, setEntSearch] = useState("");
+  const [addEntOpen, setAddEntOpen] = useState(false);
+  const [addEntLoading, setAddEntLoading] = useState(false);
+  const [addEntErrors, setAddEntErrors] = useState<Record<string, string>>({});
+  const [addEntForm, setAddEntForm] = useState({
+    featureName: "", featureKey: "",
+    type: "BOOLEAN" as "BOOLEAN" | "NUMERIC" | "UNLIMITED",
+    value: "", enabled: true,
+  });
+
+  // Per-plan entitlements cache for the features column in the table
+  const [planEntitlements, setPlanEntitlements] = useState<Record<string, Entitlement[]>>({});
+
+  // Feature flag suggestions (loaded when the add-entitlement form opens)
+  const [featureFlags, setFeatureFlags] = useState<FeatureFlag[]>([]);
+  const [flagsLoading, setFlagsLoading] = useState(false);
+
+  // Copy-from-plan state
+  const [copyFromOpen, setCopyFromOpen] = useState(false);
+  const [copyingEntitlements, setCopyingEntitlements] = useState(false);
+
+  const loadEntitlements = useCallback(async (planId: string) => {
+    setEntLoading(true);
+    try {
+      const res = await fetch(`/api/catalog/plans/${planId}/entitlements`);
+      if (res.ok) {
+        const data = await res.json();
+        const ents: Entitlement[] = data.entitlements ?? [];
+        setEntitlements(ents);
+        setPlanEntitlements((prev) => ({ ...prev, [planId]: ents }));
+      }
+    } finally {
+      setEntLoading(false);
+    }
+  }, []);
+
+  // Load entitlements when a plan is opened
+  useEffect(() => {
+    if (entPlan) loadEntitlements(entPlan.id);
+  }, [entPlan, loadEntitlements]);
+
+  // Batch-load entitlements for all plans (populates the Features column)
+  const allPlansKey = dbPlans.map((p) => p.id).join(",");
+  useEffect(() => {
+    if (dbPlans.length === 0) return;
+    Promise.all(
+      dbPlans.map((plan) =>
+        fetch(`/api/catalog/plans/${plan.id}/entitlements`)
+          .then((r) => (r.ok ? r.json() : null))
+          .then((data) => ({ id: plan.id, ents: (data?.entitlements ?? []) as Entitlement[] }))
+          .catch(() => ({ id: plan.id, ents: [] as Entitlement[] })),
+      ),
+    ).then((results) => {
+      const map: Record<string, Entitlement[]> = {};
+      results.forEach(({ id, ents }) => {
+        if (ents.length > 0) map[id] = ents;
+      });
+      if (Object.keys(map).length > 0) {
+        setPlanEntitlements((prev) => ({ ...prev, ...map }));
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allPlansKey]);
+
+  // Fetch feature flag suggestions when the add-entitlement form opens
+  useEffect(() => {
+    if (!addEntOpen || !address) return;
+    setFlagsLoading(true);
+    fetch(`/api/entitlements/provider/${address}/flags`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => { if (data?.flags) setFeatureFlags(data.flags as FeatureFlag[]); })
+      .catch(() => {})
+      .finally(() => setFlagsLoading(false));
+  }, [addEntOpen, address]);
+
+  const openEntitlements = (plan: { id: string; name: string }) => {
+    setEntPlan(plan);
+    setEntSearch("");
+    setAddEntOpen(false);
+    setAddEntForm({ featureName: "", featureKey: "", type: "BOOLEAN", value: "", enabled: true });
+    setAddEntErrors({});
+  };
+
+  const deleteEntitlement = async (planId: string, featureKey: string) => {
+    setDeletingKey(featureKey);
+    try {
+      const res = await fetch(`/api/catalog/plans/${planId}/entitlements?featureKey=${featureKey}`, { method: "DELETE" });
+      if (res.ok) {
+        toast.success("Entitlement removed");
+        await loadEntitlements(planId);
+      } else {
+        toast.error("Failed to remove entitlement");
+      }
+    } finally { setDeletingKey(null); }
+  };
+
+  const toggleEntitlement = async (planId: string, featureKey: string, enabled: boolean) => {
+    // Optimistic update so the toggle feels instant
+    setEntitlements((prev) =>
+      prev.map((e) => (e.featureKey === featureKey ? { ...e, enabled } : e))
+    );
+    setTogglingKey(featureKey);
+    try {
+      await fetch(`/api/catalog/plans/${planId}/entitlements`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ featureKey, enabled }),
+      });
+      await loadEntitlements(planId); // sync with server
+    } finally { setTogglingKey(null); }
+  };
+
+  function autoKey(name: string) {
+    return name.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_-]/g, "");
+  }
+
+  const handleAddEntitlement = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const errs: Record<string, string> = {};
+    if (!addEntForm.featureName.trim()) errs.featureName = "Required";
+    if (!addEntForm.featureKey.trim()) errs.featureKey = "Required";
+    else if (!/^[a-z0-9_-]+$/i.test(addEntForm.featureKey)) errs.featureKey = "Letters, numbers, _ and - only";
+    if (addEntForm.type === "NUMERIC") {
+      const n = Number(addEntForm.value);
+      if (addEntForm.value === "" || isNaN(n) || n < 0) errs.value = "Must be a non-negative number";
+    }
+    if (Object.keys(errs).length) { setAddEntErrors(errs); return; }
+    if (!entPlan) return;
+    setAddEntLoading(true);
+    try {
+      let val: boolean | number | null = null;
+      if (addEntForm.type === "BOOLEAN") val = addEntForm.enabled;
+      else if (addEntForm.type === "NUMERIC") val = Number(addEntForm.value);
+      const res = await fetch(`/api/catalog/plans/${entPlan.id}/entitlements`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          featureName: addEntForm.featureName,
+          featureKey: addEntForm.featureKey,
+          type: addEntForm.type,
+          value: val,
+          enabled: addEntForm.enabled,
+        }),
+      });
+      if (res.ok) {
+        setAddEntOpen(false);
+        setAddEntForm({ featureName: "", featureKey: "", type: "BOOLEAN", value: "", enabled: true });
+        setAddEntErrors({});
+        toast.success("Entitlement added");
+        await loadEntitlements(entPlan.id); // reload list immediately
+      } else {
+        const data = await res.json();
+        setAddEntErrors({ _global: data.error || "Failed to add entitlement" });
+      }
+    } finally { setAddEntLoading(false); }
+  };
+
+  // Copy all entitlements from another plan into the currently-open plan
+  const handleCopyFromPlan = async (sourcePlanId: string) => {
+    if (!entPlan) return;
+    setCopyingEntitlements(true);
+    setCopyFromOpen(false);
+    try {
+      const res = await fetch(`/api/catalog/plans/${sourcePlanId}/entitlements`);
+      if (!res.ok) { toast.error("Could not load source plan entitlements"); return; }
+      const data = await res.json();
+      const sourceEnts: Entitlement[] = data.entitlements ?? [];
+      if (sourceEnts.length === 0) { toast.info("Source plan has no entitlements to copy"); return; }
+      await Promise.allSettled(
+        sourceEnts.map((ent) =>
+          fetch(`/api/catalog/plans/${entPlan.id}/entitlements`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              featureName: ent.featureName,
+              featureKey: ent.featureKey,
+              type: ent.type,
+              value: ent.value ?? null,
+              enabled: ent.enabled,
+            }),
+          }),
+        ),
+      );
+      toast.success(`Copied ${sourceEnts.length} entitlement${sourceEnts.length !== 1 ? "s" : ""}`);
+      await loadEntitlements(entPlan.id);
+    } catch {
+      toast.error("Failed to copy entitlements");
+    } finally {
+      setCopyingEntitlements(false);
+    }
+  };
+
   const handleCloseDialog = () => {
     if (
       txStep === "inflight" ||
@@ -599,6 +828,9 @@ export function PlansSection() {
                 <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   Status
                 </th>
+                <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Features
+                </th>
                 <th className="w-12"></th>
               </tr>
             </thead>
@@ -607,7 +839,7 @@ export function PlansSection() {
                 isConnected &&
                 Array.from({ length: 3 }).map((_, i) => (
                   <tr key={i} className="border-b border-border">
-                    {Array.from({ length: 5 }).map((__, j) => (
+                    {Array.from({ length: 6 }).map((__, j) => (
                       <td key={j} className="py-3 px-4">
                         <div className="h-4 bg-secondary/80 rounded animate-pulse w-24" />
                       </td>
@@ -626,16 +858,22 @@ export function PlansSection() {
                     }}
                   >
                     <td className="py-3 px-4">
-                      <div>
-                        <p className="text-sm font-medium text-foreground">
-                          {plan.name}
-                        </p>
+                      <button
+                        onClick={() => openEntitlements({ id: plan.id, name: plan.name })}
+                        className="text-left group"
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-sm font-medium text-foreground group-hover:text-accent transition-colors">
+                            {plan.name}
+                          </p>
+                          <ChevronRight className="w-3.5 h-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </div>
                         {plan.onChainId && (
                           <code className="text-xs text-muted-foreground font-mono">
                             On-chain ID: {plan.onChainId}
                           </code>
                         )}
-                      </div>
+                      </button>
                     </td>
                     <td className="py-3 px-4">
                       <span className="text-sm font-medium text-foreground">
@@ -656,6 +894,26 @@ export function PlansSection() {
                       <PlanStatusBadge active={plan.active} />
                     </td>
                     <td className="py-3 px-4">
+                      {(() => {
+                        const ents = planEntitlements[plan.id] ?? [];
+                        if (ents.length === 0) return <span className="text-xs text-muted-foreground">—</span>;
+                        const shown = ents.slice(0, 2);
+                        const extra = ents.length - shown.length;
+                        return (
+                          <div className="flex flex-wrap gap-1">
+                            {shown.map((e) => (
+                              <span key={e.featureKey} className="text-xs bg-secondary border border-border rounded px-1.5 py-0.5 text-muted-foreground truncate max-w-[100px]">
+                                {e.featureName}
+                              </span>
+                            ))}
+                            {extra > 0 && (
+                              <span className="text-xs text-muted-foreground">+{extra}</span>
+                            )}
+                          </div>
+                        );
+                      })()}
+                    </td>
+                    <td className="py-3 px-4">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button
@@ -671,6 +929,14 @@ export function PlansSection() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() => openEntitlements({ id: plan.id, name: plan.name })}
+                            className="flex items-center gap-2 text-sm"
+                          >
+                            <List className="w-3.5 h-3.5" />
+                            Manage Entitlements
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
                           <DropdownMenuItem
                             onClick={() => {
                               // find the original DB plan to pre-fill
@@ -1119,6 +1385,286 @@ export function PlansSection() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ── Entitlements Sheet ─────────────────────────────── */}
+      <Sheet open={!!entPlan} onOpenChange={(open) => { if (!open) setEntPlan(null); }}>
+        <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
+          <SheetHeader className="pb-4 border-b border-border">
+            <SheetTitle className="flex items-center gap-2">
+              <List className="w-5 h-5 text-accent" />
+              {entPlan?.name} — Entitlements
+            </SheetTitle>
+            <SheetDescription>
+              Define which features are included in this plan. Click a plan name in the table to return.
+            </SheetDescription>
+          </SheetHeader>
+
+          <div className="space-y-4 pt-4">
+            {/* Search + Add */}
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Find entitlement…"
+                  value={entSearch}
+                  onChange={(e) => setEntSearch(e.target.value)}
+                  className="w-full h-9 pl-9 pr-3 rounded-lg bg-secondary border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/20"
+                />
+              </div>
+              <Button
+                size="sm"
+                className="bg-accent text-accent-foreground hover:bg-accent/90 gap-1.5 shrink-0"
+                onClick={() => setAddEntOpen((v) => !v)}
+              >
+                <Plus className="w-4 h-4" />
+                Add
+              </Button>
+              <DropdownMenu open={copyFromOpen} onOpenChange={setCopyFromOpen}>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={copyingEntitlements}
+                    className="gap-1.5 shrink-0"
+                    title="Copy entitlements from another plan"
+                  >
+                    {copyingEntitlements
+                      ? <Loader2 className="w-4 h-4 animate-spin" />
+                      : <Copy className="w-4 h-4" />
+                    }
+                    Copy from
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {mergedPlans.filter((p) => p.id !== entPlan?.id).length === 0 ? (
+                    <div className="px-2 py-1.5 text-xs text-muted-foreground">No other plans</div>
+                  ) : (
+                    mergedPlans
+                      .filter((p) => p.id !== entPlan?.id)
+                      .map((p) => (
+                        <DropdownMenuItem
+                          key={p.id}
+                          onClick={() => handleCopyFromPlan(p.id)}
+                          className="text-sm"
+                        >
+                          {p.name}
+                        </DropdownMenuItem>
+                      ))
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+
+            {/* Add entitlement inline form */}
+            {addEntOpen && (
+              <form
+                onSubmit={handleAddEntitlement}
+                className="space-y-3 p-4 rounded-xl border border-accent/30 bg-accent/5"
+              >
+                <p className="text-sm font-semibold text-foreground">New Entitlement</p>
+                {addEntErrors._global && (
+                  <p className="text-xs text-destructive">{addEntErrors._global}</p>
+                )}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Feature Name *</Label>
+                    <Input
+                      value={addEntForm.featureName}
+                      onChange={(e) => {
+                        const name = e.target.value;
+                        setAddEntForm((f) => ({
+                          ...f,
+                          featureName: name,
+                          featureKey: f.featureKey || autoKey(name),
+                        }));
+                      }}
+                      placeholder="e.g. Advanced Analytics"
+                      className="bg-secondary border-border h-8 text-sm"
+                    />
+                    {addEntErrors.featureName && <p className="text-xs text-destructive">{addEntErrors.featureName}</p>}
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Feature Key *</Label>
+                    <Input
+                      value={addEntForm.featureKey}
+                      onChange={(e) => setAddEntForm((f) => ({ ...f, featureKey: e.target.value }))}
+                      placeholder="advanced_analytics"
+                      className="bg-secondary border-border h-8 text-sm font-mono"
+                    />
+                    {addEntErrors.featureKey && <p className="text-xs text-destructive">{addEntErrors.featureKey}</p>}
+                  </div>
+                </div>
+                {/* Feature flag suggestions */}
+                {(flagsLoading || featureFlags.length > 0) && (
+                  <div className="space-y-1.5">
+                    <p className="text-xs text-muted-foreground">Suggestions from your feature flags:</p>
+                    {flagsLoading ? (
+                      <div className="flex gap-1.5 flex-wrap">
+                        {Array.from({ length: 3 }).map((_, i) => (
+                          <div key={i} className="h-6 w-20 rounded-full bg-secondary animate-pulse" />
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="flex gap-1.5 flex-wrap">
+                        {featureFlags.map((flag) => (
+                          <button
+                            key={flag.key}
+                            type="button"
+                            onClick={() =>
+                              setAddEntForm((f) => ({
+                                ...f,
+                                featureName: flag.label || flag.key,
+                                featureKey: flag.key,
+                                type: flag.type === "number" ? "NUMERIC" : "BOOLEAN",
+                              }))
+                            }
+                            className="text-xs px-2 py-1 rounded-full bg-accent/10 border border-accent/30 text-accent hover:bg-accent/20 transition-colors"
+                          >
+                            {flag.label || flag.key}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+                <div className="space-y-1">
+                  <Label className="text-xs">Type *</Label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(["BOOLEAN", "NUMERIC", "UNLIMITED"] as const).map((t) => (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => setAddEntForm((f) => ({ ...f, type: t, value: "" }))}
+                        className={cn(
+                          "flex flex-col items-center gap-1 py-2 px-1 rounded-lg border text-xs font-medium transition-all",
+                          addEntForm.type === t
+                            ? "bg-accent text-accent-foreground border-accent"
+                            : "bg-secondary border-border text-muted-foreground hover:text-foreground",
+                        )}
+                      >
+                        {t === "BOOLEAN" ? <ToggleLeft className="w-4 h-4" /> : t === "NUMERIC" ? <Hash className="w-4 h-4" /> : <Package className="w-4 h-4" />}
+                        {t === "BOOLEAN" ? "On/Off" : t === "NUMERIC" ? "Numeric" : "Unlimited"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {addEntForm.type === "NUMERIC" && (
+                  <div className="space-y-1">
+                    <Label className="text-xs">Value *</Label>
+                    <Input
+                      type="number" min="0"
+                      value={addEntForm.value}
+                      onChange={(e) => setAddEntForm((f) => ({ ...f, value: e.target.value }))}
+                      placeholder="e.g. 1000"
+                      className="bg-secondary border-border h-8 text-sm"
+                    />
+                    {addEntErrors.value && <p className="text-xs text-destructive">{addEntErrors.value}</p>}
+                  </div>
+                )}
+                <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/50 border border-border">
+                  <div>
+                    <p className="text-sm font-medium">Enabled</p>
+                    <p className="text-xs text-muted-foreground">Active on the plan immediately</p>
+                  </div>
+                  <Switch
+                    checked={addEntForm.enabled}
+                    onCheckedChange={(v) => setAddEntForm((f) => ({ ...f, enabled: v }))}
+                  />
+                </div>
+                <div className="flex gap-2 justify-end">
+                  <Button type="button" variant="outline" size="sm" onClick={() => setAddEntOpen(false)}>Cancel</Button>
+                  <Button type="submit" size="sm" disabled={addEntLoading} className="bg-accent text-accent-foreground hover:bg-accent/90">
+                    {addEntLoading ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />Adding…</> : "Add Entitlement"}
+                  </Button>
+                </div>
+              </form>
+            )}
+
+            {/* Entitlements list */}
+            {entLoading ? (
+              <div className="space-y-2">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="h-14 rounded-xl bg-secondary/60 animate-pulse" />
+                ))}
+              </div>
+            ) : (() => {
+              const filtered = entitlements.filter((e) =>
+                e.featureName.toLowerCase().includes(entSearch.toLowerCase()) ||
+                e.featureKey.toLowerCase().includes(entSearch.toLowerCase()),
+              );
+              return filtered.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center mb-3">
+                    <List className="w-6 h-6 text-muted-foreground" />
+                  </div>
+                  <p className="text-sm font-medium text-foreground mb-1">
+                    {entSearch ? "No entitlements match" : "No entitlements yet"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {entSearch ? "Try a different search" : "Click Add to define features included in this plan"}
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {filtered.map((ent) => (
+                    <div
+                      key={ent.featureKey}
+                      className="flex items-center gap-3 p-3 rounded-xl border border-border bg-card hover:bg-secondary/30 transition-colors"
+                    >
+                      {/* Type icon */}
+                      <div className="shrink-0 w-8 h-8 rounded-lg bg-secondary flex items-center justify-center">
+                        {ent.type === "BOOLEAN" ? (
+                          <ToggleLeft className="w-4 h-4 text-muted-foreground" />
+                        ) : ent.type === "NUMERIC" ? (
+                          <Hash className="w-4 h-4 text-muted-foreground" />
+                        ) : (
+                          <Package className="w-4 h-4 text-muted-foreground" />
+                        )}
+                      </div>
+                      {/* Info */}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground truncate">{ent.featureName}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <code className="text-xs text-muted-foreground font-mono">{ent.featureKey}</code>
+                          {ent.type === "NUMERIC" && ent.value != null && (
+                            <span className="text-xs text-muted-foreground">· limit: {String(ent.value)}</span>
+                          )}
+                          {ent.type === "UNLIMITED" && (
+                            <span className="text-xs text-muted-foreground">· unlimited</span>
+                          )}
+                        </div>
+                      </div>
+                      {/* Toggle */}
+                      <Switch
+                        checked={ent.enabled}
+                        disabled={togglingKey === ent.featureKey}
+                        onCheckedChange={(v) => entPlan && toggleEntitlement(entPlan.id, ent.featureKey, v)}
+                      />
+                      {/* Delete */}
+                      <button
+                        onClick={() => entPlan && deleteEntitlement(entPlan.id, ent.featureKey)}
+                        disabled={deletingKey === ent.featureKey}
+                        className="shrink-0 p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
+                        title="Remove entitlement"
+                      >
+                        {deletingKey === ent.featureKey
+                          ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          : <Trash2 className="w-3.5 h-3.5" />
+                        }
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+
+            <p className="text-xs text-muted-foreground text-center pt-2">
+              {entitlements.length} entitlement{entitlements.length !== 1 ? "s" : ""} on this plan
+            </p>
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

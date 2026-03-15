@@ -45,6 +45,15 @@ import {
   AlertTriangle,
   Package,
   Coins,
+  ArrowLeft,
+  ToggleLeft,
+  Hash,
+  Copy,
+  Check,
+  Pencil,
+  X,
+  Loader2,
+  ChevronRight,
 } from "lucide-react";
 import { useEnvironment } from "@/contexts/environment-context";
 import { useWriteContract, useChainId } from "wagmi";
@@ -1034,7 +1043,7 @@ function PlansTable({ env, refresh }: { env: EnvMode; refresh: number }) {
           success: false,
           errorMessage: message,
         }),
-      }).catch(() => {});
+      }).catch(() => { });
       toast.error(message);
     } finally {
       setSyncingPlanId(null);
@@ -2481,6 +2490,905 @@ export function CatalogConfigSection() {
         </div>
       </div>
       <ConfigurationTab />
+    </div>
+  );
+}
+
+// ─── Entitlement Types ─────────────────────────────────────────────────────────
+
+interface Entitlement {
+  featureName: string;
+  featureKey: string;
+  type: "BOOLEAN" | "NUMERIC" | "UNLIMITED";
+  value?: boolean | number | null;
+  enabled: boolean;
+}
+
+// ─── Add Entitlement Dialog ────────────────────────────────────────────────────
+
+function AddEntitlementDialog({
+  planId,
+  onAdded,
+}: {
+  planId: string;
+  onAdded: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [form, setForm] = useState({
+    featureName: "",
+    featureKey: "",
+    type: "BOOLEAN" as "BOOLEAN" | "NUMERIC" | "UNLIMITED",
+    value: "",
+    enabled: true,
+  });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  function autoKey(name: string) {
+    return name.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_-]/g, "");
+  }
+
+  function validate() {
+    const e: Record<string, string> = {};
+    if (!form.featureName.trim()) e.featureName = "Required";
+    if (!form.featureKey.trim()) e.featureKey = "Required";
+    else if (!/^[a-z0-9_-]+$/i.test(form.featureKey)) e.featureKey = "Letters, numbers, _ and - only";
+    if (form.type === "NUMERIC") {
+      const n = Number(form.value);
+      if (form.value === "" || isNaN(n) || n < 0) e.value = "Must be a non-negative number";
+    }
+    return e;
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const errs = validate();
+    if (Object.keys(errs).length) { setErrors(errs); return; }
+    setLoading(true);
+    try {
+      let val: boolean | number | null = null;
+      if (form.type === "BOOLEAN") val = form.enabled;
+      else if (form.type === "NUMERIC") val = Number(form.value);
+      const res = await fetch(`/api/catalog/plans/${planId}/entitlements`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          featureName: form.featureName,
+          featureKey: form.featureKey,
+          type: form.type,
+          value: val,
+          enabled: form.enabled,
+        }),
+      });
+      if (res.ok) {
+        setOpen(false);
+        setForm({ featureName: "", featureKey: "", type: "BOOLEAN", value: "", enabled: true });
+        setErrors({});
+        onAdded();
+        toast.success("Entitlement added");
+      } else {
+        const data = await res.json();
+        setErrors({ _global: data.error || "Failed to add entitlement" });
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button className="bg-accent text-accent-foreground hover:bg-accent/90 gap-2">
+          <Plus className="w-4 h-4" />
+          Add entitlement
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Add Entitlement</DialogTitle>
+          <DialogDescription>Add a feature entitlement to this plan.</DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4 py-2">
+          {errors._global && <p className="text-sm text-destructive">{errors._global}</p>}
+          <div className="space-y-2">
+            <Label htmlFor="entFeatureName">Feature Name *</Label>
+            <Input
+              id="entFeatureName"
+              value={form.featureName}
+              onChange={(e) => {
+                const name = e.target.value;
+                setForm((f) => ({ ...f, featureName: name, featureKey: f.featureKey || autoKey(name) }));
+              }}
+              placeholder="e.g. Advanced Analytics"
+              className="bg-secondary border-border"
+            />
+            {errors.featureName && <p className="text-xs text-destructive">{errors.featureName}</p>}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="entFeatureKey">Feature Key *</Label>
+            <Input
+              id="entFeatureKey"
+              value={form.featureKey}
+              onChange={(e) => setForm((f) => ({ ...f, featureKey: e.target.value }))}
+              placeholder="e.g. advanced_analytics"
+              className="bg-secondary border-border font-mono text-sm"
+            />
+            {errors.featureKey && <p className="text-xs text-destructive">{errors.featureKey}</p>}
+          </div>
+          <div className="space-y-2">
+            <Label>Entitlement Type *</Label>
+            <div className="grid grid-cols-3 gap-2">
+              {(["BOOLEAN", "NUMERIC", "UNLIMITED"] as const).map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setForm((f) => ({ ...f, type: t, value: "" }))}
+                  className={`flex flex-col items-center gap-1.5 py-3 px-2 rounded-lg border text-xs font-medium transition-all ${form.type === t
+                      ? "bg-accent text-accent-foreground border-accent"
+                      : "bg-secondary border-border text-muted-foreground hover:text-foreground"
+                    }`}
+                >
+                  {t === "BOOLEAN" ? <ToggleLeft className="w-4 h-4" /> : t === "NUMERIC" ? <Hash className="w-4 h-4" /> : <Package className="w-4 h-4" />}
+                  {t === "BOOLEAN" ? "On/Off" : t === "NUMERIC" ? "Numeric" : "Unlimited"}
+                </button>
+              ))}
+            </div>
+          </div>
+          {form.type === "NUMERIC" && (
+            <div className="space-y-2">
+              <Label htmlFor="entValue">Value *</Label>
+              <Input
+                id="entValue"
+                type="number"
+                min="0"
+                value={form.value}
+                onChange={(e) => setForm((f) => ({ ...f, value: e.target.value }))}
+                placeholder="e.g. 1000"
+                className="bg-secondary border-border"
+              />
+              {errors.value && <p className="text-xs text-destructive">{errors.value}</p>}
+            </div>
+          )}
+          <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/50 border border-border">
+            <div>
+              <p className="text-sm font-medium">Enabled</p>
+              <p className="text-xs text-muted-foreground">Is this entitlement active on the plan?</p>
+            </div>
+            <Switch
+              checked={form.enabled}
+              onCheckedChange={(v) => setForm((f) => ({ ...f, enabled: v }))}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" type="button" onClick={() => setOpen(false)}>Cancel</Button>
+            <Button type="submit" disabled={loading} className="bg-accent text-accent-foreground hover:bg-accent/90">
+              {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Adding…</> : "Add Entitlement"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─── Edit Plan Dialog ──────────────────────────────────────────────────────────
+
+function EditPlanDialog({
+  plan,
+  onSaved,
+}: {
+  plan: CatalogPlan;
+  onSaved: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [form, setForm] = useState({
+    name: plan.name,
+    tier: plan.tier,
+    description: plan.description ?? "",
+    price: parseFloat(plan.price).toFixed(2),
+    billingInterval: String(plan.billingInterval),
+    acceptedToken: plan.acceptedToken,
+  });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const errs: Record<string, string> = {};
+    if (!form.name.trim()) errs.name = "Required";
+    if (!form.tier.trim()) errs.tier = "Required";
+    if (!form.price || isNaN(Number(form.price)) || Number(form.price) <= 0) errs.price = "Must be positive";
+    if (!form.billingInterval || isNaN(Number(form.billingInterval)) || Number(form.billingInterval) <= 0) errs.billingInterval = "Required";
+    if (Object.keys(errs).length) { setErrors(errs); return; }
+    setLoading(true);
+    try {
+      const res = await fetch("/api/catalog/plans", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: plan.id,
+          name: form.name,
+          tier: form.tier,
+          description: form.description || undefined,
+          price: Number(form.price),
+          billingInterval: Number(form.billingInterval),
+          acceptedToken: form.acceptedToken,
+        }),
+      });
+      if (res.ok) {
+        setOpen(false);
+        toast.success("Plan updated");
+        onSaved();
+      } else {
+        const data = await res.json();
+        setErrors({ _global: data.error || "Failed to update plan" });
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" className="gap-2">
+          <Pencil className="w-4 h-4" />
+          Edit plan
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Edit Plan</DialogTitle>
+          <DialogDescription>Update plan settings. Changes are saved to the catalog.</DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4 py-2">
+          {errors._global && <p className="text-sm text-destructive">{errors._global}</p>}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="editPlanName">Name *</Label>
+              <Input id="editPlanName" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} className="bg-secondary border-border" />
+              {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="editPlanTier">Tier *</Label>
+              <Input id="editPlanTier" value={form.tier} onChange={(e) => setForm((f) => ({ ...f, tier: e.target.value }))} className="bg-secondary border-border" />
+              {errors.tier && <p className="text-xs text-destructive">{errors.tier}</p>}
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="editPlanDesc">Description</Label>
+            <Input id="editPlanDesc" value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} placeholder="Optional" className="bg-secondary border-border" />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="editPlanPrice">Price (USDC) *</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
+                <Input id="editPlanPrice" type="number" min="0" step="0.01" value={form.price} onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))} className="bg-secondary border-border pl-6" />
+              </div>
+              {errors.price && <p className="text-xs text-destructive">{errors.price}</p>}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="editPlanInterval">Billing Interval (days) *</Label>
+              <Input id="editPlanInterval" type="number" min="1" value={form.billingInterval} onChange={(e) => setForm((f) => ({ ...f, billingInterval: e.target.value }))} className="bg-secondary border-border" />
+              {errors.billingInterval && <p className="text-xs text-destructive">{errors.billingInterval}</p>}
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="editPlanToken">Accepted Token *</Label>
+            <Input id="editPlanToken" value={form.acceptedToken} onChange={(e) => setForm((f) => ({ ...f, acceptedToken: e.target.value }))} className="bg-secondary border-border" />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" type="button" onClick={() => setOpen(false)}>Cancel</Button>
+            <Button type="submit" disabled={loading} className="bg-accent text-accent-foreground hover:bg-accent/90">
+              {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving…</> : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─── Plan Detail View ──────────────────────────────────────────────────────────
+
+function PlanDetailView({
+  plan,
+  onBack,
+  onUpdated,
+}: {
+  plan: CatalogPlan;
+  onBack: () => void;
+  onUpdated: () => void;
+}) {
+  const [detailTab, setDetailTab] = useState<"entitlements" | "companies" | "billing">("entitlements");
+  const [entitlements, setEntitlements] = useState<Entitlement[]>([]);
+  const [entLoading, setEntLoading] = useState(false);
+  const [entRefresh, setEntRefresh] = useState(0);
+  const [deletingKey, setDeletingKey] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState(false);
+  const [toggling, setToggling] = useState<string | null>(null);
+
+  const loadEntitlements = useCallback(async () => {
+    setEntLoading(true);
+    try {
+      const res = await fetch(`/api/catalog/plans/${plan.id}/entitlements`);
+      if (res.ok) {
+        const data = await res.json();
+        setEntitlements(data.entitlements ?? []);
+      }
+    } finally {
+      setEntLoading(false);
+    }
+  }, [plan.id]);
+
+  useEffect(() => { loadEntitlements(); }, [loadEntitlements, entRefresh]);
+
+  async function deleteEntitlement(featureKey: string) {
+    setDeletingKey(featureKey);
+    try {
+      const res = await fetch(`/api/catalog/plans/${plan.id}/entitlements?featureKey=${featureKey}`, { method: "DELETE" });
+      if (res.ok) { setEntRefresh((n) => n + 1); toast.success("Entitlement removed"); }
+      else { toast.error("Failed to remove entitlement"); }
+    } finally { setDeletingKey(null); }
+  }
+
+  async function toggleEntitlement(featureKey: string, enabled: boolean) {
+    setToggling(featureKey);
+    try {
+      await fetch(`/api/catalog/plans/${plan.id}/entitlements`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ featureKey, enabled }),
+      });
+      setEntRefresh((n) => n + 1);
+    } finally { setToggling(null); }
+  }
+
+  function copyId() {
+    navigator.clipboard.writeText(plan.id);
+    setCopiedId(true);
+    setTimeout(() => setCopiedId(false), 2000);
+  }
+
+  const DETAIL_TABS = ["entitlements", "companies", "billing"] as const;
+
+  return (
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+      {/* Breadcrumb */}
+      <button onClick={onBack} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
+        <ArrowLeft className="w-4 h-4" />
+        Plans
+      </button>
+
+      {/* Plan header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-accent/30 to-accent/10 border border-border flex items-center justify-center text-xl font-bold text-accent">
+            {plan.name.charAt(0).toUpperCase()}
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-foreground">{plan.name}</h2>
+            <div className="flex items-center gap-2 mt-0.5">
+              <button
+                onClick={copyId}
+                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground font-mono transition-colors"
+              >
+                <span>{plan.id.slice(0, 20)}…</span>
+                {copiedId ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+              </button>
+            </div>
+            {plan.description && <p className="text-sm text-muted-foreground mt-0.5">{plan.description}</p>}
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="text-center">
+            <p className="text-xs text-muted-foreground">Type</p>
+            <p className="text-sm font-medium flex items-center gap-1"><Package className="w-3.5 h-3.5" /> Plan</p>
+          </div>
+          <div className="text-center">
+            <p className="text-xs text-muted-foreground">Status</p>
+            <StatusBadge status={plan.status} />
+          </div>
+          <EditPlanDialog plan={plan} onSaved={onUpdated} />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon"><MoreHorizontal className="w-4 h-4" /></Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={copyId}>Copy Plan ID</DropdownMenuItem>
+              {plan.status === "DRAFT" && (
+                <DropdownMenuItem onClick={async () => {
+                  await fetch("/api/catalog/plans", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: plan.id, status: "PUBLISHED" }) });
+                  onUpdated();
+                  toast.success("Plan published");
+                }}>Mark as Published</DropdownMenuItem>
+              )}
+              {plan.status !== "ARCHIVED" && (
+                <DropdownMenuItem onClick={async () => {
+                  await fetch("/api/catalog/plans", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: plan.id, status: "ARCHIVED" }) });
+                  onUpdated();
+                  toast.success("Plan archived");
+                }} className="text-destructive focus:text-destructive">Archive Plan</DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+
+      {/* Detail tabs */}
+      <div className="border-b border-border">
+        <div className="flex gap-0">
+          {DETAIL_TABS.map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setDetailTab(tab)}
+              className={`px-4 py-3 text-sm font-medium capitalize border-b-2 transition-all -mb-px ${detailTab === tab
+                  ? "border-accent text-foreground"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+                }`}
+            >
+              {tab}
+              {tab === "entitlements" && entitlements.length > 0 && (
+                <span className="ml-2 text-xs bg-secondary rounded-full px-1.5 py-0.5">{entitlements.length}</span>
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Tab content */}
+      {detailTab === "entitlements" && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-base font-semibold">
+              {entitlements.length} Entitlement{entitlements.length !== 1 ? "s" : ""}
+            </h3>
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Find entitlement"
+                  className="h-9 w-52 pl-9 pr-3 rounded-lg bg-secondary border border-border text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/20"
+                />
+                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+              </div>
+            </div>
+          </div>
+
+          {entLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <>
+              {entitlements.length > 0 && (
+                <div className="bg-card border border-border rounded-xl overflow-hidden">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-border bg-secondary/50">
+                        <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Feature</th>
+                        <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Entitlement</th>
+                        <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Type</th>
+                        <th className="w-12" />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {entitlements.map((ent) => (
+                        <tr key={ent.featureKey} className="border-b border-border last:border-0 hover:bg-secondary/20 transition-colors">
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center">
+                                {ent.type === "BOOLEAN" ? <ToggleLeft className="w-4 h-4 text-muted-foreground" /> : ent.type === "NUMERIC" ? <Hash className="w-4 h-4 text-muted-foreground" /> : <Package className="w-4 h-4 text-muted-foreground" />}
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium">{ent.featureName}</p>
+                                <code className="text-xs text-muted-foreground font-mono">{ent.featureKey}</code>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => !toggling && toggleEntitlement(ent.featureKey, !ent.enabled)}
+                                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none ${ent.enabled ? "bg-accent" : "bg-input"}`}
+                              >
+                                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-lg transition-transform ${ent.enabled ? "translate-x-4" : "translate-x-0"}`} />
+                              </button>
+                              <span className="text-sm">{ent.type === "NUMERIC" ? ent.value : ent.enabled ? "On" : "Off"}</span>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <Badge variant="outline" className="text-xs capitalize">
+                              {ent.type === "BOOLEAN" ? "Boolean" : ent.type === "NUMERIC" ? "Numeric" : "Unlimited"}
+                            </Badge>
+                          </td>
+                          <td className="py-3 px-4">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                  {deletingKey === ent.featureKey ? <Loader2 className="w-4 h-4 animate-spin" /> : <MoreHorizontal className="w-4 h-4" />}
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => toggleEntitlement(ent.featureKey, !ent.enabled)}>
+                                  {ent.enabled ? "Disable" : "Enable"}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => deleteEntitlement(ent.featureKey)} className="text-destructive focus:text-destructive">
+                                  Remove
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              <div className="flex items-center gap-3">
+                <AddEntitlementDialog planId={plan.id} onAdded={() => setEntRefresh((n) => n + 1)} />
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {detailTab === "companies" && (
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <div className="w-14 h-14 rounded-xl bg-secondary flex items-center justify-center mb-4">
+            <Package className="w-7 h-7 text-muted-foreground" />
+          </div>
+          <p className="text-sm font-medium text-foreground mb-1">No companies subscribed</p>
+          <p className="text-xs text-muted-foreground max-w-xs">Companies that subscribe to this plan will appear here.</p>
+        </div>
+      )}
+
+      {detailTab === "billing" && (
+        <div className="bg-card border border-border rounded-xl p-6 space-y-4">
+          <h3 className="text-base font-semibold">Billing Details</h3>
+          <div className="grid grid-cols-2 gap-6">
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Price</p>
+              <p className="text-lg font-semibold">${parseFloat(plan.price).toFixed(2)} USDC</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Billing Interval</p>
+              <p className="text-lg font-semibold">{plan.billingInterval} days</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Accepted Token</p>
+              <p className="text-sm font-medium font-mono">{plan.acceptedToken}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Environment</p>
+              <EnvBadge mode={plan.environmentMode} />
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Unified Catalog Section ───────────────────────────────────────────────────
+
+type CatalogTab = "plans" | "addons" | "credits" | "config";
+
+export function CatalogSection() {
+  const { envMode } = useEnvironment();
+  const [activeTab, setActiveTab] = useState<CatalogTab>("plans");
+  const [refresh, setRefresh] = useState(0);
+  const [selectedPlan, setSelectedPlan] = useState<CatalogPlan | null>(null);
+  const [plans, setPlans] = useState<CatalogPlan[]>([]);
+  const [addOns, setAddOns] = useState<CatalogAddOn[]>([]);
+  const [plansLoading, setPlansLoading] = useState(true);
+  const [addOnsLoading, setAddOnsLoading] = useState(true);
+  const [planSearch, setPlanSearch] = useState("");
+  const [addOnSearch, setAddOnSearch] = useState("");
+  const [updatingAddOnId, setUpdatingAddOnId] = useState<string | null>(null);
+
+  const loadPlans = useCallback(async () => {
+    setPlansLoading(true);
+    try {
+      const res = await fetch(`/api/catalog/plans?environmentMode=${envMode}`);
+      if (res.ok) { const d = await res.json(); setPlans(d.plans ?? []); }
+    } finally { setPlansLoading(false); }
+  }, [envMode]);
+
+  const loadAddOns = useCallback(async () => {
+    setAddOnsLoading(true);
+    try {
+      const res = await fetch(`/api/catalog/add-ons?environmentMode=${envMode}`);
+      if (res.ok) { const d = await res.json(); setAddOns(d.addOns ?? []); }
+    } finally { setAddOnsLoading(false); }
+  }, [envMode]);
+
+  useEffect(() => { loadPlans(); }, [loadPlans, refresh]);
+  useEffect(() => { loadAddOns(); }, [loadAddOns, refresh]);
+
+  function tr() { setRefresh((n) => n + 1); }
+
+  const filteredPlans = plans.filter((p) => p.name.toLowerCase().includes(planSearch.toLowerCase()));
+  const filteredAddOns = addOns.filter((a) => a.name.toLowerCase().includes(addOnSearch.toLowerCase()));
+
+  async function archiveAddOn(id: string) {
+    setUpdatingAddOnId(id);
+    try {
+      await fetch("/api/catalog/add-ons", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, status: "ARCHIVED" }) });
+      tr();
+      toast.success("Add-on archived");
+    } finally { setUpdatingAddOnId(null); }
+  }
+
+  // Plan detail view
+  if (selectedPlan) {
+    return (
+      <PlanDetailView
+        plan={selectedPlan}
+        onBack={() => setSelectedPlan(null)}
+        onUpdated={() => { loadPlans(); setSelectedPlan(null); }}
+      />
+    );
+  }
+
+  const TABS: { key: CatalogTab; label: string; count?: number }[] = [
+    { key: "plans", label: "Plan", count: plans.length },
+    { key: "addons", label: "Add On", count: addOns.length },
+    { key: "credits", label: "Credit Types" },
+    { key: "config", label: "Configuration" },
+  ];
+
+  return (
+    <div className="space-y-0">
+      {/* Tab bar header — matches Schematic style */}
+      <div className="flex items-center justify-between border-b border-border pb-0 mb-6">
+        <div className="flex gap-0">
+          {TABS.map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={`px-4 py-3 text-sm font-medium border-b-2 transition-all -mb-px flex items-center gap-1.5 ${activeTab === tab.key
+                  ? "border-accent text-foreground"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+                }`}
+            >
+              {tab.count !== undefined ? `${tab.count} ${tab.label}${tab.count !== 1 ? "s" : ""}` : tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Right-side actions per tab */}
+        <div className="flex items-center gap-2 pb-3">
+          {activeTab === "plans" && (
+            <>
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Find Plan"
+                  value={planSearch}
+                  onChange={(e) => setPlanSearch(e.target.value)}
+                  className="h-9 w-44 pl-9 pr-3 rounded-lg bg-secondary border border-border text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/20"
+                />
+                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+              </div>
+              <CreatePlanDialog env={envMode} onCreated={tr} />
+            </>
+          )}
+          {activeTab === "addons" && (
+            <>
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Find Add On"
+                  value={addOnSearch}
+                  onChange={(e) => setAddOnSearch(e.target.value)}
+                  className="h-9 w-44 pl-9 pr-3 rounded-lg bg-secondary border border-border text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/20"
+                />
+                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+              </div>
+              <CreateAddOnDialog env={envMode} onCreated={tr} />
+            </>
+          )}
+          {activeTab === "credits" && (
+            <CreateCreditTypeDialog env={envMode} onCreated={tr} />
+          )}
+          {activeTab === "config" && (
+            <div />
+          )}
+          <PublishButton env={envMode} onPublished={tr} />
+        </div>
+      </div>
+
+      {/* Plans Tab */}
+      {activeTab === "plans" && (
+        <div className="bg-card border border-border rounded-xl overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-border bg-secondary/50">
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Plan</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Features</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Prices</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
+                  <th className="w-12" />
+                </tr>
+              </thead>
+              <tbody>
+                {plansLoading && Array.from({ length: 3 }).map((_, i) => (
+                  <tr key={i} className="border-b border-border">
+                    {Array.from({ length: 4 }).map((__, j) => (
+                      <td key={j} className="py-4 px-4"><div className="h-4 bg-secondary/80 rounded animate-pulse w-24" /></td>
+                    ))}
+                    <td className="py-4 px-4" />
+                  </tr>
+                ))}
+                {!plansLoading && filteredPlans.length === 0 && (
+                  <tr><td colSpan={5} className="py-16 text-center text-sm text-muted-foreground">No plans found. Create your first plan above.</td></tr>
+                )}
+                {!plansLoading && filteredPlans.map((plan) => {
+                  const entitlements = (() => {
+                    try {
+                      const meta = plan as unknown as { metadata?: { entitlements?: unknown[] } };
+                      return Array.isArray(meta.metadata?.entitlements) ? meta.metadata.entitlements.length : 0;
+                    } catch { return 0; }
+                  })();
+                  return (
+                    <tr
+                      key={plan.id}
+                      onClick={() => setSelectedPlan(plan)}
+                      className="border-b border-border last:border-0 hover:bg-secondary/20 transition-colors cursor-pointer"
+                    >
+                      <td className="py-4 px-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent/30 to-accent/10 border border-border flex items-center justify-center text-sm font-bold text-accent">
+                            {plan.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-foreground">{plan.name}</p>
+                            <p className="text-xs text-muted-foreground font-mono">{plan.id.slice(0, 16)}…</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-4 px-4">
+                        <span className="text-sm text-muted-foreground">
+                          {entitlements > 0 ? `${entitlements} entitlement${entitlements !== 1 ? "s" : ""}` : "—"}
+                        </span>
+                      </td>
+                      <td className="py-4 px-4">
+                        <span className="text-sm">${parseFloat(plan.price).toFixed(2)} / {plan.billingInterval}d</span>
+                      </td>
+                      <td className="py-4 px-4">
+                        <StatusBadge status={plan.status} />
+                      </td>
+                      <td className="py-4 px-4" onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreHorizontal className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => setSelectedPlan(plan)}>
+                              <ChevronRight className="w-3.5 h-3.5 mr-2" />View Details
+                            </DropdownMenuItem>
+                            {plan.status === "DRAFT" && (
+                              <DropdownMenuItem onClick={async () => {
+                                await fetch("/api/catalog/plans", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: plan.id, status: "PUBLISHED" }) });
+                                tr(); toast.success("Plan published");
+                              }}>Mark as Published</DropdownMenuItem>
+                            )}
+                            {plan.status !== "ARCHIVED" && (
+                              <DropdownMenuItem onClick={async () => {
+                                await fetch("/api/catalog/plans", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: plan.id, status: "ARCHIVED" }) });
+                                tr(); toast.success("Plan archived");
+                              }} className="text-destructive focus:text-destructive">Archive</DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-secondary/20">
+            <span className="text-sm text-muted-foreground">Showing {filteredPlans.length} plan{filteredPlans.length !== 1 ? "s" : ""}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Add-Ons Tab */}
+      {activeTab === "addons" && (
+        <div className="bg-card border border-border rounded-xl overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-border bg-secondary/50">
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Add On</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Code</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Prices</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
+                  <th className="w-12" />
+                </tr>
+              </thead>
+              <tbody>
+                {addOnsLoading && Array.from({ length: 3 }).map((_, i) => (
+                  <tr key={i} className="border-b border-border">
+                    {Array.from({ length: 4 }).map((__, j) => (
+                      <td key={j} className="py-4 px-4"><div className="h-4 bg-secondary/80 rounded animate-pulse w-24" /></td>
+                    ))}
+                    <td className="py-4 px-4" />
+                  </tr>
+                ))}
+                {!addOnsLoading && filteredAddOns.length === 0 && (
+                  <tr><td colSpan={5} className="py-16 text-center text-sm text-muted-foreground">No add-ons found. Create your first add-on above.</td></tr>
+                )}
+                {!addOnsLoading && filteredAddOns.map((addon) => (
+                  <tr key={addon.id} className="border-b border-border last:border-0 hover:bg-secondary/20 transition-colors">
+                    <td className="py-4 px-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500/20 to-blue-500/10 border border-border flex items-center justify-center">
+                          <Package className="w-4 h-4 text-muted-foreground" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-foreground">{addon.name}</p>
+                          <p className="text-xs text-muted-foreground">{addon.description ?? ""}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-4 px-4">
+                      <code className="text-xs font-mono text-muted-foreground">{addon.code}</code>
+                    </td>
+                    <td className="py-4 px-4">
+                      <span className="text-sm">${parseFloat(addon.price).toFixed(2)} · {addon.billingType === "ONE_TIME" ? "One-time" : "Recurring"}</span>
+                    </td>
+                    <td className="py-4 px-4">
+                      <StatusBadge status={addon.status} />
+                    </td>
+                    <td className="py-4 px-4">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" disabled={updatingAddOnId === addon.id}>
+                            {updatingAddOnId === addon.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <MoreHorizontal className="w-4 h-4" />}
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          {addon.status === "DRAFT" && (
+                            <DropdownMenuItem onClick={async () => {
+                              setUpdatingAddOnId(addon.id);
+                              await fetch("/api/catalog/add-ons", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: addon.id, status: "PUBLISHED" }) });
+                              setUpdatingAddOnId(null); tr(); toast.success("Add-on published");
+                            }}>Publish</DropdownMenuItem>
+                          )}
+                          {addon.status !== "ARCHIVED" && (
+                            <DropdownMenuItem onClick={() => archiveAddOn(addon.id)} className="text-destructive focus:text-destructive">Archive</DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-secondary/20">
+            <span className="text-sm text-muted-foreground">Showing {filteredAddOns.length} add-on{filteredAddOns.length !== 1 ? "s" : ""}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Credit Types Tab */}
+      {activeTab === "credits" && (
+        <CreditTypesTable env={envMode} refresh={refresh} />
+      )}
+
+      {/* Configuration Tab */}
+      {activeTab === "config" && (
+        <ConfigurationTab />
+      )}
     </div>
   );
 }

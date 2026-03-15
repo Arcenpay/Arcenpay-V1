@@ -122,8 +122,9 @@ export function FeaturesSection() {
             })
             .catch(() => {
                 // Bootstrap silently fails when Tableland isn't configured server-side.
-                // The manual "Initialize Storage" button remains visible so the provider
-                // can act once they configure TABLELAND_TABLE_NAME + TABLELAND_PRIVATE_KEY.
+                // Set tableExists to null (not false) so this effect doesn't re-trigger
+                // on every render — the manual "Initialize Storage" button stays visible.
+                setTableExists(null);
             })
             .finally(() => setIsBootstrapping(false));
     }, [tableExists, isConnected, address, isBootstrapping, fetchFlags]);
