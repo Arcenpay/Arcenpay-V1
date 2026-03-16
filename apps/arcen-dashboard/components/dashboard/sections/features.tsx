@@ -12,7 +12,6 @@ import {
     Flag,
     ToggleLeft,
     ToggleRight,
-    Pencil,
     Trash2,
     Search,
     Info,
@@ -23,6 +22,7 @@ import {
     RefreshCw,
     Database,
 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import {
     Dialog,
     DialogContent,
@@ -46,6 +46,7 @@ type FlagType = "boolean" | "string" | "number";
 interface FeatureFlag {
     key: string;
     label: string;
+    description?: string;
     type: FlagType;
     planTiers: string[];
     enabledCount: number;
@@ -64,8 +65,13 @@ async function apiFetch(path: string, options?: RequestInit) {
         ...options,
     });
     if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || `HTTP ${res.status}`);
+        if (res.status === 503 || res.status === 504) {
+            throw new Error("Facilitator service is unavailable. Make sure it is running.");
+        }
+        const text = await res.text().catch(() => "");
+        let message = `HTTP ${res.status}`;
+        try { message = (JSON.parse(text) as { error?: string }).error ?? message; } catch { message = text || message; }
+        throw new Error(message);
     }
     return res.json();
 }
@@ -82,7 +88,7 @@ export function FeaturesSection() {
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedTier, setSelectedTier] = useState<string>("All");
     const [showAddDialog, setShowAddDialog] = useState(false);
-    const [newFlag, setNewFlag] = useState({ key: "", label: "", type: "boolean" as FlagType, planTiers: [] as string[] });
+    const [newFlag, setNewFlag] = useState({ key: "", label: "", description: "", type: "boolean" as FlagType, defaultValue: "", planTiers: [] as string[] });
     const [newFlagError, setNewFlagError] = useState("");
     const [isSaving, setIsSaving] = useState(false);
     const [isBootstrapping, setIsBootstrapping] = useState(false);
@@ -161,6 +167,7 @@ export function FeaturesSection() {
         const flagData: FeatureFlag = {
             key: newFlag.key,
             label: newFlag.label || newFlag.key,
+            description: newFlag.description,
             type: newFlag.type,
             planTiers: newFlag.planTiers,
             enabledCount: 0,
@@ -173,6 +180,7 @@ export function FeaturesSection() {
                 method: "PUT",
                 body: JSON.stringify({
                     label: flagData.label,
+                    description: flagData.description,
                     type: flagData.type,
                     planTiers: flagData.planTiers,
                 }),
@@ -187,7 +195,7 @@ export function FeaturesSection() {
             setIsSaving(false);
         }
 
-        setNewFlag({ key: "", label: "", type: "boolean", planTiers: [] });
+        setNewFlag({ key: "", label: "", description: "", type: "boolean", defaultValue: "", planTiers: [] as string[] });
         setNewFlagError("");
         setShowAddDialog(false);
     };
@@ -298,7 +306,7 @@ export function FeaturesSection() {
                 <div className="flex items-center gap-3 p-4 rounded-xl bg-warning/5 border border-warning/20">
                     <AlertCircle className="w-4 h-4 text-warning shrink-0" />
                     <p className="text-sm text-muted-foreground flex-1">
-                        Facilitator unavailable. {error}
+                        {error}
                     </p>
                     <Button variant="ghost" size="sm" onClick={fetchFlags}>
                         <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
@@ -371,10 +379,13 @@ export function FeaturesSection() {
                                     >
                                         <td className="py-3 px-4">
                                             <div className="flex items-center gap-2">
-                                                <Flag className="w-3.5 h-3.5 text-accent shrink-0" />
+                                                <Flag className="w-3.5 h-3.5 text-accent shrink-0 mt-0.5 self-start" />
                                                 <div>
                                                     <p className="text-sm font-medium text-foreground">{flag.label}</p>
                                                     <code className="text-xs text-muted-foreground font-mono">{flag.key}</code>
+                                                    {flag.description && (
+                                                        <p className="text-xs text-muted-foreground mt-0.5 max-w-xs truncate">{flag.description}</p>
+                                                    )}
                                                 </div>
                                             </div>
                                         </td>
@@ -506,7 +517,7 @@ export function FeaturesSection() {
 
             {/* Add Flag Dialog */}
             <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-                <DialogContent className="sm:max-w-md">
+                <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>Add Feature Flag</DialogTitle>
                         <DialogDescription>
@@ -545,6 +556,18 @@ export function FeaturesSection() {
                         </div>
 
                         <div className="space-y-2">
+                            <Label htmlFor="flagDescription">Description <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                            <Textarea
+                                id="flagDescription"
+                                placeholder="Describe what this flag controls, e.g. Enables advanced analytics dashboard for subscribers on this tier."
+                                value={newFlag.description}
+                                onChange={(e) => setNewFlag((p) => ({ ...p, description: e.target.value }))}
+                                className="bg-secondary border-border resize-none text-sm"
+                                rows={3}
+                            />
+                        </div>
+
+                        <div className="space-y-2">
                             <Label>Value Type</Label>
                             <div className="flex items-center gap-2">
                                 {(["boolean", "string", "number"] as FlagType[]).map((t) => {
@@ -567,6 +590,21 @@ export function FeaturesSection() {
                                 })}
                             </div>
                         </div>
+
+                        {newFlag.type !== "boolean" && (
+                            <div className="space-y-2">
+                                <Label htmlFor="flagDefault">Default Value <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                                <Input
+                                    id="flagDefault"
+                                    type={newFlag.type === "number" ? "number" : "text"}
+                                    placeholder={newFlag.type === "number" ? "e.g. 100" : "e.g. standard"}
+                                    value={newFlag.defaultValue}
+                                    onChange={(e) => setNewFlag((p) => ({ ...p, defaultValue: e.target.value }))}
+                                    className="bg-secondary border-border"
+                                />
+                                <p className="text-xs text-muted-foreground">Applied to tiers where the flag is enabled</p>
+                            </div>
+                        )}
 
                         <div className="space-y-2">
                             <Label>Assign to Plan Tiers</Label>

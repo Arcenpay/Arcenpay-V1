@@ -687,6 +687,26 @@ if (process.env.TABLELAND_TABLE_NAME) {
     });
 }
 
+// ── In-memory flag store (fallback when Tableland is not configured) ──────────
+// Persists only for the lifetime of the server process. Development use only.
+type FlagMatrix = Record<ProviderTier, Record<string, boolean | string | number>>;
+const inMemoryFlags = new Map<string, FlagMatrix>();
+function getInMemoryMatrix(provider: string): FlagMatrix {
+  if (!inMemoryFlags.has(provider)) {
+    inMemoryFlags.set(provider, { starter: {}, pro: {}, enterprise: {} });
+  }
+  return inMemoryFlags.get(provider)!;
+}
+
+// ── Flag metadata store (label, description, type per provider per flag key) ──
+type FlagMeta = { label: string; description: string; type: string };
+const flagMetadataStore = new Map<string, Map<string, FlagMeta>>();
+function setFlagMeta(provider: string, flagKey: string, meta: Partial<FlagMeta>): void {
+  if (!flagMetadataStore.has(provider)) flagMetadataStore.set(provider, new Map());
+  const existing = flagMetadataStore.get(provider)!.get(flagKey) ?? { label: "", description: "", type: "boolean" };
+  flagMetadataStore.get(provider)!.set(flagKey, { ...existing, ...meta });
+}
+
 // Optional: Axelar GMP transport (cross-chain subscription mirroring)
 let axelarTransport: AxelarTransport | null = null;
 if (
@@ -2058,20 +2078,26 @@ app.get("/api/entitlements/provider/:provider/flags", async (req, res) => {
       }
     }
 
-    const fallbackMatrix = {
-      starter: getDefaultFlagsForTier("starter"),
-      pro: getDefaultFlagsForTier("pro"),
-      enterprise: getDefaultFlagsForTier("enterprise"),
-    } satisfies Record<ProviderTier, Record<string, boolean | string | number>>;
-
+    // Use in-memory store if it has been bootstrapped
+    const memMatrix = getInMemoryMatrix(normalizedProvider);
+    const memFlags = buildProviderFlagCatalog(memMatrix);
+    // Merge in stored metadata (label, description)
+    const metaMap = flagMetadataStore.get(normalizedProvider);
+    if (metaMap) {
+      for (const flag of memFlags) {
+        const meta = metaMap.get(flag.key);
+        if (meta?.label) flag.label = meta.label;
+        (flag as Record<string, unknown>).description = meta?.description ?? "";
+      }
+    }
     return res.json({
       ok: true,
-      source: "default",
-      storageReady: false,
+      source: "memory",
+      storageReady: true,
       provider: normalizedProvider,
       planTiers: [...PROVIDER_TIERS],
-      flags: buildProviderFlagCatalog(fallbackMatrix),
-      matrix: fallbackMatrix,
+      flags: memFlags,
+      matrix: memMatrix,
       updatedAt: Date.now(),
     });
   } catch (err: any) {
@@ -2095,11 +2121,9 @@ app.post(
     }
 
     if (!tablelandService) {
-      return res.status(503).json({
-        ok: false,
-        error:
-          "Tableland service not configured. Set TABLELAND_TABLE_NAME + TABLELAND_PRIVATE_KEY.",
-      });
+      const normalizedProvider = provider.toLowerCase();
+      inMemoryFlags.set(normalizedProvider, { starter: {}, pro: {}, enterprise: {} });
+      return res.json({ ok: true, provider: normalizedProvider, initialized: true, source: "memory" });
     }
 
     try {
@@ -2154,14 +2178,6 @@ app.put(
         error: "flagKey must be lowercase alphanumeric with underscores.",
       });
     }
-    if (!tablelandService) {
-      return res.status(503).json({
-        ok: false,
-        error:
-          "Tableland service not configured. Set TABLELAND_TABLE_NAME + TABLELAND_PRIVATE_KEY.",
-      });
-    }
-
     const requestedTiersRaw = Array.isArray(req.body?.planTiers)
       ? (req.body.planTiers as unknown[])
       : [];
@@ -2170,6 +2186,19 @@ app.put(
         .filter((tier): tier is string => typeof tier === "string")
         .map((tier) => normalizeProviderTier(tier)),
     );
+
+    if (!tablelandService) {
+      const normalizedProvider = provider.toLowerCase();
+      const matrix = getInMemoryMatrix(normalizedProvider);
+      for (const tier of PROVIDER_TIERS) {
+        matrix[tier][flagKey] = enabledTiers.has(tier);
+      }
+      const label = typeof req.body?.label === "string" ? req.body.label.trim() : "";
+      const description = typeof req.body?.description === "string" ? req.body.description.trim() : "";
+      const type = typeof req.body?.type === "string" ? req.body.type.trim() : "boolean";
+      setFlagMeta(normalizedProvider, flagKey, { label, description, type });
+      return res.json({ ok: true, provider: normalizedProvider, key: flagKey, planTiers: Array.from(enabledTiers), source: "memory" });
+    }
 
     try {
       if (tablelandReady) {
@@ -2233,11 +2262,10 @@ app.patch(
       });
     }
     if (!tablelandService) {
-      return res.status(503).json({
-        ok: false,
-        error:
-          "Tableland service not configured. Set TABLELAND_TABLE_NAME + TABLELAND_PRIVATE_KEY.",
-      });
+      const normalizedProvider = provider.toLowerCase();
+      const matrix = getInMemoryMatrix(normalizedProvider);
+      matrix[tier][flagKey] = enabled;
+      return res.json({ ok: true, provider: normalizedProvider, key: flagKey, tier, enabled, source: "memory" });
     }
 
     try {
@@ -2298,11 +2326,13 @@ app.delete(
       });
     }
     if (!tablelandService) {
-      return res.status(503).json({
-        ok: false,
-        error:
-          "Tableland service not configured. Set TABLELAND_TABLE_NAME + TABLELAND_PRIVATE_KEY.",
-      });
+      const normalizedProvider = provider.toLowerCase();
+      const matrix = getInMemoryMatrix(normalizedProvider);
+      for (const tier of PROVIDER_TIERS) {
+        delete matrix[tier][flagKey];
+      }
+      flagMetadataStore.get(normalizedProvider)?.delete(flagKey);
+      return res.json({ ok: true, provider: normalizedProvider, key: flagKey, deleted: true, source: "memory" });
     }
 
     try {
