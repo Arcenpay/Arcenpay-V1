@@ -67,9 +67,8 @@ import {
   List,
 } from "lucide-react";
 import { useEnvironment } from "@/contexts/environment-context";
-import { useWriteContract, useChainId, useAccount } from "wagmi";
+import { useAccount } from "wagmi";
 import { toast } from "sonner";
-import { PlanFactoryABI, getContractAddresses, TOKENS } from "@meap/core";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -125,6 +124,21 @@ interface CatalogCreditType {
   version: number;
   publishedAt?: string | null;
   updatedAt: string;
+}
+
+// ─── Token Options ────────────────────────────────────────────────────────────
+
+const TOKEN_OPTIONS: { label: string; address: string }[] = [
+  { label: "USDC — Sepolia Testnet",  address: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238" },
+  { label: "USDC — Base Sepolia",     address: "0x036CbD53842c5426634e7929541eC2318f3dCF7e" },
+  { label: "USDC — Base Mainnet",     address: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913" },
+];
+
+const DEFAULT_TOKEN = TOKEN_OPTIONS[0].address;
+
+function tokenLabel(address: string): string {
+  const match = TOKEN_OPTIONS.find((t) => t.address.toLowerCase() === address.toLowerCase());
+  return match ? match.label.split(" — ")[0] + " (" + address.slice(0, 6) + "…" + address.slice(-4) + ")" : address.slice(0, 10) + "…";
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -331,13 +345,14 @@ function CreatePlanDialog({
 }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState<string>("");
   const [form, setForm] = useState({
     name: "",
     tier: "",
     description: "",
     price: "",
     billingInterval: "30",
-    acceptedToken: "USDC",
+    acceptedToken: DEFAULT_TOKEN,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -362,6 +377,7 @@ function CreatePlanDialog({
       return;
     }
     setLoading(true);
+    setStatus("Creating plan…");
     try {
       const res = await fetch("/api/catalog/plans", {
         method: "POST",
@@ -376,24 +392,36 @@ function CreatePlanDialog({
           environmentMode: env,
         }),
       });
-      if (res.ok) {
-        setOpen(false);
-        setForm({
-          name: "",
-          tier: "",
-          description: "",
-          price: "",
-          billingInterval: "30",
-          acceptedToken: "USDC",
-        });
-        setErrors({});
-        onCreated();
-      } else {
+      if (!res.ok) {
         const data = await res.json();
         setErrors({ _global: data.error || "Failed to create plan" });
+        return;
       }
+      const created = await res.json();
+      const planId = created.plan?.id ?? created.id;
+
+      // Auto register on-chain immediately (relayer pays gas, no MetaMask popup)
+      setStatus("Registering on-chain…");
+      const syncRes = await fetch(`/api/catalog/plans/${planId}/register-on-chain`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      const syncData = await syncRes.json().catch(() => ({})) as { txHash?: string; error?: string };
+      if (!syncRes.ok) {
+        // Plan is saved, but on-chain registration failed — show warning, don't block
+        toast.error(`Plan saved but on-chain registration failed: ${syncData.error ?? "unknown error"}`);
+      } else {
+        toast.success(`Plan created and registered on-chain`);
+      }
+
+      setOpen(false);
+      setForm({ name: "", tier: "", description: "", price: "", billingInterval: "30", acceptedToken: DEFAULT_TOKEN });
+      setErrors({});
+      setStatus("");
+      onCreated();
     } finally {
       setLoading(false);
+      setStatus("");
     }
   }
 
@@ -482,30 +510,41 @@ function CreatePlanDialog({
           </div>
           <div className="space-y-1">
             <Label>Accepted Token *</Label>
-            <Input
+            <Select
               value={form.acceptedToken}
-              onChange={(e) =>
-                setForm({ ...form, acceptedToken: e.target.value })
-              }
-              placeholder="USDC"
-            />
+              onValueChange={(v) => setForm({ ...form, acceptedToken: v })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select token" />
+              </SelectTrigger>
+              <SelectContent>
+                {TOKEN_OPTIONS.map((t) => (
+                  <SelectItem key={t.address} value={t.address}>
+                    {t.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             {errors.acceptedToken && (
               <p className="text-xs text-destructive">{errors.acceptedToken}</p>
             )}
           </div>
           <p className="text-xs text-muted-foreground">
-            Environment: <strong>{env}</strong> — plan will be created as DRAFT.
+            Environment: <strong>{env}</strong> — plan will be created and registered on-chain automatically.
           </p>
           <div className="flex justify-end gap-2">
             <Button
               type="button"
               variant="outline"
               onClick={() => setOpen(false)}
+              disabled={loading}
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? "Creating…" : "Create Plan"}
+            <Button type="submit" disabled={loading} className="gap-2 min-w-44">
+              {loading ? (
+                <><Loader2 className="w-4 h-4 animate-spin" />{status || "Processing…"}</>
+              ) : "Create Plan"}
             </Button>
           </div>
         </form>
@@ -531,7 +570,7 @@ function CreateAddOnDialog({
     description: "",
     billingType: "ONE_TIME" as "ONE_TIME" | "RECURRING",
     price: "",
-    acceptedToken: "USDC",
+    acceptedToken: DEFAULT_TOKEN,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -577,7 +616,7 @@ function CreateAddOnDialog({
           description: "",
           billingType: "ONE_TIME",
           price: "",
-          acceptedToken: "USDC",
+          acceptedToken: DEFAULT_TOKEN,
         });
         setErrors({});
         onCreated();
@@ -699,15 +738,19 @@ function CreateAddOnDialog({
           </div>
           <div className="space-y-2">
             <Label htmlFor="addonToken">Accepted Token *</Label>
-            <Input
-              id="addonToken"
+            <Select
               value={form.acceptedToken}
-              onChange={(e) =>
-                setForm({ ...form, acceptedToken: e.target.value })
-              }
-              placeholder="USDC"
-              className="bg-secondary border-border focus:border-accent"
-            />
+              onValueChange={(v) => setForm({ ...form, acceptedToken: v })}
+            >
+              <SelectTrigger id="addonToken" className="bg-secondary border-border">
+                <SelectValue placeholder="Select token" />
+              </SelectTrigger>
+              <SelectContent>
+                {TOKEN_OPTIONS.map((t) => (
+                  <SelectItem key={t.address} value={t.address}>{t.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             {errors.acceptedToken && (
               <p className="text-xs text-destructive">{errors.acceptedToken}</p>
             )}
@@ -758,7 +801,7 @@ function CreateCreditTypeDialog({
     unitName: "",
     unitsPerPack: "100",
     price: "",
-    acceptedToken: "USDC",
+    acceptedToken: DEFAULT_TOKEN,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -808,7 +851,7 @@ function CreateCreditTypeDialog({
           unitName: "",
           unitsPerPack: "100",
           price: "",
-          acceptedToken: "USDC",
+          acceptedToken: DEFAULT_TOKEN,
         });
         setErrors({});
         onCreated();
@@ -928,15 +971,19 @@ function CreateCreditTypeDialog({
             </div>
             <div className="space-y-2">
               <Label htmlFor="creditToken">Accepted Token *</Label>
-              <Input
-                id="creditToken"
+              <Select
                 value={form.acceptedToken}
-                onChange={(e) =>
-                  setForm({ ...form, acceptedToken: e.target.value })
-                }
-                placeholder="USDC"
-                className="bg-secondary border-border focus:border-accent"
-              />
+                onValueChange={(v) => setForm({ ...form, acceptedToken: v })}
+              >
+                <SelectTrigger id="creditToken" className="bg-secondary border-border">
+                  <SelectValue placeholder="Select token" />
+                </SelectTrigger>
+                <SelectContent>
+                  {TOKEN_OPTIONS.map((t) => (
+                    <SelectItem key={t.address} value={t.address}>{t.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               {errors.acceptedToken && (
                 <p className="text-xs text-destructive">
                   {errors.acceptedToken}
@@ -981,8 +1028,8 @@ function PlansTable({ env, refresh }: { env: EnvMode; refresh: number }) {
   const [statusFilter, setStatusFilter] = useState<CatalogStatus | "">("");
   const [updating, setUpdating] = useState<string | null>(null);
   const [syncingPlanId, setSyncingPlanId] = useState<string | null>(null);
-  const { writeContractAsync } = useWriteContract();
-  const chainId = useChainId();
+  const [editTarget, setEditTarget] = useState<CatalogPlan | null>(null);
+  const [entTarget, setEntTarget] = useState<CatalogPlan | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -1020,42 +1067,18 @@ function PlansTable({ env, refresh }: { env: EnvMode; refresh: number }) {
   async function registerOnChain(plan: CatalogPlan) {
     setSyncingPlanId(plan.id);
     try {
-      const contracts = getContractAddresses(chainId);
-      const planFactoryAddress = contracts.planFactory as `0x${string}`;
-      if (!planFactoryAddress || planFactoryAddress === "0x0000000000000000000000000000000000000000") {
-        toast.error("PlanFactory not deployed on this chain");
-        return;
-      }
-      const priceInUsdc = BigInt(Math.round(parseFloat(plan.price) * 1_000_000));
-      const billingIntervalSeconds = plan.billingInterval * 86400;
-      const usdcAddress = (
-        TOKENS[chainId as keyof typeof TOKENS]?.USDC ?? plan.acceptedToken
-      ) as `0x${string}`;
-      const txHash = await writeContractAsync({
-        address: planFactoryAddress,
-        abi: PlanFactoryABI,
-        functionName: "createPlan",
-        args: [plan.name, plan.tier, priceInUsdc, billingIntervalSeconds, usdcAddress, ""],
-      });
-      await fetch(`/api/catalog/plans/${plan.id}/chain-confirm`, {
+      const res = await fetch(`/api/catalog/plans/${plan.id}/register-on-chain`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ txHash, success: true }),
       });
-      toast.success(`Plan registered on-chain: ${txHash.slice(0, 10)}…`);
+      const data = await res.json().catch(() => ({})) as { txHash?: string; error?: string };
+      if (!res.ok) {
+        throw new Error((data as { error?: string }).error || "Registration failed");
+      }
+      toast.success(`Plan registered on-chain: ${(data.txHash ?? "").slice(0, 10)}…`);
       load();
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Registration failed";
-      await fetch(`/api/catalog/plans/${plan.id}/chain-confirm`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          txHash: "0x" + "0".repeat(64),
-          success: false,
-          errorMessage: message,
-        }),
-      }).catch(() => { });
-      toast.error(message);
+      toast.error(err instanceof Error ? err.message : "Registration failed");
     } finally {
       setSyncingPlanId(null);
     }
@@ -1116,8 +1139,8 @@ function PlansTable({ env, refresh }: { env: EnvMode; refresh: number }) {
             {plans.map((plan) => {
               const transitions = NEXT_STATUS[plan.status] ?? [];
               const needsChainSync =
-                plan.status === "PUBLISHED" &&
-                (plan.chainSyncStatus === "PENDING" || plan.chainSyncStatus === "FAILED");
+                plan.status !== "ARCHIVED" &&
+                plan.chainSyncStatus !== "SYNCED";
               return (
                 <TableRow key={plan.id}>
                   <TableCell className="font-medium">{plan.name}</TableCell>
@@ -1127,7 +1150,7 @@ function PlansTable({ env, refresh }: { env: EnvMode; refresh: number }) {
                   <TableCell>{parseFloat(plan.price).toFixed(2)}</TableCell>
                   <TableCell>{plan.billingInterval}d</TableCell>
                   <TableCell className="text-xs">
-                    {plan.acceptedToken}
+                    {tokenLabel(plan.acceptedToken)}
                   </TableCell>
                   <TableCell>
                     <StatusBadge status={plan.status} />
@@ -1154,6 +1177,13 @@ function PlansTable({ env, refresh }: { env: EnvMode; refresh: number }) {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => setEditTarget(plan)}>
+                          Edit Plan
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setEntTarget(plan)}>
+                          Add Entitlement
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
                         {transitions.map((s) => (
                           <DropdownMenuItem
                             key={s}
@@ -1180,6 +1210,24 @@ function PlansTable({ env, refresh }: { env: EnvMode; refresh: number }) {
             })}
           </TableBody>
         </Table>
+      )}
+      {editTarget && (
+        <EditPlanDialog
+          key={editTarget.id}
+          plan={editTarget}
+          open={true}
+          onOpenChange={(o) => { if (!o) setEditTarget(null); }}
+          onSaved={() => { load(); setEditTarget(null); }}
+        />
+      )}
+      {entTarget && (
+        <AddEntitlementDialog
+          key={entTarget.id}
+          planId={entTarget.id}
+          open={true}
+          onOpenChange={(o) => { if (!o) setEntTarget(null); }}
+          onAdded={() => { load(); setEntTarget(null); }}
+        />
       )}
     </div>
   );
@@ -1525,7 +1573,7 @@ function AddOnsTable({ env, refresh }: { env: EnvMode; refresh: number }) {
                   </TableCell>
                   <TableCell>{parseFloat(addon.price).toFixed(2)}</TableCell>
                   <TableCell className="text-xs">
-                    {addon.acceptedToken}
+                    {tokenLabel(addon.acceptedToken)}
                   </TableCell>
                   <TableCell>
                     <StatusBadge status={addon.status} />
@@ -1995,7 +2043,7 @@ function CreditTypesTable({ env, refresh }: { env: EnvMode; refresh: number }) {
                   <TableCell className="text-xs">{ct.unitName}</TableCell>
                   <TableCell>{ct.unitsPerPack}</TableCell>
                   <TableCell>{parseFloat(ct.price).toFixed(2)}</TableCell>
-                  <TableCell className="text-xs">{ct.acceptedToken}</TableCell>
+                  <TableCell className="text-xs">{tokenLabel(ct.acceptedToken)}</TableCell>
                   <TableCell>
                     <StatusBadge status={ct.status} />
                   </TableCell>
@@ -3042,11 +3090,17 @@ interface Entitlement {
 function AddEntitlementDialog({
   planId,
   onAdded,
+  open: externalOpen,
+  onOpenChange: externalOnOpenChange,
 }: {
   planId: string;
   onAdded: () => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = externalOpen !== undefined ? externalOpen : internalOpen;
+  const setOpen = externalOnOpenChange ?? setInternalOpen;
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     featureName: "",
@@ -3209,11 +3263,17 @@ function AddEntitlementDialog({
 function EditPlanDialog({
   plan,
   onSaved,
+  open: externalOpen,
+  onOpenChange: externalOnOpenChange,
 }: {
   plan: CatalogPlan;
   onSaved: () => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = externalOpen !== undefined ? externalOpen : internalOpen;
+  const setOpen = externalOnOpenChange ?? setInternalOpen;
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     name: plan.name,
@@ -3592,7 +3652,7 @@ function PlanDetailView({
             </div>
             <div>
               <p className="text-xs text-muted-foreground mb-1">Accepted Token</p>
-              <p className="text-sm font-medium font-mono">{plan.acceptedToken}</p>
+              <p className="text-sm font-medium font-mono">{tokenLabel(plan.acceptedToken)}</p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground mb-1">Environment</p>
@@ -3922,6 +3982,23 @@ export function CatalogSection() {
       {activeTab === "config" && (
         <ConfigurationTab />
       )}
+    </div>
+  );
+}
+
+// ─── Standalone section exports (used by page.tsx routing) ────────────────────
+
+export function CatalogPlansSection() {
+  const { envMode } = useEnvironment();
+  const [refresh, setRefresh] = useState(0);
+  function tr() { setRefresh((n) => n + 1); }
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2 flex-wrap">
+        <CreatePlanDialog env={envMode} onCreated={tr} />
+        <PublishButton env={envMode} onPublished={tr} />
+      </div>
+      <PlansTable env={envMode} refresh={refresh} />
     </div>
   );
 }

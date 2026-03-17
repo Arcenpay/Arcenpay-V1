@@ -6,7 +6,6 @@ import { useOrganization } from "@clerk/nextjs";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { Header } from "@/components/dashboard/header";
 import { OverviewSection } from "@/components/dashboard/sections/overview";
-import { PlansSection } from "@/components/dashboard/sections/plans";
 import { SubscribersSection } from "@/components/dashboard/sections/subscribers";
 import { SessionsSection } from "@/components/dashboard/sections/sessions";
 import { FeaturesSection } from "@/components/dashboard/sections/features";
@@ -14,6 +13,7 @@ import { SettingsSection } from "@/components/dashboard/sections/settings";
 import { InvoicesSection } from "@/components/dashboard/sections/invoices";
 import { AuditLogSection } from "@/components/dashboard/sections/audit-log";
 import {
+  CatalogPlansSection,
   CatalogAddOnsSection,
   CatalogCreditsSection,
   CatalogConfigSection,
@@ -73,7 +73,7 @@ export default function Dashboard() {
       case "catalog-plans":
         return (
           <SectionErrorBoundary fallbackLabel="Plans failed to load">
-            <PlansSection />
+            <CatalogPlansSection />
           </SectionErrorBoundary>
         );
       case "catalog-addons":

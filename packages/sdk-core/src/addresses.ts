@@ -15,15 +15,15 @@ import type { ContractAddresses } from './types';
 
 // --- Contract Addresses per Chain ---
 const ADDRESSES: Record<number, ContractAddresses> = {
-  // Sepolia Testnet (Primary Dev Network) — Deployed 2026-02-25
+  // Sepolia Testnet (Primary Dev Network) — Deployed 2026-03-16
   11155111: {
-    subscriptionRegistry: '0xf45A9E5280F72260a713c50b0Ca4e4FB1e22Cc8A',
-    autopayModule: '0x3f3734fb45D1511c23384D18Eb1927492E5e3764',
-    planFactory: '0xc736f5d91aC0039b97A4Fc3540B8f3d59E7FdBa6',
-    feeCollector: '0x513fab5218045790364b33A38D95FE8E17403BAe',
-    sessionVault: '0x2dccEaad8551a620E4Fc736bb4d0fbb8D1A17D7C',
-    zkUsageVerifier: '0x265E0dC80b00044d183AFa83237F5976bB4d585c',
-    mirrorRegistry: '0x05BdaB1b4A87a4a5DF3Af1Ebb9Da853A0d31592E',
+    subscriptionRegistry: '0x59A6f6ab64Fe8d53e32092B9Cbb16Ca0371F1a49',
+    autopayModule: '0x323fB58dA52e044BaB56fB822792842A16fb7C9B',
+    planFactory: '0x18707519A062AbCC3E73fBd4150C3B30B241f536',
+    feeCollector: '0x8702736dd0a5BC67Bd9Ce5B2e462e8f562B28E2E',
+    sessionVault: '0x82F0021AbFf92C1ab41d0278BDDbfad508B26836',
+    zkUsageVerifier: '0x38276b799414fC432b78f03E411089b07c384dfC',
+    mirrorRegistry: '0x2632d31c3a516626fB9495Fc7D22f0B784804DE8',
   },
   // Base Sepolia (Testnet) — set MEAP_CONTRACT_84532_* env vars after deployment
   84532: {
