@@ -23,15 +23,8 @@ import {
   Package,
   Trash2,
   ChevronRight,
+  PanelRightOpen,
 } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -66,7 +59,8 @@ import { toast } from "sonner";
 import {
   useContractAddresses,
   PlanFactoryABI,
-  TOKENS,
+  getUsdcAddress,
+  getUsdcTokenOptions,
 } from "@/lib/contracts";
 import {
   formatUsdc,
@@ -78,26 +72,7 @@ import {
 
 type BillingInterval = "monthly" | "quarterly" | "annual";
 
-const USDC_OPTIONS = [
-  {
-    chainId: 11155111,
-    label: "Sepolia",
-    tag: "testnet",
-    address: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238" as `0x${string}`,
-  },
-  {
-    chainId: 84532,
-    label: "Base Sepolia",
-    tag: "testnet",
-    address: "0x036CbD53842c5426634e7929541eC2318f3dCF7e" as `0x${string}`,
-  },
-  {
-    chainId: 8453,
-    label: "Base",
-    tag: "mainnet",
-    address: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913" as `0x${string}`,
-  },
-] as const;
+const USDC_OPTIONS = getUsdcTokenOptions();
 
 interface Plan {
   id: string;
@@ -142,8 +117,7 @@ export function PlansSection() {
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
   const contractAddresses = useContractAddresses();
-  const chainUsdc =
-    TOKENS[chainId as keyof typeof TOKENS]?.USDC || TOKENS[11155111].USDC;
+  const chainUsdc = getUsdcAddress(chainId);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<
@@ -745,6 +719,10 @@ export function PlansSection() {
     });
   };
 
+  const totalPlans = mergedPlans.length;
+  const activePlans = mergedPlans.filter((p) => p.active).length;
+  const archivedPlans = mergedPlans.filter((p) => !p.active).length;
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -778,6 +756,33 @@ export function PlansSection() {
       </div>
 
       {/* Search + Filter */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="rounded-xl border border-border bg-card p-3">
+          <p className="text-xs text-muted-foreground uppercase tracking-wide">
+            Total Plans
+          </p>
+          <p className="text-2xl font-semibold text-foreground mt-1">
+            {totalPlans}
+          </p>
+        </div>
+        <div className="rounded-xl border border-border bg-card p-3">
+          <p className="text-xs text-muted-foreground uppercase tracking-wide">
+            Active
+          </p>
+          <p className="text-2xl font-semibold text-success mt-1">
+            {activePlans}
+          </p>
+        </div>
+        <div className="rounded-xl border border-border bg-card p-3">
+          <p className="text-xs text-muted-foreground uppercase tracking-wide">
+            Archived
+          </p>
+          <p className="text-2xl font-semibold text-muted-foreground mt-1">
+            {archivedPlans}
+          </p>
+        </div>
+      </div>
+
       <div className="flex items-center gap-3 flex-wrap">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -1039,20 +1044,29 @@ export function PlansSection() {
         </div>
       </div>
 
-      {/* Create Plan Dialog */}
-      <Dialog open={showCreateDialog} onOpenChange={handleCloseDialog}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Create Subscription Plan</DialogTitle>
-            <DialogDescription>
+      {/* Create Plan Sheet */}
+      <Sheet
+        open={showCreateDialog}
+        onOpenChange={(open) => {
+          if (!open) handleCloseDialog();
+          else setShowCreateDialog(true);
+        }}
+      >
+        <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
+          <SheetHeader className="pb-4 border-b border-border">
+            <SheetTitle className="flex items-center gap-2">
+              <PanelRightOpen className="w-4 h-4 text-accent" />
+              Create Subscription Plan
+            </SheetTitle>
+            <SheetDescription>
               Deploy a new plan to PlanFactory on-chain. This requires a wallet
               transaction (~120k gas).
-            </DialogDescription>
-          </DialogHeader>
+            </SheetDescription>
+          </SheetHeader>
 
-          <div className="space-y-4 py-2">
+          <div className="space-y-4 py-4">
             {/* Plan Name */}
-            <div className="space-y-2">
+            <div className="space-y-2 rounded-xl border border-border bg-card p-4">
               <Label htmlFor="planName">Plan Name</Label>
               <Input
                 id="planName"
@@ -1071,7 +1085,7 @@ export function PlansSection() {
             </div>
 
             {/* Price + Interval */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4 rounded-xl border border-border bg-card p-4">
               <div className="space-y-2">
                 <Label htmlFor="planPrice">Price (USDC)</Label>
                 <div className="relative">
@@ -1126,7 +1140,7 @@ export function PlansSection() {
               </div>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2 rounded-xl border border-border bg-card p-4">
               <Label>Accepted Token</Label>
               {(() => {
                 const selected = USDC_OPTIONS.find(
@@ -1213,7 +1227,7 @@ export function PlansSection() {
             </div>
 
             {/* Features */}
-            <div className="space-y-2">
+            <div className="space-y-2 rounded-xl border border-border bg-card p-4">
               <Label htmlFor="planFeatures">Feature Keys (optional)</Label>
               <Input
                 id="planFeatures"
@@ -1256,7 +1270,7 @@ export function PlansSection() {
             />
           </div>
 
-          <DialogFooter>
+          <div className="sticky bottom-0 bg-background/95 backdrop-blur border-t border-border pt-4 mt-4 flex items-center justify-end gap-2">
             <Button
               variant="outline"
               onClick={handleCloseDialog}
@@ -1304,20 +1318,23 @@ export function PlansSection() {
                 </>
               )}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </div>
+        </SheetContent>
+      </Sheet>
 
-      {/* Edit Plan Dialog */}
-      <Dialog open={!!editingPlan} onOpenChange={(open) => { if (!open) setEditingPlan(null); }}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Edit Plan</DialogTitle>
-            <DialogDescription>Update the plan details stored in the catalog.</DialogDescription>
-          </DialogHeader>
+      {/* Edit Plan Sheet */}
+      <Sheet open={!!editingPlan} onOpenChange={(open) => { if (!open) setEditingPlan(null); }}>
+        <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
+          <SheetHeader className="pb-4 border-b border-border">
+            <SheetTitle className="flex items-center gap-2">
+              <PanelRightOpen className="w-4 h-4 text-accent" />
+              Edit Plan
+            </SheetTitle>
+            <SheetDescription>Update the plan details stored in your catalog.</SheetDescription>
+          </SheetHeader>
           {editingPlan && (
-            <div className="space-y-4 py-2">
-              <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4 rounded-xl border border-border bg-card p-4">
                 <div className="space-y-2">
                   <Label htmlFor="editName">Plan Name</Label>
                   <Input
@@ -1337,7 +1354,7 @@ export function PlansSection() {
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4 rounded-xl border border-border bg-card p-4">
                 <div className="space-y-2">
                   <Label htmlFor="editPrice">Price (USDC)</Label>
                   <div className="relative">
@@ -1362,7 +1379,7 @@ export function PlansSection() {
                   />
                 </div>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-2 rounded-xl border border-border bg-card p-4">
                 <Label htmlFor="editToken">Accepted Token</Label>
                 <Input
                   id="editToken"
@@ -1373,7 +1390,7 @@ export function PlansSection() {
               </div>
             </div>
           )}
-          <DialogFooter>
+          <div className="sticky bottom-0 bg-background/95 backdrop-blur border-t border-border pt-4 mt-4 flex items-center justify-end gap-2">
             <Button variant="outline" onClick={() => setEditingPlan(null)}>Cancel</Button>
             <Button
               className="bg-accent text-accent-foreground hover:bg-accent/90"
@@ -1382,9 +1399,9 @@ export function PlansSection() {
             >
               {editLoading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving…</> : "Save Changes"}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {/* ── Entitlements Sheet ─────────────────────────────── */}
       <Sheet open={!!entPlan} onOpenChange={(open) => { if (!open) setEntPlan(null); }}>

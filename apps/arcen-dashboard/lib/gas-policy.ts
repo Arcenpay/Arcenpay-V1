@@ -14,6 +14,7 @@
 
 import { db } from "@/lib/db";
 import { getTierLimits } from "@/lib/tier-guard";
+import { FACILITATOR_SECRET, FACILITATOR_URL } from "@/lib/config";
 import { PlatformTier, Prisma } from "@/src/generated/prisma/client";
 
 // ── Allowed chains for gas sponsorship (L2 only) ─────────────────────────────
@@ -81,6 +82,9 @@ export type PaymasterRequest = {
     to: string;
     data: string;
     value?: string;
+    userOperation?: Record<string, unknown>;
+    entryPoint?: string;
+    sponsorContext?: Record<string, unknown>;
 };
 
 export type PaymasterResponse =
@@ -88,6 +92,8 @@ export type PaymasterResponse =
         sponsored: true;
         paymasterAndData: string; // ERC-4337 paymaster data
         maxGasCostUsd: number;
+        entryPoint?: string;
+        sponsorResult?: unknown;
     }
     | {
         sponsored: false;
@@ -195,20 +201,74 @@ export async function evaluatePaymasterRequest(
         return { sponsored: false, reason: decision.reason };
     }
 
-    // In production, this would call the actual paymaster service
-    // (e.g., Pimlico, Biconomy, or a self-hosted ERC-4337 paymaster)
-    // and return the paymasterAndData for the UserOperation.
-    //
-    // For now, return a placeholder indicating sponsorship is approved.
-    // The facilitator service will use this to construct the actual
-    // paymaster data when submitting the UserOperation to the bundler.
+    const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+    };
+    if (FACILITATOR_SECRET) {
+        headers.Authorization = `Bearer ${FACILITATOR_SECRET}`;
+    }
+
+    let payload:
+        | {
+            sponsored: true;
+            paymasterAndData: string;
+            entryPoint?: string;
+            sponsorResult?: unknown;
+          }
+        | { sponsored: false; reason?: string };
+    try {
+        const response = await fetch(`${FACILITATOR_URL}/api/paymaster/evaluate`, {
+            method: "POST",
+            headers,
+            body: JSON.stringify(req),
+        });
+        if (!response.ok) {
+            return {
+                sponsored: false,
+                reason: `Paymaster relay returned HTTP ${response.status}.`,
+            };
+        }
+        payload = (await response.json()) as
+            | {
+                sponsored: true;
+                paymasterAndData: string;
+                entryPoint?: string;
+                sponsorResult?: unknown;
+              }
+            | { sponsored: false; reason?: string };
+    } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        return {
+            sponsored: false,
+            reason: `Paymaster relay request failed: ${message}`,
+        };
+    }
+
+    if (!payload.sponsored) {
+        return {
+            sponsored: false,
+            reason: payload.reason || "Paymaster sponsorship denied by facilitator.",
+        };
+    }
+
+    if (
+        typeof payload.paymasterAndData !== "string" ||
+        !payload.paymasterAndData.startsWith("0x")
+    ) {
+        return {
+            sponsored: false,
+            reason: "Paymaster relay did not return a valid paymasterAndData.",
+        };
+    }
 
     const budgetInfo = await getDailyGasSpend(req.teamId);
 
     return {
         sponsored: true,
-        paymasterAndData: "0x", // Placeholder — facilitator fills this
+        paymasterAndData: payload.paymasterAndData,
         maxGasCostUsd: Math.min(budgetInfo.remainingUsd, 0.50), // cap per-tx
+        ...(payload.entryPoint ? { entryPoint: payload.entryPoint } : {}),
+        ...(payload.sponsorResult !== undefined ? { sponsorResult: payload.sponsorResult } : {}),
     };
 }
 

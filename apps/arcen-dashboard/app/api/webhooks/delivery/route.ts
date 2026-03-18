@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { toPrismaNullableJson } from "@/lib/prisma-json";
-import { FACILITATOR_SECRET } from "@/lib/config";
+import { requireFacilitatorAuth } from "@/lib/facilitator-auth";
 import { writeAuditEvent } from "@/lib/audit";
 
 const deliverySchema = z.object({
@@ -18,16 +18,9 @@ const deliverySchema = z.object({
   payload: z.record(z.unknown()).optional(),
 });
 
-function isAuthorized(request: NextRequest): boolean {
-  if (!FACILITATOR_SECRET) return true;
-  const token = request.headers.get("authorization")?.replace("Bearer ", "").trim();
-  return token === FACILITATOR_SECRET;
-}
-
 export async function POST(request: NextRequest) {
-  if (!isAuthorized(request)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const authError = requireFacilitatorAuth(request);
+  if (authError) return authError;
 
   const body = await request.json().catch(() => ({}));
   const parsed = deliverySchema.safeParse(body);

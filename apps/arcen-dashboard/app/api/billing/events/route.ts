@@ -5,7 +5,7 @@ import { allocateInvoiceNumber, toSix } from "@/lib/invoices";
 import { toPrismaJson } from "@/lib/prisma-json";
 import { ensureInvoicePdfForTeam } from "@/lib/invoice-documents";
 import { sendInvoiceEmail } from "@/lib/email";
-import { FACILITATOR_SECRET } from "@/lib/config";
+import { requireFacilitatorAuth } from "@/lib/facilitator-auth";
 import { writeAuditEvent } from "@/lib/audit";
 
 const eventSchema = z.object({
@@ -56,19 +56,9 @@ const listQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(200).default(50),
 });
 
-function isAuthorized(request: NextRequest): boolean {
-  if (!FACILITATOR_SECRET) return true;
-  const token = request.headers
-    .get("authorization")
-    ?.replace("Bearer ", "")
-    .trim();
-  return token === FACILITATOR_SECRET;
-}
-
 export async function GET(request: NextRequest) {
-  if (!isAuthorized(request)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const authError = requireFacilitatorAuth(request);
+  if (authError) return authError;
 
   const parsed = listQuerySchema.safeParse(
     Object.fromEntries(request.nextUrl.searchParams),
@@ -96,9 +86,8 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  if (!isAuthorized(request)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const authError = requireFacilitatorAuth(request);
+  if (authError) return authError;
 
   const body = await request.json().catch(() => ({}));
   const parsed = eventSchema.safeParse(body);

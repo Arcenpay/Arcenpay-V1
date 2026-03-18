@@ -22,7 +22,11 @@ type RevenuePoint = {
   revenue: number;
 };
 
-export function RevenueChart() {
+interface RevenueChartProps {
+  chainId: number;
+}
+
+export function RevenueChart({ chainId }: RevenueChartProps) {
   const [data, setData] = useState<RevenuePoint[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -32,7 +36,7 @@ export function RevenueChart() {
     const fetchRevenue = async () => {
       try {
         setLoading(true);
-        const response = await fetch("/api/proofs/history?limit=12");
+        const response = await fetch(`/api/proofs/history?limit=12&chainId=${chainId}`);
         if (!response.ok) return;
         const payload = await response.json();
         const jobs = Array.isArray(payload.jobs) ? (payload.jobs as ProofHistoryJob[]) : [];
@@ -70,14 +74,16 @@ export function RevenueChart() {
       cancelled = true;
       clearInterval(interval);
     };
-  }, []);
+  }, [chainId]);
 
   return (
     <div className="bg-card border border-border rounded-xl p-5 h-[380px] animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h3 className="text-base font-semibold text-foreground">Revenue Trend</h3>
-          <p className="text-sm text-muted-foreground mt-0.5">Monthly recurring revenue</p>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Monthly recurring revenue (Chain {chainId})
+          </p>
         </div>
         <div className="flex items-center gap-4 text-xs">
           <div className="flex items-center gap-1.5">

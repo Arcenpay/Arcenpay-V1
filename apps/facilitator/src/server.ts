@@ -56,7 +56,7 @@ import {
   type PlanTier,
   type X402VerifiedPaymentContext,
 } from "@meap/core";
-import { createPublicClient, http } from "viem";
+import { createPublicClient, encodePacked, http, type Hex } from "viem";
 import { DurableJobQueue } from "./queue.js";
 import { X402ReplayProtection } from "./replay-protection.js";
 
@@ -103,9 +103,47 @@ const PROOF_SIGNER_PRIVATE_KEY =
 const FACILITATOR_SECRET = (process.env.FACILITATOR_SECRET || "").trim();
 const DASHBOARD_URL = (process.env.DASHBOARD_URL || "").replace(/\/$/, "");
 const DASHBOARD_TEAM_ID = (process.env.DASHBOARD_TEAM_ID || "").trim();
+const DEFAULT_ERC4337_ENTRYPOINT_V07 =
+  "0x0000000071727de22e5e9d8baf0edac6f37da032";
+const PAYMASTER_RPC_URL = (
+  process.env.PAYMASTER_RPC_URL ||
+  process.env.ZERODEV_PAYMASTER_RPC ||
+  ""
+).trim();
+const PAYMASTER_RPC_METHOD = (
+  process.env.PAYMASTER_RPC_METHOD || "pm_sponsorUserOperation"
+).trim();
+const PAYMASTER_RPC_AUTH_TOKEN = (process.env.PAYMASTER_RPC_AUTH_TOKEN || "").trim();
+const PAYMASTER_CHAIN_IDS = parseChainIdSet(
+  process.env.PAYMASTER_CHAIN_IDS ||
+    (FACILITATOR_PROFILE === "production" ? "" : "84532"),
+);
+const PAYMASTER_DEFAULT_ENTRYPOINT = (
+  process.env.PAYMASTER_ENTRYPOINT || DEFAULT_ERC4337_ENTRYPOINT_V07
+).trim();
+const PAYMASTER_RECORD_ESTIMATED_SPEND =
+  process.env.PAYMASTER_RECORD_ESTIMATED_SPEND !== "false";
+const PAYMASTER_ESTIMATED_GAS_USED = Math.max(
+  1,
+  Number.parseInt(process.env.PAYMASTER_ESTIMATED_GAS_USED || "120000", 10) ||
+    120000,
+);
+const PAYMASTER_ESTIMATED_GAS_COST_USD = Math.max(
+  0,
+  Number.parseFloat(process.env.PAYMASTER_ESTIMATED_GAS_COST_USD || "0.05") ||
+    0.05,
+);
 
 function isHexAddress(value: string | undefined | null): boolean {
   return typeof value === "string" && /^0x[a-fA-F0-9]{40}$/.test(value);
+}
+
+function parseChainIdSet(raw: string): Set<number> {
+  const values = raw
+    .split(",")
+    .map((v) => Number.parseInt(v.trim(), 10))
+    .filter((v) => Number.isFinite(v) && v > 0);
+  return new Set(values);
 }
 
 function validateRuntimeConfig(): void {
@@ -165,6 +203,12 @@ function validateRuntimeConfig(): void {
       );
     }
 
+    if (PAYMASTER_CHAIN_IDS.size > 0 && !PAYMASTER_RPC_URL) {
+      errors.push(
+        "PAYMASTER_RPC_URL is required when PAYMASTER_CHAIN_IDS is configured.",
+      );
+    }
+
     for (const artifactPath of [
       PROOF_WASM_PATH,
       PROOF_ZKEY_PATH,
@@ -195,6 +239,18 @@ function validateRuntimeConfig(): void {
   if (process.env.TABLELAND_TABLE_NAME && !process.env.TABLELAND_PRIVATE_KEY) {
     errors.push(
       "TABLELAND_PRIVATE_KEY is required when TABLELAND_TABLE_NAME is configured.",
+    );
+  }
+
+  if (!isHexAddress(PAYMASTER_DEFAULT_ENTRYPOINT)) {
+    errors.push(
+      `PAYMASTER_ENTRYPOINT must be a valid address. Received: ${PAYMASTER_DEFAULT_ENTRYPOINT}`,
+    );
+  }
+
+  if (PAYMASTER_CHAIN_IDS.size > 0 && !PAYMASTER_RPC_URL) {
+    console.warn(
+      "[Facilitator] PAYMASTER_CHAIN_IDS is set but PAYMASTER_RPC_URL is missing; sponsorship requests will be denied.",
     );
   }
 
@@ -2889,11 +2945,148 @@ interface PaymasterEvalRequest {
   chainId: number;
   walletAddress: string;
   txType: string;
-  to: string;
+  to?: string;
   data?: string;
+  value?: string;
+  userOperation?: Record<string, unknown>;
+  entryPoint?: string;
+  sponsorContext?: Record<string, unknown>;
 }
 
-app.post("/api/paymaster/evaluate", async (req, res) => {
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function parseHexValue(value: unknown): Hex | null {
+  if (typeof value !== "string") return null;
+  if (!/^0x[a-fA-F0-9]*$/.test(value)) return null;
+  return value as Hex;
+}
+
+function parseBigIntValue(value: unknown): bigint | null {
+  if (typeof value === "bigint") return value >= 0n ? value : null;
+  if (typeof value === "number" && Number.isInteger(value) && value >= 0) {
+    return BigInt(value);
+  }
+  if (typeof value === "string" && value.length > 0) {
+    if (/^0x[a-fA-F0-9]+$/.test(value) || /^[0-9]+$/.test(value)) {
+      try {
+        const parsed = BigInt(value);
+        return parsed >= 0n ? parsed : null;
+      } catch {
+        return null;
+      }
+    }
+  }
+  return null;
+}
+
+function extractPaymasterAndData(result: unknown): Hex | null {
+  const directHex = parseHexValue(result);
+  if (directHex && directHex.length >= 2) return directHex;
+
+  if (!isRecord(result)) return null;
+
+  const directField = parseHexValue(result.paymasterAndData);
+  if (directField && directField.length >= 2) return directField;
+
+  const paymasterAddress =
+    typeof result.paymaster === "string" && isHexAddress(result.paymaster)
+      ? (result.paymaster as `0x${string}`)
+      : null;
+  const paymasterData = parseHexValue(result.paymasterData ?? "0x");
+  const verificationGasLimit = parseBigIntValue(
+    result.paymasterVerificationGasLimit ?? result.verificationGasLimit,
+  );
+  const postOpGasLimit = parseBigIntValue(
+    result.paymasterPostOpGasLimit ?? result.postOpGasLimit,
+  );
+
+  if (
+    paymasterAddress &&
+    paymasterData &&
+    verificationGasLimit !== null &&
+    postOpGasLimit !== null
+  ) {
+    return encodePacked(
+      ["address", "uint128", "uint128", "bytes"],
+      [paymasterAddress, verificationGasLimit, postOpGasLimit, paymasterData],
+    ) as Hex;
+  }
+
+  return null;
+}
+
+function extractJsonRpcError(payload: unknown): string {
+  if (!isRecord(payload)) return "Invalid JSON-RPC response";
+  const err = payload.error;
+  if (!isRecord(err)) return "Unknown paymaster RPC error";
+  const message =
+    typeof err.message === "string" ? err.message : "Unknown paymaster RPC error";
+  const code = typeof err.code === "number" ? ` (${err.code})` : "";
+  return `${message}${code}`;
+}
+
+async function sponsorUserOperationViaPaymaster(input: {
+  chainId: number;
+  userOperation: Record<string, unknown>;
+  entryPoint: `0x${string}`;
+  sponsorContext?: Record<string, unknown>;
+}): Promise<{ paymasterAndData: Hex; rawResult: unknown }> {
+  if (!PAYMASTER_RPC_URL) {
+    throw new Error("PAYMASTER_RPC_URL is not configured.");
+  }
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (PAYMASTER_RPC_AUTH_TOKEN) {
+    headers.Authorization = `Bearer ${PAYMASTER_RPC_AUTH_TOKEN}`;
+  }
+
+  const payload = {
+    jsonrpc: "2.0",
+    id: Date.now(),
+    method: PAYMASTER_RPC_METHOD,
+    params: [
+      input.userOperation,
+      input.entryPoint,
+      {
+        chainId: input.chainId,
+        ...(input.sponsorContext ?? {}),
+      },
+    ],
+  };
+
+  const rpcRes = await fetch(PAYMASTER_RPC_URL, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(payload),
+  });
+
+  const json = (await rpcRes.json().catch(() => ({}))) as unknown;
+
+  if (!rpcRes.ok) {
+    const rpcMessage = extractJsonRpcError(json);
+    throw new Error(`HTTP ${rpcRes.status}: ${rpcMessage}`);
+  }
+
+  if (isRecord(json) && json.error) {
+    throw new Error(extractJsonRpcError(json));
+  }
+
+  const result = isRecord(json) ? json.result : undefined;
+  const paymasterAndData = extractPaymasterAndData(result);
+  if (!paymasterAndData) {
+    throw new Error(
+      "Paymaster RPC did not return paymasterAndData (or equivalent split fields).",
+    );
+  }
+
+  return { paymasterAndData, rawResult: result };
+}
+
+app.post("/api/paymaster/evaluate", requireFacilitatorSecretIfConfigured, async (req, res) => {
   const body = req.body as PaymasterEvalRequest;
 
   if (!body.teamId || !body.chainId || !body.walletAddress || !body.txType) {
@@ -2904,12 +3097,19 @@ app.post("/api/paymaster/evaluate", async (req, res) => {
     return;
   }
 
-  // Only L2 chains are eligible for sponsorship
-  const sponsoredChains = new Set([8453, 84532]);
-  if (!sponsoredChains.has(body.chainId)) {
+  if (!body.userOperation || !isRecord(body.userOperation)) {
+    res.status(400).json({
+      sponsored: false,
+      reason: "Missing required field: userOperation",
+    });
+    return;
+  }
+
+  if (PAYMASTER_CHAIN_IDS.size === 0 || !PAYMASTER_CHAIN_IDS.has(body.chainId)) {
+    const allowed = [...PAYMASTER_CHAIN_IDS].join(", ") || "none";
     res.status(200).json({
       sponsored: false,
-      reason: `Chain ${body.chainId} is not eligible for gas sponsorship (L2 only)`,
+      reason: `Chain ${body.chainId} is not eligible for paymaster sponsorship (allowed: ${allowed}).`,
     });
     return;
   }
@@ -2920,6 +3120,14 @@ app.post("/api/paymaster/evaluate", async (req, res) => {
     res.status(200).json({
       sponsored: false,
       reason: `Transaction type "${body.txType}" is not eligible for sponsorship`,
+    });
+    return;
+  }
+
+  if (!PAYMASTER_RPC_URL) {
+    res.status(200).json({
+      sponsored: false,
+      reason: "Paymaster RPC is not configured (PAYMASTER_RPC_URL missing).",
     });
     return;
   }
@@ -2964,32 +3172,59 @@ app.post("/api/paymaster/evaluate", async (req, res) => {
       return;
     }
 
-    // Budget approved — in production, this would forward to an ERC-4337 bundler
-    // (Pimlico, Biconomy, etc.) and return paymasterAndData.
-    // For now, return approval with a placeholder.
+    const entryPoint =
+      typeof body.entryPoint === "string" && isHexAddress(body.entryPoint)
+        ? (body.entryPoint as `0x${string}`)
+        : (PAYMASTER_DEFAULT_ENTRYPOINT as `0x${string}`);
+
+    let sponsorship: { paymasterAndData: Hex; rawResult: unknown };
+    try {
+      sponsorship = await sponsorUserOperationViaPaymaster({
+        chainId: body.chainId,
+        userOperation: body.userOperation,
+        entryPoint,
+        sponsorContext: body.sponsorContext,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error("[Facilitator] Paymaster RPC error:", err);
+      res.status(200).json({
+        sponsored: false,
+        reason: `Paymaster sponsorship failed: ${message}`,
+      });
+      return;
+    }
+
+    const quoteId = `sponsor_${Date.now().toString(36)}_${Math.random()
+      .toString(36)
+      .slice(2, 8)}`;
+
     res.status(200).json({
       sponsored: true,
       chainId: body.chainId,
       walletAddress: body.walletAddress,
       txType: body.txType,
+      entryPoint,
       remainingBudgetUsd: budgetData.budget?.remainingUsd,
-      // TODO: Integrate with ERC-4337 bundler to return actual paymasterAndData
-      paymasterAndData: null,
-      message: "Gas sponsorship approved. ERC-4337 bundler integration pending.",
+      paymasterAndData: sponsorship.paymasterAndData,
+      sponsorResult: sponsorship.rawResult,
+      quoteId,
+      message: "Gas sponsorship approved via paymaster RPC.",
     });
 
-    // Record the gas spend (fire-and-forget)
-    postToDashboard("/api/platform/gas-spend", {
-      teamId: body.teamId,
-      chainId: body.chainId,
-      txHash: "pending", // Will be updated after tx is mined
-      gasUsed: 0, // Will be updated after tx is mined
-      gasCostUsd: 0, // Estimated; updated after tx
-      walletAddress: body.walletAddress,
-      txType: body.txType,
-    }).catch(() => {
-      // Non-fatal
-    });
+    if (PAYMASTER_RECORD_ESTIMATED_SPEND) {
+      void postToDashboard("/api/platform/gas-spend", {
+        teamId: body.teamId,
+        chainId: body.chainId,
+        txHash: quoteId,
+        gasUsed: PAYMASTER_ESTIMATED_GAS_USED,
+        gasCostUsd: PAYMASTER_ESTIMATED_GAS_COST_USD,
+        walletAddress: body.walletAddress,
+        txType: body.txType,
+      }).catch(() => {
+        // Non-fatal
+      });
+    }
   } catch (err) {
     console.error("[Facilitator] Paymaster evaluate error:", err);
     res.status(500).json({

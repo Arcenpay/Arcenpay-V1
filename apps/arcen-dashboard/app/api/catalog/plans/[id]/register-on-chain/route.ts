@@ -29,6 +29,16 @@ const PROVIDER_REGISTRY_ABI = [
   },
 ] as const;
 
+const OWNABLE_OWNER_ABI = [
+  {
+    inputs: [],
+    name: "owner",
+    outputs: [{ internalType: "address", name: "", type: "address" }],
+    stateMutability: "view",
+    type: "function",
+  },
+] as const;
+
 const CHAIN_MAP: Record<number, Chain> = {
   11155111: sepolia,
   8453: base,
@@ -125,15 +135,29 @@ export async function POST(
   if (!isRegistered) {
     const ownerKey = process.env.PLAN_FACTORY_OWNER_PRIVATE_KEY;
     if (!ownerKey) {
+      const planFactoryOwner = await publicClient
+        .readContract({
+          address: planFactoryAddress,
+          abi: OWNABLE_OWNER_ABI,
+          functionName: "owner",
+        })
+        .catch(() => null as `0x${string}` | null);
+      const ownerHint = planFactoryOwner
+        ? ` PlanFactory owner is ${planFactoryOwner}.`
+        : "";
       await db.catalogPlan.update({
         where: { id: planId },
         data: {
           chainSyncStatus: "FAILED",
-          chainSyncError: "Relayer not registered as provider. Set PLAN_FACTORY_OWNER_PRIVATE_KEY (the PlanFactory owner's private key) in the dashboard .env to auto-register.",
+          chainSyncError: `Relayer not registered as provider.${ownerHint} Set PLAN_FACTORY_OWNER_PRIVATE_KEY (the PlanFactory owner's private key) in dashboard .env to auto-register.`,
         },
       });
       return NextResponse.json(
-        { error: "Relayer wallet is not a registered provider. Add PLAN_FACTORY_OWNER_PRIVATE_KEY (PlanFactory owner key) to .env and restart the server." },
+        {
+          error: `Relayer wallet is not a registered provider.${ownerHint} Add PLAN_FACTORY_OWNER_PRIVATE_KEY and restart the server.`,
+          relayerAddress: account.address,
+          planFactoryOwner,
+        },
         { status: 503 },
       );
     }

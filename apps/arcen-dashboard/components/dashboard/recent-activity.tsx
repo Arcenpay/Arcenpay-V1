@@ -12,7 +12,11 @@ type ProofHistoryJob = {
     txHash?: string;
 };
 
-export function RecentActivity() {
+interface RecentActivityProps {
+    chainId: number;
+}
+
+export function RecentActivity({ chainId }: RecentActivityProps) {
     const [jobs, setJobs] = useState<ProofHistoryJob[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -22,7 +26,7 @@ export function RecentActivity() {
         const fetchActivity = async () => {
             try {
                 setLoading(true);
-                const response = await fetch("/api/proofs/history?limit=8");
+                const response = await fetch(`/api/proofs/history?limit=8&chainId=${chainId}`);
                 if (!response.ok) return;
                 const payload = await response.json();
                 if (!cancelled) {
@@ -48,14 +52,16 @@ export function RecentActivity() {
             cancelled = true;
             clearInterval(interval);
         };
-    }, []);
+    }, [chainId]);
 
     return (
         <div className="bg-card border border-border rounded-xl p-5 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-200">
             <div className="flex items-center justify-between mb-5">
                 <div>
                     <h3 className="text-base font-semibold text-foreground">Recent Activity</h3>
-                    <p className="text-sm text-muted-foreground mt-0.5">On-chain events</p>
+                    <p className="text-sm text-muted-foreground mt-0.5">
+                        On-chain events (Chain {chainId})
+                    </p>
                 </div>
                 <button className="flex items-center gap-1 text-sm text-accent hover:text-accent/80 font-medium transition-colors group">
                     View all
