@@ -68,6 +68,7 @@ import {
 } from "lucide-react";
 import { useEnvironment } from "@/contexts/environment-context";
 import { useAccount } from "wagmi";
+import { getUsdcAddress, getUsdcTokenOptions } from "@/lib/contracts";
 import { toast } from "sonner";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -128,13 +129,12 @@ interface CatalogCreditType {
 
 // ─── Token Options ────────────────────────────────────────────────────────────
 
-const TOKEN_OPTIONS: { label: string; address: string }[] = [
-  { label: "USDC — Sepolia Testnet",  address: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238" },
-  { label: "USDC — Base Sepolia",     address: "0x036CbD53842c5426634e7929541eC2318f3dCF7e" },
-  { label: "USDC — Base Mainnet",     address: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913" },
-];
+const TOKEN_OPTIONS: { label: string; address: string }[] = getUsdcTokenOptions().map((option) => ({
+  label: option.label,
+  address: option.address,
+}));
 
-const DEFAULT_TOKEN = TOKEN_OPTIONS[0].address;
+const DEFAULT_TOKEN = getUsdcAddress(11155111);
 
 function tokenLabel(address: string): string {
   const match = TOKEN_OPTIONS.find((t) => t.address.toLowerCase() === address.toLowerCase());
@@ -512,7 +512,9 @@ function CreatePlanDialog({
             <Label>Accepted Token *</Label>
             <Select
               value={form.acceptedToken}
-              onValueChange={(v) => setForm({ ...form, acceptedToken: v })}
+              onValueChange={(v) =>
+                setForm({ ...form, acceptedToken: v as `0x${string}` })
+              }
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select token" />
@@ -740,7 +742,9 @@ function CreateAddOnDialog({
             <Label htmlFor="addonToken">Accepted Token *</Label>
             <Select
               value={form.acceptedToken}
-              onValueChange={(v) => setForm({ ...form, acceptedToken: v })}
+              onValueChange={(v) =>
+                setForm({ ...form, acceptedToken: v as `0x${string}` })
+              }
             >
               <SelectTrigger id="addonToken" className="bg-secondary border-border">
                 <SelectValue placeholder="Select token" />
@@ -973,7 +977,9 @@ function CreateCreditTypeDialog({
               <Label htmlFor="creditToken">Accepted Token *</Label>
               <Select
                 value={form.acceptedToken}
-                onValueChange={(v) => setForm({ ...form, acceptedToken: v })}
+                onValueChange={(v) =>
+                  setForm({ ...form, acceptedToken: v as `0x${string}` })
+                }
               >
                 <SelectTrigger id="creditToken" className="bg-secondary border-border">
                   <SelectValue placeholder="Select token" />

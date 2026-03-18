@@ -1,0 +1,67 @@
+import { afterEach, describe, expect, it } from "vitest";
+import {
+  getChainEnvironment,
+  isZeroAddress,
+  validateChainEnvironment,
+} from "../src/environment";
+
+const originalNodeEnv = process.env.NODE_ENV;
+
+function resetEnv(...keys: string[]) {
+  for (const key of keys) {
+    delete process.env[key];
+  }
+}
+
+afterEach(() => {
+  process.env.NODE_ENV = originalNodeEnv;
+  resetEnv(
+    "MEAP_RPC_URL_11155111",
+    "MEAP_RPC_URL_84532",
+    "MEAP_CONTRACT_84532_planFactory",
+  );
+});
+
+describe("environment", () => {
+  it("resolves chain environment with default service URL", () => {
+    const env = getChainEnvironment(11155111);
+    expect(env.chainId).toBe(11155111);
+    expect(env.services.rpcUrl).toContain("http");
+  });
+
+  it("accepts Base Sepolia in non-production despite zero contract placeholders", () => {
+    expect(() =>
+      validateChainEnvironment(84532, {
+        production: false,
+        requiredServices: ["rpcUrl"],
+      }),
+    ).not.toThrow();
+  });
+
+  it("rejects Base Sepolia in production with undeployed contracts", () => {
+    process.env.NODE_ENV = "production";
+    expect(() =>
+      validateChainEnvironment(84532, {
+        production: true,
+      }),
+    ).toThrow(/no deployed contracts/i);
+  });
+
+  it("fails validation when rpcUrl env override is invalid", () => {
+    process.env.MEAP_RPC_URL_11155111 = "not-a-url";
+    expect(() =>
+      validateChainEnvironment(11155111, {
+        requiredServices: ["rpcUrl"],
+      }),
+    ).toThrow(/invalid services/i);
+  });
+
+  it("detects zero addresses correctly", () => {
+    expect(isZeroAddress("0x0000000000000000000000000000000000000000")).toBe(
+      true,
+    );
+    expect(isZeroAddress("0x1111111111111111111111111111111111111111")).toBe(
+      false,
+    );
+  });
+});

@@ -142,6 +142,33 @@ export const GRAPH_URL: string = (() => {
   return val;
 })();
 
+/**
+ * Resolves subgraph URL for a specific chain ID.
+ * Resolution order:
+ *   NEXT_PUBLIC_GRAPH_URL_<chainId>
+ *   MEAP_SUBGRAPH_URL_<chainId>
+ *   NEXT_PUBLIC_GRAPH_URL
+ *   MEAP_SUBGRAPH_URL
+ *   chain manifest subgraphUrl
+ */
+export function getGraphUrl(chainId: number): string {
+  const specific =
+    process.env[`NEXT_PUBLIC_GRAPH_URL_${chainId}`] ||
+    process.env[`MEAP_SUBGRAPH_URL_${chainId}`];
+  if (specific) return specific;
+
+  const global =
+    process.env.NEXT_PUBLIC_GRAPH_URL ||
+    process.env.MEAP_SUBGRAPH_URL;
+  if (global) return global;
+
+  try {
+    return getChainEnvironmentCompat(chainId).services.subgraphUrl || "";
+  } catch {
+    return "";
+  }
+}
+
 // ── Auth ──────────────────────────────────────────────────────────────────────
 
 /**

@@ -29,6 +29,82 @@ export {
   TOKENS,
 };
 
+const EVM_ADDRESS_REGEX = /^0x[a-fA-F0-9]{40}$/;
+
+function isAddress(value: string | undefined | null): value is `0x${string}` {
+  return typeof value === "string" && EVM_ADDRESS_REGEX.test(value);
+}
+
+function resolveUsdcOverride(chainId: number): `0x${string}` | null {
+  const globalOverride =
+    process.env.NEXT_PUBLIC_USDC_ADDRESS || process.env.NEXT_PUBLIC_MOCK_USDC_ADDRESS;
+
+  const chainOverrides: Record<number, string | undefined> = {
+    11155111:
+      process.env.NEXT_PUBLIC_USDC_ADDRESS_11155111 ||
+      process.env.NEXT_PUBLIC_MOCK_USDC_ADDRESS_11155111,
+    84532:
+      process.env.NEXT_PUBLIC_USDC_ADDRESS_84532 ||
+      process.env.NEXT_PUBLIC_MOCK_USDC_ADDRESS_84532,
+    8453:
+      process.env.NEXT_PUBLIC_USDC_ADDRESS_8453 ||
+      process.env.NEXT_PUBLIC_MOCK_USDC_ADDRESS_8453,
+  };
+
+  const candidate = chainOverrides[chainId] || globalOverride;
+  if (!isAddress(candidate)) return null;
+  return candidate;
+}
+
+export function getUsdcAddress(chainId: number): `0x${string}` {
+  const override = resolveUsdcOverride(chainId);
+  if (override) return override;
+
+  const token = TOKENS[chainId as keyof typeof TOKENS]?.USDC;
+  if (isAddress(token)) return token;
+  return TOKENS[11155111].USDC as `0x${string}`;
+}
+
+export function getUsdcTokenOptions(): Array<{
+  chainId: number;
+  label: string;
+  tag: "testnet" | "mainnet";
+  address: `0x${string}`;
+  source: "default" | "override";
+}> {
+  const chains: Array<{
+    chainId: number;
+    label: string;
+    tag: "testnet" | "mainnet";
+  }> = [
+    { chainId: 11155111, label: "Sepolia", tag: "testnet" },
+    { chainId: 84532, label: "Base Sepolia", tag: "testnet" },
+    { chainId: 8453, label: "Base", tag: "mainnet" },
+  ];
+
+  const options: Array<{
+    chainId: number;
+    label: string;
+    tag: "testnet" | "mainnet";
+    address: `0x${string}`;
+    source: "default" | "override";
+  }> = [];
+
+  for (const chain of chains) {
+    const override = resolveUsdcOverride(chain.chainId);
+    const address = getUsdcAddress(chain.chainId);
+    options.push({
+      chainId: chain.chainId,
+      label: `${override ? "Custom USDC" : "USDC"} — ${chain.label}`,
+      tag: chain.tag,
+      address,
+      source: override ? "override" : "default",
+    });
+  }
+
+  return options;
+}
+
 /** Returns live contract addresses for the wallet's current chain.
  *  Falls back to Sepolia (11155111) when chain is unsupported. */
 export function useContractAddresses() {
@@ -58,5 +134,5 @@ export function useContractAddresses() {
   }
 }
 
-/** Sepolia USDC token address (Circle testnet deployment) */
-export const SEPOLIA_USDC = "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238";
+/** Backward-compatible alias for Sepolia token resolution */
+export const SEPOLIA_USDC = getUsdcAddress(11155111);

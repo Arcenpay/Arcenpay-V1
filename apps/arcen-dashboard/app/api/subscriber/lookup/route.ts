@@ -9,17 +9,11 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { FACILITATOR_SECRET } from "@/lib/config";
+import { requireFacilitatorAuth } from "@/lib/facilitator-auth";
 
 export async function GET(req: NextRequest) {
-  // Auth check — require the shared secret header
-  if (FACILITATOR_SECRET) {
-    const authHeader = req.headers.get("authorization");
-    const token = authHeader?.replace("Bearer ", "").trim();
-    if (token !== FACILITATOR_SECRET) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-  }
+  const authError = requireFacilitatorAuth(req);
+  if (authError) return authError;
 
   const wallet = req.nextUrl.searchParams.get("wallet");
 

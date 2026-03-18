@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useAccount, useChainId, useReadContracts } from "wagmi";
-import { useQuery } from "@apollo/client";
+import { useAccount, useChainId } from "wagmi";
 import { MetricCard } from "@/components/dashboard/metric-card";
 import { RevenueChart } from "@/components/dashboard/charts/revenue-chart";
 import { RecentActivity } from "@/components/dashboard/recent-activity";
+import { useEnvironment } from "@/contexts/environment-context";
 import {
   DollarSign,
   Users,
@@ -13,87 +13,96 @@ import {
   Receipt,
   AlertTriangle,
 } from "lucide-react";
-import {
-  useContractAddresses,
-  FeeCollectorABI,
-  SEPOLIA_USDC,
-} from "@/lib/contracts";
-import { GET_PROTOCOL_STATS } from "@/lib/graphql";
 import { formatUsdc } from "@/lib/format";
 
-export function OverviewSection() {
-  const { address, isConnected } = useAccount();
-  const chainId = useChainId();
-  const [mounted, setMounted] = useState(false);
+type OverviewPayload = {
+  context: {
+    teamId: string;
+    environmentMode: "DEVELOPMENT" | "PRODUCTION";
+    chainId: number;
+  };
+  metrics: {
+    activePlans: number;
+    activeSubscribers: number;
+    monthlyRevenueRaw: string | null;
+    protocolFeesRaw: string | null;
+  };
+};
 
-  // DB-sourced metrics (primary source — reliable, instant)
-  const [dbActivePlans, setDbActivePlans] = useState<number | null>(null);
+export function OverviewSection() {
+  const { isConnected } = useAccount();
+  const walletChainId = useChainId();
+  const { envMode, isLoading: envLoading } = useEnvironment();
+  const [mounted, setMounted] = useState(false);
+  const [payload, setPayload] = useState<OverviewPayload | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Load active plans count from the catalog DB API on mount
+  const effectiveChainId = isConnected
+    ? walletChainId
+    : envMode === "PRODUCTION"
+      ? 8453
+      : 11155111;
+
   useEffect(() => {
-    async function loadDbMetrics() {
+    if (!mounted || envLoading) return;
+
+    let cancelled = false;
+
+    async function loadOverview() {
       try {
-        const res = await fetch("/api/catalog/plans");
-        if (res.ok) {
-          const data = await res.json();
-          const plans: Array<{ active: boolean; status: string }> =
-            data.plans ?? [];
-          const activeCount = plans.filter(
-            (p) => p.active && p.status !== "ARCHIVED",
-          ).length;
-          setDbActivePlans(activeCount);
+        setIsLoading(true);
+        const params = new URLSearchParams({
+          chainId: String(effectiveChainId),
+          environmentMode: envMode,
+        });
+        const res = await fetch(`/api/platform/overview?${params.toString()}`, {
+          cache: "no-store",
+        });
+        if (!res.ok) {
+          if (!cancelled) setPayload(null);
+          return;
         }
+        const data = (await res.json()) as OverviewPayload;
+        if (!cancelled) setPayload(data);
       } catch {
-        // non-critical — fall back to on-chain read
+        if (!cancelled) setPayload(null);
+      } finally {
+        if (!cancelled) setIsLoading(false);
       }
     }
-    loadDbMetrics();
-  }, []);
 
-  const contractAddresses = useContractAddresses();
+    void loadOverview();
+    const interval = setInterval(() => {
+      void loadOverview();
+    }, 30_000);
 
-  // Batch on-chain reads (fees + plan IDs as fallback)
-  const { data: contractData, isLoading: contractsLoading } = useReadContracts(
-    {
-      contracts: [
-        {
-          address: contractAddresses.feeCollector as `0x${string}`,
-          abi: FeeCollectorABI,
-          functionName: "accumulatedFees",
-          args: [SEPOLIA_USDC as `0x${string}`],
-          chainId,
-        },
-      ],
-      query: { enabled: mounted && isConnected && !!address },
-    },
-  );
-
-  // The Graph for subscriber + revenue stats
-  const { data: graphData, loading: graphLoading } = useQuery(
-    GET_PROTOCOL_STATS,
-    {
-      skip: !mounted || !isConnected,
-    },
-  );
-
-  const isLoading = contractsLoading || graphLoading;
-
-  const feesCollected = contractData?.[0]?.result as bigint | undefined;
-  const stats = graphData?.protocolStats;
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [mounted, envLoading, envMode, effectiveChainId]);
 
   const metrics = {
-    activeSubscribers: stats?.activeSubscriptions?.toString() ?? "—",
-    mrr:
-      stats?.totalRevenue != null
-        ? formatUsdc(BigInt(stats.totalRevenue))
+    activeSubscribers:
+      payload?.metrics.activeSubscribers != null
+        ? String(payload.metrics.activeSubscribers)
         : "—",
-    feesCollected: feesCollected != null ? formatUsdc(feesCollected) : "—",
-    // DB count is authoritative; will show immediately without wallet/chain dependency
-    activePlans: dbActivePlans != null ? String(dbActivePlans) : "—",
+    mrr:
+      payload?.metrics.monthlyRevenueRaw != null
+        ? formatUsdc(payload.metrics.monthlyRevenueRaw)
+        : "—",
+    feesCollected:
+      payload?.metrics.protocolFeesRaw != null
+        ? formatUsdc(payload.metrics.protocolFeesRaw)
+        : "—",
+    activePlans:
+      payload?.metrics.activePlans != null
+        ? String(payload.metrics.activePlans)
+        : "—",
   };
 
   return (
@@ -103,7 +112,7 @@ export function OverviewSection() {
         <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-warning/5 border border-warning/20 animate-in fade-in slide-in-from-top-2 duration-300">
           <AlertTriangle className="w-4 h-4 text-warning shrink-0" />
           <p className="text-sm text-muted-foreground">
-            Connect your wallet to load live dashboard data.
+            Wallet is disconnected. Showing workspace default chain data.
           </p>
         </div>
       )}
@@ -112,27 +121,27 @@ export function OverviewSection() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard
           title="Active Subscribers"
-          value={mounted && isConnected ? metrics.activeSubscribers : "—"}
+          value={mounted ? metrics.activeSubscribers : "—"}
           changeType="neutral"
           icon={Users}
           delay={0}
-          loading={mounted && isLoading && isConnected}
+          loading={mounted && (isLoading || envLoading)}
         />
         <MetricCard
           title="Monthly Recurring Revenue"
-          value={mounted && isConnected ? metrics.mrr : "—"}
+          value={mounted ? metrics.mrr : "—"}
           changeType="neutral"
           icon={DollarSign}
           delay={1}
-          loading={mounted && isLoading && isConnected}
+          loading={mounted && (isLoading || envLoading)}
         />
         <MetricCard
           title="Protocol Fees Collected"
-          value={mounted && isConnected ? metrics.feesCollected : "—"}
+          value={mounted ? metrics.feesCollected : "—"}
           changeType="neutral"
           icon={Receipt}
           delay={2}
-          loading={mounted && isLoading && isConnected}
+          loading={mounted && (isLoading || envLoading)}
         />
         <MetricCard
           title="Active Plans"
@@ -140,16 +149,16 @@ export function OverviewSection() {
           changeType="neutral"
           icon={Layers}
           delay={3}
-          loading={mounted && dbActivePlans === null}
+          loading={mounted && (isLoading || envLoading)}
         />
       </div>
 
       {/* Chart + Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          <RevenueChart />
+          <RevenueChart chainId={effectiveChainId} />
         </div>
-        <RecentActivity />
+        <RecentActivity chainId={effectiveChainId} />
       </div>
     </div>
   );

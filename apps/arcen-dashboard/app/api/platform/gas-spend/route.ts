@@ -10,8 +10,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
-
-const FACILITATOR_SECRET = process.env.FACILITATOR_API_SECRET;
+import { requireFacilitatorAuth } from "@/lib/facilitator-auth";
 
 const spendSchema = z.object({
     teamId: z.string().min(1),
@@ -24,11 +23,8 @@ const spendSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-    // Authenticate via shared secret (facilitator → dashboard)
-    const authHeader = request.headers.get("authorization");
-    if (!FACILITATOR_SECRET || authHeader !== `Bearer ${FACILITATOR_SECRET}`) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authError = requireFacilitatorAuth(request);
+    if (authError) return authError;
 
     const body = await request.json().catch(() => ({}));
     const parsed = spendSchema.safeParse(body);
