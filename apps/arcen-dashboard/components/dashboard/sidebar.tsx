@@ -27,6 +27,7 @@ import {
   Bot,
   Webhook,
   BookOpen,
+  ExternalLink,
 } from "lucide-react";
 import { useEnvironment } from "@/contexts/environment-context";
 
@@ -86,7 +87,9 @@ const navGroups: NavGroup[] = [
   },
   {
     label: "Help",
-    items: [{ id: "docs", label: "Docs & SDK", icon: BookOpen }],
+    items: [
+      { id: "docs", label: "Docs", icon: BookOpen, href: process.env.NEXT_PUBLIC_DOCS_URL ?? "http://localhost:3003" },
+    ],
   },
 ];
 
