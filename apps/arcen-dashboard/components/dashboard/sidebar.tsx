@@ -24,6 +24,7 @@ import {
   SlidersHorizontal,
   CreditCard,
   BookOpen,
+  ExternalLink,
 } from "lucide-react";
 import { useEnvironment } from "@/contexts/environment-context";
 
@@ -34,7 +35,7 @@ interface SidebarProps {
   onCollapsedChange: (collapsed: boolean) => void;
 }
 
-type NavItem = { id: Section; label: string; icon: React.ElementType };
+type NavItem = { id: Section; label: string; icon: React.ElementType; href?: string };
 type NavGroup = { label: string; items: NavItem[] };
 
 const navGroups: NavGroup[] = [
@@ -78,7 +79,7 @@ const navGroups: NavGroup[] = [
   {
     label: "Help",
     items: [
-      { id: "docs", label: "Docs", icon: BookOpen },
+      { id: "docs", label: "Docs", icon: BookOpen, href: process.env.NEXT_PUBLIC_DOCS_URL ?? "http://localhost:3003" },
     ],
   },
 ];
@@ -117,8 +118,13 @@ export function Sidebar({
       {/* Logo */}
       <div className="h-14 flex items-center px-3 border-b border-sidebar-border shrink-0">
         <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-gradient-to-br from-accent to-chart-1">
-            <Hexagon className="w-3.5 h-3.5 text-accent-foreground" />
+          <div className="w-7 h-7 flex items-center justify-center shrink-0">
+            <svg viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+              <rect width="512" height="512" fill="#0B59E5" rx="100"/>
+              <polygon points="214,142 284,142 414,414 344,414" fill="#ffffff" />
+              <circle cx="230" cy="265" r="45" fill="#1CA1FC" />
+              <circle cx="170" cy="350" r="50" fill="#ffffff" />
+            </svg>
           </div>
           <span
             className={cn(
@@ -159,42 +165,34 @@ export function Sidebar({
               {group.items.map((item) => {
                 const Icon = item.icon;
                 const isActive = activeSection === item.id;
-
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => onSectionChange(item.id)}
-                    title={collapsed ? item.label : undefined}
-                    className={cn(
-                      "w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md text-sm font-medium transition-all duration-150 relative",
-                      isActive
-                        ? "bg-sidebar-accent text-sidebar-foreground"
-                        : "text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent/50",
-                    )}
-                  >
-                    {/* Active pill */}
-                    <span
-                      className={cn(
-                        "absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 rounded-r-full bg-accent transition-all duration-200",
-                        isActive ? "opacity-100" : "opacity-0",
-                      )}
-                    />
-                    <Icon
-                      className={cn(
-                        "w-4 h-4 shrink-0",
-                        isActive ? "text-accent" : "",
-                      )}
-                    />
-                    <span
-                      className={cn(
-                        "whitespace-nowrap text-xs transition-all duration-300",
-                        collapsed
-                          ? "opacity-0 w-0 overflow-hidden"
-                          : "opacity-100",
-                      )}
-                    >
+                const sharedClass = cn(
+                  "w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md text-sm font-medium transition-all duration-150 relative",
+                  isActive
+                    ? "bg-sidebar-accent text-sidebar-foreground"
+                    : "text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent/50",
+                );
+                const inner = (
+                  <>
+                    <span className={cn("absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 rounded-r-full bg-accent transition-all duration-200", isActive ? "opacity-100" : "opacity-0")} />
+                    <Icon className={cn("w-4 h-4 shrink-0", isActive ? "text-accent" : "")} />
+                    <span className={cn("whitespace-nowrap text-xs transition-all duration-300", collapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100")}>
                       {item.label}
                     </span>
+                    {item.href && !collapsed && <ExternalLink className="w-3 h-3 shrink-0 opacity-40" />}
+                  </>
+                );
+
+                if (item.href) {
+                  return (
+                    <a key={item.id} href={item.href} target="_blank" rel="noopener noreferrer" title={collapsed ? item.label : undefined} className={sharedClass}>
+                      {inner}
+                    </a>
+                  );
+                }
+
+                return (
+                  <button key={item.id} onClick={() => onSectionChange(item.id)} title={collapsed ? item.label : undefined} className={sharedClass}>
+                    {inner}
                   </button>
                 );
               })}
