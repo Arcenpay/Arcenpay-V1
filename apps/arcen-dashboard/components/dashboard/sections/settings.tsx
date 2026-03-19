@@ -23,7 +23,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
   User,
@@ -40,7 +39,15 @@ import {
   Plus,
   Info,
 } from "lucide-react";
-import { useAccount, useChainId, useBalance, useSendTransaction, useReadContracts, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import {
+  useAccount,
+  useChainId,
+  useBalance,
+  useSendTransaction,
+  useReadContracts,
+  useWriteContract,
+  useWaitForTransactionReceipt,
+} from "wagmi";
 import { parseEther, isAddress } from "viem";
 import { toast } from "sonner";
 import { useContractAddresses } from "@/lib/contracts";
@@ -93,11 +100,31 @@ const NOTIFICATION_DEFAULTS = [
 
 // Minimal ABI for SubscriptionRegistry public transport getters and setCrossChainTransports
 const REGISTRY_GMP_ABI = [
-  { name: "axelarTransport", type: "function", stateMutability: "view", inputs: [], outputs: [{ type: "address" }] },
-  { name: "ccipTransport", type: "function", stateMutability: "view", inputs: [], outputs: [{ type: "address" }] },
-  { name: "setCrossChainTransports", type: "function", stateMutability: "nonpayable", inputs: [{ name: "axelarTransport", type: "address" }, { name: "ccipTransport", type: "address" }], outputs: [] },
+  {
+    name: "axelarTransport",
+    type: "function",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "address" }],
+  },
+  {
+    name: "ccipTransport",
+    type: "function",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "address" }],
+  },
+  {
+    name: "setCrossChainTransports",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "axelarTransport", type: "address" },
+      { name: "ccipTransport", type: "address" },
+    ],
+    outputs: [],
+  },
 ] as const;
-
 
 interface WebhookLogEntry {
   id: string;
@@ -261,9 +288,18 @@ export function SettingsSection() {
 
   // API key
   const [apiKeyPrefix, setApiKeyPrefix] = useState<string | null>(null);
-  const [newlyGeneratedKey, setNewlyGeneratedKey] = useState<string | null>(null);
+  const [newlyGeneratedKey, setNewlyGeneratedKey] = useState<string | null>(
+    null,
+  );
   const [isGeneratingKey, setIsGeneratingKey] = useState(false);
   const [copiedKey, setCopiedKey] = useState(false);
+  const [generateKeySheetOpen, setGenerateKeySheetOpen] = useState(false);
+  const [revokeKeySheetOpen, setRevokeKeySheetOpen] = useState(false);
+  const [pendingDangerAction, setPendingDangerAction] = useState<{
+    confirmTitle: string;
+    confirmDesc: string;
+    confirmLabel: string;
+  } | null>(null);
 
   // GMP
   const [gmpTopUpAmount, setGmpTopUpAmount] = useState("");
@@ -271,24 +307,40 @@ export function SettingsSection() {
   const [newCcipTransport, setNewCcipTransport] = useState("");
   const [isSettingTransports, setIsSettingTransports] = useState(false);
 
-  const registryAddress = contractAddresses.subscriptionRegistry as `0x${string}`;
+  const registryAddress =
+    contractAddresses.subscriptionRegistry as `0x${string}`;
 
   const { data: transportData, refetch: refetchTransports } = useReadContracts({
     contracts: [
-      { address: registryAddress, abi: REGISTRY_GMP_ABI, functionName: "axelarTransport" },
-      { address: registryAddress, abi: REGISTRY_GMP_ABI, functionName: "ccipTransport" },
+      {
+        address: registryAddress,
+        abi: REGISTRY_GMP_ABI,
+        functionName: "axelarTransport",
+      },
+      {
+        address: registryAddress,
+        abi: REGISTRY_GMP_ABI,
+        functionName: "ccipTransport",
+      },
     ],
     query: { enabled: isConnected && !!registryAddress },
   });
 
-  const axelarTransportAddr = transportData?.[0]?.result as `0x${string}` | undefined;
-  const ccipTransportAddr = transportData?.[1]?.result as `0x${string}` | undefined;
+  const axelarTransportAddr = transportData?.[0]?.result as
+    | `0x${string}`
+    | undefined;
+  const ccipTransportAddr = transportData?.[1]?.result as
+    | `0x${string}`
+    | undefined;
   const ZERO = "0x0000000000000000000000000000000000000000";
-  const axelarConfigured = !!axelarTransportAddr && axelarTransportAddr !== ZERO;
+  const axelarConfigured =
+    !!axelarTransportAddr && axelarTransportAddr !== ZERO;
   const ccipConfigured = !!ccipTransportAddr && ccipTransportAddr !== ZERO;
 
   const { writeContractAsync: writeSetTransports } = useWriteContract();
-  const [setTransportsTxHash, setSetTransportsTxHash] = useState<`0x${string}` | undefined>();
+  const [setTransportsTxHash, setSetTransportsTxHash] = useState<
+    `0x${string}` | undefined
+  >();
   const { data: setTransportsReceipt } = useWaitForTransactionReceipt({
     hash: setTransportsTxHash,
     query: { enabled: !!setTransportsTxHash },
@@ -309,7 +361,9 @@ export function SettingsSection() {
     const axelar = newAxelarTransport.trim() || ZERO;
     const ccip = newCcipTransport.trim() || ZERO;
     if (!isAddress(axelar) || !isAddress(ccip)) {
-      toast.error("Both addresses must be valid EVM addresses (or leave blank to clear)");
+      toast.error(
+        "Both addresses must be valid EVM addresses (or leave blank to clear)",
+      );
       return;
     }
     setIsSettingTransports(true);
@@ -345,7 +399,11 @@ export function SettingsSection() {
     fetch("/api/provider/notifications")
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
-        if (data?.notifications && Array.isArray(data.notifications) && data.notifications.length > 0) {
+        if (
+          data?.notifications &&
+          Array.isArray(data.notifications) &&
+          data.notifications.length > 0
+        ) {
           setNotifications(data.notifications);
         }
       })
@@ -469,7 +527,9 @@ export function SettingsSection() {
       setEnvironmentMode(nextMode);
       toast.success(`Workspace now in ${nextMode} mode`);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Environment switch failed");
+      toast.error(
+        err instanceof Error ? err.message : "Environment switch failed",
+      );
     }
   };
 
@@ -486,7 +546,9 @@ export function SettingsSection() {
           notifyEmail,
           notifyWebhook,
           // Only send if user has entered a new secret (min 16 chars)
-          ...(webhookSecret.length >= 16 && { webhookSigningSecret: webhookSecret }),
+          ...(webhookSecret.length >= 16 && {
+            webhookSigningSecret: webhookSecret,
+          }),
         }),
       });
       if (!res.ok) throw new Error("Save failed");
@@ -724,7 +786,9 @@ export function SettingsSection() {
                   <div className="flex items-center gap-2">
                     <Button
                       variant={
-                        environmentMode === "DEVELOPMENT" ? "default" : "outline"
+                        environmentMode === "DEVELOPMENT"
+                          ? "default"
+                          : "outline"
                       }
                       size="sm"
                       onClick={() => handleSwitchEnvironment("DEVELOPMENT")}
@@ -973,7 +1037,6 @@ export function SettingsSection() {
                   Test Webhook
                 </Button>
                 <Button
-                  className="bg-accent text-accent-foreground hover:bg-accent/90"
                   size="sm"
                   onClick={handleSaveWebhookConfig}
                   disabled={isSaving}
@@ -1070,25 +1133,26 @@ export function SettingsSection() {
               )}
 
               <div className="flex items-center gap-3 pt-2">
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      className="bg-accent text-accent-foreground hover:bg-accent/90"
-                      disabled={isGeneratingKey}
-                    >
-                      {isGeneratingKey ? (
-                        <>
-                          <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                          Generating…
-                        </>
-                      ) : (
-                        <>
-                          <RefreshCw className="w-4 h-4 mr-2" />
-                          {apiKeyPrefix ? "Regenerate Key" : "Generate Key"}
-                        </>
-                      )}
-                    </Button>
-                  </AlertDialogTrigger>
+                <Button
+                  disabled={isGeneratingKey}
+                  onClick={() => setGenerateKeySheetOpen(true)}
+                >
+                  {isGeneratingKey ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                      Generating…
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                      {apiKeyPrefix ? "Regenerate Key" : "Generate Key"}
+                    </>
+                  )}
+                </Button>
+                <AlertDialog
+                  open={generateKeySheetOpen}
+                  onOpenChange={setGenerateKeySheetOpen}
+                >
                   <AlertDialogContent>
                     <AlertDialogHeader>
                       <AlertDialogTitle>
@@ -1104,7 +1168,13 @@ export function SettingsSection() {
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleGenerateApiKey}>
+                      <AlertDialogAction
+                        onClick={() => {
+                          void handleGenerateApiKey();
+                          setGenerateKeySheetOpen(false);
+                        }}
+                        disabled={isGeneratingKey}
+                      >
                         {apiKeyPrefix ? "Regenerate" : "Generate"}
                       </AlertDialogAction>
                     </AlertDialogFooter>
@@ -1112,35 +1182,42 @@ export function SettingsSection() {
                 </AlertDialog>
 
                 {apiKeyPrefix && (
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="border-destructive/30 text-destructive hover:bg-destructive/10"
-                      >
-                        Revoke Key
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Revoke API Key?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This will permanently invalidate the current API key.
-                          Any integrations using it will immediately lose
-                          access.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                          onClick={handleRevokeApiKey}
-                        >
-                          Revoke
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                  <>
+                    <Button
+                      variant="outline"
+                      className="border-destructive/30 text-destructive hover:bg-destructive/10"
+                      onClick={() => setRevokeKeySheetOpen(true)}
+                    >
+                      Revoke Key
+                    </Button>
+                    <AlertDialog
+                      open={revokeKeySheetOpen}
+                      onOpenChange={setRevokeKeySheetOpen}
+                    >
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Revoke API Key?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will permanently invalidate the current API
+                            key. Any integrations using it will immediately lose
+                            access.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            onClick={() => {
+                              void handleRevokeApiKey();
+                              setRevokeKeySheetOpen(false);
+                            }}
+                          >
+                            Revoke
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </>
                 )}
               </div>
 
@@ -1224,8 +1301,16 @@ export function SettingsSection() {
                   Configured Transport Adapters
                 </p>
                 {[
-                  { label: "Axelar (Primary)", addr: axelarTransportAddr, configured: axelarConfigured },
-                  { label: "CCIP (Fallback)", addr: ccipTransportAddr, configured: ccipConfigured },
+                  {
+                    label: "Axelar (Primary)",
+                    addr: axelarTransportAddr,
+                    configured: axelarConfigured,
+                  },
+                  {
+                    label: "CCIP (Fallback)",
+                    addr: ccipTransportAddr,
+                    configured: ccipConfigured,
+                  },
                 ].map(({ label, addr, configured }) => (
                   <div
                     key={label}
@@ -1235,7 +1320,11 @@ export function SettingsSection() {
                     <div className="flex items-center gap-2">
                       <Badge
                         variant="secondary"
-                        className={configured ? "bg-success/10 text-success border-success/20" : "bg-warning/10 text-warning border-warning/20"}
+                        className={
+                          configured
+                            ? "bg-success/10 text-success border-success/20"
+                            : "bg-warning/10 text-warning border-warning/20"
+                        }
                       >
                         {configured ? "Configured" : "Not Set"}
                       </Badge>
@@ -1250,13 +1339,18 @@ export function SettingsSection() {
               </div>
 
               <div className="space-y-3 pt-2 border-t border-border">
-                <p className="text-sm font-medium text-foreground">Update Transport Adapters</p>
+                <p className="text-sm font-medium text-foreground">
+                  Update Transport Adapters
+                </p>
                 <p className="text-xs text-muted-foreground">
-                  Set the Axelar and CCIP adapter contract addresses. Requires contract owner wallet. Leave blank to clear.
+                  Set the Axelar and CCIP adapter contract addresses. Requires
+                  contract owner wallet. Leave blank to clear.
                 </p>
                 <div className="space-y-2">
                   <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Axelar Transport Address</Label>
+                    <Label className="text-xs text-muted-foreground">
+                      Axelar Transport Address
+                    </Label>
                     <Input
                       placeholder="0x… (leave blank to clear)"
                       value={newAxelarTransport}
@@ -1265,7 +1359,9 @@ export function SettingsSection() {
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">CCIP Transport Address</Label>
+                    <Label className="text-xs text-muted-foreground">
+                      CCIP Transport Address
+                    </Label>
                     <Input
                       placeholder="0x… (leave blank to clear)"
                       value={newCcipTransport}
@@ -1278,7 +1374,11 @@ export function SettingsSection() {
                     size="sm"
                     className="flex items-center gap-2"
                     onClick={handleSetTransports}
-                    disabled={!isConnected || isSettingTransports || !!setTransportsTxHash}
+                    disabled={
+                      !isConnected ||
+                      isSettingTransports ||
+                      !!setTransportsTxHash
+                    }
                   >
                     <Globe className="w-3.5 h-3.5" />
                     {isSettingTransports ? "Submitting…" : "Set Transports"}
@@ -1306,7 +1406,7 @@ export function SettingsSection() {
                     </span>
                   </div>
                   <Button
-                    className="bg-accent text-accent-foreground hover:bg-accent/90 flex items-center gap-2 shrink-0"
+                    className="flex items-center gap-2 shrink-0"
                     onClick={handleGmpTopUp}
                     disabled={!isConnected || !gmpTopUpAmount}
                   >
@@ -1377,42 +1477,51 @@ export function SettingsSection() {
                       {action.desc}
                     </p>
                   </div>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="border-destructive/30 text-destructive hover:bg-destructive/10 shrink-0"
-                        disabled={!isConnected}
-                      >
-                        {action.btnLabel}
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>
-                          {action.confirmTitle}
-                        </AlertDialogTitle>
-                        <AlertDialogDescription>
-                          {action.confirmDesc}
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                          onClick={() =>
-                            toast.info(
-                              "Action requires contract implementation",
-                            )
-                          }
-                        >
-                          Confirm
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                  <Button
+                    variant="outline"
+                    className="border-destructive/30 text-destructive hover:bg-destructive/10 shrink-0"
+                    disabled={!isConnected}
+                    onClick={() =>
+                      setPendingDangerAction({
+                        confirmTitle: action.confirmTitle,
+                        confirmDesc: action.confirmDesc,
+                        confirmLabel: "Confirm",
+                      })
+                    }
+                  >
+                    {action.btnLabel}
+                  </Button>
                 </div>
               ))}
+              <AlertDialog
+                open={pendingDangerAction !== null}
+                onOpenChange={(open) => {
+                  if (!open) setPendingDangerAction(null);
+                }}
+              >
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>
+                      {pendingDangerAction?.confirmTitle}
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      {pendingDangerAction?.confirmDesc}
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      onClick={() => {
+                        toast.info("Action requires contract implementation");
+                        setPendingDangerAction(null);
+                      }}
+                    >
+                      {pendingDangerAction?.confirmLabel ?? "Confirm"}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </CardContent>
           </Card>
         </TabsContent>

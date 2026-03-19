@@ -3,6 +3,7 @@ pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
 import "../interfaces/IZKUsageVerifier.sol";
 import "../interfaces/ISessionVault.sol";
 import "../interfaces/IFeeCollector.sol";
@@ -11,7 +12,7 @@ import "../interfaces/IGroth16Verifier.sol";
 
 /// @title ZKUsageVerifier
 /// @notice On-chain zk-SNARK proof verification and ZKVUB settlement
-contract ZKUsageVerifier is IZKUsageVerifier, Ownable, ReentrancyGuard {
+contract ZKUsageVerifier is IZKUsageVerifier, Ownable, ReentrancyGuard, Pausable {
     // ============================================================
     //                         STORAGE
     // ============================================================
@@ -62,6 +63,9 @@ contract ZKUsageVerifier is IZKUsageVerifier, Ownable, ReentrancyGuard {
     //                      ADMIN FUNCTIONS
     // ============================================================
 
+    function pause() external onlyOwner { _pause(); }
+    function unpause() external onlyOwner { _unpause(); }
+
     /// @notice Sets the rate schedule for a plan
     /// @param planId The plan ID
     /// @param ratePerCall Price per API call in stablecoin base units
@@ -100,7 +104,7 @@ contract ZKUsageVerifier is IZKUsageVerifier, Ownable, ReentrancyGuard {
     function submitProof(
         Proof calldata proof,
         PublicInputs calldata inputs
-    ) external nonReentrant {
+    ) external nonReentrant whenNotPaused {
         require(groth16Verifier != address(0), "ZKVerifier: verifier not configured");
 
         // 1. Check nullifier hasn't been used
@@ -132,9 +136,7 @@ contract ZKUsageVerifier is IZKUsageVerifier, Ownable, ReentrancyGuard {
         if (provider == address(0) && sessionPlanId != 0) {
             provider = planFactory.getPlan(sessionPlanId).provider;
         }
-        if (provider == address(0)) {
-            provider = owner();
-        }
+        require(provider != address(0), "ZKVerifier: provider not resolved");
         sessionVault.settle(inputs.sessionId, providerAmount, provider);
 
         // 7. Emit settlement event

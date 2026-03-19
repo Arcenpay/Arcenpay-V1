@@ -98,6 +98,7 @@ async function main() {
     planFactoryAddr,
     registryAddr,
     feeCollectorAddr,
+    deployer.address,
   );
   await autopayModule.waitForDeployment();
   const autopayModuleAddr = await autopayModule.getAddress();

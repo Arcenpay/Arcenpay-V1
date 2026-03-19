@@ -16,7 +16,7 @@ type Subscriber @entity(immutable: false) {
   lastUpdated: BigInt!
 }
 
-type Subscription @entity(immutable: false) {
+type SubscriptionRecord @entity(immutable: false) {
   id: ID! # tokenId
   subscriber: Bytes!
   plan: Plan!

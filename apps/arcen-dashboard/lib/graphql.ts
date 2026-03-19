@@ -38,7 +38,7 @@ export const GET_PROVIDER_PLANS = gql`
 
 export const GET_SUBSCRIBERS = gql`
   query GetSubscribers($provider: Bytes!, $planIds: [String!]) {
-    subscriptions(
+    subscriptions: subscriptionRecords(
       where: { plan_in: $planIds }
       orderBy: mintedAt
       orderDirection: desc
@@ -144,7 +144,7 @@ export const GET_PROTOCOL_STATS = gql`
  */
 export const GET_SUBSCRIPTION_HISTORY = gql`
   query GetSubscriptionHistory($tokenId: String!) {
-    subscription(id: $tokenId) {
+    subscription: subscriptionRecord(id: $tokenId) {
       id
       subscriber
       plan {

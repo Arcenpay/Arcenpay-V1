@@ -2,13 +2,14 @@
 pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
 import "../interfaces/ISubscriptionRegistry.sol";
 
 /// @title MirrorRegistry
 /// @notice Cross-chain entitlement state mirror
 /// @dev Receives GMP messages and mirrors subscription state from primary chain
 /// @dev Supports Axelar GMP (primary) and Chainlink CCIP (fallback) transport routes
-contract MirrorRegistry is Ownable {
+contract MirrorRegistry is Ownable, Pausable {
     uint8 public constant ROUTE_AXELAR = 1;
     uint8 public constant ROUTE_CCIP = 2;
 
@@ -78,6 +79,9 @@ contract MirrorRegistry is Ownable {
     //                      ADMIN FUNCTIONS
     // ============================================================
 
+    function pause() external onlyOwner { _pause(); }
+    function unpause() external onlyOwner { _unpause(); }
+
     /// @notice Authorizes a bridge for a specific source chain
     function authorizeBridge(address bridge, uint256 sourceChainId) external onlyOwner {
         authorizedBridges[sourceChainId][bridge] = true;
@@ -109,15 +113,27 @@ contract MirrorRegistry is Ownable {
     // ============================================================
 
     /// @notice Receives and processes a cross-chain subscription update
-    /// @dev Called by authorized GMP bridges
+    /// @dev Called by authorized GMP bridges. Verifies trusted source and deduplicates messages.
     function onGMPReceived(
         uint256 sourceChainId,
+        bytes calldata sourceAddress,
+        bytes32 messageId,
         bytes calldata payload
-    ) external {
+    ) external whenNotPaused {
         require(
             authorizedBridges[sourceChainId][msg.sender],
             "MirrorRegistry: unauthorized bridge"
         );
+
+        // Trusted source verification (parity with _processRoutedMessage)
+        require(messageId != bytes32(0), "MirrorRegistry: zero message id");
+        require(!processedMessages[messageId], "MirrorRegistry: duplicate message");
+
+        bytes32 trustedSourceHash = trustedSources[sourceChainId];
+        require(trustedSourceHash != bytes32(0), "MirrorRegistry: source not configured");
+        require(keccak256(sourceAddress) == trustedSourceHash, "MirrorRegistry: invalid source");
+
+        processedMessages[messageId] = true;
 
         (
             address subscriber,
@@ -136,6 +152,8 @@ contract MirrorRegistry is Ownable {
             sourceChainId,
             uint64(block.timestamp)
         );
+
+        emit RoutedMessageProcessed(messageId, 0);
     }
 
     /// @notice Axelar-routed update entrypoint (primary route)
@@ -144,7 +162,7 @@ contract MirrorRegistry is Ownable {
         bytes calldata sourceAddress,
         bytes32 messageId,
         bytes calldata payload
-    ) external {
+    ) external whenNotPaused {
         require(msg.sender == axelarGateway, "MirrorRegistry: unauthorized axelar");
         _processRoutedMessage(ROUTE_AXELAR, sourceChainId, sourceAddress, messageId, payload);
     }
@@ -155,7 +173,7 @@ contract MirrorRegistry is Ownable {
         bytes calldata sourceAddress,
         bytes32 messageId,
         bytes calldata payload
-    ) external {
+    ) external whenNotPaused {
         require(msg.sender == ccipRouter, "MirrorRegistry: unauthorized ccip");
         _processRoutedMessage(ROUTE_CCIP, sourceChainId, sourceAddress, messageId, payload);
     }

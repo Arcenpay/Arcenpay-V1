@@ -7,6 +7,8 @@ import "../contracts/core/FeeCollector.sol";
 import "../contracts/core/SubscriptionRegistry.sol";
 import "../contracts/core/SessionVault.sol";
 import "../contracts/core/ERC7579AutopayModule.sol";
+import "../contracts/core/MirrorRegistry.sol";
+import "../contracts/core/ZKUsageVerifier.sol";
 import "../contracts/interfaces/IERC7579AutopayModule.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
@@ -25,6 +27,18 @@ contract MockUSDC is ERC20 {
     }
 }
 
+/// @notice Mock Groth16 verifier that always returns true
+contract MockGroth16Verifier {
+    function verifyProof(
+        uint256[2] calldata,
+        uint256[2][2] calldata,
+        uint256[2] calldata,
+        uint256[] calldata
+    ) external pure returns (bool) {
+        return true;
+    }
+}
+
 /// @title MEAPProtocolTest
 /// @notice End-to-end Foundry tests for MEAP core contracts
 contract MEAPProtocolTest is Test {
@@ -37,6 +51,9 @@ contract MEAPProtocolTest is Test {
     SubscriptionRegistry public registry;
     SessionVault public sessionVault;
     ERC7579AutopayModule public autopayModule;
+    MirrorRegistry public mirrorRegistry;
+    ZKUsageVerifier public zkVerifier;
+    MockGroth16Verifier public mockVerifier;
     MockUSDC public usdc;
 
     address public owner = address(this);
@@ -44,6 +61,8 @@ contract MEAPProtocolTest is Test {
     address public subscriber = address(0x2);
     address public agent = address(0x3);
     address public treasury = address(0x4);
+    address public bridge = address(0x10);
+    uint256 public constant SOURCE_CHAIN_ID = 1;
 
     uint256 public constant PLAN_PRICE = 10 * 10 ** 6; // 10 USDC
     uint32 public constant MONTHLY = 2_592_000; // 30 days
@@ -77,8 +96,21 @@ contract MEAPProtocolTest is Test {
         autopayModule = new ERC7579AutopayModule(
             address(planFactory),
             address(registry),
-            address(feeCollector)
+            address(feeCollector),
+            address(this) // admin = test contract
         );
+
+        // Deploy MirrorRegistry
+        mirrorRegistry = new MirrorRegistry();
+
+        // Deploy mock Groth16 verifier and ZKUsageVerifier
+        mockVerifier = new MockGroth16Verifier();
+        zkVerifier = new ZKUsageVerifier(
+            address(sessionVault),
+            address(feeCollector),
+            address(planFactory)
+        );
+        zkVerifier.setGroth16Verifier(address(mockVerifier));
 
         // Fund test accounts
         usdc.mint(subscriber, 1_000 * 10 ** 6);
@@ -91,6 +123,8 @@ contract MEAPProtocolTest is Test {
         registry.authorizeBiller(address(this));
         registry.authorizeBiller(address(autopayModule));
         feeCollector.authorizeCollector(address(autopayModule));
+        feeCollector.authorizeCollector(address(zkVerifier));
+        sessionVault.authorizeSettler(address(zkVerifier));
     }
 
     // ============================================================
@@ -166,6 +200,269 @@ contract MEAPProtocolTest is Test {
 
         uint256[] memory plans = planFactory.getProviderPlans(provider);
         assertEq(plans.length, 3);
+    }
+
+    // ============================================================
+    //              CREATE PLAN FOR (EIP-712) TESTS
+    // ============================================================
+
+    function test_createPlanFor_withValidSignature() public {
+        // Setup: Create a new provider with a known private key
+        uint256 providerPk = 0xA11CE;
+        address providerAddr = vm.addr(providerPk);
+        planFactory.registerProvider(providerAddr);
+
+        // Get the nonce before creating plan
+        uint256 nonce = planFactory.nonces(providerAddr);
+        assertEq(nonce, 0, "Nonce should start at 0");
+
+        // Set deadline 1 hour from now
+        uint256 deadline = block.timestamp + 1 hours;
+
+        // Build the EIP-712 typed data hash
+        bytes32 structHash = keccak256(abi.encode(
+            planFactory.CREATE_PLAN_TYPEHASH(),
+            providerAddr,
+            keccak256(bytes("Pro Plan")),
+            keccak256(bytes("pro")),
+            PLAN_PRICE,
+            MONTHLY,
+            address(usdc),
+            keccak256(bytes("")),
+            nonce,
+            deadline
+        ));
+
+        bytes32 digest = keccak256(abi.encodePacked(
+            "\x19\x01",
+            planFactory.DOMAIN_SEPARATOR(),
+            structHash
+        ));
+
+        // Sign the digest
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(providerPk, digest);
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        // Relayer (this contract) calls createPlanFor
+        uint256 planId = planFactory.createPlanFor(
+            providerAddr,
+            "Pro Plan",
+            "pro",
+            PLAN_PRICE,
+            MONTHLY,
+            address(usdc),
+            "",
+            deadline,
+            signature
+        );
+
+        // Verify the plan was created with the correct owner
+        IPlanFactory.Plan memory plan = planFactory.getPlan(planId);
+        assertEq(plan.provider, providerAddr, "Provider should be the signer, not msg.sender");
+        assertEq(plan.name, "Pro Plan");
+        assertEq(plan.price, PLAN_PRICE);
+
+        // Verify nonce was incremented
+        assertEq(planFactory.nonces(providerAddr), 1, "Nonce should be incremented");
+
+        // Verify provider plans mapping
+        uint256[] memory plans = planFactory.getProviderPlans(providerAddr);
+        assertEq(plans.length, 1);
+        assertEq(plans[0], planId);
+    }
+
+    function test_createPlanFor_revert_expiredSignature() public {
+        uint256 providerPk = 0xA11CE;
+        address providerAddr = vm.addr(providerPk);
+        planFactory.registerProvider(providerAddr);
+
+        uint256 deadline = block.timestamp - 1; // Already expired
+        uint256 nonce = planFactory.nonces(providerAddr);
+
+        bytes32 structHash = keccak256(abi.encode(
+            planFactory.CREATE_PLAN_TYPEHASH(),
+            providerAddr,
+            keccak256(bytes("Pro Plan")),
+            keccak256(bytes("pro")),
+            PLAN_PRICE,
+            MONTHLY,
+            address(usdc),
+            keccak256(bytes("")),
+            nonce,
+            deadline
+        ));
+
+        bytes32 digest = keccak256(abi.encodePacked(
+            "\x19\x01",
+            planFactory.DOMAIN_SEPARATOR(),
+            structHash
+        ));
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(providerPk, digest);
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        vm.expectRevert("PlanFactory: signature expired");
+        planFactory.createPlanFor(
+            providerAddr,
+            "Pro Plan",
+            "pro",
+            PLAN_PRICE,
+            MONTHLY,
+            address(usdc),
+            "",
+            deadline,
+            signature
+        );
+    }
+
+    function test_createPlanFor_revert_replayAttack() public {
+        uint256 providerPk = 0xA11CE;
+        address providerAddr = vm.addr(providerPk);
+        planFactory.registerProvider(providerAddr);
+
+        uint256 deadline = block.timestamp + 1 hours;
+        uint256 nonce = planFactory.nonces(providerAddr);
+
+        bytes32 structHash = keccak256(abi.encode(
+            planFactory.CREATE_PLAN_TYPEHASH(),
+            providerAddr,
+            keccak256(bytes("Pro Plan")),
+            keccak256(bytes("pro")),
+            PLAN_PRICE,
+            MONTHLY,
+            address(usdc),
+            keccak256(bytes("")),
+            nonce,
+            deadline
+        ));
+
+        bytes32 digest = keccak256(abi.encodePacked(
+            "\x19\x01",
+            planFactory.DOMAIN_SEPARATOR(),
+            structHash
+        ));
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(providerPk, digest);
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        // First call should succeed
+        planFactory.createPlanFor(
+            providerAddr,
+            "Pro Plan",
+            "pro",
+            PLAN_PRICE,
+            MONTHLY,
+            address(usdc),
+            "",
+            deadline,
+            signature
+        );
+
+        // Second call with same signature should fail (nonce already used)
+        vm.expectRevert("PlanFactory: invalid signature");
+        planFactory.createPlanFor(
+            providerAddr,
+            "Pro Plan",
+            "pro",
+            PLAN_PRICE,
+            MONTHLY,
+            address(usdc),
+            "",
+            deadline,
+            signature
+        );
+    }
+
+    function test_createPlanFor_revert_invalidSignature() public {
+        uint256 providerPk = 0xA11CE;
+        address providerAddr = vm.addr(providerPk);
+        planFactory.registerProvider(providerAddr);
+
+        // Sign with a different private key
+        uint256 attackerPk = 0xBAD;
+
+        uint256 deadline = block.timestamp + 1 hours;
+        uint256 nonce = planFactory.nonces(providerAddr);
+
+        bytes32 structHash = keccak256(abi.encode(
+            planFactory.CREATE_PLAN_TYPEHASH(),
+            providerAddr,
+            keccak256(bytes("Pro Plan")),
+            keccak256(bytes("pro")),
+            PLAN_PRICE,
+            MONTHLY,
+            address(usdc),
+            keccak256(bytes("")),
+            nonce,
+            deadline
+        ));
+
+        bytes32 digest = keccak256(abi.encodePacked(
+            "\x19\x01",
+            planFactory.DOMAIN_SEPARATOR(),
+            structHash
+        ));
+
+        // Sign with attacker's key instead of provider's key
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(attackerPk, digest);
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        vm.expectRevert("PlanFactory: invalid signature");
+        planFactory.createPlanFor(
+            providerAddr,
+            "Pro Plan",
+            "pro",
+            PLAN_PRICE,
+            MONTHLY,
+            address(usdc),
+            "",
+            deadline,
+            signature
+        );
+    }
+
+    function test_createPlanFor_revert_notProvider() public {
+        uint256 userPk = 0xA11CE;
+        address userAddr = vm.addr(userPk);
+        // Note: NOT registering as provider
+
+        uint256 deadline = block.timestamp + 1 hours;
+        uint256 nonce = planFactory.nonces(userAddr);
+
+        bytes32 structHash = keccak256(abi.encode(
+            planFactory.CREATE_PLAN_TYPEHASH(),
+            userAddr,
+            keccak256(bytes("Pro Plan")),
+            keccak256(bytes("pro")),
+            PLAN_PRICE,
+            MONTHLY,
+            address(usdc),
+            keccak256(bytes("")),
+            nonce,
+            deadline
+        ));
+
+        bytes32 digest = keccak256(abi.encodePacked(
+            "\x19\x01",
+            planFactory.DOMAIN_SEPARATOR(),
+            structHash
+        ));
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(userPk, digest);
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        vm.expectRevert("PlanFactory: not a provider");
+        planFactory.createPlanFor(
+            userAddr,
+            "Pro Plan",
+            "pro",
+            PLAN_PRICE,
+            MONTHLY,
+            address(usdc),
+            "",
+            deadline,
+            signature
+        );
     }
 
     // ============================================================
@@ -452,7 +749,8 @@ contract MEAPProtocolTest is Test {
                 token: address(usdc),
                 interval: MONTHLY,
                 startTime: startTime,
-                planId: planId
+                planId: planId,
+                maxTotalAmount: 0 // unlimited
             });
 
         vm.prank(subscriber);
@@ -479,5 +777,369 @@ contract MEAPProtocolTest is Test {
             expiryAfterFirstBilling + MONTHLY,
             "autopay renew should happen only once per cycle"
         );
+    }
+
+    // ============================================================
+    //          SECURITY FIX: MirrorRegistry trustedSources
+    // ============================================================
+
+    function test_mirrorRegistry_onGMPReceived_revert_noTrustedSource() public {
+        mirrorRegistry.authorizeBridge(bridge, SOURCE_CHAIN_ID);
+
+        bytes memory sourceAddr = abi.encodePacked(address(0xABC));
+        bytes32 msgId = keccak256("msg1");
+        bytes memory payload = abi.encode(subscriber, uint256(1), uint256(1), "pro", uint64(block.timestamp + 30 days));
+
+        vm.prank(bridge);
+        vm.expectRevert("MirrorRegistry: source not configured");
+        mirrorRegistry.onGMPReceived(SOURCE_CHAIN_ID, sourceAddr, msgId, payload);
+    }
+
+    function test_mirrorRegistry_onGMPReceived_revert_wrongSource() public {
+        mirrorRegistry.authorizeBridge(bridge, SOURCE_CHAIN_ID);
+        mirrorRegistry.setTrustedSource(SOURCE_CHAIN_ID, abi.encodePacked(address(0xABC)));
+
+        bytes memory wrongSource = abi.encodePacked(address(0xDEF));
+        bytes32 msgId = keccak256("msg1");
+        bytes memory payload = abi.encode(subscriber, uint256(1), uint256(1), "pro", uint64(block.timestamp + 30 days));
+
+        vm.prank(bridge);
+        vm.expectRevert("MirrorRegistry: invalid source");
+        mirrorRegistry.onGMPReceived(SOURCE_CHAIN_ID, wrongSource, msgId, payload);
+    }
+
+    function test_mirrorRegistry_onGMPReceived_revert_duplicateMessage() public {
+        mirrorRegistry.authorizeBridge(bridge, SOURCE_CHAIN_ID);
+        bytes memory sourceAddr = abi.encodePacked(address(0xABC));
+        mirrorRegistry.setTrustedSource(SOURCE_CHAIN_ID, sourceAddr);
+
+        bytes32 msgId = keccak256("msg1");
+        bytes memory payload = abi.encode(subscriber, uint256(1), uint256(1), "pro", uint64(block.timestamp + 30 days));
+
+        vm.prank(bridge);
+        mirrorRegistry.onGMPReceived(SOURCE_CHAIN_ID, sourceAddr, msgId, payload);
+
+        vm.prank(bridge);
+        vm.expectRevert("MirrorRegistry: duplicate message");
+        mirrorRegistry.onGMPReceived(SOURCE_CHAIN_ID, sourceAddr, msgId, payload);
+    }
+
+    function test_mirrorRegistry_onGMPReceived_success() public {
+        mirrorRegistry.authorizeBridge(bridge, SOURCE_CHAIN_ID);
+        bytes memory sourceAddr = abi.encodePacked(address(0xABC));
+        mirrorRegistry.setTrustedSource(SOURCE_CHAIN_ID, sourceAddr);
+
+        uint64 expiry = uint64(block.timestamp + 30 days);
+        bytes32 msgId = keccak256("msg1");
+        bytes memory payload = abi.encode(subscriber, uint256(1), uint256(1), "pro", expiry);
+
+        vm.prank(bridge);
+        mirrorRegistry.onGMPReceived(SOURCE_CHAIN_ID, sourceAddr, msgId, payload);
+
+        assertTrue(mirrorRegistry.isValid(subscriber));
+        assertEq(mirrorRegistry.expiresAt(subscriber), expiry);
+        assertTrue(mirrorRegistry.processedMessages(msgId));
+    }
+
+    function test_mirrorRegistry_pause() public {
+        mirrorRegistry.pause();
+        mirrorRegistry.authorizeBridge(bridge, SOURCE_CHAIN_ID);
+        bytes memory sourceAddr = abi.encodePacked(address(0xABC));
+        mirrorRegistry.setTrustedSource(SOURCE_CHAIN_ID, sourceAddr);
+
+        bytes32 msgId = keccak256("msg1");
+        bytes memory payload = abi.encode(subscriber, uint256(1), uint256(1), "pro", uint64(block.timestamp + 30 days));
+
+        vm.prank(bridge);
+        vm.expectRevert(abi.encodeWithSignature("EnforcedPause()"));
+        mirrorRegistry.onGMPReceived(SOURCE_CHAIN_ID, sourceAddr, msgId, payload);
+    }
+
+    // ============================================================
+    //      SECURITY FIX: SessionVault hardened IDs + whitelist
+    // ============================================================
+
+    function test_sessionVault_uniqueSessionIds() public {
+        vm.startPrank(agent);
+        usdc.approve(address(sessionVault), 300 * 10 ** 6);
+
+        bytes32 id1 = sessionVault.fundSession(100 * 10 ** 6, address(usdc));
+        bytes32 id2 = sessionVault.fundSession(100 * 10 ** 6, address(usdc));
+        bytes32 id3 = sessionVault.fundSession(100 * 10 ** 6, address(usdc));
+        vm.stopPrank();
+
+        assertTrue(id1 != id2);
+        assertTrue(id2 != id3);
+        assertTrue(id1 != id3);
+    }
+
+    function test_sessionVault_pause_fundSession() public {
+        sessionVault.pause();
+
+        vm.startPrank(agent);
+        usdc.approve(address(sessionVault), 100 * 10 ** 6);
+        vm.expectRevert(abi.encodeWithSignature("EnforcedPause()"));
+        sessionVault.fundSession(100 * 10 ** 6, address(usdc));
+        vm.stopPrank();
+    }
+
+    function test_sessionVault_withdraw_whenPaused() public {
+        vm.startPrank(agent);
+        usdc.approve(address(sessionVault), 100 * 10 ** 6);
+        bytes32 sessionId = sessionVault.fundSession(100 * 10 ** 6, address(usdc));
+        vm.stopPrank();
+
+        sessionVault.pause();
+
+        // Withdraw should still work when paused
+        vm.prank(agent);
+        sessionVault.withdraw(sessionId);
+        assertEq(sessionVault.getBalance(sessionId), 0);
+    }
+
+    function test_sessionVault_providerWhitelist() public {
+        sessionVault.authorizeSettler(address(this));
+
+        vm.startPrank(agent);
+        usdc.approve(address(sessionVault), 100 * 10 ** 6);
+        bytes32 sessionId = sessionVault.fundSession(100 * 10 ** 6, address(usdc));
+        vm.stopPrank();
+
+        // Enable whitelist
+        sessionVault.setProviderWhitelistEnabled(true);
+
+        // Settle to non-whitelisted provider should revert
+        vm.expectRevert("SessionVault: provider not whitelisted");
+        sessionVault.settle(sessionId, 10 * 10 ** 6, provider);
+
+        // Whitelist the provider
+        sessionVault.whitelistProvider(provider);
+
+        // Now should succeed
+        sessionVault.settle(sessionId, 10 * 10 ** 6, provider);
+        assertEq(sessionVault.getBalance(sessionId), 90 * 10 ** 6);
+    }
+
+    function test_sessionVault_providerWhitelist_disabled_by_default() public {
+        sessionVault.authorizeSettler(address(this));
+
+        vm.startPrank(agent);
+        usdc.approve(address(sessionVault), 100 * 10 ** 6);
+        bytes32 sessionId = sessionVault.fundSession(100 * 10 ** 6, address(usdc));
+        vm.stopPrank();
+
+        // Whitelist not enabled — any provider should work
+        sessionVault.settle(sessionId, 10 * 10 ** 6, provider);
+        assertEq(sessionVault.getBalance(sessionId), 90 * 10 ** 6);
+    }
+
+    // ============================================================
+    //    SECURITY FIX: AutopayModule rate limiting + account pause
+    // ============================================================
+
+    function test_autopay_accountPause() public {
+        vm.prank(provider);
+        uint256 planId = planFactory.createPlan("Pro", "pro", PLAN_PRICE, MONTHLY, address(usdc), "");
+
+        vm.prank(subscriber);
+        usdc.approve(address(autopayModule), type(uint256).max);
+
+        uint64 startTime = uint64(block.timestamp + 5);
+        IERC7579AutopayModule.AutopayConfig memory config = IERC7579AutopayModule.AutopayConfig({
+            merchant: provider,
+            maxAmount: PLAN_PRICE,
+            token: address(usdc),
+            interval: MONTHLY,
+            startTime: startTime,
+            planId: planId,
+            maxTotalAmount: 0
+        });
+
+        vm.prank(subscriber);
+        autopayModule.onInstall(abi.encode(config));
+
+        // Subscriber pauses their own autopay
+        vm.prank(subscriber);
+        autopayModule.pauseAccount();
+
+        vm.warp(startTime + 1);
+        vm.prank(provider);
+        vm.expectRevert("AutopayModule: account paused");
+        autopayModule.execute(subscriber, PLAN_PRICE);
+
+        // Subscriber unpauses
+        vm.prank(subscriber);
+        autopayModule.unpauseAccount();
+
+        // Now should succeed
+        vm.prank(provider);
+        autopayModule.execute(subscriber, PLAN_PRICE);
+    }
+
+    function test_autopay_maxTotalAmount() public {
+        vm.prank(provider);
+        uint256 planId = planFactory.createPlan("Pro", "pro", PLAN_PRICE, MONTHLY, address(usdc), "");
+
+        vm.prank(subscriber);
+        usdc.approve(address(autopayModule), type(uint256).max);
+
+        uint64 startTime = uint64(block.timestamp + 5);
+        // maxTotalAmount = 2 months worth
+        IERC7579AutopayModule.AutopayConfig memory config = IERC7579AutopayModule.AutopayConfig({
+            merchant: provider,
+            maxAmount: PLAN_PRICE,
+            token: address(usdc),
+            interval: MONTHLY,
+            startTime: startTime,
+            planId: planId,
+            maxTotalAmount: PLAN_PRICE * 2
+        });
+
+        vm.prank(subscriber);
+        autopayModule.onInstall(abi.encode(config));
+
+        // First pull — OK
+        vm.warp(startTime + 1);
+        vm.prank(provider);
+        autopayModule.execute(subscriber, PLAN_PRICE);
+        assertEq(autopayModule.totalPulled(subscriber), PLAN_PRICE);
+
+        // Second pull — OK
+        vm.warp(block.timestamp + MONTHLY);
+        vm.prank(provider);
+        autopayModule.execute(subscriber, PLAN_PRICE);
+        assertEq(autopayModule.totalPulled(subscriber), PLAN_PRICE * 2);
+
+        // Third pull — should revert (total exceeded)
+        vm.warp(block.timestamp + MONTHLY);
+        vm.prank(provider);
+        vm.expectRevert("AutopayModule: total amount exceeded");
+        autopayModule.execute(subscriber, PLAN_PRICE);
+    }
+
+    function test_autopay_globalPause() public {
+        vm.prank(provider);
+        uint256 planId = planFactory.createPlan("Pro", "pro", PLAN_PRICE, MONTHLY, address(usdc), "");
+
+        vm.prank(subscriber);
+        usdc.approve(address(autopayModule), type(uint256).max);
+
+        uint64 startTime = uint64(block.timestamp + 5);
+        IERC7579AutopayModule.AutopayConfig memory config = IERC7579AutopayModule.AutopayConfig({
+            merchant: provider,
+            maxAmount: PLAN_PRICE,
+            token: address(usdc),
+            interval: MONTHLY,
+            startTime: startTime,
+            planId: planId,
+            maxTotalAmount: 0
+        });
+
+        vm.prank(subscriber);
+        autopayModule.onInstall(abi.encode(config));
+
+        // Admin pauses globally
+        autopayModule.pause();
+
+        vm.warp(startTime + 1);
+        vm.prank(provider);
+        vm.expectRevert(abi.encodeWithSignature("EnforcedPause()"));
+        autopayModule.execute(subscriber, PLAN_PRICE);
+
+        // Admin unpauses
+        autopayModule.unpause();
+
+        vm.prank(provider);
+        autopayModule.execute(subscriber, PLAN_PRICE);
+    }
+
+    // ============================================================
+    //       SECURITY FIX: AutopayModule dispatch retry
+    // ============================================================
+
+    function test_autopay_retryDispatch_noPending() public {
+        vm.prank(provider);
+        uint256 planId = planFactory.createPlan("Pro", "pro", PLAN_PRICE, MONTHLY, address(usdc), "");
+
+        uint64 startTime = uint64(block.timestamp + 5);
+        IERC7579AutopayModule.AutopayConfig memory config = IERC7579AutopayModule.AutopayConfig({
+            merchant: provider,
+            maxAmount: PLAN_PRICE,
+            token: address(usdc),
+            interval: MONTHLY,
+            startTime: startTime,
+            planId: planId,
+            maxTotalAmount: 0
+        });
+
+        vm.prank(subscriber);
+        usdc.approve(address(autopayModule), type(uint256).max);
+        vm.prank(subscriber);
+        autopayModule.onInstall(abi.encode(config));
+
+        vm.expectRevert("AutopayModule: no pending dispatch");
+        autopayModule.retryDispatch(subscriber);
+    }
+
+    function test_autopay_getPendingDispatch_empty() public view {
+        (uint256 tokenId, uint256 destChain, address merchant, uint64 ts) = autopayModule.getPendingDispatch(subscriber);
+        assertEq(tokenId, 0);
+        assertEq(destChain, 0);
+        assertEq(merchant, address(0));
+        assertEq(ts, 0);
+    }
+
+    // ============================================================
+    //       SECURITY FIX: PlanFactory pause
+    // ============================================================
+
+    function test_planFactory_pause_createPlan() public {
+        planFactory.pause();
+
+        vm.prank(provider);
+        vm.expectRevert(abi.encodeWithSignature("EnforcedPause()"));
+        planFactory.createPlan("Pro", "pro", PLAN_PRICE, MONTHLY, address(usdc), "");
+    }
+
+    function test_planFactory_deactivatePlan_whenPaused() public {
+        vm.prank(provider);
+        uint256 planId = planFactory.createPlan("Pro", "pro", PLAN_PRICE, MONTHLY, address(usdc), "");
+
+        planFactory.pause();
+
+        // deactivatePlan should still work when paused
+        vm.prank(provider);
+        planFactory.deactivatePlan(planId);
+
+        IPlanFactory.Plan memory plan = planFactory.getPlan(planId);
+        assertFalse(plan.active);
+    }
+
+    // ============================================================
+    //   SECURITY FIX: SubscriptionRegistry pause
+    // ============================================================
+
+    function test_registry_pause_mint() public {
+        vm.prank(provider);
+        uint256 planId = planFactory.createPlan("Pro", "pro", PLAN_PRICE, MONTHLY, address(usdc), "");
+
+        registry.pause();
+
+        vm.expectRevert(abi.encodeWithSignature("EnforcedPause()"));
+        registry.mint(subscriber, planId, DURATION);
+    }
+
+    function test_registry_cancel_whenPaused() public {
+        vm.prank(provider);
+        uint256 planId = planFactory.createPlan("Pro", "pro", PLAN_PRICE, MONTHLY, address(usdc), "");
+
+        uint256 tokenId = registry.mint(subscriber, planId, DURATION);
+
+        registry.pause();
+
+        // Cancel should still work when paused
+        vm.prank(subscriber);
+        registry.cancel(tokenId);
+        assertFalse(registry.isValid(tokenId));
     }
 }

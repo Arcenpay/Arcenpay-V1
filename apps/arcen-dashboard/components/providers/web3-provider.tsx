@@ -12,6 +12,14 @@ import { apolloClient } from "@/lib/graphql";
 
 const queryClient = new QueryClient();
 
+// Dynamic metadata URL based on environment
+const getMetadataUrl = () => {
+  if (typeof window !== "undefined") {
+    return window.location.origin;
+  }
+  return process.env.NEXT_PUBLIC_APP_URL || "https://arcenpay.xyz";
+};
+
 // Initialize AppKit once at module scope
 createAppKit({
   adapters: [wagmiAdapter],
@@ -21,7 +29,7 @@ createAppKit({
   metadata: {
     name: "ArcenPay Dashboard",
     description: "ArcenPay Provider Dashboard",
-    url: "https://arcenpay.xyz",
+    url: getMetadataUrl(),
     icons: ["/icon.svg"],
   },
   features: {
@@ -43,7 +51,7 @@ export function Web3Provider({
 }) {
   const initialState = cookieToInitialState(
     wagmiAdapter.wagmiConfig as Config,
-    cookies
+    cookies,
   );
 
   return (

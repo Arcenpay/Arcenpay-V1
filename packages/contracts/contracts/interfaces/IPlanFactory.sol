@@ -68,6 +68,39 @@ interface IPlanFactory {
         string calldata metadataURI
     ) external returns (uint256 planId);
 
+    /// @notice Creates a plan on behalf of a provider via EIP-712 signature
+    /// @dev Allows a relayer to pay gas while the provider retains ownership
+    /// @param provider The address that will own the plan (must sign)
+    /// @param name The plan name
+    /// @param tier The plan tier identifier
+    /// @param price Price per interval in stablecoin base units
+    /// @param billingInterval Billing interval in seconds
+    /// @param acceptedToken Stablecoin address
+    /// @param metadataURI Plan metadata URI
+    /// @param deadline Signature expiration timestamp
+    /// @param signature EIP-712 signature from the provider
+    /// @return planId The created plan ID
+    function createPlanFor(
+        address provider,
+        string calldata name,
+        string calldata tier,
+        uint256 price,
+        uint32 billingInterval,
+        address acceptedToken,
+        string calldata metadataURI,
+        uint256 deadline,
+        bytes calldata signature
+    ) external returns (uint256 planId);
+
+    /// @notice Returns the EIP-712 nonce for a provider
+    /// @param provider The provider address
+    /// @return The current nonce
+    function nonces(address provider) external view returns (uint256);
+
+    /// @notice Returns the EIP-712 domain separator
+    /// @return The domain separator hash
+    function DOMAIN_SEPARATOR() external view returns (bytes32);
+
     /// @notice Returns plan details by ID
     /// @param planId The plan ID
     /// @return plan The plan configuration

@@ -193,8 +193,9 @@ export function SessionsSection() {
   const pendingProofs = payload?.activeProofs.count ?? 0;
 
   // Stats
-  const activeSessions = sessions.filter((s) => BigInt(s.currentBalance) > 0n)
-    .length;
+  const activeSessions = sessions.filter(
+    (s) => BigInt(s.currentBalance) > 0n,
+  ).length;
   const totalSettled = sessions.reduce(
     (acc, s) => acc + BigInt(s.totalSettled),
     0n,
@@ -321,59 +322,67 @@ export function SessionsSection() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {sessionsLoading ? (
-          Array.from({ length: 3 }).map((_, i) => <SkeletonCard key={i} />)
-        ) : (
-          [
-            {
-              label: "Active Sessions",
-              value: activeSessions.toString(),
-              icon: Cpu,
-              color: "text-chart-1",
-            },
-            {
-              label: "Total Settled",
-              value: formatUsdc(totalSettled),
-              icon: DollarSign,
-              color: "text-accent",
-            },
-            {
-              label: "Pending Proofs",
-              value: pendingProofs.toString(),
-              icon: Shield,
-              color: "text-chart-3",
-            },
-          ].map((stat, index) => (
-            <Card
-              key={stat.label}
-              className="border-border bg-card hover:border-muted-foreground/30 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4"
-              style={{
-                animationDelay: `${index * 75}ms`,
-                animationFillMode: "both",
-              }}
-            >
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">{stat.label}</p>
-                    <p className={`text-2xl font-semibold mt-1 ${stat.color}`}>
-                      {stat.value}
-                    </p>
+        {sessionsLoading
+          ? Array.from({ length: 3 }).map((_, i) => <SkeletonCard key={i} />)
+          : [
+              {
+                label: "Active Sessions",
+                value: activeSessions.toString(),
+                icon: Cpu,
+                color: "text-chart-1",
+              },
+              {
+                label: "Total Settled",
+                value: formatUsdc(totalSettled),
+                icon: DollarSign,
+                color: "text-accent",
+              },
+              {
+                label: "Pending Proofs",
+                value: pendingProofs.toString(),
+                icon: Shield,
+                color: "text-chart-3",
+              },
+            ].map((stat, index) => (
+              <Card
+                key={stat.label}
+                className="border-border bg-card hover:border-muted-foreground/30 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4"
+                style={{
+                  animationDelay: `${index * 75}ms`,
+                  animationFillMode: "both",
+                }}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">
+                        {stat.label}
+                      </p>
+                      <p
+                        className={`text-2xl font-semibold mt-1 ${stat.color}`}
+                      >
+                        {stat.value}
+                      </p>
+                    </div>
+                    <stat.icon className={`w-8 h-8 ${stat.color} opacity-50`} />
                   </div>
-                  <stat.icon className={`w-8 h-8 ${stat.color} opacity-50`} />
-                </div>
-              </CardContent>
-            </Card>
-          ))
-        )}
+                </CardContent>
+              </Card>
+            ))}
       </div>
 
       {/* Error */}
       {sessionsError && (
         <div className="flex items-center gap-3 p-4 rounded-xl bg-destructive/5 border border-destructive/20">
           <AlertCircle className="w-4 h-4 text-destructive shrink-0" />
-          <p className="text-sm text-muted-foreground flex-1">{sessionsError}</p>
-          <Button variant="ghost" size="sm" onClick={() => void loadSessionsData()}>
+          <p className="text-sm text-muted-foreground flex-1">
+            {sessionsError}
+          </p>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => void loadSessionsData()}
+          >
             <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
             Retry
           </Button>
@@ -440,7 +449,9 @@ export function SessionsSection() {
                       <td className="py-3 px-4">
                         <span className="text-sm text-muted-foreground">
                           {lastSettlement
-                            ? formatRelativeTime(parseInt(lastSettlement.timestamp))
+                            ? formatRelativeTime(
+                                parseInt(lastSettlement.timestamp),
+                              )
                             : "—"}
                         </span>
                       </td>
@@ -584,7 +595,10 @@ export function SessionsSection() {
         {sessionsLoading && (
           <div className="space-y-2">
             {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="h-12 bg-secondary/50 rounded-lg animate-pulse" />
+              <div
+                key={i}
+                className="h-12 bg-secondary/50 rounded-lg animate-pulse"
+              />
             ))}
           </div>
         )}
@@ -620,7 +634,9 @@ export function SessionsSection() {
                   <div>
                     <p className="text-xs text-muted-foreground">
                       Session{" "}
-                      <code className="font-mono">{shortHash(proof.sessionId)}</code>
+                      <code className="font-mono">
+                        {shortHash(proof.sessionId)}
+                      </code>
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {proof.callCount} calls ·{" "}
@@ -717,7 +733,11 @@ export function SessionsSection() {
               </p>
               {yieldStrategy && (
                 <a
-                  href={getBlockExplorerUrl(chainId, "address", yieldStrategy as string)}
+                  href={getBlockExplorerUrl(
+                    chainId,
+                    "address",
+                    yieldStrategy as string,
+                  )}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground mt-1 transition-colors"
@@ -729,7 +749,10 @@ export function SessionsSection() {
             </div>
           </div>
           <p className="text-xs text-muted-foreground mt-3">
-            Vault address: <code className="font-mono">{truncateAddress(yieldVaultAddress)}</code>
+            Vault address:{" "}
+            <code className="font-mono">
+              {truncateAddress(yieldVaultAddress)}
+            </code>
             {" · "}Set{" "}
             <code className="font-mono">
               MEAP_CONTRACT_{chainId}_yieldSessionVault
@@ -741,7 +764,7 @@ export function SessionsSection() {
 
       {/* Fund Session Dialog */}
       <Dialog open={showDepositDialog} onOpenChange={setShowDepositDialog}>
-        <DialogContent className="sm:max-w-sm">
+        <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Fund Agent Session</DialogTitle>
             <DialogDescription>
@@ -774,11 +797,13 @@ export function SessionsSection() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDepositDialog(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setShowDepositDialog(false)}
+            >
               Cancel
             </Button>
             <Button
-              className="bg-accent text-accent-foreground hover:bg-accent/90"
               onClick={() => void handleDeposit()}
               disabled={!depositAmount || parseFloat(depositAmount) <= 0}
             >

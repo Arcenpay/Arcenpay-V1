@@ -25,6 +25,7 @@
     "smoke:base-mainnet": "hardhat run scripts/smoke.ts --network baseMainnet",
     "ops:authorize-facilitator:settler": "hardhat run scripts/authorize-facilitator-settler.ts --network sepolia",
     "ops:set-groth16-verifier": "hardhat run scripts/set-groth16-verifier.ts --network sepolia",
+    "ops:plan-factory-owner": "hardhat run scripts/ops-plan-factory-owner.ts --network sepolia",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {

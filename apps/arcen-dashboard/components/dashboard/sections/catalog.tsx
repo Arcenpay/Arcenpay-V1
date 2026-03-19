@@ -14,15 +14,6 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -32,7 +23,9 @@ import {
 import {
   Sheet,
   SheetContent,
+  SheetFooter,
   SheetHeader,
+  SheetTrigger,
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
@@ -48,7 +41,6 @@ import {
   Plus,
   RefreshCw,
   MoreHorizontal,
-  Upload,
   SlidersHorizontal,
   AlertTriangle,
   Package,
@@ -67,9 +59,10 @@ import {
   List,
 } from "lucide-react";
 import { useEnvironment } from "@/contexts/environment-context";
-import { useAccount } from "wagmi";
+import { useAccount, useSignTypedData, useChainId } from "wagmi";
 import { getUsdcAddress, getUsdcTokenOptions } from "@/lib/contracts";
 import { toast } from "sonner";
+import { SafeTransactionDialog } from "@/components/safe/safe-transaction-dialog";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -127,18 +120,89 @@ interface CatalogCreditType {
   updatedAt: string;
 }
 
+interface OwnerActionRequiredPayload {
+  description?: string;
+  target?: string;
+  value?: string;
+  data?: string;
+  functionSignature?: string;
+  args?: string[];
+  safeTransaction?: {
+    to: string;
+    value: string;
+    data: string;
+    operation: number;
+  };
+}
+
+interface RegisterOnChainResponse {
+  txHash?: string;
+  error?: string;
+  relayerAddress?: string;
+  planFactoryOwner?: string | null;
+  ownerActionRequired?: OwnerActionRequiredPayload;
+}
+
 // ─── Token Options ────────────────────────────────────────────────────────────
 
-const TOKEN_OPTIONS: { label: string; address: string }[] = getUsdcTokenOptions().map((option) => ({
-  label: option.label,
-  address: option.address,
-}));
+const TOKEN_OPTIONS: { label: string; address: string }[] =
+  getUsdcTokenOptions().map((option) => ({
+    label: option.label,
+    address: option.address,
+  }));
 
 const DEFAULT_TOKEN = getUsdcAddress(11155111);
 
 function tokenLabel(address: string): string {
-  const match = TOKEN_OPTIONS.find((t) => t.address.toLowerCase() === address.toLowerCase());
-  return match ? match.label.split(" — ")[0] + " (" + address.slice(0, 6) + "…" + address.slice(-4) + ")" : address.slice(0, 10) + "…";
+  const match = TOKEN_OPTIONS.find(
+    (t) => t.address.toLowerCase() === address.toLowerCase(),
+  );
+  return match
+    ? match.label.split(" — ")[0] +
+        " (" +
+        address.slice(0, 6) +
+        "…" +
+        address.slice(-4) +
+        ")"
+    : address.slice(0, 10) + "…";
+}
+
+function isOwnerActionRequired(data: RegisterOnChainResponse): boolean {
+  return Boolean(
+    data.ownerActionRequired?.target && data.ownerActionRequired?.data,
+  );
+}
+
+function formatOwnerActionMessage(data: RegisterOnChainResponse): string {
+  const owner = data.planFactoryOwner
+    ? ` Owner: ${data.planFactoryOwner}.`
+    : "";
+  const relayer = data.relayerAddress
+    ? ` Relayer: ${data.relayerAddress}.`
+    : "";
+  return `Plan saved. Multisig owner action required to register provider.${owner}${relayer}`;
+}
+
+async function copyOwnerActionPayload(
+  data: RegisterOnChainResponse,
+): Promise<void> {
+  if (!data.ownerActionRequired) return;
+  try {
+    await navigator.clipboard.writeText(
+      JSON.stringify(
+        {
+          relayerAddress: data.relayerAddress,
+          planFactoryOwner: data.planFactoryOwner,
+          ownerActionRequired: data.ownerActionRequired,
+        },
+        null,
+        2,
+      ),
+    );
+    toast.message("Safe payload copied to clipboard");
+  } catch {
+    // Ignore clipboard errors (unsupported contexts, denied permission, etc.)
+  }
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -176,161 +240,42 @@ const NEXT_STATUS: Partial<Record<CatalogStatus, CatalogStatus[]>> = {
   PUBLISHED: ["ARCHIVED"],
 };
 
+function statusActionLabel(status: CatalogStatus): string {
+  if (status === "PUBLISHED") return "Publish";
+  if (status === "ARCHIVED") return "Archive";
+  return status;
+}
+
 // ─── Publish Summary Dialog ────────────────────────────────────────────────────
 
 type ChainSyncStatus = "PENDING" | "SYNCED" | "FAILED" | "NOT_APPLICABLE";
 
-interface PublishedEntity {
-  id: string;
-  name: string;
-  chainSyncStatus: ChainSyncStatus;
-  onChainPlanId?: string | null;
-  code?: string;
-  tier?: string;
-}
-
-interface PublishResult {
-  plans: PublishedEntity[];
-  addOns: PublishedEntity[];
-  credits: PublishedEntity[];
-}
-
-interface ChainSyncInfo {
-  required: boolean;
-  pendingCount: number;
-  pendingPlanIds: string[];
-  message: string;
-}
-
 function ChainSyncBadge({ status }: { status: ChainSyncStatus }) {
   if (status === "SYNCED")
-    return <Badge variant="default" className="bg-green-600 text-white text-xs">On-chain</Badge>;
+    return (
+      <Badge variant="default" className="bg-green-600 text-white text-xs">
+        On-chain
+      </Badge>
+    );
   if (status === "PENDING")
-    return <Badge variant="secondary" className="text-yellow-600 border-yellow-400 text-xs">Needs sync</Badge>;
-  if (status === "FAILED")
-    return <Badge variant="destructive" className="text-xs">Sync failed</Badge>;
-  return <Badge variant="outline" className="text-xs text-muted-foreground">Off-chain</Badge>;
-}
-
-function PublishButton({
-  env,
-  onPublished,
-}: {
-  env: EnvMode;
-  onPublished: () => void;
-}) {
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<PublishResult | null>(null);
-  const [chainSync, setChainSync] = useState<ChainSyncInfo | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [open, setOpen] = useState(false);
-
-  async function handlePublish() {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/catalog/publish", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ environmentMode: env }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setResult(data.published);
-        setChainSync(data.chainSync ?? null);
-        setOpen(true);
-        onPublished();
-      } else {
-        setError(data.error ?? "Publish failed");
-      }
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  const totalPublished =
-    (result?.plans.length ?? 0) +
-    (result?.addOns.length ?? 0) +
-    (result?.credits.length ?? 0);
-
-  return (
-    <>
-      <Button
-        size="sm"
-        onClick={handlePublish}
-        disabled={loading}
-        className="gap-2"
+    return (
+      <Badge
+        variant="secondary"
+        className="text-yellow-600 border-yellow-400 text-xs"
       >
-        <Upload className="w-4 h-4" />
-        {loading
-          ? "Publishing…"
-          : `Publish Drafts (${env === "DEVELOPMENT" ? "Dev" : "Prod"})`}
-      </Button>
-      {error && (
-        <p className="text-xs text-destructive mt-1">{error}</p>
-      )}
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Catalog Published</DialogTitle>
-            <DialogDescription>
-              {totalPublished} item{totalPublished !== 1 ? "s" : ""} published to{" "}
-              <strong>{env}</strong>.
-            </DialogDescription>
-          </DialogHeader>
-          {result && (
-            <div className="space-y-4 text-sm max-h-72 overflow-y-auto">
-              {result.plans.length > 0 && (
-                <div>
-                  <p className="font-medium text-muted-foreground mb-1">Plans ({result.plans.length})</p>
-                  <ul className="space-y-1">
-                    {result.plans.map((p) => (
-                      <li key={p.id} className="flex items-center justify-between gap-2">
-                        <span className="truncate">{p.name} <span className="text-muted-foreground">({p.tier})</span></span>
-                        <ChainSyncBadge status={p.chainSyncStatus} />
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              {result.addOns.length > 0 && (
-                <div>
-                  <p className="font-medium text-muted-foreground mb-1">Add-ons ({result.addOns.length})</p>
-                  <ul className="space-y-1">
-                    {result.addOns.map((a) => (
-                      <li key={a.id} className="flex items-center justify-between gap-2">
-                        <span className="truncate">{a.name}</span>
-                        <ChainSyncBadge status={a.chainSyncStatus} />
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              {result.credits.length > 0 && (
-                <div>
-                  <p className="font-medium text-muted-foreground mb-1">Credit types ({result.credits.length})</p>
-                  <ul className="space-y-1">
-                    {result.credits.map((c) => (
-                      <li key={c.id} className="flex items-center justify-between gap-2">
-                        <span className="truncate">{c.name}</span>
-                        <ChainSyncBadge status={c.chainSyncStatus} />
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          )}
-          {chainSync?.required && (
-            <div className="rounded-md border border-yellow-400/30 bg-yellow-400/5 p-3 text-xs text-yellow-600 space-y-1">
-              <p className="font-medium">{chainSync.pendingCount} plan(s) need on-chain registration</p>
-              <p className="text-muted-foreground">{chainSync.message}</p>
-            </div>
-          )}
-          <Button onClick={() => setOpen(false)}>Done</Button>
-        </DialogContent>
-      </Dialog>
-    </>
+        Needs sync
+      </Badge>
+    );
+  if (status === "FAILED")
+    return (
+      <Badge variant="destructive" className="text-xs">
+        Sync failed
+      </Badge>
+    );
+  return (
+    <Badge variant="outline" className="text-xs text-muted-foreground">
+      Off-chain
+    </Badge>
   );
 }
 
@@ -400,22 +345,21 @@ function CreatePlanDialog({
       const created = await res.json();
       const planId = created.plan?.id ?? created.id;
 
-      // Auto register on-chain immediately (relayer pays gas, no MetaMask popup)
-      setStatus("Registering on-chain…");
-      const syncRes = await fetch(`/api/catalog/plans/${planId}/register-on-chain`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
-      const syncData = await syncRes.json().catch(() => ({})) as { txHash?: string; error?: string };
-      if (!syncRes.ok) {
-        // Plan is saved, but on-chain registration failed — show warning, don't block
-        toast.error(`Plan saved but on-chain registration failed: ${syncData.error ?? "unknown error"}`);
-      } else {
-        toast.success(`Plan created and registered on-chain`);
-      }
+      // Plan created - user can now register on-chain via the table action
+      // (this requires EIP-712 signature, so we don't auto-trigger it here)
+      toast.success(
+        `Plan created! Click "Register on-chain" in the table to register it with your wallet.`,
+      );
 
       setOpen(false);
-      setForm({ name: "", tier: "", description: "", price: "", billingInterval: "30", acceptedToken: DEFAULT_TOKEN });
+      setForm({
+        name: "",
+        tier: "",
+        description: "",
+        price: "",
+        billingInterval: "30",
+        acceptedToken: DEFAULT_TOKEN,
+      });
       setErrors({});
       setStatus("");
       onCreated();
@@ -426,18 +370,21 @@ function CreatePlanDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger asChild>
         <Button size="sm" variant="outline" className="gap-2">
           <Plus className="w-4 h-4" />
           New Plan
         </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Create Catalog Plan</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+      </SheetTrigger>
+      <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
+        <SheetHeader className="pb-4 border-b border-border">
+          <SheetTitle>Create Catalog Plan</SheetTitle>
+          <SheetDescription>
+            Create a clean, publish-ready plan with on-chain registration.
+          </SheetDescription>
+        </SheetHeader>
+        <form onSubmit={handleSubmit} className="space-y-4 py-4">
           {errors._global && (
             <p className="text-sm text-destructive">{errors._global}</p>
           )}
@@ -532,9 +479,10 @@ function CreatePlanDialog({
             )}
           </div>
           <p className="text-xs text-muted-foreground">
-            Environment: <strong>{env}</strong> — plan will be created and registered on-chain automatically.
+            Environment: <strong>{env}</strong> — plan will be created and
+            registered on-chain automatically.
           </p>
-          <div className="flex justify-end gap-2">
+          <SheetFooter className="pt-4 border-t border-border flex-row justify-end gap-2">
             <Button
               type="button"
               variant="outline"
@@ -545,13 +493,18 @@ function CreatePlanDialog({
             </Button>
             <Button type="submit" disabled={loading} className="gap-2 min-w-44">
               {loading ? (
-                <><Loader2 className="w-4 h-4 animate-spin" />{status || "Processing…"}</>
-              ) : "Create Plan"}
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  {status || "Processing…"}
+                </>
+              ) : (
+                "Create Plan"
+              )}
             </Button>
-          </div>
+          </SheetFooter>
         </form>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }
 
@@ -632,23 +585,23 @@ function CreateAddOnDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button className="flex items-center gap-2 bg-accent text-accent-foreground hover:bg-accent/90">
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger asChild>
+        <Button className="flex items-center gap-2">
           <Plus className="w-4 h-4" />
           Create Add-On
         </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Create Add-On Product</DialogTitle>
-          <DialogDescription>
+      </SheetTrigger>
+      <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
+        <SheetHeader className="pb-4 border-b border-border">
+          <SheetTitle>Create Add-On Product</SheetTitle>
+          <SheetDescription>
             Add-ons are additional features or services customers can purchase
             alongside their plans. They work independently and don't require
             existing plans.
-          </DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 py-2">
+          </SheetDescription>
+        </SheetHeader>
+        <form onSubmit={handleSubmit} className="space-y-4 py-4">
           {errors._global && (
             <p className="text-sm text-destructive">{errors._global}</p>
           )}
@@ -746,12 +699,17 @@ function CreateAddOnDialog({
                 setForm({ ...form, acceptedToken: v as `0x${string}` })
               }
             >
-              <SelectTrigger id="addonToken" className="bg-secondary border-border">
+              <SelectTrigger
+                id="addonToken"
+                className="bg-secondary border-border"
+              >
                 <SelectValue placeholder="Select token" />
               </SelectTrigger>
               <SelectContent>
                 {TOKEN_OPTIONS.map((t) => (
-                  <SelectItem key={t.address} value={t.address}>{t.label}</SelectItem>
+                  <SelectItem key={t.address} value={t.address}>
+                    {t.label}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -763,10 +721,10 @@ function CreateAddOnDialog({
             <span className="text-xs text-muted-foreground">
               Environment:{" "}
               <span className="text-foreground font-medium">{env}</span> —
-              Add-on will be created as DRAFT and can be published later.
+              Add-on will be saved as Draft until published.
             </span>
           </div>
-          <div className="flex justify-end gap-2 pt-2">
+          <SheetFooter className="pt-4 border-t border-border flex-row justify-end gap-2">
             <Button
               type="button"
               variant="outline"
@@ -774,17 +732,13 @@ function CreateAddOnDialog({
             >
               Cancel
             </Button>
-            <Button
-              type="submit"
-              disabled={loading}
-              className="bg-accent text-accent-foreground hover:bg-accent/90"
-            >
+            <Button type="submit" disabled={loading}>
               {loading ? "Creating…" : "Create Add-On"}
             </Button>
-          </div>
+          </SheetFooter>
         </form>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }
 
@@ -869,23 +823,23 @@ function CreateCreditTypeDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button className="flex items-center gap-2 bg-accent text-accent-foreground hover:bg-accent/90">
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger asChild>
+        <Button className="flex items-center gap-2">
           <Plus className="w-4 h-4" />
           Create Credit Type
         </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Create Credit Type</DialogTitle>
-          <DialogDescription>
+      </SheetTrigger>
+      <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
+        <SheetHeader className="pb-4 border-b border-border">
+          <SheetTitle>Create Credit Type</SheetTitle>
+          <SheetDescription>
             Credit types define units of consumption that can be granted through
             plans or purchased separately. Perfect for usage-based billing and
             metered features.
-          </DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 py-2">
+          </SheetDescription>
+        </SheetHeader>
+        <form onSubmit={handleSubmit} className="space-y-4 py-4">
           {errors._global && (
             <p className="text-sm text-destructive">{errors._global}</p>
           )}
@@ -981,12 +935,17 @@ function CreateCreditTypeDialog({
                   setForm({ ...form, acceptedToken: v as `0x${string}` })
                 }
               >
-                <SelectTrigger id="creditToken" className="bg-secondary border-border">
+                <SelectTrigger
+                  id="creditToken"
+                  className="bg-secondary border-border"
+                >
                   <SelectValue placeholder="Select token" />
                 </SelectTrigger>
                 <SelectContent>
                   {TOKEN_OPTIONS.map((t) => (
-                    <SelectItem key={t.address} value={t.address}>{t.label}</SelectItem>
+                    <SelectItem key={t.address} value={t.address}>
+                      {t.label}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -1001,10 +960,10 @@ function CreateCreditTypeDialog({
             <span className="text-xs text-muted-foreground">
               Environment:{" "}
               <span className="text-foreground font-medium">{env}</span> —
-              Credit type will be created as DRAFT and can be published later.
+              Credit type will be saved as Draft until published.
             </span>
           </div>
-          <div className="flex justify-end gap-2 pt-2">
+          <SheetFooter className="pt-4 border-t border-border flex-row justify-end gap-2">
             <Button
               type="button"
               variant="outline"
@@ -1012,30 +971,37 @@ function CreateCreditTypeDialog({
             >
               Cancel
             </Button>
-            <Button
-              type="submit"
-              disabled={loading}
-              className="bg-accent text-accent-foreground hover:bg-accent/90"
-            >
+            <Button type="submit" disabled={loading}>
               {loading ? "Creating…" : "Create Credit Type"}
             </Button>
-          </div>
+          </SheetFooter>
         </form>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }
 
 // ─── Plans Table ───────────────────────────────────────────────────────────────
 
 function PlansTable({ env, refresh }: { env: EnvMode; refresh: number }) {
+  const { address, isConnected } = useAccount();
+  const chainId = useChainId();
+  const { signTypedDataAsync } = useSignTypedData();
+
   const [plans, setPlans] = useState<CatalogPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<CatalogStatus | "">("");
   const [updating, setUpdating] = useState<string | null>(null);
   const [syncingPlanId, setSyncingPlanId] = useState<string | null>(null);
+  const [deletingPlanId, setDeletingPlanId] = useState<string | null>(null);
   const [editTarget, setEditTarget] = useState<CatalogPlan | null>(null);
   const [entTarget, setEntTarget] = useState<CatalogPlan | null>(null);
+  const [safeDialogOpen, setSafeDialogOpen] = useState(false);
+  const [safeDialogData, setSafeDialogData] = useState<{
+    payload: OwnerActionRequiredPayload;
+    planFactoryOwner: string | null;
+    relayerAddress: string | null;
+  } | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -1071,28 +1037,165 @@ function PlansTable({ env, refresh }: { env: EnvMode; refresh: number }) {
   }
 
   async function registerOnChain(plan: CatalogPlan) {
+    // Check wallet connection
+    if (!isConnected || !address) {
+      toast.error("Please connect your wallet first");
+      return;
+    }
+
     setSyncingPlanId(plan.id);
     try {
-      const res = await fetch(`/api/catalog/plans/${plan.id}/register-on-chain`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
-      const data = await res.json().catch(() => ({})) as { txHash?: string; error?: string };
-      if (!res.ok) {
-        throw new Error((data as { error?: string }).error || "Registration failed");
+      // 1. Fetch nonce and contract info
+      const nonceRes = await fetch(`/api/catalog/plans/${plan.id}/sign-nonce`);
+      if (!nonceRes.ok) {
+        const nonceErr = await nonceRes.json().catch(() => ({}));
+        throw new Error(nonceErr.error || "Failed to get signing nonce");
       }
-      toast.success(`Plan registered on-chain: ${(data.txHash ?? "").slice(0, 10)}…`);
+      const { nonce, planFactoryAddress, domain } = await nonceRes.json();
+
+      // 2. Prepare plan parameters for signing
+      const deadline = Math.floor(Date.now() / 1000) + 3600; // 1 hour from now
+      const priceInUsdc = BigInt(
+        Math.round(parseFloat(plan.price) * 1_000_000),
+      );
+      const billingIntervalSeconds = plan.billingInterval * 86400;
+
+      // 3. Sign EIP-712 typed data
+      const signature = await signTypedDataAsync({
+        domain: {
+          name: domain.name,
+          version: domain.version,
+          chainId: BigInt(domain.chainId),
+          verifyingContract: planFactoryAddress as `0x${string}`,
+        },
+        types: {
+          CreatePlan: [
+            { name: "provider", type: "address" },
+            { name: "name", type: "string" },
+            { name: "tier", type: "string" },
+            { name: "price", type: "uint256" },
+            { name: "billingInterval", type: "uint32" },
+            { name: "acceptedToken", type: "address" },
+            { name: "metadataURI", type: "string" },
+            { name: "nonce", type: "uint256" },
+            { name: "deadline", type: "uint256" },
+          ],
+        },
+        primaryType: "CreatePlan",
+        message: {
+          provider: address,
+          name: plan.name,
+          tier: plan.tier,
+          price: priceInUsdc,
+          billingInterval: billingIntervalSeconds,
+          acceptedToken: plan.acceptedToken as `0x${string}`,
+          metadataURI: "",
+          nonce: BigInt(nonce),
+          deadline: BigInt(deadline),
+        },
+      });
+
+      // 4. Submit to API with signature
+      const res = await fetch(
+        `/api/catalog/plans/${plan.id}/register-on-chain`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            signature,
+            deadline,
+            userAddress: address,
+          }),
+        },
+      );
+      const data = (await res
+        .json()
+        .catch(() => ({}))) as RegisterOnChainResponse;
+      if (!res.ok) {
+        if (res.status === 409 && isOwnerActionRequired(data)) {
+          toast.error(formatOwnerActionMessage(data));
+          void copyOwnerActionPayload(data);
+          if (
+            data.ownerActionRequired?.target &&
+            data.ownerActionRequired?.data
+          ) {
+            console.info("[catalog] owner action required", {
+              target: data.ownerActionRequired.target,
+              value: data.ownerActionRequired.value ?? "0",
+              data: data.ownerActionRequired.data,
+              functionSignature: data.ownerActionRequired.functionSignature,
+              args: data.ownerActionRequired.args ?? [],
+            });
+          }
+          return;
+        }
+        throw new Error(data.error || "Registration failed");
+      }
+      toast.success(
+        `Plan registered on-chain — you are the owner! Tx: ${(data.txHash ?? "").slice(0, 10)}…`,
+      );
       load();
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Registration failed");
+      const msg = err instanceof Error ? err.message : "Registration failed";
+      // Handle user rejection
+      if (
+        msg.includes("rejected") ||
+        msg.includes("denied") ||
+        msg.includes("User rejected")
+      ) {
+        toast.error("Signature request was rejected");
+      } else {
+        toast.error(msg);
+      }
     } finally {
       setSyncingPlanId(null);
     }
   }
 
+  async function deletePlan(plan: CatalogPlan) {
+    if (plan.status === "PUBLISHED") {
+      toast.error(
+        "Published plans cannot be deleted. Archive the plan instead.",
+      );
+      return;
+    }
+    if (plan.onChainPlanId) {
+      toast.error(
+        "On-chain plans cannot be deleted. Archive the plan instead.",
+      );
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Delete plan "${plan.name}"? This cannot be undone.`,
+    );
+    if (!confirmed) return;
+
+    setDeletingPlanId(plan.id);
+    try {
+      const res = await fetch("/api/catalog/plans", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: plan.id }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}) as { error?: string });
+        throw new Error(data.error || "Failed to delete plan");
+      }
+      toast.success(`"${plan.name}" deleted`);
+      load();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete plan");
+    } finally {
+      setDeletingPlanId(null);
+    }
+  }
+
+  const envLabel = env === "DEVELOPMENT" ? "Testnet" : "Mainnet";
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Select
           value={statusFilter || "all"}
           onValueChange={(v) =>
@@ -1109,23 +1212,38 @@ function PlansTable({ env, refresh }: { env: EnvMode; refresh: number }) {
             <SelectItem value="ARCHIVED">Archived</SelectItem>
           </SelectContent>
         </Select>
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={load}
-          disabled={loading}
-          className="gap-1"
-        >
-          <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-        </Button>
+
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="text-xs">
+            {envLabel}
+          </Badge>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={load}
+            disabled={loading}
+            className="gap-1"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+          </Button>
+        </div>
       </div>
 
       {loading ? (
         <p className="text-sm text-muted-foreground py-4">Loading…</p>
       ) : plans.length === 0 ? (
-        <p className="text-sm text-muted-foreground py-4">
-          No plans found. Create your first catalog plan above.
-        </p>
+        <div className="rounded-xl border border-dashed border-border bg-secondary/15 px-6 py-12 text-center">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl border border-border bg-card">
+            <Package className="h-6 w-6 text-muted-foreground" />
+          </div>
+          <p className="text-base font-semibold text-foreground">
+            No plans in {envLabel} yet
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Create your first catalog plan to start selling in the active
+            environment.
+          </p>
+        </div>
       ) : (
         <Table>
           <TableHeader>
@@ -1145,8 +1263,7 @@ function PlansTable({ env, refresh }: { env: EnvMode; refresh: number }) {
             {plans.map((plan) => {
               const transitions = NEXT_STATUS[plan.status] ?? [];
               const needsChainSync =
-                plan.status !== "ARCHIVED" &&
-                plan.chainSyncStatus !== "SYNCED";
+                plan.status !== "ARCHIVED" && plan.chainSyncStatus !== "SYNCED";
               return (
                 <TableRow key={plan.id}>
                   <TableCell className="font-medium">{plan.name}</TableCell>
@@ -1162,7 +1279,8 @@ function PlansTable({ env, refresh }: { env: EnvMode; refresh: number }) {
                     <StatusBadge status={plan.status} />
                   </TableCell>
                   <TableCell>
-                    {plan.chainSyncStatus && plan.chainSyncStatus !== "NOT_APPLICABLE" ? (
+                    {plan.chainSyncStatus &&
+                    plan.chainSyncStatus !== "NOT_APPLICABLE" ? (
                       <ChainSyncBadge status={plan.chainSyncStatus} />
                     ) : (
                       <span className="text-xs text-muted-foreground">—</span>
@@ -1177,7 +1295,11 @@ function PlansTable({ env, refresh }: { env: EnvMode; refresh: number }) {
                         <Button
                           size="icon"
                           variant="ghost"
-                          disabled={updating === plan.id || syncingPlanId === plan.id}
+                          disabled={
+                            updating === plan.id ||
+                            syncingPlanId === plan.id ||
+                            deletingPlanId === plan.id
+                          }
                         >
                           <MoreHorizontal className="w-4 h-4" />
                         </Button>
@@ -1195,7 +1317,7 @@ function PlansTable({ env, refresh }: { env: EnvMode; refresh: number }) {
                             key={s}
                             onClick={() => updateStatus(plan.id, s)}
                           >
-                            Mark as {s}
+                            {statusActionLabel(s)}
                           </DropdownMenuItem>
                         ))}
                         {needsChainSync && (
@@ -1206,6 +1328,14 @@ function PlansTable({ env, refresh }: { env: EnvMode; refresh: number }) {
                             {syncingPlanId === plan.id
                               ? "Registering…"
                               : "Register On-Chain"}
+                          </DropdownMenuItem>
+                        )}
+                        {!plan.onChainPlanId && plan.status !== "PUBLISHED" && (
+                          <DropdownMenuItem
+                            onClick={() => deletePlan(plan)}
+                            className="text-destructive focus:text-destructive"
+                          >
+                            Delete Plan
                           </DropdownMenuItem>
                         )}
                       </DropdownMenuContent>
@@ -1222,8 +1352,13 @@ function PlansTable({ env, refresh }: { env: EnvMode; refresh: number }) {
           key={editTarget.id}
           plan={editTarget}
           open={true}
-          onOpenChange={(o) => { if (!o) setEditTarget(null); }}
-          onSaved={() => { load(); setEditTarget(null); }}
+          onOpenChange={(o) => {
+            if (!o) setEditTarget(null);
+          }}
+          onSaved={() => {
+            load();
+            setEditTarget(null);
+          }}
         />
       )}
       {entTarget && (
@@ -1231,8 +1366,13 @@ function PlansTable({ env, refresh }: { env: EnvMode; refresh: number }) {
           key={entTarget.id}
           planId={entTarget.id}
           open={true}
-          onOpenChange={(o) => { if (!o) setEntTarget(null); }}
-          onAdded={() => { load(); setEntTarget(null); }}
+          onOpenChange={(o) => {
+            if (!o) setEntTarget(null);
+          }}
+          onAdded={() => {
+            load();
+            setEntTarget(null);
+          }}
         />
       )}
     </div>
@@ -1268,7 +1408,9 @@ function AddOnsTable({ env, refresh }: { env: EnvMode; refresh: number }) {
   const [updating, setUpdating] = useState<string | null>(null);
 
   // ── Entitlements state ────────────────────────────────────────────────────
-  const [entAddon, setEntAddon] = useState<{ id: string; name: string } | null>(null);
+  const [entAddon, setEntAddon] = useState<{ id: string; name: string } | null>(
+    null,
+  );
   const [entitlements, setEntitlements] = useState<Entitlement[]>([]);
   const [entLoading, setEntLoading] = useState(false);
   const [deletingKey, setDeletingKey] = useState<string | null>(null);
@@ -1278,13 +1420,17 @@ function AddOnsTable({ env, refresh }: { env: EnvMode; refresh: number }) {
   const [addEntLoading, setAddEntLoading] = useState(false);
   const [addEntErrors, setAddEntErrors] = useState<Record<string, string>>({});
   const [addEntForm, setAddEntForm] = useState({
-    featureName: "", featureKey: "",
+    featureName: "",
+    featureKey: "",
     type: "BOOLEAN" as "BOOLEAN" | "NUMERIC" | "UNLIMITED",
-    value: "", enabled: true,
+    value: "",
+    enabled: true,
   });
 
   // Per-addon entitlements cache for the features column
-  const [addonEntitlements, setAddonEntitlements] = useState<Record<string, Entitlement[]>>({});
+  const [addonEntitlements, setAddonEntitlements] = useState<
+    Record<string, Entitlement[]>
+  >({});
 
   // Feature flag suggestions
   const [featureFlags, setFeatureFlags] = useState<FeatureFlag[]>([]);
@@ -1341,7 +1487,10 @@ function AddOnsTable({ env, refresh }: { env: EnvMode; refresh: number }) {
       addOns.map((addon) =>
         fetch(`/api/catalog/add-ons/${addon.id}/entitlements`)
           .then((r) => (r.ok ? r.json() : null))
-          .then((data) => ({ id: addon.id, ents: (data?.entitlements ?? []) as Entitlement[] }))
+          .then((data) => ({
+            id: addon.id,
+            ents: (data?.entitlements ?? []) as Entitlement[],
+          }))
           .catch(() => ({ id: addon.id, ents: [] as Entitlement[] })),
       ),
     ).then((results) => {
@@ -1362,7 +1511,9 @@ function AddOnsTable({ env, refresh }: { env: EnvMode; refresh: number }) {
     setFlagsLoading(true);
     fetch(`/api/entitlements/provider/${address}/flags`)
       .then((r) => (r.ok ? r.json() : null))
-      .then((data) => { if (data?.flags) setFeatureFlags(data.flags as FeatureFlag[]); })
+      .then((data) => {
+        if (data?.flags) setFeatureFlags(data.flags as FeatureFlag[]);
+      })
       .catch(() => {})
       .finally(() => setFlagsLoading(false));
   }, [addEntOpen, address]);
@@ -1371,26 +1522,41 @@ function AddOnsTable({ env, refresh }: { env: EnvMode; refresh: number }) {
     setEntAddon(addon);
     setEntSearch("");
     setAddEntOpen(false);
-    setAddEntForm({ featureName: "", featureKey: "", type: "BOOLEAN", value: "", enabled: true });
+    setAddEntForm({
+      featureName: "",
+      featureKey: "",
+      type: "BOOLEAN",
+      value: "",
+      enabled: true,
+    });
     setAddEntErrors({});
   };
 
   const deleteEntitlement = async (addonId: string, featureKey: string) => {
     setDeletingKey(featureKey);
     try {
-      const res = await fetch(`/api/catalog/add-ons/${addonId}/entitlements?featureKey=${featureKey}`, { method: "DELETE" });
+      const res = await fetch(
+        `/api/catalog/add-ons/${addonId}/entitlements?featureKey=${featureKey}`,
+        { method: "DELETE" },
+      );
       if (res.ok) {
         toast.success("Entitlement removed");
         await loadEntitlements(addonId);
       } else {
         toast.error("Failed to remove entitlement");
       }
-    } finally { setDeletingKey(null); }
+    } finally {
+      setDeletingKey(null);
+    }
   };
 
-  const toggleEntitlement = async (addonId: string, featureKey: string, enabled: boolean) => {
+  const toggleEntitlement = async (
+    addonId: string,
+    featureKey: string,
+    enabled: boolean,
+  ) => {
     setEntitlements((prev) =>
-      prev.map((e) => (e.featureKey === featureKey ? { ...e, enabled } : e))
+      prev.map((e) => (e.featureKey === featureKey ? { ...e, enabled } : e)),
     );
     setTogglingKey(featureKey);
     try {
@@ -1400,11 +1566,16 @@ function AddOnsTable({ env, refresh }: { env: EnvMode; refresh: number }) {
         body: JSON.stringify({ featureKey, enabled }),
       });
       await loadEntitlements(addonId);
-    } finally { setTogglingKey(null); }
+    } finally {
+      setTogglingKey(null);
+    }
   };
 
   function autoKey(name: string) {
-    return name.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_-]/g, "");
+    return name
+      .toLowerCase()
+      .replace(/\s+/g, "_")
+      .replace(/[^a-z0-9_-]/g, "");
   }
 
   const handleAddEntitlement = async (e: React.FormEvent) => {
@@ -1412,40 +1583,59 @@ function AddOnsTable({ env, refresh }: { env: EnvMode; refresh: number }) {
     const errs: Record<string, string> = {};
     if (!addEntForm.featureName.trim()) errs.featureName = "Required";
     if (!addEntForm.featureKey.trim()) errs.featureKey = "Required";
-    else if (!/^[a-z0-9_-]+$/i.test(addEntForm.featureKey)) errs.featureKey = "Letters, numbers, _ and - only";
+    else if (!/^[a-z0-9_-]+$/i.test(addEntForm.featureKey))
+      errs.featureKey = "Letters, numbers, _ and - only";
     if (addEntForm.type === "NUMERIC") {
       const n = Number(addEntForm.value);
-      if (addEntForm.value === "" || isNaN(n) || n < 0) errs.value = "Must be a non-negative number";
+      if (addEntForm.value === "" || isNaN(n) || n < 0)
+        errs.value = "Must be a non-negative number";
     }
-    if (Object.keys(errs).length) { setAddEntErrors(errs); return; }
+    if (Object.keys(errs).length) {
+      setAddEntErrors(errs);
+      return;
+    }
     if (!entAddon) return;
     setAddEntLoading(true);
     try {
       let val: boolean | number | null = null;
       if (addEntForm.type === "BOOLEAN") val = addEntForm.enabled;
       else if (addEntForm.type === "NUMERIC") val = Number(addEntForm.value);
-      const res = await fetch(`/api/catalog/add-ons/${entAddon.id}/entitlements`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          featureName: addEntForm.featureName,
-          featureKey: addEntForm.featureKey,
-          type: addEntForm.type,
-          value: val,
-          enabled: addEntForm.enabled,
-        }),
-      });
+      const res = await fetch(
+        `/api/catalog/add-ons/${entAddon.id}/entitlements`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            featureName: addEntForm.featureName,
+            featureKey: addEntForm.featureKey,
+            type: addEntForm.type,
+            value: val,
+            enabled: addEntForm.enabled,
+          }),
+        },
+      );
       if (res.ok) {
         setAddEntOpen(false);
-        setAddEntForm({ featureName: "", featureKey: "", type: "BOOLEAN", value: "", enabled: true });
+        setAddEntForm({
+          featureName: "",
+          featureKey: "",
+          type: "BOOLEAN",
+          value: "",
+          enabled: true,
+        });
         setAddEntErrors({});
         toast.success("Entitlement added");
         await loadEntitlements(entAddon.id);
       } else {
         const data = await res.json().catch(() => ({}));
-        setAddEntErrors({ _global: (data as { error?: string }).error || "Failed to add entitlement" });
+        setAddEntErrors({
+          _global:
+            (data as { error?: string }).error || "Failed to add entitlement",
+        });
       }
-    } finally { setAddEntLoading(false); }
+    } finally {
+      setAddEntLoading(false);
+    }
   };
 
   const handleCopyFromAddon = async (sourceAddonId: string) => {
@@ -1453,11 +1643,19 @@ function AddOnsTable({ env, refresh }: { env: EnvMode; refresh: number }) {
     setCopyingEntitlements(true);
     setCopyFromOpen(false);
     try {
-      const res = await fetch(`/api/catalog/add-ons/${sourceAddonId}/entitlements`);
-      if (!res.ok) { toast.error("Could not load source add-on entitlements"); return; }
+      const res = await fetch(
+        `/api/catalog/add-ons/${sourceAddonId}/entitlements`,
+      );
+      if (!res.ok) {
+        toast.error("Could not load source add-on entitlements");
+        return;
+      }
       const data = await res.json();
       const sourceEnts: Entitlement[] = data.entitlements ?? [];
-      if (sourceEnts.length === 0) { toast.info("Source add-on has no entitlements to copy"); return; }
+      if (sourceEnts.length === 0) {
+        toast.info("Source add-on has no entitlements to copy");
+        return;
+      }
       await Promise.allSettled(
         sourceEnts.map((ent) =>
           fetch(`/api/catalog/add-ons/${entAddon.id}/entitlements`, {
@@ -1473,7 +1671,9 @@ function AddOnsTable({ env, refresh }: { env: EnvMode; refresh: number }) {
           }),
         ),
       );
-      toast.success(`Copied ${sourceEnts.length} entitlement${sourceEnts.length !== 1 ? "s" : ""}`);
+      toast.success(
+        `Copied ${sourceEnts.length} entitlement${sourceEnts.length !== 1 ? "s" : ""}`,
+      );
       await loadEntitlements(entAddon.id);
     } catch {
       toast.error("Failed to copy entitlements");
@@ -1590,18 +1790,28 @@ function AddOnsTable({ env, refresh }: { env: EnvMode; refresh: number }) {
                   <TableCell>
                     {(() => {
                       const ents = addonEntitlements[addon.id] ?? [];
-                      if (ents.length === 0) return <span className="text-xs text-muted-foreground">—</span>;
+                      if (ents.length === 0)
+                        return (
+                          <span className="text-xs text-muted-foreground">
+                            —
+                          </span>
+                        );
                       const shown = ents.slice(0, 2);
                       const extra = ents.length - shown.length;
                       return (
                         <div className="flex flex-wrap gap-1">
                           {shown.map((e) => (
-                            <span key={e.featureKey} className="text-xs bg-secondary border border-border rounded px-1.5 py-0.5 text-muted-foreground truncate max-w-[100px]">
+                            <span
+                              key={e.featureKey}
+                              className="text-xs bg-secondary border border-border rounded px-1.5 py-0.5 text-muted-foreground truncate max-w-[100px]"
+                            >
                               {e.featureName}
                             </span>
                           ))}
                           {extra > 0 && (
-                            <span className="text-xs text-muted-foreground">+{extra}</span>
+                            <span className="text-xs text-muted-foreground">
+                              +{extra}
+                            </span>
                           )}
                         </div>
                       );
@@ -1620,7 +1830,9 @@ function AddOnsTable({ env, refresh }: { env: EnvMode; refresh: number }) {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem
-                          onClick={() => openEntitlements({ id: addon.id, name: addon.name })}
+                          onClick={() =>
+                            openEntitlements({ id: addon.id, name: addon.name })
+                          }
                           className="flex items-center gap-2 text-sm"
                         >
                           <List className="w-3.5 h-3.5" />
@@ -1634,7 +1846,7 @@ function AddOnsTable({ env, refresh }: { env: EnvMode; refresh: number }) {
                                 key={s}
                                 onClick={() => updateStatus(addon.id, s)}
                               >
-                                Mark as {s}
+                                {statusActionLabel(s)}
                               </DropdownMenuItem>
                             ))}
                           </>
@@ -1650,7 +1862,12 @@ function AddOnsTable({ env, refresh }: { env: EnvMode; refresh: number }) {
       )}
 
       {/* ── Entitlements Sheet ─────────────────────────────── */}
-      <Sheet open={!!entAddon} onOpenChange={(open) => { if (!open) setEntAddon(null); }}>
+      <Sheet
+        open={!!entAddon}
+        onOpenChange={(open) => {
+          if (!open) setEntAddon(null);
+        }}
+      >
         <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
           <SheetHeader className="pb-4 border-b border-border">
             <SheetTitle className="flex items-center gap-2">
@@ -1677,7 +1894,7 @@ function AddOnsTable({ env, refresh }: { env: EnvMode; refresh: number }) {
               </div>
               <Button
                 size="sm"
-                className="bg-accent text-accent-foreground hover:bg-accent/90 gap-1.5 shrink-0"
+                className="gap-1.5 shrink-0"
                 onClick={() => setAddEntOpen((v) => !v)}
               >
                 <Plus className="w-4 h-4" />
@@ -1692,16 +1909,19 @@ function AddOnsTable({ env, refresh }: { env: EnvMode; refresh: number }) {
                     className="gap-1.5 shrink-0"
                     title="Copy entitlements from another add-on"
                   >
-                    {copyingEntitlements
-                      ? <Loader2 className="w-4 h-4 animate-spin" />
-                      : <Copy className="w-4 h-4" />
-                    }
+                    {copyingEntitlements ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Copy className="w-4 h-4" />
+                    )}
                     Copy from
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   {addOns.filter((a) => a.id !== entAddon?.id).length === 0 ? (
-                    <div className="px-2 py-1.5 text-xs text-muted-foreground">No other add-ons</div>
+                    <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                      No other add-ons
+                    </div>
                   ) : (
                     addOns
                       .filter((a) => a.id !== entAddon?.id)
@@ -1725,9 +1945,13 @@ function AddOnsTable({ env, refresh }: { env: EnvMode; refresh: number }) {
                 onSubmit={handleAddEntitlement}
                 className="space-y-3 p-4 rounded-xl border border-accent/30 bg-accent/5"
               >
-                <p className="text-sm font-semibold text-foreground">New Entitlement</p>
+                <p className="text-sm font-semibold text-foreground">
+                  New Entitlement
+                </p>
                 {addEntErrors._global && (
-                  <p className="text-xs text-destructive">{addEntErrors._global}</p>
+                  <p className="text-xs text-destructive">
+                    {addEntErrors._global}
+                  </p>
                 )}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
@@ -1745,41 +1969,61 @@ function AddOnsTable({ env, refresh }: { env: EnvMode; refresh: number }) {
                       placeholder="e.g. Advanced Analytics"
                       className="bg-secondary border-border h-8 text-sm"
                     />
-                    {addEntErrors.featureName && <p className="text-xs text-destructive">{addEntErrors.featureName}</p>}
+                    {addEntErrors.featureName && (
+                      <p className="text-xs text-destructive">
+                        {addEntErrors.featureName}
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs">Feature Key *</Label>
                     <Input
                       value={addEntForm.featureKey}
-                      onChange={(e) => setAddEntForm((f) => ({ ...f, featureKey: e.target.value }))}
+                      onChange={(e) =>
+                        setAddEntForm((f) => ({
+                          ...f,
+                          featureKey: e.target.value,
+                        }))
+                      }
                       placeholder="advanced_analytics"
                       className="bg-secondary border-border h-8 text-sm font-mono"
                     />
-                    {addEntErrors.featureKey && <p className="text-xs text-destructive">{addEntErrors.featureKey}</p>}
+                    {addEntErrors.featureKey && (
+                      <p className="text-xs text-destructive">
+                        {addEntErrors.featureKey}
+                      </p>
+                    )}
                   </div>
                 </div>
                 {/* Feature flag suggestions */}
                 {(flagsLoading || featureFlags.length > 0) && (
                   <div className="space-y-1.5">
-                    <p className="text-xs text-muted-foreground">Suggestions from your feature flags:</p>
+                    <p className="text-xs text-muted-foreground">
+                      Suggestions from your feature flags:
+                    </p>
                     {flagsLoading ? (
                       <div className="flex gap-1.5 flex-wrap">
                         {Array.from({ length: 3 }).map((_, i) => (
-                          <div key={i} className="h-6 w-20 rounded-full bg-secondary animate-pulse" />
+                          <div
+                            key={i}
+                            className="h-6 w-20 rounded-full bg-secondary animate-pulse"
+                          />
                         ))}
                       </div>
                     ) : (
                       <div className="flex gap-1.5 flex-wrap">
                         {featureFlags.map((flag) => (
                           <button
-                            key={flag.key}
                             type="button"
                             onClick={() =>
                               setAddEntForm((f) => ({
                                 ...f,
                                 featureName: flag.label || flag.key,
                                 featureKey: flag.key,
-                                type: flag.type === "number" ? "NUMERIC" : "BOOLEAN",
+                                type:
+                                  flag.type === "number"
+                                    ? "NUMERIC"
+                                    : "BOOLEAN",
                               }))
                             }
                             className="text-xs px-2 py-1 rounded-full bg-accent/10 border border-accent/30 text-accent hover:bg-accent/20 transition-colors"
@@ -1796,17 +2040,28 @@ function AddOnsTable({ env, refresh }: { env: EnvMode; refresh: number }) {
                   <div className="grid grid-cols-3 gap-2">
                     {(["BOOLEAN", "NUMERIC", "UNLIMITED"] as const).map((t) => (
                       <button
-                        key={t}
                         type="button"
-                        onClick={() => setAddEntForm((f) => ({ ...f, type: t, value: "" }))}
+                        onClick={() =>
+                          setAddEntForm((f) => ({ ...f, type: t, value: "" }))
+                        }
                         className={`flex flex-col items-center gap-1 py-2 px-1 rounded-lg border text-xs font-medium transition-all ${
                           addEntForm.type === t
                             ? "bg-accent text-accent-foreground border-accent"
                             : "bg-secondary border-border text-muted-foreground hover:text-foreground"
                         }`}
                       >
-                        {t === "BOOLEAN" ? <ToggleLeft className="w-4 h-4" /> : t === "NUMERIC" ? <Hash className="w-4 h-4" /> : <Package className="w-4 h-4" />}
-                        {t === "BOOLEAN" ? "On/Off" : t === "NUMERIC" ? "Numeric" : "Unlimited"}
+                        {t === "BOOLEAN" ? (
+                          <ToggleLeft className="w-4 h-4" />
+                        ) : t === "NUMERIC" ? (
+                          <Hash className="w-4 h-4" />
+                        ) : (
+                          <Package className="w-4 h-4" />
+                        )}
+                        {t === "BOOLEAN"
+                          ? "On/Off"
+                          : t === "NUMERIC"
+                            ? "Numeric"
+                            : "Unlimited"}
                       </button>
                     ))}
                   </div>
@@ -1815,29 +2070,54 @@ function AddOnsTable({ env, refresh }: { env: EnvMode; refresh: number }) {
                   <div className="space-y-1">
                     <Label className="text-xs">Value *</Label>
                     <Input
-                      type="number" min="0"
+                      type="number"
+                      min="0"
                       value={addEntForm.value}
-                      onChange={(e) => setAddEntForm((f) => ({ ...f, value: e.target.value }))}
+                      onChange={(e) =>
+                        setAddEntForm((f) => ({ ...f, value: e.target.value }))
+                      }
                       placeholder="e.g. 1000"
                       className="bg-secondary border-border h-8 text-sm"
                     />
-                    {addEntErrors.value && <p className="text-xs text-destructive">{addEntErrors.value}</p>}
+                    {addEntErrors.value && (
+                      <p className="text-xs text-destructive">
+                        {addEntErrors.value}
+                      </p>
+                    )}
                   </div>
                 )}
                 <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/50 border border-border">
                   <div>
                     <p className="text-sm font-medium">Enabled</p>
-                    <p className="text-xs text-muted-foreground">Active on the add-on immediately</p>
+                    <p className="text-xs text-muted-foreground">
+                      Active on the add-on immediately
+                    </p>
                   </div>
                   <Switch
                     checked={addEntForm.enabled}
-                    onCheckedChange={(v) => setAddEntForm((f) => ({ ...f, enabled: v }))}
+                    onCheckedChange={(v) =>
+                      setAddEntForm((f) => ({ ...f, enabled: v }))
+                    }
                   />
                 </div>
                 <div className="flex gap-2 justify-end">
-                  <Button type="button" variant="outline" size="sm" onClick={() => setAddEntOpen(false)}>Cancel</Button>
-                  <Button type="submit" size="sm" disabled={addEntLoading} className="bg-accent text-accent-foreground hover:bg-accent/90">
-                    {addEntLoading ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />Adding…</> : "Add Entitlement"}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setAddEntOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" size="sm" disabled={addEntLoading}>
+                    {addEntLoading ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                        Adding…
+                      </>
+                    ) : (
+                      "Add Entitlement"
+                    )}
                   </Button>
                 </div>
               </form>
@@ -1847,78 +2127,109 @@ function AddOnsTable({ env, refresh }: { env: EnvMode; refresh: number }) {
             {entLoading ? (
               <div className="space-y-2">
                 {Array.from({ length: 3 }).map((_, i) => (
-                  <div key={i} className="h-14 rounded-xl bg-secondary/60 animate-pulse" />
+                  <div
+                    key={i}
+                    className="h-14 rounded-xl bg-secondary/60 animate-pulse"
+                  />
                 ))}
               </div>
-            ) : (() => {
-              const filtered = entitlements.filter((e) =>
-                e.featureName.toLowerCase().includes(entSearch.toLowerCase()) ||
-                e.featureKey.toLowerCase().includes(entSearch.toLowerCase()),
-              );
-              return filtered.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center mb-3">
-                    <List className="w-6 h-6 text-muted-foreground" />
+            ) : (
+              (() => {
+                const filtered = entitlements.filter(
+                  (e) =>
+                    e.featureName
+                      .toLowerCase()
+                      .includes(entSearch.toLowerCase()) ||
+                    e.featureKey
+                      .toLowerCase()
+                      .includes(entSearch.toLowerCase()),
+                );
+                return filtered.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center mb-3">
+                      <List className="w-6 h-6 text-muted-foreground" />
+                    </div>
+                    <p className="text-sm font-medium text-foreground mb-1">
+                      {entSearch
+                        ? "No entitlements match"
+                        : "No entitlements yet"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {entSearch
+                        ? "Try a different search"
+                        : "Click Add to define features included in this add-on"}
+                    </p>
                   </div>
-                  <p className="text-sm font-medium text-foreground mb-1">
-                    {entSearch ? "No entitlements match" : "No entitlements yet"}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {entSearch ? "Try a different search" : "Click Add to define features included in this add-on"}
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {filtered.map((ent) => (
-                    <div
-                      key={ent.featureKey}
-                      className="flex items-center gap-3 p-3 rounded-xl border border-border bg-card hover:bg-secondary/30 transition-colors"
-                    >
-                      <div className="shrink-0 w-8 h-8 rounded-lg bg-secondary flex items-center justify-center">
-                        {ent.type === "BOOLEAN" ? (
-                          <ToggleLeft className="w-4 h-4 text-muted-foreground" />
-                        ) : ent.type === "NUMERIC" ? (
-                          <Hash className="w-4 h-4 text-muted-foreground" />
-                        ) : (
-                          <Package className="w-4 h-4 text-muted-foreground" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-foreground truncate">{ent.featureName}</p>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <code className="text-xs text-muted-foreground font-mono">{ent.featureKey}</code>
-                          {ent.type === "NUMERIC" && ent.value != null && (
-                            <span className="text-xs text-muted-foreground">· limit: {String(ent.value)}</span>
-                          )}
-                          {ent.type === "UNLIMITED" && (
-                            <span className="text-xs text-muted-foreground">· unlimited</span>
+                ) : (
+                  <div className="space-y-2">
+                    {filtered.map((ent) => (
+                      <div
+                        key={ent.featureKey}
+                        className="flex items-center gap-3 p-3 rounded-xl border border-border bg-card hover:bg-secondary/30 transition-colors"
+                      >
+                        <div className="shrink-0 w-8 h-8 rounded-lg bg-secondary flex items-center justify-center">
+                          {ent.type === "BOOLEAN" ? (
+                            <ToggleLeft className="w-4 h-4 text-muted-foreground" />
+                          ) : ent.type === "NUMERIC" ? (
+                            <Hash className="w-4 h-4 text-muted-foreground" />
+                          ) : (
+                            <Package className="w-4 h-4 text-muted-foreground" />
                           )}
                         </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-foreground truncate">
+                            {ent.featureName}
+                          </p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <code className="text-xs text-muted-foreground font-mono">
+                              {ent.featureKey}
+                            </code>
+                            {ent.type === "NUMERIC" && ent.value != null && (
+                              <span className="text-xs text-muted-foreground">
+                                · limit: {String(ent.value)}
+                              </span>
+                            )}
+                            {ent.type === "UNLIMITED" && (
+                              <span className="text-xs text-muted-foreground">
+                                · unlimited
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <Switch
+                          checked={ent.enabled}
+                          disabled={togglingKey === ent.featureKey}
+                          onCheckedChange={(v) =>
+                            entAddon &&
+                            toggleEntitlement(entAddon.id, ent.featureKey, v)
+                          }
+                        />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            entAddon &&
+                            deleteEntitlement(entAddon.id, ent.featureKey)
+                          }
+                          disabled={deletingKey === ent.featureKey}
+                          className="shrink-0 p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
+                          title="Remove entitlement"
+                        >
+                          {deletingKey === ent.featureKey ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Trash2 className="w-3.5 h-3.5" />
+                          )}
+                        </button>
                       </div>
-                      <Switch
-                        checked={ent.enabled}
-                        disabled={togglingKey === ent.featureKey}
-                        onCheckedChange={(v) => entAddon && toggleEntitlement(entAddon.id, ent.featureKey, v)}
-                      />
-                      <button
-                        onClick={() => entAddon && deleteEntitlement(entAddon.id, ent.featureKey)}
-                        disabled={deletingKey === ent.featureKey}
-                        className="shrink-0 p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
-                        title="Remove entitlement"
-                      >
-                        {deletingKey === ent.featureKey
-                          ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          : <Trash2 className="w-3.5 h-3.5" />
-                        }
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              );
-            })()}
+                    ))}
+                  </div>
+                );
+              })()
+            )}
 
             <p className="text-xs text-muted-foreground text-center pt-2">
-              {entitlements.length} entitlement{entitlements.length !== 1 ? "s" : ""} on this add-on
+              {entitlements.length} entitlement
+              {entitlements.length !== 1 ? "s" : ""} on this add-on
             </p>
           </div>
         </SheetContent>
@@ -2049,7 +2360,9 @@ function CreditTypesTable({ env, refresh }: { env: EnvMode; refresh: number }) {
                   <TableCell className="text-xs">{ct.unitName}</TableCell>
                   <TableCell>{ct.unitsPerPack}</TableCell>
                   <TableCell>{parseFloat(ct.price).toFixed(2)}</TableCell>
-                  <TableCell className="text-xs">{tokenLabel(ct.acceptedToken)}</TableCell>
+                  <TableCell className="text-xs">
+                    {tokenLabel(ct.acceptedToken)}
+                  </TableCell>
                   <TableCell>
                     <StatusBadge status={ct.status} />
                   </TableCell>
@@ -2074,7 +2387,7 @@ function CreditTypesTable({ env, refresh }: { env: EnvMode; refresh: number }) {
                               key={s}
                               onClick={() => updateStatus(ct.id, s)}
                             >
-                              Mark as {s}
+                              {statusActionLabel(s)}
                             </DropdownMenuItem>
                           ))}
                         </DropdownMenuContent>
@@ -2146,7 +2459,9 @@ function ConfigurationTab() {
   const [loadingConfig, setLoadingConfig] = useState(false);
   const [savingConfig, setSavingConfig] = useState(false);
   const [configError, setConfigError] = useState<string | null>(null);
-  const [configSavedMessage, setConfigSavedMessage] = useState<string | null>(null);
+  const [configSavedMessage, setConfigSavedMessage] = useState<string | null>(
+    null,
+  );
 
   // Configuration settings state
   const [settings, setSettings] = useState<CatalogConfigSettings>(
@@ -2296,48 +2611,6 @@ function ConfigurationTab() {
           {configSavedMessage}
         </div>
       )}
-
-      {/* Active Environment */}
-      <div className="rounded-xl border border-border/50 bg-linear-to-br from-card to-card/50 p-6 shadow-sm space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-lg font-semibold text-foreground tracking-tight">
-              Active Environment
-            </h3>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              Currently deployed network configuration
-            </p>
-          </div>
-          <Badge
-            variant="outline"
-            className={`${envMode === "PRODUCTION" ? "border-orange-500/50 text-orange-500 bg-orange-500/10" : "border-blue-500/50 text-blue-500 bg-blue-500/10"} px-3.5 py-1.5 text-sm font-medium`}
-          >
-            {envMode === "PRODUCTION" ? "🟠 Mainnet" : "🔵 Testnet"}
-          </Badge>
-        </div>
-        <div className="flex items-center gap-4 p-5 rounded-lg bg-secondary/60 border border-border/50">
-          <div
-            className={`w-5 h-5 rounded-full ${CHAIN_INFO[envMode].color} shrink-0 shadow-sm`}
-          />
-          <div className="flex-1">
-            <p className="text-base font-semibold text-foreground">{envMode}</p>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              {CHAIN_INFO[envMode].name} · Chain ID{" "}
-              <span className="font-mono font-medium">
-                {CHAIN_INFO[envMode].chainId}
-              </span>
-            </p>
-          </div>
-        </div>
-        {switchResult && (
-          <div className="flex items-center gap-2.5 p-4 rounded-lg bg-green-500/10 border border-green-500/20">
-            <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-            <span className="text-sm font-medium text-green-600 dark:text-green-400">
-              {switchResult}
-            </span>
-          </div>
-        )}
-      </div>
 
       {/* Initial Plan Configuration */}
       <div className="rounded-xl border border-border/50 bg-card shadow-sm overflow-hidden">
@@ -2881,8 +3154,8 @@ function ConfigurationTab() {
           </p>
         </div>
         <div className="p-6">
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
+          <Sheet open={dialogOpen} onOpenChange={setDialogOpen}>
+            <SheetTrigger asChild>
               <Button
                 size="default"
                 variant="outline"
@@ -2891,18 +3164,16 @@ function ConfigurationTab() {
                 <SlidersHorizontal className="w-4 h-4" />
                 Switch Environment
               </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-lg">
-              <DialogHeader>
-                <DialogTitle className="text-xl">
-                  Switch Environment
-                </DialogTitle>
-                <DialogDescription className="text-sm text-muted-foreground">
+            </SheetTrigger>
+            <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
+              <SheetHeader className="pb-4 border-b border-border">
+                <SheetTitle className="text-xl">Switch Environment</SheetTitle>
+                <SheetDescription className="text-sm text-muted-foreground">
                   Change the active environment mode for your team. This affects
                   which blockchain network your catalog data is published to.
-                </DialogDescription>
-              </DialogHeader>
-              <form onSubmit={handleSwitch} className="space-y-6">
+                </SheetDescription>
+              </SheetHeader>
+              <form onSubmit={handleSwitch} className="space-y-6 py-4">
                 <div className="space-y-3">
                   <Label htmlFor="target-env" className="text-sm font-semibold">
                     Target Environment
@@ -2995,8 +3266,8 @@ function ConfigurationTab() {
                   </Button>
                 </div>
               </form>
-            </DialogContent>
-          </Dialog>
+            </SheetContent>
+          </Sheet>
         </div>
       </div>
     </div>
@@ -3026,7 +3297,6 @@ export function CatalogAddOnsSection() {
         </div>
         <div className="flex items-center gap-2">
           <CreateAddOnDialog env={envMode} onCreated={tr} />
-          <PublishButton env={envMode} onPublished={tr} />
         </div>
       </div>
       <AddOnsTable env={envMode} refresh={refresh} />
@@ -3054,7 +3324,6 @@ export function CatalogCreditsSection() {
         </div>
         <div className="flex items-center gap-2">
           <CreateCreditTypeDialog env={envMode} onCreated={tr} />
-          <PublishButton env={envMode} onPublished={tr} />
         </div>
       </div>
       <CreditTypesTable env={envMode} refresh={refresh} />
@@ -3118,17 +3387,22 @@ function AddEntitlementDialog({
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   function autoKey(name: string) {
-    return name.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_-]/g, "");
+    return name
+      .toLowerCase()
+      .replace(/\s+/g, "_")
+      .replace(/[^a-z0-9_-]/g, "");
   }
 
   function validate() {
     const e: Record<string, string> = {};
     if (!form.featureName.trim()) e.featureName = "Required";
     if (!form.featureKey.trim()) e.featureKey = "Required";
-    else if (!/^[a-z0-9_-]+$/i.test(form.featureKey)) e.featureKey = "Letters, numbers, _ and - only";
+    else if (!/^[a-z0-9_-]+$/i.test(form.featureKey))
+      e.featureKey = "Letters, numbers, _ and - only";
     if (form.type === "NUMERIC") {
       const n = Number(form.value);
-      if (form.value === "" || isNaN(n) || n < 0) e.value = "Must be a non-negative number";
+      if (form.value === "" || isNaN(n) || n < 0)
+        e.value = "Must be a non-negative number";
     }
     return e;
   }
@@ -3136,7 +3410,10 @@ function AddEntitlementDialog({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const errs = validate();
-    if (Object.keys(errs).length) { setErrors(errs); return; }
+    if (Object.keys(errs).length) {
+      setErrors(errs);
+      return;
+    }
     setLoading(true);
     try {
       let val: boolean | number | null = null;
@@ -3155,7 +3432,13 @@ function AddEntitlementDialog({
       });
       if (res.ok) {
         setOpen(false);
-        setForm({ featureName: "", featureKey: "", type: "BOOLEAN", value: "", enabled: true });
+        setForm({
+          featureName: "",
+          featureKey: "",
+          type: "BOOLEAN",
+          value: "",
+          enabled: true,
+        });
         setErrors({});
         onAdded();
         toast.success("Entitlement added");
@@ -3169,20 +3452,26 @@ function AddEntitlementDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button className="bg-accent text-accent-foreground hover:bg-accent/90 gap-2">
-          <Plus className="w-4 h-4" />
-          Add entitlement
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Add Entitlement</DialogTitle>
-          <DialogDescription>Add a feature entitlement to this plan.</DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 py-2">
-          {errors._global && <p className="text-sm text-destructive">{errors._global}</p>}
+    <Sheet open={open} onOpenChange={setOpen}>
+      {externalOpen === undefined && (
+        <SheetTrigger asChild>
+          <Button className="gap-2">
+            <Plus className="w-4 h-4" />
+            Add entitlement
+          </Button>
+        </SheetTrigger>
+      )}
+      <SheetContent className="w-full sm:max-w-md overflow-y-auto">
+        <SheetHeader className="pb-4 border-b border-border">
+          <SheetTitle>Add Entitlement</SheetTitle>
+          <SheetDescription>
+            Add a feature entitlement to this plan.
+          </SheetDescription>
+        </SheetHeader>
+        <form onSubmit={handleSubmit} className="space-y-4 py-4">
+          {errors._global && (
+            <p className="text-sm text-destructive">{errors._global}</p>
+          )}
           <div className="space-y-2">
             <Label htmlFor="entFeatureName">Feature Name *</Label>
             <Input
@@ -3190,23 +3479,33 @@ function AddEntitlementDialog({
               value={form.featureName}
               onChange={(e) => {
                 const name = e.target.value;
-                setForm((f) => ({ ...f, featureName: name, featureKey: f.featureKey || autoKey(name) }));
+                setForm((f) => ({
+                  ...f,
+                  featureName: name,
+                  featureKey: f.featureKey || autoKey(name),
+                }));
               }}
               placeholder="e.g. Advanced Analytics"
               className="bg-secondary border-border"
             />
-            {errors.featureName && <p className="text-xs text-destructive">{errors.featureName}</p>}
+            {errors.featureName && (
+              <p className="text-xs text-destructive">{errors.featureName}</p>
+            )}
           </div>
           <div className="space-y-2">
             <Label htmlFor="entFeatureKey">Feature Key *</Label>
             <Input
               id="entFeatureKey"
               value={form.featureKey}
-              onChange={(e) => setForm((f) => ({ ...f, featureKey: e.target.value }))}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, featureKey: e.target.value }))
+              }
               placeholder="e.g. advanced_analytics"
               className="bg-secondary border-border font-mono text-sm"
             />
-            {errors.featureKey && <p className="text-xs text-destructive">{errors.featureKey}</p>}
+            {errors.featureKey && (
+              <p className="text-xs text-destructive">{errors.featureKey}</p>
+            )}
           </div>
           <div className="space-y-2">
             <Label>Entitlement Type *</Label>
@@ -3216,13 +3515,24 @@ function AddEntitlementDialog({
                   key={t}
                   type="button"
                   onClick={() => setForm((f) => ({ ...f, type: t, value: "" }))}
-                  className={`flex flex-col items-center gap-1.5 py-3 px-2 rounded-lg border text-xs font-medium transition-all ${form.type === t
+                  className={`flex flex-col items-center gap-1.5 py-3 px-2 rounded-lg border text-xs font-medium transition-all ${
+                    form.type === t
                       ? "bg-accent text-accent-foreground border-accent"
                       : "bg-secondary border-border text-muted-foreground hover:text-foreground"
-                    }`}
+                  }`}
                 >
-                  {t === "BOOLEAN" ? <ToggleLeft className="w-4 h-4" /> : t === "NUMERIC" ? <Hash className="w-4 h-4" /> : <Package className="w-4 h-4" />}
-                  {t === "BOOLEAN" ? "On/Off" : t === "NUMERIC" ? "Numeric" : "Unlimited"}
+                  {t === "BOOLEAN" ? (
+                    <ToggleLeft className="w-4 h-4" />
+                  ) : t === "NUMERIC" ? (
+                    <Hash className="w-4 h-4" />
+                  ) : (
+                    <Package className="w-4 h-4" />
+                  )}
+                  {t === "BOOLEAN"
+                    ? "On/Off"
+                    : t === "NUMERIC"
+                      ? "Numeric"
+                      : "Unlimited"}
                 </button>
               ))}
             </div>
@@ -3235,32 +3545,51 @@ function AddEntitlementDialog({
                 type="number"
                 min="0"
                 value={form.value}
-                onChange={(e) => setForm((f) => ({ ...f, value: e.target.value }))}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, value: e.target.value }))
+                }
                 placeholder="e.g. 1000"
                 className="bg-secondary border-border"
               />
-              {errors.value && <p className="text-xs text-destructive">{errors.value}</p>}
+              {errors.value && (
+                <p className="text-xs text-destructive">{errors.value}</p>
+              )}
             </div>
           )}
           <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/50 border border-border">
             <div>
               <p className="text-sm font-medium">Enabled</p>
-              <p className="text-xs text-muted-foreground">Is this entitlement active on the plan?</p>
+              <p className="text-xs text-muted-foreground">
+                Is this entitlement active on the plan?
+              </p>
             </div>
             <Switch
               checked={form.enabled}
               onCheckedChange={(v) => setForm((f) => ({ ...f, enabled: v }))}
             />
           </div>
-          <DialogFooter>
-            <Button variant="outline" type="button" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button type="submit" disabled={loading} className="bg-accent text-accent-foreground hover:bg-accent/90">
-              {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Adding…</> : "Add Entitlement"}
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              type="button"
+              onClick={() => setOpen(false)}
+            >
+              Cancel
             </Button>
-          </DialogFooter>
+            <Button type="submit" disabled={loading}>
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Adding…
+                </>
+              ) : (
+                "Add Entitlement"
+              )}
+            </Button>
+          </div>
         </form>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }
 
@@ -3296,9 +3625,18 @@ function EditPlanDialog({
     const errs: Record<string, string> = {};
     if (!form.name.trim()) errs.name = "Required";
     if (!form.tier.trim()) errs.tier = "Required";
-    if (!form.price || isNaN(Number(form.price)) || Number(form.price) <= 0) errs.price = "Must be positive";
-    if (!form.billingInterval || isNaN(Number(form.billingInterval)) || Number(form.billingInterval) <= 0) errs.billingInterval = "Required";
-    if (Object.keys(errs).length) { setErrors(errs); return; }
+    if (!form.price || isNaN(Number(form.price)) || Number(form.price) <= 0)
+      errs.price = "Must be positive";
+    if (
+      !form.billingInterval ||
+      isNaN(Number(form.billingInterval)) ||
+      Number(form.billingInterval) <= 0
+    )
+      errs.billingInterval = "Required";
+    if (Object.keys(errs).length) {
+      setErrors(errs);
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch("/api/catalog/plans", {
@@ -3328,64 +3666,145 @@ function EditPlanDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" className="gap-2">
-          <Pencil className="w-4 h-4" />
-          Edit plan
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Edit Plan</DialogTitle>
-          <DialogDescription>Update plan settings. Changes are saved to the catalog.</DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 py-2">
-          {errors._global && <p className="text-sm text-destructive">{errors._global}</p>}
+    <Sheet open={open} onOpenChange={setOpen}>
+      {externalOpen === undefined && (
+        <SheetTrigger asChild>
+          <Button variant="outline" className="gap-2">
+            <Pencil className="w-4 h-4" />
+            Edit plan
+          </Button>
+        </SheetTrigger>
+      )}
+      <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
+        <SheetHeader className="pb-4 border-b border-border">
+          <SheetTitle>Edit Plan</SheetTitle>
+          <SheetDescription>
+            Update plan settings. Changes are saved to the catalog.
+          </SheetDescription>
+        </SheetHeader>
+        <form onSubmit={handleSubmit} className="space-y-4 py-4">
+          {errors._global && (
+            <p className="text-sm text-destructive">{errors._global}</p>
+          )}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="editPlanName">Name *</Label>
-              <Input id="editPlanName" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} className="bg-secondary border-border" />
-              {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
+              <Input
+                id="editPlanName"
+                value={form.name}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, name: e.target.value }))
+                }
+                className="bg-secondary border-border"
+              />
+              {errors.name && (
+                <p className="text-xs text-destructive">{errors.name}</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="editPlanTier">Tier *</Label>
-              <Input id="editPlanTier" value={form.tier} onChange={(e) => setForm((f) => ({ ...f, tier: e.target.value }))} className="bg-secondary border-border" />
-              {errors.tier && <p className="text-xs text-destructive">{errors.tier}</p>}
+              <Input
+                id="editPlanTier"
+                value={form.tier}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, tier: e.target.value }))
+                }
+                className="bg-secondary border-border"
+              />
+              {errors.tier && (
+                <p className="text-xs text-destructive">{errors.tier}</p>
+              )}
             </div>
           </div>
           <div className="space-y-2">
             <Label htmlFor="editPlanDesc">Description</Label>
-            <Input id="editPlanDesc" value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} placeholder="Optional" className="bg-secondary border-border" />
+            <Input
+              id="editPlanDesc"
+              value={form.description}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, description: e.target.value }))
+              }
+              placeholder="Optional"
+              className="bg-secondary border-border"
+            />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="editPlanPrice">Price (USDC) *</Label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
-                <Input id="editPlanPrice" type="number" min="0" step="0.01" value={form.price} onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))} className="bg-secondary border-border pl-6" />
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                  $
+                </span>
+                <Input
+                  id="editPlanPrice"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={form.price}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, price: e.target.value }))
+                  }
+                  className="bg-secondary border-border pl-6"
+                />
               </div>
-              {errors.price && <p className="text-xs text-destructive">{errors.price}</p>}
+              {errors.price && (
+                <p className="text-xs text-destructive">{errors.price}</p>
+              )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="editPlanInterval">Billing Interval (days) *</Label>
-              <Input id="editPlanInterval" type="number" min="1" value={form.billingInterval} onChange={(e) => setForm((f) => ({ ...f, billingInterval: e.target.value }))} className="bg-secondary border-border" />
-              {errors.billingInterval && <p className="text-xs text-destructive">{errors.billingInterval}</p>}
+              <Label htmlFor="editPlanInterval">
+                Billing Interval (days) *
+              </Label>
+              <Input
+                id="editPlanInterval"
+                type="number"
+                min="1"
+                value={form.billingInterval}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, billingInterval: e.target.value }))
+                }
+                className="bg-secondary border-border"
+              />
+              {errors.billingInterval && (
+                <p className="text-xs text-destructive">
+                  {errors.billingInterval}
+                </p>
+              )}
             </div>
           </div>
           <div className="space-y-2">
             <Label htmlFor="editPlanToken">Accepted Token *</Label>
-            <Input id="editPlanToken" value={form.acceptedToken} onChange={(e) => setForm((f) => ({ ...f, acceptedToken: e.target.value }))} className="bg-secondary border-border" />
+            <Input
+              id="editPlanToken"
+              value={form.acceptedToken}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, acceptedToken: e.target.value }))
+              }
+              className="bg-secondary border-border"
+            />
           </div>
-          <DialogFooter>
-            <Button variant="outline" type="button" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button type="submit" disabled={loading} className="bg-accent text-accent-foreground hover:bg-accent/90">
-              {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving…</> : "Save Changes"}
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              type="button"
+              onClick={() => setOpen(false)}
+            >
+              Cancel
             </Button>
-          </DialogFooter>
+            <Button type="submit" disabled={loading}>
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Saving…
+                </>
+              ) : (
+                "Save Changes"
+              )}
+            </Button>
+          </div>
         </form>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }
 
@@ -3400,7 +3819,9 @@ function PlanDetailView({
   onBack: () => void;
   onUpdated: () => void;
 }) {
-  const [detailTab, setDetailTab] = useState<"entitlements" | "companies" | "billing">("entitlements");
+  const [detailTab, setDetailTab] = useState<
+    "entitlements" | "companies" | "billing"
+  >("entitlements");
   const [entitlements, setEntitlements] = useState<Entitlement[]>([]);
   const [entLoading, setEntLoading] = useState(false);
   const [entRefresh, setEntRefresh] = useState(0);
@@ -3421,15 +3842,26 @@ function PlanDetailView({
     }
   }, [plan.id]);
 
-  useEffect(() => { loadEntitlements(); }, [loadEntitlements, entRefresh]);
+  useEffect(() => {
+    loadEntitlements();
+  }, [loadEntitlements, entRefresh]);
 
   async function deleteEntitlement(featureKey: string) {
     setDeletingKey(featureKey);
     try {
-      const res = await fetch(`/api/catalog/plans/${plan.id}/entitlements?featureKey=${featureKey}`, { method: "DELETE" });
-      if (res.ok) { setEntRefresh((n) => n + 1); toast.success("Entitlement removed"); }
-      else { toast.error("Failed to remove entitlement"); }
-    } finally { setDeletingKey(null); }
+      const res = await fetch(
+        `/api/catalog/plans/${plan.id}/entitlements?featureKey=${featureKey}`,
+        { method: "DELETE" },
+      );
+      if (res.ok) {
+        setEntRefresh((n) => n + 1);
+        toast.success("Entitlement removed");
+      } else {
+        toast.error("Failed to remove entitlement");
+      }
+    } finally {
+      setDeletingKey(null);
+    }
   }
 
   async function toggleEntitlement(featureKey: string, enabled: boolean) {
@@ -3441,7 +3873,9 @@ function PlanDetailView({
         body: JSON.stringify({ featureKey, enabled }),
       });
       setEntRefresh((n) => n + 1);
-    } finally { setToggling(null); }
+    } finally {
+      setToggling(null);
+    }
   }
 
   function copyId() {
@@ -3455,7 +3889,10 @@ function PlanDetailView({
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
       {/* Breadcrumb */}
-      <button onClick={onBack} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
+      <button
+        onClick={onBack}
+        className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+      >
         <ArrowLeft className="w-4 h-4" />
         Plans
       </button>
@@ -3474,16 +3911,26 @@ function PlanDetailView({
                 className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground font-mono transition-colors"
               >
                 <span>{plan.id.slice(0, 20)}…</span>
-                {copiedId ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+                {copiedId ? (
+                  <Check className="w-3 h-3 text-green-500" />
+                ) : (
+                  <Copy className="w-3 h-3" />
+                )}
               </button>
             </div>
-            {plan.description && <p className="text-sm text-muted-foreground mt-0.5">{plan.description}</p>}
+            {plan.description && (
+              <p className="text-sm text-muted-foreground mt-0.5">
+                {plan.description}
+              </p>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-3">
           <div className="text-center">
             <p className="text-xs text-muted-foreground">Type</p>
-            <p className="text-sm font-medium flex items-center gap-1"><Package className="w-3.5 h-3.5" /> Plan</p>
+            <p className="text-sm font-medium flex items-center gap-1">
+              <Package className="w-3.5 h-3.5" /> Plan
+            </p>
           </div>
           <div className="text-center">
             <p className="text-xs text-muted-foreground">Status</p>
@@ -3492,23 +3939,73 @@ function PlanDetailView({
           <EditPlanDialog plan={plan} onSaved={onUpdated} />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="icon"><MoreHorizontal className="w-4 h-4" /></Button>
+              <Button variant="outline" size="icon">
+                <MoreHorizontal className="w-4 h-4" />
+              </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={copyId}>Copy Plan ID</DropdownMenuItem>
               {plan.status === "DRAFT" && (
-                <DropdownMenuItem onClick={async () => {
-                  await fetch("/api/catalog/plans", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: plan.id, status: "PUBLISHED" }) });
-                  onUpdated();
-                  toast.success("Plan published");
-                }}>Mark as Published</DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={async () => {
+                    await fetch("/api/catalog/plans", {
+                      method: "PUT",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        id: plan.id,
+                        status: "PUBLISHED",
+                      }),
+                    });
+                    onUpdated();
+                    toast.success("Plan published");
+                  }}
+                >
+                  Publish
+                </DropdownMenuItem>
               )}
               {plan.status !== "ARCHIVED" && (
-                <DropdownMenuItem onClick={async () => {
-                  await fetch("/api/catalog/plans", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: plan.id, status: "ARCHIVED" }) });
-                  onUpdated();
-                  toast.success("Plan archived");
-                }} className="text-destructive focus:text-destructive">Archive Plan</DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={async () => {
+                    await fetch("/api/catalog/plans", {
+                      method: "PUT",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ id: plan.id, status: "ARCHIVED" }),
+                    });
+                    onUpdated();
+                    toast.success("Plan archived");
+                  }}
+                  className="text-destructive focus:text-destructive"
+                >
+                  Archive Plan
+                </DropdownMenuItem>
+              )}
+              {!plan.onChainPlanId && plan.status !== "PUBLISHED" && (
+                <DropdownMenuItem
+                  onClick={async () => {
+                    const confirmed = window.confirm(
+                      `Delete plan "${plan.name}"? This cannot be undone.`,
+                    );
+                    if (!confirmed) return;
+                    const res = await fetch("/api/catalog/plans", {
+                      method: "DELETE",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ id: plan.id }),
+                    });
+                    const data = await res
+                      .json()
+                      .catch(() => ({}) as { error?: string });
+                    if (!res.ok) {
+                      toast.error(data.error || "Failed to delete plan");
+                      return;
+                    }
+                    onBack();
+                    onUpdated();
+                    toast.success("Plan deleted");
+                  }}
+                  className="text-destructive focus:text-destructive"
+                >
+                  Delete Plan
+                </DropdownMenuItem>
               )}
             </DropdownMenuContent>
           </DropdownMenu>
@@ -3522,14 +4019,17 @@ function PlanDetailView({
             <button
               key={tab}
               onClick={() => setDetailTab(tab)}
-              className={`px-4 py-3 text-sm font-medium capitalize border-b-2 transition-all -mb-px ${detailTab === tab
+              className={`px-4 py-3 text-sm font-medium capitalize border-b-2 transition-all -mb-px ${
+                detailTab === tab
                   ? "border-accent text-foreground"
                   : "border-transparent text-muted-foreground hover:text-foreground"
-                }`}
+              }`}
             >
               {tab}
               {tab === "entitlements" && entitlements.length > 0 && (
-                <span className="ml-2 text-xs bg-secondary rounded-full px-1.5 py-0.5">{entitlements.length}</span>
+                <span className="ml-2 text-xs bg-secondary rounded-full px-1.5 py-0.5">
+                  {entitlements.length}
+                </span>
               )}
             </button>
           ))}
@@ -3541,7 +4041,8 @@ function PlanDetailView({
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-base font-semibold">
-              {entitlements.length} Entitlement{entitlements.length !== 1 ? "s" : ""}
+              {entitlements.length} Entitlement
+              {entitlements.length !== 1 ? "s" : ""}
             </h3>
             <div className="flex items-center gap-2">
               <div className="relative">
@@ -3550,7 +4051,19 @@ function PlanDetailView({
                   placeholder="Find entitlement"
                   className="h-9 w-52 pl-9 pr-3 rounded-lg bg-secondary border border-border text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/20"
                 />
-                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                <svg
+                  className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
               </div>
             </div>
           </div>
@@ -3566,55 +4079,122 @@ function PlanDetailView({
                   <table className="w-full">
                     <thead>
                       <tr className="border-b border-border bg-secondary/50">
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Feature</th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Entitlement</th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Type</th>
+                        <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                          Feature
+                        </th>
+                        <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                          Entitlement
+                        </th>
+                        <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                          Type
+                        </th>
                         <th className="w-12" />
                       </tr>
                     </thead>
                     <tbody>
                       {entitlements.map((ent) => (
-                        <tr key={ent.featureKey} className="border-b border-border last:border-0 hover:bg-secondary/20 transition-colors">
+                        <tr
+                          key={ent.featureKey}
+                          className="border-b border-border last:border-0 hover:bg-secondary/20 transition-colors"
+                        >
                           <td className="py-3 px-4">
                             <div className="flex items-center gap-3">
                               <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center">
-                                {ent.type === "BOOLEAN" ? <ToggleLeft className="w-4 h-4 text-muted-foreground" /> : ent.type === "NUMERIC" ? <Hash className="w-4 h-4 text-muted-foreground" /> : <Package className="w-4 h-4 text-muted-foreground" />}
+                                {ent.type === "BOOLEAN" ? (
+                                  <ToggleLeft className="w-4 h-4 text-muted-foreground" />
+                                ) : ent.type === "NUMERIC" ? (
+                                  <Hash className="w-4 h-4 text-muted-foreground" />
+                                ) : (
+                                  <Package className="w-4 h-4 text-muted-foreground" />
+                                )}
                               </div>
                               <div>
-                                <p className="text-sm font-medium">{ent.featureName}</p>
-                                <code className="text-xs text-muted-foreground font-mono">{ent.featureKey}</code>
+                                <p className="text-sm font-medium">
+                                  {ent.featureName}
+                                </p>
+                                <code className="text-xs text-muted-foreground font-mono">
+                                  {ent.featureKey}
+                                </code>
                               </div>
                             </div>
                           </td>
                           <td className="py-3 px-4">
                             <div className="flex items-center gap-2">
                               <button
-                                onClick={() => !toggling && toggleEntitlement(ent.featureKey, !ent.enabled)}
-                                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none ${ent.enabled ? "bg-accent" : "bg-input"}`}
+                                type="button"
+                                onClick={() =>
+                                  !toggling &&
+                                  toggleEntitlement(
+                                    ent.featureKey,
+                                    !ent.enabled,
+                                  )
+                                }
+                                disabled={toggling === ent.featureKey}
+                                className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none ${ent.enabled ? "bg-accent" : "bg-input"} ${toggling === ent.featureKey ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}
                               >
-                                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-lg transition-transform ${ent.enabled ? "translate-x-4" : "translate-x-0"}`} />
+                                <span
+                                  className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-lg transition-transform ${ent.enabled ? "translate-x-4" : "translate-x-0"}`}
+                                />
                               </button>
-                              <span className="text-sm">{ent.type === "NUMERIC" ? ent.value : ent.enabled ? "On" : "Off"}</span>
+                              <span className="text-sm text-foreground">
+                                {ent.type === "NUMERIC"
+                                  ? ent.value
+                                  : ent.enabled
+                                    ? "On"
+                                    : "Off"}
+                              </span>
                             </div>
                           </td>
                           <td className="py-3 px-4">
-                            <Badge variant="outline" className="text-xs capitalize">
-                              {ent.type === "BOOLEAN" ? "Boolean" : ent.type === "NUMERIC" ? "Numeric" : "Unlimited"}
+                            <Badge
+                              variant="outline"
+                              className="text-xs capitalize"
+                            >
+                              {ent.type === "BOOLEAN"
+                                ? "Boolean"
+                                : ent.type === "NUMERIC"
+                                  ? "Numeric"
+                                  : "Unlimited"}
                             </Badge>
                           </td>
-                          <td className="py-3 px-4">
+                          <td className="py-3 px-4 text-right">
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8">
-                                  {deletingKey === ent.featureKey ? <Loader2 className="w-4 h-4 animate-spin" /> : <MoreHorizontal className="w-4 h-4" />}
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                >
+                                  <MoreHorizontal className="w-4 h-4" />
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => toggleEntitlement(ent.featureKey, !ent.enabled)}>
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    toggleEntitlement(
+                                      ent.featureKey,
+                                      !ent.enabled,
+                                    )
+                                  }
+                                  disabled={toggling === ent.featureKey}
+                                >
                                   {ent.enabled ? "Disable" : "Enable"}
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => deleteEntitlement(ent.featureKey)} className="text-destructive focus:text-destructive">
-                                  Remove
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    deleteEntitlement(ent.featureKey)
+                                  }
+                                  disabled={deletingKey === ent.featureKey}
+                                  className="text-destructive focus:text-destructive"
+                                >
+                                  {deletingKey === ent.featureKey ? (
+                                    <>
+                                      <Loader2 className="mr-2 w-4 h-4 animate-spin" />
+                                      Removing...
+                                    </>
+                                  ) : (
+                                    "Remove"
+                                  )}
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
@@ -3627,7 +4207,10 @@ function PlanDetailView({
               )}
 
               <div className="flex items-center gap-3">
-                <AddEntitlementDialog planId={plan.id} onAdded={() => setEntRefresh((n) => n + 1)} />
+                <AddEntitlementDialog
+                  planId={plan.id}
+                  onAdded={() => setEntRefresh((n) => n + 1)}
+                />
               </div>
             </>
           )}
@@ -3639,8 +4222,12 @@ function PlanDetailView({
           <div className="w-14 h-14 rounded-xl bg-secondary flex items-center justify-center mb-4">
             <Package className="w-7 h-7 text-muted-foreground" />
           </div>
-          <p className="text-sm font-medium text-foreground mb-1">No companies subscribed</p>
-          <p className="text-xs text-muted-foreground max-w-xs">Companies that subscribe to this plan will appear here.</p>
+          <p className="text-sm font-medium text-foreground mb-1">
+            No companies subscribed
+          </p>
+          <p className="text-xs text-muted-foreground max-w-xs">
+            Companies that subscribe to this plan will appear here.
+          </p>
         </div>
       )}
 
@@ -3650,15 +4237,25 @@ function PlanDetailView({
           <div className="grid grid-cols-2 gap-6">
             <div>
               <p className="text-xs text-muted-foreground mb-1">Price</p>
-              <p className="text-lg font-semibold">${parseFloat(plan.price).toFixed(2)} USDC</p>
+              <p className="text-lg font-semibold">
+                ${parseFloat(plan.price).toFixed(2)} USDC
+              </p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground mb-1">Billing Interval</p>
-              <p className="text-lg font-semibold">{plan.billingInterval} days</p>
+              <p className="text-xs text-muted-foreground mb-1">
+                Billing Interval
+              </p>
+              <p className="text-lg font-semibold">
+                {plan.billingInterval} days
+              </p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground mb-1">Accepted Token</p>
-              <p className="text-sm font-medium font-mono">{tokenLabel(plan.acceptedToken)}</p>
+              <p className="text-xs text-muted-foreground mb-1">
+                Accepted Token
+              </p>
+              <p className="text-sm font-medium font-mono">
+                {tokenLabel(plan.acceptedToken)}
+              </p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground mb-1">Environment</p>
@@ -3692,33 +4289,61 @@ export function CatalogSection() {
     setPlansLoading(true);
     try {
       const res = await fetch(`/api/catalog/plans?environmentMode=${envMode}`);
-      if (res.ok) { const d = await res.json(); setPlans(d.plans ?? []); }
-    } finally { setPlansLoading(false); }
+      if (res.ok) {
+        const d = await res.json();
+        setPlans(d.plans ?? []);
+      }
+    } finally {
+      setPlansLoading(false);
+    }
   }, [envMode]);
 
   const loadAddOns = useCallback(async () => {
     setAddOnsLoading(true);
     try {
-      const res = await fetch(`/api/catalog/add-ons?environmentMode=${envMode}`);
-      if (res.ok) { const d = await res.json(); setAddOns(d.addOns ?? []); }
-    } finally { setAddOnsLoading(false); }
+      const res = await fetch(
+        `/api/catalog/add-ons?environmentMode=${envMode}`,
+      );
+      if (res.ok) {
+        const d = await res.json();
+        setAddOns(d.addOns ?? []);
+      }
+    } finally {
+      setAddOnsLoading(false);
+    }
   }, [envMode]);
 
-  useEffect(() => { loadPlans(); }, [loadPlans, refresh]);
-  useEffect(() => { loadAddOns(); }, [loadAddOns, refresh]);
+  useEffect(() => {
+    loadPlans();
+  }, [loadPlans, refresh]);
+  useEffect(() => {
+    loadAddOns();
+  }, [loadAddOns, refresh]);
 
-  function tr() { setRefresh((n) => n + 1); }
+  function tr() {
+    setRefresh((n) => n + 1);
+  }
 
-  const filteredPlans = plans.filter((p) => p.name.toLowerCase().includes(planSearch.toLowerCase()));
-  const filteredAddOns = addOns.filter((a) => a.name.toLowerCase().includes(addOnSearch.toLowerCase()));
+  const filteredPlans = plans.filter((p) =>
+    p.name.toLowerCase().includes(planSearch.toLowerCase()),
+  );
+  const filteredAddOns = addOns.filter((a) =>
+    a.name.toLowerCase().includes(addOnSearch.toLowerCase()),
+  );
 
   async function archiveAddOn(id: string) {
     setUpdatingAddOnId(id);
     try {
-      await fetch("/api/catalog/add-ons", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, status: "ARCHIVED" }) });
+      await fetch("/api/catalog/add-ons", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, status: "ARCHIVED" }),
+      });
       tr();
       toast.success("Add-on archived");
-    } finally { setUpdatingAddOnId(null); }
+    } finally {
+      setUpdatingAddOnId(null);
+    }
   }
 
   // Plan detail view
@@ -3727,14 +4352,17 @@ export function CatalogSection() {
       <PlanDetailView
         plan={selectedPlan}
         onBack={() => setSelectedPlan(null)}
-        onUpdated={() => { loadPlans(); setSelectedPlan(null); }}
+        onUpdated={() => {
+          loadPlans();
+          setSelectedPlan(null);
+        }}
       />
     );
   }
 
   const TABS: { key: CatalogTab; label: string; count?: number }[] = [
     { key: "plans", label: "Plan", count: plans.length },
-    { key: "addons", label: "Add On", count: addOns.length },
+    { key: "addons", label: "Add-on", count: addOns.length },
     { key: "credits", label: "Credit Types" },
     { key: "config", label: "Configuration" },
   ];
@@ -3748,12 +4376,15 @@ export function CatalogSection() {
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`px-4 py-3 text-sm font-medium border-b-2 transition-all -mb-px flex items-center gap-1.5 ${activeTab === tab.key
+              className={`px-4 py-3 text-sm font-medium border-b-2 transition-all -mb-px flex items-center gap-1.5 ${
+                activeTab === tab.key
                   ? "border-accent text-foreground"
                   : "border-transparent text-muted-foreground hover:text-foreground"
-                }`}
+              }`}
             >
-              {tab.count !== undefined ? `${tab.count} ${tab.label}${tab.count !== 1 ? "s" : ""}` : tab.label}
+              {tab.count !== undefined
+                ? `${tab.count} ${tab.label}${tab.count !== 1 ? "s" : ""}`
+                : tab.label}
             </button>
           ))}
         </div>
@@ -3765,12 +4396,24 @@ export function CatalogSection() {
               <div className="relative">
                 <input
                   type="text"
-                  placeholder="Find Plan"
+                  placeholder="Search plans"
                   value={planSearch}
                   onChange={(e) => setPlanSearch(e.target.value)}
                   className="h-9 w-44 pl-9 pr-3 rounded-lg bg-secondary border border-border text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/20"
                 />
-                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                <svg
+                  className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
               </div>
               <CreatePlanDialog env={envMode} onCreated={tr} />
             </>
@@ -3780,12 +4423,24 @@ export function CatalogSection() {
               <div className="relative">
                 <input
                   type="text"
-                  placeholder="Find Add On"
+                  placeholder="Search add-ons"
                   value={addOnSearch}
                   onChange={(e) => setAddOnSearch(e.target.value)}
                   className="h-9 w-44 pl-9 pr-3 rounded-lg bg-secondary border border-border text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/20"
                 />
-                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                <svg
+                  className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
               </div>
               <CreateAddOnDialog env={envMode} onCreated={tr} />
             </>
@@ -3793,10 +4448,7 @@ export function CatalogSection() {
           {activeTab === "credits" && (
             <CreateCreditTypeDialog env={envMode} onCreated={tr} />
           )}
-          {activeTab === "config" && (
-            <div />
-          )}
-          <PublishButton env={envMode} onPublished={tr} />
+          {activeTab === "config" && <div />}
         </div>
       </div>
 
@@ -3807,94 +4459,205 @@ export function CatalogSection() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-border bg-secondary/50">
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Plan</th>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Features</th>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Prices</th>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    Plan
+                  </th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    Features
+                  </th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    Prices
+                  </th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    Status
+                  </th>
                   <th className="w-12" />
                 </tr>
               </thead>
               <tbody>
-                {plansLoading && Array.from({ length: 3 }).map((_, i) => (
-                  <tr key={i} className="border-b border-border">
-                    {Array.from({ length: 4 }).map((__, j) => (
-                      <td key={j} className="py-4 px-4"><div className="h-4 bg-secondary/80 rounded animate-pulse w-24" /></td>
-                    ))}
-                    <td className="py-4 px-4" />
-                  </tr>
-                ))}
-                {!plansLoading && filteredPlans.length === 0 && (
-                  <tr><td colSpan={5} className="py-16 text-center text-sm text-muted-foreground">No plans found. Create your first plan above.</td></tr>
-                )}
-                {!plansLoading && filteredPlans.map((plan) => {
-                  const entitlements = (() => {
-                    try {
-                      const meta = plan as unknown as { metadata?: { entitlements?: unknown[] } };
-                      return Array.isArray(meta.metadata?.entitlements) ? meta.metadata.entitlements.length : 0;
-                    } catch { return 0; }
-                  })();
-                  return (
-                    <tr
-                      key={plan.id}
-                      onClick={() => setSelectedPlan(plan)}
-                      className="border-b border-border last:border-0 hover:bg-secondary/20 transition-colors cursor-pointer"
-                    >
-                      <td className="py-4 px-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent/30 to-accent/10 border border-border flex items-center justify-center text-sm font-bold text-accent">
-                            {plan.name.charAt(0).toUpperCase()}
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-foreground">{plan.name}</p>
-                            <p className="text-xs text-muted-foreground font-mono">{plan.id.slice(0, 16)}…</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="py-4 px-4">
-                        <span className="text-sm text-muted-foreground">
-                          {entitlements > 0 ? `${entitlements} entitlement${entitlements !== 1 ? "s" : ""}` : "—"}
-                        </span>
-                      </td>
-                      <td className="py-4 px-4">
-                        <span className="text-sm">${parseFloat(plan.price).toFixed(2)} / {plan.billingInterval}d</span>
-                      </td>
-                      <td className="py-4 px-4">
-                        <StatusBadge status={plan.status} />
-                      </td>
-                      <td className="py-4 px-4" onClick={(e) => e.stopPropagation()}>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <MoreHorizontal className="w-4 h-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => setSelectedPlan(plan)}>
-                              <ChevronRight className="w-3.5 h-3.5 mr-2" />View Details
-                            </DropdownMenuItem>
-                            {plan.status === "DRAFT" && (
-                              <DropdownMenuItem onClick={async () => {
-                                await fetch("/api/catalog/plans", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: plan.id, status: "PUBLISHED" }) });
-                                tr(); toast.success("Plan published");
-                              }}>Mark as Published</DropdownMenuItem>
-                            )}
-                            {plan.status !== "ARCHIVED" && (
-                              <DropdownMenuItem onClick={async () => {
-                                await fetch("/api/catalog/plans", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: plan.id, status: "ARCHIVED" }) });
-                                tr(); toast.success("Plan archived");
-                              }} className="text-destructive focus:text-destructive">Archive</DropdownMenuItem>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </td>
+                {plansLoading &&
+                  Array.from({ length: 3 }).map((_, i) => (
+                    <tr key={i} className="border-b border-border">
+                      {Array.from({ length: 4 }).map((__, j) => (
+                        <td key={j} className="py-4 px-4">
+                          <div className="h-4 bg-secondary/80 rounded animate-pulse w-24" />
+                        </td>
+                      ))}
+                      <td className="py-4 px-4" />
                     </tr>
-                  );
-                })}
+                  ))}
+                {!plansLoading && filteredPlans.length === 0 && (
+                  <tr>
+                    <td
+                      colSpan={5}
+                      className="py-16 text-center text-sm text-muted-foreground"
+                    >
+                      No plans found. Create your first plan above.
+                    </td>
+                  </tr>
+                )}
+                {!plansLoading &&
+                  filteredPlans.map((plan) => {
+                    const entitlements = (() => {
+                      try {
+                        const meta = plan as unknown as {
+                          metadata?: { entitlements?: unknown[] };
+                        };
+                        return Array.isArray(meta.metadata?.entitlements)
+                          ? meta.metadata.entitlements.length
+                          : 0;
+                      } catch {
+                        return 0;
+                      }
+                    })();
+                    return (
+                      <tr
+                        key={plan.id}
+                        onClick={() => setSelectedPlan(plan)}
+                        className="border-b border-border last:border-0 hover:bg-secondary/20 transition-colors cursor-pointer"
+                      >
+                        <td className="py-4 px-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent/30 to-accent/10 border border-border flex items-center justify-center text-sm font-bold text-accent"></div>
+                            <div>
+                              <p className="text-sm font-medium text-foreground">
+                                {plan.name}
+                              </p>
+                              <p className="text-xs text-muted-foreground font-mono">
+                                {plan.id.slice(0, 16)}…
+                              </p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-4 px-4">
+                          <span className="text-sm text-muted-foreground">
+                            {entitlements > 0
+                              ? `${entitlements} entitlement${entitlements !== 1 ? "s" : ""}`
+                              : "—"}
+                          </span>
+                        </td>
+                        <td className="py-4 px-4">
+                          <span className="text-sm">
+                            ${parseFloat(plan.price).toFixed(2)} /{" "}
+                            {plan.billingInterval}d
+                          </span>
+                        </td>
+                        <td className="py-4 px-4">
+                          <StatusBadge status={plan.status} />
+                        </td>
+                        <td
+                          className="py-4 px-4"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                              >
+                                <MoreHorizontal className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() => setSelectedPlan(plan)}
+                              >
+                                <ChevronRight className="w-3.5 h-3.5 mr-2" />
+                                View Details
+                              </DropdownMenuItem>
+                              {plan.status === "DRAFT" && (
+                                <DropdownMenuItem
+                                  onClick={async () => {
+                                    await fetch("/api/catalog/plans", {
+                                      method: "PUT",
+                                      headers: {
+                                        "Content-Type": "application/json",
+                                      },
+                                      body: JSON.stringify({
+                                        id: plan.id,
+                                        status: "PUBLISHED",
+                                      }),
+                                    });
+                                    tr();
+                                    toast.success("Plan published");
+                                  }}
+                                >
+                                  Publish
+                                </DropdownMenuItem>
+                              )}
+                              {plan.status !== "ARCHIVED" && (
+                                <DropdownMenuItem
+                                  onClick={async () => {
+                                    await fetch("/api/catalog/plans", {
+                                      method: "PUT",
+                                      headers: {
+                                        "Content-Type": "application/json",
+                                      },
+                                      body: JSON.stringify({
+                                        id: plan.id,
+                                        status: "ARCHIVED",
+                                      }),
+                                    });
+                                    tr();
+                                    toast.success("Plan archived");
+                                  }}
+                                  className="text-destructive focus:text-destructive"
+                                >
+                                  Archive
+                                </DropdownMenuItem>
+                              )}
+                              {!plan.onChainPlanId &&
+                                plan.status !== "PUBLISHED" && (
+                                  <DropdownMenuItem
+                                    onClick={async () => {
+                                      const confirmed = window.confirm(
+                                        `Delete plan "${plan.name}"? This cannot be undone.`,
+                                      );
+                                      if (!confirmed) return;
+                                      const res = await fetch(
+                                        "/api/catalog/plans",
+                                        {
+                                          method: "DELETE",
+                                          headers: {
+                                            "Content-Type": "application/json",
+                                          },
+                                          body: JSON.stringify({ id: plan.id }),
+                                        },
+                                      );
+                                      const data = await res
+                                        .json()
+                                        .catch(
+                                          () => ({}) as { error?: string },
+                                        );
+                                      if (!res.ok) {
+                                        toast.error(
+                                          data.error || "Failed to delete plan",
+                                        );
+                                        return;
+                                      }
+                                      tr();
+                                      toast.success("Plan deleted");
+                                    }}
+                                    className="text-destructive focus:text-destructive"
+                                  >
+                                    Delete
+                                  </DropdownMenuItem>
+                                )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </td>
+                      </tr>
+                    );
+                  })}
               </tbody>
             </table>
           </div>
           <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-secondary/20">
-            <span className="text-sm text-muted-foreground">Showing {filteredPlans.length} plan{filteredPlans.length !== 1 ? "s" : ""}</span>
+            <span className="text-sm text-muted-foreground">
+              Showing {filteredPlans.length} plan
+              {filteredPlans.length !== 1 ? "s" : ""}
+            </span>
           </div>
         </div>
       )}
@@ -3906,75 +4669,138 @@ export function CatalogSection() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-border bg-secondary/50">
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Add On</th>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Code</th>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Prices</th>
-                  <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    Add On
+                  </th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    Code
+                  </th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    Prices
+                  </th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    Status
+                  </th>
                   <th className="w-12" />
                 </tr>
               </thead>
               <tbody>
-                {addOnsLoading && Array.from({ length: 3 }).map((_, i) => (
-                  <tr key={i} className="border-b border-border">
-                    {Array.from({ length: 4 }).map((__, j) => (
-                      <td key={j} className="py-4 px-4"><div className="h-4 bg-secondary/80 rounded animate-pulse w-24" /></td>
-                    ))}
-                    <td className="py-4 px-4" />
-                  </tr>
-                ))}
+                {addOnsLoading &&
+                  Array.from({ length: 3 }).map((_, i) => (
+                    <tr key={i} className="border-b border-border">
+                      {Array.from({ length: 4 }).map((__, j) => (
+                        <td key={j} className="py-4 px-4">
+                          <div className="h-4 bg-secondary/80 rounded animate-pulse w-24" />
+                        </td>
+                      ))}
+                      <td className="py-4 px-4" />
+                    </tr>
+                  ))}
                 {!addOnsLoading && filteredAddOns.length === 0 && (
-                  <tr><td colSpan={5} className="py-16 text-center text-sm text-muted-foreground">No add-ons found. Create your first add-on above.</td></tr>
-                )}
-                {!addOnsLoading && filteredAddOns.map((addon) => (
-                  <tr key={addon.id} className="border-b border-border last:border-0 hover:bg-secondary/20 transition-colors">
-                    <td className="py-4 px-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500/20 to-blue-500/10 border border-border flex items-center justify-center">
-                          <Package className="w-4 h-4 text-muted-foreground" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-foreground">{addon.name}</p>
-                          <p className="text-xs text-muted-foreground">{addon.description ?? ""}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-4 px-4">
-                      <code className="text-xs font-mono text-muted-foreground">{addon.code}</code>
-                    </td>
-                    <td className="py-4 px-4">
-                      <span className="text-sm">${parseFloat(addon.price).toFixed(2)} · {addon.billingType === "ONE_TIME" ? "One-time" : "Recurring"}</span>
-                    </td>
-                    <td className="py-4 px-4">
-                      <StatusBadge status={addon.status} />
-                    </td>
-                    <td className="py-4 px-4">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8" disabled={updatingAddOnId === addon.id}>
-                            {updatingAddOnId === addon.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <MoreHorizontal className="w-4 h-4" />}
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          {addon.status === "DRAFT" && (
-                            <DropdownMenuItem onClick={async () => {
-                              setUpdatingAddOnId(addon.id);
-                              await fetch("/api/catalog/add-ons", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: addon.id, status: "PUBLISHED" }) });
-                              setUpdatingAddOnId(null); tr(); toast.success("Add-on published");
-                            }}>Publish</DropdownMenuItem>
-                          )}
-                          {addon.status !== "ARCHIVED" && (
-                            <DropdownMenuItem onClick={() => archiveAddOn(addon.id)} className="text-destructive focus:text-destructive">Archive</DropdownMenuItem>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                  <tr>
+                    <td
+                      colSpan={5}
+                      className="py-16 text-center text-sm text-muted-foreground"
+                    >
+                      No add-ons found. Create your first add-on above.
                     </td>
                   </tr>
-                ))}
+                )}
+                {!addOnsLoading &&
+                  filteredAddOns.map((addon) => (
+                    <tr
+                      key={addon.id}
+                      className="border-b border-border last:border-0 hover:bg-secondary/20 transition-colors"
+                    >
+                      <td className="py-4 px-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500/20 to-blue-500/10 border border-border flex items-center justify-center"></div>
+                          <div>
+                            <p className="text-sm font-medium text-foreground">
+                              {addon.name}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {addon.description ?? ""}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-4 px-4">
+                        <code className="text-xs font-mono text-muted-foreground">
+                          {addon.code}
+                        </code>
+                      </td>
+                      <td className="py-4 px-4">
+                        <span className="text-sm">
+                          ${parseFloat(addon.price).toFixed(2)} ·{" "}
+                          {addon.billingType === "ONE_TIME"
+                            ? "One-time"
+                            : "Recurring"}
+                        </span>
+                      </td>
+                      <td className="py-4 px-4">
+                        <StatusBadge status={addon.status} />
+                      </td>
+                      <td className="py-4 px-4">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              disabled={updatingAddOnId === addon.id}
+                            >
+                              {updatingAddOnId === addon.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <MoreHorizontal className="w-4 h-4" />
+                              )}
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {addon.status === "DRAFT" && (
+                              <DropdownMenuItem
+                                onClick={async () => {
+                                  setUpdatingAddOnId(addon.id);
+                                  await fetch("/api/catalog/add-ons", {
+                                    method: "PUT",
+                                    headers: {
+                                      "Content-Type": "application/json",
+                                    },
+                                    body: JSON.stringify({
+                                      id: addon.id,
+                                      status: "PUBLISHED",
+                                    }),
+                                  });
+                                  setUpdatingAddOnId(null);
+                                  tr();
+                                  toast.success("Add-on published");
+                                }}
+                              >
+                                Publish
+                              </DropdownMenuItem>
+                            )}
+                            {addon.status !== "ARCHIVED" && (
+                              <DropdownMenuItem
+                                onClick={() => archiveAddOn(addon.id)}
+                                className="text-destructive focus:text-destructive"
+                              >
+                                Archive
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </td>
+                    </tr>
+                  ))}
               </tbody>
             </table>
           </div>
           <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-secondary/20">
-            <span className="text-sm text-muted-foreground">Showing {filteredAddOns.length} add-on{filteredAddOns.length !== 1 ? "s" : ""}</span>
+            <span className="text-sm text-muted-foreground">
+              Showing {filteredAddOns.length} add-on
+              {filteredAddOns.length !== 1 ? "s" : ""}
+            </span>
           </div>
         </div>
       )}
@@ -3985,9 +4811,7 @@ export function CatalogSection() {
       )}
 
       {/* Configuration Tab */}
-      {activeTab === "config" && (
-        <ConfigurationTab />
-      )}
+      {activeTab === "config" && <ConfigurationTab />}
     </div>
   );
 }
@@ -3997,12 +4821,30 @@ export function CatalogSection() {
 export function CatalogPlansSection() {
   const { envMode } = useEnvironment();
   const [refresh, setRefresh] = useState(0);
-  function tr() { setRefresh((n) => n + 1); }
+
+  function tr() {
+    setRefresh((n) => n + 1);
+  }
+
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2 flex-wrap">
-        <CreatePlanDialog env={envMode} onCreated={tr} />
-        <PublishButton env={envMode} onPublished={tr} />
+    <div className="space-y-6">
+      <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-card to-secondary/25 p-5 sm:p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-2">
+            <h2 className="text-2xl font-semibold tracking-tight text-foreground">
+              Plans Catalog
+            </h2>
+            <p className="max-w-2xl text-sm text-muted-foreground">
+              Create and manage production-ready catalog plans. Plan data is
+              scoped to the active environment, and switching environment
+              instantly loads that network's dataset.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            <CreatePlanDialog env={envMode} onCreated={tr} />
+          </div>
+        </div>
       </div>
       <PlansTable env={envMode} refresh={refresh} />
     </div>

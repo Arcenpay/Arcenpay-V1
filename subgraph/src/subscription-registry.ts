@@ -4,12 +4,12 @@ import {
   SubscriptionRenewed,
   SubscriptionCancelled,
 } from '../generated/SubscriptionRegistry/SubscriptionRegistry';
-import { BillingEvent, Plan, Subscription } from '../generated/schema';
+import { BillingEvent, Plan, SubscriptionRecord } from '../generated/schema';
 import { eventId, getOrCreateStats, getOrCreateSubscriber } from './common';
 
 export function handleSubscriptionMinted(event: SubscriptionMinted): void {
   const id = event.params.tokenId.toString();
-  let sub = new Subscription(id);
+  let sub = new SubscriptionRecord(id);
 
   let plan = Plan.load(event.params.planId.toString());
   if (!plan) {
@@ -61,7 +61,7 @@ export function handleSubscriptionMinted(event: SubscriptionMinted): void {
 
 export function handleSubscriptionRenewed(event: SubscriptionRenewed): void {
   const id = event.params.tokenId.toString();
-  let sub = Subscription.load(id);
+  let sub = SubscriptionRecord.load(id);
   if (!sub) return;
 
   sub.expiration = event.params.newExpiration;
@@ -91,7 +91,7 @@ export function handleSubscriptionRenewed(event: SubscriptionRenewed): void {
 
 export function handleSubscriptionCancelled(event: SubscriptionCancelled): void {
   const id = event.params.tokenId.toString();
-  let sub = Subscription.load(id);
+  let sub = SubscriptionRecord.load(id);
   if (!sub) return;
 
   sub.isActive = false;

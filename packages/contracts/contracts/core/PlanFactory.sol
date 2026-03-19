@@ -3,18 +3,35 @@ pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
 import "../interfaces/IPlanFactory.sol";
 
 /// @title PlanFactory
 /// @notice SaaS provider plan configuration and deployment
 /// @dev Manages provider registration and plan tier CRUD operations
-contract PlanFactory is IPlanFactory, Ownable, ReentrancyGuard {
+/// @dev Supports EIP-712 meta-transactions for gasless plan creation
+contract PlanFactory is IPlanFactory, Ownable, ReentrancyGuard, EIP712, Pausable {
+    using ECDSA for bytes32;
+    // ============================================================
+    //                      EIP-712 CONSTANTS
+    // ============================================================
+
+    /// @notice EIP-712 typehash for createPlanFor meta-transaction
+    bytes32 public constant CREATE_PLAN_TYPEHASH = keccak256(
+        "CreatePlan(address provider,string name,string tier,uint256 price,uint32 billingInterval,address acceptedToken,string metadataURI,uint256 nonce,uint256 deadline)"
+    );
+
     // ============================================================
     //                         STORAGE
     // ============================================================
 
     /// @notice Counter for plan IDs
     uint256 private _nextPlanId;
+
+    /// @notice EIP-712 nonces for replay protection (provider => nonce)
+    mapping(address => uint256) public nonces;
 
     /// @notice Registered providers
     mapping(address => bool) private _providers;
@@ -32,7 +49,7 @@ contract PlanFactory is IPlanFactory, Ownable, ReentrancyGuard {
     //                        CONSTRUCTOR
     // ============================================================
 
-    constructor(address[] memory _approvedTokens) Ownable(msg.sender) {
+    constructor(address[] memory _approvedTokens) Ownable(msg.sender) EIP712("ArcenPay PlanFactory", "1") {
         _nextPlanId = 1; // Start plan IDs at 1
         for (uint256 i = 0; i < _approvedTokens.length; i++) {
             approvedTokens[_approvedTokens[i]] = true;
@@ -42,6 +59,9 @@ contract PlanFactory is IPlanFactory, Ownable, ReentrancyGuard {
     // ============================================================
     //                      ADMIN FUNCTIONS
     // ============================================================
+
+    function pause() external onlyOwner { _pause(); }
+    function unpause() external onlyOwner { _unpause(); }
 
     /// @notice Adds a token to the approved list
     /// @param token The token address to approve
@@ -75,7 +95,7 @@ contract PlanFactory is IPlanFactory, Ownable, ReentrancyGuard {
         uint32 billingInterval,
         address acceptedToken,
         string calldata metadataURI
-    ) external returns (uint256 planId) {
+    ) external whenNotPaused returns (uint256 planId) {
         require(_providers[msg.sender], "PlanFactory: not a provider");
         require(price > 0, "PlanFactory: price must be > 0");
         require(billingInterval >= 2_592_000, "PlanFactory: interval must be >= 30 days");
@@ -99,6 +119,74 @@ contract PlanFactory is IPlanFactory, Ownable, ReentrancyGuard {
         _providerPlans[msg.sender].push(planId);
 
         emit PlanCreated(planId, msg.sender, name, price, billingInterval);
+    }
+
+    /// @inheritdoc IPlanFactory
+    function createPlanFor(
+        address provider,
+        string calldata name,
+        string calldata tier,
+        uint256 price,
+        uint32 billingInterval,
+        address acceptedToken,
+        string calldata metadataURI,
+        uint256 deadline,
+        bytes calldata signature
+    ) external whenNotPaused returns (uint256 planId) {
+        require(block.timestamp <= deadline, "PlanFactory: signature expired");
+        require(_providers[provider], "PlanFactory: not a provider");
+        require(price > 0, "PlanFactory: price must be > 0");
+        require(billingInterval >= 2_592_000, "PlanFactory: interval must be >= 30 days");
+        require(approvedTokens[acceptedToken], "PlanFactory: token not approved");
+        require(bytes(name).length > 0, "PlanFactory: empty name");
+
+        // Get and increment nonce atomically
+        uint256 currentNonce = nonces[provider];
+        nonces[provider] = currentNonce + 1;
+
+        // Build EIP-712 struct hash
+        bytes32 structHash = keccak256(abi.encode(
+            CREATE_PLAN_TYPEHASH,
+            provider,
+            keccak256(bytes(name)),
+            keccak256(bytes(tier)),
+            price,
+            billingInterval,
+            acceptedToken,
+            keccak256(bytes(metadataURI)),
+            currentNonce,
+            deadline
+        ));
+
+        // Verify signature
+        bytes32 digest = _hashTypedDataV4(structHash);
+        address recoveredSigner = ECDSA.recover(digest, signature);
+        require(recoveredSigner == provider, "PlanFactory: invalid signature");
+
+        // Create plan with provider as owner (not msg.sender)
+        planId = _nextPlanId++;
+
+        _plans[planId] = Plan({
+            id: planId,
+            provider: provider,
+            name: name,
+            tier: tier,
+            price: price,
+            billingInterval: billingInterval,
+            acceptedToken: acceptedToken,
+            active: true,
+            metadataURI: metadataURI
+        });
+
+        _providerPlans[provider].push(planId);
+
+        emit PlanCreated(planId, provider, name, price, billingInterval);
+    }
+
+    /// @notice Returns the EIP-712 domain separator
+    /// @return The domain separator hash
+    function DOMAIN_SEPARATOR() external view returns (bytes32) {
+        return _domainSeparatorV4();
     }
 
     /// @inheritdoc IPlanFactory

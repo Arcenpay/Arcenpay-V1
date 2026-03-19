@@ -27,6 +27,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  Sheet,
+  SheetContent,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -426,7 +433,7 @@ function BlockEditorRow({
   );
 }
 
-// ─── Create template dialog ───────────────────────────────────────────────────
+// ─── Create template sheet ────────────────────────────────────────────────────
 
 function CreateTemplateDialog({
   open,
@@ -521,11 +528,11 @@ function CreateTemplateDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
-      <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>New Template</DialogTitle>
-        </DialogHeader>
+    <Sheet open={open} onOpenChange={(v) => !v && handleClose()}>
+      <SheetContent className="w-full sm:max-w-xl max-h-[85vh] overflow-y-auto">
+        <SheetHeader className="pb-4 border-b border-border">
+          <SheetTitle>New Template</SheetTitle>
+        </SheetHeader>
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
@@ -590,16 +597,16 @@ function CreateTemplateDialog({
             </div>
           </div>
         </div>
-        <DialogFooter>
+        <SheetFooter className="pt-4 border-t border-border flex-row justify-end gap-2">
           <Button variant="outline" onClick={handleClose} disabled={busy}>
             Cancel
           </Button>
           <Button onClick={handleCreate} disabled={busy}>
             {busy ? "Creating…" : "Create Template"}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   );
 }
 
