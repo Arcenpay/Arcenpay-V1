@@ -519,10 +519,7 @@ export function ComponentsSection() {
             customers
           </p>
         </div>
-        <Button
-          className="flex items-center gap-2 bg-accent text-accent-foreground hover:bg-accent/90"
-          onClick={handleCreateNew}
-        >
+        <Button className="flex items-center gap-2" onClick={handleCreateNew}>
           <Plus className="w-4 h-4" />
           Create Component
         </Button>
@@ -755,7 +752,7 @@ export function ComponentsSection() {
             </p>
             <Button
               onClick={handleCreateNew}
-              className="flex items-center gap-2 bg-accent text-accent-foreground hover:bg-accent/90"
+              className="flex items-center gap-2"
             >
               <Plus className="w-4 h-4" />
               Create Component
@@ -779,7 +776,7 @@ export function ComponentsSection() {
             </p>
             <Button
               onClick={handleCreateNew}
-              className="flex items-center gap-2 bg-accent text-accent-foreground hover:bg-accent/90"
+              className="flex items-center gap-2"
             >
               <Plus className="w-4 h-4" />
               Create Component

@@ -126,24 +126,31 @@ export function PlansSection() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [pendingArchiveId, setPendingArchiveId] = useState<string | null>(null);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [dbLoading, setDbLoading] = useState(false);
-  const [dbPlans, setDbPlans] = useState<Array<{
-    id: string;
-    name: string;
-    tier: string;
-    price: string;
-    billingInterval: number;
-    active: boolean;
-    status: string;
-    acceptedToken: string;
-    onChainPlanId?: string | null;
-    chainSyncStatus?: string;
-  }>>([]);
+  const [dbPlans, setDbPlans] = useState<
+    Array<{
+      id: string;
+      name: string;
+      tier: string;
+      price: string;
+      billingInterval: number;
+      active: boolean;
+      status: string;
+      acceptedToken: string;
+      onChainPlanId?: string | null;
+      chainSyncStatus?: string;
+    }>
+  >([]);
 
   // Edit plan state
   const [editingPlan, setEditingPlan] = useState<{
-    id: string; name: string; tier: string; priceUsdc: string;
-    billingInterval: string; acceptedToken: string;
+    id: string;
+    name: string;
+    tier: string;
+    priceUsdc: string;
+    billingInterval: string;
+    acceptedToken: string;
   } | null>(null);
   const [editLoading, setEditLoading] = useState(false);
 
@@ -273,16 +280,20 @@ export function PlansSection() {
   // DB plans are the primary source; on-chain provides real-time status.
   const mergedPlans = dbPlans.map((dbPlan) => {
     const onChainMatch = plans.find(
-      (p) => p.id === dbPlan.onChainPlanId || p.name === dbPlan.name
+      (p) => p.id === dbPlan.onChainPlanId || p.name === dbPlan.name,
     );
     return {
       id: dbPlan.id,
       onChainId: dbPlan.onChainPlanId ?? onChainMatch?.id ?? null,
       name: dbPlan.name,
       tier: dbPlan.tier,
-      priceRaw: onChainMatch?.priceRaw ?? BigInt(Math.round(parseFloat(dbPlan.price) * 1_000_000)),
-      billingInterval: onChainMatch?.billingInterval ?? (dbPlan.billingInterval * 86400),
-      active: onChainMatch?.active ?? (dbPlan.status !== "ARCHIVED" && dbPlan.active),
+      priceRaw:
+        onChainMatch?.priceRaw ??
+        BigInt(Math.round(parseFloat(dbPlan.price) * 1_000_000)),
+      billingInterval:
+        onChainMatch?.billingInterval ?? dbPlan.billingInterval * 86400,
+      active:
+        onChainMatch?.active ?? (dbPlan.status !== "ARCHIVED" && dbPlan.active),
       status: dbPlan.status,
     };
   });
@@ -360,8 +371,8 @@ export function PlansSection() {
 
       await publicClient!.waitForTransactionReceipt({
         hash,
-        pollingInterval: 2_000,  // poll every 2s (Sepolia ~12s blocks)
-        timeout: 120_000,        // 2 minute total timeout
+        pollingInterval: 2_000, // poll every 2s (Sepolia ~12s blocks)
+        timeout: 120_000, // 2 minute total timeout
       });
 
       setTxStep("success");
@@ -370,7 +381,9 @@ export function PlansSection() {
       // The on-chain read (getProviderPlans) has a multi-render cycle delay.
       // Saving to our DB immediately gives an instant, reliable list update.
       try {
-        const intervalDays = Math.round(INTERVAL_SECONDS[newPlan.interval] / 86400);
+        const intervalDays = Math.round(
+          INTERVAL_SECONDS[newPlan.interval] / 86400,
+        );
         await fetch("/api/catalog/plans", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -407,16 +420,25 @@ export function PlansSection() {
       }, 3000);
     } catch (err: unknown) {
       const raw = err instanceof Error ? err.message : String(err);
-      const msg = raw.includes("could not be found") || raw.includes("timed out")
-        ? "Transaction submitted but receipt not found yet — check the block explorer to confirm."
-        : raw;
+      const msg =
+        raw.includes("could not be found") || raw.includes("timed out")
+          ? "Transaction submitted but receipt not found yet — check the block explorer to confirm."
+          : raw;
       setTxStep("error");
       setTxError(msg);
-      toast.error(raw.includes("User rejected") ? "Transaction rejected" : "Transaction failed");
+      toast.error(
+        raw.includes("User rejected")
+          ? "Transaction rejected"
+          : "Transaction failed",
+      );
     }
   };
 
-  const handleArchivePlan = async (plan: { id: string; onChainId: string | null; name: string }) => {
+  const handleArchivePlan = async (plan: {
+    id: string;
+    onChainId: string | null;
+    name: string;
+  }) => {
     setPendingArchiveId(plan.id);
     try {
       // If we have an actual on-chain numeric ID, call the contract
@@ -432,7 +454,11 @@ export function PlansSection() {
       await fetch("/api/catalog/plans", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: plan.id, status: "ARCHIVED", active: false }),
+        body: JSON.stringify({
+          id: plan.id,
+          status: "ARCHIVED",
+          active: false,
+        }),
       });
       toast.success(`"${plan.name}" archived`);
       await fetchDbPlans();
@@ -443,6 +469,55 @@ export function PlansSection() {
       toast.error(msg);
     } finally {
       setPendingArchiveId(null);
+    }
+  };
+
+  const handleDeletePlan = async (plan: {
+    id: string;
+    onChainId: string | null;
+    name: string;
+    status: string;
+  }) => {
+    if (plan.status === "PUBLISHED") {
+      toast.error(
+        "Published plans cannot be deleted. Archive the plan instead.",
+      );
+      return;
+    }
+    if (plan.onChainId) {
+      toast.error(
+        "On-chain plans cannot be deleted. Archive the plan instead.",
+      );
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Delete plan "${plan.name}"? This cannot be undone.`,
+    );
+    if (!confirmed) return;
+
+    setPendingDeleteId(plan.id);
+    try {
+      const res = await fetch("/api/catalog/plans", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: plan.id }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}) as { error?: string });
+        throw new Error(data.error || "Failed to delete plan");
+      }
+
+      toast.success(`"${plan.name}" deleted`);
+      await fetchDbPlans();
+      refetchPlanIds();
+      refetchPlans();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to delete plan";
+      toast.error(msg);
+    } finally {
+      setPendingDeleteId(null);
     }
   };
 
@@ -501,7 +576,9 @@ export function PlansSection() {
     totalCount: number;
   }
 
-  const [entPlan, setEntPlan] = useState<{ id: string; name: string } | null>(null);
+  const [entPlan, setEntPlan] = useState<{ id: string; name: string } | null>(
+    null,
+  );
   const [entitlements, setEntitlements] = useState<Entitlement[]>([]);
   const [entLoading, setEntLoading] = useState(false);
   const [deletingKey, setDeletingKey] = useState<string | null>(null);
@@ -511,13 +588,17 @@ export function PlansSection() {
   const [addEntLoading, setAddEntLoading] = useState(false);
   const [addEntErrors, setAddEntErrors] = useState<Record<string, string>>({});
   const [addEntForm, setAddEntForm] = useState({
-    featureName: "", featureKey: "",
+    featureName: "",
+    featureKey: "",
     type: "BOOLEAN" as "BOOLEAN" | "NUMERIC" | "UNLIMITED",
-    value: "", enabled: true,
+    value: "",
+    enabled: true,
   });
 
   // Per-plan entitlements cache for the features column in the table
-  const [planEntitlements, setPlanEntitlements] = useState<Record<string, Entitlement[]>>({});
+  const [planEntitlements, setPlanEntitlements] = useState<
+    Record<string, Entitlement[]>
+  >({});
 
   // Feature flag suggestions (loaded when the add-entitlement form opens)
   const [featureFlags, setFeatureFlags] = useState<FeatureFlag[]>([]);
@@ -555,7 +636,10 @@ export function PlansSection() {
       dbPlans.map((plan) =>
         fetch(`/api/catalog/plans/${plan.id}/entitlements`)
           .then((r) => (r.ok ? r.json() : null))
-          .then((data) => ({ id: plan.id, ents: (data?.entitlements ?? []) as Entitlement[] }))
+          .then((data) => ({
+            id: plan.id,
+            ents: (data?.entitlements ?? []) as Entitlement[],
+          }))
           .catch(() => ({ id: plan.id, ents: [] as Entitlement[] })),
       ),
     ).then((results) => {
@@ -576,7 +660,9 @@ export function PlansSection() {
     setFlagsLoading(true);
     fetch(`/api/entitlements/provider/${address}/flags`)
       .then((r) => (r.ok ? r.json() : null))
-      .then((data) => { if (data?.flags) setFeatureFlags(data.flags as FeatureFlag[]); })
+      .then((data) => {
+        if (data?.flags) setFeatureFlags(data.flags as FeatureFlag[]);
+      })
       .catch(() => {})
       .finally(() => setFlagsLoading(false));
   }, [addEntOpen, address]);
@@ -585,27 +671,42 @@ export function PlansSection() {
     setEntPlan(plan);
     setEntSearch("");
     setAddEntOpen(false);
-    setAddEntForm({ featureName: "", featureKey: "", type: "BOOLEAN", value: "", enabled: true });
+    setAddEntForm({
+      featureName: "",
+      featureKey: "",
+      type: "BOOLEAN",
+      value: "",
+      enabled: true,
+    });
     setAddEntErrors({});
   };
 
   const deleteEntitlement = async (planId: string, featureKey: string) => {
     setDeletingKey(featureKey);
     try {
-      const res = await fetch(`/api/catalog/plans/${planId}/entitlements?featureKey=${featureKey}`, { method: "DELETE" });
+      const res = await fetch(
+        `/api/catalog/plans/${planId}/entitlements?featureKey=${featureKey}`,
+        { method: "DELETE" },
+      );
       if (res.ok) {
         toast.success("Entitlement removed");
         await loadEntitlements(planId);
       } else {
         toast.error("Failed to remove entitlement");
       }
-    } finally { setDeletingKey(null); }
+    } finally {
+      setDeletingKey(null);
+    }
   };
 
-  const toggleEntitlement = async (planId: string, featureKey: string, enabled: boolean) => {
+  const toggleEntitlement = async (
+    planId: string,
+    featureKey: string,
+    enabled: boolean,
+  ) => {
     // Optimistic update so the toggle feels instant
     setEntitlements((prev) =>
-      prev.map((e) => (e.featureKey === featureKey ? { ...e, enabled } : e))
+      prev.map((e) => (e.featureKey === featureKey ? { ...e, enabled } : e)),
     );
     setTogglingKey(featureKey);
     try {
@@ -615,11 +716,16 @@ export function PlansSection() {
         body: JSON.stringify({ featureKey, enabled }),
       });
       await loadEntitlements(planId); // sync with server
-    } finally { setTogglingKey(null); }
+    } finally {
+      setTogglingKey(null);
+    }
   };
 
   function autoKey(name: string) {
-    return name.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_-]/g, "");
+    return name
+      .toLowerCase()
+      .replace(/\s+/g, "_")
+      .replace(/[^a-z0-9_-]/g, "");
   }
 
   const handleAddEntitlement = async (e: React.FormEvent) => {
@@ -627,12 +733,17 @@ export function PlansSection() {
     const errs: Record<string, string> = {};
     if (!addEntForm.featureName.trim()) errs.featureName = "Required";
     if (!addEntForm.featureKey.trim()) errs.featureKey = "Required";
-    else if (!/^[a-z0-9_-]+$/i.test(addEntForm.featureKey)) errs.featureKey = "Letters, numbers, _ and - only";
+    else if (!/^[a-z0-9_-]+$/i.test(addEntForm.featureKey))
+      errs.featureKey = "Letters, numbers, _ and - only";
     if (addEntForm.type === "NUMERIC") {
       const n = Number(addEntForm.value);
-      if (addEntForm.value === "" || isNaN(n) || n < 0) errs.value = "Must be a non-negative number";
+      if (addEntForm.value === "" || isNaN(n) || n < 0)
+        errs.value = "Must be a non-negative number";
     }
-    if (Object.keys(errs).length) { setAddEntErrors(errs); return; }
+    if (Object.keys(errs).length) {
+      setAddEntErrors(errs);
+      return;
+    }
     if (!entPlan) return;
     setAddEntLoading(true);
     try {
@@ -652,7 +763,13 @@ export function PlansSection() {
       });
       if (res.ok) {
         setAddEntOpen(false);
-        setAddEntForm({ featureName: "", featureKey: "", type: "BOOLEAN", value: "", enabled: true });
+        setAddEntForm({
+          featureName: "",
+          featureKey: "",
+          type: "BOOLEAN",
+          value: "",
+          enabled: true,
+        });
         setAddEntErrors({});
         toast.success("Entitlement added");
         await loadEntitlements(entPlan.id); // reload list immediately
@@ -660,7 +777,9 @@ export function PlansSection() {
         const data = await res.json();
         setAddEntErrors({ _global: data.error || "Failed to add entitlement" });
       }
-    } finally { setAddEntLoading(false); }
+    } finally {
+      setAddEntLoading(false);
+    }
   };
 
   // Copy all entitlements from another plan into the currently-open plan
@@ -669,11 +788,19 @@ export function PlansSection() {
     setCopyingEntitlements(true);
     setCopyFromOpen(false);
     try {
-      const res = await fetch(`/api/catalog/plans/${sourcePlanId}/entitlements`);
-      if (!res.ok) { toast.error("Could not load source plan entitlements"); return; }
+      const res = await fetch(
+        `/api/catalog/plans/${sourcePlanId}/entitlements`,
+      );
+      if (!res.ok) {
+        toast.error("Could not load source plan entitlements");
+        return;
+      }
       const data = await res.json();
       const sourceEnts: Entitlement[] = data.entitlements ?? [];
-      if (sourceEnts.length === 0) { toast.info("Source plan has no entitlements to copy"); return; }
+      if (sourceEnts.length === 0) {
+        toast.info("Source plan has no entitlements to copy");
+        return;
+      }
       await Promise.allSettled(
         sourceEnts.map((ent) =>
           fetch(`/api/catalog/plans/${entPlan.id}/entitlements`, {
@@ -689,7 +816,9 @@ export function PlansSection() {
           }),
         ),
       );
-      toast.success(`Copied ${sourceEnts.length} entitlement${sourceEnts.length !== 1 ? "s" : ""}`);
+      toast.success(
+        `Copied ${sourceEnts.length} entitlement${sourceEnts.length !== 1 ? "s" : ""}`,
+      );
       await loadEntitlements(entPlan.id);
     } catch {
       toast.error("Failed to copy entitlements");
@@ -745,7 +874,7 @@ export function PlansSection() {
             Refresh
           </Button>
           <Button
-            className="flex items-center gap-2 bg-accent text-accent-foreground hover:bg-accent/90"
+            className="flex items-center gap-2"
             onClick={() => setShowCreateDialog(true)}
             disabled={!isConnected}
           >
@@ -864,7 +993,9 @@ export function PlansSection() {
                   >
                     <td className="py-3 px-4">
                       <button
-                        onClick={() => openEntitlements({ id: plan.id, name: plan.name })}
+                        onClick={() =>
+                          openEntitlements({ id: plan.id, name: plan.name })
+                        }
                         className="text-left group"
                       >
                         <div className="flex items-center gap-1.5">
@@ -901,18 +1032,28 @@ export function PlansSection() {
                     <td className="py-3 px-4">
                       {(() => {
                         const ents = planEntitlements[plan.id] ?? [];
-                        if (ents.length === 0) return <span className="text-xs text-muted-foreground">—</span>;
+                        if (ents.length === 0)
+                          return (
+                            <span className="text-xs text-muted-foreground">
+                              —
+                            </span>
+                          );
                         const shown = ents.slice(0, 2);
                         const extra = ents.length - shown.length;
                         return (
                           <div className="flex flex-wrap gap-1">
                             {shown.map((e) => (
-                              <span key={e.featureKey} className="text-xs bg-secondary border border-border rounded px-1.5 py-0.5 text-muted-foreground truncate max-w-[100px]">
+                              <span
+                                key={e.featureKey}
+                                className="text-xs bg-secondary border border-border rounded px-1.5 py-0.5 text-muted-foreground truncate max-w-[100px]"
+                              >
                                 {e.featureName}
                               </span>
                             ))}
                             {extra > 0 && (
-                              <span className="text-xs text-muted-foreground">+{extra}</span>
+                              <span className="text-xs text-muted-foreground">
+                                +{extra}
+                              </span>
                             )}
                           </div>
                         );
@@ -926,7 +1067,8 @@ export function PlansSection() {
                             size="sm"
                             className="h-8 w-8 p-0"
                           >
-                            {pendingArchiveId === plan.id ? (
+                            {pendingArchiveId === plan.id ||
+                            pendingDeleteId === plan.id ? (
                               <Loader2 className="w-4 h-4 animate-spin" />
                             ) : (
                               <MoreHorizontal className="w-4 h-4" />
@@ -935,7 +1077,9 @@ export function PlansSection() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem
-                            onClick={() => openEntitlements({ id: plan.id, name: plan.name })}
+                            onClick={() =>
+                              openEntitlements({ id: plan.id, name: plan.name })
+                            }
                             className="flex items-center gap-2 text-sm"
                           >
                             <List className="w-3.5 h-3.5" />
@@ -945,13 +1089,19 @@ export function PlansSection() {
                           <DropdownMenuItem
                             onClick={() => {
                               // find the original DB plan to pre-fill
-                              const dbPlan = dbPlans.find(p => p.id === plan.id);
+                              const dbPlan = dbPlans.find(
+                                (p) => p.id === plan.id,
+                              );
                               setEditingPlan({
                                 id: plan.id,
                                 name: plan.name,
                                 tier: plan.tier,
-                                priceUsdc: dbPlan ? parseFloat(dbPlan.price).toFixed(2) : "",
-                                billingInterval: dbPlan ? String(dbPlan.billingInterval) : "30",
+                                priceUsdc: dbPlan
+                                  ? parseFloat(dbPlan.price).toFixed(2)
+                                  : "",
+                                billingInterval: dbPlan
+                                  ? String(dbPlan.billingInterval)
+                                  : "30",
                                 acceptedToken: dbPlan?.acceptedToken ?? "",
                               });
                             }}
@@ -998,6 +1148,15 @@ export function PlansSection() {
                               </DropdownMenuItem>
                             </>
                           )}
+                          {!plan.onChainId && plan.status !== "PUBLISHED" && (
+                            <DropdownMenuItem
+                              onClick={() => handleDeletePlan(plan)}
+                              className="flex items-center gap-2 text-sm text-destructive focus:text-destructive"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              Delete Plan
+                            </DropdownMenuItem>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </td>
@@ -1026,7 +1185,7 @@ export function PlansSection() {
             </p>
             {!searchQuery && statusFilter === "All" && isConnected && (
               <Button
-                className="flex items-center gap-2 bg-accent text-accent-foreground hover:bg-accent/90"
+                className="flex items-center gap-2"
                 onClick={() => setShowCreateDialog(true)}
               >
                 <Plus className="w-4 h-4" />
@@ -1156,8 +1315,7 @@ export function PlansSection() {
                       >
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-medium text-foreground">
-                            USDC —{" "}
-                            {selected?.label ?? "Select chain"}
+                            USDC — {selected?.label ?? "Select chain"}
                           </span>
                           {selected && (
                             <span
@@ -1182,7 +1340,8 @@ export function PlansSection() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width]">
                       {USDC_OPTIONS.map((opt) => {
-                        const isSelected = newPlan.acceptedToken === opt.address;
+                        const isSelected =
+                          newPlan.acceptedToken === opt.address;
                         return (
                           <DropdownMenuItem
                             key={opt.chainId}
@@ -1283,7 +1442,7 @@ export function PlansSection() {
               Cancel
             </Button>
             <Button
-              className="bg-accent text-accent-foreground hover:bg-accent/90 min-w-[140px]"
+              className="min-w-[140px]"
               onClick={handleCreatePlan}
               disabled={txStep !== "idle" && txStep !== "error"}
             >
@@ -1323,14 +1482,21 @@ export function PlansSection() {
       </Sheet>
 
       {/* Edit Plan Sheet */}
-      <Sheet open={!!editingPlan} onOpenChange={(open) => { if (!open) setEditingPlan(null); }}>
+      <Sheet
+        open={!!editingPlan}
+        onOpenChange={(open) => {
+          if (!open) setEditingPlan(null);
+        }}
+      >
         <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
           <SheetHeader className="pb-4 border-b border-border">
             <SheetTitle className="flex items-center gap-2">
               <PanelRightOpen className="w-4 h-4 text-accent" />
               Edit Plan
             </SheetTitle>
-            <SheetDescription>Update the plan details stored in your catalog.</SheetDescription>
+            <SheetDescription>
+              Update the plan details stored in your catalog.
+            </SheetDescription>
           </SheetHeader>
           {editingPlan && (
             <div className="space-y-4 py-4">
@@ -1340,7 +1506,11 @@ export function PlansSection() {
                   <Input
                     id="editName"
                     value={editingPlan.name}
-                    onChange={(e) => setEditingPlan(p => p ? { ...p, name: e.target.value } : p)}
+                    onChange={(e) =>
+                      setEditingPlan((p) =>
+                        p ? { ...p, name: e.target.value } : p,
+                      )
+                    }
                     className="bg-secondary border-border focus:border-accent"
                   />
                 </div>
@@ -1349,7 +1519,11 @@ export function PlansSection() {
                   <Input
                     id="editTier"
                     value={editingPlan.tier}
-                    onChange={(e) => setEditingPlan(p => p ? { ...p, tier: e.target.value } : p)}
+                    onChange={(e) =>
+                      setEditingPlan((p) =>
+                        p ? { ...p, tier: e.target.value } : p,
+                      )
+                    }
                     className="bg-secondary border-border focus:border-accent"
                   />
                 </div>
@@ -1358,12 +1532,20 @@ export function PlansSection() {
                 <div className="space-y-2">
                   <Label htmlFor="editPrice">Price (USDC)</Label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                      $
+                    </span>
                     <Input
                       id="editPrice"
-                      type="number" min="0" step="0.01"
+                      type="number"
+                      min="0"
+                      step="0.01"
                       value={editingPlan.priceUsdc}
-                      onChange={(e) => setEditingPlan(p => p ? { ...p, priceUsdc: e.target.value } : p)}
+                      onChange={(e) =>
+                        setEditingPlan((p) =>
+                          p ? { ...p, priceUsdc: e.target.value } : p,
+                        )
+                      }
                       className="bg-secondary border-border focus:border-accent pl-6"
                     />
                   </div>
@@ -1372,9 +1554,14 @@ export function PlansSection() {
                   <Label htmlFor="editInterval">Billing Interval (days)</Label>
                   <Input
                     id="editInterval"
-                    type="number" min="1"
+                    type="number"
+                    min="1"
                     value={editingPlan.billingInterval}
-                    onChange={(e) => setEditingPlan(p => p ? { ...p, billingInterval: e.target.value } : p)}
+                    onChange={(e) =>
+                      setEditingPlan((p) =>
+                        p ? { ...p, billingInterval: e.target.value } : p,
+                      )
+                    }
                     className="bg-secondary border-border focus:border-accent"
                   />
                 </div>
@@ -1384,27 +1571,41 @@ export function PlansSection() {
                 <Input
                   id="editToken"
                   value={editingPlan.acceptedToken}
-                  onChange={(e) => setEditingPlan(p => p ? { ...p, acceptedToken: e.target.value } : p)}
+                  onChange={(e) =>
+                    setEditingPlan((p) =>
+                      p ? { ...p, acceptedToken: e.target.value } : p,
+                    )
+                  }
                   className="bg-secondary border-border focus:border-accent"
                 />
               </div>
             </div>
           )}
           <div className="sticky bottom-0 bg-background/95 backdrop-blur border-t border-border pt-4 mt-4 flex items-center justify-end gap-2">
-            <Button variant="outline" onClick={() => setEditingPlan(null)}>Cancel</Button>
-            <Button
-              className="bg-accent text-accent-foreground hover:bg-accent/90"
-              onClick={handleEditSave}
-              disabled={editLoading}
-            >
-              {editLoading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving…</> : "Save Changes"}
+            <Button variant="outline" onClick={() => setEditingPlan(null)}>
+              Cancel
+            </Button>
+            <Button onClick={handleEditSave} disabled={editLoading}>
+              {editLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Saving…
+                </>
+              ) : (
+                "Save Changes"
+              )}
             </Button>
           </div>
         </SheetContent>
       </Sheet>
 
       {/* ── Entitlements Sheet ─────────────────────────────── */}
-      <Sheet open={!!entPlan} onOpenChange={(open) => { if (!open) setEntPlan(null); }}>
+      <Sheet
+        open={!!entPlan}
+        onOpenChange={(open) => {
+          if (!open) setEntPlan(null);
+        }}
+      >
         <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
           <SheetHeader className="pb-4 border-b border-border">
             <SheetTitle className="flex items-center gap-2">
@@ -1412,7 +1613,8 @@ export function PlansSection() {
               {entPlan?.name} — Entitlements
             </SheetTitle>
             <SheetDescription>
-              Define which features are included in this plan. Click a plan name in the table to return.
+              Define which features are included in this plan. Click a plan name
+              in the table to return.
             </SheetDescription>
           </SheetHeader>
 
@@ -1431,7 +1633,7 @@ export function PlansSection() {
               </div>
               <Button
                 size="sm"
-                className="bg-accent text-accent-foreground hover:bg-accent/90 gap-1.5 shrink-0"
+                className="gap-1.5 shrink-0"
                 onClick={() => setAddEntOpen((v) => !v)}
               >
                 <Plus className="w-4 h-4" />
@@ -1446,16 +1648,20 @@ export function PlansSection() {
                     className="gap-1.5 shrink-0"
                     title="Copy entitlements from another plan"
                   >
-                    {copyingEntitlements
-                      ? <Loader2 className="w-4 h-4 animate-spin" />
-                      : <Copy className="w-4 h-4" />
-                    }
+                    {copyingEntitlements ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Copy className="w-4 h-4" />
+                    )}
                     Copy from
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  {mergedPlans.filter((p) => p.id !== entPlan?.id).length === 0 ? (
-                    <div className="px-2 py-1.5 text-xs text-muted-foreground">No other plans</div>
+                  {mergedPlans.filter((p) => p.id !== entPlan?.id).length ===
+                  0 ? (
+                    <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                      No other plans
+                    </div>
                   ) : (
                     mergedPlans
                       .filter((p) => p.id !== entPlan?.id)
@@ -1479,9 +1685,13 @@ export function PlansSection() {
                 onSubmit={handleAddEntitlement}
                 className="space-y-3 p-4 rounded-xl border border-accent/30 bg-accent/5"
               >
-                <p className="text-sm font-semibold text-foreground">New Entitlement</p>
+                <p className="text-sm font-semibold text-foreground">
+                  New Entitlement
+                </p>
                 {addEntErrors._global && (
-                  <p className="text-xs text-destructive">{addEntErrors._global}</p>
+                  <p className="text-xs text-destructive">
+                    {addEntErrors._global}
+                  </p>
                 )}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
@@ -1499,27 +1709,45 @@ export function PlansSection() {
                       placeholder="e.g. Advanced Analytics"
                       className="bg-secondary border-border h-8 text-sm"
                     />
-                    {addEntErrors.featureName && <p className="text-xs text-destructive">{addEntErrors.featureName}</p>}
+                    {addEntErrors.featureName && (
+                      <p className="text-xs text-destructive">
+                        {addEntErrors.featureName}
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs">Feature Key *</Label>
                     <Input
                       value={addEntForm.featureKey}
-                      onChange={(e) => setAddEntForm((f) => ({ ...f, featureKey: e.target.value }))}
+                      onChange={(e) =>
+                        setAddEntForm((f) => ({
+                          ...f,
+                          featureKey: e.target.value,
+                        }))
+                      }
                       placeholder="advanced_analytics"
                       className="bg-secondary border-border h-8 text-sm font-mono"
                     />
-                    {addEntErrors.featureKey && <p className="text-xs text-destructive">{addEntErrors.featureKey}</p>}
+                    {addEntErrors.featureKey && (
+                      <p className="text-xs text-destructive">
+                        {addEntErrors.featureKey}
+                      </p>
+                    )}
                   </div>
                 </div>
                 {/* Feature flag suggestions */}
                 {(flagsLoading || featureFlags.length > 0) && (
                   <div className="space-y-1.5">
-                    <p className="text-xs text-muted-foreground">Suggestions from your feature flags:</p>
+                    <p className="text-xs text-muted-foreground">
+                      Suggestions from your feature flags:
+                    </p>
                     {flagsLoading ? (
                       <div className="flex gap-1.5 flex-wrap">
                         {Array.from({ length: 3 }).map((_, i) => (
-                          <div key={i} className="h-6 w-20 rounded-full bg-secondary animate-pulse" />
+                          <div
+                            key={i}
+                            className="h-6 w-20 rounded-full bg-secondary animate-pulse"
+                          />
                         ))}
                       </div>
                     ) : (
@@ -1533,7 +1761,10 @@ export function PlansSection() {
                                 ...f,
                                 featureName: flag.label || flag.key,
                                 featureKey: flag.key,
-                                type: flag.type === "number" ? "NUMERIC" : "BOOLEAN",
+                                type:
+                                  flag.type === "number"
+                                    ? "NUMERIC"
+                                    : "BOOLEAN",
                               }))
                             }
                             className="text-xs px-2 py-1 rounded-full bg-accent/10 border border-accent/30 text-accent hover:bg-accent/20 transition-colors"
@@ -1552,7 +1783,9 @@ export function PlansSection() {
                       <button
                         key={t}
                         type="button"
-                        onClick={() => setAddEntForm((f) => ({ ...f, type: t, value: "" }))}
+                        onClick={() =>
+                          setAddEntForm((f) => ({ ...f, type: t, value: "" }))
+                        }
                         className={cn(
                           "flex flex-col items-center gap-1 py-2 px-1 rounded-lg border text-xs font-medium transition-all",
                           addEntForm.type === t
@@ -1560,8 +1793,18 @@ export function PlansSection() {
                             : "bg-secondary border-border text-muted-foreground hover:text-foreground",
                         )}
                       >
-                        {t === "BOOLEAN" ? <ToggleLeft className="w-4 h-4" /> : t === "NUMERIC" ? <Hash className="w-4 h-4" /> : <Package className="w-4 h-4" />}
-                        {t === "BOOLEAN" ? "On/Off" : t === "NUMERIC" ? "Numeric" : "Unlimited"}
+                        {t === "BOOLEAN" ? (
+                          <ToggleLeft className="w-4 h-4" />
+                        ) : t === "NUMERIC" ? (
+                          <Hash className="w-4 h-4" />
+                        ) : (
+                          <Package className="w-4 h-4" />
+                        )}
+                        {t === "BOOLEAN"
+                          ? "On/Off"
+                          : t === "NUMERIC"
+                            ? "Numeric"
+                            : "Unlimited"}
                       </button>
                     ))}
                   </div>
@@ -1570,29 +1813,54 @@ export function PlansSection() {
                   <div className="space-y-1">
                     <Label className="text-xs">Value *</Label>
                     <Input
-                      type="number" min="0"
+                      type="number"
+                      min="0"
                       value={addEntForm.value}
-                      onChange={(e) => setAddEntForm((f) => ({ ...f, value: e.target.value }))}
+                      onChange={(e) =>
+                        setAddEntForm((f) => ({ ...f, value: e.target.value }))
+                      }
                       placeholder="e.g. 1000"
                       className="bg-secondary border-border h-8 text-sm"
                     />
-                    {addEntErrors.value && <p className="text-xs text-destructive">{addEntErrors.value}</p>}
+                    {addEntErrors.value && (
+                      <p className="text-xs text-destructive">
+                        {addEntErrors.value}
+                      </p>
+                    )}
                   </div>
                 )}
                 <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/50 border border-border">
                   <div>
                     <p className="text-sm font-medium">Enabled</p>
-                    <p className="text-xs text-muted-foreground">Active on the plan immediately</p>
+                    <p className="text-xs text-muted-foreground">
+                      Active on the plan immediately
+                    </p>
                   </div>
                   <Switch
                     checked={addEntForm.enabled}
-                    onCheckedChange={(v) => setAddEntForm((f) => ({ ...f, enabled: v }))}
+                    onCheckedChange={(v) =>
+                      setAddEntForm((f) => ({ ...f, enabled: v }))
+                    }
                   />
                 </div>
                 <div className="flex gap-2 justify-end">
-                  <Button type="button" variant="outline" size="sm" onClick={() => setAddEntOpen(false)}>Cancel</Button>
-                  <Button type="submit" size="sm" disabled={addEntLoading} className="bg-accent text-accent-foreground hover:bg-accent/90">
-                    {addEntLoading ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />Adding…</> : "Add Entitlement"}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setAddEntOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" size="sm" disabled={addEntLoading}>
+                    {addEntLoading ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                        Adding…
+                      </>
+                    ) : (
+                      "Add Entitlement"
+                    )}
                   </Button>
                 </div>
               </form>
@@ -1602,82 +1870,112 @@ export function PlansSection() {
             {entLoading ? (
               <div className="space-y-2">
                 {Array.from({ length: 3 }).map((_, i) => (
-                  <div key={i} className="h-14 rounded-xl bg-secondary/60 animate-pulse" />
+                  <div
+                    key={i}
+                    className="h-14 rounded-xl bg-secondary/60 animate-pulse"
+                  />
                 ))}
               </div>
-            ) : (() => {
-              const filtered = entitlements.filter((e) =>
-                e.featureName.toLowerCase().includes(entSearch.toLowerCase()) ||
-                e.featureKey.toLowerCase().includes(entSearch.toLowerCase()),
-              );
-              return filtered.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center mb-3">
-                    <List className="w-6 h-6 text-muted-foreground" />
+            ) : (
+              (() => {
+                const filtered = entitlements.filter(
+                  (e) =>
+                    e.featureName
+                      .toLowerCase()
+                      .includes(entSearch.toLowerCase()) ||
+                    e.featureKey
+                      .toLowerCase()
+                      .includes(entSearch.toLowerCase()),
+                );
+                return filtered.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center mb-3">
+                      <List className="w-6 h-6 text-muted-foreground" />
+                    </div>
+                    <p className="text-sm font-medium text-foreground mb-1">
+                      {entSearch
+                        ? "No entitlements match"
+                        : "No entitlements yet"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {entSearch
+                        ? "Try a different search"
+                        : "Click Add to define features included in this plan"}
+                    </p>
                   </div>
-                  <p className="text-sm font-medium text-foreground mb-1">
-                    {entSearch ? "No entitlements match" : "No entitlements yet"}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {entSearch ? "Try a different search" : "Click Add to define features included in this plan"}
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {filtered.map((ent) => (
-                    <div
-                      key={ent.featureKey}
-                      className="flex items-center gap-3 p-3 rounded-xl border border-border bg-card hover:bg-secondary/30 transition-colors"
-                    >
-                      {/* Type icon */}
-                      <div className="shrink-0 w-8 h-8 rounded-lg bg-secondary flex items-center justify-center">
-                        {ent.type === "BOOLEAN" ? (
-                          <ToggleLeft className="w-4 h-4 text-muted-foreground" />
-                        ) : ent.type === "NUMERIC" ? (
-                          <Hash className="w-4 h-4 text-muted-foreground" />
-                        ) : (
-                          <Package className="w-4 h-4 text-muted-foreground" />
-                        )}
-                      </div>
-                      {/* Info */}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-foreground truncate">{ent.featureName}</p>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <code className="text-xs text-muted-foreground font-mono">{ent.featureKey}</code>
-                          {ent.type === "NUMERIC" && ent.value != null && (
-                            <span className="text-xs text-muted-foreground">· limit: {String(ent.value)}</span>
-                          )}
-                          {ent.type === "UNLIMITED" && (
-                            <span className="text-xs text-muted-foreground">· unlimited</span>
+                ) : (
+                  <div className="space-y-2">
+                    {filtered.map((ent) => (
+                      <div
+                        key={ent.featureKey}
+                        className="flex items-center gap-3 p-3 rounded-xl border border-border bg-card hover:bg-secondary/30 transition-colors"
+                      >
+                        {/* Type icon */}
+                        <div className="shrink-0 w-8 h-8 rounded-lg bg-secondary flex items-center justify-center">
+                          {ent.type === "BOOLEAN" ? (
+                            <ToggleLeft className="w-4 h-4 text-muted-foreground" />
+                          ) : ent.type === "NUMERIC" ? (
+                            <Hash className="w-4 h-4 text-muted-foreground" />
+                          ) : (
+                            <Package className="w-4 h-4 text-muted-foreground" />
                           )}
                         </div>
+                        {/* Info */}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-foreground truncate">
+                            {ent.featureName}
+                          </p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <code className="text-xs text-muted-foreground font-mono">
+                              {ent.featureKey}
+                            </code>
+                            {ent.type === "NUMERIC" && ent.value != null && (
+                              <span className="text-xs text-muted-foreground">
+                                · limit: {String(ent.value)}
+                              </span>
+                            )}
+                            {ent.type === "UNLIMITED" && (
+                              <span className="text-xs text-muted-foreground">
+                                · unlimited
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        {/* Toggle */}
+                        <Switch
+                          checked={ent.enabled}
+                          disabled={togglingKey === ent.featureKey}
+                          onCheckedChange={(v) =>
+                            entPlan &&
+                            toggleEntitlement(entPlan.id, ent.featureKey, v)
+                          }
+                        />
+                        {/* Delete */}
+                        <button
+                          onClick={() =>
+                            entPlan &&
+                            deleteEntitlement(entPlan.id, ent.featureKey)
+                          }
+                          disabled={deletingKey === ent.featureKey}
+                          className="shrink-0 p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
+                          title="Remove entitlement"
+                        >
+                          {deletingKey === ent.featureKey ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Trash2 className="w-3.5 h-3.5" />
+                          )}
+                        </button>
                       </div>
-                      {/* Toggle */}
-                      <Switch
-                        checked={ent.enabled}
-                        disabled={togglingKey === ent.featureKey}
-                        onCheckedChange={(v) => entPlan && toggleEntitlement(entPlan.id, ent.featureKey, v)}
-                      />
-                      {/* Delete */}
-                      <button
-                        onClick={() => entPlan && deleteEntitlement(entPlan.id, ent.featureKey)}
-                        disabled={deletingKey === ent.featureKey}
-                        className="shrink-0 p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
-                        title="Remove entitlement"
-                      >
-                        {deletingKey === ent.featureKey
-                          ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          : <Trash2 className="w-3.5 h-3.5" />
-                        }
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              );
-            })()}
+                    ))}
+                  </div>
+                );
+              })()
+            )}
 
             <p className="text-xs text-muted-foreground text-center pt-2">
-              {entitlements.length} entitlement{entitlements.length !== 1 ? "s" : ""} on this plan
+              {entitlements.length} entitlement
+              {entitlements.length !== 1 ? "s" : ""} on this plan
             </p>
           </div>
         </SheetContent>

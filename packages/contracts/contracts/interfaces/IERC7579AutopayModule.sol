@@ -38,6 +38,7 @@ interface IERC7579AutopayModule is IERC7579Module {
         uint32 interval;       // Billing interval in seconds (e.g., 2,592,000 for monthly)
         uint64 startTime;      // Billing start timestamp
         uint256 planId;        // Reference to PlanFactory plan ID
+        uint256 maxTotalAmount; // Maximum total amount pullable over config lifetime (0 = unlimited)
     }
 
     // ============================================================
@@ -64,6 +65,15 @@ interface IERC7579AutopayModule is IERC7579Module {
     /// @notice Emitted when autopay is revoked
     event AutopayRevoked(address indexed account);
 
+    /// @notice Emitted when an account pauses its autopay
+    event AccountAutopayPaused(address indexed account);
+
+    /// @notice Emitted when an account unpauses its autopay
+    event AccountAutopayUnpaused(address indexed account);
+
+    /// @notice Emitted when a failed cross-chain dispatch is successfully retried
+    event CrossChainDispatchRetried(address indexed account, uint256 tokenId, uint256 destinationChainId);
+
     // ============================================================
     //                     CORE FUNCTIONS
     // ============================================================
@@ -87,4 +97,13 @@ interface IERC7579AutopayModule is IERC7579Module {
     /// @param account The smart account address
     /// @return True if a pull can be executed
     function canExecute(address account) external view returns (bool);
+
+    /// @notice Allows the smart account to pause its own autopay
+    function pauseAccount() external;
+
+    /// @notice Allows the smart account to unpause its own autopay
+    function unpauseAccount() external;
+
+    /// @notice Returns total amount pulled for an account
+    function totalPulled(address account) external view returns (uint256);
 }

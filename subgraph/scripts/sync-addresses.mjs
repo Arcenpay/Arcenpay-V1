@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 function parseArgs(argv) {
-  const out = { deployment: '', network: '' };
+  const out = { deployment: '', network: '', config: '' };
   for (let i = 2; i < argv.length; i += 1) {
     if (argv[i] === '--deployment') {
       out.deployment = argv[i + 1] || '';
@@ -10,12 +10,15 @@ function parseArgs(argv) {
     } else if (argv[i] === '--network') {
       out.network = argv[i + 1] || '';
       i += 1;
+    } else if (argv[i] === '--config') {
+      out.config = argv[i + 1] || '';
+      i += 1;
     }
   }
   return out;
 }
 
-const { deployment, network } = parseArgs(process.argv);
+const { deployment, network, config } = parseArgs(process.argv);
 if (!deployment) {
   throw new Error('Missing --deployment <path>');
 }
@@ -25,7 +28,7 @@ if (!network) {
 
 const root = path.resolve(process.cwd());
 const deploymentPath = path.resolve(root, deployment);
-const yamlPath = path.join(root, 'subgraph.yaml');
+const yamlPath = config ? path.resolve(root, config) : path.join(root, 'subgraph.yaml');
 
 if (!fs.existsSync(deploymentPath)) {
   throw new Error(`Deployment file not found: ${deploymentPath}`);
@@ -56,4 +59,4 @@ for (const [name, address] of Object.entries(addressMap)) {
 }
 
 fs.writeFileSync(yamlPath, yaml);
-console.log(`Updated subgraph.yaml using ${deploymentPath}`);
+console.log(`Updated ${path.basename(yamlPath)} using ${deploymentPath}`);

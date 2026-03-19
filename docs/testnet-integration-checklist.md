@@ -37,6 +37,9 @@ Use this checklist to fully wire dashboard + facilitator + external services on 
 - `PAYMASTER_CHAIN_IDS` (testnet only, example `84532`)
 - Optional if provider requires auth: `PAYMASTER_RPC_AUTH_TOKEN`
 
+Recommended format (v3):
+- `PAYMASTER_RPC_URL=https://rpc.zerodev.app/api/v3/<PROJECT_ID>/chain/11155111`
+
 ## 5) Notifications (recommended)
 
 - `RESEND_API_KEY`
@@ -51,6 +54,7 @@ Use this checklist to fully wire dashboard + facilitator + external services on 
   - `TABLELAND_TABLE_NAME`
   - `TABLELAND_PRIVATE_KEY`
   - optional `TABLELAND_RPC_URL`, `TABLELAND_GATEWAY_URL`
+  - If Tableland is unavailable, facilitator automatically falls back to in-memory feature flags (development-safe fallback)
 - Lit:
   - `LIT_NETWORK`
 - Axelar:
@@ -60,7 +64,15 @@ Use this checklist to fully wire dashboard + facilitator + external services on 
   - `CCIP_ROUTER_ADDRESS`
   - optional `CCIP_LINK_TOKEN_ADDRESS`
 
-## 7) Mock USDC deployment requirements
+## 7) Smart Ownership (recommended for production-grade safety)
+
+- Set `PLAN_FACTORY_OWNER_ADDRESS` to your Safe/multisig owner address.
+- Keep `PLAN_FACTORY_OWNER_PRIVATE_KEY` empty in dashboard env.
+- Use PlanFactory owner as a Safe/multisig.
+- When relayer provider registration is needed, execute `registerProvider(relayer)` from owner Safe.
+- Dashboard API now returns calldata (`ownerActionRequired`) for Safe transaction execution.
+
+## 8) Mock USDC deployment requirements
 
 To deploy and mint test `mUSDC` to any wallet:
 

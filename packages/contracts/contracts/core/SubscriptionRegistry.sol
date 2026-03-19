@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
 import "../interfaces/ISubscriptionRegistry.sol";
 import "../interfaces/IERC5643.sol";
 import "../interfaces/IPlanFactory.sol";
@@ -26,7 +27,8 @@ contract SubscriptionRegistry is
     IERC5643,
     ISubscriptionRegistry,
     Ownable,
-    ReentrancyGuard
+    ReentrancyGuard,
+    Pausable
 {
     uint8 public constant ROUTE_AXELAR = 1;
     uint8 public constant ROUTE_CCIP = 2;
@@ -94,6 +96,9 @@ contract SubscriptionRegistry is
     //                      ADMIN FUNCTIONS
     // ============================================================
 
+    function pause() external onlyOwner { _pause(); }
+    function unpause() external onlyOwner { _unpause(); }
+
     /// @notice Authorizes a billing contract
     function authorizeBiller(address biller) external onlyOwner {
         authorizedBillers[biller] = true;
@@ -132,7 +137,7 @@ contract SubscriptionRegistry is
         address to,
         uint256 planId,
         uint64 duration
-    ) external onlyBiller nonReentrant returns (uint256 tokenId) {
+    ) external onlyBiller nonReentrant whenNotPaused returns (uint256 tokenId) {
         require(to != address(0), "SubscriptionRegistry: zero address");
         require(duration > 0, "SubscriptionRegistry: zero duration");
 
@@ -167,7 +172,7 @@ contract SubscriptionRegistry is
     }
 
     /// @inheritdoc ISubscriptionRegistry
-    function renew(uint256 tokenId, uint64 extension) external onlyBiller nonReentrant {
+    function renew(uint256 tokenId, uint64 extension) external onlyBiller nonReentrant whenNotPaused {
         _renewInternal(tokenId, extension);
     }
 
@@ -207,7 +212,7 @@ contract SubscriptionRegistry is
     }
 
     /// @inheritdoc ISubscriptionRegistry
-    function updateCrossChain(uint256 tokenId, bytes calldata gmMessage) external onlyBridge {
+    function updateCrossChain(uint256 tokenId, bytes calldata gmMessage) external onlyBridge whenNotPaused {
         // Decode GMP message: (uint64 newExpiration, uint256 planId)
         (uint64 newExpiration, uint256 planId) = abi.decode(gmMessage, (uint64, uint256));
 
@@ -228,7 +233,7 @@ contract SubscriptionRegistry is
         uint256 tokenId,
         uint256 destinationChainId,
         address refundAddress
-    ) external payable onlyBiller returns (bytes32 messageId, uint8 routeUsed) {
+    ) external payable onlyBiller whenNotPaused returns (bytes32 messageId, uint8 routeUsed) {
         require(_ownerOf(tokenId) != address(0), "SubscriptionRegistry: nonexistent token");
         require(destinationChainId > 0, "SubscriptionRegistry: invalid destination");
         require(refundAddress != address(0), "SubscriptionRegistry: zero refund");

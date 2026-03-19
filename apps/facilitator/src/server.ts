@@ -56,7 +56,13 @@ import {
   type PlanTier,
   type X402VerifiedPaymentContext,
 } from "@meap/core";
-import { createPublicClient, encodePacked, http, type Hex } from "viem";
+import {
+  createPublicClient,
+  encodePacked,
+  http,
+  verifyMessage,
+  type Hex,
+} from "viem";
 import { DurableJobQueue } from "./queue.js";
 import { X402ReplayProtection } from "./replay-protection.js";
 
@@ -113,7 +119,9 @@ const PAYMASTER_RPC_URL = (
 const PAYMASTER_RPC_METHOD = (
   process.env.PAYMASTER_RPC_METHOD || "pm_sponsorUserOperation"
 ).trim();
-const PAYMASTER_RPC_AUTH_TOKEN = (process.env.PAYMASTER_RPC_AUTH_TOKEN || "").trim();
+const PAYMASTER_RPC_AUTH_TOKEN = (
+  process.env.PAYMASTER_RPC_AUTH_TOKEN || ""
+).trim();
 const PAYMASTER_CHAIN_IDS = parseChainIdSet(
   process.env.PAYMASTER_CHAIN_IDS ||
     (FACILITATOR_PROFILE === "production" ? "" : "84532"),
@@ -180,9 +188,7 @@ function validateRuntimeConfig(): void {
     }
 
     if (!process.env.CHAIN_ID) {
-      errors.push(
-        "CHAIN_ID must be explicitly set in production.",
-      );
+      errors.push("CHAIN_ID must be explicitly set in production.");
     }
 
     if (!FACILITATOR_SECRET) {
@@ -219,7 +225,10 @@ function validateRuntimeConfig(): void {
       }
     }
 
-    if (PROOF_ARTIFACT_VERSION && !fs.existsSync(PROOF_ARTIFACT_MANIFEST_PATH)) {
+    if (
+      PROOF_ARTIFACT_VERSION &&
+      !fs.existsSync(PROOF_ARTIFACT_MANIFEST_PATH)
+    ) {
       errors.push(
         `MEAP_PROOF_ARTIFACT_VERSION is set but artifact manifest is missing: ${PROOF_ARTIFACT_MANIFEST_PATH}`,
       );
@@ -637,8 +646,14 @@ const queueRedisReady = (async (): Promise<void> => {
   try {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const ioredis = require("ioredis") as {
-      default?: new (url: string, opts?: object) => import("./queue.js").IRedisQueue & { connect(): Promise<void> };
-      new (url: string, opts?: object): import("./queue.js").IRedisQueue & { connect(): Promise<void> };
+      default?: new (
+        url: string,
+        opts?: object,
+      ) => import("./queue.js").IRedisQueue & { connect(): Promise<void> };
+      new (
+        url: string,
+        opts?: object,
+      ): import("./queue.js").IRedisQueue & { connect(): Promise<void> };
     };
     const Ctor = ioredis.default ?? ioredis;
     const client = new Ctor(process.env.REDIS_URL, {
@@ -648,7 +663,9 @@ const queueRedisReady = (async (): Promise<void> => {
     });
     await client.connect();
     jobQueue.setRedis(client);
-    console.log("[Facilitator] Queue Redis connected — enabling crash recovery");
+    console.log(
+      "[Facilitator] Queue Redis connected — enabling crash recovery",
+    );
     await jobQueue.recoverFromRedis("billing");
     await jobQueue.recoverFromRedis("webhooks");
   } catch (err) {
@@ -682,7 +699,10 @@ jobQueue.startWorker<{ pathname: string; payload: unknown }>(
     if (!DASHBOARD_URL) return;
     const { pathname, payload } = job.payload;
     const ok = await postToDashboard(pathname, payload);
-    if (!ok) throw new Error(`Dashboard webhook delivery to ${pathname} returned non-2xx`);
+    if (!ok)
+      throw new Error(
+        `Dashboard webhook delivery to ${pathname} returned non-2xx`,
+      );
   },
 );
 
@@ -745,7 +765,10 @@ if (process.env.TABLELAND_TABLE_NAME) {
 
 // ── In-memory flag store (fallback when Tableland is not configured) ──────────
 // Persists only for the lifetime of the server process. Development use only.
-type FlagMatrix = Record<ProviderTier, Record<string, boolean | string | number>>;
+type FlagMatrix = Record<
+  ProviderTier,
+  Record<string, boolean | string | number>
+>;
 const inMemoryFlags = new Map<string, FlagMatrix>();
 function getInMemoryMatrix(provider: string): FlagMatrix {
   if (!inMemoryFlags.has(provider)) {
@@ -757,9 +780,18 @@ function getInMemoryMatrix(provider: string): FlagMatrix {
 // ── Flag metadata store (label, description, type per provider per flag key) ──
 type FlagMeta = { label: string; description: string; type: string };
 const flagMetadataStore = new Map<string, Map<string, FlagMeta>>();
-function setFlagMeta(provider: string, flagKey: string, meta: Partial<FlagMeta>): void {
-  if (!flagMetadataStore.has(provider)) flagMetadataStore.set(provider, new Map());
-  const existing = flagMetadataStore.get(provider)!.get(flagKey) ?? { label: "", description: "", type: "boolean" };
+function setFlagMeta(
+  provider: string,
+  flagKey: string,
+  meta: Partial<FlagMeta>,
+): void {
+  if (!flagMetadataStore.has(provider))
+    flagMetadataStore.set(provider, new Map());
+  const existing = flagMetadataStore.get(provider)!.get(flagKey) ?? {
+    label: "",
+    description: "",
+    type: "boolean",
+  };
   flagMetadataStore.get(provider)!.set(flagKey, { ...existing, ...meta });
 }
 
@@ -817,7 +849,10 @@ const billingBridgeStats: {
   lastError: null,
 };
 
-async function postToDashboard(pathname: string, payload: unknown): Promise<boolean> {
+async function postToDashboard(
+  pathname: string,
+  payload: unknown,
+): Promise<boolean> {
   if (!DASHBOARD_URL) return false;
   try {
     const headers: Record<string, string> = {
@@ -842,8 +877,12 @@ async function postToDashboard(pathname: string, payload: unknown): Promise<bool
     return true;
   } catch (err) {
     billingBridgeStats.failed += 1;
-    billingBridgeStats.lastError = err instanceof Error ? err.message : String(err);
-    console.error(`[Facilitator] Failed posting to dashboard ${pathname}:`, err);
+    billingBridgeStats.lastError =
+      err instanceof Error ? err.message : String(err);
+    console.error(
+      `[Facilitator] Failed posting to dashboard ${pathname}:`,
+      err,
+    );
     return false;
   }
 }
@@ -1496,8 +1535,10 @@ if (axelarTransport || ccipTransport) {
         };
         const destChainId = Number(destinationChainId);
         // Build minimal payload: ABI-encode tokenId for MirrorRegistry
-        const payload = `0x${tokenId.toString(16).padStart(64, "0")}` as `0x${string}`;
-        const refundAddress = (CONTRACTS.sessionVault || "0x0000000000000000000000000000000000000000") as `0x${string}`;
+        const payload =
+          `0x${tokenId.toString(16).padStart(64, "0")}` as `0x${string}`;
+        const refundAddress = (CONTRACTS.sessionVault ||
+          "0x0000000000000000000000000000000000000000") as `0x${string}`;
         // route 0 = Axelar (primary), route 1 = CCIP (fallback)
         const useAxelar = route === 0 && axelarTransport !== null;
         const transport = useAxelar ? axelarTransport : ccipTransport;
@@ -1508,7 +1549,11 @@ if (axelarTransport || ccipTransport) {
           continue;
         }
         try {
-          const result = await transport.dispatch(destChainId, payload, refundAddress);
+          const result = await transport.dispatch(
+            destChainId,
+            payload,
+            refundAddress,
+          );
           console.log(
             `[Facilitator] GMP dispatched tokenId=${tokenId} → chain ${destChainId} via ${useAxelar ? "Axelar" : "CCIP"} txHash=${result.transactionHash}`,
           );
@@ -1521,7 +1566,10 @@ if (axelarTransport || ccipTransport) {
       }
     },
     onError: (err) => {
-      console.error("[Facilitator] CrossChainDispatchRequested watcher error:", err);
+      console.error(
+        "[Facilitator] CrossChainDispatchRequested watcher error:",
+        err,
+      );
     },
   });
   console.log("[Facilitator] Cross-chain dispatch watcher active");
@@ -1632,9 +1680,8 @@ app.get("/health", async (_req, res) => {
     queues: {
       aggregationPending: aggregatorService.getStats().pendingSettlements,
       webhookFailuresLast200: webhookService
-        ? webhookService
-            .getDeliveryLog(200)
-            .filter((entry) => !entry.success).length
+        ? webhookService.getDeliveryLog(200).filter((entry) => !entry.success)
+            .length
         : 0,
       billingBridge: jobQueue.getStats("billing"),
       webhookDelivery: jobQueue.getStats("webhooks"),
@@ -1661,27 +1708,39 @@ app.get("/health", async (_req, res) => {
 
       // SLO 1: Billing queue dead-letter must stay at 0
       if (billingStats.deadLetter > 0) {
-        breaches.push(`billing_dead_letter: ${billingStats.deadLetter} jobs require manual replay`);
+        breaches.push(
+          `billing_dead_letter: ${billingStats.deadLetter} jobs require manual replay`,
+        );
       }
       // SLO 2: Webhook dead-letter must stay at 0
       if (webhookStats.deadLetter > 0) {
-        breaches.push(`webhook_dead_letter: ${webhookStats.deadLetter} jobs require manual replay`);
+        breaches.push(
+          `webhook_dead_letter: ${webhookStats.deadLetter} jobs require manual replay`,
+        );
       }
       // SLO 3: Billing queue backlog < 50 (indicates dashboard bridge is lagging)
       if (billingStats.pending > 50) {
-        breaches.push(`billing_backlog: ${billingStats.pending} pending (SLO: <50)`);
+        breaches.push(
+          `billing_backlog: ${billingStats.pending} pending (SLO: <50)`,
+        );
       }
       // SLO 4: Webhook failure rate < 10 in last 200 deliveries
       if (webhookFailures > 10) {
-        breaches.push(`webhook_failure_rate: ${webhookFailures}/200 recent deliveries failed (SLO: <10)`);
+        breaches.push(
+          `webhook_failure_rate: ${webhookFailures}/200 recent deliveries failed (SLO: <10)`,
+        );
       }
       // SLO 5: RPC connectivity — block number must be available
       if (!blockNumber) {
-        breaches.push("rpc_connectivity: unable to read latest block — check RPC_URL");
+        breaches.push(
+          "rpc_connectivity: unable to read latest block — check RPC_URL",
+        );
       }
       // SLO 6: Settler authorization must be valid when on-chain settlement is enabled
       if (settlementWriter && !settlementAuthorizationState.authorized) {
-        breaches.push("settler_authorization: on-chain settler is not authorized — settlement will fail");
+        breaches.push(
+          "settler_authorization: on-chain settler is not authorized — settlement will fail",
+        );
       }
 
       return {
@@ -1753,7 +1812,8 @@ app.use(
         x402ReplayRejections.inc();
         res.setHeader("x-meap-rejection-reason", "replay_detected");
         return res.status(402).json({
-          error: "Payment replay detected. Each x-payment header may only be used once.",
+          error:
+            "Payment replay detected. Each x-payment header may only be used once.",
           code: "REPLAY_DETECTED",
         });
       }
@@ -2178,8 +2238,17 @@ app.post(
 
     if (!tablelandService) {
       const normalizedProvider = provider.toLowerCase();
-      inMemoryFlags.set(normalizedProvider, { starter: {}, pro: {}, enterprise: {} });
-      return res.json({ ok: true, provider: normalizedProvider, initialized: true, source: "memory" });
+      inMemoryFlags.set(normalizedProvider, {
+        starter: {},
+        pro: {},
+        enterprise: {},
+      });
+      return res.json({
+        ok: true,
+        provider: normalizedProvider,
+        initialized: true,
+        source: "memory",
+      });
     }
 
     try {
@@ -2249,11 +2318,22 @@ app.put(
       for (const tier of PROVIDER_TIERS) {
         matrix[tier][flagKey] = enabledTiers.has(tier);
       }
-      const label = typeof req.body?.label === "string" ? req.body.label.trim() : "";
-      const description = typeof req.body?.description === "string" ? req.body.description.trim() : "";
-      const type = typeof req.body?.type === "string" ? req.body.type.trim() : "boolean";
+      const label =
+        typeof req.body?.label === "string" ? req.body.label.trim() : "";
+      const description =
+        typeof req.body?.description === "string"
+          ? req.body.description.trim()
+          : "";
+      const type =
+        typeof req.body?.type === "string" ? req.body.type.trim() : "boolean";
       setFlagMeta(normalizedProvider, flagKey, { label, description, type });
-      return res.json({ ok: true, provider: normalizedProvider, key: flagKey, planTiers: Array.from(enabledTiers), source: "memory" });
+      return res.json({
+        ok: true,
+        provider: normalizedProvider,
+        key: flagKey,
+        planTiers: Array.from(enabledTiers),
+        source: "memory",
+      });
     }
 
     try {
@@ -2321,7 +2401,14 @@ app.patch(
       const normalizedProvider = provider.toLowerCase();
       const matrix = getInMemoryMatrix(normalizedProvider);
       matrix[tier][flagKey] = enabled;
-      return res.json({ ok: true, provider: normalizedProvider, key: flagKey, tier, enabled, source: "memory" });
+      return res.json({
+        ok: true,
+        provider: normalizedProvider,
+        key: flagKey,
+        tier,
+        enabled,
+        source: "memory",
+      });
     }
 
     try {
@@ -2388,7 +2475,13 @@ app.delete(
         delete matrix[tier][flagKey];
       }
       flagMetadataStore.get(normalizedProvider)?.delete(flagKey);
-      return res.json({ ok: true, provider: normalizedProvider, key: flagKey, deleted: true, source: "memory" });
+      return res.json({
+        ok: true,
+        provider: normalizedProvider,
+        key: flagKey,
+        deleted: true,
+        source: "memory",
+      });
     }
 
     try {
@@ -2671,7 +2764,9 @@ app.post(
         ? req.body.schemaVersion
         : undefined;
     const occurredAt =
-      typeof req.body?.occurredAt === "string" ? req.body.occurredAt : undefined;
+      typeof req.body?.occurredAt === "string"
+        ? req.body.occurredAt
+        : undefined;
 
     const allowedEventTypes = new Set([
       "SUBSCRIPTION_MINTED",
@@ -2873,9 +2968,16 @@ app.post(
     const jobId = String(req.params.jobId);
     const replayed = jobQueue.replayDeadLetterJob(name, jobId);
     if (!replayed) {
-      return res.status(404).json({ error: "Job not found in dead-letter queue" });
+      return res
+        .status(404)
+        .json({ error: "Job not found in dead-letter queue" });
     }
-    res.json({ ok: true, queue: name, jobId, message: "Job re-enqueued for retry" });
+    res.json({
+      ok: true,
+      queue: name,
+      jobId,
+      message: "Job re-enqueued for retry",
+    });
   },
 );
 
@@ -3022,7 +3124,9 @@ function extractJsonRpcError(payload: unknown): string {
   const err = payload.error;
   if (!isRecord(err)) return "Unknown paymaster RPC error";
   const message =
-    typeof err.message === "string" ? err.message : "Unknown paymaster RPC error";
+    typeof err.message === "string"
+      ? err.message
+      : "Unknown paymaster RPC error";
   const code = typeof err.code === "number" ? ` (${err.code})` : "";
   return `${message}${code}`;
 }
@@ -3086,153 +3190,164 @@ async function sponsorUserOperationViaPaymaster(input: {
   return { paymasterAndData, rawResult: result };
 }
 
-app.post("/api/paymaster/evaluate", requireFacilitatorSecretIfConfigured, async (req, res) => {
-  const body = req.body as PaymasterEvalRequest;
+app.post(
+  "/api/paymaster/evaluate",
+  requireFacilitatorSecretIfConfigured,
+  async (req, res) => {
+    const body = req.body as PaymasterEvalRequest;
 
-  if (!body.teamId || !body.chainId || !body.walletAddress || !body.txType) {
-    res.status(400).json({
-      sponsored: false,
-      reason: "Missing required fields: teamId, chainId, walletAddress, txType",
-    });
-    return;
-  }
-
-  if (!body.userOperation || !isRecord(body.userOperation)) {
-    res.status(400).json({
-      sponsored: false,
-      reason: "Missing required field: userOperation",
-    });
-    return;
-  }
-
-  if (PAYMASTER_CHAIN_IDS.size === 0 || !PAYMASTER_CHAIN_IDS.has(body.chainId)) {
-    const allowed = [...PAYMASTER_CHAIN_IDS].join(", ") || "none";
-    res.status(200).json({
-      sponsored: false,
-      reason: `Chain ${body.chainId} is not eligible for paymaster sponsorship (allowed: ${allowed}).`,
-    });
-    return;
-  }
-
-  // Only specific tx types can be sponsored
-  const sponsoredTxTypes = new Set(["subscribe", "renew", "deposit"]);
-  if (!sponsoredTxTypes.has(body.txType)) {
-    res.status(200).json({
-      sponsored: false,
-      reason: `Transaction type "${body.txType}" is not eligible for sponsorship`,
-    });
-    return;
-  }
-
-  if (!PAYMASTER_RPC_URL) {
-    res.status(200).json({
-      sponsored: false,
-      reason: "Paymaster RPC is not configured (PAYMASTER_RPC_URL missing).",
-    });
-    return;
-  }
-
-  // Check gas budget with dashboard
-  if (!DASHBOARD_URL) {
-    res.status(200).json({
-      sponsored: false,
-      reason: "Gas budget service not configured (DASHBOARD_URL missing)",
-    });
-    return;
-  }
-
-  try {
-    const budgetRes = await fetch(
-      `${DASHBOARD_URL}/api/platform/gas-budget?teamId=${encodeURIComponent(body.teamId)}`,
-      {
-        headers: FACILITATOR_SECRET
-          ? { Authorization: `Bearer ${FACILITATOR_SECRET}` }
-          : {},
-      },
-    );
-
-    if (!budgetRes.ok) {
-      res.status(200).json({
+    if (!body.teamId || !body.chainId || !body.walletAddress || !body.txType) {
+      res.status(400).json({
         sponsored: false,
-        reason: `Budget check failed: HTTP ${budgetRes.status}`,
+        reason:
+          "Missing required fields: teamId, chainId, walletAddress, txType",
       });
       return;
     }
 
-    const budgetData = (await budgetRes.json()) as {
-      budget?: { remainingUsd?: number; budgetExhausted?: boolean };
-    };
-
-    if (budgetData.budget?.budgetExhausted || (budgetData.budget?.remainingUsd ?? 0) <= 0) {
-      res.status(200).json({
+    if (!body.userOperation || !isRecord(body.userOperation)) {
+      res.status(400).json({
         sponsored: false,
-        reason: "Daily gas budget exhausted",
-        remainingUsd: budgetData.budget?.remainingUsd ?? 0,
+        reason: "Missing required field: userOperation",
       });
       return;
     }
 
-    const entryPoint =
-      typeof body.entryPoint === "string" && isHexAddress(body.entryPoint)
-        ? (body.entryPoint as `0x${string}`)
-        : (PAYMASTER_DEFAULT_ENTRYPOINT as `0x${string}`);
+    if (
+      PAYMASTER_CHAIN_IDS.size === 0 ||
+      !PAYMASTER_CHAIN_IDS.has(body.chainId)
+    ) {
+      const allowed = [...PAYMASTER_CHAIN_IDS].join(", ") || "none";
+      res.status(200).json({
+        sponsored: false,
+        reason: `Chain ${body.chainId} is not eligible for paymaster sponsorship (allowed: ${allowed}).`,
+      });
+      return;
+    }
 
-    let sponsorship: { paymasterAndData: Hex; rawResult: unknown };
+    // Only specific tx types can be sponsored
+    const sponsoredTxTypes = new Set(["subscribe", "renew", "deposit"]);
+    if (!sponsoredTxTypes.has(body.txType)) {
+      res.status(200).json({
+        sponsored: false,
+        reason: `Transaction type "${body.txType}" is not eligible for sponsorship`,
+      });
+      return;
+    }
+
+    if (!PAYMASTER_RPC_URL) {
+      res.status(200).json({
+        sponsored: false,
+        reason: "Paymaster RPC is not configured (PAYMASTER_RPC_URL missing).",
+      });
+      return;
+    }
+
+    // Check gas budget with dashboard
+    if (!DASHBOARD_URL) {
+      res.status(200).json({
+        sponsored: false,
+        reason: "Gas budget service not configured (DASHBOARD_URL missing)",
+      });
+      return;
+    }
+
     try {
-      sponsorship = await sponsorUserOperationViaPaymaster({
-        chainId: body.chainId,
-        userOperation: body.userOperation,
-        entryPoint,
-        sponsorContext: body.sponsorContext,
-      });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      console.error("[Facilitator] Paymaster RPC error:", err);
+      const budgetRes = await fetch(
+        `${DASHBOARD_URL}/api/platform/gas-budget?teamId=${encodeURIComponent(body.teamId)}`,
+        {
+          headers: FACILITATOR_SECRET
+            ? { Authorization: `Bearer ${FACILITATOR_SECRET}` }
+            : {},
+        },
+      );
+
+      if (!budgetRes.ok) {
+        res.status(200).json({
+          sponsored: false,
+          reason: `Budget check failed: HTTP ${budgetRes.status}`,
+        });
+        return;
+      }
+
+      const budgetData = (await budgetRes.json()) as {
+        budget?: { remainingUsd?: number; budgetExhausted?: boolean };
+      };
+
+      if (
+        budgetData.budget?.budgetExhausted ||
+        (budgetData.budget?.remainingUsd ?? 0) <= 0
+      ) {
+        res.status(200).json({
+          sponsored: false,
+          reason: "Daily gas budget exhausted",
+          remainingUsd: budgetData.budget?.remainingUsd ?? 0,
+        });
+        return;
+      }
+
+      const entryPoint =
+        typeof body.entryPoint === "string" && isHexAddress(body.entryPoint)
+          ? (body.entryPoint as `0x${string}`)
+          : (PAYMASTER_DEFAULT_ENTRYPOINT as `0x${string}`);
+
+      let sponsorship: { paymasterAndData: Hex; rawResult: unknown };
+      try {
+        sponsorship = await sponsorUserOperationViaPaymaster({
+          chainId: body.chainId,
+          userOperation: body.userOperation,
+          entryPoint,
+          sponsorContext: body.sponsorContext,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.error("[Facilitator] Paymaster RPC error:", err);
+        res.status(200).json({
+          sponsored: false,
+          reason: `Paymaster sponsorship failed: ${message}`,
+        });
+        return;
+      }
+
+      const quoteId = `sponsor_${Date.now().toString(36)}_${Math.random()
+        .toString(36)
+        .slice(2, 8)}`;
+
       res.status(200).json({
-        sponsored: false,
-        reason: `Paymaster sponsorship failed: ${message}`,
-      });
-      return;
-    }
-
-    const quoteId = `sponsor_${Date.now().toString(36)}_${Math.random()
-      .toString(36)
-      .slice(2, 8)}`;
-
-    res.status(200).json({
-      sponsored: true,
-      chainId: body.chainId,
-      walletAddress: body.walletAddress,
-      txType: body.txType,
-      entryPoint,
-      remainingBudgetUsd: budgetData.budget?.remainingUsd,
-      paymasterAndData: sponsorship.paymasterAndData,
-      sponsorResult: sponsorship.rawResult,
-      quoteId,
-      message: "Gas sponsorship approved via paymaster RPC.",
-    });
-
-    if (PAYMASTER_RECORD_ESTIMATED_SPEND) {
-      void postToDashboard("/api/platform/gas-spend", {
-        teamId: body.teamId,
+        sponsored: true,
         chainId: body.chainId,
-        txHash: quoteId,
-        gasUsed: PAYMASTER_ESTIMATED_GAS_USED,
-        gasCostUsd: PAYMASTER_ESTIMATED_GAS_COST_USD,
         walletAddress: body.walletAddress,
         txType: body.txType,
-      }).catch(() => {
-        // Non-fatal
+        entryPoint,
+        remainingBudgetUsd: budgetData.budget?.remainingUsd,
+        paymasterAndData: sponsorship.paymasterAndData,
+        sponsorResult: sponsorship.rawResult,
+        quoteId,
+        message: "Gas sponsorship approved via paymaster RPC.",
+      });
+
+      if (PAYMASTER_RECORD_ESTIMATED_SPEND) {
+        void postToDashboard("/api/platform/gas-spend", {
+          teamId: body.teamId,
+          chainId: body.chainId,
+          txHash: quoteId,
+          gasUsed: PAYMASTER_ESTIMATED_GAS_USED,
+          gasCostUsd: PAYMASTER_ESTIMATED_GAS_COST_USD,
+          walletAddress: body.walletAddress,
+          txType: body.txType,
+        }).catch(() => {
+          // Non-fatal
+        });
+      }
+    } catch (err) {
+      console.error("[Facilitator] Paymaster evaluate error:", err);
+      res.status(500).json({
+        sponsored: false,
+        reason: "Internal error during gas budget evaluation",
       });
     }
-  } catch (err) {
-    console.error("[Facilitator] Paymaster evaluate error:", err);
-    res.status(500).json({
-      sponsored: false,
-      reason: "Internal error during gas budget evaluation",
-    });
-  }
-});
+  },
+);
 
 // ============================================================
 //  Start Server
@@ -3269,7 +3384,9 @@ void (async () => {
     try {
       await eventListener.start(12000);
       eventListenerActive = true;
-      console.log("[Facilitator] EventListener started — watching on-chain events");
+      console.log(
+        "[Facilitator] EventListener started — watching on-chain events",
+      );
     } catch (err) {
       eventListenerActive = false;
       console.error("[Facilitator] EventListener failed to start:", err);

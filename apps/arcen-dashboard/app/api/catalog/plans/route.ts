@@ -35,6 +35,10 @@ const updateSchema = z.object({
   active: z.boolean().optional(),
 });
 
+const deleteSchema = z.object({
+  id: z.string().min(1),
+});
+
 export async function GET(request: NextRequest) {
   const auth = await requirePermission("catalog:read");
   if (isErrorResponse(auth)) return auth;
@@ -210,4 +214,66 @@ export async function PUT(request: NextRequest) {
   });
 
   return NextResponse.json({ plan: updated });
+}
+
+export async function DELETE(request: NextRequest) {
+  const auth = await requirePermission("catalog:write");
+  if (isErrorResponse(auth)) return auth;
+
+  const body = await request.json().catch(() => ({}));
+  const parsed = deleteSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Invalid request", details: parsed.error.flatten().fieldErrors },
+      { status: 400 },
+    );
+  }
+
+  const existing = await db.catalogPlan.findFirst({
+    where: { id: parsed.data.id, teamId: auth.team.teamId },
+  });
+  if (!existing) {
+    return NextResponse.json({ error: "Plan not found" }, { status: 404 });
+  }
+
+  if (existing.status === "PUBLISHED") {
+    return NextResponse.json(
+      { error: "Published plans cannot be deleted. Archive the plan instead." },
+      { status: 409 },
+    );
+  }
+
+  if (existing.onChainPlanId) {
+    return NextResponse.json(
+      {
+        error:
+          "On-chain plans cannot be deleted from catalog. Archive or deactivate them instead.",
+      },
+      { status: 409 },
+    );
+  }
+
+  await db.$transaction([
+    db.catalogVersion.deleteMany({
+      where: {
+        teamId: auth.team.teamId,
+        entityType: "PLAN",
+        entityId: existing.id,
+      },
+    }),
+    db.catalogPlan.delete({ where: { id: existing.id } }),
+  ]);
+
+  await writeAuditEvent({
+    request,
+    teamId: auth.team.teamId,
+    userId: auth.team.userId,
+    walletAddress: auth.team.walletAddress,
+    action: "catalog.plan.delete",
+    resourceType: "CatalogPlan",
+    resourceId: existing.id,
+    beforeData: existing,
+  });
+
+  return NextResponse.json({ success: true });
 }

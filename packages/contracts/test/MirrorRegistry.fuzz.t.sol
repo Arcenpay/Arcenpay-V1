@@ -18,6 +18,8 @@ contract MirrorRegistryFuzzTest is Test {
     uint256 constant SOURCE_CHAIN = 11155111; // Sepolia
     uint256 constant ALT_CHAIN = 84532;       // Base Sepolia
 
+    uint256 private _gmpNonce;
+
     function setUp() public {
         admin = address(this);
         bridge1 = address(0xB1);
@@ -28,6 +30,14 @@ contract MirrorRegistryFuzzTest is Test {
         mirror.authorizeBridge(bridge2, ALT_CHAIN);
         mirror.setAxelarGateway(address(0xA1));
         mirror.setCCIPRouter(address(0xCC));
+
+        // Configure trusted sources for GMP path
+        mirror.setTrustedSource(SOURCE_CHAIN, abi.encodePacked(address(0xABCD)));
+        mirror.setTrustedSource(ALT_CHAIN, abi.encodePacked(address(0xABCE)));
+    }
+
+    function _nextMsgId() internal returns (bytes32) {
+        return keccak256(abi.encodePacked("gmp", _gmpNonce++));
     }
 
     // ── Fuzz: Unauthorized Bridge Rejection ─────────────────
@@ -35,13 +45,14 @@ contract MirrorRegistryFuzzTest is Test {
         vm.assume(caller != bridge1 && caller != bridge2);
         vm.assume(chainId > 0);
 
+        bytes memory sourceAddr = abi.encodePacked(address(0xABCD));
         bytes memory payload = abi.encode(
             address(0x1234), uint256(1), uint256(1), "pro", uint64(block.timestamp + 30 days)
         );
 
         vm.prank(caller);
         vm.expectRevert("MirrorRegistry: unauthorized bridge");
-        mirror.onGMPReceived(chainId, payload);
+        mirror.onGMPReceived(chainId, sourceAddr, _nextMsgId(), payload);
     }
 
     // ── Fuzz: Valid Mirror Update ────────────────────────────
@@ -54,12 +65,13 @@ contract MirrorRegistryFuzzTest is Test {
         vm.assume(subscriber != address(0));
         vm.assume(expiration > uint64(block.timestamp));
 
+        bytes memory sourceAddr = abi.encodePacked(address(0xABCD));
         bytes memory payload = abi.encode(
             subscriber, tokenId, planId, "basic", expiration
         );
 
         vm.prank(bridge1);
-        mirror.onGMPReceived(SOURCE_CHAIN, payload);
+        mirror.onGMPReceived(SOURCE_CHAIN, sourceAddr, _nextMsgId(), payload);
 
         // Verify mirror was applied
         assertTrue(mirror.isValid(subscriber), "Subscriber should be valid after mirror");
@@ -102,11 +114,12 @@ contract MirrorRegistryFuzzTest is Test {
         vm.assume(oldExpiry > uint64(block.timestamp));
 
         // First update
+        bytes memory sourceAddr = abi.encodePacked(address(0xABCD));
         bytes memory payload1 = abi.encode(
             subscriber, uint256(1), uint256(1), "pro", newExpiry
         );
         vm.prank(bridge1);
-        mirror.onGMPReceived(SOURCE_CHAIN, payload1);
+        mirror.onGMPReceived(SOURCE_CHAIN, sourceAddr, _nextMsgId(), payload1);
 
         // Verify the mirror was updated correctly
         assertEq(mirror.expiresAt(subscriber), newExpiry, "Expiry should match the update");
@@ -124,16 +137,18 @@ contract MirrorRegistryFuzzTest is Test {
         vm.assume(exp1 > uint64(block.timestamp));
         vm.assume(exp2 > uint64(block.timestamp));
 
+        bytes memory sourceAddr1 = abi.encodePacked(address(0xABCD));
+        bytes memory sourceAddr2 = abi.encodePacked(address(0xABCE));
         bytes memory payload1 = abi.encode(sub1, uint256(1), uint256(1), "basic", exp1);
         bytes memory payload2 = abi.encode(sub2, uint256(2), uint256(2), "premium", exp2);
 
         // Update sub1 from chain A
         vm.prank(bridge1);
-        mirror.onGMPReceived(SOURCE_CHAIN, payload1);
+        mirror.onGMPReceived(SOURCE_CHAIN, sourceAddr1, _nextMsgId(), payload1);
 
         // Update sub2 from chain B
         vm.prank(bridge2);
-        mirror.onGMPReceived(ALT_CHAIN, payload2);
+        mirror.onGMPReceived(ALT_CHAIN, sourceAddr2, _nextMsgId(), payload2);
 
         // Verify isolation
         assertEq(mirror.expiresAt(sub1), exp1, "Sub1 should have chain A expiry");

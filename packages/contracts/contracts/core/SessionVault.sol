@@ -5,12 +5,13 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
 import "../interfaces/ISessionVault.sol";
 
 /// @title SessionVault
 /// @notice Pre-funded stablecoin balance vault for ZKVUB billing sessions
 /// @dev Agents deposit stablecoins into sessions; verifier settles from session balance
-contract SessionVault is ISessionVault, Ownable, ReentrancyGuard {
+contract SessionVault is ISessionVault, Ownable, ReentrancyGuard, Pausable {
     using SafeERC20 for IERC20;
 
     // ============================================================
@@ -43,6 +44,12 @@ contract SessionVault is ISessionVault, Ownable, ReentrancyGuard {
     /// @notice Nonce for session ID generation
     uint256 private _sessionNonce;
 
+    /// @notice Optional provider whitelist (address => authorized)
+    mapping(address => bool) public whitelistedProviders;
+
+    /// @notice Whether provider whitelist is active
+    bool public providerWhitelistEnabled;
+
     // ============================================================
     //                        CONSTRUCTOR
     // ============================================================
@@ -62,6 +69,9 @@ contract SessionVault is ISessionVault, Ownable, ReentrancyGuard {
     //                      ADMIN FUNCTIONS
     // ============================================================
 
+    function pause() external onlyOwner { _pause(); }
+    function unpause() external onlyOwner { _unpause(); }
+
     /// @notice Authorizes a settlement contract
     function authorizeSettler(address settler) external onlyOwner {
         authorizedSettlers[settler] = true;
@@ -72,6 +82,22 @@ contract SessionVault is ISessionVault, Ownable, ReentrancyGuard {
         authorizedSettlers[settler] = false;
     }
 
+    /// @notice Enables/disables the provider whitelist
+    function setProviderWhitelistEnabled(bool enabled) external onlyOwner {
+        providerWhitelistEnabled = enabled;
+    }
+
+    /// @notice Adds a provider to the whitelist
+    function whitelistProvider(address _provider) external onlyOwner {
+        require(_provider != address(0), "SessionVault: zero provider");
+        whitelistedProviders[_provider] = true;
+    }
+
+    /// @notice Removes a provider from the whitelist
+    function removeProviderFromWhitelist(address _provider) external onlyOwner {
+        whitelistedProviders[_provider] = false;
+    }
+
     // ============================================================
     //                    SESSION MANAGEMENT
     // ============================================================
@@ -80,18 +106,23 @@ contract SessionVault is ISessionVault, Ownable, ReentrancyGuard {
     function fundSession(
         uint256 amount,
         address token
-    ) external nonReentrant returns (bytes32 sessionId) {
+    ) external nonReentrant whenNotPaused returns (bytes32 sessionId) {
         require(amount > 0, "SessionVault: zero amount");
         require(token != address(0), "SessionVault: zero token");
 
-        // Generate unique session ID
+        // Generate unique session ID (hardened with blockhash and contract address)
         sessionId = keccak256(abi.encodePacked(
             msg.sender,
             token,
             amount,
             block.timestamp,
+            blockhash(block.number - 1),
+            address(this),
             _sessionNonce++
         ));
+
+        // Defense-in-depth: ensure no collision
+        require(_sessions[sessionId].createdAt == 0, "SessionVault: session ID collision");
 
         // Transfer tokens from agent to vault
         IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
@@ -115,7 +146,7 @@ contract SessionVault is ISessionVault, Ownable, ReentrancyGuard {
     /// @notice Adds funds to an existing session
     /// @param sessionId The session to top up
     /// @param amount The amount to add
-    function topUp(bytes32 sessionId, uint256 amount) external nonReentrant {
+    function topUp(bytes32 sessionId, uint256 amount) external nonReentrant whenNotPaused {
         Session storage session = _sessions[sessionId];
         require(session.active, "SessionVault: session not active");
         require(session.agent == msg.sender, "SessionVault: not session owner");
@@ -130,12 +161,16 @@ contract SessionVault is ISessionVault, Ownable, ReentrancyGuard {
     }
 
     /// @inheritdoc ISessionVault
-    function settle(bytes32 sessionId, uint256 amount, address provider) external onlySettler nonReentrant {
+    function settle(bytes32 sessionId, uint256 amount, address provider) external onlySettler nonReentrant whenNotPaused {
         Session storage session = _sessions[sessionId];
         require(session.active, "SessionVault: session not active");
         require(amount > 0, "SessionVault: zero amount");
         require(session.balance >= amount, "SessionVault: insufficient balance");
         require(provider != address(0), "SessionVault: zero provider");
+
+        if (providerWhitelistEnabled) {
+            require(whitelistedProviders[provider], "SessionVault: provider not whitelisted");
+        }
 
         session.balance -= amount;
         session.totalSettled += amount;

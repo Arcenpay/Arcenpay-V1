@@ -10,7 +10,7 @@ dataSources:
     name: SubscriptionRegistry
     network: sepolia
     source:
-      address: "0xf45A9E5280F72260a713c50b0Ca4e4FB1e22Cc8A"
+      address: "0xE206C519076535A9d24c852093860CFD780908C1"
       abi: SubscriptionRegistry
       startBlock: 7500000
     mapping:
@@ -18,7 +18,7 @@ dataSources:
       apiVersion: 0.0.7
       language: wasm/assemblyscript
       entities:
-        - Subscription
+        - SubscriptionRecord
         - Plan
         - Subscriber
         - BillingEvent
@@ -38,7 +38,7 @@ dataSources:
     name: PlanFactory
     network: sepolia
     source:
-      address: "0xc736f5d91aC0039b97A4Fc3540B8f3d59E7FdBa6"
+      address: "0x4F97E0c2Ac053b735640fEb164a08Cb45ba83db1"
       abi: PlanFactory
       startBlock: 7500000
     mapping:
@@ -66,7 +66,7 @@ dataSources:
     name: SessionVault
     network: sepolia
     source:
-      address: "0x2dccEaad8551a620E4Fc736bb4d0fbb8D1A17D7C"
+      address: "0xd68b9C0a34d61CC3b3F982A5EC6Cc5a5739e46D9"
       abi: SessionVault
       startBlock: 7500000
     mapping:
@@ -93,7 +93,7 @@ dataSources:
     name: ZKUsageVerifier
     network: sepolia
     source:
-      address: "0x265E0dC80b00044d183AFa83237F5976bB4d585c"
+      address: "0x1f75d66692416cE880d51Baf6CdcBeE98E5837c0"
       abi: ZKUsageVerifier
       startBlock: 7500000
     mapping:
@@ -116,7 +116,7 @@ dataSources:
     name: FeeCollector
     network: sepolia
     source:
-      address: "0x513fab5218045790364b33A38D95FE8E17403BAe"
+      address: "0xa8A0D3007e5680D387A50C1a1E2Eb0AD092ca396"
       abi: FeeCollector
       startBlock: 7500000
     mapping:
