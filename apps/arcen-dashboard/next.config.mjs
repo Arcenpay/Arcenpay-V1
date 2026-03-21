@@ -8,7 +8,21 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  turbopack: {},
+  // Server-only packages that should not be bundled (works for both Turbopack and webpack)
+  serverExternalPackages: [
+    "pino",
+    "pino-pretty",
+    "thread-stream",
+    "lokijs",
+    "encoding",
+    "@reclaimprotocol/js-sdk",
+  ],
+  turbopack: {
+    resolveAlias: {
+      "thread-stream": "./lib/stubs/thread-stream-stub.js",
+      "@reclaimprotocol/js-sdk": "./lib/stubs/reclaim-sdk-stub.js",
+    },
+  },
   webpack: (config) => {
     config.resolve.alias = {
       ...(config.resolve.alias || {}),

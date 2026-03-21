@@ -1,9 +1,19 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Key, Plus, Trash2, Copy, Check, AlertTriangle, Eye, EyeOff } from "lucide-react";
+import { Key, Plus, Trash2, Copy, Check, AlertTriangle, Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetFooter,
+} from "@/components/ui/sheet";
 import { formatRelativeTime } from "@/lib/format";
 
 interface ApiKey {
@@ -133,19 +143,19 @@ function ApiKeysContent() {
 
       {/* New key banner */}
       {newKey && (
-        <div className="rounded-lg border border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-800 p-4">
+        <div className="rounded-lg border border-green-500/30 bg-green-500/5 p-4">
           <div className="flex items-start gap-3">
-            <AlertTriangle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+            <AlertTriangle className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
             <div className="flex-1 min-w-0">
-              <p className="font-medium text-green-800 dark:text-green-300 text-sm">
-                API key created: <strong>{newKey.name}</strong>
+              <p className="font-medium text-green-600 dark:text-green-400 text-sm">
+                Key created: <strong>{newKey.name}</strong>
               </p>
-              <p className="text-green-700 dark:text-green-400 text-xs mt-1 mb-3">
+              <p className="text-muted-foreground text-xs mt-1 mb-3">
                 Copy this key now — it will never be shown again.
               </p>
               <CopyableKey value={newKey.key} />
             </div>
-            <button onClick={() => setNewKey(null)} className="text-green-600 hover:text-green-800 text-xs">
+            <button onClick={() => setNewKey(null)} className="text-muted-foreground hover:text-foreground text-xs">
               Dismiss
             </button>
           </div>
@@ -154,49 +164,62 @@ function ApiKeysContent() {
 
       {/* Keys list */}
       {loading ? (
-        <div className="text-center py-8 text-muted-foreground">Loading...</div>
+        <div className="rounded-lg border border-border overflow-hidden">
+          <div className="h-11 bg-muted/50 border-b border-border" />
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="flex items-center gap-4 px-4 py-3 border-b border-border/50">
+              <div className="h-4 w-32 bg-muted/50 animate-pulse rounded" />
+              <div className="h-4 w-20 bg-muted/50 animate-pulse rounded" />
+              <div className="h-4 w-16 bg-muted/50 animate-pulse rounded ml-auto" />
+            </div>
+          ))}
+        </div>
       ) : keys.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-border p-12 text-center">
-          <Key className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
-          <p className="text-muted-foreground">No API keys yet. Create one to start using the protocol API.</p>
+        <div className="rounded-xl border border-dashed border-border/60 p-14 text-center">
+          <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-4">
+            <Key className="h-5 w-5 text-muted-foreground" />
+          </div>
+          <p className="font-medium text-sm mb-1">No API keys yet</p>
+          <p className="text-muted-foreground text-xs">Create a key to authenticate requests to the protocol API.</p>
+          <Button size="sm" className="mt-4" onClick={() => setShowCreate(true)}>
+            <Plus className="h-3.5 w-3.5 mr-1" /> Create API Key
+          </Button>
         </div>
       ) : (
-        <div className="rounded-lg border border-border overflow-hidden">
+        <div className="rounded-xl border border-border overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-muted/50">
+            <thead className="bg-muted/40">
               <tr>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Name</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Key</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Last Used</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Created</th>
-                <th className="px-4 py-3" />
+                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Name</th>
+                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Key Prefix</th>
+                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground hidden md:table-cell">Last Used</th>
+                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground hidden lg:table-cell">Created</th>
+                <th className="px-4 py-3 w-10" />
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-border/50">
               {keys.map((k) => (
-                <tr key={k.id} className="border-b border-border/50">
-                  <td className="px-4 py-3">
-                    <div>
-                      <div className="font-medium">{k.name}</div>
-                      {k.description && (
-                        <div className="text-xs text-muted-foreground">{k.description}</div>
-                      )}
-                    </div>
+                <tr key={k.id} className="group hover:bg-muted/20 transition-colors">
+                  <td className="px-4 py-3.5">
+                    <div className="font-medium text-sm">{k.name}</div>
+                    {k.description && (
+                      <div className="text-xs text-muted-foreground mt-0.5">{k.description}</div>
+                    )}
                   </td>
-                  <td className="px-4 py-3">
-                    <Badge variant="outline" className="font-mono text-xs">{k.prefix}...</Badge>
+                  <td className="px-4 py-3.5">
+                    <Badge variant="outline" className="font-mono text-xs">{k.prefix}•••</Badge>
                   </td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground">
+                  <td className="px-4 py-3.5 text-xs text-muted-foreground hidden md:table-cell">
                     {k.lastUsedAt ? formatRelativeTime(new Date(k.lastUsedAt).getTime() / 1000) : "Never"}
                   </td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground">
+                  <td className="px-4 py-3.5 text-xs text-muted-foreground hidden lg:table-cell">
                     {formatRelativeTime(new Date(k.createdAt).getTime() / 1000)}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3.5">
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="text-destructive hover:text-destructive h-7"
+                      className="text-destructive hover:text-destructive h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
                       onClick={() => handleDelete(k.id)}
                       disabled={deletingId === k.id}
                     >
@@ -211,51 +234,71 @@ function ApiKeysContent() {
       )}
 
       {/* Usage example */}
-      <div className="rounded-lg border border-border/50 bg-muted/20 p-4">
-        <p className="text-xs font-medium text-muted-foreground mb-2">Usage:</p>
-        <pre className="text-xs text-muted-foreground overflow-x-auto">
+      <div className="rounded-xl border border-border/50 bg-muted/20 p-4">
+        <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wider">Usage</p>
+        <pre className="text-xs text-muted-foreground overflow-x-auto leading-relaxed">
 {`GET /api/v1/flags/check?key=scan
 Authorization: Bearer api_xxx
 X-Arcen-Company-Keys: wallet=0x...`}
         </pre>
       </div>
 
-      {/* Create modal */}
-      {showCreate && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-background rounded-lg border border-border p-6 w-full max-w-md shadow-xl">
-            <h2 className="text-lg font-semibold mb-4">Create API Key</h2>
-            <div className="space-y-3">
-              <div>
-                <label className="text-sm font-medium">Name *</label>
-                <input
-                  type="text"
-                  value={createForm.name}
-                  onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
-                  placeholder="Production API Key"
-                  className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary/20"
-                />
+      {/* Create Sheet */}
+      <Sheet open={showCreate} onOpenChange={(v) => { if (!v) { setShowCreate(false); setCreateForm({ name: "", description: "" }); } }}>
+        <SheetContent side="right" className="sm:max-w-md flex flex-col p-0">
+          <SheetHeader className="px-6 pt-6 pb-4 border-b border-border/60">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+                <ShieldCheck className="h-4 w-4 text-primary" />
               </div>
               <div>
-                <label className="text-sm font-medium">Description</label>
-                <input
-                  type="text"
-                  value={createForm.description}
-                  onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })}
-                  placeholder="Used by our main backend service"
-                  className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary/20"
-                />
+                <SheetTitle className="text-base">Create API Key</SheetTitle>
+                <SheetDescription className="text-xs mt-0.5">
+                  Keys authenticate requests to the protocol API. Store securely.
+                </SheetDescription>
               </div>
             </div>
-            <div className="flex gap-2 mt-6 justify-end">
-              <Button variant="outline" size="sm" onClick={() => setShowCreate(false)}>Cancel</Button>
-              <Button size="sm" onClick={handleCreate} disabled={creating || !createForm.name.trim()}>
-                {creating ? "Creating..." : "Create Key"}
-              </Button>
+          </SheetHeader>
+
+          <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+            <div className="space-y-1.5">
+              <Label htmlFor="key-name">Name <span className="text-destructive">*</span></Label>
+              <Input
+                id="key-name"
+                value={createForm.name}
+                onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
+                placeholder="Production API Key"
+                maxLength={64}
+                autoFocus
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="key-desc">Description <span className="text-muted-foreground text-xs font-normal">(optional)</span></Label>
+              <Input
+                id="key-desc"
+                value={createForm.description}
+                onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })}
+                placeholder="Used by our main backend service"
+                maxLength={256}
+              />
+            </div>
+
+            <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-xs text-amber-600 dark:text-amber-400 flex items-start gap-2">
+              <AlertTriangle className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
+              <span>The full key is shown only once after creation. Store it somewhere safe immediately.</span>
             </div>
           </div>
-        </div>
-      )}
+
+          <SheetFooter className="px-6 py-4 border-t border-border/60 flex-row gap-2">
+            <Button variant="outline" className="flex-1" onClick={() => { setShowCreate(false); setCreateForm({ name: "", description: "" }); }}>
+              Cancel
+            </Button>
+            <Button className="flex-1" onClick={handleCreate} disabled={creating || !createForm.name.trim()}>
+              {creating ? "Creating..." : "Create Key"}
+            </Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
