@@ -115,19 +115,30 @@ export function EventsStreamSection() {
 
   return (
     <div className="space-y-6">
+      {/* Controls row */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Event Stream</h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            Real-time feed of track, identify, and flag check events.
-          </p>
+        <div className="flex items-center gap-2">
+          <Filter className="h-4 w-4 text-muted-foreground" />
+          {["all", "track", "identify", "flag_check"].map((t) => (
+            <button
+              key={t}
+              onClick={() => setFilterType(t)}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                filterType === t
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+              }`}
+            >
+              {t === "all" ? "All" : t === "flag_check" ? "Flag Check" : t.charAt(0).toUpperCase() + t.slice(1)}
+            </button>
+          ))}
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setAutoRefresh(!autoRefresh)}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs border transition-colors ${
               autoRefresh
-                ? "bg-green-50 border-green-200 text-green-700 dark:bg-green-950 dark:border-green-800 dark:text-green-400"
+                ? "border-green-500/30 bg-green-500/5 text-green-600 dark:text-green-400"
                 : "border-border text-muted-foreground"
             }`}
           >
@@ -135,49 +146,44 @@ export function EventsStreamSection() {
             {autoRefresh ? "Live" : "Paused"}
           </button>
           <Button variant="outline" size="sm" onClick={fetchEvents} disabled={loading}>
-            <RefreshCw className={`h-4 w-4 mr-1 ${loading ? "animate-spin" : ""}`} />
-            Refresh
+            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
           </Button>
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="flex items-center gap-2">
-        <Filter className="h-4 w-4 text-muted-foreground" />
-        {["all", "track", "identify", "flag_check"].map((t) => (
-          <button
-            key={t}
-            onClick={() => setFilterType(t)}
-            className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-              filterType === t
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted text-muted-foreground hover:bg-muted/80"
-            }`}
-          >
-            {t === "all" ? "All" : t === "flag_check" ? "Flag Check" : t.charAt(0).toUpperCase() + t.slice(1)}
-          </button>
-        ))}
-      </div>
-
       {/* Event table */}
-      <div className="rounded-lg border border-border overflow-hidden">
+      <div className="rounded-xl border border-border overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-muted/50">
+          <thead className="bg-muted/40">
             <tr>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Event</th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Company</th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">User</th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Time</th>
-              <th className="px-4 py-3" />
+              <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Event</th>
+              <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Company</th>
+              <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground hidden md:table-cell">User</th>
+              <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Time</th>
+              <th className="px-4 py-3 w-8" />
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-border/40">
             {loading ? (
-              <tr><td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">Loading events...</td></tr>
+              [...Array(6)].map((_, i) => (
+                <tr key={i}>
+                  <td className="px-4 py-3"><div className="h-5 w-20 bg-muted/50 animate-pulse rounded-full" /></td>
+                  <td className="px-4 py-3"><div className="h-4 w-28 bg-muted/50 animate-pulse rounded" /></td>
+                  <td className="px-4 py-3 hidden md:table-cell"><div className="h-4 w-20 bg-muted/50 animate-pulse rounded" /></td>
+                  <td className="px-4 py-3"><div className="h-4 w-24 bg-muted/50 animate-pulse rounded" /></td>
+                  <td className="px-4 py-3" />
+                </tr>
+              ))
             ) : events.length === 0 ? (
-              <tr><td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
-                No events yet. Start sending events via the /api/v1/events endpoint.
-              </td></tr>
+              <tr>
+                <td colSpan={5} className="px-4 py-14 text-center">
+                  <div className="w-10 h-10 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-3">
+                    <Activity className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                  <p className="text-sm font-medium mb-1">No events yet</p>
+                  <p className="text-xs text-muted-foreground">Send events via <code className="bg-muted px-1 rounded">/api/v1/events</code> to see them here.</p>
+                </td>
+              </tr>
             ) : (
               events.map((e) => <EventRow key={e.id} event={e} />)
             )}
@@ -186,9 +192,9 @@ export function EventsStreamSection() {
       </div>
 
       {/* Quick reference */}
-      <div className="rounded-lg border border-border/50 bg-muted/20 p-4">
-        <p className="text-xs font-medium text-muted-foreground mb-2">Quick Reference — Send a track event:</p>
-        <pre className="text-xs text-muted-foreground overflow-x-auto">
+      <div className="rounded-xl border border-border/50 bg-muted/20 p-4">
+        <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wider">Quick Reference</p>
+        <pre className="text-xs text-muted-foreground overflow-x-auto leading-relaxed">
 {`POST /api/v1/events
 Authorization: Bearer api_xxx
 {
