@@ -21,6 +21,10 @@ import {
 import { ComponentsSection } from "@/components/dashboard/sections/components";
 import { BillingSection } from "@/components/dashboard/sections/billing";
 import { DocsSection } from "@/components/dashboard/sections/docs";
+import { CompaniesSection } from "@/components/dashboard/sections/companies";
+import { EventsStreamSection } from "@/components/dashboard/sections/events-stream";
+import { FeatureFlagsSection } from "@/components/dashboard/sections/feature-flags";
+import { ApiKeysSection } from "@/components/dashboard/sections/api-keys";
 import { SectionErrorBoundary } from "@/components/dashboard/section-error-boundary";
 import { SubgraphLagBanner } from "@/components/dashboard/subgraph-lag-banner";
 import { EnvironmentProvider } from "@/contexts/environment-context";
@@ -39,7 +43,11 @@ export type Section =
   | "billing"
   | "audit-log"
   | "settings"
-  | "docs";
+  | "docs"
+  | "companies"
+  | "events-stream"
+  | "feature-flags"
+  | "api-keys";
 
 export default function Dashboard() {
   const router = useRouter();
@@ -146,6 +154,30 @@ export default function Dashboard() {
         return (
           <SectionErrorBoundary fallbackLabel="Docs failed to load">
             <DocsSection />
+          </SectionErrorBoundary>
+        );
+      case "companies":
+        return (
+          <SectionErrorBoundary fallbackLabel="Companies failed to load">
+            <CompaniesSection />
+          </SectionErrorBoundary>
+        );
+      case "events-stream":
+        return (
+          <SectionErrorBoundary fallbackLabel="Events failed to load">
+            <EventsStreamSection />
+          </SectionErrorBoundary>
+        );
+      case "feature-flags":
+        return (
+          <SectionErrorBoundary fallbackLabel="Feature Flags failed to load">
+            <FeatureFlagsSection />
+          </SectionErrorBoundary>
+        );
+      case "api-keys":
+        return (
+          <SectionErrorBoundary fallbackLabel="API Keys failed to load">
+            <ApiKeysSection />
           </SectionErrorBoundary>
         );
       default:

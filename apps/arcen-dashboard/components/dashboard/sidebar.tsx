@@ -24,7 +24,9 @@ import {
   SlidersHorizontal,
   CreditCard,
   BookOpen,
-  ExternalLink,
+  Activity,
+  Key,
+  Zap,
 } from "lucide-react";
 import { useEnvironment } from "@/contexts/environment-context";
 
@@ -54,7 +56,11 @@ const navGroups: NavGroup[] = [
   },
   {
     label: "Manage",
-    items: [{ id: "invoices", label: "Invoices", icon: ReceiptText }],
+    items: [
+      { id: "invoices", label: "Invoices", icon: ReceiptText },
+      { id: "companies", label: "Companies", icon: Building2 },
+      { id: "feature-flags", label: "Feature Flags", icon: Zap },
+    ],
   },
   {
     label: "Customers",
@@ -66,6 +72,8 @@ const navGroups: NavGroup[] = [
       { id: "sessions", label: "Sessions", icon: Cpu },
       { id: "features", label: "Features", icon: Flag },
       { id: "components", label: "Components", icon: LayoutTemplate },
+      { id: "events-stream", label: "Events", icon: Activity },
+      { id: "api-keys", label: "API Keys", icon: Key },
     ],
   },
   {
@@ -120,7 +128,7 @@ export function Sidebar({
         <div className="flex items-center gap-2.5">
           <div className="w-7 h-7 flex items-center justify-center shrink-0">
             <svg viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
-              <rect width="512" height="512" fill="#0B59E5" rx="100"/>
+              <rect width="512" height="512" fill="#0B59E5" rx="100" />
               <polygon points="214,142 284,142 414,414 344,414" fill="#ffffff" />
               <circle cx="230" cy="265" r="45" fill="#1CA1FC" />
               <circle cx="170" cy="350" r="50" fill="#ffffff" />

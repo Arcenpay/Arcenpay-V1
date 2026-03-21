@@ -4,6 +4,21 @@
 
 // Types
 export type {
+  // Web3 SchematicHQ Protocol types
+  SchematicCompanyKeys,
+  SchematicUserKeys,
+  FlagCheckResult,
+  TrackEventPayload,
+  IdentifyEventPayload,
+  SchematicCompany,
+  SchematicUser,
+  ZkTlsProof,
+  EmbedAccessTokenResponse,
+  ComponentElement,
+  ComponentElementType,
+  ComponentDesign,
+  ComponentRenderData,
+  // Core types
   Plan,
   PlanTier,
   EnvironmentMode,

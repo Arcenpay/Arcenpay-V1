@@ -22,7 +22,8 @@ const getMetadataUrl = () => {
 
 // Initialize AppKit once at module scope
 createAppKit({
-  adapters: [wagmiAdapter],
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  adapters: [wagmiAdapter as any],
   projectId,
   networks: [base, baseSepolia, sepolia, mainnet],
   defaultNetwork: base,

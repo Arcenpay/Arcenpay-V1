@@ -187,6 +187,12 @@ model Team {
   tierHistory        TierUpgradeHistory[]
   supportTickets     SupportTicket[]
 
+  // Web3 SchematicHQ Protocol Layer
+  schematicCompanies  SchematicCompany[]
+  featureFlags        CatalogFeatureFlag[]
+  schematicApiKeys    SchematicApiKey[]
+  embedComponents     EmbedComponent[]
+
   @@index([slug])
   @@index([clerkOrgId])
   @@index([platformTier])
@@ -707,4 +713,236 @@ model SupportTicket {
   @@index([teamId, status])
   @@index([teamId, createdAt])
   @@index([status, priority])
+}
+
+// ─── Web3 SchematicHQ Protocol Layer ──────────────────────────────────────────
+// Companies, Users, Events, Feature Flags, Rules, Overrides, Access Tokens,
+// API Keys, zkTLS Proofs, Embeddable Components
+
+model SchematicCompany {
+  id            String   @id @default(cuid())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  lastSeenAt    DateTime @default(now())
+  teamId        String
+
+  name          String
+  walletAddress String?  // Primary Web3 identity
+  email         String?
+  externalId    String?  // Caller's own internal UUID/ID
+  logoUrl       String?
+  traits        Json     @default("{}")
+
+  // Active plan assignment (references CatalogPlan.id)
+  activePlanId  String?
+  // Active add-on IDs (JSON array of CatalogAddOn.id)
+  activeAddOnIds Json    @default("[]")
+
+  team      Team               @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  users     SchematicUser[]
+  overrides CompanyOverride[]
+  events    SchematicEvent[]
+  zkProofs  ZkTlsProof[]
+
+  @@unique([teamId, walletAddress])
+  @@unique([teamId, externalId])
+  @@index([teamId, email])
+  @@index([teamId, lastSeenAt])
+}
+
+model SchematicUser {
+  id            String   @id @default(cuid())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  lastSeenAt    DateTime @default(now())
+  teamId        String
+
+  companyId     String
+  name          String?
+  email         String?
+  walletAddress String?
+  clerkUserId   String?
+  externalId    String?
+  traits        Json     @default("{}")
+
+  company SchematicCompany @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  zkProofs ZkTlsProof[]
+
+  @@unique([teamId, walletAddress])
+  @@unique([teamId, clerkUserId])
+  @@index([teamId, companyId])
+  @@index([teamId, externalId])
+  @@index([teamId, email])
+}
+
+model SchematicEvent {
+  id        String   @id @default(cuid())
+  sentAt    DateTime @default(now())
+  teamId    String
+
+  eventType String   // "track" | "identify" | "flag_check"
+  name      String?  // event key for track events (e.g., "scan")
+  companyId String?
+  userId    String?
+  traits    Json     @default("{}")
+
+  company SchematicCompany? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  @@index([teamId, name, companyId, sentAt])
+  @@index([teamId, eventType, sentAt])
+  @@index([teamId, companyId, sentAt])
+}
+
+model CatalogFeatureFlag {
+  id           String   @id @default(cuid())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  teamId       String
+
+  featureKey   String   // unique key used in API calls (e.g., "scan")
+  name         String
+  description  String?
+  defaultValue Boolean  @default(false)
+
+  // Feature type mirrors SchematicHQ: boolean | event_based | trait_based
+  featureType  String   @default("boolean")
+
+  // For event_based features
+  eventKey         String?  // e.g., "scan" — matches SchematicEvent.name
+  unitSingular     String?  // e.g., "Scan"
+  unitPlural       String?  // e.g., "Scans"
+
+  rules FlagRule[]
+  team  Team       @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, featureKey])
+  @@index([teamId])
+}
+
+model FlagRule {
+  id       String  @id @default(cuid())
+  flagId   String
+  priority Int     // evaluation order — lower number = evaluated first
+  value    Boolean // True or False to serve when this rule matches
+
+  conditions FlagRuleCondition[]
+  flag       CatalogFeatureFlag @relation(fields: [flagId], references: [id], onDelete: Cascade)
+
+  @@index([flagId, priority])
+}
+
+model FlagRuleCondition {
+  id           String  @id @default(cuid())
+  ruleId       String
+
+  // criteriaType: base_plan | add_on | usage | company_trait | user_trait | zktls_claim
+  criteriaType String
+  // operator: is_one_of | is_less_than | is_greater_than | equals | contains | not_equals
+  operator     String
+  // JSON array of plan/add-on IDs or string values for is_one_of
+  values       Json    @default("[]")
+
+  // For usage criteria
+  metricKey    String? // matches SchematicEvent.name (e.g., "scan")
+  metricValue  Float?  // threshold (e.g., 300)
+  metricPeriod String? // "monthly" | "daily" | "weekly"
+
+  // For company_trait / user_trait criteria
+  traitKey     String?
+
+  // For zktls_claim criteria
+  zktlsProviderId String? // Reclaim Protocol provider ID
+
+  rule FlagRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  @@index([ruleId])
+}
+
+model CompanyOverride {
+  id         String   @id @default(cuid())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  teamId     String
+
+  companyId  String
+  featureKey String
+  value      Boolean
+  reason     String?
+
+  company SchematicCompany @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, featureKey])
+  @@index([teamId, companyId])
+}
+
+// Short-lived tokens for embeddable component authentication
+model EmbedAccessToken {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  teamId    String
+
+  tokenHash  String   @unique
+  companyId  String?
+  userId     String?
+  expiresAt  DateTime
+
+  @@index([teamId])
+  @@index([expiresAt])
+}
+
+// External API keys for SchematicHQ-style developer access
+model SchematicApiKey {
+  id          String    @id @default(cuid())
+  createdAt   DateTime  @default(now())
+  lastUsedAt  DateTime?
+  teamId      String
+
+  name        String
+  keyHash     String    @unique  // argon2 hash of the actual key
+  prefix      String             // first 12 chars for display (e.g., api_abc12345..)
+  description String?
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([teamId])
+}
+
+// zkTLS proofs submitted via Reclaim Protocol
+model ZkTlsProof {
+  id            String   @id @default(cuid())
+  verifiedAt    DateTime @default(now())
+  teamId        String
+
+  companyId     String?
+  userId        String?
+  providerId    String   // Reclaim Protocol provider ID
+  providerName  String   // human-readable (e.g., "Stripe Subscription Status")
+  claimData     Json     // verified structured claims extracted from proof
+  proofHash     String   @unique  // prevents replay attacks
+  expiresAt     DateTime?
+
+  company SchematicCompany? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  user    SchematicUser?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([teamId, companyId])
+  @@index([teamId, providerId])
+  @@index([expiresAt])
+}
+
+// Embeddable UI components (like SchematicHQ components)
+model EmbedComponent {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  teamId    String
+
+  name     String
+  // JSON array of element configs (planManager, meteredFeatures, plansTable, etc.)
+  elements Json    @default("[]")
+  // Design settings: colors, typography, layout
+  design   Json    @default("{}")
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([teamId])
 }

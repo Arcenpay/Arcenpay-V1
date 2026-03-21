@@ -315,6 +315,138 @@ export interface UsageReport {
   settled: boolean;
 }
 
+// ─── Web3 SchematicHQ Protocol Types ──────────────────────────────────────────
+
+/** Multi-key identity for a company (Web3-native + Web2 compatible) */
+export interface SchematicCompanyKeys {
+  id?: string;       // caller's internal company UUID
+  wallet?: string;   // wallet address (checksummed or lowercase)
+  email?: string;
+}
+
+/** Multi-key identity for a user */
+export interface SchematicUserKeys {
+  id?: string;             // caller's internal user UUID
+  clerkUserId?: string;    // Clerk authentication user ID
+  wallet?: string;         // wallet address
+}
+
+/** Result of a flag check evaluation */
+export interface FlagCheckResult {
+  flag: string;
+  value: boolean;
+  reason: string;
+  companyId?: string;
+  userId?: string;
+}
+
+/** Track event payload (usage reporting) */
+export interface TrackEventPayload {
+  event_type: 'track';
+  name: string;
+  company: SchematicCompanyKeys;
+  user?: SchematicUserKeys;
+  traits?: Record<string, unknown>;
+}
+
+/** Identify event payload (company/user upsert) */
+export interface IdentifyEventPayload {
+  event_type: 'identify';
+  company?: SchematicCompanyKeys & { name?: string };
+  user?: SchematicUserKeys & { name?: string; email?: string };
+  traits?: Record<string, unknown>;
+}
+
+/** A SchematicHQ-style company with Web3 identity */
+export interface SchematicCompany {
+  id: string;
+  name: string;
+  walletAddress: string | null;
+  email: string | null;
+  externalId: string | null;
+  traits: Record<string, unknown>;
+  activePlanId: string | null;
+  logoUrl: string | null;
+  createdAt: string;
+  lastSeenAt: string;
+}
+
+/** A SchematicHQ-style user */
+export interface SchematicUser {
+  id: string;
+  name: string | null;
+  email: string | null;
+  walletAddress: string | null;
+  clerkUserId: string | null;
+  externalId: string | null;
+  companyId: string;
+  traits: Record<string, unknown>;
+  createdAt: string;
+  lastSeenAt: string;
+}
+
+/** A verified zkTLS proof from Reclaim Protocol */
+export interface ZkTlsProof {
+  id: string;
+  providerId: string;
+  providerName: string;
+  claims: Record<string, string>;
+  verifiedAt: string;
+  expiresAt: string | null;
+  companyId: string | null;
+  userId: string | null;
+}
+
+/** Embed access token response */
+export interface EmbedAccessTokenResponse {
+  token: string;
+  expires_at: string;
+  company_id: string | null;
+  user_id: string | null;
+}
+
+/** Component element types for ArcenEmbed */
+export type ComponentElementType =
+  | 'planManager'
+  | 'includedFeatures'
+  | 'meteredFeatures'
+  | 'plansTable'
+  | 'invoices'
+  | 'paymentMethod';
+
+export interface ComponentElement {
+  type: ComponentElementType;
+  config?: Record<string, unknown>;
+}
+
+export interface ComponentDesign {
+  primaryColor?: string;
+  secondaryColor?: string;
+  backgroundColor?: string;
+  borderRadius?: number;
+  fontFamily?: string;
+  fontSize?: number;
+  fontColor?: string;
+  fontWeight?: 'regular' | 'medium' | 'bold';
+  columns?: 1 | 2 | 3;
+}
+
+/** Render data returned by /api/v1/components/:id/render */
+export interface ComponentRenderData {
+  component: {
+    id: string;
+    name: string;
+    elements: ComponentElement[];
+    design: ComponentDesign;
+  };
+  company: { id: string; name: string; walletAddress: string | null } | null;
+  activePlan: { id: string; name: string; tier: string; price: string } | null;
+  plans: Array<{ id: string; name: string; tier: string; price: string; billingInterval: number }>;
+  entitlements: Array<{ featureKey: string; name: string; value: boolean }>;
+  usage: Array<{ featureKey: string; name: string; used: number; unitSingular: string | null }>;
+  userId: string | null;
+}
+
 // --- SDK Config ---
 
 export interface MEAPConfig {

@@ -28,6 +28,15 @@ export type { TemplateRendererProps, TemplateBlock } from './components/Template
 export { InvoiceList } from './components/InvoiceList';
 export type { InvoiceListProps } from './components/InvoiceList';
 
+// Web3 SchematicHQ Protocol — Embeddable component
+export { ArcenEmbed } from './components/ArcenEmbed';
+
+// Web3 SchematicHQ Protocol — Hooks
+export { useFlag, useFlags } from './hooks/useFlag';
+export type { UseFlagOptions } from './hooks/useFlag';
+export { useTrack } from './hooks/useTrack';
+export type { TrackEventInput, TrackOptions } from './hooks/useTrack';
+
 // Hooks
 export { useEntitlement } from './hooks/useEntitlement';
 export {

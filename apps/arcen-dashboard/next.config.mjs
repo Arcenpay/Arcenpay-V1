@@ -20,7 +20,8 @@ const nextConfig = {
       net: false,
       tls: false,
     };
-    config.externals.push("pino-pretty", "lokijs", "encoding");
+    // @reclaimprotocol/js-sdk is an optional runtime dep — don't bundle it
+    config.externals.push("pino-pretty", "lokijs", "encoding", "@reclaimprotocol/js-sdk");
     return config;
   },
 }
