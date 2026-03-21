@@ -197,6 +197,66 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // ── Field length validation ──────────────────────────────────
+  if (body.event_type === "track") {
+    const tb = body as TrackEventBody;
+    if (tb.name && tb.name.length > 64) {
+      return NextResponse.json({ error: "name too long" }, { status: 400 });
+    }
+    if (tb.company?.wallet && !/^0x[0-9a-fA-F]{40}$/.test(tb.company.wallet)) {
+      return NextResponse.json({ error: "Invalid wallet address format" }, { status: 400 });
+    }
+    if (tb.company?.email) {
+      if (tb.company.email.length > 254) {
+        return NextResponse.json({ error: "email too long" }, { status: 400 });
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(tb.company.email)) {
+        return NextResponse.json({ error: "Invalid email format" }, { status: 400 });
+      }
+    }
+    if (tb.company?.id && tb.company.id.length > 64) {
+      return NextResponse.json({ error: "company id too long" }, { status: 400 });
+    }
+    if (tb.traits !== undefined && (typeof tb.traits !== "object" || tb.traits === null || Array.isArray(tb.traits))) {
+      return NextResponse.json({ error: "traits must be a plain object" }, { status: 400 });
+    }
+  }
+
+  if (body.event_type === "identify") {
+    const ib = body as IdentifyEventBody;
+    if (ib.company?.wallet && !/^0x[0-9a-fA-F]{40}$/.test(ib.company.wallet)) {
+      return NextResponse.json({ error: "Invalid wallet address format" }, { status: 400 });
+    }
+    if (ib.company?.email) {
+      if (ib.company.email.length > 254) {
+        return NextResponse.json({ error: "email too long" }, { status: 400 });
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(ib.company.email)) {
+        return NextResponse.json({ error: "Invalid email format" }, { status: 400 });
+      }
+    }
+    if (ib.company?.name && ib.company.name.length > 128) {
+      return NextResponse.json({ error: "company name too long" }, { status: 400 });
+    }
+    if (ib.company?.id && ib.company.id.length > 64) {
+      return NextResponse.json({ error: "company id too long" }, { status: 400 });
+    }
+    if (ib.user?.email) {
+      if (ib.user.email.length > 254) {
+        return NextResponse.json({ error: "email too long" }, { status: 400 });
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(ib.user.email)) {
+        return NextResponse.json({ error: "Invalid email format" }, { status: 400 });
+      }
+    }
+    if (ib.user?.wallet && !/^0x[0-9a-fA-F]{40}$/.test(ib.user.wallet)) {
+      return NextResponse.json({ error: "Invalid wallet address format" }, { status: 400 });
+    }
+    if (ib.traits !== undefined && (typeof ib.traits !== "object" || ib.traits === null || Array.isArray(ib.traits))) {
+      return NextResponse.json({ error: "traits must be a plain object" }, { status: 400 });
+    }
+  }
+
   const { teamId } = ctx;
 
   // ── identify ────────────────────────────────────────────────

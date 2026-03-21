@@ -24,7 +24,6 @@ import { DocsSection } from "@/components/dashboard/sections/docs";
 import { CompaniesSection } from "@/components/dashboard/sections/companies";
 import { EventsStreamSection } from "@/components/dashboard/sections/events-stream";
 import { FeatureFlagsSection } from "@/components/dashboard/sections/feature-flags";
-import { ApiKeysSection } from "@/components/dashboard/sections/api-keys";
 import { SectionErrorBoundary } from "@/components/dashboard/section-error-boundary";
 import { SubgraphLagBanner } from "@/components/dashboard/subgraph-lag-banner";
 import { EnvironmentProvider } from "@/contexts/environment-context";
@@ -46,8 +45,7 @@ export type Section =
   | "docs"
   | "companies"
   | "events-stream"
-  | "feature-flags"
-  | "api-keys";
+  | "feature-flags";
 
 export default function Dashboard() {
   const router = useRouter();
@@ -172,12 +170,6 @@ export default function Dashboard() {
         return (
           <SectionErrorBoundary fallbackLabel="Feature Flags failed to load">
             <FeatureFlagsSection />
-          </SectionErrorBoundary>
-        );
-      case "api-keys":
-        return (
-          <SectionErrorBoundary fallbackLabel="API Keys failed to load">
-            <ApiKeysSection />
           </SectionErrorBoundary>
         );
       default:

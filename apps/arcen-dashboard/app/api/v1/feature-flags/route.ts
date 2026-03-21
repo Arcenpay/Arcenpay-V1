@@ -54,10 +54,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "featureKey and name are required" }, { status: 400 });
   }
 
-  // Validate featureKey format
-  if (!/^[a-z0-9_-]+$/i.test(body.featureKey)) {
+  // ── Field length validation ──────────────────────────────────
+  if (body.featureKey.length > 128) {
+    return NextResponse.json({ error: "featureKey too long" }, { status: 400 });
+  }
+  if (body.name.length > 128) {
+    return NextResponse.json({ error: "name too long" }, { status: 400 });
+  }
+  if (body.description !== undefined && body.description.length > 256) {
+    return NextResponse.json({ error: "description too long" }, { status: 400 });
+  }
+
+  // Validate featureKey format — must start and end with alphanumeric
+  if (!/^[a-z0-9][a-z0-9_-]{0,62}[a-z0-9]$/i.test(body.featureKey)) {
     return NextResponse.json(
-      { error: "featureKey must only contain letters, numbers, hyphens, and underscores" },
+      { error: "featureKey must start and end with an alphanumeric character and contain only letters, numbers, hyphens, and underscores" },
       { status: 400 },
     );
   }

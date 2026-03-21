@@ -45,7 +45,29 @@ function CopyableKey({ value }: { value: string }) {
   );
 }
 
+/** Embeddable panel — no page header. Use inside Settings tabs. */
+export function ProtocolKeysPanel() {
+  return <ApiKeysContent />;
+}
+
+/** Full-page section with header (legacy export kept for backward compat) */
 export function ApiKeysSection() {
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">API Keys</h1>
+          <p className="text-muted-foreground text-sm mt-1">
+            Manage API keys for external access to the ArcenPay protocol.
+          </p>
+        </div>
+      </div>
+      <ApiKeysContent />
+    </div>
+  );
+}
+
+function ApiKeysContent() {
   const [keys, setKeys] = useState<ApiKey[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
@@ -103,13 +125,7 @@ export function ApiKeysSection() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">API Keys</h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            Manage API keys for external access to the ArcenPay protocol.
-          </p>
-        </div>
+      <div className="flex justify-end">
         <Button size="sm" onClick={() => setShowCreate(true)}>
           <Plus className="h-4 w-4 mr-1" /> Create API Key
         </Button>

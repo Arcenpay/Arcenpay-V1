@@ -41,7 +41,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const expiresIn = Math.min(body.expires_in ?? 3600, 86400); // max 24h
+  // ── expiresIn validation: must be between 60s (1 min) and 86400s (24 hrs) ───
+  const rawExpiresIn = body.expires_in ?? 3600;
+  if (typeof rawExpiresIn !== "number" || !Number.isFinite(rawExpiresIn) || rawExpiresIn < 60 || rawExpiresIn > 86400) {
+    return NextResponse.json(
+      { error: "expires_in must be between 60 and 86400 seconds" },
+      { status: 400 },
+    );
+  }
+  const expiresIn = rawExpiresIn;
   const expiresAt = new Date(Date.now() + expiresIn * 1000);
 
   // Resolve company and user IDs

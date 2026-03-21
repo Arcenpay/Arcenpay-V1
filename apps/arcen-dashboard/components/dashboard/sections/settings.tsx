@@ -38,7 +38,9 @@ import {
   Fuel,
   Plus,
   Info,
+  Key,
 } from "lucide-react";
+import { ProtocolKeysPanel } from "@/components/dashboard/sections/api-keys";
 import {
   useAccount,
   useChainId,
@@ -687,7 +689,14 @@ export function SettingsSection() {
             className="data-[state=active]:bg-card data-[state=active]:text-foreground"
           >
             <Shield className="w-4 h-4 mr-2" />
-            API Keys
+            Provider Keys
+          </TabsTrigger>
+          <TabsTrigger
+            value="protocolkeys"
+            className="data-[state=active]:bg-card data-[state=active]:text-foreground"
+          >
+            <Key className="w-4 h-4 mr-2" />
+            Protocol Keys
           </TabsTrigger>
           <TabsTrigger
             value="gmp"
@@ -1524,6 +1533,26 @@ export function SettingsSection() {
               </AlertDialog>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Protocol Keys Tab */}
+        <TabsContent
+          value="protocolkeys"
+          className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300"
+        >
+          <div className="flex items-start gap-3 p-4 rounded-xl bg-accent/5 border border-accent/20">
+            <Key className="w-4 h-4 text-accent shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-medium text-foreground">Protocol API Keys</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Use these keys to authenticate your server-side integrations with the
+                ArcenPay protocol API — event tracking, flag evaluation, company management,
+                and zkTLS proof submission. Keys are stored as SHA-256 hashes; the raw key
+                is only shown once on creation.
+              </p>
+            </div>
+          </div>
+          <ProtocolKeysPanel />
         </TabsContent>
       </Tabs>
     </div>

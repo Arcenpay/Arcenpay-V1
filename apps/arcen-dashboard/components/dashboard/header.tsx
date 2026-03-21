@@ -27,7 +27,7 @@ const sectionTitles: Record<Section, string> = {
   subscribers: "Subscribers",
   invoices: "Invoices",
   sessions: "Sessions",
-  features: "Features",
+  features: "Entitlements",
   components: "Components",
   billing: "Billing & Plan",
   "audit-log": "Audit Log",
@@ -36,7 +36,6 @@ const sectionTitles: Record<Section, string> = {
   companies: "Companies",
   "events-stream": "Events",
   "feature-flags": "Feature Flags",
-  "api-keys": "API Keys",
 };
 
 const sectionDescriptions: Record<Section, string> = {
@@ -48,7 +47,7 @@ const sectionDescriptions: Record<Section, string> = {
   subscribers: "Track active subscribers",
   invoices: "Search, download, and resend invoices",
   sessions: "ZKVUB agent sessions",
-  features: "Tableland + Lit Protocol feature flags",
+  features: "On-chain entitlement flags per subscription tier",
   components: "UI component library",
   billing: "Manage your platform tier, gas budget, and support",
   "audit-log": "Immutable record of all team actions",
@@ -57,7 +56,6 @@ const sectionDescriptions: Record<Section, string> = {
   companies: "Manage companies, entitlements, and overrides",
   "events-stream": "Live stream of track and identify events",
   "feature-flags": "Manage flags, targeting rules, and zkTLS conditions",
-  "api-keys": "Manage API keys for external protocol access",
 };
 
 export function Header({ activeSection }: HeaderProps) {
