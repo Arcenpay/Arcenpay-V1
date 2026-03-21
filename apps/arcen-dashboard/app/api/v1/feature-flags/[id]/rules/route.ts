@@ -76,6 +76,22 @@ export async function POST(
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
+  // ── Rule validation ──────────────────────────────────────────
+  if (body.priority !== undefined && (typeof body.priority !== "number" || body.priority < 0 || body.priority > 999)) {
+    return NextResponse.json({ error: "priority must be between 0 and 999" }, { status: 400 });
+  }
+  for (const c of body.conditions ?? []) {
+    if (c.metricKey !== undefined && c.metricKey.length > 256) {
+      return NextResponse.json({ error: "metricKey too long" }, { status: 400 });
+    }
+    if (c.traitKey !== undefined && c.traitKey.length > 256) {
+      return NextResponse.json({ error: "traitKey too long" }, { status: 400 });
+    }
+    if (c.metricValue !== undefined && (!Number.isFinite(c.metricValue) || c.metricValue < 0)) {
+      return NextResponse.json({ error: "metricValue must be a finite number >= 0" }, { status: 400 });
+    }
+  }
+
   const rule = await db.flagRule.create({
     data: {
       flagId: flag.id,
@@ -124,6 +140,24 @@ export async function PUT(
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+
+  // ── Rules validation ─────────────────────────────────────────
+  for (const rule of body.rules ?? []) {
+    if (rule.priority !== undefined && (typeof rule.priority !== "number" || rule.priority < 0 || rule.priority > 999)) {
+      return NextResponse.json({ error: "priority must be between 0 and 999" }, { status: 400 });
+    }
+    for (const c of rule.conditions ?? []) {
+      if (c.metricKey !== undefined && c.metricKey.length > 256) {
+        return NextResponse.json({ error: "metricKey too long" }, { status: 400 });
+      }
+      if (c.traitKey !== undefined && c.traitKey.length > 256) {
+        return NextResponse.json({ error: "traitKey too long" }, { status: 400 });
+      }
+      if (c.metricValue !== undefined && (!Number.isFinite(c.metricValue) || c.metricValue < 0)) {
+        return NextResponse.json({ error: "metricValue must be a finite number >= 0" }, { status: 400 });
+      }
+    }
   }
 
   // Delete existing rules and recreate (transactional replace)

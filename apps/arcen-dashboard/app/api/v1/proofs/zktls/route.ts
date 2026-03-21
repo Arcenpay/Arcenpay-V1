@@ -38,6 +38,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "proof is required" }, { status: 400 });
   }
 
+  // ── expiresIn / expiresAt validation ────────────────────────
+  if (body.expiresIn !== undefined) {
+    if (typeof body.expiresIn !== "number" || !Number.isFinite(body.expiresIn)) {
+      return NextResponse.json({ error: "expiresIn must be a number" }, { status: 400 });
+    }
+    // expiresIn of 0 means no expiry; otherwise must be in the future (> 0 seconds)
+    if (body.expiresIn !== 0 && body.expiresIn <= 0) {
+      return NextResponse.json({ error: "expiresIn must be 0 (no expiry) or a positive number of seconds" }, { status: 400 });
+    }
+  }
+
   // Verify the Reclaim proof
   const verification = await verifyReclaimProof(body.proof);
 
@@ -134,6 +145,9 @@ export async function GET(req: NextRequest) {
   const companyId = req.nextUrl.searchParams.get("companyId");
   const providerId = req.nextUrl.searchParams.get("providerId");
 
+  const url = req.nextUrl;
+  const limit = Math.min(Number(url.searchParams.get("limit") ?? 50), 200);
+
   const proofs = await db.zkTlsProof.findMany({
     where: {
       teamId,
@@ -142,7 +156,7 @@ export async function GET(req: NextRequest) {
       OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
     },
     orderBy: { verifiedAt: "desc" },
-    take: 50,
+    take: limit,
     select: {
       id: true,
       providerId: true,

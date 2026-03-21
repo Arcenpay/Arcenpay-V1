@@ -25,7 +25,6 @@ import {
   CreditCard,
   BookOpen,
   Activity,
-  Key,
   Zap,
 } from "lucide-react";
 import { useEnvironment } from "@/contexts/environment-context";
@@ -70,10 +69,9 @@ const navGroups: NavGroup[] = [
     label: "Developer",
     items: [
       { id: "sessions", label: "Sessions", icon: Cpu },
-      { id: "features", label: "Features", icon: Flag },
+      { id: "features", label: "Entitlements", icon: Flag },
       { id: "components", label: "Components", icon: LayoutTemplate },
       { id: "events-stream", label: "Events", icon: Activity },
-      { id: "api-keys", label: "API Keys", icon: Key },
     ],
   },
   {

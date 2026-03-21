@@ -42,6 +42,10 @@ export async function GET(req: NextRequest) {
     );
   }
 
+  if (featureKey.length > 128) {
+    return NextResponse.json({ error: "key too long" }, { status: 400 });
+  }
+
   const { teamId } = ctx;
 
   // Parse company + user key headers
@@ -59,6 +63,19 @@ export async function GET(req: NextRequest) {
     wallet: rawCompanyKeys["wallet"] ?? rawCompanyKeys["wallet_address"],
     email: rawCompanyKeys["email"],
   };
+
+  // At least one company key must be provided
+  if (!companyKeys.id && !companyKeys.wallet && !companyKeys.email) {
+    return NextResponse.json(
+      { error: "At least one company key (id, wallet, or email) must be provided" },
+      { status: 400 },
+    );
+  }
+
+  // Validate wallet format if provided
+  if (companyKeys.wallet && !/^0x[0-9a-fA-F]{40}$/.test(companyKeys.wallet)) {
+    return NextResponse.json({ error: "Invalid wallet address format" }, { status: 400 });
+  }
 
   const userKeys: UserKeys | undefined =
     rawUserKeys["id"] || rawUserKeys["clerk_user_id"] || rawUserKeys["wallet"]

@@ -18,6 +18,9 @@ export async function GET(req: NextRequest) {
   const url = req.nextUrl;
   const limit = Math.min(Number(url.searchParams.get("limit") ?? 50), 200);
   const cursor = url.searchParams.get("cursor");
+  if (cursor !== null && cursor.trim() === "") {
+    return NextResponse.json({ error: "cursor must be a non-empty string" }, { status: 400 });
+  }
   const companyId = url.searchParams.get("companyId");
   const search = url.searchParams.get("search");
 
@@ -85,6 +88,28 @@ export async function POST(req: NextRequest) {
 
   if (!body.companyId) {
     return NextResponse.json({ error: "companyId is required" }, { status: 400 });
+  }
+
+  // ── Field length and format validation ───────────────────────
+  if (body.name !== undefined && body.name.length > 128) {
+    return NextResponse.json({ error: "name too long" }, { status: 400 });
+  }
+  if (body.email !== undefined) {
+    if (body.email.length > 254) {
+      return NextResponse.json({ error: "email too long" }, { status: 400 });
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email)) {
+      return NextResponse.json({ error: "Invalid email format" }, { status: 400 });
+    }
+  }
+  if (body.wallet !== undefined && !/^0x[0-9a-fA-F]{40}$/.test(body.wallet)) {
+    return NextResponse.json({ error: "Invalid wallet address format" }, { status: 400 });
+  }
+  if (body.id !== undefined && body.id.length > 64) {
+    return NextResponse.json({ error: "id too long" }, { status: 400 });
+  }
+  if (body.traits !== undefined && (typeof body.traits !== "object" || body.traits === null || Array.isArray(body.traits))) {
+    return NextResponse.json({ error: "traits must be a plain object" }, { status: 400 });
   }
 
   // Verify company belongs to team

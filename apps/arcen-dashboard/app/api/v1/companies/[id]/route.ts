@@ -114,6 +114,14 @@ export async function PATCH(
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
+  // ── Field length and type validation ────────────────────────
+  if (body.name !== undefined && body.name.length > 128) {
+    return NextResponse.json({ error: "name too long" }, { status: 400 });
+  }
+  if (body.traits !== undefined && (typeof body.traits !== "object" || body.traits === null || Array.isArray(body.traits))) {
+    return NextResponse.json({ error: "traits must be a plain object" }, { status: 400 });
+  }
+
   const company = await db.schematicCompany.findFirst({
     where: { id, teamId },
   });
