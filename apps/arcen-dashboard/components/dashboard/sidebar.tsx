@@ -24,6 +24,9 @@ import {
   SlidersHorizontal,
   CreditCard,
   BookOpen,
+  Activity,
+  Key,
+  Zap,
 } from "lucide-react";
 import { useEnvironment } from "@/contexts/environment-context";
 
@@ -53,7 +56,11 @@ const navGroups: NavGroup[] = [
   },
   {
     label: "Manage",
-    items: [{ id: "invoices", label: "Invoices", icon: ReceiptText }],
+    items: [
+      { id: "invoices", label: "Invoices", icon: ReceiptText },
+      { id: "companies", label: "Companies", icon: Building2 },
+      { id: "feature-flags", label: "Feature Flags", icon: Zap },
+    ],
   },
   {
     label: "Customers",
@@ -65,6 +72,8 @@ const navGroups: NavGroup[] = [
       { id: "sessions", label: "Sessions", icon: Cpu },
       { id: "features", label: "Features", icon: Flag },
       { id: "components", label: "Components", icon: LayoutTemplate },
+      { id: "events-stream", label: "Events", icon: Activity },
+      { id: "api-keys", label: "API Keys", icon: Key },
     ],
   },
   {

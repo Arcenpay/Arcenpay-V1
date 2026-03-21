@@ -2,6 +2,10 @@
 //  @meap/node — Main Entry Point
 // ============================================================
 
+// Web3 SchematicHQ Protocol — ArcenClient
+export { ArcenClient, ArcenApiError } from "./client";
+export type { ArcenClientConfig, TrackEventInput, IdentifyInput } from "./client";
+
 // Middleware
 export { x402Middleware } from "./middleware/x402";
 export type { X402MiddlewareOptions } from "./middleware/x402";

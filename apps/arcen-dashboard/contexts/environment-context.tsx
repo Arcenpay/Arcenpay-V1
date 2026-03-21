@@ -52,7 +52,7 @@ export function EnvironmentProvider({
   useEffect(() => {
     if (isLoading || !chainId) return;
 
-    const newEnvMode = getEnvModeFromChainId(chainId);
+    const newEnvMode = getEnvModeFromChainId(Number(chainId));
     if (newEnvMode && newEnvMode !== envMode) {
       setEnvMode(newEnvMode);
 

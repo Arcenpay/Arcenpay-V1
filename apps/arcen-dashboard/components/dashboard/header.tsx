@@ -33,6 +33,10 @@ const sectionTitles: Record<Section, string> = {
   "audit-log": "Audit Log",
   settings: "Settings",
   docs: "Documentation",
+  companies: "Companies",
+  "events-stream": "Events",
+  "feature-flags": "Feature Flags",
+  "api-keys": "API Keys",
 };
 
 const sectionDescriptions: Record<Section, string> = {
@@ -50,6 +54,10 @@ const sectionDescriptions: Record<Section, string> = {
   "audit-log": "Immutable record of all team actions",
   settings: "Provider configuration",
   docs: "Platform guides, SDK reference, and contract addresses",
+  companies: "Manage companies, entitlements, and overrides",
+  "events-stream": "Live stream of track and identify events",
+  "feature-flags": "Manage flags, targeting rules, and zkTLS conditions",
+  "api-keys": "Manage API keys for external protocol access",
 };
 
 export function Header({ activeSection }: HeaderProps) {
