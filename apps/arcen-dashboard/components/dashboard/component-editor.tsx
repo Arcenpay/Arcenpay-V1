@@ -1324,13 +1324,11 @@ export function ComponentEditor({
   const [activeViewState, setActiveViewState] = useState<string>(componentViews[0]?.id ?? "portal");
 
   // Collapsible design panel sections
-  const [openSections, setOpenSections] = useState({ elements: true, general: true, cardStyling: false, typography: false });
+  const [openSections, setOpenSections] = useState({ general: true, cardStyling: false, typography: false });
   const toggleSection = (k: keyof typeof openSections) =>
     setOpenSections((s) => ({ ...s, [k]: !s[k] }));
 
   // Element picker (inside design panel for custom components)
-  const [showElementPicker, setShowElementPicker] = useState(false);
-
   const handleDragStart = (element: Omit<ComponentElement, "id" | "props">) => {
     const newElement: ComponentElement = {
       id: `${element.type}-${Date.now()}`,
@@ -1488,16 +1486,17 @@ npm install @meap/react @meap/core wagmi viem
   const updateTypography = (patch: Partial<ComponentConfig["styling"]["typography"]>) =>
     setConfig((c) => ({ ...c, styling: { ...c.styling, typography: { ...c.styling.typography, ...patch } } }));
 
-  // ── Design Panel (right sidebar) — unified for SDK + custom ──
+  // ── Design Panel (right sidebar) ─────────────────────────────
   const designPanel = (
-    <div className="w-64 border-l border-border overflow-y-auto bg-background shrink-0 flex flex-col">
+    <div className="w-60 border-l border-border overflow-y-auto bg-card shrink-0 flex flex-col">
       <div className="px-4 py-3 border-b border-border shrink-0">
         <p className="text-xs font-semibold text-foreground">Design</p>
+        <p className="text-[10px] text-muted-foreground mt-0.5">Customize appearance</p>
       </div>
 
       {/* Component name */}
       <div className="px-4 py-3 border-b border-border shrink-0">
-        <Label htmlFor="comp-name" className="text-xs text-muted-foreground mb-1 block">
+        <Label htmlFor="comp-name" className="text-[10px] font-medium text-muted-foreground mb-1.5 block uppercase tracking-wider">
           Name
         </Label>
         <Input
@@ -1507,99 +1506,6 @@ npm install @meap/react @meap/core wagmi viem
           className="h-8 text-xs"
         />
       </div>
-
-      {/* Elements — custom components only */}
-      {isCustom && (
-        <DesignSection
-          title="Elements"
-          open={openSections.elements}
-          onToggle={() => toggleSection("elements")}
-        >
-          {elements.length === 0 ? (
-            <p className="text-xs text-muted-foreground py-1">No elements added yet.</p>
-          ) : (
-            <div className="space-y-1 mb-2">
-              {elements.map((el, index) => {
-                const Icon = el.icon;
-                return (
-                  <div key={el.id} className="flex items-center gap-2 py-1 group">
-                    <div className="w-4 h-4 rounded flex items-center justify-center bg-accent/10 shrink-0">
-                      <Icon className="w-2.5 h-2.5 text-accent" />
-                    </div>
-                    <span className="text-xs text-foreground flex-1 truncate">{el.label}</span>
-                    <div className="flex items-center gap-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button
-                        onClick={() => moveElement(index, "up")}
-                        disabled={index === 0}
-                        className="w-5 h-5 flex items-center justify-center rounded hover:bg-secondary disabled:opacity-30"
-                      >
-                        <ChevronUp className="w-3 h-3 text-muted-foreground" />
-                      </button>
-                      <button
-                        onClick={() => moveElement(index, "down")}
-                        disabled={index === elements.length - 1}
-                        className="w-5 h-5 flex items-center justify-center rounded hover:bg-secondary disabled:opacity-30"
-                      >
-                        <ChevronDown className="w-3 h-3 text-muted-foreground" />
-                      </button>
-                      <button
-                        onClick={() => removeElement(el.id)}
-                        className="w-5 h-5 flex items-center justify-center rounded hover:bg-destructive/10"
-                      >
-                        <Trash2 className="w-3 h-3 text-destructive" />
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-          {/* Add element */}
-          <button
-            onClick={() => setShowElementPicker((v) => !v)}
-            className="flex items-center gap-1.5 w-full px-2.5 py-2 rounded-lg border border-dashed border-border hover:border-accent/50 hover:bg-secondary/30 transition-all text-xs text-muted-foreground hover:text-foreground"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            {showElementPicker ? "Hide elements" : "Add element"}
-          </button>
-          {showElementPicker && (
-            <div className="mt-2 space-y-3 max-h-64 overflow-y-auto">
-              {ELEMENT_LIBRARY.map((cat) => (
-                <div key={cat.category}>
-                  <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
-                    {cat.category}
-                  </p>
-                  <div className="space-y-0.5">
-                    {cat.elements.map((el) => {
-                      const Icon = el.icon;
-                      const isAdded = elements.some((e) => e.type === el.type);
-                      return (
-                        <button
-                          key={el.type}
-                          onClick={() => { if (!isAdded) { addElement(el); } }}
-                          disabled={isAdded}
-                          className={cn(
-                            "flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-xs transition-all",
-                            isAdded
-                              ? "text-accent bg-accent/5 cursor-default"
-                              : "text-foreground hover:bg-secondary cursor-pointer",
-                          )}
-                        >
-                          <div className={cn("w-4 h-4 rounded flex items-center justify-center shrink-0", isAdded ? "bg-accent/15" : "bg-secondary")}>
-                            <Icon className={cn("w-2.5 h-2.5", isAdded ? "text-accent" : "text-muted-foreground")} />
-                          </div>
-                          <span className="flex-1 text-left">{el.label}</span>
-                          {isAdded && <Check className="w-3 h-3 text-accent shrink-0" />}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </DesignSection>
-      )}
 
       {/* General */}
       <DesignSection
@@ -1832,13 +1738,61 @@ npm install @meap/react @meap/core wagmi viem
 
       {/* Body */}
       <div className="flex flex-1 min-h-0">
-        {/* ── COMPONENT view — unified layout for SDK + custom ── */}
+        {/* ── COMPONENT view ── */}
         {activeView === "component" && (
           <div className="flex flex-1 min-w-0">
-            {/* Viewport area */}
+
+            {/* ── LEFT: Element library — custom portal only ── */}
+            {isCustom && activeViewState === "portal" && (
+              <div className="w-52 border-r border-border bg-card shrink-0 flex flex-col overflow-hidden">
+                <div className="px-3 py-3 border-b border-border shrink-0">
+                  <p className="text-xs font-semibold text-foreground">Elements</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">Drag or click to add</p>
+                </div>
+                <div className="flex-1 overflow-y-auto">
+                  {ELEMENT_LIBRARY.map((cat) => (
+                    <div key={cat.category} className="px-3 pt-3 pb-1">
+                      <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">{cat.category}</p>
+                      <div className="space-y-1">
+                        {cat.elements.map((el) => {
+                          const Icon = el.icon;
+                          const isAdded = elements.some((e) => e.type === el.type);
+                          return (
+                            <div
+                              key={el.type}
+                              draggable={!isAdded}
+                              onDragStart={() => handleDragStart(el)}
+                              onClick={() => { if (!isAdded) addElement(el); }}
+                              className={cn(
+                                "flex items-center gap-2.5 px-2.5 py-2.5 rounded-lg border transition-all duration-150 select-none",
+                                isAdded
+                                  ? "border-accent/20 bg-accent/5 cursor-default"
+                                  : "border-border bg-background hover:border-accent/50 hover:bg-accent/5 cursor-grab active:cursor-grabbing hover:shadow-sm",
+                              )}
+                            >
+                              <div className={cn("w-7 h-7 rounded-lg flex items-center justify-center shrink-0", isAdded ? "bg-accent/10" : "bg-secondary")}>
+                                <Icon className={cn("w-3.5 h-3.5", isAdded ? "text-accent" : "text-muted-foreground")} />
+                              </div>
+                              <span className={cn("text-xs font-medium flex-1 leading-tight", isAdded ? "text-accent" : "text-foreground")}>{el.label}</span>
+                              {isAdded
+                                ? <Check className="w-3 h-3 text-accent shrink-0" />
+                                : <GripVertical className="w-3 h-3 text-muted-foreground/40 shrink-0" />
+                              }
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                  <div className="h-3" />
+                </div>
+              </div>
+            )}
+
+            {/* ── CENTER: Viewport ── */}
             <div className="flex-1 flex flex-col min-w-0 bg-secondary/5">
-              {/* View-state tab bar — identical for both SDK and custom */}
-              <div className="flex items-center border-b border-border px-6 shrink-0 bg-background">
+              {/* View-state tab bar */}
+              <div className="flex items-center border-b border-border px-4 shrink-0 bg-background/80 backdrop-blur-sm">
                 {componentViews.map((vs) => (
                   <button
                     key={vs.id}
@@ -1853,146 +1807,149 @@ npm install @meap/react @meap/core wagmi viem
                     {vs.label}
                   </button>
                 ))}
-              </div>
-              {/* Viewport frame */}
-              <div className="flex-1 overflow-y-auto p-8 bg-secondary/5">
-                <div className="max-w-3xl mx-auto">
-                  {/* Browser chrome */}
-                  <div className="rounded-t-xl border border-b-0 border-border bg-secondary/40 flex items-center gap-2 px-4 py-2.5">
-                    <div className="flex gap-1.5">
-                      <div className="w-2.5 h-2.5 rounded-full bg-muted-foreground/20" />
-                      <div className="w-2.5 h-2.5 rounded-full bg-muted-foreground/20" />
-                      <div className="w-2.5 h-2.5 rounded-full bg-muted-foreground/20" />
-                    </div>
-                    <div className="flex-1 h-5 rounded bg-background/70 border border-border/50" />
-                    <Badge variant="secondary" className="text-[9px] h-4 bg-accent/10 text-accent border-0">
-                      Live Preview
-                    </Badge>
-                  </div>
-                  <div className="border border-border rounded-b-xl bg-background p-8 min-h-[420px]">
-                    {/*
-                     * Unified viewport — same rendering logic for both types.
-                     * Portal tab on custom: show the user's assembled elements.
-                     * All other tabs (Checkout, Payment Method, etc.): SdkViewportPreview.
-                     * SDK components: always SdkViewportPreview.
-                     */}
-                    {isCustom && activeViewState === "portal" ? (
-                      elements.length === 0 ? (
-                        /* Empty state — nudge user to add elements */
-                        <div className="flex flex-col items-center justify-center h-56 select-none">
-                          <div className="w-14 h-14 rounded-2xl bg-secondary/60 flex items-center justify-center mb-4 border border-border">
-                            <LayoutTemplate className="w-6 h-6 text-muted-foreground/50" />
-                          </div>
-                          <p className="text-sm font-semibold text-foreground mb-1">No elements yet</p>
-                          <p className="text-xs text-muted-foreground mb-5 text-center max-w-[200px]">
-                            Add billing elements via the Design panel →
-                          </p>
-                          <div className="flex flex-wrap gap-2 justify-center">
-                            {["pricing-table", "plan-manager", "metered-features"].map((type) => {
-                              const el = ALL_ELEMENTS.find((e) => e.type === type);
-                              if (!el) return null;
-                              const Icon = el.icon;
-                              return (
-                                <button
-                                  key={type}
-                                  onClick={() => addElement(el)}
-                                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/70 border border-border text-xs font-medium text-foreground transition-colors"
-                                >
-                                  <Icon className="w-3 h-3 text-muted-foreground" />
-                                  {el.label}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      ) : (
-                        /* Custom portal: drag-and-drop canvas with element cards */
-                        <div
-                          onDrop={handleDrop}
-                          onDragOver={handleDragOver}
-                          className={cn(
-                            "min-h-[320px] rounded-lg transition-all duration-150",
-                            draggedElement && "ring-2 ring-accent/40 bg-accent/5",
-                          )}
-                        >
-                          <div
-                            className="grid gap-4"
-                            style={{
-                              gridTemplateColumns:
-                                config.styling.sections === "merged"
-                                  ? "1fr"
-                                  : `repeat(${Math.min(config.styling.columns, elements.length)}, 1fr)`,
-                            }}
-                          >
-                            {elements.map((element, index) => {
-                              const Icon = element.icon;
-                              const accentColor = config.styling.primaryColor && config.styling.primaryColor !== "#000000"
-                                ? config.styling.primaryColor : "#6366f1";
-                              return (
-                                <div
-                                  key={element.id}
-                                  style={{
-                                    borderRadius: config.styling.cardStyle.borderRadius || undefined,
-                                    backgroundColor: config.styling.cardStyle.backgroundColor || undefined,
-                                    boxShadow: config.styling.cardStyle.cardShadow ? "0 2px 12px 0 rgb(0 0 0/0.07)" : "none",
-                                    fontFamily: config.styling.typography.fontFamily || undefined,
-                                  }}
-                                  className={cn(
-                                    "group relative rounded-xl border transition-all cursor-pointer",
-                                    selectedElement === element.id
-                                      ? "border-accent ring-1 ring-accent/20"
-                                      : "border-border hover:border-accent/40",
-                                  )}
-                                  onClick={() => setSelectedElement(element.id)}
-                                >
-                                  <div className="flex items-center gap-2 px-3 py-2 border-b border-border/60 bg-secondary/20 rounded-t-xl">
-                                    <GripVertical className="w-3.5 h-3.5 text-muted-foreground/40 cursor-move opacity-0 group-hover:opacity-100 transition-opacity" />
-                                    <div className="w-5 h-5 rounded flex items-center justify-center" style={{ backgroundColor: `${accentColor}18` }}>
-                                      <Icon className="w-3 h-3" style={{ color: accentColor }} />
-                                    </div>
-                                    <span className="text-xs font-medium text-foreground flex-1">{element.label}</span>
-                                    <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                                      <button onClick={(e) => { e.stopPropagation(); moveElement(index, "up"); }} disabled={index === 0} className="h-5 w-5 flex items-center justify-center rounded hover:bg-secondary disabled:opacity-30">
-                                        <ChevronUp className="w-3 h-3 text-muted-foreground" />
-                                      </button>
-                                      <button onClick={(e) => { e.stopPropagation(); moveElement(index, "down"); }} disabled={index === elements.length - 1} className="h-5 w-5 flex items-center justify-center rounded hover:bg-secondary disabled:opacity-30">
-                                        <ChevronDown className="w-3 h-3 text-muted-foreground" />
-                                      </button>
-                                      <button onClick={(e) => { e.stopPropagation(); removeElement(element.id); }} className="h-5 w-5 flex items-center justify-center rounded hover:bg-destructive/10">
-                                        <Trash2 className="w-3 h-3 text-destructive" />
-                                      </button>
-                                    </div>
-                                  </div>
-                                  <div className="p-4">
-                                    <ElementPreview type={element.type} realData={realData} />
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                          {/* Drop target hint at bottom */}
-                          {draggedElement && (
-                            <div className="mt-3 h-10 rounded-lg border-2 border-dashed border-accent/50 flex items-center justify-center">
-                              <span className="text-xs text-accent font-medium">Drop here to add</span>
-                            </div>
-                          )}
-                        </div>
-                      )
-                    ) : (
-                      /* SDK components + all non-Portal tabs of custom: unified SdkViewportPreview */
-                      <SdkViewportPreview
-                        componentId={isCustom ? "customer-portal" : component.id}
-                        viewState={activeViewState}
-                        styling={config.styling}
-                        realData={realData}
-                        onViewChange={(vs) => setActiveViewState(vs)}
-                      />
-                    )}
-                  </div>
+                <div className="ml-auto flex items-center gap-2 pr-2">
+                  <Badge variant="secondary" className="text-[9px] h-5 bg-accent/10 text-accent border-0 font-medium">
+                    Live Preview
+                  </Badge>
                 </div>
               </div>
+
+              {/* Viewport frame */}
+              <div className="flex-1 overflow-y-auto p-6">
+                {isCustom && activeViewState === "portal" ? (
+                  /* ── Custom portal: drag-and-drop canvas ── */
+                  elements.length === 0 ? (
+                    /* Empty state */
+                    <div
+                      onDrop={handleDrop}
+                      onDragOver={handleDragOver}
+                      className={cn(
+                        "flex flex-col items-center justify-center min-h-[480px] rounded-2xl border-2 border-dashed transition-all duration-200 select-none",
+                        draggedElement ? "border-accent bg-accent/5" : "border-border bg-background/40",
+                      )}
+                    >
+                      <div className="w-14 h-14 rounded-2xl bg-secondary flex items-center justify-center mb-4 border border-border">
+                        <LayoutTemplate className="w-6 h-6 text-muted-foreground/50" />
+                      </div>
+                      <p className="text-sm font-semibold text-foreground mb-1">{draggedElement ? "Drop to add" : "Start building"}</p>
+                      <p className="text-xs text-muted-foreground mb-5 text-center max-w-[220px]">
+                        {draggedElement ? `Adding "${draggedElement.label}"` : "Drag elements from the left panel, or click them to add"}
+                      </p>
+                      {!draggedElement && (
+                        <div className="flex flex-wrap gap-2 justify-center">
+                          {["plan-manager", "metered-features", "next-bill-due"].map((type) => {
+                            const el = ALL_ELEMENTS.find((e) => e.type === type);
+                            if (!el) return null;
+                            const Icon = el.icon;
+                            return (
+                              <button key={type} onClick={() => addElement(el)} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-card hover:bg-secondary border border-border text-xs font-medium text-foreground transition-colors shadow-sm">
+                                <Icon className="w-3 h-3 text-accent" />
+                                {el.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    /* Canvas with elements */
+                    <div
+                      onDrop={handleDrop}
+                      onDragOver={handleDragOver}
+                      className={cn("min-h-[480px] transition-all duration-150", draggedElement && "ring-2 ring-inset ring-accent/30 rounded-2xl")}
+                    >
+                      <div
+                        className="grid gap-4"
+                        style={{
+                          gridTemplateColumns:
+                            config.styling.sections === "merged"
+                              ? "1fr"
+                              : `repeat(${Math.min(config.styling.columns, elements.length)}, 1fr)`,
+                        }}
+                      >
+                        {elements.map((element, index) => {
+                          const Icon = element.icon;
+                          return (
+                            <div
+                              key={element.id}
+                              className={cn(
+                                "group bg-card rounded-xl border overflow-hidden transition-all duration-150 cursor-default",
+                                selectedElement === element.id
+                                  ? "border-accent shadow-sm ring-1 ring-accent/20"
+                                  : "border-border hover:border-accent/30 hover:shadow-sm",
+                              )}
+                              style={{
+                                borderRadius: config.styling.cardStyle.borderRadius || undefined,
+                                backgroundColor: config.styling.cardStyle.backgroundColor || undefined,
+                                boxShadow: config.styling.cardStyle.cardShadow ? "0 2px 8px 0 rgb(0 0 0/0.06)" : undefined,
+                                fontFamily: config.styling.typography.fontFamily || undefined,
+                              }}
+                              onClick={() => setSelectedElement(element.id === selectedElement ? null : element.id)}
+                            >
+                              {/* Element card header */}
+                              <div className="flex items-center gap-2 px-3 py-2.5 border-b border-border bg-secondary/30">
+                                <GripVertical className="w-3.5 h-3.5 text-muted-foreground/30 cursor-grab shrink-0" />
+                                <div className="w-5 h-5 rounded-md bg-accent/10 flex items-center justify-center shrink-0">
+                                  <Icon className="w-3 h-3 text-accent" />
+                                </div>
+                                <span className="text-xs font-medium text-foreground flex-1">{element.label}</span>
+                                {/* Controls — always visible on hover */}
+                                <div className="flex items-center gap-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); moveElement(index, "up"); }}
+                                    disabled={index === 0}
+                                    className="w-6 h-6 flex items-center justify-center rounded hover:bg-secondary disabled:opacity-25 transition-colors"
+                                  >
+                                    <ChevronUp className="w-3 h-3 text-muted-foreground" />
+                                  </button>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); moveElement(index, "down"); }}
+                                    disabled={index === elements.length - 1}
+                                    className="w-6 h-6 flex items-center justify-center rounded hover:bg-secondary disabled:opacity-25 transition-colors"
+                                  >
+                                    <ChevronDown className="w-3 h-3 text-muted-foreground" />
+                                  </button>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); removeElement(element.id); }}
+                                    className="w-6 h-6 flex items-center justify-center rounded hover:bg-destructive/10 transition-colors ml-0.5"
+                                  >
+                                    <Trash2 className="w-3 h-3 text-destructive" />
+                                  </button>
+                                </div>
+                              </div>
+                              {/* Element content */}
+                              <div className="p-4">
+                                <ElementPreview type={element.type} realData={realData} />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      {/* Drop zone at bottom */}
+                      {draggedElement && (
+                        <div className="mt-4 h-14 rounded-xl border-2 border-dashed border-accent/50 bg-accent/5 flex items-center justify-center gap-2">
+                          <Plus className="w-4 h-4 text-accent" />
+                          <span className="text-sm text-accent font-medium">Drop &quot;{draggedElement.label}&quot; here</span>
+                        </div>
+                      )}
+                    </div>
+                  )
+                ) : (
+                  /* ── SDK components + non-Portal custom tabs ── */
+                  <div className="max-w-3xl mx-auto">
+                    <SdkViewportPreview
+                      componentId={isCustom ? "customer-portal" : component.id}
+                      viewState={activeViewState}
+                      styling={config.styling}
+                      realData={realData}
+                      onViewChange={(vs) => setActiveViewState(vs)}
+                    />
+                  </div>
+                )}
+              </div>
             </div>
-            {/* Design panel — always on right */}
+
+            {/* ── RIGHT: Design panel ── */}
             {designPanel}
           </div>
         )}
