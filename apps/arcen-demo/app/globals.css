@@ -1,37 +1,575 @@
 @import "tailwindcss";
 
+/* ─── CSS Variables ─────────────────────────────────────────── */
 :root {
-  --bg: #0a0a0f;
-  --surface: #111117;
-  --surface-2: #18181f;
-  --border: #2a2a35;
-  --border-dim: #1e1e28;
-  --text: #e8e8f0;
-  --text-dim: #8888a0;
-  --text-muted: #555566;
-  --accent: #7c6ffa;
-  --accent-dim: #7c6ffa20;
+  --bg: #070711;
+  --surface: #0f0f1a;
+  --surface-2: #16162b;
+  --surface-3: #1c1c36;
+  --border: #2a2a45;
+  --border-dim: #1e1e38;
+  --text: #e2e2f0;
+  --text-dim: #8888aa;
+  --text-muted: #4a4a66;
+  --accent: #6366f1;
+  --accent-2: #8b5cf6;
+  --accent-dim: #6366f115;
   --success: #22c55e;
-  --success-dim: #22c55e18;
+  --success-dim: #22c55e12;
   --warning: #f59e0b;
-  --warning-dim: #f59e0b18;
+  --warning-dim: #f59e0b12;
   --danger: #ef4444;
-  --danger-dim: #ef444418;
+  --danger-dim: #ef444412;
+  --radius: 10px;
 }
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
   font-size: 14px;
-  line-height: 1.5;
-  margin: 0;
+  line-height: 1.6;
+  min-height: 100vh;
 }
 
-::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { opacity: 0.8; }
+
+code {
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 0.85em;
+  background: var(--surface-3);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* ─── SDK Component Styles (@meap/* uses meap-* classes) ─────── */
+.meap-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  display: inline-block;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes pulse-glow { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+/* PricingTable */
+.meap-pricing-table {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.meap-pricing-loading,
+.meap-pricing-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 40px;
+  color: var(--text-dim);
+  font-size: 13px;
+}
+
+.meap-plan-card {
+  background: var(--surface-2);
+  border: 1px solid var(--border-dim);
+  border-radius: 14px;
+  padding: 24px 20px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.meap-plan-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(99, 102, 241, 0.15);
+}
+
+.meap-plan-card.selected {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+}
+
+.meap-plan-card.selected::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+}
+
+.meap-plan-tier {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.meap-plan-name {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 12px;
+}
+
+.meap-plan-price {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-bottom: 20px;
+}
+
+.meap-plan-amount {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.meap-plan-interval {
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+.meap-plan-select-btn {
+  width: 100%;
+  padding: 9px 0;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: opacity 0.15s;
+}
+
+.meap-plan-select-btn:hover { opacity: 0.85; }
+.meap-plan-card.selected .meap-plan-select-btn {
+  background: var(--surface-3);
+  color: var(--accent);
+  border: 1px solid var(--accent);
+}
+
+/* SubscriptionStatus */
+.meap-subscription-status {
+  background: var(--surface-2);
+  border: 1px solid var(--border-dim);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+}
+
+.meap-status-loading {
+  display: flex;
+  justify-content: center;
+  padding: 16px;
+}
+
+.meap-status-active { display: flex; gap: 12px; align-items: center; }
+.meap-status-inactive { display: flex; gap: 10px; align-items: center; color: var(--text-dim); }
+.meap-status-inactive p { font-size: 13px; }
+
+.meap-status-badge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 3px 8px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.meap-status-badge.active {
+  background: var(--success-dim);
+  color: var(--success);
+  border: 1px solid color-mix(in srgb, var(--success) 25%, transparent);
+}
+
+.meap-status-badge.inactive {
+  background: var(--surface-3);
+  color: var(--text-muted);
+  border: 1px solid var(--border-dim);
+}
+
+.meap-status-details { display: flex; flex-direction: column; gap: 2px; }
+.meap-status-tier { font-size: 13px; font-weight: 600; }
+.meap-status-expiry { font-size: 11px; color: var(--text-dim); }
+
+/* FeatureFlagGuard */
+.meap-guard-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+}
+
+/* CheckoutModal */
+.meap-checkout-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.meap-checkout-modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  width: 100%;
+  max-width: 440px;
+  overflow: hidden;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(99, 102, 241, 0.1);
+}
+
+.meap-checkout-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--border-dim);
+}
+
+.meap-checkout-header h2 {
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.meap-checkout-close {
+  background: var(--surface-2);
+  border: 1px solid var(--border-dim);
+  color: var(--text-dim);
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.meap-checkout-close:hover {
+  background: var(--surface-3);
+  color: var(--text);
+}
+
+.meap-checkout-progress {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--border-dim);
+}
+
+.meap-checkout-step {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.meap-checkout-step:not(:last-child)::after {
+  content: '';
+  display: block;
+  width: 20px;
+  height: 1px;
+  background: var(--border);
+  margin-left: 6px;
+}
+
+.meap-checkout-step.active:not(:last-child)::after {
+  background: var(--accent);
+}
+
+.meap-step-dot {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  transition: all 0.2s;
+}
+
+.meap-checkout-step.active .meap-step-dot {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+
+.meap-checkout-step.completed .meap-step-dot {
+  background: var(--success-dim);
+  border-color: var(--success);
+  color: var(--success);
+}
+
+.meap-checkout-body {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.meap-checkout-body p {
+  color: var(--text-dim);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.meap-testnet-badge {
+  background: var(--warning-dim);
+  border: 1px solid color-mix(in srgb, var(--warning) 25%, transparent);
+  color: var(--warning);
+  font-size: 11px;
+  padding: 6px 10px;
+  border-radius: 6px;
+}
+
+.meap-tx-hash a {
+  font-family: monospace;
+  font-size: 12px;
+  color: var(--accent);
+}
+
+.meap-email-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.meap-email-input-group label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+
+.meap-email-input {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 9px 12px;
+  color: var(--text);
+  font-size: 13px;
+  outline: none;
+  width: 100%;
+}
+
+.meap-email-input:focus {
+  border-color: var(--accent);
+}
+
+.meap-checkout-actions {
+  padding: 0 24px 20px;
+  display: flex;
+  gap: 8px;
+}
+
+.meap-checkout-btn {
+  flex: 1;
+  padding: 11px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: opacity 0.15s;
+}
+
+.meap-checkout-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.meap-checkout-btn.primary {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: white;
+}
+
+.meap-checkout-btn.secondary {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.meap-checkout-btn:hover:not(:disabled) { opacity: 0.85; }
+
+/* UsageDashboard */
+.meap-usage-dashboard {
+  background: var(--surface-2);
+  border: 1px solid var(--border-dim);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+
+.meap-usage-dashboard.meap-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 32px;
+  color: var(--text-dim);
+  font-size: 13px;
+}
+
+.meap-usage-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.meap-usage-header h3 {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.meap-usage-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.meap-metric-card {
+  background: var(--surface-3);
+  border: 1px solid var(--border-dim);
+  border-radius: 8px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.meap-metric-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.meap-metric-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.meap-usage-footer {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-muted);
+  padding-top: 10px;
+  border-top: 1px solid var(--border-dim);
+}
+
+.meap-session-id, .meap-last-updated {
+  font-family: monospace;
+}
+
+/* BillingHistory */
+.meap-billing-history {
+  background: var(--surface-2);
+  border: 1px solid var(--border-dim);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.meap-billing-history.meap-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 32px;
+  color: var(--text-dim);
+  font-size: 13px;
+}
+
+.meap-billing-history.meap-error {
+  padding: 16px 20px;
+  color: var(--danger);
+  font-size: 13px;
+}
+
+.meap-billing-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border-dim);
+}
+
+.meap-billing-header h3 { font-size: 14px; font-weight: 700; }
+.meap-event-count { font-size: 11px; color: var(--text-muted); }
+
+.meap-billing-empty {
+  padding: 32px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.meap-billing-list { display: flex; flex-direction: column; }
+
+.meap-billing-item {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--border-dim);
+  transition: background 0.12s;
+}
+
+.meap-billing-item:hover { background: var(--surface-3); }
+.meap-billing-item:last-child { border-bottom: none; }
+
+.meap-billing-icon { font-size: 16px; flex-shrink: 0; margin-top: 2px; }
+
+.meap-billing-details { flex: 1; min-width: 0; }
+
+.meap-billing-type {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 3px;
+}
+
+.meap-event-badge { font-size: 13px; font-weight: 600; }
+.meap-billing-amount { font-size: 12px; color: var(--success); font-family: monospace; }
+
+.meap-billing-meta { display: flex; gap: 10px; align-items: center; }
+.meap-billing-date { font-size: 11px; color: var(--text-muted); }
+.meap-tx-link { font-size: 11px; font-family: monospace; color: var(--accent); }
+
+/* Status badge (used in UsageDashboard) */
+.meap-status-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 20px;
+  color: white;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}

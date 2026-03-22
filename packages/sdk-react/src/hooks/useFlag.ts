@@ -16,7 +16,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { FlagCheckResult, SchematicCompanyKeys, SchematicUserKeys } from '@meap/core';
 
-interface UseFlagOptions {
+export interface UseFlagOptions {
   /** Base URL for the ArcenPay dashboard API (defaults to '') */
   baseUrl?: string;
   /** API key for server-side usage (omit for client-side — use access token instead) */
@@ -27,7 +27,7 @@ interface UseFlagOptions {
   skip?: boolean;
 }
 
-interface UseFlagResult {
+export interface UseFlagResult {
   value: boolean | null;
   loading: boolean;
   reason: string;
