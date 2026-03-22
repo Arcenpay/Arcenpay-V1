@@ -39,8 +39,11 @@ import {
   Plus,
   Info,
   Key,
+  Wallet,
+  Webhook,
 } from "lucide-react";
 import { ProtocolKeysPanel } from "@/components/dashboard/sections/api-keys";
+import { useUser } from "@clerk/nextjs";
 import {
   useAccount,
   useChainId,
@@ -267,8 +270,10 @@ function WebhookLogCard() {
 // ── Main SettingsSection ──────────────────────────────────────────────────────
 
 export function SettingsSection() {
-  const { isConnected } = useAccount();
+  const { isConnected, address: connectedAddress } = useAccount();
+  const { user: clerkUser } = useUser();
   const chainId = useChainId();
+  const linkedWallet = clerkUser?.publicMetadata?.walletAddress as string | undefined;
   const contractAddresses = useContractAddresses();
 
   const [activeTab, setActiveTab] = useState("profile");
@@ -688,15 +693,15 @@ export function SettingsSection() {
             value="apikeys"
             className="data-[state=active]:bg-card data-[state=active]:text-foreground"
           >
-            <Shield className="w-4 h-4 mr-2" />
-            Provider Keys
+            <Webhook className="w-4 h-4 mr-2" />
+            Webhook Key
           </TabsTrigger>
           <TabsTrigger
             value="protocolkeys"
             className="data-[state=active]:bg-card data-[state=active]:text-foreground"
           >
             <Key className="w-4 h-4 mr-2" />
-            Protocol Keys
+            API Keys
           </TabsTrigger>
           <TabsTrigger
             value="gmp"
@@ -719,6 +724,93 @@ export function SettingsSection() {
           value="profile"
           className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300"
         >
+          {/* EVM Identity Card */}
+          <Card className="border-accent/30 bg-card">
+            <CardHeader>
+              <CardTitle className="text-base font-medium flex items-center gap-2">
+                <Wallet className="w-4 h-4 text-accent" />
+                EVM Account Identity
+              </CardTitle>
+              <CardDescription>
+                Your linked wallet is your universal identity across{" "}
+                <span className="text-foreground font-medium">all EVM chains</span> —
+                Ethereum, Base, Polygon, Arbitrum, Optimism, and any EVM-compatible network.
+                One account = one wallet address. The chain can change but your address never does.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {linkedWallet ? (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-4 rounded-xl bg-secondary/50 border border-border">
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Linked wallet address</p>
+                      <code className="text-sm font-mono text-foreground break-all">{linkedWallet}</code>
+                    </div>
+                    <div className="flex items-center gap-2 ml-4 shrink-0">
+                      <Badge variant="secondary" className="bg-success/10 text-success border-success/20">
+                        Linked
+                      </Badge>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8"
+                        onClick={() => {
+                          navigator.clipboard.writeText(linkedWallet);
+                          setCopiedAddress("wallet");
+                          setTimeout(() => setCopiedAddress(null), 2000);
+                        }}
+                      >
+                        {copiedAddress === "wallet" ? (
+                          <Check className="w-3.5 h-3.5 text-success" />
+                        ) : (
+                          <Copy className="w-3.5 h-3.5" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                  {connectedAddress && connectedAddress.toLowerCase() !== linkedWallet.toLowerCase() && (
+                    <div className="flex items-start gap-2 p-3 rounded-lg bg-warning/5 border border-warning/20">
+                      <AlertTriangle className="w-4 h-4 text-warning shrink-0 mt-0.5" />
+                      <p className="text-xs text-muted-foreground">
+                        Your connected wallet{" "}
+                        <code className="text-foreground">{connectedAddress.slice(0, 6)}…{connectedAddress.slice(-4)}</code>{" "}
+                        differs from your linked account wallet. Switch your wallet to the linked address to interact with on-chain features.
+                      </p>
+                    </div>
+                  )}
+                  <div className="flex items-start gap-2 p-3 rounded-lg bg-secondary/50 border border-border">
+                    <Info className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
+                    <p className="text-xs text-muted-foreground">
+                      This address is permanent and cannot be changed. It identifies your provider on-chain across all supported EVM networks.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-4 rounded-xl bg-secondary/50 border border-border">
+                    <div>
+                      <p className="text-sm font-medium text-foreground">No wallet linked</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Link your wallet to enable on-chain subscriptions, plan management, and usage billing.
+                      </p>
+                    </div>
+                    <Badge variant="secondary" className="bg-warning/10 text-warning border-warning/20 shrink-0">
+                      Not Linked
+                    </Badge>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.location.href = "/onboarding/wallet"}
+                  >
+                    <Wallet className="w-4 h-4 mr-2" />
+                    Link Wallet
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           <Card className="border-border bg-card">
             <CardHeader>
               <CardTitle className="text-base font-medium">
@@ -1070,21 +1162,34 @@ export function SettingsSection() {
           <WebhookLogCard />
         </TabsContent>
 
-        {/* API Keys Tab */}
+        {/* Webhook Key Tab */}
         <TabsContent
           value="apikeys"
           className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300"
         >
+          <div className="flex items-start gap-3 p-4 rounded-xl bg-accent/5 border border-accent/20">
+            <Webhook className="w-4 h-4 text-accent shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-medium text-foreground">Webhook Signing Key</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                This key is used exclusively to sign outbound webhook payloads with{" "}
+                <code className="text-foreground">HMAC-SHA256</code>. When ArcenPay sends an event
+                to your webhook URL, it includes an <code className="text-foreground">X-MEAP-Signature</code>{" "}
+                header signed with this key — use it to verify the payload came from us.{" "}
+                <span className="text-foreground font-medium">Do not use this key for API calls</span> —
+                use an API Key from the API Keys tab instead.
+              </p>
+            </div>
+          </div>
           <Card className="border-border bg-card">
             <CardHeader>
               <CardTitle className="text-base font-medium flex items-center gap-2">
-                <Shield className="w-4 h-4" />
-                Provider API Key
+                <Webhook className="w-4 h-4" />
+                Webhook Signing Key
               </CardTitle>
               <CardDescription>
-                Use this key to authenticate server-to-server requests to the
-                ArcenPay API. The full key is shown only once — store it
-                securely.
+                Signs outbound webhook payloads via HMAC-SHA256 so your server can verify
+                that events came from ArcenPay. One key per workspace. Shown only once — store it securely.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -1233,12 +1338,15 @@ export function SettingsSection() {
               <div className="flex items-start gap-2 p-3 rounded-lg bg-secondary/50 border border-border">
                 <Info className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
                 <p className="text-xs text-muted-foreground">
-                  Send the key as{" "}
+                  This key signs webhook payloads with HMAC-SHA256. On your server, verify incoming webhooks
+                  by computing{" "}
                   <code className="text-foreground">
-                    Authorization: Bearer ak_live_…
+                    HMAC-SHA256(body, ak_live_…)
                   </code>{" "}
-                  header. Only one active key per provider. Regenerating
-                  invalidates the previous key immediately.
+                  and comparing it to the{" "}
+                  <code className="text-foreground">X-MEAP-Signature</code> header.
+                  Only one key per workspace. Regenerating invalidates the previous key immediately.
+                  For SDK/API authentication, use an API Key from the <strong>API Keys</strong> tab.
                 </p>
               </div>
             </CardContent>
@@ -1535,7 +1643,7 @@ export function SettingsSection() {
           </Card>
         </TabsContent>
 
-        {/* Protocol Keys Tab */}
+        {/* API Keys Tab */}
         <TabsContent
           value="protocolkeys"
           className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300"
@@ -1543,12 +1651,15 @@ export function SettingsSection() {
           <div className="flex items-start gap-3 p-4 rounded-xl bg-accent/5 border border-accent/20">
             <Key className="w-4 h-4 text-accent shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-medium text-foreground">Protocol API Keys</p>
+              <p className="text-sm font-medium text-foreground">API Keys — for your backend SDK</p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Use these keys to authenticate your server-side integrations with the
-                ArcenPay protocol API — event tracking, flag evaluation, company management,
-                and zkTLS proof submission. Keys are stored as SHA-256 hashes; the raw key
-                is only shown once on creation.
+                Use these keys to authenticate your server-side SDK and backend API calls to ArcenPay —
+                feature flag checks, event tracking, company management, usage queries, and access token generation.
+                Pass as <code className="text-foreground">Authorization: Bearer api_…</code> on all{" "}
+                <code className="text-foreground">/api/v1/*</code> endpoints. Keys are hashed (Argon2) and
+                never stored in plaintext — the raw key is shown only once on creation.{" "}
+                <span className="text-foreground font-medium">These are not webhook keys</span> — for webhook
+                verification use the Webhook Key tab.
               </p>
             </div>
           </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -18,10 +18,15 @@ import {
   Clock,
   ShieldCheck,
   ArrowRight,
+  History,
+  Zap,
 } from "lucide-react";
 import {
   ComponentEditor,
   type ComponentConfig,
+  type RealData,
+  type RealPlan,
+  type RealFlag,
 } from "@/components/dashboard/component-editor";
 import { cn } from "@/lib/utils";
 
@@ -70,8 +75,8 @@ const DEFAULT_SDK_COMPONENTS: ComponentConfig[] = [
     styling: {
       columns: 2,
       sections: "merged",
-      primaryColor: "#000000",
-      secondaryColor: "#194BFB",
+      primaryColor: "#6366f1",
+      secondaryColor: "#e0e7ff",
       cardStyle: {
         backgroundColor: "#FFFFFF",
         borderRadius: "10px",
@@ -112,8 +117,8 @@ const DEFAULT_SDK_COMPONENTS: ComponentConfig[] = [
     styling: {
       columns: 2,
       sections: "merged",
-      primaryColor: "#000000",
-      secondaryColor: "#194BFB",
+      primaryColor: "#6366f1",
+      secondaryColor: "#e0e7ff",
       cardStyle: {
         backgroundColor: "#FFFFFF",
         borderRadius: "10px",
@@ -148,8 +153,8 @@ const DEFAULT_SDK_COMPONENTS: ComponentConfig[] = [
     styling: {
       columns: 3,
       sections: "merged",
-      primaryColor: "#000000",
-      secondaryColor: "#194BFB",
+      primaryColor: "#6366f1",
+      secondaryColor: "#e0e7ff",
       cardStyle: {
         backgroundColor: "#FFFFFF",
         borderRadius: "10px",
@@ -198,8 +203,8 @@ const DEFAULT_SDK_COMPONENTS: ComponentConfig[] = [
     styling: {
       columns: 2,
       sections: "merged",
-      primaryColor: "#000000",
-      secondaryColor: "#194BFB",
+      primaryColor: "#6366f1",
+      secondaryColor: "#e0e7ff",
       cardStyle: {
         backgroundColor: "#FFFFFF",
         borderRadius: "10px",
@@ -212,6 +217,78 @@ const DEFAULT_SDK_COMPONENTS: ComponentConfig[] = [
       },
     },
     template: "usage-portal",
+    createdAt: new Date("2024-01-01"),
+    updatedAt: new Date("2024-01-01"),
+  },
+  {
+    id: "checkout-modal",
+    name: "Checkout Modal",
+    description:
+      "Multi-step upgrade flow: plan selection → on-chain subscribe transaction → confirmation",
+    type: "sdk",
+    category: "Checkout",
+    elements: [
+      {
+        id: "1",
+        type: "checkout-modal",
+        label: "Checkout Modal",
+        icon: Zap,
+        props: {},
+      },
+    ],
+    styling: {
+      columns: 1,
+      sections: "merged",
+      primaryColor: "#6366f1",
+      secondaryColor: "#e0e7ff",
+      cardStyle: {
+        backgroundColor: "#FFFFFF",
+        borderRadius: "10px",
+        cardShadow: true,
+        cardPadding: "45px",
+      },
+      typography: {
+        fontFamily: "Inter",
+        fontSize: "14px",
+      },
+    },
+    template: "checkout",
+    createdAt: new Date("2024-01-01"),
+    updatedAt: new Date("2024-01-01"),
+  },
+  {
+    id: "billing-history",
+    name: "Billing History",
+    description:
+      "On-chain subscription events and payment history from SubscriptionRegistry logs",
+    type: "sdk",
+    category: "Billing",
+    elements: [
+      {
+        id: "1",
+        type: "billing-history",
+        label: "Billing History",
+        icon: History,
+        props: {},
+      },
+    ],
+    styling: {
+      columns: 1,
+      sections: "merged",
+      primaryColor: "#6366f1",
+      secondaryColor: "#e0e7ff",
+      cardStyle: {
+        backgroundColor: "#FFFFFF",
+        borderRadius: "10px",
+        cardShadow: true,
+        cardPadding: "45px",
+      },
+      typography: {
+        fontFamily: "Inter",
+        fontSize: "14px",
+      },
+    },
+    template: "blank",
     createdAt: new Date("2024-01-01"),
     updatedAt: new Date("2024-01-01"),
   },
@@ -259,23 +336,30 @@ function CustomerPortalPreview() {
   );
 }
 
-function CheckoutPreview() {
+function CheckoutPreview({ plans }: { plans: RealPlan[] }) {
+  const planList = plans.length
+    ? plans.slice(0, 3)
+    : [
+        { id: "1", name: "Starter", price: 9, billingInterval: "monthly" },
+        { id: "2", name: "Pro", price: 29, billingInterval: "monthly" },
+        { id: "3", name: "Enterprise", price: 99, billingInterval: "monthly" },
+      ];
   return (
     <div className="space-y-2 p-3">
       <div className="h-2 w-20 rounded bg-foreground/10" />
       <div className="flex gap-2">
-        {[false, true, false].map((active, i) => (
+        {planList.map((plan, i) => (
           <div
-            key={i}
+            key={plan.id}
             className={cn(
               "flex-1 rounded-md border p-2 space-y-1.5",
-              active
+              i === 1
                 ? "border-accent bg-accent/5"
                 : "border-border bg-secondary/30",
             )}
           >
-            <div className="h-1.5 w-8 rounded bg-foreground/10" />
-            <div className="h-2.5 w-10 rounded bg-foreground/15" />
+            <div className="text-[8px] font-semibold text-foreground truncate">{plan.name}</div>
+            <div className="text-[9px] font-bold text-foreground">${plan.price}<span className="text-[7px] font-normal text-muted-foreground">/{plan.billingInterval === "yearly" ? "yr" : "mo"}</span></div>
             <div className="space-y-1">
               <div className="h-1 w-full rounded bg-foreground/5" />
               <div className="h-1 w-full rounded bg-foreground/5" />
@@ -284,12 +368,12 @@ function CheckoutPreview() {
             <div
               className={cn(
                 "h-4 rounded text-[7px] font-medium flex items-center justify-center",
-                active
+                i === 1
                   ? "bg-accent text-accent-foreground"
                   : "bg-secondary text-muted-foreground",
               )}
             >
-              {active ? "Selected" : "Select"}
+              {i === 1 ? "Selected" : "Select"}
             </div>
           </div>
         ))}
@@ -302,7 +386,14 @@ function CheckoutPreview() {
   );
 }
 
-function PricingTablePreview() {
+function PricingTablePreview({ plans }: { plans: RealPlan[] }) {
+  const planList = plans.length
+    ? plans.slice(0, 3)
+    : [
+        { id: "1", name: "Starter", price: 9, billingInterval: "monthly" },
+        { id: "2", name: "Pro", price: 29, billingInterval: "monthly" },
+        { id: "3", name: "Enterprise", price: 99, billingInterval: "monthly" },
+      ];
   return (
     <div className="space-y-2 p-3">
       <div className="flex items-center justify-between">
@@ -316,10 +407,10 @@ function PricingTablePreview() {
           </div>
         </div>
       </div>
-      <div className="grid grid-cols-3 gap-1.5">
-        {["Starter", "Pro", "Enterprise"].map((name, i) => (
+      <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${Math.min(planList.length, 3)}, 1fr)` }}>
+        {planList.map((plan, i) => (
           <div
-            key={i}
+            key={plan.id}
             className={cn(
               "rounded-md border p-2 space-y-1.5",
               i === 1
@@ -327,8 +418,8 @@ function PricingTablePreview() {
                 : "border-border bg-secondary/30",
             )}
           >
-            <div className="h-1.5 w-10 rounded bg-foreground/10" />
-            <div className="h-2.5 w-8 rounded bg-foreground/15" />
+            <div className="text-[8px] font-semibold text-foreground truncate">{plan.name}</div>
+            <div className="text-[9px] font-bold text-foreground">${plan.price}<span className="text-[7px] text-muted-foreground">/{plan.billingInterval === "yearly" ? "yr" : "mo"}</span></div>
             <div className="space-y-0.5">
               {[1, 2, 3].map((j) => (
                 <div key={j} className="flex items-center gap-0.5">
@@ -387,12 +478,122 @@ function UsageDashboardPreview() {
   );
 }
 
-const PREVIEW_MAP: Record<string, React.FC> = {
-  "customer-portal": CustomerPortalPreview,
-  checkout: CheckoutPreview,
-  "pricing-table": PricingTablePreview,
-  "usage-dashboard": UsageDashboardPreview,
-};
+function CheckoutModalPreview({ plans }: { plans: RealPlan[] }) {
+  const selectedPlan = plans[1] ?? plans[0];
+  const planName = selectedPlan?.name ?? "Pro Plan";
+  const planPrice = selectedPlan ? `$${selectedPlan.price}` : "$29";
+  const billingLabel = selectedPlan?.billingInterval === "yearly" ? "/yr" : "/mo";
+  const token = selectedPlan?.acceptedToken ?? "USDC";
+  const steps = ["Wallet", "Account", "Autopay", "Approve", "Subscribe"];
+  const activeStep = 3;
+
+  return (
+    <div className="p-3">
+      <div className="rounded-lg border border-accent/20 bg-card/80 p-2 space-y-2 shadow-sm">
+        {/* Modal header */}
+        <div className="flex items-center justify-between pb-1.5 border-b border-border">
+          <span className="text-[9px] font-semibold text-foreground truncate">Subscribe · {planName}</span>
+          <div className="w-3 h-3 rounded-full bg-secondary flex items-center justify-center text-[7px] text-muted-foreground shrink-0">✕</div>
+        </div>
+        {/* Step progress */}
+        <div className="flex items-center gap-0.5">
+          {steps.map((_, i) => (
+            <React.Fragment key={i}>
+              <div className={cn(
+                "w-3.5 h-3.5 rounded-full flex items-center justify-center text-[6px] font-bold shrink-0",
+                i < activeStep ? "bg-accent text-accent-foreground" :
+                i === activeStep ? "bg-accent text-accent-foreground ring-1 ring-accent/40 ring-offset-1 ring-offset-card" :
+                "bg-secondary text-muted-foreground"
+              )}>
+                {i < activeStep ? "✓" : i + 1}
+              </div>
+              {i < steps.length - 1 && (
+                <div className={cn("h-0.5 flex-1", i < activeStep ? "bg-accent/60" : "bg-border")} />
+              )}
+            </React.Fragment>
+          ))}
+        </div>
+        {/* Plan summary */}
+        <div className="flex items-center justify-between p-1.5 rounded-md bg-secondary/40 border border-border">
+          <div>
+            <p className="text-[7px] text-muted-foreground">Subscribing to</p>
+            <p className="text-[9px] font-semibold text-foreground">{planName}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-[9px] font-bold text-foreground">{planPrice}<span className="text-[7px] font-normal text-muted-foreground">{billingLabel}</span></p>
+            <p className="text-[7px] text-muted-foreground">{token}</p>
+          </div>
+        </div>
+        {/* Wallet + chain */}
+        <div className="flex items-center gap-1.5 p-1.5 rounded-md bg-success/5 border border-success/20">
+          <div className="w-3 h-3 rounded-full bg-success/20 flex items-center justify-center shrink-0">
+            <span className="text-[6px] text-success font-bold">✓</span>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[7px] text-muted-foreground">Wallet</p>
+            <p className="text-[7px] font-mono text-foreground">0x4a2f…8c3d</p>
+          </div>
+          <div className="px-1 py-0.5 rounded bg-accent/10 text-[6px] font-medium text-accent shrink-0">Base</div>
+        </div>
+        {/* Approve USDC */}
+        <div className="flex items-center gap-1.5 p-1.5 rounded-md bg-warning/5 border border-warning/20">
+          <div className="w-3 h-3 rounded-full bg-warning/15 flex items-center justify-center shrink-0 animate-pulse">
+            <span className="text-[6px] font-bold text-warning">!</span>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[7px] font-medium text-foreground">Approve {token}</p>
+            <p className="text-[6px] text-muted-foreground">Allow charge {planPrice}{billingLabel}</p>
+          </div>
+        </div>
+        {/* CTA */}
+        <div className="h-5 rounded-md bg-accent text-[7px] font-semibold flex items-center justify-center text-accent-foreground">
+          Approve &amp; Subscribe
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BillingHistoryPreview() {
+  return (
+    <div className="space-y-1.5 p-3">
+      <div className="flex items-center justify-between pb-1.5 border-b border-border">
+        <div className="h-2 w-16 rounded bg-foreground/10" />
+        <div className="h-4 w-12 rounded-md bg-secondary flex items-center justify-center">
+          <span className="text-[7px] text-muted-foreground">All time</span>
+        </div>
+      </div>
+      {[
+        { label: "Plan upgraded → Pro", tag: "upgrade" },
+        { label: "Payment · $29.00 USDC", tag: "payment" },
+        { label: "Payment · $9.00 USDC", tag: "payment" },
+        { label: "Subscription created", tag: "create" },
+      ].map((item, i) => (
+        <div key={i} className="flex items-center gap-1.5 py-0.5">
+          <div
+            className={cn(
+              "w-1.5 h-1.5 shrink-0 rounded-full",
+              item.tag === "upgrade" ? "bg-accent" : item.tag === "create" ? "bg-success" : "bg-muted-foreground/40",
+            )}
+          />
+          <span className="text-[8px] text-foreground flex-1 truncate">{item.label}</span>
+          <span className="text-[7px] text-muted-foreground shrink-0">Mar {4 - i}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function buildPreviewMap(plans: RealPlan[], flags: RealFlag[]) {
+  return {
+    "customer-portal": CustomerPortalPreview,
+    checkout: () => <CheckoutPreview plans={plans} />,
+    "pricing-table": () => <PricingTablePreview plans={plans} />,
+    "usage-dashboard": UsageDashboardPreview,
+    "checkout-modal": () => <CheckoutModalPreview plans={plans} />,
+    "billing-history": BillingHistoryPreview,
+  } as Record<string, React.FC>;
+}
 
 const CATEGORY_ICONS: Record<string, React.ElementType> = {
   Portal: Layers,
@@ -413,6 +614,92 @@ export function ComponentsSection() {
   const [selectedComponent, setSelectedComponent] =
     useState<ComponentConfig | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
+  const [realPlans, setRealPlans] = useState<RealPlan[]>([]);
+  const [realFlags, setRealFlags] = useState<RealFlag[]>([]);
+
+  // Fetch real plans + flags for live previews
+  useEffect(() => {
+    fetch("/api/catalog/plans?status=PUBLISHED")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!data) return;
+        const plans: RealPlan[] = (
+          Array.isArray(data) ? data : data.plans ?? []
+        ).map(
+          (p: Record<string, unknown>) => ({
+            id: String(p.id ?? ""),
+            name: String(p.name ?? ""),
+            price: Number(p.price ?? 0),
+            billingInterval: String(p.billingInterval ?? "monthly"),
+            tier: String(p.tier ?? ""),
+            description: String(p.description ?? ""),
+            acceptedToken: String(p.acceptedToken ?? "USDC"),
+          }),
+        );
+        if (plans.length > 0) setRealPlans(plans);
+      })
+      .catch(() => {});
+
+    fetch("/api/v1/feature-flags")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!data) return;
+        const flags: RealFlag[] = (
+          Array.isArray(data) ? data : data.data ?? []
+        ).map(
+          (f: Record<string, unknown>) => ({
+            featureKey: String(f.featureKey ?? ""),
+            name: String(f.name ?? ""),
+            featureType: String(f.featureType ?? "boolean"),
+            defaultValue: Boolean(f.defaultValue ?? false),
+          }),
+        );
+        if (flags.length > 0) setRealFlags(flags);
+      })
+      .catch(() => {});
+  }, []);
+
+  // Load custom components from server on mount
+  useEffect(() => {
+    fetch("/api/v1/components")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!data?.data) return;
+        const loaded: ComponentConfig[] = (data.data as Array<{
+          id: string;
+          name: string;
+          elements: unknown;
+          design: unknown;
+          createdAt: string;
+          updatedAt: string;
+        }>).map((c) => ({
+          id: c.id,
+          name: c.name,
+          description: "",
+          type: "custom" as const,
+          category: "Custom",
+          elements: Array.isArray(c.elements) ? (c.elements as ComponentConfig["elements"]) : [],
+          styling: {
+            columns: 2,
+            sections: "merged" as const,
+            primaryColor: "#6366f1",
+            secondaryColor: "#e0e7ff",
+            cardStyle: {
+              backgroundColor: "#FFFFFF",
+              borderRadius: "10px",
+              cardShadow: true,
+              cardPadding: "45px",
+            },
+            typography: { fontFamily: "Inter", fontSize: "14px" },
+          },
+          template: "blank",
+          createdAt: new Date(c.createdAt),
+          updatedAt: new Date(c.updatedAt),
+        }));
+        setCustomComponents(loaded);
+      })
+      .catch(() => {});
+  }, []);
 
   const allComponents = [...DEFAULT_SDK_COMPONENTS, ...customComponents];
 
@@ -442,8 +729,8 @@ export function ComponentsSection() {
       styling: {
         columns: 2,
         sections: "merged",
-        primaryColor: "#000000",
-        secondaryColor: "#194BFB",
+        primaryColor: "#6366f1",
+        secondaryColor: "#e0e7ff",
         cardStyle: {
           backgroundColor: "#FFFFFF",
           borderRadius: "10px",
@@ -463,25 +750,69 @@ export function ComponentsSection() {
     setEditorOpen(true);
   };
 
-  const handleSaveComponent = (component: ComponentConfig) => {
+  const handleSaveComponent = async (component: ComponentConfig) => {
     if (component.type === "custom") {
       const existingIndex = customComponents.findIndex(
         (c) => c.id === component.id,
       );
-      if (existingIndex >= 0) {
-        const newComponents = [...customComponents];
-        newComponents[existingIndex] = component;
-        setCustomComponents(newComponents);
-      } else {
-        setCustomComponents([...customComponents, component]);
+      const isNew = existingIndex < 0;
+
+      // Persist to API
+      try {
+        if (isNew) {
+          const res = await fetch("/api/v1/components", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name: component.name,
+              elements: component.elements,
+              design: component.styling,
+            }),
+          });
+          if (res.ok) {
+            const data = await res.json();
+            // Use the server-assigned ID
+            const saved: ComponentConfig = { ...component, id: data.data.id };
+            setCustomComponents((prev) => [...prev, saved]);
+          } else {
+            setCustomComponents((prev) => [...prev, component]);
+          }
+        } else {
+          await fetch(`/api/v1/components/${component.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name: component.name,
+              elements: component.elements,
+              design: component.styling,
+            }),
+          });
+          const newComponents = [...customComponents];
+          newComponents[existingIndex] = component;
+          setCustomComponents(newComponents);
+        }
+      } catch {
+        // Optimistic fallback — update local state even if API fails
+        if (isNew) {
+          setCustomComponents((prev) => [...prev, component]);
+        } else {
+          const newComponents = [...customComponents];
+          newComponents[existingIndex] = component;
+          setCustomComponents(newComponents);
+        }
       }
     }
     setEditorOpen(false);
     setSelectedComponent(null);
   };
 
-  const handleDeleteComponent = (id: string) => {
+  const handleDeleteComponent = async (id: string) => {
     setCustomComponents(customComponents.filter((c) => c.id !== id));
+    try {
+      await fetch(`/api/v1/components/${id}`, { method: "DELETE" });
+    } catch {
+      // Ignore — already removed from local state
+    }
   };
 
   const handleDuplicateComponent = (component: ComponentConfig) => {
@@ -496,6 +827,9 @@ export function ComponentsSection() {
     setCustomComponents([...customComponents, duplicated]);
   };
 
+  const realData: RealData = { plans: realPlans, flags: realFlags };
+  const PREVIEW_MAP = buildPreviewMap(realPlans, realFlags);
+
   if (editorOpen && selectedComponent) {
     return (
       <ComponentEditor
@@ -505,6 +839,7 @@ export function ComponentsSection() {
           setSelectedComponent(null);
         }}
         onSave={handleSaveComponent}
+        realData={realData}
       />
     );
   }
