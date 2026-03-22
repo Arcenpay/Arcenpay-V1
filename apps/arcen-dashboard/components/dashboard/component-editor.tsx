@@ -780,6 +780,7 @@ interface SdkViewportPreviewProps {
   viewState: string;
   styling: ComponentConfig["styling"];
   realData?: RealData;
+  onViewChange?: (vs: string) => void;
 }
 
 function SdkViewportPreview({
@@ -787,135 +788,114 @@ function SdkViewportPreview({
   viewState,
   styling,
   realData,
+  onViewChange,
 }: SdkViewportPreviewProps) {
+  // Simulation state — checkout step, unsubscribe confirm, etc.
+  const [checkoutStep, setCheckoutStep] = useState(0); // 0=plans 1=wallet 2=approve 3=success
+  const [simCancelled, setSimCancelled] = useState(false);
+  const [selectedPlanIdx, setSelectedPlanIdx] = useState(1);
+
+  // Reset when switching view states
+  useEffect(() => {
+    setCheckoutStep(0);
+    setSimCancelled(false);
+  }, [viewState, componentId]);
   const defaultPlans = [
     { id: "s", name: "Starter", price: 9, billingInterval: "monthly", acceptedToken: "USDC" },
     { id: "p", name: "Pro", price: 29, billingInterval: "monthly", acceptedToken: "USDC" },
     { id: "e", name: "Enterprise", price: 99, billingInterval: "monthly", acceptedToken: "USDC" },
   ] as RealPlan[];
   const plans = realData?.plans?.length ? realData.plans.slice(0, 3) : defaultPlans;
-  const activePlan = plans[1] ?? plans[0];
+  const activePlan = plans[selectedPlanIdx] ?? plans[0];
   const token = activePlan?.acceptedToken ?? "USDC";
-
-  const wrapperStyle = {
-    fontFamily: styling.typography.fontFamily || "inherit",
-  } as React.CSSProperties;
 
   const primary = styling.primaryColor && styling.primaryColor !== "#000000" ? styling.primaryColor : "#6366f1";
   const radius = styling.cardStyle.borderRadius || "8px";
-  const shadow = styling.cardStyle.cardShadow ? "0 2px 12px 0 rgb(0 0 0 / 0.09)" : "none";
-  const padding = styling.cardStyle.cardPadding || "20px";
+  const shadow = styling.cardStyle.cardShadow ? "0 4px 16px 0 rgb(0 0 0 / 0.08)" : "none";
+  const padding = styling.cardStyle.cardPadding || "24px";
   const cardBg = styling.cardStyle.backgroundColor || undefined;
+  const font = styling.typography.fontFamily || "inherit";
 
-  const cardStyle: React.CSSProperties = {
-    background: cardBg,
-    borderRadius: radius,
-    boxShadow: shadow,
-    padding,
-    border: "1px solid hsl(var(--border))",
-  };
+  const card: React.CSSProperties = { background: cardBg, borderRadius: radius, boxShadow: shadow, padding, border: "1px solid hsl(var(--border))", fontFamily: font };
+  const btnPrimary: React.CSSProperties = { backgroundColor: primary, color: "#fff", borderRadius: `calc(${radius} - 2px)`, fontSize: 13, fontWeight: 600, padding: "10px 20px", cursor: "pointer", border: "none", display: "inline-block", fontFamily: font };
+  const btnSecondary: React.CSSProperties = { backgroundColor: "hsl(var(--secondary))", color: "hsl(var(--foreground))", borderRadius: `calc(${radius} - 2px)`, fontSize: 13, fontWeight: 500, padding: "10px 20px", cursor: "pointer", border: "1px solid hsl(var(--border))", display: "inline-block", fontFamily: font };
 
-  const btnPrimary: React.CSSProperties = {
-    backgroundColor: primary,
-    color: "#fff",
-    borderRadius: `calc(${radius} - 2px)`,
-    fontSize: 13,
-    fontWeight: 600,
-    padding: "9px 20px",
-    cursor: "pointer",
-    border: "none",
-    display: "inline-block",
-  };
+  // ── helper: step bar (used in checkout) ──────────────────────
+  const StepBar = ({ steps, active }: { steps: string[]; active: number }) => (
+    <div className="flex items-center gap-1 mb-5">
+      {steps.map((step, i) => (
+        <React.Fragment key={i}>
+          <div className="flex flex-col items-center gap-0.5">
+            <div
+              className="flex items-center justify-center w-6 h-6 rounded-full text-[10px] font-bold shrink-0"
+              style={{
+                backgroundColor: i < active ? primary : i === active ? primary : "hsl(var(--secondary))",
+                color: i <= active ? "#fff" : "hsl(var(--muted-foreground))",
+                opacity: i < active ? 0.7 : 1,
+              }}
+            >
+              {i < active ? "✓" : i + 1}
+            </div>
+            <span className="text-[9px] text-muted-foreground whitespace-nowrap hidden sm:block">{step}</span>
+          </div>
+          {i < steps.length - 1 && (
+            <div className="h-px flex-1 mt-[-10px]" style={{ backgroundColor: i < active ? primary : "hsl(var(--border))" }} />
+          )}
+        </React.Fragment>
+      ))}
+    </div>
+  );
 
   const key = `${componentId}:${viewState}`;
 
   switch (key) {
-    // ── customer-portal: Portal ────────────────────────────────
+    // ── customer-portal: Portal ───────────────────────────────
     case "customer-portal:portal": {
+      const portalFlags = realData?.flags?.slice(0, 4) ?? [
+        { featureKey: "api", name: "API Access", defaultValue: true },
+        { featureKey: "hooks", name: "Webhooks", defaultValue: true },
+        { featureKey: "domain", name: "Custom Domain", defaultValue: false },
+        { featureKey: "sso", name: "SSO", defaultValue: false },
+      ];
       return (
-        <div style={wrapperStyle} className="space-y-4 max-w-2xl mx-auto">
-          {/* Plan card */}
-          <div style={cardStyle}>
-            <div className="flex items-center justify-between mb-3">
+        <div style={{ fontFamily: font }} className="space-y-4 max-w-2xl mx-auto">
+          {/* Active plan card */}
+          <div style={card}>
+            <div className="flex items-start justify-between mb-4">
               <div>
-                <p className="text-sm font-semibold text-foreground">{activePlan.name}</p>
-                <p className="text-xs text-muted-foreground">
-                  ${activePlan.price}/{activePlan.billingInterval === "yearly" ? "yr" : "mo"} · {token}
-                </p>
+                <p className="text-base font-semibold text-foreground">{activePlan.name}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">${activePlan.price} / {activePlan.billingInterval === "yearly" ? "year" : "month"} · {token}</p>
               </div>
-              <span
-                className="text-xs font-medium px-2 py-1 rounded-full"
-                style={{ backgroundColor: `${primary}18`, color: primary, borderRadius: "999px" }}
-              >
-                Active
-              </span>
+              <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ backgroundColor: `${primary}15`, color: primary }}>Active</span>
             </div>
-            <div className="h-px bg-border mb-3" />
-            <div className="grid grid-cols-2 gap-2 mb-4">
-              {(realData?.flags?.slice(0, 4) ?? [
-                { featureKey: "api_access", name: "API Access", defaultValue: true },
-                { featureKey: "webhooks", name: "Webhooks", defaultValue: true },
-                { featureKey: "custom_domain", name: "Custom Domain", defaultValue: false },
-                { featureKey: "sso", name: "SSO", defaultValue: false },
-              ]).map((f, i) => (
+            <div className="h-px bg-border mb-4" />
+            <div className="grid grid-cols-2 gap-2 mb-5">
+              {portalFlags.map((f, i) => (
                 <div key={i} className="flex items-center gap-2">
-                  <div
-                    className="w-4 h-4 rounded-full flex items-center justify-center shrink-0"
-                    style={{ backgroundColor: f.defaultValue ? `${primary}20` : "hsl(var(--secondary))" }}
-                  >
-                    {f.defaultValue && (
-                      <Check className="w-2.5 h-2.5" style={{ color: primary }} />
-                    )}
+                  <div className="w-4 h-4 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: f.defaultValue ? `${primary}18` : "hsl(var(--secondary))" }}>
+                    {f.defaultValue && <Check className="w-2.5 h-2.5" style={{ color: primary }} />}
                   </div>
                   <span className="text-xs text-foreground">{f.name}</span>
                 </div>
               ))}
             </div>
-            <div className="flex gap-2">
-              <button
-                style={{ ...btnPrimary, flex: 1 }}
-              >
-                Upgrade
-              </button>
-              <button
-                style={{
-                  flex: 1,
-                  borderRadius: `calc(${radius} - 2px)`,
-                  fontSize: 13,
-                  fontWeight: 500,
-                  padding: "9px 20px",
-                  border: "1px solid hsl(var(--border))",
-                  backgroundColor: "hsl(var(--secondary))",
-                  color: "hsl(var(--foreground))",
-                  cursor: "pointer",
-                }}
-              >
-                Manage Billing
-              </button>
+            <div className="flex gap-2.5">
+              <button style={{ ...btnPrimary, flex: 1, textAlign: "center" }} onClick={() => onViewChange?.("checkout")}>Upgrade Plan</button>
+              <button style={{ ...btnSecondary, flex: 1, textAlign: "center" }} onClick={() => onViewChange?.("payment-method")}>Manage Billing</button>
             </div>
+            <button className="w-full mt-2 text-xs text-destructive hover:underline" style={{ background: "none", border: "none", cursor: "pointer", fontFamily: font }} onClick={() => onViewChange?.("unsubscribe")}>Cancel subscription</button>
           </div>
           {/* Usage */}
-          <div style={cardStyle}>
-            <p className="text-sm font-semibold text-foreground mb-3">Usage This Period</p>
-            {[
-              { name: "API Calls", used: 7500, limit: 10000 },
-              { name: "Storage", used: 3.2, limit: 10 },
-            ].map((m, i) => (
-              <div key={i} className="mb-2">
-                <div className="flex justify-between mb-1">
-                  <span className="text-xs text-foreground">{m.name}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {m.used}/{m.limit}
-                  </span>
+          <div style={card}>
+            <p className="text-sm font-semibold text-foreground mb-4">Usage This Period</p>
+            {[{ name: "API Calls", used: 7_500, limit: 10_000, unit: "" }, { name: "Storage", used: 3.2, limit: 10, unit: " GB" }].map((m, i) => (
+              <div key={i} className="mb-3 last:mb-0">
+                <div className="flex justify-between mb-1.5">
+                  <span className="text-xs font-medium text-foreground">{m.name}</span>
+                  <span className="text-xs text-muted-foreground">{m.used}{m.unit} / {m.limit}{m.unit}</span>
                 </div>
-                <div className="h-2 rounded-full bg-secondary">
-                  <div
-                    className="h-full rounded-full"
-                    style={{
-                      width: `${(m.used / m.limit) * 100}%`,
-                      backgroundColor: primary,
-                    }}
-                  />
+                <div className="h-2 rounded-full" style={{ background: "hsl(var(--secondary))" }}>
+                  <div className="h-full rounded-full transition-all" style={{ width: `${(m.used / m.limit) * 100}%`, backgroundColor: primary }} />
                 </div>
               </div>
             ))}
@@ -924,410 +904,326 @@ function SdkViewportPreview({
       );
     }
 
-    // ── customer-portal / checkout: Checkout ──────────────────
+    // ── Checkout (multi-step simulation) ──────────────────────
     case "customer-portal:checkout":
-    case "checkout:checkout": {
-      const steps = ["Wallet", "Account", "Autopay", "Approve", "Subscribe"];
-      const activeStep = 3;
-      return (
-        <div style={wrapperStyle} className="max-w-md mx-auto">
-          <div style={cardStyle}>
-            <p className="text-sm font-semibold text-foreground mb-4">
-              Subscribe to {activePlan.name}
-            </p>
-            {/* Step bar */}
-            <div className="flex items-center gap-1 mb-4">
-              {steps.map((step, i) => (
-                <React.Fragment key={i}>
-                  <div
-                    className="flex items-center justify-center w-6 h-6 rounded-full text-[10px] font-bold shrink-0"
+    case "checkout:checkout":
+    case "checkout-modal:checkout": {
+      const steps = ["Select Plan", "Connect Wallet", "Approve", "Subscribe"];
+      const chosenPlan = plans[selectedPlanIdx] ?? plans[0];
+
+      // Step 0 — Plan selection
+      if (checkoutStep === 0) {
+        return (
+          <div style={{ fontFamily: font }} className="max-w-2xl mx-auto space-y-4">
+            <div style={card}>
+              <p className="text-base font-semibold text-foreground mb-1">Choose a plan</p>
+              <p className="text-xs text-muted-foreground mb-5">Select the plan that works for you</p>
+              <StepBar steps={steps} active={0} />
+              <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${Math.min(plans.length, 3)}, 1fr)` }}>
+                {plans.map((plan, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setSelectedPlanIdx(i)}
                     style={{
-                      backgroundColor: i <= activeStep ? primary : "hsl(var(--secondary))",
-                      color: i <= activeStep ? "#fff" : "hsl(var(--muted-foreground))",
-                      borderRadius: "999px",
+                      border: selectedPlanIdx === i ? `2px solid ${primary}` : "1px solid hsl(var(--border))",
+                      borderRadius: radius,
+                      background: selectedPlanIdx === i ? `${primary}08` : "hsl(var(--secondary)/0.3)",
+                      padding: "14px 12px",
+                      cursor: "pointer",
+                      textAlign: "left",
+                      fontFamily: font,
+                      boxShadow: selectedPlanIdx === i ? `0 0 0 3px ${primary}20` : "none",
+                      transition: "all 0.15s",
                     }}
                   >
-                    {i < activeStep ? "✓" : i + 1}
+                    {i === 1 && <div className="text-[10px] font-semibold px-1.5 py-0.5 mb-2 w-fit rounded-full" style={{ backgroundColor: primary, color: "#fff" }}>Popular</div>}
+                    <p className="text-sm font-semibold text-foreground">{plan.name}</p>
+                    <p className="text-xl font-bold text-foreground mt-0.5">${plan.price}<span className="text-xs font-normal text-muted-foreground">/{plan.billingInterval === "yearly" ? "yr" : "mo"}</span></p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">{plan.acceptedToken ?? "USDC"}</p>
+                  </button>
+                ))}
+              </div>
+              <button style={{ ...btnPrimary, width: "100%", textAlign: "center", marginTop: 20 }} onClick={() => setCheckoutStep(1)}>
+                Continue with {chosenPlan.name} →
+              </button>
+            </div>
+          </div>
+        );
+      }
+
+      // Step 1 — Connect wallet
+      if (checkoutStep === 1) {
+        return (
+          <div style={{ fontFamily: font }} className="max-w-md mx-auto">
+            <div style={card}>
+              <p className="text-base font-semibold text-foreground mb-1">Connect your wallet</p>
+              <p className="text-xs text-muted-foreground mb-5">You need a wallet to subscribe on-chain</p>
+              <StepBar steps={steps} active={1} />
+              <div className="flex items-center justify-between p-3 mb-4 rounded-lg" style={{ background: "hsl(var(--secondary))", borderRadius: radius }}>
+                <div><p className="text-[10px] text-muted-foreground">Subscribing to</p><p className="text-sm font-semibold text-foreground">{chosenPlan.name}</p></div>
+                <div className="text-right"><p className="text-sm font-bold text-foreground">${chosenPlan.price}<span className="text-xs font-normal text-muted-foreground">/{chosenPlan.billingInterval === "yearly" ? "yr" : "mo"}</span></p><p className="text-xs text-muted-foreground">{token}</p></div>
+              </div>
+              <div className="space-y-2 mb-5">
+                {["MetaMask", "Coinbase Wallet", "WalletConnect"].map((w, i) => (
+                  <button key={i} onClick={() => setCheckoutStep(2)} style={{ width: "100%", border: "1px solid hsl(var(--border))", borderRadius: radius, padding: "10px 14px", cursor: "pointer", background: "hsl(var(--secondary)/0.4)", fontFamily: font, display: "flex", alignItems: "center", gap: 10 }}>
+                    <div className="w-6 h-6 rounded-md flex items-center justify-center shrink-0" style={{ backgroundColor: `${primary}15` }}>
+                      <CreditCard className="w-3.5 h-3.5" style={{ color: primary }} />
+                    </div>
+                    <span className="text-sm font-medium text-foreground">{w}</span>
+                  </button>
+                ))}
+              </div>
+              <button style={{ ...btnSecondary, width: "100%", textAlign: "center" }} onClick={() => setCheckoutStep(0)}>← Back</button>
+            </div>
+          </div>
+        );
+      }
+
+      // Step 2 — Approve token
+      if (checkoutStep === 2) {
+        return (
+          <div style={{ fontFamily: font }} className="max-w-md mx-auto">
+            <div style={card}>
+              <p className="text-base font-semibold text-foreground mb-1">Approve {token}</p>
+              <p className="text-xs text-muted-foreground mb-5">Allow the contract to charge your wallet</p>
+              <StepBar steps={steps} active={2} />
+              <div className="flex items-center gap-2.5 p-3 mb-3 rounded-lg" style={{ background: "hsl(var(--secondary)/0.5)", border: "1px solid hsl(var(--border))", borderRadius: radius }}>
+                <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0" style={{ background: `${primary}18` }}>
+                  <Check className="w-4 h-4" style={{ color: primary }} />
+                </div>
+                <div><p className="text-[10px] text-muted-foreground">Connected wallet</p><p className="text-xs font-mono text-foreground">0x4a2f…8c3d · Base</p></div>
+              </div>
+              <div className="flex items-center gap-2.5 p-3 mb-5 rounded-lg" style={{ background: "hsl(var(--warning)/0.06)", border: "1px solid hsl(var(--warning)/0.25)", borderRadius: radius }}>
+                <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 animate-pulse" style={{ background: "hsl(var(--warning)/0.15)" }}>
+                  <span className="text-[11px] font-bold text-warning">!</span>
+                </div>
+                <div><p className="text-xs font-semibold text-foreground">Approve {token} spending</p><p className="text-[10px] text-muted-foreground">Max charge: ${chosenPlan.price}/{chosenPlan.billingInterval === "yearly" ? "yr" : "mo"}</p></div>
+              </div>
+              <button style={{ ...btnPrimary, width: "100%", textAlign: "center" }} onClick={() => setCheckoutStep(3)}>Approve &amp; Subscribe</button>
+              <button style={{ ...btnSecondary, width: "100%", textAlign: "center", marginTop: 8 }} onClick={() => setCheckoutStep(1)}>← Back</button>
+            </div>
+          </div>
+        );
+      }
+
+      // Step 3 — Success
+      return (
+        <div style={{ fontFamily: font }} className="max-w-sm mx-auto">
+          <div style={{ ...card, textAlign: "center" }}>
+            <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: primary }}>
+              <Check className="w-8 h-8 text-white" />
+            </div>
+            <p className="text-base font-semibold text-foreground mb-1">You&apos;re subscribed!</p>
+            <p className="text-xs text-muted-foreground mb-1">Now on the <strong>{chosenPlan.name}</strong> plan.</p>
+            <p className="text-xs text-muted-foreground mb-6">Transaction confirmed on Base · <span className="font-mono">0x4a2f…</span></p>
+            <button style={{ ...btnPrimary, minWidth: 160 }} onClick={() => { setCheckoutStep(0); onViewChange?.("portal"); }}>Go to Portal</button>
+          </div>
+        </div>
+      );
+    }
+
+    // ── Payment Method ─────────────────────────────────────────
+    case "customer-portal:payment-method": {
+      const wallets = [
+        { addr: "0x4a2f…8c3d", network: "Base", isDefault: true },
+        { addr: "0x9b1e…2af1", network: "Ethereum", isDefault: false },
+      ];
+      return (
+        <div style={{ fontFamily: font }} className="max-w-md mx-auto">
+          <div style={card}>
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-sm font-semibold text-foreground">Payment Methods</p>
+              <button style={{ ...btnPrimary, fontSize: 11, padding: "5px 12px" }}>+ Add Wallet</button>
+            </div>
+            <div className="space-y-2 mb-2">
+              {wallets.map((w, i) => (
+                <div key={i} className="flex items-center gap-3 p-3 rounded-lg" style={{ border: w.isDefault ? `1.5px solid ${primary}` : "1px solid hsl(var(--border))", background: w.isDefault ? `${primary}06` : "hsl(var(--secondary)/0.3)", borderRadius: radius }}>
+                  <div className="w-10 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: "hsl(var(--secondary))" }}>
+                    <CreditCard className="w-4 h-4 text-muted-foreground" />
                   </div>
-                  {i < steps.length - 1 && (
-                    <div
-                      className="h-0.5 flex-1"
-                      style={{ backgroundColor: i < activeStep ? primary : "hsl(var(--border))" }}
-                    />
-                  )}
-                </React.Fragment>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-foreground font-mono">{w.addr}</p>
+                    <p className="text-xs text-muted-foreground">{w.network} · ERC-20</p>
+                  </div>
+                  {w.isDefault
+                    ? <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: `${primary}18`, color: primary }}>Default</span>
+                    : <button className="text-[10px] text-muted-foreground hover:text-foreground" style={{ background: "none", border: "none", cursor: "pointer" }}>Set default</button>
+                  }
+                </div>
               ))}
             </div>
-            {/* Plan summary */}
-            <div
-              className="flex items-center justify-between p-3 mb-3"
-              style={{ background: "hsl(var(--secondary))", borderRadius: radius }}
-            >
-              <div>
-                <p className="text-[10px] text-muted-foreground">Subscribing to</p>
-                <p className="text-sm font-semibold text-foreground">{activePlan.name}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-sm font-bold text-foreground">
-                  ${activePlan.price}
-                  <span className="text-xs font-normal text-muted-foreground">
-                    /{activePlan.billingInterval === "yearly" ? "yr" : "mo"}
-                  </span>
-                </p>
-                <p className="text-xs text-muted-foreground">{token}</p>
+            <div className="h-px bg-border mt-4 mb-3" />
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">Autopay enabled · charges on renewal</p>
+              <div className="w-9 h-5 rounded-full flex items-center relative" style={{ backgroundColor: primary }}>
+                <div className="absolute right-0.5 w-4 h-4 rounded-full bg-white shadow-sm" />
               </div>
             </div>
-            {/* Wallet row */}
-            <div
-              className="flex items-center gap-2 p-3 mb-2"
-              style={{
-                background: "hsl(var(--success) / 0.06)",
-                border: "1px solid hsl(var(--success) / 0.2)",
-                borderRadius: radius,
-              }}
-            >
-              <div
-                className="w-6 h-6 rounded-full flex items-center justify-center"
-                style={{ background: "hsl(var(--success) / 0.15)" }}
-              >
-                <Check className="w-3.5 h-3.5 text-success" />
-              </div>
-              <div className="flex-1">
-                <p className="text-xs text-muted-foreground">Connected wallet</p>
-                <p className="text-xs font-mono text-foreground">0x4a2f…8c3d</p>
-              </div>
-              <span
-                className="text-[10px] font-semibold px-2 py-0.5 rounded"
-                style={{ backgroundColor: `${primary}18`, color: primary, borderRadius: "999px" }}
-              >
-                Base
-              </span>
-            </div>
-            {/* Approve row */}
-            <div
-              className="flex items-center gap-2 p-3 mb-4"
-              style={{
-                background: "hsl(var(--warning) / 0.06)",
-                border: "1px solid hsl(var(--warning) / 0.2)",
-                borderRadius: radius,
-              }}
-            >
-              <div
-                className="w-6 h-6 rounded-full flex items-center justify-center animate-pulse"
-                style={{ background: "hsl(var(--warning) / 0.15)" }}
-              >
-                <span className="text-[9px] font-bold text-warning">!</span>
-              </div>
-              <div>
-                <p className="text-xs font-medium text-foreground">Approve {token}</p>
-                <p className="text-[10px] text-muted-foreground">
-                  Allow contract to charge ${activePlan.price}/{activePlan.billingInterval === "yearly" ? "yr" : "mo"}
-                </p>
-              </div>
-            </div>
-            <button style={{ ...btnPrimary, width: "100%", textAlign: "center" }}>
-              Approve &amp; Subscribe
-            </button>
           </div>
         </div>
       );
     }
 
-    // ── customer-portal: Payment Method ───────────────────────
-    case "customer-portal:payment-method": {
-      return (
-        <div style={wrapperStyle} className="max-w-md mx-auto">
-          <div style={cardStyle}>
-            <p className="text-sm font-semibold text-foreground mb-4">Payment Methods</p>
-            <div
-              className="flex items-center gap-3 p-3 mb-2"
-              style={{
-                border: `1.5px solid ${primary}`,
-                borderRadius: radius,
-                background: `${primary}08`,
-              }}
-            >
-              <div
-                className="w-10 h-7 rounded flex items-center justify-center"
-                style={{ background: "hsl(var(--secondary))" }}
-              >
-                <CreditCard className="w-4 h-4 text-muted-foreground" />
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium text-foreground">Wallet ••••4a2f</p>
-                <p className="text-xs text-muted-foreground">Base network · ERC-20</p>
-              </div>
-              <span
-                className="text-[10px] font-semibold px-2 py-0.5"
-                style={{ backgroundColor: `${primary}18`, color: primary, borderRadius: "999px" }}
-              >
-                Default
-              </span>
-            </div>
-            <button
-              className="w-full flex items-center justify-center gap-2 py-2.5 mt-3"
-              style={{
-                border: "1.5px dashed hsl(var(--border))",
-                borderRadius: radius,
-                fontSize: 13,
-                color: "hsl(var(--muted-foreground))",
-                background: "transparent",
-                cursor: "pointer",
-              }}
-            >
-              <Plus className="w-4 h-4" />
-              Add payment method
-            </button>
-          </div>
-        </div>
-      );
-    }
-
-    // ── customer-portal: Unsubscribe ──────────────────────────
+    // ── Unsubscribe ────────────────────────────────────────────
     case "customer-portal:unsubscribe": {
+      if (simCancelled) {
+        return (
+          <div style={{ fontFamily: font }} className="max-w-sm mx-auto">
+            <div style={{ ...card, textAlign: "center" }}>
+              <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: "hsl(var(--secondary))" }}>
+                <Check className="w-6 h-6 text-muted-foreground" />
+              </div>
+              <p className="text-sm font-semibold text-foreground mb-1">Subscription cancelled</p>
+              <p className="text-xs text-muted-foreground mb-5">You have access until the end of this billing period.</p>
+              <button style={{ ...btnSecondary, minWidth: 140 }} onClick={() => { setSimCancelled(false); onViewChange?.("portal"); }}>Back to Portal</button>
+            </div>
+          </div>
+        );
+      }
       return (
-        <div style={wrapperStyle} className="max-w-md mx-auto">
-          <div style={{ ...cardStyle, textAlign: "center" }}>
-            <div
-              className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4"
-              style={{ background: "hsl(var(--destructive) / 0.1)" }}
-            >
+        <div style={{ fontFamily: font }} className="max-w-md mx-auto">
+          <div style={{ ...card, textAlign: "center" }}>
+            <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: "hsl(var(--destructive)/0.08)" }}>
               <X className="w-6 h-6 text-destructive" />
             </div>
-            <p className="text-sm font-semibold text-foreground mb-1">
-              Cancel your subscription?
-            </p>
-            <p className="text-xs text-muted-foreground mb-6 max-w-xs mx-auto">
-              You&apos;ll lose access to {activePlan.name} features at the end of your billing period.
-            </p>
-            <div className="flex gap-3">
+            <p className="text-sm font-semibold text-foreground mb-1">Cancel your subscription?</p>
+            <p className="text-xs text-muted-foreground mb-2 max-w-xs mx-auto">You&apos;re currently on the <strong>{activePlan.name}</strong> plan. You&apos;ll lose access to these features:</p>
+            <div className="text-left mb-5 space-y-1 px-2">
+              {(realData?.flags?.slice(0, 3) ?? [{ name: "API Access" }, { name: "Webhooks" }, { name: "Priority Support" }]).map((f, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <X className="w-3 h-3 text-destructive shrink-0" />
+                  <span className="text-xs text-muted-foreground">{f.name}</span>
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-2.5">
+              <button style={{ ...btnPrimary, flex: 1, textAlign: "center" }} onClick={() => onViewChange?.("portal")}>Keep Plan</button>
               <button
-                style={{
-                  flex: 1,
-                  border: "1px solid hsl(var(--border))",
-                  borderRadius: radius,
-                  padding: "9px 20px",
-                  fontSize: 13,
-                  fontWeight: 500,
-                  backgroundColor: "hsl(var(--secondary))",
-                  color: "hsl(var(--foreground))",
-                  cursor: "pointer",
-                }}
-              >
-                Keep Plan
-              </button>
-              <button
-                style={{
-                  flex: 1,
-                  borderRadius: radius,
-                  padding: "9px 20px",
-                  fontSize: 13,
-                  fontWeight: 600,
-                  backgroundColor: "hsl(var(--destructive))",
-                  color: "#fff",
-                  cursor: "pointer",
-                  border: "none",
-                }}
-              >
-                Cancel Subscription
-              </button>
+                style={{ flex: 1, borderRadius: radius, padding: "10px 20px", fontSize: 13, fontWeight: 600, backgroundColor: "hsl(var(--destructive))", color: "#fff", cursor: "pointer", border: "none", fontFamily: font }}
+                onClick={() => setSimCancelled(true)}
+              >Cancel Subscription</button>
             </div>
           </div>
         </div>
       );
     }
 
-    // ── Disabled / locked state ────────────────────────────────
+    // ── Disabled / locked ──────────────────────────────────────
     case "customer-portal:disabled":
-    case "pricing-table:disabled":
-    case "plan-manager:upgrade": {
+    case "pricing-table:disabled": {
+      const lockedFeatures = realData?.flags?.slice(0, 3) ?? [{ name: "Custom Domain" }, { name: "SSO" }, { name: "Priority Support" }];
       return (
-        <div style={wrapperStyle} className="max-w-md mx-auto">
-          <div style={{ ...cardStyle, textAlign: "center" }}>
-            <div
-              className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4"
-              style={{ background: "hsl(var(--secondary))" }}
-            >
-              <Shield className="w-6 h-6 text-muted-foreground" />
+        <div style={{ fontFamily: font }} className="max-w-md mx-auto">
+          <div style={card}>
+            <div className="flex items-start gap-3 mb-4 p-3 rounded-lg" style={{ background: "hsl(var(--secondary))", borderRadius: radius }}>
+              <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ background: "hsl(var(--border))" }}>
+                <Shield className="w-5 h-5 text-muted-foreground" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-foreground">Access Restricted</p>
+                <p className="text-xs text-muted-foreground mt-0.5">These features require a higher plan</p>
+              </div>
             </div>
-            <p className="text-sm font-semibold text-foreground mb-1">Access Restricted</p>
-            <p className="text-xs text-muted-foreground mb-5 max-w-xs mx-auto">
-              This feature requires a higher plan. Upgrade to unlock full access.
-            </p>
-            <button style={{ ...btnPrimary, minWidth: 160 }}>Upgrade Plan</button>
+            <div className="space-y-2.5 mb-5">
+              {lockedFeatures.map((f, i) => (
+                <div key={i} className="flex items-center gap-3 p-2.5 rounded-lg opacity-50" style={{ border: "1px solid hsl(var(--border))", borderRadius: radius }}>
+                  <div className="w-4 h-4 rounded-full flex items-center justify-center shrink-0" style={{ background: "hsl(var(--border))" }}>
+                    <Shield className="w-2.5 h-2.5 text-muted-foreground" />
+                  </div>
+                  <span className="text-xs text-foreground">{f.name}</span>
+                  <span className="ml-auto text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-secondary text-muted-foreground">Locked</span>
+                </div>
+              ))}
+            </div>
+            <button style={{ ...btnPrimary, width: "100%", textAlign: "center" }} onClick={() => onViewChange?.("checkout")}>Upgrade to Unlock</button>
           </div>
         </div>
       );
     }
 
-    // ── checkout-modal aliases ────────────────────────────────
-    case "checkout-modal:checkout":
-      return (
-        <SdkViewportPreview
-          componentId="checkout"
-          viewState="checkout"
-          styling={styling}
-          realData={realData}
-        />
-      );
-    case "checkout-modal:success":
-      return (
-        <SdkViewportPreview
-          componentId="checkout"
-          viewState="success"
-          styling={styling}
-          realData={realData}
-        />
-      );
+    // ── checkout-modal aliases ─────────────────────────────────
     case "checkout-modal:plans":
-    // ── checkout / pricing-table: Plans ───────────────────────
     case "checkout:plans":
     case "pricing-table:plans": {
       return (
-        <div style={wrapperStyle} className="max-w-2xl mx-auto">
+        <div style={{ fontFamily: font }} className="max-w-2xl mx-auto space-y-4">
+          <div className="text-center mb-2">
+            <p className="text-base font-semibold text-foreground">Choose your plan</p>
+            <p className="text-xs text-muted-foreground mt-1">Billed in {token} · cancel anytime</p>
+          </div>
           <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${Math.min(plans.length, 3)}, 1fr)` }}>
-            {plans.map((plan, i) => (
-              <div
-                key={i}
-                style={{
-                  ...(i === 1
-                    ? { border: `2px solid ${primary}`, background: `${primary}06` }
-                    : { border: "1px solid hsl(var(--border))", background: cardBg }),
-                  borderRadius: radius,
-                  boxShadow: i === 1 ? `0 0 0 4px ${primary}14` : shadow,
-                  padding,
-                }}
-              >
-                {i === 1 && (
-                  <div
-                    className="text-[10px] font-semibold px-2 py-0.5 mb-3 w-fit"
-                    style={{ backgroundColor: primary, color: "#fff", borderRadius: "999px" }}
-                  >
-                    Most Popular
-                  </div>
-                )}
-                <p className="text-sm font-semibold text-foreground mb-1">{plan.name}</p>
-                <p className="text-2xl font-bold text-foreground mb-0.5">
-                  ${plan.price}
-                  <span className="text-sm font-normal text-muted-foreground">
-                    /{plan.billingInterval === "yearly" ? "yr" : "mo"}
-                  </span>
-                </p>
-                <p className="text-xs text-muted-foreground mb-4">{plan.acceptedToken ?? "USDC"}</p>
-                <div className="space-y-2 mb-5">
-                  {(realData?.flags?.slice(0, 3) ?? [
-                    { featureKey: "f1", name: "API Access", defaultValue: true },
-                    { featureKey: "f2", name: "Webhooks", defaultValue: i >= 1 },
-                    { featureKey: "f3", name: "SSO", defaultValue: i >= 2 },
-                  ]).map((f, j) => (
-                    <div key={j} className="flex items-center gap-2">
-                      <div
-                        className="w-4 h-4 rounded-full flex items-center justify-center"
-                        style={{ backgroundColor: f.defaultValue ? `${primary}20` : "hsl(var(--secondary))" }}
-                      >
-                        {f.defaultValue && <Check className="w-2.5 h-2.5" style={{ color: primary }} />}
+            {plans.map((plan, i) => {
+              const isPopular = i === 1;
+              return (
+                <div key={i} style={{ border: isPopular ? `2px solid ${primary}` : "1px solid hsl(var(--border))", borderRadius: radius, background: isPopular ? `${primary}06` : cardBg, boxShadow: isPopular ? `0 0 0 4px ${primary}14` : shadow, padding }}>
+                  {isPopular && <div className="text-[10px] font-semibold px-2 py-0.5 mb-3 w-fit rounded-full" style={{ backgroundColor: primary, color: "#fff" }}>Most Popular</div>}
+                  <p className="text-sm font-semibold text-foreground mb-1">{plan.name}</p>
+                  <p className="text-2xl font-bold text-foreground mb-0.5">${plan.price}<span className="text-sm font-normal text-muted-foreground">/{plan.billingInterval === "yearly" ? "yr" : "mo"}</span></p>
+                  <p className="text-xs text-muted-foreground mb-4">{plan.acceptedToken ?? "USDC"}</p>
+                  <div className="space-y-2 mb-5">
+                    {(realData?.flags?.slice(0, 3) ?? [{ featureKey: "f1", name: "API Access", defaultValue: true }, { featureKey: "f2", name: "Webhooks", defaultValue: i >= 1 }, { featureKey: "f3", name: "SSO", defaultValue: i >= 2 }]).map((f, j) => (
+                      <div key={j} className="flex items-center gap-2">
+                        <div className="w-4 h-4 rounded-full flex items-center justify-center" style={{ backgroundColor: f.defaultValue ? `${primary}20` : "hsl(var(--secondary))" }}>
+                          {f.defaultValue && <Check className="w-2.5 h-2.5" style={{ color: primary }} />}
+                        </div>
+                        <span className="text-xs text-foreground">{f.name}</span>
                       </div>
-                      <span className="text-xs text-foreground">{f.name}</span>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
+                  <button
+                    onClick={() => { setSelectedPlanIdx(i); setCheckoutStep(1); onViewChange?.("checkout"); }}
+                    style={{ width: "100%", borderRadius: `calc(${radius} - 2px)`, padding: "10px 0", fontSize: 13, fontWeight: 600, cursor: "pointer", border: isPopular ? "none" : "1px solid hsl(var(--border))", backgroundColor: isPopular ? primary : "hsl(var(--secondary))", color: isPopular ? "#fff" : "hsl(var(--foreground))", textAlign: "center", fontFamily: font }}
+                  >{isPopular ? "Get Started" : "Select"}</button>
                 </div>
-                <button
-                  style={{
-                    width: "100%",
-                    borderRadius: `calc(${radius} - 2px)`,
-                    padding: "9px 0",
-                    fontSize: 13,
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    border: i === 1 ? "none" : "1px solid hsl(var(--border))",
-                    backgroundColor: i === 1 ? primary : "hsl(var(--secondary))",
-                    color: i === 1 ? "#fff" : "hsl(var(--foreground))",
-                    textAlign: "center",
-                  }}
-                >
-                  {i === 1 ? "Get Started" : "Select"}
-                </button>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       );
     }
 
-    // ── checkout: Success ─────────────────────────────────────
+    case "checkout-modal:success":
     case "checkout:success": {
+      const donePlan = plans[selectedPlanIdx] ?? plans[0];
       return (
-        <div style={wrapperStyle} className="max-w-sm mx-auto">
-          <div style={{ ...cardStyle, textAlign: "center" }}>
-            <div
-              className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
-              style={{ backgroundColor: primary }}
-            >
+        <div style={{ fontFamily: font }} className="max-w-sm mx-auto">
+          <div style={{ ...card, textAlign: "center" }}>
+            <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: primary }}>
               <Check className="w-8 h-8 text-white" />
             </div>
-            <p className="text-base font-semibold text-foreground mb-1">Subscribed!</p>
-            <p className="text-xs text-muted-foreground mb-1">
-              You&apos;re now on the <span className="font-medium text-foreground">{activePlan.name}</span> plan.
-            </p>
-            <p className="text-xs text-muted-foreground mb-6">
-              Transaction confirmed on Base network.
-            </p>
-            <button style={{ ...btnPrimary, minWidth: 140 }}>Go to Dashboard</button>
+            <p className="text-base font-semibold text-foreground mb-1">You&apos;re subscribed!</p>
+            <p className="text-xs text-muted-foreground mb-1">Now on the <strong>{donePlan.name}</strong> plan.</p>
+            <p className="text-xs text-muted-foreground mb-6">Transaction confirmed on Base.</p>
+            <button style={{ ...btnPrimary, minWidth: 160 }} onClick={() => { setCheckoutStep(0); onViewChange?.("portal"); }}>Go to Portal</button>
           </div>
         </div>
       );
     }
 
-    // ── plan-manager: Active ──────────────────────────────────
+    // ── plan-manager: Active ───────────────────────────────────
     case "plan-manager:active": {
+      const planFeatures = realData?.flags?.slice(0, 3) ?? [{ featureKey: "f1", name: "API Access", defaultValue: true }, { featureKey: "f2", name: "Webhooks", defaultValue: true }, { featureKey: "f3", name: "Priority Support", defaultValue: true }];
       return (
-        <div style={wrapperStyle} className="max-w-md mx-auto">
-          <div style={cardStyle}>
-            <div className="flex items-center justify-between mb-3">
+        <div style={{ fontFamily: font }} className="max-w-md mx-auto">
+          <div style={card}>
+            <div className="flex items-start justify-between mb-4">
               <div>
                 <p className="text-sm font-semibold text-foreground">{activePlan.name}</p>
-                <p className="text-xs text-muted-foreground">
-                  ${activePlan.price}/{activePlan.billingInterval === "yearly" ? "yr" : "mo"}
-                </p>
+                <p className="text-xs text-muted-foreground">${activePlan.price}/{activePlan.billingInterval === "yearly" ? "yr" : "mo"} · {token}</p>
               </div>
-              <span
-                className="text-xs font-medium px-2 py-1"
-                style={{ backgroundColor: `${primary}18`, color: primary, borderRadius: "999px" }}
-              >
-                Active
-              </span>
+              <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ backgroundColor: `${primary}15`, color: primary }}>Active</span>
             </div>
-            <div className="space-y-2 mb-4">
-              {(realData?.flags?.slice(0, 3) ?? [
-                { featureKey: "f1", name: "API Access", defaultValue: true },
-                { featureKey: "f2", name: "Webhooks", defaultValue: true },
-                { featureKey: "f3", name: "Priority Support", defaultValue: true },
-              ]).map((f, i) => (
+            <div className="space-y-2 mb-5">
+              {planFeatures.map((f, i) => (
                 <div key={i} className="flex items-center gap-2">
-                  <Check className="w-3.5 h-3.5" style={{ color: primary }} />
+                  <Check className="w-3.5 h-3.5 shrink-0" style={{ color: primary }} />
                   <span className="text-xs text-foreground">{f.name}</span>
                 </div>
               ))}
             </div>
             <div className="flex gap-2">
-              <button
-                style={{
-                  flex: 1,
-                  borderRadius: `calc(${radius} - 2px)`,
-                  padding: "8px 0",
-                  fontSize: 12,
-                  fontWeight: 500,
-                  border: "1px solid hsl(var(--border))",
-                  background: "hsl(var(--secondary))",
-                  color: "hsl(var(--foreground))",
-                  cursor: "pointer",
-                }}
-              >
-                Downgrade
-              </button>
-              <button style={{ ...btnPrimary, flex: 1, padding: "8px 0", textAlign: "center", fontSize: 12 }}>
-                Upgrade
-              </button>
+              <button style={{ ...btnSecondary, flex: 1, textAlign: "center", fontSize: 12, padding: "8px 0" }} onClick={() => onViewChange?.("unsubscribe")}>Downgrade</button>
+              <button style={{ ...btnPrimary, flex: 1, textAlign: "center", fontSize: 12, padding: "8px 0" }} onClick={() => onViewChange?.("checkout")}>Upgrade</button>
             </div>
           </div>
         </div>
@@ -1337,7 +1233,7 @@ function SdkViewportPreview({
     default:
       return (
         <div className="flex items-center justify-center h-40">
-          <p className="text-xs text-muted-foreground">No preview available for this state.</p>
+          <p className="text-xs text-muted-foreground">No preview for this state.</p>
         </div>
       );
   }
@@ -2089,6 +1985,7 @@ npm install @meap/react @meap/core wagmi viem
                         viewState={activeViewState}
                         styling={config.styling}
                         realData={realData}
+                        onViewChange={(vs) => setActiveViewState(vs)}
                       />
                     )}
                   </div>
