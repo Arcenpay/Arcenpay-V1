@@ -1,18 +1,22 @@
 # AcmeScan — ArcenPay SDK Demo App
 
-A full SaaS demo app that uses the ArcenPay SDK to demonstrate feature flags, event tracking, and company management in a real React application.
+A full SaaS demo app that uses every component and hook from the `@meap/react` SDK, backed by `@meap/node` server-side calls. Demonstrates the complete ArcenPay integration: subscriptions, feature flags, usage tracking, on-chain billing, and embedded portals.
 
-## What This Demonstrates
+## SDK Components Used
 
-| Feature | SDK Usage |
-|---------|-----------|
-| Feature flag check (single) | `useFlag(key, companyKeys)` |
-| Feature flag check (bulk) | `useFlags([...keys], companyKeys)` |
-| Usage event tracking | `useTrack()` → `track({ name, company })` |
-| Company upsert (identify) | `ArcenClient.identify()` (server-side) |
-| Company list/get | `ArcenClient.listCompanies()` (server-side) |
-| Flag check server-side | `ArcenClient.checkFlags()` (server-side) |
-| Live events feed | Direct API polling via `/api/v1/events` |
+| Component / Hook | Tab | What It Shows |
+|---|---|---|
+| `MEAPProvider` | All | Wagmi + React Query + protocol context |
+| `SubscriptionStatus` | Plans | Current subscription tier + expiry |
+| `PricingTable` | Plans | On-chain plan tiers from PlanFactory |
+| `CheckoutModal` | Plans | Full on-chain subscribe flow |
+| `FeatureFlagGuard` | Features | Gate content by entitlement + fallback |
+| `useFlag` | Features | Real-time single flag check |
+| `useFlags` | Features | Bulk flag check (4 flags at once) |
+| `useTrack` | Usage | Send usage events to the protocol |
+| `UsageDashboard` | Usage | Live ZKVUB session metrics (on-chain) |
+| `BillingHistory` | Billing | On-chain SubscriptionRegistry events |
+| `ArcenEmbed` | Portal | Embedded self-serve billing portal |
 
 ## Setup
 
@@ -21,7 +25,7 @@ A full SaaS demo app that uses the ArcenPay SDK to demonstrate feature flags, ev
 ```bash
 cd apps/arcen-dashboard
 pnpm dev
-# Dashboard runs on http://localhost:3000
+# Dashboard → http://localhost:3000
 ```
 
 ### 2. Create an API key
@@ -29,55 +33,71 @@ pnpm dev
 1. Open http://localhost:3000
 2. Sign in → create/join an organization
 3. Go to **Settings** → **Protocol Keys** tab
-4. Click **Create API Key**
-5. Copy the key (shown once!)
+4. Click **Create API Key** → copy the key (shown once!)
 
-### 3. Create some feature flags (optional but recommended)
+### 3. Create feature flags (recommended)
 
-1. Go to **Feature Flags** in the dashboard
-2. Create flags with these keys to see them in the demo:
-   - `scan`
-   - `advanced_analytics`
-   - `api_access`
-   - `custom_exports`
-   - `sso`
-3. Optionally set a company override to true so they show as enabled
+In the dashboard, create flags with these keys:
+- `scan`
+- `advanced_analytics`
+- `api_access`
+- `custom_exports`
+- `sso`
 
-### 4. Run the demo app
+Optionally set company overrides to `true` to see them enabled.
+
+### 4. Run the demo
 
 ```bash
-# Option A: Use the setup screen (no env file needed)
+# Option A: Setup screen (no env file needed)
 cd apps/arcen-demo
 pnpm dev
 # Open http://localhost:3001
 # Enter your API key in the setup screen
 
-# Option B: Use .env.local
+# Option B: .env.local
 cp .env.local.example .env.local
 # Edit .env.local with your API key
 pnpm dev
 ```
 
-## App Structure
+## Architecture
 
 ```
 app/
-├── page.tsx              # Main demo UI (all SDK usage happens here)
-├── layout.tsx            # Root layout
-├── globals.css           # Dark theme styles
+├── layout.tsx              # Root layout — wraps children with <Providers>
+├── providers.tsx           # Client component: <MEAPProvider> (Wagmi + React Query)
+├── page.tsx                # Main demo — 5 tabs, all SDK components
+├── globals.css             # Dark theme + meap-* CSS classes for SDK components
 └── api/
-    ├── company/route.ts  # Uses ArcenClient.identify() + listCompanies()
-    ├── flags/route.ts    # Uses ArcenClient.checkFlags()
-    ├── track/route.ts    # Uses ArcenClient.track()
-    ├── events/route.ts   # Proxies /api/v1/events
-    └── config/route.ts   # Stores config for server routes
+    ├── access-token/       # POST — ArcenClient.createAccessToken()
+    ├── company/            # GET/POST — list/identify companies
+    ├── config/             # GET/POST — store API key at runtime (setup screen)
+    ├── events/             # GET — proxy /api/v1/events feed
+    ├── flags/              # GET — ArcenClient.checkFlags()
+    └── track/              # POST — ArcenClient.track()
 
 lib/
-└── arcen-client.ts       # ArcenClient singleton from @meap/node
+└── arcen-client.ts         # ArcenClient singleton (env → runtime config fallback)
 ```
 
-## SDK Packages Used
+## Tabs
 
-- **`@meap/react`** — `useFlag`, `useFlags`, `useTrack` React hooks
-- **`@meap/node`** — `ArcenClient` for server-side API calls
-- **`@meap/core`** — TypeScript types (`SchematicCompany`, `FlagCheckResult`, etc.)
+| Tab | Components |
+|---|---|
+| **Plans** | `SubscriptionStatus` + `PricingTable` + `CheckoutModal` |
+| **Features** | `FeatureFlagGuard` + `useFlag` + `useFlags` |
+| **Usage** | `useTrack` event buttons + `UsageDashboard` |
+| **Billing** | `BillingHistory` |
+| **Portal** | `ArcenEmbed` (requires access token from `/api/access-token`) |
+
+## On-Chain Requirements
+
+The following components require a wallet connection and active testnet contracts:
+- `SubscriptionStatus` — reads from `SubscriptionRegistry`
+- `PricingTable` — reads from `PlanFactory`
+- `CheckoutModal` — writes to `SubscriptionRegistry`
+- `UsageDashboard` — reads from `SessionVault` + `ZKUsageVerifier`
+- `BillingHistory` — queries `SubscriptionRegistry` logs
+
+Feature flag hooks (`useFlag`, `useFlags`, `useTrack`) work without a wallet using the email fallback company identity.

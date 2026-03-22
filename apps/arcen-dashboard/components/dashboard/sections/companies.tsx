@@ -2,20 +2,20 @@
 
 import { useState, useEffect, useCallback } from "react";
 import {
-  Building2,
-  Search,
-  Plus,
-  Wallet,
-  Mail,
-  ChevronRight,
-  RefreshCw,
-  Shield,
-  Copy,
-  Check,
+  Building2, Search, Plus, Wallet, Mail, ChevronRight,
+  RefreshCw, Shield, Copy, Check, Users, ExternalLink,
+  Zap, Info,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter,
+} from "@/components/ui/sheet";
 import { formatRelativeTime } from "@/lib/format";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface Company {
   id: string;
@@ -35,160 +35,281 @@ interface CompanyDetail extends Company {
   activePlan: { id: string; name: string; tier: string; price: string } | null;
 }
 
+// ─── CopyButton ───────────────────────────────────────────────────────────────
+
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
   return (
     <button
-      onClick={() => { navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 1500); }}
-      className="ml-1 text-muted-foreground hover:text-foreground"
+      onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 1500); }}
+      className="ml-1 text-muted-foreground hover:text-foreground transition-colors"
     >
-      {copied ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
+      {copied ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
     </button>
   );
 }
 
-function CompanyRow({ company, onClick }: { company: Company; onClick: () => void }) {
+// ─── CompanyDetailContent (renders inside SheetContent) ───────────────────────
+
+function CompanyDetailContent({ company, onClose }: { company: CompanyDetail; onClose: () => void }) {
+  const enabled  = company.entitlements.filter((e) => e.value);
+  const disabled = company.entitlements.filter((e) => !e.value);
+
   return (
-    <tr className="hover:bg-muted/30 cursor-pointer border-b border-border/50" onClick={onClick}>
-      <td className="px-4 py-3">
+    <>
+      <SheetHeader className="px-6 pt-6 pb-4 border-b border-border/60">
         <div className="flex items-center gap-3">
-          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-            <Building2 className="h-4 w-4 text-primary" />
+          <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+            <Building2 className="h-5 w-5 text-primary" />
           </div>
-          <span className="font-medium text-sm">{company.name}</span>
-        </div>
-      </td>
-      <td className="px-4 py-3">
-        {company.walletAddress ? (
-          <div className="flex items-center font-mono text-xs text-muted-foreground">
-            {company.walletAddress.slice(0, 8)}...{company.walletAddress.slice(-6)}
-            <CopyButton text={company.walletAddress} />
-          </div>
-        ) : (
-          <span className="text-muted-foreground text-xs">—</span>
-        )}
-      </td>
-      <td className="px-4 py-3 text-sm text-muted-foreground">{company.email ?? "—"}</td>
-      <td className="px-4 py-3">
-        {company.activePlanId ? (
-          <Badge variant="secondary" className="text-xs">Active Plan</Badge>
-        ) : (
-          <Badge variant="outline" className="text-xs text-muted-foreground">No Plan</Badge>
-        )}
-      </td>
-      <td className="px-4 py-3 text-xs text-muted-foreground">{formatRelativeTime(new Date(company.lastSeenAt).getTime() / 1000)}</td>
-      <td className="px-4 py-3"><ChevronRight className="h-4 w-4 text-muted-foreground" /></td>
-    </tr>
-  );
-}
-
-function CompanyDetail({ company, onBack }: { company: CompanyDetail; onBack: () => void }) {
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Button variant="ghost" size="sm" onClick={onBack}>← Back</Button>
-        <h2 className="text-lg font-semibold">{company.name}</h2>
-        {company.walletAddress && (
-          <Badge variant="secondary" className="font-mono text-xs">
-            <Wallet className="h-3 w-3 mr-1" />
-            {company.walletAddress.slice(0, 8)}...{company.walletAddress.slice(-6)}
-          </Badge>
-        )}
-      </div>
-
-      {/* Active Plan */}
-      <div className="rounded-lg border border-border p-4">
-        <h3 className="font-medium mb-2 text-sm">Active Plan</h3>
-        {company.activePlan ? (
-          <div className="flex items-center gap-3">
-            <Badge className="bg-primary/10 text-primary">{company.activePlan.name}</Badge>
-            <span className="text-sm text-muted-foreground">{company.activePlan.tier}</span>
-          </div>
-        ) : (
-          <span className="text-muted-foreground text-sm">No active plan</span>
-        )}
-      </div>
-
-      {/* Entitlements */}
-      <div className="rounded-lg border border-border p-4">
-        <h3 className="font-medium mb-3 text-sm flex items-center gap-2">
-          <Shield className="h-4 w-4" /> Entitlements
-        </h3>
-        {company.entitlements.length === 0 ? (
-          <span className="text-muted-foreground text-sm">No feature flags configured</span>
-        ) : (
-          <div className="grid grid-cols-2 gap-2">
-            {company.entitlements.map((e) => (
-              <div key={e.featureKey} className="flex items-center justify-between text-sm">
-                <span className="font-mono text-xs">{e.featureKey}</span>
-                <Badge variant={e.value ? "default" : "outline"} className="text-xs">
-                  {e.value ? "✓ True" : "✗ False"}
-                </Badge>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Overrides */}
-      {company.overrides.length > 0 && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50/50 dark:bg-amber-950/20 p-4">
-          <h3 className="font-medium mb-3 text-sm text-amber-700 dark:text-amber-400">Company Overrides</h3>
-          <div className="space-y-2">
-            {company.overrides.map((o) => (
-              <div key={o.id} className="flex items-center justify-between text-sm">
-                <span className="font-mono text-xs">{o.featureKey}</span>
-                <div className="flex items-center gap-2">
-                  <Badge variant={o.value ? "default" : "destructive"} className="text-xs">
-                    {o.value ? "Override: True" : "Override: False"}
-                  </Badge>
-                  {o.reason && <span className="text-xs text-muted-foreground">{o.reason}</span>}
-                </div>
-              </div>
-            ))}
+          <div className="min-w-0">
+            <SheetTitle className="truncate">{company.name}</SheetTitle>
+            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+              {company.walletAddress && (
+                <span className="flex items-center gap-1 text-xs text-muted-foreground font-mono">
+                  <Wallet className="h-3 w-3" />
+                  {company.walletAddress.slice(0, 10)}…{company.walletAddress.slice(-6)}
+                  <CopyButton text={company.walletAddress} />
+                </span>
+              )}
+              {company.email && (
+                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Mail className="h-3 w-3" />{company.email}
+                </span>
+              )}
+            </div>
           </div>
         </div>
-      )}
+        {company.externalId && (
+          <SheetDescription className="font-mono text-xs mt-1">ID: {company.externalId}</SheetDescription>
+        )}
+      </SheetHeader>
 
-      {/* Users */}
-      <div className="rounded-lg border border-border p-4">
-        <h3 className="font-medium mb-3 text-sm">Users ({company.users.length})</h3>
-        {company.users.length === 0 ? (
-          <span className="text-muted-foreground text-sm">No users identified</span>
-        ) : (
-          <div className="space-y-2">
-            {company.users.map((u) => (
-              <div key={u.id} className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-sm">
-                  <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center text-xs">
-                    {(u.name ?? u.email ?? "?").charAt(0).toUpperCase()}
+      <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+        {/* Active Plan */}
+        <section>
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Active Plan</h3>
+          {company.activePlan ? (
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-primary/5 border border-primary/20">
+              <div className="flex-1">
+                <div className="font-medium text-sm">{company.activePlan.name}</div>
+                <div className="text-xs text-muted-foreground">{company.activePlan.tier}</div>
+              </div>
+              <Badge variant="secondary" className="text-xs">{company.activePlan.price}</Badge>
+            </div>
+          ) : (
+            <div className="p-3 rounded-lg border border-dashed border-border/60 bg-muted/20 text-sm text-muted-foreground">
+              No active plan
+            </div>
+          )}
+        </section>
+
+        {/* Entitlements */}
+        <section>
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2 flex items-center gap-1.5">
+            <Shield className="h-3.5 w-3.5" /> Entitlements
+          </h3>
+          {company.entitlements.length === 0 ? (
+            <div className="p-3 rounded-lg border border-dashed border-border/60 bg-muted/20 text-sm text-muted-foreground">
+              No feature flags configured
+            </div>
+          ) : (
+            <div className="space-y-1.5">
+              {enabled.map((e) => (
+                <div key={e.featureKey} className="flex items-center justify-between px-3 py-2 rounded-lg bg-emerald-500/5 border border-emerald-500/20">
+                  <span className="font-mono text-xs">{e.featureKey}</span>
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-emerald-500/15 text-emerald-600 border-emerald-500/30 text-xs dark:text-emerald-400">✓ True</Badge>
+                    <span className="text-xs text-muted-foreground/70">{e.reason}</span>
                   </div>
-                  <span>{u.name ?? u.email ?? "Unknown"}</span>
-                  {u.walletAddress && (
-                    <span className="text-xs font-mono text-muted-foreground">
-                      {u.walletAddress.slice(0, 6)}...
-                    </span>
-                  )}
                 </div>
-                <span className="text-xs text-muted-foreground">{formatRelativeTime(new Date(u.lastSeenAt).getTime() / 1000)}</span>
-              </div>
-            ))}
-          </div>
+              ))}
+              {disabled.map((e) => (
+                <div key={e.featureKey} className="flex items-center justify-between px-3 py-2 rounded-lg bg-muted/30 border border-border/40">
+                  <span className="font-mono text-xs text-muted-foreground">{e.featureKey}</span>
+                  <Badge variant="outline" className="text-xs text-muted-foreground">✗ False</Badge>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* Overrides */}
+        {company.overrides.length > 0 && (
+          <section>
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-400 mb-2 flex items-center gap-1.5">
+              <Zap className="h-3.5 w-3.5" /> Company Overrides
+            </h3>
+            <div className="space-y-1.5 p-3 rounded-lg border border-amber-300/40 bg-amber-50/30 dark:bg-amber-950/20">
+              {company.overrides.map((o) => (
+                <div key={o.id} className="flex items-center justify-between text-sm">
+                  <span className="font-mono text-xs">{o.featureKey}</span>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={o.value ? "default" : "destructive"} className="text-xs">
+                      {o.value ? "True" : "False"}
+                    </Badge>
+                    {o.reason && <span className="text-xs text-muted-foreground">{o.reason}</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
         )}
+
+        {/* Users */}
+        <section>
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2 flex items-center gap-1.5">
+            <Users className="h-3.5 w-3.5" /> Users
+            <Badge variant="secondary" className="text-xs ml-1">{company.users.length}</Badge>
+          </h3>
+          {company.users.length === 0 ? (
+            <div className="p-3 rounded-lg border border-dashed border-border/60 bg-muted/20 text-sm text-muted-foreground">
+              No users identified for this company
+            </div>
+          ) : (
+            <div className="space-y-1.5">
+              {company.users.map((u) => (
+                <div key={u.id} className="flex items-center justify-between px-3 py-2 rounded-lg border border-border/40">
+                  <div className="flex items-center gap-2.5">
+                    <div className="h-7 w-7 rounded-full bg-muted border border-border flex items-center justify-center text-xs font-medium flex-shrink-0">
+                      {(u.name ?? u.email ?? "?").charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium">{u.name ?? u.email ?? "Unknown"}</div>
+                      {u.walletAddress && (
+                        <div className="text-xs font-mono text-muted-foreground">{u.walletAddress.slice(0, 8)}…</div>
+                      )}
+                    </div>
+                  </div>
+                  <span className="text-xs text-muted-foreground">{formatRelativeTime(new Date(u.lastSeenAt).getTime() / 1000)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* Meta */}
+        <section className="pt-2 border-t border-border/40 space-y-1.5">
+          <div className="flex justify-between text-xs text-muted-foreground">
+            <span>Created</span>
+            <span>{new Date(company.createdAt).toLocaleDateString()}</span>
+          </div>
+          <div className="flex justify-between text-xs text-muted-foreground">
+            <span>Last seen</span>
+            <span>{formatRelativeTime(new Date(company.lastSeenAt).getTime() / 1000)}</span>
+          </div>
+        </section>
       </div>
-    </div>
+
+      <SheetFooter className="px-6 py-4 border-t border-border/60">
+        <Button variant="outline" size="sm" onClick={onClose} className="w-full">Close</Button>
+      </SheetFooter>
+    </>
   );
 }
+
+// ─── Create Company Sheet ─────────────────────────────────────────────────────
+
+function CreateCompanySheet({ open, onOpenChange, onCreated }: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  onCreated: () => void;
+}) {
+  const [form, setForm] = useState({ name: "", wallet: "", email: "", externalId: "" });
+  const [creating, setCreating] = useState(false);
+  const [error, setError] = useState("");
+
+  const reset = () => { setForm({ name: "", wallet: "", email: "", externalId: "" }); setError(""); };
+
+  const handleCreate = async () => {
+    if (!form.name.trim()) return;
+    setCreating(true);
+    setError("");
+    try {
+      const res = await fetch("/api/v1/companies", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: form.name,
+          wallet: form.wallet || undefined,
+          email:  form.email  || undefined,
+          id:     form.externalId || undefined,
+        }),
+      });
+      if (res.ok) {
+        reset();
+        onOpenChange(false);
+        onCreated();
+      } else {
+        const body = await res.json() as { error?: string };
+        setError(body.error ?? "Failed to create company");
+      }
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  return (
+    <Sheet open={open} onOpenChange={(v) => { if (!v) reset(); onOpenChange(v); }}>
+      <SheetContent side="right" className="sm:max-w-md flex flex-col p-0">
+        <SheetHeader className="px-6 pt-6 pb-4 border-b border-border/60">
+          <SheetTitle>Add Company</SheetTitle>
+          <SheetDescription>
+            Companies are identified by wallet address, email, or external ID.
+          </SheetDescription>
+        </SheetHeader>
+
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+          <div className="space-y-1.5">
+            <Label htmlFor="co-name">Name <span className="text-destructive">*</span></Label>
+            <Input id="co-name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Acme Corp" />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="co-wallet">Wallet Address <span className="text-xs font-normal text-muted-foreground ml-1">(EVM)</span></Label>
+            <Input id="co-wallet" value={form.wallet} onChange={(e) => setForm({ ...form, wallet: e.target.value })} placeholder="0x..." className="font-mono text-xs" />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="co-email">Email</Label>
+            <Input id="co-email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="team@company.com" />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="co-extid">External ID <span className="text-xs font-normal text-muted-foreground ml-1">(your system&apos;s ID)</span></Label>
+            <Input id="co-extid" value={form.externalId} onChange={(e) => setForm({ ...form, externalId: e.target.value })} placeholder="org_1234" className="font-mono text-xs" />
+          </div>
+
+          <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/30 border border-border/40">
+            <ExternalLink className="h-3.5 w-3.5 text-muted-foreground mt-0.5 flex-shrink-0" />
+            <p className="text-xs text-muted-foreground">Provide at least one identifier so the protocol can match future events and flag checks to this company.</p>
+          </div>
+
+          {error && (
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">
+              <Info className="h-4 w-4 flex-shrink-0 mt-0.5" />{error}
+            </div>
+          )}
+        </div>
+
+        <SheetFooter className="px-6 py-4 border-t border-border/60 flex-row gap-2">
+          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)} className="flex-1">Cancel</Button>
+          <Button size="sm" onClick={handleCreate} disabled={creating || !form.name.trim()} className="flex-1">
+            {creating ? <><RefreshCw className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Creating…</> : "Add Company"}
+          </Button>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+// ─── Main ─────────────────────────────────────────────────────────────────────
 
 export function CompaniesSection() {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [selectedCompany, setSelectedCompany] = useState<CompanyDetail | null>(null);
+  const [detailCompany, setDetailCompany] = useState<CompanyDetail | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
   const [loadingDetail, setLoadingDetail] = useState(false);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [createForm, setCreateForm] = useState({ name: "", wallet: "", email: "" });
-  const [creating, setCreating] = useState(false);
+  const [showCreate, setShowCreate] = useState(false);
 
   const fetchCompanies = useCallback(async () => {
     setLoading(true);
@@ -207,163 +328,143 @@ export function CompaniesSection() {
 
   useEffect(() => { fetchCompanies(); }, [fetchCompanies]);
 
-  const openCompanyDetail = async (company: Company) => {
+  const openDetail = async (company: Company) => {
     setLoadingDetail(true);
+    setDetailCompany(null);
+    setDetailOpen(true);
     try {
       const res = await fetch(`/api/v1/companies/${company.id}`);
       if (res.ok) {
         const data = await res.json() as { data: CompanyDetail };
-        setSelectedCompany(data.data);
+        setDetailCompany(data.data);
       }
     } finally {
       setLoadingDetail(false);
     }
   };
 
-  const handleCreate = async () => {
-    if (!createForm.name.trim()) return;
-    setCreating(true);
-    try {
-      const res = await fetch("/api/v1/companies", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: createForm.name,
-          wallet: createForm.wallet || undefined,
-          email: createForm.email || undefined,
-        }),
-      });
-      if (res.ok) {
-        setShowCreateModal(false);
-        setCreateForm({ name: "", wallet: "", email: "" });
-        fetchCompanies();
-      }
-    } finally {
-      setCreating(false);
-    }
-  };
-
-  if (selectedCompany) {
-    return <CompanyDetail company={selectedCompany} onBack={() => setSelectedCompany(null)} />;
-  }
+  const closeDetail = () => { setDetailOpen(false); setDetailCompany(null); };
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Companies</h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            Manage customer companies — their plans, entitlements, and overrides.
+          <p className="text-muted-foreground text-sm mt-0.5">
+            Manage customer companies — plans, entitlements, and overrides.
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={fetchCompanies} disabled={loading}>
-            <RefreshCw className={`h-4 w-4 mr-1 ${loading ? "animate-spin" : ""}`} />
-            Refresh
+            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            <span className="ml-1.5 hidden sm:inline">Refresh</span>
           </Button>
-          <Button size="sm" onClick={() => setShowCreateModal(true)}>
-            <Plus className="h-4 w-4 mr-1" /> Add Company
+          <Button size="sm" onClick={() => setShowCreate(true)}>
+            <Plus className="h-4 w-4 mr-1.5" /> Add Company
           </Button>
         </div>
       </div>
 
       {/* Search */}
       <div className="relative">
-        <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search by name, email, or wallet..."
-          className="w-full pl-9 pr-4 py-2 text-sm border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary/20"
-        />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+        <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name, email, or wallet…" className="pl-9" />
       </div>
 
       {/* Table */}
-      <div className="rounded-lg border border-border overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-muted/50">
-            <tr>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Name</th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Wallet</th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Email</th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Plan</th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Last Seen</th>
-              <th className="px-4 py-3" />
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">Loading...</td></tr>
-            ) : companies.length === 0 ? (
-              <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
-                {search ? "No companies match your search" : "No companies yet. Add your first company."}
-              </td></tr>
-            ) : (
-              companies.map((c) => (
-                <CompanyRow
-                  key={c.id}
-                  company={c}
-                  onClick={() => openCompanyDetail(c)}
-                />
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Create Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-background rounded-lg border border-border p-6 w-full max-w-md shadow-xl">
-            <h2 className="text-lg font-semibold mb-4">Add Company</h2>
-            <div className="space-y-3">
-              <div>
-                <label className="text-sm font-medium">Name *</label>
-                <input
-                  type="text"
-                  value={createForm.name}
-                  onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
-                  placeholder="Acme Corp"
-                  className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary/20"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium">Wallet Address</label>
-                <input
-                  type="text"
-                  value={createForm.wallet}
-                  onChange={(e) => setCreateForm({ ...createForm, wallet: e.target.value })}
-                  placeholder="0x..."
-                  className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 font-mono"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium">Email</label>
-                <input
-                  type="email"
-                  value={createForm.email}
-                  onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
-                  placeholder="team@company.com"
-                  className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary/20"
-                />
-              </div>
-            </div>
-            <div className="flex gap-2 mt-6 justify-end">
-              <Button variant="outline" size="sm" onClick={() => setShowCreateModal(false)}>Cancel</Button>
-              <Button size="sm" onClick={handleCreate} disabled={creating || !createForm.name.trim()}>
-                {creating ? "Creating..." : "Create"}
-              </Button>
-            </div>
+      {loading ? (
+        <div className="space-y-2">
+          {[...Array(4)].map((_, i) => <div key={i} className="h-14 rounded-lg bg-muted/40 animate-pulse" />)}
+        </div>
+      ) : companies.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-border bg-muted/20 p-14 text-center space-y-3">
+          <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto">
+            <Building2 className="h-6 w-6 text-primary" />
           </div>
+          <div>
+            <p className="font-medium">{search ? "No companies match your search" : "No companies yet"}</p>
+            <p className="text-sm text-muted-foreground mt-1">{search ? "Try a different term." : "Add your first company or send events via the SDK."}</p>
+          </div>
+          {!search && <Button size="sm" onClick={() => setShowCreate(true)}><Plus className="h-4 w-4 mr-1.5" /> Add Company</Button>}
+        </div>
+      ) : (
+        <div className="rounded-xl border border-border overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-muted/40 border-b border-border/60">
+                <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Company</th>
+                <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide hidden md:table-cell">Wallet</th>
+                <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide hidden lg:table-cell">Email</th>
+                <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Plan</th>
+                <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide hidden sm:table-cell">Last Seen</th>
+                <th className="px-4 py-2.5 w-10" />
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border/40">
+              {companies.map((c) => (
+                <tr key={c.id} onClick={() => openDetail(c)} className="hover:bg-muted/30 cursor-pointer transition-colors group">
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <Building2 className="h-4 w-4 text-primary" />
+                      </div>
+                      <span className="font-medium">{c.name}</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 hidden md:table-cell">
+                    {c.walletAddress ? (
+                      <span className="flex items-center font-mono text-xs text-muted-foreground">
+                        {c.walletAddress.slice(0, 8)}…{c.walletAddress.slice(-6)}
+                        <CopyButton text={c.walletAddress} />
+                      </span>
+                    ) : <span className="text-muted-foreground/40 text-xs">—</span>}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-muted-foreground hidden lg:table-cell">{c.email ?? <span className="text-muted-foreground/40 text-xs">—</span>}</td>
+                  <td className="px-4 py-3">
+                    {c.activePlanId
+                      ? <Badge variant="secondary" className="text-xs">Active</Badge>
+                      : <Badge variant="outline" className="text-xs text-muted-foreground/50">—</Badge>}
+                  </td>
+                  <td className="px-4 py-3 text-xs text-muted-foreground hidden sm:table-cell">
+                    {formatRelativeTime(new Date(c.lastSeenAt).getTime() / 1000)}
+                  </td>
+                  <td className="px-4 py-3">
+                    <ChevronRight className="h-4 w-4 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors" />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
-      {loadingDetail && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-40">
-          <div className="bg-background rounded-lg p-4 text-sm">Loading company details...</div>
-        </div>
-      )}
+      {/* Create sheet */}
+      <CreateCompanySheet open={showCreate} onOpenChange={setShowCreate} onCreated={fetchCompanies} />
+
+      {/* Detail sheet */}
+      <Sheet open={detailOpen} onOpenChange={(v) => { if (!v) closeDetail(); }}>
+        <SheetContent side="right" className="sm:max-w-xl flex flex-col p-0 overflow-y-auto">
+          {loadingDetail ? (
+            <div className="flex flex-col">
+              <SheetHeader className="px-6 pt-6 pb-4 border-b border-border/60">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-muted/60 animate-pulse" />
+                  <div className="space-y-1.5 flex-1">
+                    <div className="h-4 w-36 bg-muted/60 animate-pulse rounded" />
+                    <div className="h-3 w-52 bg-muted/60 animate-pulse rounded" />
+                  </div>
+                </div>
+              </SheetHeader>
+              <div className="px-6 py-5 space-y-3">
+                {[...Array(6)].map((_, i) => <div key={i} className="h-11 bg-muted/40 animate-pulse rounded-lg" />)}
+              </div>
+            </div>
+          ) : detailCompany ? (
+            <CompanyDetailContent company={detailCompany} onClose={closeDetail} />
+          ) : null}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
