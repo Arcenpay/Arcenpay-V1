@@ -757,14 +757,12 @@ function SdkViewportPreview({
   realData,
   onViewChange,
 }: SdkViewportPreviewProps) {
-  // Simulation state — checkout step, unsubscribe confirm, etc.
-  const [checkoutStep, setCheckoutStep] = useState(0); // 0=plans 1=wallet 2=approve 3=success
+  // Simulation state
   const [simCancelled, setSimCancelled] = useState(false);
   const [selectedPlanIdx, setSelectedPlanIdx] = useState(1);
 
   // Reset when switching view states
   useEffect(() => {
-    setCheckoutStep(0);
     setSimCancelled(false);
   }, [viewState, componentId]);
   // Always use clean demo data — never show raw blockchain data in preview
@@ -792,32 +790,6 @@ function SdkViewportPreview({
   const card: React.CSSProperties = { background: cardBg, borderRadius: radius, boxShadow: shadow, padding, border: "1px solid hsl(var(--border))", fontFamily: font };
   const btnPrimary: React.CSSProperties = { backgroundColor: primary, color: "#fff", borderRadius: `calc(${radius} - 2px)`, fontSize: 13, fontWeight: 600, padding: "10px 20px", cursor: "pointer", border: "none", display: "inline-block", fontFamily: font };
   const btnSecondary: React.CSSProperties = { backgroundColor: "hsl(var(--secondary))", color: "hsl(var(--foreground))", borderRadius: `calc(${radius} - 2px)`, fontSize: 13, fontWeight: 500, padding: "10px 20px", cursor: "pointer", border: "1px solid hsl(var(--border))", display: "inline-block", fontFamily: font };
-
-  // ── helper: step bar (used in checkout) ──────────────────────
-  const StepBar = ({ steps, active }: { steps: string[]; active: number }) => (
-    <div className="flex items-center gap-1 mb-5">
-      {steps.map((step, i) => (
-        <React.Fragment key={i}>
-          <div className="flex flex-col items-center gap-0.5">
-            <div
-              className="flex items-center justify-center w-6 h-6 rounded-full text-[10px] font-bold shrink-0"
-              style={{
-                backgroundColor: i < active ? primary : i === active ? primary : "hsl(var(--secondary))",
-                color: i <= active ? "#fff" : "hsl(var(--muted-foreground))",
-                opacity: i < active ? 0.7 : 1,
-              }}
-            >
-              {i < active ? "✓" : i + 1}
-            </div>
-            <span className="text-[9px] text-muted-foreground whitespace-nowrap hidden sm:block">{step}</span>
-          </div>
-          {i < steps.length - 1 && (
-            <div className="h-px flex-1 mt-[-10px]" style={{ backgroundColor: i < active ? primary : "hsl(var(--border))" }} />
-          )}
-        </React.Fragment>
-      ))}
-    </div>
-  );
 
   const key = `${componentId}:${viewState}`;
 
@@ -872,167 +844,137 @@ function SdkViewportPreview({
       );
     }
 
-    // ── Checkout (multi-step simulation) ──────────────────────
+    // ── Checkout — plan selection + subscription summary (SchematicHQ style) ──
     case "customer-portal:checkout":
     case "checkout:checkout":
     case "checkout-modal:checkout": {
-      const steps = ["Select Plan", "Connect Wallet", "Approve", "Subscribe"];
       const chosenPlan = plans[selectedPlanIdx] ?? plans[0];
+      return (
+        <div style={{ fontFamily: font }} className="max-w-3xl mx-auto">
+          {/* Step indicator */}
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-6 h-6 rounded-full border border-border flex items-center justify-center">
+              <span className="text-xs text-muted-foreground">1</span>
+            </div>
+            <span className="text-sm font-medium text-foreground">Plan</span>
+            <div className="ml-auto">
+              <button style={{ background: "none", border: "none", cursor: "pointer" }} onClick={() => onViewChange?.("portal")}>
+                <X className="w-5 h-5 text-muted-foreground" />
+              </button>
+            </div>
+          </div>
 
-      // Step 0 — Plan selection
-      if (checkoutStep === 0) {
-        return (
-          <div style={{ fontFamily: font }} className="max-w-2xl mx-auto space-y-4">
-            <div style={card}>
-              <p className="text-base font-semibold text-foreground mb-1">Choose a plan</p>
-              <p className="text-xs text-muted-foreground mb-5">Select the plan that works for you</p>
-              <StepBar steps={steps} active={0} />
-              <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${Math.min(plans.length, 3)}, 1fr)` }}>
+          <div className="grid gap-6" style={{ gridTemplateColumns: "1fr 340px" }}>
+            {/* Left — Plan selection */}
+            <div>
+              <p className="text-lg font-semibold text-foreground mb-1">Select plan</p>
+              <p className="text-sm text-muted-foreground mb-5">Choose your base plan</p>
+              <div className="space-y-4">
                 {plans.map((plan, i) => (
                   <button
                     key={i}
                     onClick={() => setSelectedPlanIdx(i)}
                     style={{
+                      display: "block",
+                      width: "100%",
                       border: selectedPlanIdx === i ? `2px solid ${primary}` : "1px solid hsl(var(--border))",
                       borderRadius: radius,
-                      background: selectedPlanIdx === i ? `${primary}08` : "hsl(var(--secondary)/0.3)",
-                      padding: "14px 12px",
+                      background: cardBg,
+                      padding: padding,
                       cursor: "pointer",
                       textAlign: "left",
                       fontFamily: font,
-                      boxShadow: selectedPlanIdx === i ? `0 0 0 3px ${primary}20` : "none",
                       transition: "all 0.15s",
                     }}
                   >
-                    {i === 1 && <div className="text-[10px] font-semibold px-1.5 py-0.5 mb-2 w-fit rounded-full" style={{ backgroundColor: primary, color: "#fff" }}>Popular</div>}
-                    <p className="text-sm font-semibold text-foreground">{plan.name}</p>
-                    <p className="text-xl font-bold text-foreground mt-0.5">${plan.price}<span className="text-xs font-normal text-muted-foreground">/{plan.billingInterval === "yearly" ? "yr" : "mo"}</span></p>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">{plan.acceptedToken ?? "USDC"}</p>
+                    <p className="text-lg font-bold text-foreground mb-0.5">{plan.name}</p>
+                    <p className="text-xs text-muted-foreground mb-3">
+                      {plan.price === 9 ? "Perfect for Starter Business" : plan.price === 29 ? "For growing teams" : "For large organizations"}
+                    </p>
+                    <p className="text-2xl font-bold text-foreground mb-3">
+                      ${plan.price.toFixed(2)}
+                      <span className="text-sm font-normal text-muted-foreground">/month</span>
+                    </p>
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-5 h-5 rounded bg-secondary flex items-center justify-center">
+                        <Layers className="w-3 h-3 text-muted-foreground" />
+                      </div>
+                      <span className="text-xs text-muted-foreground">
+                        {plan.price === 9 ? "3 Scans per month" : plan.price === 29 ? "50 Scans per month" : "Unlimited"}
+                      </span>
+                    </div>
+                    <div
+                      style={{ ...btnPrimary, width: "100%", textAlign: "center", display: "block" }}
+                    >
+                      Choose plan
+                    </div>
                   </button>
                 ))}
               </div>
-              <button style={{ ...btnPrimary, width: "100%", textAlign: "center", marginTop: 20 }} onClick={() => setCheckoutStep(1)}>
-                Continue with {chosenPlan.name} →
+            </div>
+
+            {/* Right — Subscription summary */}
+            <div style={card}>
+              <p className="text-base font-semibold text-foreground mb-4">Subscription</p>
+              <div className="flex items-start justify-between mb-1">
+                <div>
+                  <p className="text-xs text-muted-foreground">Plan</p>
+                  <p className="text-sm font-semibold text-foreground">{chosenPlan.name}</p>
+                </div>
+                <p className="text-sm font-semibold text-foreground">${chosenPlan.price.toFixed(2)}<span className="text-xs font-normal text-muted-foreground">/mo</span></p>
+              </div>
+              <div className="h-px bg-border my-4" />
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-sm text-muted-foreground">Monthly total:</p>
+                <p className="text-sm font-semibold text-foreground">${chosenPlan.price.toFixed(2)}/mo</p>
+              </div>
+              <button style={{ ...btnSecondary, width: "100%", textAlign: "center", opacity: 0.6, cursor: "default" }}>
+                Subscribe and close
+              </button>
+              <p className="text-[10px] text-muted-foreground mt-3 text-center leading-relaxed">
+                You will be billed ${chosenPlan.price.toFixed(2)} for this subscription every month unless you unsubscribe.
+              </p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ── Payment Method — modal dialog overlay (SchematicHQ style) ──
+    case "customer-portal:payment-method": {
+      return (
+        <div style={{ fontFamily: font }} className="relative max-w-3xl mx-auto min-h-[400px]">
+          {/* Blurred background */}
+          <div className="absolute inset-0 opacity-30 blur-sm pointer-events-none">
+            <div className="grid gap-5" style={{ gridTemplateColumns: "1fr 1fr" }}>
+              <div style={card}><div className="h-3 w-24 bg-foreground/10 rounded mb-2" /><div className="h-2 w-32 bg-foreground/5 rounded mb-4" /><div className="h-8 bg-foreground/5 rounded" /></div>
+              <div style={card}><div className="h-3 w-20 bg-foreground/10 rounded mb-2" /><div className="h-2 w-28 bg-foreground/5 rounded" /></div>
+            </div>
+          </div>
+          {/* Modal dialog */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div style={{ ...card, maxWidth: 460, width: "100%", boxShadow: "0 8px 32px rgb(0 0 0/0.12)" }}>
+              <div className="flex items-center justify-between mb-5">
+                <p className="text-base font-semibold text-foreground">Edit payment method</p>
+                <button style={{ background: "none", border: "none", cursor: "pointer" }} onClick={() => onViewChange?.("portal")}>
+                  <X className="w-5 h-5 text-muted-foreground" />
+                </button>
+              </div>
+              <p className="text-sm font-semibold text-foreground mb-3">Payment Method</p>
+              <div className="flex items-center gap-3 p-3 rounded-lg mb-4" style={{ background: "hsl(var(--secondary))", borderRadius: radius }}>
+                <div className="px-2 py-1 rounded text-[10px] font-bold text-white" style={{ background: "#1a1f71" }}>VISA</div>
+                <span className="text-sm text-foreground">Card ending in 4242</span>
+              </div>
+              <button className="text-sm font-medium flex items-center gap-1" style={{ color: primary, background: "none", border: "none", cursor: "pointer", fontFamily: font }}>
+                Choose different payment method <ChevronDown className="w-4 h-4" />
               </button>
             </div>
           </div>
-        );
-      }
-
-      // Step 1 — Connect wallet
-      if (checkoutStep === 1) {
-        return (
-          <div style={{ fontFamily: font }} className="max-w-md mx-auto">
-            <div style={card}>
-              <p className="text-base font-semibold text-foreground mb-1">Connect your wallet</p>
-              <p className="text-xs text-muted-foreground mb-5">You need a wallet to subscribe on-chain</p>
-              <StepBar steps={steps} active={1} />
-              <div className="flex items-center justify-between p-3 mb-4 rounded-lg" style={{ background: "hsl(var(--secondary))", borderRadius: radius }}>
-                <div><p className="text-[10px] text-muted-foreground">Subscribing to</p><p className="text-sm font-semibold text-foreground">{chosenPlan.name}</p></div>
-                <div className="text-right"><p className="text-sm font-bold text-foreground">${chosenPlan.price}<span className="text-xs font-normal text-muted-foreground">/{chosenPlan.billingInterval === "yearly" ? "yr" : "mo"}</span></p><p className="text-xs text-muted-foreground">{token}</p></div>
-              </div>
-              <div className="space-y-2 mb-5">
-                {["MetaMask", "Coinbase Wallet", "WalletConnect"].map((w, i) => (
-                  <button key={i} onClick={() => setCheckoutStep(2)} style={{ width: "100%", border: "1px solid hsl(var(--border))", borderRadius: radius, padding: "10px 14px", cursor: "pointer", background: "hsl(var(--secondary)/0.4)", fontFamily: font, display: "flex", alignItems: "center", gap: 10 }}>
-                    <div className="w-6 h-6 rounded-md flex items-center justify-center shrink-0" style={{ backgroundColor: `${primary}15` }}>
-                      <CreditCard className="w-3.5 h-3.5" style={{ color: primary }} />
-                    </div>
-                    <span className="text-sm font-medium text-foreground">{w}</span>
-                  </button>
-                ))}
-              </div>
-              <button style={{ ...btnSecondary, width: "100%", textAlign: "center" }} onClick={() => setCheckoutStep(0)}>← Back</button>
-            </div>
-          </div>
-        );
-      }
-
-      // Step 2 — Approve token
-      if (checkoutStep === 2) {
-        return (
-          <div style={{ fontFamily: font }} className="max-w-md mx-auto">
-            <div style={card}>
-              <p className="text-base font-semibold text-foreground mb-1">Approve {token}</p>
-              <p className="text-xs text-muted-foreground mb-5">Allow the contract to charge your wallet</p>
-              <StepBar steps={steps} active={2} />
-              <div className="flex items-center gap-2.5 p-3 mb-3 rounded-lg" style={{ background: "hsl(var(--secondary)/0.5)", border: "1px solid hsl(var(--border))", borderRadius: radius }}>
-                <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0" style={{ background: `${primary}18` }}>
-                  <Check className="w-4 h-4" style={{ color: primary }} />
-                </div>
-                <div><p className="text-[10px] text-muted-foreground">Connected wallet</p><p className="text-xs font-mono text-foreground">0x4a2f…8c3d · Base</p></div>
-              </div>
-              <div className="flex items-center gap-2.5 p-3 mb-5 rounded-lg" style={{ background: "hsl(var(--warning)/0.06)", border: "1px solid hsl(var(--warning)/0.25)", borderRadius: radius }}>
-                <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 animate-pulse" style={{ background: "hsl(var(--warning)/0.15)" }}>
-                  <span className="text-[11px] font-bold text-warning">!</span>
-                </div>
-                <div><p className="text-xs font-semibold text-foreground">Approve {token} spending</p><p className="text-[10px] text-muted-foreground">Max charge: ${chosenPlan.price}/{chosenPlan.billingInterval === "yearly" ? "yr" : "mo"}</p></div>
-              </div>
-              <button style={{ ...btnPrimary, width: "100%", textAlign: "center" }} onClick={() => setCheckoutStep(3)}>Approve &amp; Subscribe</button>
-              <button style={{ ...btnSecondary, width: "100%", textAlign: "center", marginTop: 8 }} onClick={() => setCheckoutStep(1)}>← Back</button>
-            </div>
-          </div>
-        );
-      }
-
-      // Step 3 — Success
-      return (
-        <div style={{ fontFamily: font }} className="max-w-sm mx-auto">
-          <div style={{ ...card, textAlign: "center" }}>
-            <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: primary }}>
-              <Check className="w-8 h-8 text-white" />
-            </div>
-            <p className="text-base font-semibold text-foreground mb-1">You&apos;re subscribed!</p>
-            <p className="text-xs text-muted-foreground mb-1">Now on the <strong>{chosenPlan.name}</strong> plan.</p>
-            <p className="text-xs text-muted-foreground mb-6">Transaction confirmed on Base · <span className="font-mono">0x4a2f…</span></p>
-            <button style={{ ...btnPrimary, minWidth: 160 }} onClick={() => { setCheckoutStep(0); onViewChange?.("portal"); }}>Go to Portal</button>
-          </div>
         </div>
       );
     }
 
-    // ── Payment Method ─────────────────────────────────────────
-    case "customer-portal:payment-method": {
-      const wallets = [
-        { addr: "0x4a2f…8c3d", network: "Base", isDefault: true },
-        { addr: "0x9b1e…2af1", network: "Ethereum", isDefault: false },
-      ];
-      return (
-        <div style={{ fontFamily: font }} className="max-w-md mx-auto">
-          <div style={card}>
-            <div className="flex items-center justify-between mb-4">
-              <p className="text-sm font-semibold text-foreground">Payment Methods</p>
-              <button style={{ ...btnPrimary, fontSize: 11, padding: "5px 12px" }}>+ Add Wallet</button>
-            </div>
-            <div className="space-y-2 mb-2">
-              {wallets.map((w, i) => (
-                <div key={i} className="flex items-center gap-3 p-3 rounded-lg" style={{ border: w.isDefault ? `1.5px solid ${primary}` : "1px solid hsl(var(--border))", background: w.isDefault ? `${primary}06` : "hsl(var(--secondary)/0.3)", borderRadius: radius }}>
-                  <div className="w-10 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: "hsl(var(--secondary))" }}>
-                    <CreditCard className="w-4 h-4 text-muted-foreground" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-foreground font-mono">{w.addr}</p>
-                    <p className="text-xs text-muted-foreground">{w.network} · ERC-20</p>
-                  </div>
-                  {w.isDefault
-                    ? <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: `${primary}18`, color: primary }}>Default</span>
-                    : <button className="text-[10px] text-muted-foreground hover:text-foreground" style={{ background: "none", border: "none", cursor: "pointer" }}>Set default</button>
-                  }
-                </div>
-              ))}
-            </div>
-            <div className="h-px bg-border mt-4 mb-3" />
-            <div className="flex items-center justify-between">
-              <p className="text-xs text-muted-foreground">Autopay enabled · charges on renewal</p>
-              <div className="w-9 h-5 rounded-full flex items-center relative" style={{ backgroundColor: primary }}>
-                <div className="absolute right-0.5 w-4 h-4 rounded-full bg-white shadow-sm" />
-              </div>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    // ── Unsubscribe ────────────────────────────────────────────
+    // ── Unsubscribe — cancel dialog (SchematicHQ style) ──────
     case "customer-portal:unsubscribe": {
       if (simCancelled) {
         return (
@@ -1049,61 +991,72 @@ function SdkViewportPreview({
         );
       }
       return (
-        <div style={{ fontFamily: font }} className="max-w-md mx-auto">
-          <div style={{ ...card, textAlign: "center" }}>
-            <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: "hsl(var(--destructive)/0.08)" }}>
-              <X className="w-6 h-6 text-destructive" />
+        <div style={{ fontFamily: font }} className="relative max-w-3xl mx-auto min-h-[400px]">
+          {/* Blurred background */}
+          <div className="absolute inset-0 opacity-30 blur-sm pointer-events-none">
+            <div className="grid gap-5" style={{ gridTemplateColumns: "1fr 1fr" }}>
+              <div style={card}><div className="h-3 w-24 bg-foreground/10 rounded mb-2" /><div className="h-2 w-32 bg-foreground/5 rounded mb-4" /><div className="h-8 bg-foreground/5 rounded" /></div>
+              <div style={card}><div className="h-3 w-20 bg-foreground/10 rounded mb-2" /><div className="h-2 w-28 bg-foreground/5 rounded" /></div>
             </div>
-            <p className="text-sm font-semibold text-foreground mb-1">Cancel your subscription?</p>
-            <p className="text-xs text-muted-foreground mb-2 max-w-xs mx-auto">You&apos;re currently on the <strong>{activePlan.name}</strong> plan. You&apos;ll lose access to these features:</p>
-            <div className="text-left mb-5 space-y-1 px-2">
-              {demoFlags.slice(0, 3).map((f, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <X className="w-3 h-3 text-destructive shrink-0" />
-                  <span className="text-xs text-muted-foreground">{f.name}</span>
+          </div>
+          {/* Cancel dialog */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div style={{ ...card, maxWidth: 520, width: "100%", boxShadow: "0 8px 32px rgb(0 0 0/0.12)", padding: 0 }}>
+              <div className="flex">
+                {/* Left — cancel info */}
+                <div style={{ padding: padding, flex: 1 }}>
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-lg font-bold text-foreground">Cancel subscription</p>
+                    <button style={{ background: "none", border: "none", cursor: "pointer" }} onClick={() => onViewChange?.("portal")}>
+                      <X className="w-5 h-5 text-muted-foreground" />
+                    </button>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-5 leading-relaxed">
+                    You will retain access to your plan until the end of the billing period, on 3/29/2026
+                  </p>
+                  <p className="text-xs text-muted-foreground mb-2">Not ready to cancel?</p>
+                  <button style={{ ...btnSecondary, fontSize: 12, padding: "8px 16px" }} onClick={() => onViewChange?.("portal")}>Manage plan</button>
                 </div>
-              ))}
-            </div>
-            <div className="flex gap-2.5">
-              <button style={{ ...btnPrimary, flex: 1, textAlign: "center" }} onClick={() => onViewChange?.("portal")}>Keep Plan</button>
-              <button
-                style={{ flex: 1, borderRadius: radius, padding: "10px 20px", fontSize: 13, fontWeight: 600, backgroundColor: "hsl(var(--destructive))", color: "#fff", cursor: "pointer", border: "none", fontFamily: font }}
-                onClick={() => setSimCancelled(true)}
-              >Cancel Subscription</button>
+                {/* Right — plan summary */}
+                <div style={{ padding: padding, borderLeft: "1px solid hsl(var(--border))", minWidth: 220 }}>
+                  <div style={{ borderRadius: radius, border: "1px solid hsl(var(--border))", padding: "16px", marginBottom: "16px" }}>
+                    <p className="text-xs text-muted-foreground mb-0.5">Plan</p>
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-semibold text-foreground">{activePlan.name}</p>
+                      <p className="text-sm font-semibold text-foreground">${activePlan.price.toFixed(2)}<span className="text-xs font-normal text-muted-foreground">/mo</span></p>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between mb-4">
+                    <p className="text-xs text-muted-foreground">Monthly total:</p>
+                    <p className="text-sm font-semibold text-foreground">${activePlan.price.toFixed(2)}/mo</p>
+                  </div>
+                  <button
+                    style={{ ...btnPrimary, width: "100%", textAlign: "center", backgroundColor: primary }}
+                    onClick={() => setSimCancelled(true)}
+                  >
+                    Cancel subscription
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       );
     }
 
-    // ── Disabled / locked ──────────────────────────────────────
+    // ── Disabled — Portal not found (SchematicHQ style) ──────
     case "customer-portal:disabled":
     case "pricing-table:disabled": {
-      const lockedFeatures = [{ name: "Custom Domain" }, { name: "SSO" }, { name: "Priority Support" }];
       return (
-        <div style={{ fontFamily: font }} className="max-w-md mx-auto">
-          <div style={card}>
-            <div className="flex items-start gap-3 mb-4 p-3 rounded-lg" style={{ background: "hsl(var(--secondary))", borderRadius: radius }}>
-              <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ background: "hsl(var(--border))" }}>
-                <Shield className="w-5 h-5 text-muted-foreground" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-foreground">Access Restricted</p>
-                <p className="text-xs text-muted-foreground mt-0.5">These features require a higher plan</p>
-              </div>
+        <div style={{ fontFamily: font }} className="max-w-3xl mx-auto">
+          <div className="grid gap-5" style={{ gridTemplateColumns: "1fr 1fr" }}>
+            <div style={card}>
+              <p className="text-2xl font-bold text-foreground mb-2">Portal not found</p>
+              <p className="text-sm text-muted-foreground">Please try again later.</p>
             </div>
-            <div className="space-y-2.5 mb-5">
-              {lockedFeatures.map((f, i) => (
-                <div key={i} className="flex items-center gap-3 p-2.5 rounded-lg opacity-50" style={{ border: "1px solid hsl(var(--border))", borderRadius: radius }}>
-                  <div className="w-4 h-4 rounded-full flex items-center justify-center shrink-0" style={{ background: "hsl(var(--border))" }}>
-                    <Shield className="w-2.5 h-2.5 text-muted-foreground" />
-                  </div>
-                  <span className="text-xs text-foreground">{f.name}</span>
-                  <span className="ml-auto text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-secondary text-muted-foreground">Locked</span>
-                </div>
-              ))}
-            </div>
-            <button style={{ ...btnPrimary, width: "100%", textAlign: "center" }} onClick={() => onViewChange?.("checkout")}>Upgrade to Unlock</button>
+          </div>
+          <div className="mt-12 text-center">
+            <p className="text-xs text-muted-foreground">Powered by <span className="font-semibold text-foreground">ArcenPay</span></p>
           </div>
         </div>
       );
@@ -1139,7 +1092,7 @@ function SdkViewportPreview({
                     ))}
                   </div>
                   <button
-                    onClick={() => { setSelectedPlanIdx(i); setCheckoutStep(1); onViewChange?.("checkout"); }}
+                    onClick={() => { setSelectedPlanIdx(i); onViewChange?.("checkout"); }}
                     style={{ width: "100%", borderRadius: `calc(${radius} - 2px)`, padding: "10px 0", fontSize: 13, fontWeight: 600, cursor: "pointer", border: isPopular ? "none" : "1px solid hsl(var(--border))", backgroundColor: isPopular ? primary : "hsl(var(--secondary))", color: isPopular ? "#fff" : "hsl(var(--foreground))", textAlign: "center", fontFamily: font }}
                   >{isPopular ? "Get Started" : "Select"}</button>
                 </div>
@@ -1162,7 +1115,7 @@ function SdkViewportPreview({
             <p className="text-base font-semibold text-foreground mb-1">You&apos;re subscribed!</p>
             <p className="text-xs text-muted-foreground mb-1">Now on the <strong>{donePlan.name}</strong> plan.</p>
             <p className="text-xs text-muted-foreground mb-6">Transaction confirmed on Base.</p>
-            <button style={{ ...btnPrimary, minWidth: 160 }} onClick={() => { setCheckoutStep(0); onViewChange?.("portal"); }}>Go to Portal</button>
+            <button style={{ ...btnPrimary, minWidth: 160 }} onClick={() => onViewChange?.("portal")}>Go to Portal</button>
           </div>
         </div>
       );
@@ -1454,26 +1407,129 @@ npm install @meap/react @meap/core wagmi viem
   const updateTypography = (patch: Partial<ComponentConfig["styling"]["typography"]>) =>
     setConfig((c) => ({ ...c, styling: { ...c.styling, typography: { ...c.styling.typography, ...patch } } }));
 
-  // ── Design Panel (right sidebar) ─────────────────────────────
-  const designPanel = (
-    <div className="w-60 border-l border-border overflow-y-auto bg-card shrink-0 flex flex-col">
-      <div className="px-4 py-3 border-b border-border shrink-0">
-        <p className="text-xs font-semibold text-foreground">Design</p>
-        <p className="text-[10px] text-muted-foreground mt-0.5">Customize appearance</p>
+  // Right panel tab state — "elements" (custom only) vs "design"
+  const [rightTab, setRightTab] = useState<"elements" | "design">(isCustom ? "elements" : "design");
+
+  // ── Right sidebar panel ─────────────────────────────────────
+  const rightPanel = (
+    <div className="w-[280px] border-l border-border overflow-y-auto bg-card shrink-0 flex flex-col">
+      {/* Tab switcher — Elements | Design */}
+      <div className="border-b border-border shrink-0">
+        <div className="flex">
+          {isCustom && (
+            <button
+              onClick={() => setRightTab("elements")}
+              className={cn(
+                "flex-1 py-3 text-xs font-medium border-b-2 -mb-px transition-colors",
+                rightTab === "elements"
+                  ? "border-accent text-accent"
+                  : "border-transparent text-muted-foreground hover:text-foreground",
+              )}
+            >
+              Elements
+            </button>
+          )}
+          <button
+            onClick={() => setRightTab("design")}
+            className={cn(
+              "flex-1 py-3 text-xs font-medium border-b-2 -mb-px transition-colors",
+              rightTab === "design"
+                ? "border-accent text-accent"
+                : "border-transparent text-muted-foreground hover:text-foreground",
+            )}
+          >
+            Design
+          </button>
+        </div>
       </div>
 
-      {/* Component name */}
-      <div className="px-4 py-3 border-b border-border shrink-0">
-        <Label htmlFor="comp-name" className="text-[10px] font-medium text-muted-foreground mb-1.5 block uppercase tracking-wider">
-          Name
-        </Label>
-        <Input
-          id="comp-name"
-          value={config.name}
-          onChange={(e) => setConfig({ ...config, name: e.target.value })}
-          className="h-8 text-xs"
-        />
-      </div>
+      {/* ── ELEMENTS TAB — custom only ── */}
+      {isCustom && rightTab === "elements" && (
+        <div className="flex-1 overflow-y-auto">
+          {/* Current elements list */}
+          {elements.length > 0 && (
+            <div className="px-4 py-3 border-b border-border">
+              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Added Elements</p>
+              <div className="space-y-1">
+                {elements.map((el, index) => {
+                  const Icon = el.icon;
+                  return (
+                    <div key={el.id} className="flex items-center gap-2 py-1.5 group">
+                      <GripVertical className="w-3 h-3 text-muted-foreground/30 shrink-0 cursor-grab" />
+                      <div className="w-5 h-5 rounded bg-accent/10 flex items-center justify-center shrink-0">
+                        <Icon className="w-3 h-3 text-accent" />
+                      </div>
+                      <span className="text-xs text-foreground flex-1 truncate">{el.label}</span>
+                      <div className="flex items-center gap-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => moveElement(index, "up")} disabled={index === 0} className="w-5 h-5 flex items-center justify-center rounded hover:bg-secondary disabled:opacity-25">
+                          <ChevronUp className="w-3 h-3 text-muted-foreground" />
+                        </button>
+                        <button onClick={() => moveElement(index, "down")} disabled={index === elements.length - 1} className="w-5 h-5 flex items-center justify-center rounded hover:bg-secondary disabled:opacity-25">
+                          <ChevronDown className="w-3 h-3 text-muted-foreground" />
+                        </button>
+                        <button onClick={() => removeElement(el.id)} className="w-5 h-5 flex items-center justify-center rounded hover:bg-destructive/10">
+                          <Trash2 className="w-3 h-3 text-destructive" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          {/* Element library */}
+          {ELEMENT_LIBRARY.map((cat) => (
+            <div key={cat.category} className="px-4 pt-3 pb-1">
+              <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">{cat.category}</p>
+              <div className="space-y-1">
+                {cat.elements.map((el) => {
+                  const Icon = el.icon;
+                  const isAdded = elements.some((e) => e.type === el.type);
+                  return (
+                    <div
+                      key={el.type}
+                      draggable={!isAdded}
+                      onDragStart={() => handleDragStart(el)}
+                      onClick={() => { if (!isAdded) addElement(el); }}
+                      className={cn(
+                        "flex items-center gap-2.5 px-2.5 py-2 rounded-lg border transition-all duration-150 select-none",
+                        isAdded
+                          ? "border-accent/20 bg-accent/5 cursor-default"
+                          : "border-border bg-background hover:border-accent/50 hover:bg-accent/5 cursor-pointer hover:shadow-sm",
+                      )}
+                    >
+                      <div className={cn("w-6 h-6 rounded-md flex items-center justify-center shrink-0", isAdded ? "bg-accent/10" : "bg-secondary")}>
+                        <Icon className={cn("w-3.5 h-3.5", isAdded ? "text-accent" : "text-muted-foreground")} />
+                      </div>
+                      <span className={cn("text-xs font-medium flex-1 leading-tight", isAdded ? "text-accent" : "text-foreground")}>{el.label}</span>
+                      {isAdded && <Check className="w-3 h-3 text-accent shrink-0" />}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+          <div className="h-3" />
+        </div>
+      )}
+
+      {/* ── DESIGN TAB ── */}
+      {rightTab === "design" && (
+        <div className="flex-1 overflow-y-auto">
+          <div className="px-4 py-3 text-xs text-muted-foreground border-b border-border">
+            Define styling for all elements within this component.
+          </div>
+
+          {/* Component name */}
+          <div className="px-4 py-3 border-b border-border">
+            <Label htmlFor="comp-name" className="text-[10px] font-medium text-muted-foreground mb-1.5 block uppercase tracking-wider">Name</Label>
+            <Input
+              id="comp-name"
+              value={config.name}
+              onChange={(e) => setConfig({ ...config, name: e.target.value })}
+              className="h-8 text-xs"
+            />
+          </div>
 
       {/* General */}
       <DesignSection
@@ -1640,6 +1696,8 @@ npm install @meap/react @meap/core wagmi viem
           </Select>
         </DesignRow>
       </DesignSection>
+        </div>
+      )}
     </div>
   );
 
@@ -1710,95 +1768,31 @@ npm install @meap/react @meap/core wagmi viem
         {activeView === "component" && (
           <div className="flex flex-1 min-w-0">
 
-            {/* ── LEFT: Element library — custom portal only ── */}
-            {isCustom && activeViewState === "portal" && (
-              <div className="w-52 border-r border-border bg-card shrink-0 flex flex-col overflow-hidden">
-                <div className="px-3 py-3 border-b border-border shrink-0">
-                  <p className="text-xs font-semibold text-foreground">Elements</p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">Drag or click to add</p>
-                </div>
-                <div className="flex-1 overflow-y-auto">
-                  {ELEMENT_LIBRARY.map((cat) => (
-                    <div key={cat.category} className="px-3 pt-3 pb-1">
-                      <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">{cat.category}</p>
-                      <div className="space-y-1">
-                        {cat.elements.map((el) => {
-                          const Icon = el.icon;
-                          const isAdded = elements.some((e) => e.type === el.type);
-                          return (
-                            <div
-                              key={el.type}
-                              draggable={!isAdded}
-                              onDragStart={() => handleDragStart(el)}
-                              onClick={() => { if (!isAdded) addElement(el); }}
-                              className={cn(
-                                "flex items-center gap-2.5 px-2.5 py-2.5 rounded-lg border transition-all duration-150 select-none",
-                                isAdded
-                                  ? "border-accent/20 bg-accent/5 cursor-default"
-                                  : "border-border bg-background hover:border-accent/50 hover:bg-accent/5 cursor-grab active:cursor-grabbing hover:shadow-sm",
-                              )}
-                            >
-                              <div className={cn("w-7 h-7 rounded-lg flex items-center justify-center shrink-0", isAdded ? "bg-accent/10" : "bg-secondary")}>
-                                <Icon className={cn("w-3.5 h-3.5", isAdded ? "text-accent" : "text-muted-foreground")} />
-                              </div>
-                              <span className={cn("text-xs font-medium flex-1 leading-tight", isAdded ? "text-accent" : "text-foreground")}>{el.label}</span>
-                              {isAdded
-                                ? <Check className="w-3 h-3 text-accent shrink-0" />
-                                : <GripVertical className="w-3 h-3 text-muted-foreground/40 shrink-0" />
-                              }
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                  <div className="h-3" />
-                </div>
-              </div>
-            )}
-
             {/* ── CENTER: Viewport ── */}
             <div className="flex-1 flex flex-col min-w-0 bg-secondary/5">
 
-              {/* Tab bar — ONLY for custom components (simulate different states) */}
-              {isCustom && (
-                <div className="flex items-center border-b border-border px-4 shrink-0 bg-background/80 backdrop-blur-sm">
-                  {componentViews.map((vs) => (
-                    <button
-                      key={vs.id}
-                      onClick={() => setActiveViewState(vs.id)}
-                      className={cn(
-                        "px-4 py-3 text-xs font-medium border-b-2 -mb-px transition-colors whitespace-nowrap",
-                        activeViewState === vs.id
-                          ? "border-accent text-accent"
-                          : "border-transparent text-muted-foreground hover:text-foreground",
-                      )}
-                    >
-                      {vs.label}
-                    </button>
-                  ))}
-                  <div className="ml-auto flex items-center gap-2 pr-2">
-                    <Badge variant="secondary" className="text-[9px] h-5 bg-accent/10 text-accent border-0 font-medium">Live Preview</Badge>
-                  </div>
-                </div>
-              )}
-
-              {/* SDK component — simple header bar (no tabs) */}
-              {!isCustom && (
-                <div className="flex items-center justify-between px-6 py-2.5 border-b border-border bg-background/80 backdrop-blur-sm shrink-0">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-2 h-2 rounded-full bg-accent/70" />
-                    <span className="text-xs font-medium text-foreground">{component.name}</span>
-                    <span className="text-[10px] text-muted-foreground px-1.5 py-0.5 rounded bg-secondary">SDK Component</span>
-                  </div>
-                  <Badge variant="secondary" className="text-[9px] h-5 bg-accent/10 text-accent border-0 font-medium">Live Preview</Badge>
-                </div>
-              )}
+              {/* View-state tab bar — shown for ALL component types */}
+              <div className="flex items-center border-b border-border px-4 shrink-0 bg-background/80 backdrop-blur-sm">
+                {componentViews.map((vs) => (
+                  <button
+                    key={vs.id}
+                    onClick={() => setActiveViewState(vs.id)}
+                    className={cn(
+                      "px-4 py-3 text-xs font-medium border-b-2 -mb-px transition-colors whitespace-nowrap",
+                      activeViewState === vs.id
+                        ? "border-accent text-accent"
+                        : "border-transparent text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    {vs.label}
+                  </button>
+                ))}
+              </div>
 
               {/* Viewport content */}
               <div className="flex-1 overflow-y-auto p-6">
                 {isCustom && activeViewState === "portal" ? (
-                  /* ── Custom portal: drag-and-drop canvas ── */
+                  /* ── Custom portal: rendered element preview (like SchematicHQ) ── */
                   elements.length === 0 ? (
                     /* Empty state */
                     <div
@@ -1814,33 +1808,23 @@ npm install @meap/react @meap/core wagmi viem
                       </div>
                       <p className="text-sm font-semibold text-foreground mb-1">{draggedElement ? "Drop to add" : "Start building"}</p>
                       <p className="text-xs text-muted-foreground mb-5 text-center max-w-[220px]">
-                        {draggedElement ? `Adding "${draggedElement.label}"` : "Drag elements from the left panel, or click them to add"}
+                        {draggedElement ? `Adding "${draggedElement.label}"` : "Add elements from the Elements tab on the right"}
                       </p>
                       {!draggedElement && (
-                        <div className="flex flex-wrap gap-2 justify-center">
-                          {["plan-manager", "metered-features", "next-bill-due"].map((type) => {
-                            const el = ALL_ELEMENTS.find((e) => e.type === type);
-                            if (!el) return null;
-                            const Icon = el.icon;
-                            return (
-                              <button key={type} onClick={() => addElement(el)} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-card hover:bg-secondary border border-border text-xs font-medium text-foreground transition-colors shadow-sm">
-                                <Icon className="w-3 h-3 text-accent" />
-                                {el.label}
-                              </button>
-                            );
-                          })}
-                        </div>
+                        <Button variant="outline" size="sm" onClick={() => setRightTab("elements")} className="gap-2 text-xs">
+                          <Plus className="w-3.5 h-3.5" /> Add Elements
+                        </Button>
                       )}
                     </div>
                   ) : (
-                    /* Canvas with elements */
+                    /* Rendered elements in grid — no card headers, just the preview content directly */
                     <div
                       onDrop={handleDrop}
                       onDragOver={handleDragOver}
                       className={cn("min-h-[480px] transition-all duration-150", draggedElement && "ring-2 ring-inset ring-accent/30 rounded-2xl")}
                     >
                       <div
-                        className="grid gap-4"
+                        className="grid gap-5"
                         style={{
                           gridTemplateColumns:
                             config.styling.sections === "merged"
@@ -1848,65 +1832,29 @@ npm install @meap/react @meap/core wagmi viem
                               : `repeat(${Math.min(config.styling.columns, elements.length)}, 1fr)`,
                         }}
                       >
-                        {elements.map((element, index) => {
-                          const Icon = element.icon;
-                          return (
-                            <div
-                              key={element.id}
-                              className={cn(
-                                "group bg-card rounded-xl border overflow-hidden transition-all duration-150 cursor-default",
-                                selectedElement === element.id
-                                  ? "border-accent shadow-sm ring-1 ring-accent/20"
-                                  : "border-border hover:border-accent/30 hover:shadow-sm",
-                              )}
-                              style={{
-                                borderRadius: config.styling.cardStyle.borderRadius || undefined,
-                                backgroundColor: config.styling.cardStyle.backgroundColor || undefined,
-                                boxShadow: config.styling.cardStyle.cardShadow ? "0 2px 8px 0 rgb(0 0 0/0.06)" : undefined,
-                                fontFamily: config.styling.typography.fontFamily || undefined,
-                              }}
-                              onClick={() => setSelectedElement(element.id === selectedElement ? null : element.id)}
-                            >
-                              {/* Element card header */}
-                              <div className="flex items-center gap-2 px-3 py-2.5 border-b border-border bg-secondary/30">
-                                <GripVertical className="w-3.5 h-3.5 text-muted-foreground/30 cursor-grab shrink-0" />
-                                <div className="w-5 h-5 rounded-md bg-accent/10 flex items-center justify-center shrink-0">
-                                  <Icon className="w-3 h-3 text-accent" />
-                                </div>
-                                <span className="text-xs font-medium text-foreground flex-1">{element.label}</span>
-                                {/* Controls — always visible on hover */}
-                                <div className="flex items-center gap-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <button
-                                    onClick={(e) => { e.stopPropagation(); moveElement(index, "up"); }}
-                                    disabled={index === 0}
-                                    className="w-6 h-6 flex items-center justify-center rounded hover:bg-secondary disabled:opacity-25 transition-colors"
-                                  >
-                                    <ChevronUp className="w-3 h-3 text-muted-foreground" />
-                                  </button>
-                                  <button
-                                    onClick={(e) => { e.stopPropagation(); moveElement(index, "down"); }}
-                                    disabled={index === elements.length - 1}
-                                    className="w-6 h-6 flex items-center justify-center rounded hover:bg-secondary disabled:opacity-25 transition-colors"
-                                  >
-                                    <ChevronDown className="w-3 h-3 text-muted-foreground" />
-                                  </button>
-                                  <button
-                                    onClick={(e) => { e.stopPropagation(); removeElement(element.id); }}
-                                    className="w-6 h-6 flex items-center justify-center rounded hover:bg-destructive/10 transition-colors ml-0.5"
-                                  >
-                                    <Trash2 className="w-3 h-3 text-destructive" />
-                                  </button>
-                                </div>
-                              </div>
-                              {/* Element content */}
-                              <div className="p-4">
-                                <ElementPreview type={element.type} primaryColor={config.styling.primaryColor} />
-                              </div>
-                            </div>
-                          );
-                        })}
+                        {elements.map((element) => (
+                          <div
+                            key={element.id}
+                            className={cn(
+                              "bg-card rounded-xl border overflow-hidden transition-all duration-150",
+                              selectedElement === element.id
+                                ? "border-accent ring-1 ring-accent/20"
+                                : "border-border",
+                            )}
+                            style={{
+                              borderRadius: config.styling.cardStyle.borderRadius || "10px",
+                              backgroundColor: config.styling.cardStyle.backgroundColor || undefined,
+                              boxShadow: config.styling.cardStyle.cardShadow ? "0 2px 8px 0 rgb(0 0 0/0.06)" : undefined,
+                              fontFamily: config.styling.typography.fontFamily || undefined,
+                              padding: config.styling.cardStyle.cardPadding || "24px",
+                            }}
+                            onClick={() => setSelectedElement(element.id === selectedElement ? null : element.id)}
+                          >
+                            <ElementPreview type={element.type} primaryColor={config.styling.primaryColor} />
+                          </div>
+                        ))}
                       </div>
-                      {/* Drop zone at bottom */}
+                      {/* Drop zone */}
                       {draggedElement && (
                         <div className="mt-4 h-14 rounded-xl border-2 border-dashed border-accent/50 bg-accent/5 flex items-center justify-center gap-2">
                           <Plus className="w-4 h-4 text-accent" />
@@ -1916,21 +1864,21 @@ npm install @meap/react @meap/core wagmi viem
                     </div>
                   )
                 ) : (
-                  /* ── SDK components: primary view only. Custom non-portal tabs: simulation ── */
+                  /* ── Checkout / Payment Method / Unsubscribe / Disabled views ── */
                   <div className="max-w-3xl mx-auto">
                     <SdkViewportPreview
                       componentId={isCustom ? "customer-portal" : component.id}
-                      viewState={isCustom ? activeViewState : (SDK_PRIMARY_VIEW[component.id] ?? "plans")}
+                      viewState={activeViewState}
                       styling={config.styling}
-                      onViewChange={isCustom ? (vs) => setActiveViewState(vs) : undefined}
+                      onViewChange={(vs) => setActiveViewState(vs)}
                     />
                   </div>
                 )}
               </div>
             </div>
 
-            {/* ── RIGHT: Design panel ── */}
-            {designPanel}
+            {/* ── RIGHT: Elements / Design panel ── */}
+            {rightPanel}
           </div>
         )}
 
