@@ -158,6 +158,15 @@ const ALL_ELEMENTS = ELEMENT_LIBRARY.flatMap((cat) => cat.elements);
 // SDK View-state map
 // ============================================================
 
+// Primary view state shown for SDK components (no tab navigation for prebuilt)
+const SDK_PRIMARY_VIEW: Record<string, string> = {
+  "customer-portal": "portal",
+  "checkout": "plans",
+  "pricing-table": "plans",
+  "plan-manager": "active",
+  "checkout-modal": "plans",
+};
+
 const COMPONENT_VIEWS: Record<string, { id: string; label: string }[]> = {
   "customer-portal": [
     { id: "portal", label: "Portal" },
@@ -222,56 +231,42 @@ const TEMPLATES = [
 // Realistic element preview renderers
 // ============================================================
 
-function ElementPreview({ type, realData }: { type: string; realData?: RealData }) {
+function ElementPreview({ type, primaryColor }: { type: string; primaryColor?: string; realData?: RealData }) {
+  const accent = primaryColor && primaryColor !== "#000000" ? primaryColor : undefined;
   switch (type) {
     case "pricing-table": {
-      const defaultPlans = [
+      const demoPlans = [
         { name: "Starter", price: 9, billingInterval: "monthly" },
         { name: "Pro", price: 29, billingInterval: "monthly" },
         { name: "Enterprise", price: 99, billingInterval: "monthly" },
       ];
-      const plans = realData?.plans?.length
-        ? realData.plans.slice(0, 3)
-        : defaultPlans;
       return (
         <div className="space-y-2">
-          <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${Math.min(plans.length, 3)}, 1fr)` }}>
-            {plans.map((plan, i) => (
+          <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${demoPlans.length}, 1fr)` }}>
+            {demoPlans.map((plan, i) => (
               <div
                 key={i}
-                className={cn(
-                  "rounded-lg border p-3 space-y-2",
-                  i === 1
-                    ? "border-accent bg-accent/5"
-                    : "border-border bg-secondary/20",
-                )}
+                className="rounded-lg border p-3 space-y-2"
+                style={{
+                  borderColor: i === 1 ? (accent ?? undefined) : undefined,
+                  backgroundColor: i === 1 && accent ? `${accent}08` : undefined,
+                }}
               >
-                <p className="text-[10px] font-semibold text-foreground truncate">
-                  {plan.name}
-                </p>
+                <p className="text-[10px] font-semibold text-foreground truncate">{plan.name}</p>
                 <p className="text-sm font-bold text-foreground">
-                  ${plan.price}
-                  <span className="text-[9px] font-normal text-muted-foreground">
-                    /{plan.billingInterval === "yearly" ? "yr" : "mo"}
-                  </span>
+                  ${plan.price}<span className="text-[9px] font-normal text-muted-foreground">/{plan.billingInterval === "yearly" ? "yr" : "mo"}</span>
                 </p>
                 <div className="space-y-1">
                   {[1, 2, 3].map((j) => (
                     <div key={j} className="flex items-center gap-1">
-                      <div className="w-2 h-2 rounded-full bg-accent/30 flex items-center justify-center">
-                        <Check className="w-1.5 h-1.5 text-accent" />
-                      </div>
+                      <div className="w-2 h-2 rounded-full flex items-center justify-center" style={{ backgroundColor: accent ? `${accent}30` : undefined }} />
                       <div className="h-1 flex-1 rounded bg-foreground/8" />
                     </div>
                   ))}
                 </div>
                 <div
-                  className={cn(
-                    "h-5 rounded text-[8px] font-medium flex items-center justify-center",
-                    i === 1
-                      ? "bg-accent text-accent-foreground"
-                      : "bg-secondary text-muted-foreground",
-                  )}
+                  className={cn("h-5 rounded text-[8px] font-medium flex items-center justify-center", i !== 1 && "bg-secondary text-muted-foreground")}
+                  style={i === 1 ? { backgroundColor: accent ?? undefined, color: "#fff" } : undefined}
                 >
                   {i === 1 ? "Current Plan" : "Select"}
                 </div>
@@ -283,75 +278,51 @@ function ElementPreview({ type, realData }: { type: string; realData?: RealData 
     }
 
     case "plan-manager": {
-      const activePlan = realData?.plans?.[1] ?? realData?.plans?.[0];
-      const planName = activePlan?.name ?? "Pro Plan";
-      const planPrice = activePlan ? `$${activePlan.price}/${activePlan.billingInterval === "yearly" ? "yr" : "mo"}` : "$29/month";
       return (
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-[10px] font-semibold text-foreground">
-                {planName}
-              </p>
-              <p className="text-[9px] text-muted-foreground">{planPrice}</p>
+              <p className="text-[10px] font-semibold text-foreground">Pro Plan</p>
+              <p className="text-[9px] text-muted-foreground">$29/month</p>
             </div>
-            <Badge
-              variant="secondary"
-              className="text-[8px] h-4 bg-accent/10 text-accent border-accent/20"
-            >
+            <div className="text-[8px] font-semibold px-1.5 py-0.5 rounded-full" style={{ backgroundColor: accent ? `${accent}15` : undefined, color: accent ?? undefined }}>
               Active
-            </Badge>
+            </div>
           </div>
           <div className="h-px bg-border" />
           <div className="space-y-1">
-            {["10,000 API calls", "5 team members", "Priority support"].map(
-              (f, i) => (
-                <div key={i} className="flex items-center gap-1.5">
-                  <Check className="w-2.5 h-2.5 text-accent" />
-                  <span className="text-[9px] text-muted-foreground">{f}</span>
-                </div>
-              ),
-            )}
+            {["10,000 API calls", "5 team members", "Priority support"].map((f, i) => (
+              <div key={i} className="flex items-center gap-1.5">
+                <Check className="w-2.5 h-2.5 shrink-0" style={{ color: accent ?? undefined }} />
+                <span className="text-[9px] text-muted-foreground">{f}</span>
+              </div>
+            ))}
           </div>
           <div className="flex gap-1.5">
-            <div className="flex-1 h-5 rounded bg-secondary text-[8px] font-medium flex items-center justify-center text-muted-foreground">
-              Downgrade
-            </div>
-            <div className="flex-1 h-5 rounded bg-accent text-[8px] font-medium flex items-center justify-center text-accent-foreground">
-              Upgrade
-            </div>
+            <div className="flex-1 h-5 rounded bg-secondary text-[8px] font-medium flex items-center justify-center text-muted-foreground">Downgrade</div>
+            <div className="flex-1 h-5 rounded text-[8px] font-medium flex items-center justify-center text-white" style={{ backgroundColor: accent ?? undefined }}>Upgrade</div>
           </div>
         </div>
       );
     }
 
     case "included-features": {
-      const defaultFlags = [
+      const featureList = [
         { name: "API Access", defaultValue: true },
         { name: "Webhooks", defaultValue: true },
         { name: "Custom Domain", defaultValue: false },
         { name: "SSO", defaultValue: false },
       ];
-      const featureList = realData?.flags?.length
-        ? realData.flags.slice(0, 4).map((f) => ({ name: f.name, defaultValue: f.defaultValue ?? false }))
-        : defaultFlags;
       return (
         <div className="space-y-1.5">
           {featureList.map((f, i) => (
             <div key={i} className="flex items-center justify-between">
               <span className="text-[9px] text-foreground truncate pr-2">{f.name}</span>
               <div
-                className={cn(
-                  "w-5 h-3 rounded-full relative shrink-0",
-                  f.defaultValue ? "bg-accent" : "bg-secondary",
-                )}
+                className={cn("w-5 h-3 rounded-full relative shrink-0", !f.defaultValue && "bg-secondary")}
+                style={f.defaultValue ? { backgroundColor: accent ?? undefined } : undefined}
               >
-                <div
-                  className={cn(
-                    "absolute top-0.5 w-2 h-2 rounded-full bg-white",
-                    f.defaultValue ? "right-0.5" : "left-0.5",
-                  )}
-                />
+                <div className={cn("absolute top-0.5 w-2 h-2 rounded-full bg-white", f.defaultValue ? "right-0.5" : "left-0.5")} />
               </div>
             </div>
           ))}
@@ -376,11 +347,8 @@ function ElementPreview({ type, realData }: { type: string; realData?: RealData 
               </div>
               <div className="h-1.5 rounded-full bg-secondary">
                 <div
-                  className={cn(
-                    "h-full rounded-full",
-                    m.used / m.limit > 0.8 ? "bg-warning" : "bg-accent",
-                  )}
-                  style={{ width: `${(m.used / m.limit) * 100}%` }}
+                  className={cn("h-full rounded-full", m.used / m.limit > 0.8 && "bg-warning")}
+                  style={{ width: `${(m.used / m.limit) * 100}%`, backgroundColor: m.used / m.limit > 0.8 ? undefined : (accent ?? undefined) }}
                 />
               </div>
             </div>
@@ -431,7 +399,7 @@ function ElementPreview({ type, realData }: { type: string; realData?: RealData 
             <span className="text-[8px] text-muted-foreground">USDC</span>
           </div>
           <div className="h-1.5 rounded-full bg-secondary">
-            <div className="h-full rounded-full bg-accent w-3/5" />
+            <div className="h-full rounded-full w-3/5" style={{ backgroundColor: accent ?? undefined }} />
           </div>
           <p className="text-[8px] text-muted-foreground">
             Billing period: Mar 1 – Mar 31
@@ -499,11 +467,10 @@ function ElementPreview({ type, realData }: { type: string; realData?: RealData 
       );
 
     case "checkout-modal": {
-      const selectedPlan = realData?.plans?.[1] ?? realData?.plans?.[0];
-      const planName = selectedPlan?.name ?? "Pro Plan";
-      const planPrice = selectedPlan ? `$${selectedPlan.price}` : "$29";
-      const billingLabel = selectedPlan?.billingInterval === "yearly" ? "/yr" : "/mo";
-      const token = selectedPlan?.acceptedToken ?? "USDC";
+      const planName = "Pro Plan";
+      const planPrice = "$29";
+      const billingLabel = "/mo";
+      const token = "USDC";
       const steps = ["Wallet", "Account", "Autopay", "Approve", "Subscribe"];
       const activeStep = 3; // show "Approve" state
       return (
@@ -800,14 +767,20 @@ function SdkViewportPreview({
     setCheckoutStep(0);
     setSimCancelled(false);
   }, [viewState, componentId]);
-  const defaultPlans = [
+  // Always use clean demo data — never show raw blockchain data in preview
+  const plans: RealPlan[] = [
     { id: "s", name: "Starter", price: 9, billingInterval: "monthly", acceptedToken: "USDC" },
     { id: "p", name: "Pro", price: 29, billingInterval: "monthly", acceptedToken: "USDC" },
     { id: "e", name: "Enterprise", price: 99, billingInterval: "monthly", acceptedToken: "USDC" },
-  ] as RealPlan[];
-  const plans = realData?.plans?.length ? realData.plans.slice(0, 3) : defaultPlans;
+  ];
+  const demoFlags = [
+    { featureKey: "api", name: "API Access", defaultValue: true },
+    { featureKey: "hooks", name: "Webhooks", defaultValue: true },
+    { featureKey: "domain", name: "Custom Domain", defaultValue: false },
+    { featureKey: "sso", name: "SSO", defaultValue: false },
+  ];
   const activePlan = plans[selectedPlanIdx] ?? plans[0];
-  const token = activePlan?.acceptedToken ?? "USDC";
+  const token = "USDC";
 
   const primary = styling.primaryColor && styling.primaryColor !== "#000000" ? styling.primaryColor : "#6366f1";
   const radius = styling.cardStyle.borderRadius || "8px";
@@ -851,12 +824,7 @@ function SdkViewportPreview({
   switch (key) {
     // ── customer-portal: Portal ───────────────────────────────
     case "customer-portal:portal": {
-      const portalFlags = realData?.flags?.slice(0, 4) ?? [
-        { featureKey: "api", name: "API Access", defaultValue: true },
-        { featureKey: "hooks", name: "Webhooks", defaultValue: true },
-        { featureKey: "domain", name: "Custom Domain", defaultValue: false },
-        { featureKey: "sso", name: "SSO", defaultValue: false },
-      ];
+      const portalFlags = demoFlags;
       return (
         <div style={{ fontFamily: font }} className="space-y-4 max-w-2xl mx-auto">
           {/* Active plan card */}
@@ -1089,7 +1057,7 @@ function SdkViewportPreview({
             <p className="text-sm font-semibold text-foreground mb-1">Cancel your subscription?</p>
             <p className="text-xs text-muted-foreground mb-2 max-w-xs mx-auto">You&apos;re currently on the <strong>{activePlan.name}</strong> plan. You&apos;ll lose access to these features:</p>
             <div className="text-left mb-5 space-y-1 px-2">
-              {(realData?.flags?.slice(0, 3) ?? [{ name: "API Access" }, { name: "Webhooks" }, { name: "Priority Support" }]).map((f, i) => (
+              {demoFlags.slice(0, 3).map((f, i) => (
                 <div key={i} className="flex items-center gap-2">
                   <X className="w-3 h-3 text-destructive shrink-0" />
                   <span className="text-xs text-muted-foreground">{f.name}</span>
@@ -1111,7 +1079,7 @@ function SdkViewportPreview({
     // ── Disabled / locked ──────────────────────────────────────
     case "customer-portal:disabled":
     case "pricing-table:disabled": {
-      const lockedFeatures = realData?.flags?.slice(0, 3) ?? [{ name: "Custom Domain" }, { name: "SSO" }, { name: "Priority Support" }];
+      const lockedFeatures = [{ name: "Custom Domain" }, { name: "SSO" }, { name: "Priority Support" }];
       return (
         <div style={{ fontFamily: font }} className="max-w-md mx-auto">
           <div style={card}>
@@ -1161,7 +1129,7 @@ function SdkViewportPreview({
                   <p className="text-2xl font-bold text-foreground mb-0.5">${plan.price}<span className="text-sm font-normal text-muted-foreground">/{plan.billingInterval === "yearly" ? "yr" : "mo"}</span></p>
                   <p className="text-xs text-muted-foreground mb-4">{plan.acceptedToken ?? "USDC"}</p>
                   <div className="space-y-2 mb-5">
-                    {(realData?.flags?.slice(0, 3) ?? [{ featureKey: "f1", name: "API Access", defaultValue: true }, { featureKey: "f2", name: "Webhooks", defaultValue: i >= 1 }, { featureKey: "f3", name: "SSO", defaultValue: i >= 2 }]).map((f, j) => (
+                    {[{ featureKey: "f1", name: "API Access", defaultValue: true }, { featureKey: "f2", name: "Webhooks", defaultValue: i >= 1 }, { featureKey: "f3", name: "SSO", defaultValue: i >= 2 }].map((f, j) => (
                       <div key={j} className="flex items-center gap-2">
                         <div className="w-4 h-4 rounded-full flex items-center justify-center" style={{ backgroundColor: f.defaultValue ? `${primary}20` : "hsl(var(--secondary))" }}>
                           {f.defaultValue && <Check className="w-2.5 h-2.5" style={{ color: primary }} />}
@@ -1202,7 +1170,7 @@ function SdkViewportPreview({
 
     // ── plan-manager: Active ───────────────────────────────────
     case "plan-manager:active": {
-      const planFeatures = realData?.flags?.slice(0, 3) ?? [{ featureKey: "f1", name: "API Access", defaultValue: true }, { featureKey: "f2", name: "Webhooks", defaultValue: true }, { featureKey: "f3", name: "Priority Support", defaultValue: true }];
+      const planFeatures = [{ featureKey: "f1", name: "API Access", defaultValue: true }, { featureKey: "f2", name: "Webhooks", defaultValue: true }, { featureKey: "f3", name: "Priority Support", defaultValue: true }];
       return (
         <div style={{ fontFamily: font }} className="max-w-md mx-auto">
           <div style={card}>
@@ -1791,30 +1759,43 @@ npm install @meap/react @meap/core wagmi viem
 
             {/* ── CENTER: Viewport ── */}
             <div className="flex-1 flex flex-col min-w-0 bg-secondary/5">
-              {/* View-state tab bar */}
-              <div className="flex items-center border-b border-border px-4 shrink-0 bg-background/80 backdrop-blur-sm">
-                {componentViews.map((vs) => (
-                  <button
-                    key={vs.id}
-                    onClick={() => setActiveViewState(vs.id)}
-                    className={cn(
-                      "px-4 py-3 text-xs font-medium border-b-2 -mb-px transition-colors whitespace-nowrap",
-                      activeViewState === vs.id
-                        ? "border-accent text-accent"
-                        : "border-transparent text-muted-foreground hover:text-foreground",
-                    )}
-                  >
-                    {vs.label}
-                  </button>
-                ))}
-                <div className="ml-auto flex items-center gap-2 pr-2">
-                  <Badge variant="secondary" className="text-[9px] h-5 bg-accent/10 text-accent border-0 font-medium">
-                    Live Preview
-                  </Badge>
-                </div>
-              </div>
 
-              {/* Viewport frame */}
+              {/* Tab bar — ONLY for custom components (simulate different states) */}
+              {isCustom && (
+                <div className="flex items-center border-b border-border px-4 shrink-0 bg-background/80 backdrop-blur-sm">
+                  {componentViews.map((vs) => (
+                    <button
+                      key={vs.id}
+                      onClick={() => setActiveViewState(vs.id)}
+                      className={cn(
+                        "px-4 py-3 text-xs font-medium border-b-2 -mb-px transition-colors whitespace-nowrap",
+                        activeViewState === vs.id
+                          ? "border-accent text-accent"
+                          : "border-transparent text-muted-foreground hover:text-foreground",
+                      )}
+                    >
+                      {vs.label}
+                    </button>
+                  ))}
+                  <div className="ml-auto flex items-center gap-2 pr-2">
+                    <Badge variant="secondary" className="text-[9px] h-5 bg-accent/10 text-accent border-0 font-medium">Live Preview</Badge>
+                  </div>
+                </div>
+              )}
+
+              {/* SDK component — simple header bar (no tabs) */}
+              {!isCustom && (
+                <div className="flex items-center justify-between px-6 py-2.5 border-b border-border bg-background/80 backdrop-blur-sm shrink-0">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-2 h-2 rounded-full bg-accent/70" />
+                    <span className="text-xs font-medium text-foreground">{component.name}</span>
+                    <span className="text-[10px] text-muted-foreground px-1.5 py-0.5 rounded bg-secondary">SDK Component</span>
+                  </div>
+                  <Badge variant="secondary" className="text-[9px] h-5 bg-accent/10 text-accent border-0 font-medium">Live Preview</Badge>
+                </div>
+              )}
+
+              {/* Viewport content */}
               <div className="flex-1 overflow-y-auto p-6">
                 {isCustom && activeViewState === "portal" ? (
                   /* ── Custom portal: drag-and-drop canvas ── */
@@ -1919,7 +1900,7 @@ npm install @meap/react @meap/core wagmi viem
                               </div>
                               {/* Element content */}
                               <div className="p-4">
-                                <ElementPreview type={element.type} realData={realData} />
+                                <ElementPreview type={element.type} primaryColor={config.styling.primaryColor} />
                               </div>
                             </div>
                           );
@@ -1935,14 +1916,13 @@ npm install @meap/react @meap/core wagmi viem
                     </div>
                   )
                 ) : (
-                  /* ── SDK components + non-Portal custom tabs ── */
+                  /* ── SDK components: primary view only. Custom non-portal tabs: simulation ── */
                   <div className="max-w-3xl mx-auto">
                     <SdkViewportPreview
                       componentId={isCustom ? "customer-portal" : component.id}
-                      viewState={activeViewState}
+                      viewState={isCustom ? activeViewState : (SDK_PRIMARY_VIEW[component.id] ?? "plans")}
                       styling={config.styling}
-                      realData={realData}
-                      onViewChange={(vs) => setActiveViewState(vs)}
+                      onViewChange={isCustom ? (vs) => setActiveViewState(vs) : undefined}
                     />
                   </div>
                 )}
