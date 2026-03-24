@@ -15,7 +15,7 @@ const createSchema = z.object({
   name: z.string().min(1),
   tier: z.string().min(1),
   description: z.string().optional(),
-  price: z.coerce.number().positive(),
+  price: z.coerce.number().nonnegative(),
   billingInterval: z.coerce.number().int().positive(),
   acceptedToken: z.string().min(1),
   metadata: z.record(z.unknown()).optional(),
@@ -97,6 +97,11 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Free plans (price = 0) cannot be registered on the PlanFactory contract
+  // (it requires price > 0). Mark them NOT_APPLICABLE so the UI knows not to
+  // show the "Register on-chain" action.
+  const isFree = data.price === 0;
+
   const plan = await db.catalogPlan.create({
     data: {
       teamId: auth.team.teamId,
@@ -111,6 +116,7 @@ export async function POST(request: NextRequest) {
       status: "DRAFT",
       active: true,
       version: 1,
+      chainSyncStatus: isFree ? "NOT_APPLICABLE" : "PENDING",
     },
   });
 
@@ -161,6 +167,14 @@ export async function PUT(request: NextRequest) {
   }
 
   const nextVersion = existing.version + 1;
+
+  // If price changes, update chainSyncStatus accordingly (only when not yet on-chain)
+  const newPrice = parsed.data.price ?? parseFloat(existing.price.toString());
+  const chainSyncUpdate =
+    !existing.onChainPlanId && parsed.data.price !== undefined
+      ? { chainSyncStatus: newPrice === 0 ? ("NOT_APPLICABLE" as const) : ("PENDING" as const) }
+      : {};
+
   const updated = await db.catalogPlan.update({
     where: { id: existing.id },
     data: {
@@ -185,6 +199,7 @@ export async function PUT(request: NextRequest) {
       ...(parsed.data.active !== undefined && { active: parsed.data.active }),
       version: nextVersion,
       ...(parsed.data.status === "PUBLISHED" && { publishedAt: new Date() }),
+      ...chainSyncUpdate,
     },
   });
 

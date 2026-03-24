@@ -12,7 +12,7 @@ const createSchema = z.object({
     .regex(/^[a-z0-9_\-]+$/i),
   description: z.string().optional(),
   billingType: z.enum(["ONE_TIME", "RECURRING"]).default("ONE_TIME"),
-  price: z.coerce.number().positive(),
+  price: z.coerce.number().nonnegative(),
   acceptedToken: z.string().min(1),
   environmentMode: z.enum(["DEVELOPMENT", "PRODUCTION"]).default("DEVELOPMENT"),
 });

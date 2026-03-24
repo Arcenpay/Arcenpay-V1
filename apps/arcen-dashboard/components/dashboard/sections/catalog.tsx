@@ -38,6 +38,15 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
   Plus,
   RefreshCw,
   MoreHorizontal,
@@ -54,9 +63,12 @@ import {
   X,
   Loader2,
   ChevronRight,
+  ChevronDown,
   Trash2,
   Search,
   List,
+  Edit2,
+  Edit,
 } from "lucide-react";
 import { useEnvironment } from "@/contexts/environment-context";
 import { useAccount, useSignTypedData, useChainId } from "wagmi";
@@ -145,13 +157,21 @@ interface RegisterOnChainResponse {
 
 // ─── Token Options ────────────────────────────────────────────────────────────
 
+const USDC_CHAIN_OPTIONS = getUsdcTokenOptions();
+
 const TOKEN_OPTIONS: { label: string; address: string }[] =
-  getUsdcTokenOptions().map((option) => ({
+  USDC_CHAIN_OPTIONS.map((option) => ({
     label: option.label,
     address: option.address,
   }));
 
 const DEFAULT_TOKEN = getUsdcAddress(11155111);
+
+const BILLING_INTERVALS: { label: string; days: number; sublabel: string }[] = [
+  { label: "Monthly", days: 30, sublabel: "Every 30 days" },
+  { label: "Quarterly", days: 90, sublabel: "Every 90 days" },
+  { label: "Annual", days: 365, sublabel: "Every 365 days" },
+];
 
 function tokenLabel(address: string): string {
   const match = TOKEN_OPTIONS.find(
@@ -288,51 +308,57 @@ function CreatePlanDialog({
   env: EnvMode;
   onCreated: () => void;
 }) {
+  const chainId = useChainId();
+  const connectedToken = getUsdcAddress(chainId);
+
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [status, setStatus] = useState<string>("");
+  const [planType, setPlanType] = useState<"free" | "paid">("paid");
+  const [billingIntervalDays, setBillingIntervalDays] = useState(30);
   const [form, setForm] = useState({
     name: "",
     tier: "",
     description: "",
     price: "",
-    billingInterval: "30",
-    acceptedToken: DEFAULT_TOKEN,
+    acceptedToken: connectedToken,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Auto-derive tier from name (lowercase slug)
+  const autoTier = form.name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
 
   function validate() {
     const e: Record<string, string> = {};
     if (!form.name.trim()) e.name = "Required";
-    if (!form.tier.trim()) e.tier = "Required";
-    const p = Number(form.price);
-    if (!form.price || isNaN(p) || p <= 0) e.price = "Must be positive";
-    const bi = Number(form.billingInterval);
-    if (!form.billingInterval || isNaN(bi) || bi <= 0 || !Number.isInteger(bi))
-      e.billingInterval = "Must be a positive integer (days)";
-    if (!form.acceptedToken.trim()) e.acceptedToken = "Required";
+    if (planType === "paid") {
+      const p = Number(form.price);
+      if (!form.price || isNaN(p) || p <= 0) e.price = "Must be a positive number";
+    }
     return e;
+  }
+
+  function resetForm() {
+    setPlanType("paid");
+    setBillingIntervalDays(30);
+    setForm({ name: "", tier: "", description: "", price: "", acceptedToken: connectedToken });
+    setErrors({});
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const errs = validate();
-    if (Object.keys(errs).length) {
-      setErrors(errs);
-      return;
-    }
+    if (Object.keys(errs).length) { setErrors(errs); return; }
     setLoading(true);
-    setStatus("Creating plan…");
     try {
       const res = await fetch("/api/catalog/plans", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: form.name,
-          tier: form.tier,
+          tier: form.tier.trim() || autoTier || "base",
           description: form.description || undefined,
-          price: Number(form.price),
-          billingInterval: Number(form.billingInterval),
+          price: planType === "free" ? 0 : Number(form.price),
+          billingInterval: billingIntervalDays,
           acceptedToken: form.acceptedToken,
           environmentMode: env,
         }),
@@ -342,167 +368,326 @@ function CreatePlanDialog({
         setErrors({ _global: data.error || "Failed to create plan" });
         return;
       }
-      const created = await res.json();
-      const planId = created.plan?.id ?? created.id;
-
-      // Plan created - user can now register on-chain via the table action
-      // (this requires EIP-712 signature, so we don't auto-trigger it here)
-      toast.success(
-        `Plan created! Click "Register on-chain" in the table to register it with your wallet.`,
-      );
-
+      toast.success(`Plan created! Click "Register on-chain" in the table to activate it.`);
       setOpen(false);
-      setForm({
-        name: "",
-        tier: "",
-        description: "",
-        price: "",
-        billingInterval: "30",
-        acceptedToken: DEFAULT_TOKEN,
-      });
-      setErrors({});
-      setStatus("");
+      resetForm();
       onCreated();
     } finally {
       setLoading(false);
-      setStatus("");
     }
   }
 
+  const selectedChainOpt = USDC_CHAIN_OPTIONS.find((o) => o.address === form.acceptedToken);
+  const chainName = (o: typeof USDC_CHAIN_OPTIONS[number]) =>
+    o.label.replace(/USDC — |Custom USDC — /, "");
+  const chainInitial = (o: typeof USDC_CHAIN_OPTIONS[number]) => {
+    const n = chainName(o);
+    return n.startsWith("Base") ? "B" : n.startsWith("Sepolia") ? "S" : n[0]?.toUpperCase() ?? "?";
+  };
+
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
+    <Sheet open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}>
       <SheetTrigger asChild>
         <Button size="sm" variant="outline" className="gap-2">
           <Plus className="w-4 h-4" />
           New Plan
         </Button>
       </SheetTrigger>
-      <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
-        <SheetHeader className="pb-4 border-b border-border">
-          <SheetTitle>Create Catalog Plan</SheetTitle>
-          <SheetDescription>
-            Create a clean, publish-ready plan with on-chain registration.
-          </SheetDescription>
-        </SheetHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 py-4">
-          {errors._global && (
-            <p className="text-sm text-destructive">{errors._global}</p>
-          )}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <Label>Name *</Label>
-              <Input
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                placeholder="Pro"
-              />
-              {errors.name && (
-                <p className="text-xs text-destructive">{errors.name}</p>
-              )}
-            </div>
-            <div className="space-y-1">
-              <Label>Tier *</Label>
-              <Input
-                value={form.tier}
-                onChange={(e) => setForm({ ...form, tier: e.target.value })}
-                placeholder="pro"
-              />
-              {errors.tier && (
-                <p className="text-xs text-destructive">{errors.tier}</p>
-              )}
-            </div>
-          </div>
-          <div className="space-y-1">
-            <Label>Description</Label>
-            <Input
-              value={form.description}
-              onChange={(e) =>
-                setForm({ ...form, description: e.target.value })
-              }
-              placeholder="Optional description"
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <Label>Price (USDC) *</Label>
-              <Input
-                value={form.price}
-                onChange={(e) => setForm({ ...form, price: e.target.value })}
-                placeholder="29.00"
-                type="number"
-                min="0"
-                step="0.01"
-              />
-              {errors.price && (
-                <p className="text-xs text-destructive">{errors.price}</p>
-              )}
-            </div>
-            <div className="space-y-1">
-              <Label>Billing Interval (days) *</Label>
-              <Input
-                value={form.billingInterval}
-                onChange={(e) =>
-                  setForm({ ...form, billingInterval: e.target.value })
-                }
-                placeholder="30"
-                type="number"
-                min="1"
-              />
-              {errors.billingInterval && (
-                <p className="text-xs text-destructive">
-                  {errors.billingInterval}
+      <SheetContent className="w-full sm:max-w-4xl p-0 overflow-hidden flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
+          <div />
+          <button onClick={() => { setOpen(false); resetForm(); }} className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-secondary hover:text-foreground transition-all">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="flex flex-1 min-h-0 overflow-hidden">
+          {/* ── LEFT: Plan Preview ── */}
+          <div className="w-[300px] shrink-0 border-r border-border bg-secondary/20 p-6 flex flex-col gap-6 overflow-y-auto">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground mb-4">Create Plan</p>
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-9 h-9 rounded-full bg-linear-to-br from-zinc-400 to-zinc-700 shrink-0" />
+                <p className="text-base font-bold text-foreground truncate">
+                  {form.name || <span className="font-normal text-muted-foreground">Untitled plan</span>}
                 </p>
-              )}
+              </div>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground mb-3">Plan Preview</p>
+              <div className="bg-card border border-border rounded-xl overflow-hidden">
+                <div className="p-4 border-b border-border">
+                  <p className="text-lg font-bold text-foreground leading-tight">{form.name || "—"}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{form.description || form.name || "—"}</p>
+                  <p className="text-sm font-semibold text-foreground mt-1.5">
+                    {planType === "free" ? "Free" : form.price ? `$${form.price} USDC` : "—"}
+                    {planType === "paid" && form.price && (
+                      <span className="text-xs font-normal text-muted-foreground ml-1">
+                        / {BILLING_INTERVALS.find((i) => i.days === billingIntervalDays)?.label.toLowerCase() ?? `${billingIntervalDays}d`}
+                      </span>
+                    )}
+                  </p>
+                </div>
+                <div className="p-4">
+                  <p className="text-xs text-muted-foreground text-center py-3">No entitlements yet</p>
+                </div>
+                <div className="px-4 pb-4">
+                  <button className="w-full py-2.5 rounded-lg bg-secondary border border-border text-sm font-medium text-muted-foreground cursor-default">
+                    Subscribe
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
-          <div className="space-y-1">
-            <Label>Accepted Token *</Label>
-            <Select
-              value={form.acceptedToken}
-              onValueChange={(v) =>
-                setForm({ ...form, acceptedToken: v as `0x${string}` })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select token" />
-              </SelectTrigger>
-              <SelectContent>
-                {TOKEN_OPTIONS.map((t) => (
-                  <SelectItem key={t.address} value={t.address}>
-                    {t.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.acceptedToken && (
-              <p className="text-xs text-destructive">{errors.acceptedToken}</p>
-            )}
+
+          {/* ── RIGHT: Settings ── */}
+          <div className="flex-1 overflow-y-auto">
+            <form id="create-plan-form" onSubmit={handleSubmit}>
+              <div className="p-6 space-y-8">
+                {/* Header */}
+                <div>
+                  <div className="flex items-center gap-3 mb-1">
+                    <h2 className="text-2xl font-bold text-foreground tracking-tight">Plan Settings</h2>
+                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-secondary border border-border text-muted-foreground">
+                      {env === "DEVELOPMENT" ? "Dev" : "Production"}
+                    </span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">A company can only have one base plan.</p>
+                </div>
+
+                {errors._global && (
+                  <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                    <p className="text-sm text-destructive">{errors._global}</p>
+                  </div>
+                )}
+
+                {/* Name + Tier */}
+                <div className="grid grid-cols-[1fr_auto] gap-4 items-start">
+                  <div>
+                    <Label className="text-sm font-medium text-foreground mb-2 block">Name *</Label>
+                    <Input
+                      value={form.name}
+                      onChange={(e) => { setForm({ ...form, name: e.target.value }); setErrors((p) => ({ ...p, name: "" })); }}
+                      placeholder="e.g. Pro, Starter, Enterprise"
+                      className="h-11 bg-background border-border"
+                    />
+                    {errors.name && <p className="text-xs text-destructive mt-1">{errors.name}</p>}
+                  </div>
+                  <div className="w-28">
+                    <Label className="text-sm font-medium text-foreground mb-2 block">
+                      Tier
+                      <span className="text-muted-foreground font-normal ml-1">(auto)</span>
+                    </Label>
+                    <Input
+                      value={form.tier || autoTier}
+                      onChange={(e) => setForm({ ...form, tier: e.target.value })}
+                      placeholder={autoTier || "pro"}
+                      className="h-11 bg-background border-border font-mono text-sm"
+                    />
+                  </div>
+                </div>
+
+                {/* Description */}
+                <div>
+                  <Label className="text-sm font-medium text-foreground mb-2 block">Description</Label>
+                  <Input
+                    value={form.description}
+                    onChange={(e) => setForm({ ...form, description: e.target.value })}
+                    placeholder="Describe this plan"
+                    className="h-11 bg-background border-border"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1.5">Optional</p>
+                </div>
+
+                {/* Pricing */}
+                <div>
+                  <div className="flex items-center gap-2.5 mb-1">
+                    <h3 className="text-xl font-bold text-foreground tracking-tight">Pricing</h3>
+                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-warning/10 text-warning border border-warning/20">
+                      {env === "DEVELOPMENT" ? "DEV" : "PROD"}
+                    </span>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-5">Monetize your offering with flexible pricing options</p>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Type */}
+                    <div>
+                      <Label className="text-sm font-medium text-foreground mb-2 block">Type</Label>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button type="button" className="w-full flex items-center justify-between h-11 px-3 rounded-lg bg-background border border-border text-sm text-foreground hover:bg-secondary/50 transition-colors">
+                            <span className="font-medium">{planType === "free" ? "Free" : "Paid"}</span>
+                            <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width]">
+                          <DropdownMenuItem onClick={() => { setPlanType("free"); setForm((p) => ({ ...p, price: "" })); }}>
+                            <div className="flex-1">
+                              <p className="text-sm font-medium">Free</p>
+                              <p className="text-xs text-muted-foreground">No charge — $0.00 USDC</p>
+                            </div>
+                            {planType === "free" && <Check className="w-4 h-4 ml-2 text-foreground" />}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setPlanType("paid")}>
+                            <div className="flex-1">
+                              <p className="text-sm font-medium">Paid</p>
+                              <p className="text-xs text-muted-foreground">Recurring USDC payment</p>
+                            </div>
+                            {planType === "paid" && <Check className="w-4 h-4 ml-2 text-foreground" />}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+
+                    {/* Billing Integration */}
+                    <div>
+                      <Label className="text-sm font-medium text-foreground mb-2 block">Billing Integration</Label>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button type="button" className="w-full flex items-center justify-between h-11 px-3 rounded-lg bg-background border border-border text-sm text-foreground hover:bg-secondary/50 transition-colors">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="font-medium truncate">
+                                {selectedChainOpt ? chainName(selectedChainOpt) : "Select chain"}
+                              </span>
+                              {selectedChainOpt && (
+                                <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0 ${selectedChainOpt.tag === "mainnet" ? "bg-success/10 text-success" : "bg-secondary text-muted-foreground border border-border"}`}>
+                                  {selectedChainOpt.tag}
+                                </span>
+                              )}
+                              {selectedChainOpt?.chainId === chainId && (
+                                <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-foreground text-background shrink-0">Connected</span>
+                              )}
+                            </div>
+                            <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0 ml-1" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="w-80">
+                          {USDC_CHAIN_OPTIONS.some((o) => o.tag === "testnet") && (
+                            <>
+                              <div className="px-2 pt-2 pb-1"><p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Testnets</p></div>
+                              {USDC_CHAIN_OPTIONS.filter((o) => o.tag === "testnet").map((opt) => {
+                                const isConn = opt.chainId === chainId;
+                                return (
+                                  <DropdownMenuItem key={opt.chainId} disabled={!isConn} onClick={() => isConn && setForm((p) => ({ ...p, acceptedToken: opt.address }))} className={`flex items-center justify-between gap-3 py-2.5 ${!isConn ? "opacity-40 cursor-not-allowed" : ""}`}>
+                                    <div className="flex items-center gap-2.5">
+                                      <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 border ${isConn ? "bg-foreground text-background border-foreground" : "bg-secondary text-muted-foreground border-border"}`}>
+                                        <span className="text-[10px] font-bold">{chainInitial(opt)}</span>
+                                      </div>
+                                      <div>
+                                        <div className="flex items-center gap-1.5">
+                                          <p className="text-sm font-medium">{chainName(opt)}</p>
+                                          {isConn && <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-foreground text-background">Connected</span>}
+                                        </div>
+                                        <p className="text-xs font-mono text-muted-foreground mt-0.5">USDC · {opt.address.slice(0, 6)}…{opt.address.slice(-4)}</p>
+                                      </div>
+                                    </div>
+                                    {form.acceptedToken === opt.address && isConn && <Check className="w-3.5 h-3.5 text-foreground shrink-0" />}
+                                    {!isConn && <span className="text-[9px] text-muted-foreground shrink-0">Switch wallet</span>}
+                                  </DropdownMenuItem>
+                                );
+                              })}
+                            </>
+                          )}
+                          {USDC_CHAIN_OPTIONS.some((o) => o.tag === "mainnet") && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <div className="px-2 pt-2 pb-1"><p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Mainnets</p></div>
+                              {USDC_CHAIN_OPTIONS.filter((o) => o.tag === "mainnet").map((opt) => {
+                                const isConn = opt.chainId === chainId;
+                                return (
+                                  <DropdownMenuItem key={opt.chainId} disabled={!isConn} onClick={() => isConn && setForm((p) => ({ ...p, acceptedToken: opt.address }))} className={`flex items-center justify-between gap-3 py-2.5 ${!isConn ? "opacity-40 cursor-not-allowed" : ""}`}>
+                                    <div className="flex items-center gap-2.5">
+                                      <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 border ${isConn ? "bg-foreground text-background border-foreground" : "bg-secondary text-muted-foreground border-border"}`}>
+                                        <span className="text-[10px] font-bold">{chainInitial(opt)}</span>
+                                      </div>
+                                      <div>
+                                        <div className="flex items-center gap-1.5">
+                                          <p className="text-sm font-medium">{chainName(opt)}</p>
+                                          {isConn && <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-foreground text-background">Connected</span>}
+                                        </div>
+                                        <p className="text-xs font-mono text-muted-foreground mt-0.5">USDC · {opt.address.slice(0, 6)}…{opt.address.slice(-4)}</p>
+                                      </div>
+                                    </div>
+                                    {form.acceptedToken === opt.address && isConn && <Check className="w-3.5 h-3.5 text-foreground shrink-0" />}
+                                    {!isConn && <span className="text-[9px] text-muted-foreground shrink-0">Switch wallet</span>}
+                                  </DropdownMenuItem>
+                                );
+                              })}
+                            </>
+                          )}
+                          <div className="px-3 py-2 border-t border-border mt-1">
+                            <p className="text-[10px] text-muted-foreground">Switch your wallet network to enable other chains</p>
+                          </div>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+
+                  {/* Paid-only: Price + Interval */}
+                  {planType === "paid" && (
+                    <div className="grid grid-cols-2 gap-4 mt-4">
+                      <div>
+                        <Label className="text-sm font-medium text-foreground mb-2 block">Price (USDC) *</Label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">$</span>
+                          <Input
+                            value={form.price}
+                            onChange={(e) => { setForm({ ...form, price: e.target.value }); setErrors((p) => ({ ...p, price: "" })); }}
+                            placeholder="29.00"
+                            type="number"
+                            min="0.01"
+                            step="0.01"
+                            className="h-11 bg-background border-border pl-6"
+                          />
+                        </div>
+                        {errors.price && <p className="text-xs text-destructive mt-1">{errors.price}</p>}
+                      </div>
+                      <div>
+                        <Label className="text-sm font-medium text-foreground mb-2 block">Billing Interval</Label>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button type="button" className="w-full flex items-center justify-between h-11 px-3 rounded-lg bg-background border border-border text-sm text-foreground hover:bg-secondary/50 transition-colors">
+                              <span className="font-medium">{BILLING_INTERVALS.find((i) => i.days === billingIntervalDays)?.label ?? `${billingIntervalDays} days`}</span>
+                              <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width]">
+                            {BILLING_INTERVALS.map((iv) => (
+                              <DropdownMenuItem key={iv.days} onClick={() => setBillingIntervalDays(iv.days)} className="flex items-center justify-between">
+                                <div>
+                                  <p className="text-sm font-medium">{iv.label}</p>
+                                  <p className="text-xs text-muted-foreground">{iv.sublabel}</p>
+                                </div>
+                                {billingIntervalDays === iv.days && <Check className="w-4 h-4 text-foreground ml-2" />}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <p className="text-xs text-muted-foreground">
+                  Environment: <strong>{env}</strong> — plan will be created in the catalog.
+                  Click &ldquo;Register on-chain&rdquo; after creation to activate it on-chain.
+                </p>
+              </div>
+            </form>
           </div>
-          <p className="text-xs text-muted-foreground">
-            Environment: <strong>{env}</strong> — plan will be created and
-            registered on-chain automatically.
-          </p>
-          <SheetFooter className="pt-4 border-t border-border flex-row justify-end gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setOpen(false)}
-              disabled={loading}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={loading} className="gap-2 min-w-44">
-              {loading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  {status || "Processing…"}
-                </>
-              ) : (
-                "Create Plan"
-              )}
-            </Button>
-          </SheetFooter>
-        </form>
+        </div>
+
+        {/* Footer */}
+        <div className="shrink-0 border-t border-border px-6 py-4 flex items-center justify-end gap-3 bg-background">
+          <Button type="button" variant="outline" onClick={() => { setOpen(false); resetForm(); }} disabled={loading}>
+            Cancel
+          </Button>
+          <Button form="create-plan-form" type="submit" disabled={loading} className="min-w-[140px]">
+            {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Creating…</> : "Save Changes"}
+          </Button>
+        </div>
       </SheetContent>
     </Sheet>
   );
@@ -517,37 +702,50 @@ function CreateAddOnDialog({
   env: EnvMode;
   onCreated: () => void;
 }) {
+  const chainId = useChainId();
+  const connectedToken = getUsdcAddress(chainId);
+
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [billingIntervalDays, setBillingIntervalDays] = useState(30);
   const [form, setForm] = useState({
     name: "",
-    code: "",
     description: "",
     billingType: "ONE_TIME" as "ONE_TIME" | "RECURRING",
     price: "",
-    acceptedToken: DEFAULT_TOKEN,
+    acceptedToken: connectedToken,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Auto-derive code from name
+  const autoCode = form.name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+
+  const selectedChainOpt = USDC_CHAIN_OPTIONS.find((o) => o.address === form.acceptedToken);
+  const chainName = (o: typeof USDC_CHAIN_OPTIONS[number]) =>
+    o.label.replace(/USDC — |Custom USDC — /, "");
+  const chainInitial = (o: typeof USDC_CHAIN_OPTIONS[number]) => {
+    const n = chainName(o);
+    return n.startsWith("Base") ? "B" : n.startsWith("Sepolia") ? "S" : n[0]?.toUpperCase() ?? "?";
+  };
 
   function validate() {
     const e: Record<string, string> = {};
     if (!form.name.trim()) e.name = "Required";
-    if (!form.code.trim()) e.code = "Required";
-    else if (!/^[a-z0-9_\-]+$/i.test(form.code))
-      e.code = "Only letters, numbers, _ and - allowed";
     const p = Number(form.price);
     if (!form.price || isNaN(p) || p <= 0) e.price = "Must be positive";
-    if (!form.acceptedToken.trim()) e.acceptedToken = "Required";
     return e;
+  }
+
+  function resetForm() {
+    setBillingIntervalDays(30);
+    setForm({ name: "", description: "", billingType: "ONE_TIME", price: "", acceptedToken: connectedToken });
+    setErrors({});
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const errs = validate();
-    if (Object.keys(errs).length) {
-      setErrors(errs);
-      return;
-    }
+    if (Object.keys(errs).length) { setErrors(errs); return; }
     setLoading(true);
     try {
       const res = await fetch("/api/catalog/add-ons", {
@@ -555,25 +753,19 @@ function CreateAddOnDialog({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: form.name,
-          code: form.code,
+          code: autoCode || "add-on",
           description: form.description || undefined,
           billingType: form.billingType,
+          billingInterval: form.billingType === "RECURRING" ? billingIntervalDays : undefined,
           price: Number(form.price),
           acceptedToken: form.acceptedToken,
           environmentMode: env,
         }),
       });
       if (res.ok) {
+        toast.success("Add-on created");
         setOpen(false);
-        setForm({
-          name: "",
-          code: "",
-          description: "",
-          billingType: "ONE_TIME",
-          price: "",
-          acceptedToken: DEFAULT_TOKEN,
-        });
-        setErrors({});
+        resetForm();
         onCreated();
       } else {
         const data = await res.json();
@@ -585,158 +777,298 @@ function CreateAddOnDialog({
   }
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
+    <Sheet open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}>
       <SheetTrigger asChild>
-        <Button className="flex items-center gap-2">
+        <Button size="sm" variant="outline" className="gap-2">
           <Plus className="w-4 h-4" />
-          Create Add-On
+          New Add-On
         </Button>
       </SheetTrigger>
-      <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
-        <SheetHeader className="pb-4 border-b border-border">
-          <SheetTitle>Create Add-On Product</SheetTitle>
-          <SheetDescription>
-            Add-ons are additional features or services customers can purchase
-            alongside their plans. They work independently and don't require
-            existing plans.
-          </SheetDescription>
-        </SheetHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 py-4">
-          {errors._global && (
-            <p className="text-sm text-destructive">{errors._global}</p>
-          )}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="addonName">Name *</Label>
-              <Input
-                id="addonName"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                placeholder="e.g. Extra Storage, Priority Support"
-                className="bg-secondary border-border focus:border-accent"
-              />
-              {errors.name && (
-                <p className="text-xs text-destructive">{errors.name}</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="addonCode">Code *</Label>
-              <Input
-                id="addonCode"
-                value={form.code}
-                onChange={(e) => setForm({ ...form, code: e.target.value })}
-                placeholder="e.g. extra-storage"
-                className="bg-secondary border-border focus:border-accent font-mono text-sm"
-              />
-              {errors.code && (
-                <p className="text-xs text-destructive">{errors.code}</p>
-              )}
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="addonDescription">Description (Optional)</Label>
-            <Input
-              id="addonDescription"
-              value={form.description}
-              onChange={(e) =>
-                setForm({ ...form, description: e.target.value })
-              }
-              placeholder="Describe what this add-on provides"
-              className="bg-secondary border-border focus:border-accent"
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="addonBillingType">Billing Type *</Label>
-              <Select
-                value={form.billingType}
-                onValueChange={(v) =>
-                  setForm({
-                    ...form,
-                    billingType: v as "ONE_TIME" | "RECURRING",
-                  })
-                }
-              >
-                <SelectTrigger
-                  id="addonBillingType"
-                  className="bg-secondary border-border"
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ONE_TIME">One-Time Purchase</SelectItem>
-                  <SelectItem value="RECURRING">Recurring (Monthly)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="addonPrice">Price (USDC) *</Label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                  $
-                </span>
-                <Input
-                  id="addonPrice"
-                  value={form.price}
-                  onChange={(e) => setForm({ ...form, price: e.target.value })}
-                  placeholder="9.99"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  className="bg-secondary border-border focus:border-accent pl-6"
-                />
+      <SheetContent className="w-full sm:max-w-4xl p-0 overflow-hidden flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
+          <div />
+          <button onClick={() => { setOpen(false); resetForm(); }} className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-secondary hover:text-foreground transition-all">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="flex flex-1 min-h-0 overflow-hidden">
+          {/* ── LEFT: Add-On Preview ── */}
+          <div className="w-[300px] shrink-0 border-r border-border bg-secondary/20 p-6 flex flex-col gap-6 overflow-y-auto">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground mb-4">Create Add-On</p>
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-9 h-9 rounded-full bg-linear-to-br from-zinc-400 to-zinc-700 shrink-0" />
+                <p className="text-base font-bold text-foreground truncate">
+                  {form.name || <span className="font-normal text-muted-foreground">Untitled add-on</span>}
+                </p>
               </div>
-              {errors.price && (
-                <p className="text-xs text-destructive">{errors.price}</p>
-              )}
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground mb-3">Add-On Preview</p>
+              <div className="bg-card border border-border rounded-xl overflow-hidden">
+                <div className="p-4 border-b border-border">
+                  <p className="text-lg font-bold text-foreground leading-tight">{form.name || "—"}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{form.description || "No description"}</p>
+                  <div className="flex items-center gap-2 mt-1.5">
+                    <p className="text-sm font-semibold text-foreground">
+                      {form.price ? `$${form.price} USDC` : "—"}
+                    </p>
+                    <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-secondary border border-border text-muted-foreground">
+                      {form.billingType === "ONE_TIME" ? "One-time" : "Recurring"}
+                    </span>
+                  </div>
+                  {form.billingType === "RECURRING" && form.price && (
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      / {BILLING_INTERVALS.find((i) => i.days === billingIntervalDays)?.label.toLowerCase() ?? `${billingIntervalDays}d`}
+                    </p>
+                  )}
+                </div>
+                <div className="p-4">
+                  <p className="text-xs text-muted-foreground text-center py-3">No entitlements yet</p>
+                </div>
+                <div className="px-4 pb-4">
+                  <button className="w-full py-2.5 rounded-lg bg-secondary border border-border text-sm font-medium text-muted-foreground cursor-default">
+                    Purchase
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="addonToken">Accepted Token *</Label>
-            <Select
-              value={form.acceptedToken}
-              onValueChange={(v) =>
-                setForm({ ...form, acceptedToken: v as `0x${string}` })
-              }
-            >
-              <SelectTrigger
-                id="addonToken"
-                className="bg-secondary border-border"
-              >
-                <SelectValue placeholder="Select token" />
-              </SelectTrigger>
-              <SelectContent>
-                {TOKEN_OPTIONS.map((t) => (
-                  <SelectItem key={t.address} value={t.address}>
-                    {t.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.acceptedToken && (
-              <p className="text-xs text-destructive">{errors.acceptedToken}</p>
-            )}
+
+          {/* ── RIGHT: Settings ── */}
+          <div className="flex-1 overflow-y-auto">
+            <form id="create-addon-form" onSubmit={handleSubmit}>
+              <div className="p-6 space-y-8">
+                {/* Header */}
+                <div>
+                  <div className="flex items-center gap-3 mb-1">
+                    <h2 className="text-2xl font-bold text-foreground tracking-tight">Add-On Settings</h2>
+                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-secondary border border-border text-muted-foreground">
+                      {env === "DEVELOPMENT" ? "Dev" : "Production"}
+                    </span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">Additional features customers can purchase alongside plans.</p>
+                </div>
+
+                {errors._global && (
+                  <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                    <p className="text-sm text-destructive">{errors._global}</p>
+                  </div>
+                )}
+
+                {/* Name */}
+                <div>
+                  <Label className="text-sm font-medium text-foreground mb-2 block">Name *</Label>
+                  <Input
+                    value={form.name}
+                    onChange={(e) => { setForm({ ...form, name: e.target.value }); setErrors((p) => ({ ...p, name: "" })); }}
+                    placeholder="e.g. Extra Storage, Priority Support"
+                    className="h-11 bg-background border-border"
+                  />
+                  {errors.name && <p className="text-xs text-destructive mt-1">{errors.name}</p>}
+                  {autoCode && (
+                    <p className="text-xs text-muted-foreground mt-1">Code: <span className="font-mono">{autoCode}</span></p>
+                  )}
+                </div>
+
+                {/* Description */}
+                <div>
+                  <Label className="text-sm font-medium text-foreground mb-2 block">Description</Label>
+                  <Input
+                    value={form.description}
+                    onChange={(e) => setForm({ ...form, description: e.target.value })}
+                    placeholder="Describe what this add-on provides"
+                    className="h-11 bg-background border-border"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1.5">Optional</p>
+                </div>
+
+                {/* Pricing */}
+                <div>
+                  <div className="flex items-center gap-2.5 mb-1">
+                    <h3 className="text-xl font-bold text-foreground tracking-tight">Pricing</h3>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-5">Configure billing for this add-on</p>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Type */}
+                    <div>
+                      <Label className="text-sm font-medium text-foreground mb-2 block">Type</Label>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button type="button" className="w-full flex items-center justify-between h-11 px-3 rounded-lg bg-background border border-border text-sm text-foreground hover:bg-secondary/50 transition-colors">
+                            <span className="font-medium">{form.billingType === "ONE_TIME" ? "One-time" : "Recurring"}</span>
+                            <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width]">
+                          <DropdownMenuItem onClick={() => setForm((p) => ({ ...p, billingType: "ONE_TIME" }))}>
+                            <div className="flex-1">
+                              <p className="text-sm font-medium">One-time</p>
+                              <p className="text-xs text-muted-foreground">Single charge purchase</p>
+                            </div>
+                            {form.billingType === "ONE_TIME" && <Check className="w-4 h-4 ml-2 text-foreground" />}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setForm((p) => ({ ...p, billingType: "RECURRING" }))}>
+                            <div className="flex-1">
+                              <p className="text-sm font-medium">Recurring</p>
+                              <p className="text-xs text-muted-foreground">Billed on a schedule</p>
+                            </div>
+                            {form.billingType === "RECURRING" && <Check className="w-4 h-4 ml-2 text-foreground" />}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+
+                    {/* Billing Integration */}
+                    <div>
+                      <Label className="text-sm font-medium text-foreground mb-2 block">Billing Integration</Label>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button type="button" className="w-full flex items-center justify-between h-11 px-3 rounded-lg bg-background border border-border text-sm text-foreground hover:bg-secondary/50 transition-colors">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="font-medium truncate">
+                                {selectedChainOpt ? chainName(selectedChainOpt) : "Select chain"}
+                              </span>
+                              {selectedChainOpt && (
+                                <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0 ${selectedChainOpt.tag === "mainnet" ? "bg-success/10 text-success" : "bg-secondary text-muted-foreground border border-border"}`}>
+                                  {selectedChainOpt.tag}
+                                </span>
+                              )}
+                              {selectedChainOpt?.chainId === chainId && (
+                                <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-foreground text-background shrink-0">Connected</span>
+                              )}
+                            </div>
+                            <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0 ml-1" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="w-80">
+                          {USDC_CHAIN_OPTIONS.some((o) => o.tag === "testnet") && (
+                            <>
+                              <div className="px-2 pt-2 pb-1"><p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Testnets</p></div>
+                              {USDC_CHAIN_OPTIONS.filter((o) => o.tag === "testnet").map((opt) => {
+                                const isConn = opt.chainId === chainId;
+                                return (
+                                  <DropdownMenuItem key={opt.chainId} disabled={!isConn} onClick={() => isConn && setForm((p) => ({ ...p, acceptedToken: opt.address }))} className={`flex items-center justify-between gap-3 py-2.5 ${!isConn ? "opacity-40 cursor-not-allowed" : ""}`}>
+                                    <div className="flex items-center gap-2.5">
+                                      <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 border ${isConn ? "bg-foreground text-background border-foreground" : "bg-secondary text-muted-foreground border-border"}`}>
+                                        <span className="text-[10px] font-bold">{chainInitial(opt)}</span>
+                                      </div>
+                                      <div>
+                                        <div className="flex items-center gap-1.5">
+                                          <p className="text-sm font-medium">{chainName(opt)}</p>
+                                          {isConn && <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-foreground text-background">Connected</span>}
+                                        </div>
+                                        <p className="text-xs font-mono text-muted-foreground mt-0.5">USDC · {opt.address.slice(0, 6)}…{opt.address.slice(-4)}</p>
+                                      </div>
+                                    </div>
+                                    {form.acceptedToken === opt.address && isConn && <Check className="w-3.5 h-3.5 text-foreground shrink-0" />}
+                                    {!isConn && <span className="text-[9px] text-muted-foreground shrink-0">Switch wallet</span>}
+                                  </DropdownMenuItem>
+                                );
+                              })}
+                            </>
+                          )}
+                          {USDC_CHAIN_OPTIONS.some((o) => o.tag === "mainnet") && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <div className="px-2 pt-2 pb-1"><p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Mainnets</p></div>
+                              {USDC_CHAIN_OPTIONS.filter((o) => o.tag === "mainnet").map((opt) => {
+                                const isConn = opt.chainId === chainId;
+                                return (
+                                  <DropdownMenuItem key={opt.chainId} disabled={!isConn} onClick={() => isConn && setForm((p) => ({ ...p, acceptedToken: opt.address }))} className={`flex items-center justify-between gap-3 py-2.5 ${!isConn ? "opacity-40 cursor-not-allowed" : ""}`}>
+                                    <div className="flex items-center gap-2.5">
+                                      <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 border ${isConn ? "bg-foreground text-background border-foreground" : "bg-secondary text-muted-foreground border-border"}`}>
+                                        <span className="text-[10px] font-bold">{chainInitial(opt)}</span>
+                                      </div>
+                                      <div>
+                                        <div className="flex items-center gap-1.5">
+                                          <p className="text-sm font-medium">{chainName(opt)}</p>
+                                          {isConn && <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-foreground text-background">Connected</span>}
+                                        </div>
+                                        <p className="text-xs font-mono text-muted-foreground mt-0.5">USDC · {opt.address.slice(0, 6)}…{opt.address.slice(-4)}</p>
+                                      </div>
+                                    </div>
+                                    {form.acceptedToken === opt.address && isConn && <Check className="w-3.5 h-3.5 text-foreground shrink-0" />}
+                                    {!isConn && <span className="text-[9px] text-muted-foreground shrink-0">Switch wallet</span>}
+                                  </DropdownMenuItem>
+                                );
+                              })}
+                            </>
+                          )}
+                          <div className="px-3 py-2 border-t border-border mt-1">
+                            <p className="text-[10px] text-muted-foreground">Switch your wallet network to enable other chains</p>
+                          </div>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+
+                  {/* Price */}
+                  <div className="mt-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-sm font-medium text-foreground mb-2 block">Price (USDC) *</Label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">$</span>
+                          <Input
+                            value={form.price}
+                            onChange={(e) => { setForm({ ...form, price: e.target.value }); setErrors((p) => ({ ...p, price: "" })); }}
+                            placeholder="9.99"
+                            type="number"
+                            min="0.01"
+                            step="0.01"
+                            className="h-11 bg-background border-border pl-6"
+                          />
+                        </div>
+                        {errors.price && <p className="text-xs text-destructive mt-1">{errors.price}</p>}
+                      </div>
+
+                      {/* Recurring: billing interval */}
+                      {form.billingType === "RECURRING" && (
+                        <div>
+                          <Label className="text-sm font-medium text-foreground mb-2 block">Billing Interval</Label>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button type="button" className="w-full flex items-center justify-between h-11 px-3 rounded-lg bg-background border border-border text-sm text-foreground hover:bg-secondary/50 transition-colors">
+                                <span className="font-medium">{BILLING_INTERVALS.find((i) => i.days === billingIntervalDays)?.label ?? `${billingIntervalDays} days`}</span>
+                                <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width]">
+                              {BILLING_INTERVALS.map((iv) => (
+                                <DropdownMenuItem key={iv.days} onClick={() => setBillingIntervalDays(iv.days)} className="flex items-center justify-between">
+                                  <div>
+                                    <p className="text-sm font-medium">{iv.label}</p>
+                                    <p className="text-xs text-muted-foreground">{iv.sublabel}</p>
+                                  </div>
+                                  {billingIntervalDays === iv.days && <Check className="w-4 h-4 text-foreground ml-2" />}
+                                </DropdownMenuItem>
+                              ))}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </form>
           </div>
-          <div className="flex items-center gap-2 p-3 rounded-lg bg-secondary/50 border border-border">
-            <span className="text-xs text-muted-foreground">
-              Environment:{" "}
-              <span className="text-foreground font-medium">{env}</span> —
-              Add-on will be saved as Draft until published.
-            </span>
-          </div>
-          <SheetFooter className="pt-4 border-t border-border flex-row justify-end gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? "Creating…" : "Create Add-On"}
-            </Button>
-          </SheetFooter>
-        </form>
+        </div>
+
+        {/* Footer */}
+        <div className="shrink-0 border-t border-border px-6 py-4 flex items-center justify-end gap-3 bg-background">
+          <Button type="button" variant="outline" onClick={() => { setOpen(false); resetForm(); }} disabled={loading}>
+            Cancel
+          </Button>
+          <Button form="create-addon-form" type="submit" disabled={loading} className="min-w-[140px]">
+            {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Creating…</> : "Save Changes"}
+          </Button>
+        </div>
       </SheetContent>
     </Sheet>
   );
@@ -751,50 +1083,64 @@ function CreateCreditTypeDialog({
   env: EnvMode;
   onCreated: () => void;
 }) {
+  const chainId = useChainId();
+  const connectedToken = getUsdcAddress(chainId);
+
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     name: "",
-    code: "",
-    unitName: "",
+    description: "",
+    unitNameSingle: "",
+    unitNamePlural: "",
     unitsPerPack: "100",
     price: "",
-    acceptedToken: DEFAULT_TOKEN,
+    acceptedToken: connectedToken,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Auto-derive code from name
+  const autoCode = form.name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+
+  const selectedChainOpt = USDC_CHAIN_OPTIONS.find((o) => o.address === form.acceptedToken);
+  const chainName = (o: typeof USDC_CHAIN_OPTIONS[number]) =>
+    o.label.replace(/USDC — |Custom USDC — /, "");
+  const chainInitial = (o: typeof USDC_CHAIN_OPTIONS[number]) => {
+    const n = chainName(o);
+    return n.startsWith("Base") ? "B" : n.startsWith("Sepolia") ? "S" : n[0]?.toUpperCase() ?? "?";
+  };
 
   function validate() {
     const e: Record<string, string> = {};
     if (!form.name.trim()) e.name = "Required";
-    if (!form.code.trim()) e.code = "Required";
-    else if (!/^[a-z0-9_\-]+$/i.test(form.code))
-      e.code = "Only letters, numbers, _ and - allowed";
-    if (!form.unitName.trim()) e.unitName = "Required";
+    if (!form.unitNameSingle.trim()) e.unitNameSingle = "Required";
     const upp = Number(form.unitsPerPack);
     if (!form.unitsPerPack || isNaN(upp) || upp <= 0 || !Number.isInteger(upp))
       e.unitsPerPack = "Must be a positive integer";
     const p = Number(form.price);
     if (!form.price || isNaN(p) || p <= 0) e.price = "Must be positive";
-    if (!form.acceptedToken.trim()) e.acceptedToken = "Required";
     return e;
+  }
+
+  function resetForm() {
+    setForm({ name: "", description: "", unitNameSingle: "", unitNamePlural: "", unitsPerPack: "100", price: "", acceptedToken: connectedToken });
+    setErrors({});
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const errs = validate();
-    if (Object.keys(errs).length) {
-      setErrors(errs);
-      return;
-    }
+    if (Object.keys(errs).length) { setErrors(errs); return; }
     setLoading(true);
     try {
+      const unitName = form.unitNameSingle.trim();
       const res = await fetch("/api/catalog/credits", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: form.name,
-          code: form.code,
-          unitName: form.unitName,
+          code: autoCode || "credit",
+          unitName,
           unitsPerPack: Number(form.unitsPerPack),
           price: Number(form.price),
           acceptedToken: form.acceptedToken,
@@ -802,16 +1148,9 @@ function CreateCreditTypeDialog({
         }),
       });
       if (res.ok) {
+        toast.success("Credit type created");
         setOpen(false);
-        setForm({
-          name: "",
-          code: "",
-          unitName: "",
-          unitsPerPack: "100",
-          price: "",
-          acceptedToken: DEFAULT_TOKEN,
-        });
-        setErrors({});
+        resetForm();
         onCreated();
       } else {
         const data = await res.json();
@@ -823,159 +1162,495 @@ function CreateCreditTypeDialog({
   }
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
+    <Sheet open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}>
       <SheetTrigger asChild>
-        <Button className="flex items-center gap-2">
+        <Button size="sm" variant="outline" className="gap-2">
           <Plus className="w-4 h-4" />
-          Create Credit Type
+          New Credit Type
         </Button>
       </SheetTrigger>
-      <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
-        <SheetHeader className="pb-4 border-b border-border">
-          <SheetTitle>Create Credit Type</SheetTitle>
-          <SheetDescription>
-            Credit types define units of consumption that can be granted through
-            plans or purchased separately. Perfect for usage-based billing and
-            metered features.
-          </SheetDescription>
-        </SheetHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 py-4">
-          {errors._global && (
-            <p className="text-sm text-destructive">{errors._global}</p>
-          )}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="creditName">Name *</Label>
-              <Input
-                id="creditName"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                placeholder="e.g. API Calls, Storage GB"
-                className="bg-secondary border-border focus:border-accent"
-              />
-              {errors.name && (
-                <p className="text-xs text-destructive">{errors.name}</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="creditCode">Code *</Label>
-              <Input
-                id="creditCode"
-                value={form.code}
-                onChange={(e) => setForm({ ...form, code: e.target.value })}
-                placeholder="e.g. api-calls"
-                className="bg-secondary border-border focus:border-accent font-mono text-sm"
-              />
-              {errors.code && (
-                <p className="text-xs text-destructive">{errors.code}</p>
-              )}
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="creditUnitName">Unit Name *</Label>
-              <Input
-                id="creditUnitName"
-                value={form.unitName}
-                onChange={(e) => setForm({ ...form, unitName: e.target.value })}
-                placeholder="e.g. calls, gigabytes"
-                className="bg-secondary border-border focus:border-accent"
-              />
-              {errors.unitName && (
-                <p className="text-xs text-destructive">{errors.unitName}</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="creditUnitsPerPack">Units per Pack *</Label>
-              <Input
-                id="creditUnitsPerPack"
-                value={form.unitsPerPack}
-                onChange={(e) =>
-                  setForm({ ...form, unitsPerPack: e.target.value })
-                }
-                placeholder="100"
-                type="number"
-                min="1"
-                className="bg-secondary border-border focus:border-accent"
-              />
-              {errors.unitsPerPack && (
-                <p className="text-xs text-destructive">
-                  {errors.unitsPerPack}
+      <SheetContent className="w-full sm:max-w-4xl p-0 overflow-hidden flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
+          <div />
+          <button onClick={() => { setOpen(false); resetForm(); }} className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-secondary hover:text-foreground transition-all">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="flex flex-1 min-h-0 overflow-hidden">
+          {/* ── LEFT: Credit Preview ── */}
+          <div className="w-[300px] shrink-0 border-r border-border bg-secondary/20 p-6 flex flex-col gap-6 overflow-y-auto">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground mb-4">Create Credit Type</p>
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-9 h-9 rounded-full bg-linear-to-br from-zinc-400 to-zinc-700 shrink-0 flex items-center justify-center">
+                  <Coins className="w-4 h-4 text-white" />
+                </div>
+                <p className="text-base font-bold text-foreground truncate">
+                  {form.name || <span className="font-normal text-muted-foreground">Untitled credit type</span>}
                 </p>
-              )}
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="creditPrice">Price per Pack (USDC) *</Label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                  $
-                </span>
-                <Input
-                  id="creditPrice"
-                  value={form.price}
-                  onChange={(e) => setForm({ ...form, price: e.target.value })}
-                  placeholder="5.00"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  className="bg-secondary border-border focus:border-accent pl-6"
-                />
               </div>
-              {errors.price && (
-                <p className="text-xs text-destructive">{errors.price}</p>
-              )}
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="creditToken">Accepted Token *</Label>
-              <Select
-                value={form.acceptedToken}
-                onValueChange={(v) =>
-                  setForm({ ...form, acceptedToken: v as `0x${string}` })
-                }
-              >
-                <SelectTrigger
-                  id="creditToken"
-                  className="bg-secondary border-border"
-                >
-                  <SelectValue placeholder="Select token" />
-                </SelectTrigger>
-                <SelectContent>
-                  {TOKEN_OPTIONS.map((t) => (
-                    <SelectItem key={t.address} value={t.address}>
-                      {t.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.acceptedToken && (
-                <p className="text-xs text-destructive">
-                  {errors.acceptedToken}
-                </p>
-              )}
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground mb-3">Credit Preview</p>
+              <div className="bg-card border border-border rounded-xl overflow-hidden">
+                <div className="p-4 border-b border-border">
+                  <p className="text-lg font-bold text-foreground leading-tight">{form.name || "—"}</p>
+                  {form.unitNameSingle && (
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Unit: <span className="font-medium">{form.unitNameSingle}</span>
+                      {form.unitNamePlural && ` / ${form.unitNamePlural}`}
+                    </p>
+                  )}
+                  {form.unitsPerPack && (
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {form.unitsPerPack} {form.unitNameSingle || "units"} per pack
+                    </p>
+                  )}
+                  <p className="text-sm font-semibold text-foreground mt-1.5">
+                    {form.price ? `$${form.price} USDC` : "—"}
+                    <span className="text-xs font-normal text-muted-foreground ml-1">/ pack</span>
+                  </p>
+                </div>
+                <div className="px-4 pb-4 pt-3">
+                  <button className="w-full py-2.5 rounded-lg bg-secondary border border-border text-sm font-medium text-muted-foreground cursor-default">
+                    Purchase Credits
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
-          <div className="flex items-center gap-2 p-3 rounded-lg bg-secondary/50 border border-border">
-            <span className="text-xs text-muted-foreground">
-              Environment:{" "}
-              <span className="text-foreground font-medium">{env}</span> —
-              Credit type will be saved as Draft until published.
-            </span>
+
+          {/* ── RIGHT: Settings ── */}
+          <div className="flex-1 overflow-y-auto">
+            <form id="create-credit-form" onSubmit={handleSubmit}>
+              <div className="p-6 space-y-8">
+                {/* Header */}
+                <div>
+                  <div className="flex items-center gap-3 mb-1">
+                    <h2 className="text-2xl font-bold text-foreground tracking-tight">Credit Type Settings</h2>
+                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-secondary border border-border text-muted-foreground">
+                      {env === "DEVELOPMENT" ? "Dev" : "Production"}
+                    </span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">Define a consumable unit for usage-based billing.</p>
+                </div>
+
+                {errors._global && (
+                  <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                    <p className="text-sm text-destructive">{errors._global}</p>
+                  </div>
+                )}
+
+                {/* Credit name */}
+                <div>
+                  <Label className="text-sm font-medium text-foreground mb-2 block">Credit name *</Label>
+                  <Input
+                    value={form.name}
+                    onChange={(e) => { setForm({ ...form, name: e.target.value }); setErrors((p) => ({ ...p, name: "" })); }}
+                    placeholder="e.g. API Calls, Storage GB"
+                    className="h-11 bg-background border-border"
+                  />
+                  {errors.name && <p className="text-xs text-destructive mt-1">{errors.name}</p>}
+                  {autoCode && (
+                    <p className="text-xs text-muted-foreground mt-1">Code: <span className="font-mono">{autoCode}</span></p>
+                  )}
+                </div>
+
+                {/* Description */}
+                <div>
+                  <Label className="text-sm font-medium text-foreground mb-2 block">Description</Label>
+                  <Input
+                    value={form.description}
+                    onChange={(e) => setForm({ ...form, description: e.target.value })}
+                    placeholder="Optional, displayed in components"
+                    className="h-11 bg-background border-border"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1.5">Optional, displayed in components</p>
+                </div>
+
+                {/* Unit names */}
+                <div>
+                  <h3 className="text-base font-semibold text-foreground mb-4">Unit Names</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-sm font-medium text-foreground mb-2 block">
+                        Single unit name *
+                        <span className="text-muted-foreground font-normal ml-1 text-xs">(A single…)</span>
+                      </Label>
+                      <Input
+                        value={form.unitNameSingle}
+                        onChange={(e) => { setForm({ ...form, unitNameSingle: e.target.value }); setErrors((p) => ({ ...p, unitNameSingle: "" })); }}
+                        placeholder="call, gigabyte, credit"
+                        className="h-11 bg-background border-border"
+                      />
+                      {errors.unitNameSingle && <p className="text-xs text-destructive mt-1">{errors.unitNameSingle}</p>}
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-foreground mb-2 block">
+                        Multiple unit name
+                        <span className="text-muted-foreground font-normal ml-1 text-xs">(Many…)</span>
+                      </Label>
+                      <Input
+                        value={form.unitNamePlural}
+                        onChange={(e) => setForm({ ...form, unitNamePlural: e.target.value })}
+                        placeholder="calls, gigabytes, credits"
+                        className="h-11 bg-background border-border"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Pack config */}
+                <div>
+                  <h3 className="text-base font-semibold text-foreground mb-4">Pack Configuration</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-sm font-medium text-foreground mb-2 block">Units per pack *</Label>
+                      <Input
+                        value={form.unitsPerPack}
+                        onChange={(e) => { setForm({ ...form, unitsPerPack: e.target.value }); setErrors((p) => ({ ...p, unitsPerPack: "" })); }}
+                        placeholder="100"
+                        type="number"
+                        min="1"
+                        className="h-11 bg-background border-border"
+                      />
+                      {errors.unitsPerPack && <p className="text-xs text-destructive mt-1">{errors.unitsPerPack}</p>}
+                      <p className="text-xs text-muted-foreground mt-1.5">How many credits per purchase</p>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-foreground mb-2 block">Price (USDC) *</Label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">$</span>
+                        <Input
+                          value={form.price}
+                          onChange={(e) => { setForm({ ...form, price: e.target.value }); setErrors((p) => ({ ...p, price: "" })); }}
+                          placeholder="5.00"
+                          type="number"
+                          min="0.01"
+                          step="0.01"
+                          className="h-11 bg-background border-border pl-6"
+                        />
+                      </div>
+                      {errors.price && <p className="text-xs text-destructive mt-1">{errors.price}</p>}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Billing Integration */}
+                <div>
+                  <Label className="text-sm font-medium text-foreground mb-2 block">Billing Integration</Label>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button type="button" className="w-full flex items-center justify-between h-11 px-3 rounded-lg bg-background border border-border text-sm text-foreground hover:bg-secondary/50 transition-colors">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="font-medium truncate">
+                            {selectedChainOpt ? chainName(selectedChainOpt) : "Select chain"}
+                          </span>
+                          {selectedChainOpt && (
+                            <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0 ${selectedChainOpt.tag === "mainnet" ? "bg-success/10 text-success" : "bg-secondary text-muted-foreground border border-border"}`}>
+                              {selectedChainOpt.tag}
+                            </span>
+                          )}
+                          {selectedChainOpt?.chainId === chainId && (
+                            <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-foreground text-background shrink-0">Connected</span>
+                          )}
+                        </div>
+                        <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0 ml-1" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-80">
+                      {USDC_CHAIN_OPTIONS.some((o) => o.tag === "testnet") && (
+                        <>
+                          <div className="px-2 pt-2 pb-1"><p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Testnets</p></div>
+                          {USDC_CHAIN_OPTIONS.filter((o) => o.tag === "testnet").map((opt) => {
+                            const isConn = opt.chainId === chainId;
+                            return (
+                              <DropdownMenuItem key={opt.chainId} disabled={!isConn} onClick={() => isConn && setForm((p) => ({ ...p, acceptedToken: opt.address }))} className={`flex items-center justify-between gap-3 py-2.5 ${!isConn ? "opacity-40 cursor-not-allowed" : ""}`}>
+                                <div className="flex items-center gap-2.5">
+                                  <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 border ${isConn ? "bg-foreground text-background border-foreground" : "bg-secondary text-muted-foreground border-border"}`}>
+                                    <span className="text-[10px] font-bold">{chainInitial(opt)}</span>
+                                  </div>
+                                  <div>
+                                    <div className="flex items-center gap-1.5">
+                                      <p className="text-sm font-medium">{chainName(opt)}</p>
+                                      {isConn && <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-foreground text-background">Connected</span>}
+                                    </div>
+                                    <p className="text-xs font-mono text-muted-foreground mt-0.5">USDC · {opt.address.slice(0, 6)}…{opt.address.slice(-4)}</p>
+                                  </div>
+                                </div>
+                                {form.acceptedToken === opt.address && isConn && <Check className="w-3.5 h-3.5 text-foreground shrink-0" />}
+                                {!isConn && <span className="text-[9px] text-muted-foreground shrink-0">Switch wallet</span>}
+                              </DropdownMenuItem>
+                            );
+                          })}
+                        </>
+                      )}
+                      {USDC_CHAIN_OPTIONS.some((o) => o.tag === "mainnet") && (
+                        <>
+                          <DropdownMenuSeparator />
+                          <div className="px-2 pt-2 pb-1"><p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Mainnets</p></div>
+                          {USDC_CHAIN_OPTIONS.filter((o) => o.tag === "mainnet").map((opt) => {
+                            const isConn = opt.chainId === chainId;
+                            return (
+                              <DropdownMenuItem key={opt.chainId} disabled={!isConn} onClick={() => isConn && setForm((p) => ({ ...p, acceptedToken: opt.address }))} className={`flex items-center justify-between gap-3 py-2.5 ${!isConn ? "opacity-40 cursor-not-allowed" : ""}`}>
+                                <div className="flex items-center gap-2.5">
+                                  <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 border ${isConn ? "bg-foreground text-background border-foreground" : "bg-secondary text-muted-foreground border-border"}`}>
+                                    <span className="text-[10px] font-bold">{chainInitial(opt)}</span>
+                                  </div>
+                                  <div>
+                                    <div className="flex items-center gap-1.5">
+                                      <p className="text-sm font-medium">{chainName(opt)}</p>
+                                      {isConn && <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-foreground text-background">Connected</span>}
+                                    </div>
+                                    <p className="text-xs font-mono text-muted-foreground mt-0.5">USDC · {opt.address.slice(0, 6)}…{opt.address.slice(-4)}</p>
+                                  </div>
+                                </div>
+                                {form.acceptedToken === opt.address && isConn && <Check className="w-3.5 h-3.5 text-foreground shrink-0" />}
+                                {!isConn && <span className="text-[9px] text-muted-foreground shrink-0">Switch wallet</span>}
+                              </DropdownMenuItem>
+                            );
+                          })}
+                        </>
+                      )}
+                      <div className="px-3 py-2 border-t border-border mt-1">
+                        <p className="text-[10px] text-muted-foreground">Switch your wallet network to enable other chains</p>
+                      </div>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
+            </form>
           </div>
-          <SheetFooter className="pt-4 border-t border-border flex-row justify-end gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? "Creating…" : "Create Credit Type"}
-            </Button>
-          </SheetFooter>
-        </form>
+        </div>
+
+        {/* Footer */}
+        <div className="shrink-0 border-t border-border px-6 py-4 flex items-center justify-end gap-3 bg-background">
+          <Button type="button" variant="outline" onClick={() => { setOpen(false); resetForm(); }} disabled={loading}>
+            Cancel
+          </Button>
+          <Button form="create-credit-form" type="submit" disabled={loading} className="min-w-[140px]">
+            {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Creating…</> : "Save Changes"}
+          </Button>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+// ─── Edit Credit Type Dialog ────────────────────────────────────────────────────
+
+function EditCreditTypeDialog({
+  credit,
+  onSaved,
+}: {
+  credit: CatalogCreditType;
+  onSaved: () => void;
+}) {
+  const chainId = useChainId();
+
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [form, setForm] = useState({
+    name: credit.name,
+    unitNameSingle: credit.unitName,
+    unitsPerPack: String(credit.unitsPerPack),
+    price: String(parseFloat(credit.price)),
+    acceptedToken: credit.acceptedToken,
+  });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Reset when credit changes
+  useEffect(() => {
+    setForm({
+      name: credit.name,
+      unitNameSingle: credit.unitName,
+      unitsPerPack: String(credit.unitsPerPack),
+      price: String(parseFloat(credit.price)),
+      acceptedToken: credit.acceptedToken,
+    });
+  }, [credit]);
+
+  function validate() {
+    const e: Record<string, string> = {};
+    if (!form.name.trim()) e.name = "Required";
+    if (!form.unitNameSingle.trim()) e.unitNameSingle = "Required";
+    const upp = Number(form.unitsPerPack);
+    if (!form.unitsPerPack || isNaN(upp) || upp <= 0 || !Number.isInteger(upp))
+      e.unitsPerPack = "Must be a positive integer";
+    const p = Number(form.price);
+    if (!form.price || isNaN(p) || p <= 0) e.price = "Must be positive";
+    return e;
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const errs = validate();
+    if (Object.keys(errs).length) { setErrors(errs); return; }
+    setLoading(true);
+    try {
+      const res = await fetch("/api/catalog/credits", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: credit.id,
+          name: form.name,
+          unitName: form.unitNameSingle,
+          unitsPerPack: Number(form.unitsPerPack),
+          price: Number(form.price),
+          acceptedToken: form.acceptedToken,
+        }),
+      });
+      if (res.ok) {
+        toast.success("Credit type updated");
+        setOpen(false);
+        onSaved();
+      } else {
+        const data = await res.json();
+        setErrors({ _global: data.error || "Failed to update credit type" });
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const selectedChainOpt = USDC_CHAIN_OPTIONS.find((o) => o.address === form.acceptedToken);
+  const chainName = (o: typeof USDC_CHAIN_OPTIONS[number]) =>
+    o.label.replace(/USDC — |Custom USDC — /, "");
+  const chainInitial = (o: typeof USDC_CHAIN_OPTIONS[number]) => {
+    const n = chainName(o);
+    return n.startsWith("Base") ? "B" : n.startsWith("Sepolia") ? "S" : n[0]?.toUpperCase() ?? "?";
+  };
+
+  return (
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger asChild>
+        <Button size="sm" variant="outline" className="gap-2">
+          Edit Credit
+        </Button>
+      </SheetTrigger>
+      <SheetContent className="w-full sm:max-w-2xl p-0 overflow-hidden flex flex-col">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
+          <h2 className="text-base font-semibold">Edit Credit Type</h2>
+          <button onClick={() => setOpen(false)} className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-secondary hover:text-foreground transition-all">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto">
+          <form id="edit-credit-form" onSubmit={handleSubmit} className="p-6 space-y-6">
+            {errors._global && (
+              <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                <p className="text-sm text-destructive">{errors._global}</p>
+              </div>
+            )}
+
+            <div>
+              <Label className="text-sm font-medium mb-2 block">Credit name *</Label>
+              <Input
+                value={form.name}
+                onChange={(e) => { setForm({ ...form, name: e.target.value }); setErrors((p) => ({ ...p, name: "" })); }}
+                className="h-11 bg-background border-border"
+              />
+              {errors.name && <p className="text-xs text-destructive mt-1">{errors.name}</p>}
+            </div>
+
+            <div>
+              <Label className="text-sm font-medium mb-2 block">Unit name (singular) *</Label>
+              <Input
+                value={form.unitNameSingle}
+                onChange={(e) => { setForm({ ...form, unitNameSingle: e.target.value }); setErrors((p) => ({ ...p, unitNameSingle: "" })); }}
+                placeholder="e.g. credit, call, token"
+                className="h-11 bg-background border-border"
+              />
+              {errors.unitNameSingle && <p className="text-xs text-destructive mt-1">{errors.unitNameSingle}</p>}
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-sm font-medium mb-2 block">Units per pack *</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={form.unitsPerPack}
+                  onChange={(e) => { setForm({ ...form, unitsPerPack: e.target.value }); setErrors((p) => ({ ...p, unitsPerPack: "" })); }}
+                  className="h-11 bg-background border-border"
+                />
+                {errors.unitsPerPack && <p className="text-xs text-destructive mt-1">{errors.unitsPerPack}</p>}
+              </div>
+              <div>
+                <Label className="text-sm font-medium mb-2 block">Price (USDC) *</Label>
+                <Input
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  value={form.price}
+                  onChange={(e) => { setForm({ ...form, price: e.target.value }); setErrors((p) => ({ ...p, price: "" })); }}
+                  placeholder="0.00"
+                  className="h-11 bg-background border-border"
+                />
+                {errors.price && <p className="text-xs text-destructive mt-1">{errors.price}</p>}
+              </div>
+            </div>
+
+            {/* Chain / Billing Integration */}
+            <div>
+              <Label className="text-sm font-medium mb-2 block">Billing Integration</Label>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button type="button" className="flex items-center justify-between w-full h-11 px-3 rounded-lg bg-background border border-border text-sm hover:border-ring/50 transition-colors">
+                    {selectedChainOpt ? (
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-7 h-7 rounded-full bg-foreground text-background flex items-center justify-center text-[10px] font-bold">
+                          {chainInitial(selectedChainOpt)}
+                        </div>
+                        <div className="text-left">
+                          <p className="text-sm font-medium leading-none">{chainName(selectedChainOpt)}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5 font-mono">USDC · {selectedChainOpt.address.slice(0, 6)}…{selectedChainOpt.address.slice(-4)}</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">Select chain</span>
+                    )}
+                    <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-72" align="start">
+                  {USDC_CHAIN_OPTIONS.map((opt) => {
+                    const isConn = opt.chainId === chainId;
+                    return (
+                      <DropdownMenuItem key={opt.chainId} disabled={!isConn} onClick={() => isConn && setForm((p) => ({ ...p, acceptedToken: opt.address }))} className={`flex items-center justify-between gap-3 py-2.5 ${!isConn ? "opacity-40 cursor-not-allowed" : ""}`}>
+                        <div className="flex items-center gap-2.5">
+                          <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 border ${isConn ? "bg-foreground text-background border-foreground" : "bg-secondary text-muted-foreground border-border"}`}>
+                            <span className="text-[10px] font-bold">{chainInitial(opt)}</span>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium">{chainName(opt)}</p>
+                            <p className="text-xs font-mono text-muted-foreground">USDC · {opt.address.slice(0, 6)}…{opt.address.slice(-4)}</p>
+                          </div>
+                        </div>
+                        {form.acceptedToken === opt.address && isConn && <Check className="w-3.5 h-3.5 shrink-0" />}
+                        {!isConn && <span className="text-[9px] text-muted-foreground shrink-0">Switch wallet</span>}
+                      </DropdownMenuItem>
+                    );
+                  })}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </form>
+        </div>
+
+        <div className="shrink-0 border-t border-border px-6 py-4 flex items-center justify-end gap-3 bg-background">
+          <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={loading}>
+            Cancel
+          </Button>
+          <Button form="edit-credit-form" type="submit" disabled={loading} className="min-w-[120px]">
+            {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving…</> : "Save Changes"}
+          </Button>
+        </div>
       </SheetContent>
     </Sheet>
   );
@@ -983,7 +1658,15 @@ function CreateCreditTypeDialog({
 
 // ─── Plans Table ───────────────────────────────────────────────────────────────
 
-function PlansTable({ env, refresh }: { env: EnvMode; refresh: number }) {
+function PlansTable({
+  env,
+  refresh,
+  onSelect,
+}: {
+  env: EnvMode;
+  refresh?: number;
+  onSelect?: (plan: CatalogPlan) => void;
+}) {
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
   const { signTypedDataAsync } = useSignTypedData();
@@ -1040,6 +1723,15 @@ function PlansTable({ env, refresh }: { env: EnvMode; refresh: number }) {
     // Check wallet connection
     if (!isConnected || !address) {
       toast.error("Please connect your wallet first");
+      return;
+    }
+
+    // Free plans (price = 0) cannot be registered — PlanFactory requires price > 0
+    if (parseFloat(plan.price) === 0) {
+      toast.error(
+        "Free plans cannot be registered on-chain. The PlanFactory contract requires price > 0. Free plan access is managed off-chain.",
+        { duration: 6000 },
+      );
       return;
     }
 
@@ -1262,25 +1954,52 @@ function PlansTable({ env, refresh }: { env: EnvMode; refresh: number }) {
           <TableBody>
             {plans.map((plan) => {
               const transitions = NEXT_STATUS[plan.status] ?? [];
+              const isFree = parseFloat(plan.price) === 0;
               const needsChainSync =
-                plan.status !== "ARCHIVED" && plan.chainSyncStatus !== "SYNCED";
+                !isFree &&
+                plan.status !== "ARCHIVED" &&
+                plan.chainSyncStatus !== "SYNCED" &&
+                plan.chainSyncStatus !== "NOT_APPLICABLE";
               return (
-                <TableRow key={plan.id}>
+                <TableRow
+                  key={plan.id}
+                  className="group cursor-pointer hover:bg-secondary/20 transition-colors"
+                  onClick={(e) => {
+                    // Don't trigger if clicking on actions/buttons
+                    if ((e.target as HTMLElement).closest("button") || (e.target as HTMLElement).closest("[role='menuitem']")) return;
+                    onSelect?.(plan);
+                  }}
+                >
                   <TableCell className="font-medium">{plan.name}</TableCell>
                   <TableCell className="text-muted-foreground text-xs">
                     {plan.tier}
                   </TableCell>
-                  <TableCell>{parseFloat(plan.price).toFixed(2)}</TableCell>
-                  <TableCell>{plan.billingInterval}d</TableCell>
+                  <TableCell>
+                    {isFree ? (
+                      <span className="text-sm font-medium text-foreground">Free</span>
+                    ) : (
+                      <span className="text-sm">${parseFloat(plan.price).toFixed(2)} USDC</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground text-xs">
+                    {BILLING_INTERVALS.find((i) => i.days === plan.billingInterval)?.label ?? `${plan.billingInterval}d`}
+                  </TableCell>
                   <TableCell className="text-xs">
-                    {tokenLabel(plan.acceptedToken)}
+                    {isFree ? (
+                      <span className="text-muted-foreground">—</span>
+                    ) : (
+                      tokenLabel(plan.acceptedToken)
+                    )}
                   </TableCell>
                   <TableCell>
                     <StatusBadge status={plan.status} />
                   </TableCell>
                   <TableCell>
-                    {plan.chainSyncStatus &&
-                    plan.chainSyncStatus !== "NOT_APPLICABLE" ? (
+                    {isFree ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full border border-border text-muted-foreground bg-secondary">
+                        Off-chain
+                      </span>
+                    ) : plan.chainSyncStatus && plan.chainSyncStatus !== "NOT_APPLICABLE" ? (
                       <ChainSyncBadge status={plan.chainSyncStatus} />
                     ) : (
                       <span className="text-xs text-muted-foreground">—</span>
@@ -1320,7 +2039,16 @@ function PlansTable({ env, refresh }: { env: EnvMode; refresh: number }) {
                             {statusActionLabel(s)}
                           </DropdownMenuItem>
                         ))}
-                        {needsChainSync && (
+                        {isFree ? (
+                          <DropdownMenuItem disabled className="opacity-50">
+                            <span className="flex flex-col gap-0.5">
+                              <span>Register On-Chain</span>
+                              <span className="text-[10px] text-muted-foreground font-normal">
+                                Free plans are managed off-chain
+                              </span>
+                            </span>
+                          </DropdownMenuItem>
+                        ) : needsChainSync ? (
                           <DropdownMenuItem
                             onClick={() => registerOnChain(plan)}
                             disabled={syncingPlanId === plan.id}
@@ -1329,7 +2057,7 @@ function PlansTable({ env, refresh }: { env: EnvMode; refresh: number }) {
                               ? "Registering…"
                               : "Register On-Chain"}
                           </DropdownMenuItem>
-                        )}
+                        ) : null}
                         {!plan.onChainPlanId && plan.status !== "PUBLISHED" && (
                           <DropdownMenuItem
                             onClick={() => deletePlan(plan)}
@@ -1767,7 +2495,9 @@ function AddOnsTable({ env, refresh }: { env: EnvMode; refresh: number }) {
             {addOns.map((addon) => {
               const transitions = NEXT_STATUS[addon.status] ?? [];
               return (
-                <TableRow key={addon.id}>
+                <TableRow
+                  key={addon.id}
+                >
                   <TableCell className="font-medium">{addon.name}</TableCell>
                   <TableCell className="font-mono text-xs text-muted-foreground">
                     {addon.code}
@@ -2240,7 +2970,15 @@ function AddOnsTable({ env, refresh }: { env: EnvMode; refresh: number }) {
 
 // ─── Credit Types Table ────────────────────────────────────────────────────────
 
-function CreditTypesTable({ env, refresh }: { env: EnvMode; refresh: number }) {
+function CreditTypesTable({
+  env,
+  refresh,
+  onSelect,
+}: {
+  env: EnvMode;
+  refresh?: number;
+  onSelect?: (credit: CatalogCreditType) => void;
+}) {
   const [creditTypes, setCreditTypes] = useState<CatalogCreditType[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<CatalogStatus | "">("");
@@ -2337,14 +3075,11 @@ function CreditTypesTable({ env, refresh }: { env: EnvMode; refresh: number }) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Code</TableHead>
+              <TableHead>Credit Type</TableHead>
               <TableHead>Unit</TableHead>
               <TableHead>Units/Pack</TableHead>
-              <TableHead>Price</TableHead>
-              <TableHead>Token</TableHead>
+              <TableHead>Price (USDC)</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>v</TableHead>
               <TableHead />
             </TableRow>
           </TableHeader>
@@ -2352,47 +3087,59 @@ function CreditTypesTable({ env, refresh }: { env: EnvMode; refresh: number }) {
             {creditTypes.map((ct) => {
               const transitions = NEXT_STATUS[ct.status] ?? [];
               return (
-                <TableRow key={ct.id}>
-                  <TableCell className="font-medium">{ct.name}</TableCell>
-                  <TableCell className="font-mono text-xs text-muted-foreground">
-                    {ct.code}
+                <TableRow
+                  key={ct.id}
+                  className="cursor-pointer hover:bg-secondary/20 transition-colors"
+                  onClick={(e) => {
+                    if ((e.target as HTMLElement).closest("button") || (e.target as HTMLElement).closest("[role='menuitem']")) return;
+                    onSelect?.(ct);
+                  }}
+                >
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-linear-to-br from-amber-500/20 to-orange-400/10 border border-border flex items-center justify-center">
+                        <Coins className="w-4 h-4 text-amber-500" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">{ct.name}</p>
+                        <p className="text-xs text-muted-foreground font-mono">{ct.code}</p>
+                      </div>
+                    </div>
                   </TableCell>
-                  <TableCell className="text-xs">{ct.unitName}</TableCell>
-                  <TableCell>{ct.unitsPerPack}</TableCell>
-                  <TableCell>{parseFloat(ct.price).toFixed(2)}</TableCell>
-                  <TableCell className="text-xs">
-                    {tokenLabel(ct.acceptedToken)}
-                  </TableCell>
+                  <TableCell className="text-sm">{ct.unitName}</TableCell>
+                  <TableCell className="text-sm">{ct.unitsPerPack}</TableCell>
+                  <TableCell className="text-sm font-medium">${parseFloat(ct.price).toFixed(2)}</TableCell>
                   <TableCell>
                     <StatusBadge status={ct.status} />
                   </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
-                    v{ct.version}
-                  </TableCell>
-                  <TableCell>
-                    {transitions.length > 0 && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            disabled={updating === ct.id}
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          disabled={updating === ct.id}
+                        >
+                          {updating === ct.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <MoreHorizontal className="w-4 h-4" />}
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {onSelect && (
+                          <DropdownMenuItem onClick={() => onSelect(ct)}>
+                            <ChevronRight className="w-3.5 h-3.5 mr-2" />
+                            View Details
+                          </DropdownMenuItem>
+                        )}
+                        {transitions.map((s) => (
+                          <DropdownMenuItem
+                            key={s}
+                            onClick={() => updateStatus(ct.id, s)}
                           >
-                            <MoreHorizontal className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          {transitions.map((s) => (
-                            <DropdownMenuItem
-                              key={s}
-                              onClick={() => updateStatus(ct.id, s)}
-                            >
-                              {statusActionLabel(s)}
-                            </DropdownMenuItem>
-                          ))}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
+                            {statusActionLabel(s)}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </TableCell>
                 </TableRow>
               );
@@ -2408,110 +3155,95 @@ function CreditTypesTable({ env, refresh }: { env: EnvMode; refresh: number }) {
 
 const CHAIN_INFO: Record<
   EnvMode,
-  { chainId: number; name: string; color: string }
+  { chainId: number; name: string; color: string; tag: string }
 > = {
   DEVELOPMENT: {
     chainId: 11155111,
-    name: "Sepolia (Testnet)",
-    color: "bg-blue-400",
+    name: "Sepolia Testnet",
+    color: "bg-zinc-400",
+    tag: "testnet",
   },
-  PRODUCTION: { chainId: 8453, name: "Base Mainnet", color: "bg-orange-400" },
+  PRODUCTION: { chainId: 8453, name: "Base Mainnet", color: "bg-foreground", tag: "mainnet" },
 };
 
 type CatalogConfigSettings = {
   initialPlan: string;
   fallbackPlan: string;
-  showBillingPeriodToggle: boolean;
+  // display
   freePlanPriceDisplay: boolean;
   hideCredits: boolean;
-  yearlyDiscountDisplay: boolean;
   showFeatureDescriptions: boolean;
   showHardLimits: boolean;
+  // plan change
   upgradeImmediately: boolean;
   downgradeImmediately: boolean;
   preventDowngradeOverLimit: boolean;
   disallowSelfServiceDowngrade: boolean;
+  // contract / on-chain (kept in type for API compat — not exposed yet in UI)
+  showBillingPeriodToggle: boolean;
+  yearlyDiscountDisplay: boolean;
 };
 
 const DEFAULT_CONFIG_SETTINGS: CatalogConfigSettings = {
-  initialPlan: "Free",
+  initialPlan: "none",
   fallbackPlan: "none",
-  showBillingPeriodToggle: true,
   freePlanPriceDisplay: true,
   hideCredits: false,
-  yearlyDiscountDisplay: true,
   showFeatureDescriptions: true,
   showHardLimits: true,
   upgradeImmediately: true,
   downgradeImmediately: false,
   preventDowngradeOverLimit: true,
   disallowSelfServiceDowngrade: false,
+  showBillingPeriodToggle: false,
+  yearlyDiscountDisplay: false,
 };
 
 function ConfigurationTab() {
   const { envMode, setEnvMode } = useEnvironment();
+  const chainId = useChainId();
+  const { isConnected, address } = useAccount();
+
   const [switchTarget, setSwitchTarget] = useState<EnvMode>("DEVELOPMENT");
   const [confirmText, setConfirmText] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [switching, setSwitching] = useState(false);
-  const [switchResult, setSwitchResult] = useState<string | null>(null);
   const [switchError, setSwitchError] = useState<string | null>(null);
   const [loadingConfig, setLoadingConfig] = useState(false);
   const [savingConfig, setSavingConfig] = useState(false);
   const [configError, setConfigError] = useState<string | null>(null);
-  const [configSavedMessage, setConfigSavedMessage] = useState<string | null>(
-    null,
-  );
+  const [settings, setSettings] = useState<CatalogConfigSettings>(DEFAULT_CONFIG_SETTINGS);
 
-  // Configuration settings state
-  const [settings, setSettings] = useState<CatalogConfigSettings>(
-    DEFAULT_CONFIG_SETTINGS,
-  );
+  // Load catalog plans for dropdowns
+  const [catalogPlans, setCatalogPlans] = useState<{ id: string; name: string; tier: string; price: string }[]>([]);
+  useEffect(() => {
+    fetch(`/api/catalog/plans?environmentMode=${envMode}&limit=50`, { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (d?.plans) setCatalogPlans(d.plans); })
+      .catch(() => {});
+  }, [envMode]);
 
   useEffect(() => {
     let cancelled = false;
-    async function loadConfig() {
-      setLoadingConfig(true);
-      setConfigError(null);
-      try {
-        const res = await fetch(
-          `/api/catalog/config?environmentMode=${envMode}`,
-          { cache: "no-store" },
-        );
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          throw new Error(data.error || "Failed to load configuration");
-        }
+    setLoadingConfig(true);
+    setConfigError(null);
+    fetch(`/api/catalog/config?environmentMode=${envMode}`, { cache: "no-store" })
+      .then((r) => r.json())
+      .then((data) => {
         if (cancelled) return;
-
-        const config = (data.config ?? {}) as Partial<CatalogConfigSettings> & {
-          fallbackPlan?: string | null;
-        };
-        setSettings({
-          ...DEFAULT_CONFIG_SETTINGS,
-          ...config,
-          fallbackPlan: config.fallbackPlan || "none",
-        });
-      } catch (err: unknown) {
-        if (cancelled) return;
-        setConfigError(
-          err instanceof Error ? err.message : "Failed to load configuration",
-        );
-      } finally {
-        if (!cancelled) setLoadingConfig(false);
-      }
-    }
-
-    void loadConfig();
-    return () => {
-      cancelled = true;
-    };
+        const config = (data.config ?? {}) as Partial<CatalogConfigSettings> & { fallbackPlan?: string | null };
+        setSettings({ ...DEFAULT_CONFIG_SETTINGS, ...config, fallbackPlan: config.fallbackPlan || "none" });
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) setConfigError(err instanceof Error ? err.message : "Failed to load configuration");
+      })
+      .finally(() => { if (!cancelled) setLoadingConfig(false); });
+    return () => { cancelled = true; };
   }, [envMode]);
 
-  async function handleSaveSettings() {
+  async function handleSave() {
     setSavingConfig(true);
     setConfigError(null);
-    setConfigSavedMessage(null);
     try {
       const res = await fetch("/api/catalog/config", {
         method: "PUT",
@@ -2519,21 +3251,14 @@ function ConfigurationTab() {
         body: JSON.stringify({
           ...settings,
           environmentMode: envMode,
-          fallbackPlan:
-            settings.fallbackPlan === "none" ? null : settings.fallbackPlan,
+          fallbackPlan: settings.fallbackPlan === "none" ? null : settings.fallbackPlan,
         }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to save configuration");
-      }
-      setConfigSavedMessage(
-        `Configuration saved for ${envMode === "PRODUCTION" ? "Mainnet" : "Testnet"}.`,
-      );
+      if (!res.ok) throw new Error(data.error || "Failed to save");
+      toast.success(`Configuration saved for ${envMode === "PRODUCTION" ? "Mainnet" : "Testnet"}`);
     } catch (err: unknown) {
-      setConfigError(
-        err instanceof Error ? err.message : "Failed to save configuration",
-      );
+      setConfigError(err instanceof Error ? err.message : "Failed to save configuration");
     } finally {
       setSavingConfig(false);
     }
@@ -2544,24 +3269,18 @@ function ConfigurationTab() {
     if (confirmText !== "CONFIRM") return;
     setSwitching(true);
     setSwitchError(null);
-    setSwitchResult(null);
     try {
       const res = await fetch("/api/environment/switch", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          environmentMode: switchTarget,
-          confirmText: "CONFIRM",
-        }),
+        body: JSON.stringify({ environmentMode: switchTarget, confirmText: "CONFIRM" }),
       });
       const data = await res.json();
       if (res.ok) {
         setEnvMode(data.environmentMode as EnvMode);
-        setSwitchResult(
-          `Switched to ${data.environmentMode} (Chain ${data.chainId})`,
-        );
         setDialogOpen(false);
         setConfirmText("");
+        toast.success(`Switched to ${data.environmentMode} — Chain ${data.chainId}`);
       } else {
         setSwitchError(data.error || "Switch failed");
       }
@@ -2570,662 +3289,321 @@ function ConfigurationTab() {
     }
   }
 
-  return (
-    <div className="max-w-5xl space-y-8">
-      <div className="flex flex-wrap items-center justify-end gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            setSettings(DEFAULT_CONFIG_SETTINGS);
-            setConfigSavedMessage(null);
-            setConfigError(null);
-          }}
-          disabled={loadingConfig || savingConfig}
-        >
-          Reset
-        </Button>
-        <Button
-          size="sm"
-          onClick={handleSaveSettings}
-          disabled={loadingConfig || savingConfig}
-          className="gap-2"
-        >
-          {savingConfig ? (
-            <>
-              <RefreshCw className="h-4 w-4 animate-spin" />
-              Saving...
-            </>
-          ) : (
-            "Save configuration"
-          )}
-        </Button>
+  const currentChainInfo = CHAIN_INFO[envMode];
+  const walletChainMatch = chainId === currentChainInfo.chainId;
+  const usdcAddress = getUsdcAddress(currentChainInfo.chainId);
+
+  // ToggleRow helper
+  function ToggleRow({ id, label, desc, checked, onChange }: { id: string; label: string; desc: string; checked: boolean; onChange: (v: boolean) => void }) {
+    return (
+      <div className="flex items-start justify-between gap-6 p-5 hover:bg-secondary/10 transition-colors">
+        <div className="space-y-1 flex-1">
+          <Label htmlFor={id} className="text-sm font-semibold text-foreground cursor-pointer">{label}</Label>
+          <p className="text-xs text-muted-foreground leading-relaxed">{desc}</p>
+        </div>
+        <Switch id={id} checked={checked} onCheckedChange={onChange} />
       </div>
+    );
+  }
+
+  return (
+    <div className="max-w-3xl space-y-6">
+
+      {/* Active environment status bar */}
+      <div className="rounded-xl border border-border bg-card p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${envMode === "PRODUCTION" ? "bg-foreground" : "bg-zinc-400"}`} />
+          <div>
+            <p className="text-sm font-bold text-foreground leading-tight">
+              {envMode === "DEVELOPMENT" ? "Development" : "Production"} Environment
+            </p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {currentChainInfo.name} · Chain {currentChainInfo.chainId}
+            </p>
+          </div>
+          <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-full border ${envMode === "PRODUCTION" ? "border-foreground/30 text-foreground" : "border-border text-muted-foreground"}`}>
+            {currentChainInfo.tag}
+          </span>
+        </div>
+        <div className="flex items-center gap-3">
+          {isConnected ? (
+            <div className="flex items-center gap-2">
+              <div className={`w-2 h-2 rounded-full ${walletChainMatch ? "bg-green-500" : "bg-orange-500"}`} />
+              <p className="text-xs text-muted-foreground">
+                {walletChainMatch ? "Wallet on correct chain" : "Wallet on wrong chain"}
+                {address && <span className="ml-1 font-mono">{address.slice(0, 6)}…{address.slice(-4)}</span>}
+              </p>
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">Wallet not connected</p>
+          )}
+        </div>
+      </div>
+
       {configError && (
-        <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
           {configError}
         </div>
       )}
-      {configSavedMessage && (
-        <div className="rounded-md border border-green-500/30 bg-green-500/5 p-3 text-sm text-green-600 dark:text-green-400">
-          {configSavedMessage}
-        </div>
-      )}
 
-      {/* Initial Plan Configuration */}
-      <div className="rounded-xl border border-border/50 bg-card shadow-sm overflow-hidden">
-        <div className="p-6 border-b border-border/50 bg-secondary/20">
-          <h3 className="text-lg font-semibold text-foreground tracking-tight">
-            Initial Plan Configuration
-          </h3>
-          <p className="text-sm text-muted-foreground mt-1">
-            Set default plans for new companies and subscription fallbacks.
+      {/* ── Default Plans ─────────────────────────────────────── */}
+      <div className="rounded-xl border border-border bg-card overflow-hidden">
+        <div className="px-5 py-4 border-b border-border bg-secondary/20">
+          <h3 className="text-sm font-bold text-foreground">Default Plans</h3>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Plans automatically assigned to new subscribers on sign-up.
           </p>
         </div>
-        <div className="p-6 space-y-6">
-          <div className="space-y-3">
-            <Label
-              htmlFor="initial-plan"
-              className="text-sm font-semibold text-foreground"
-            >
-              Initial Plan
-            </Label>
-            <Select
-              value={settings.initialPlan}
-              onValueChange={(v) =>
-                setSettings({ ...settings, initialPlan: v })
-              }
-            >
-              <SelectTrigger
-                id="initial-plan"
-                className="bg-background border-border hover:border-foreground/30 transition-colors max-w-md h-11"
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Free">Free</SelectItem>
-                <SelectItem value="Starter">Starter</SelectItem>
-                <SelectItem value="Pro">Pro</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              The plan assigned to new companies upon sign-up. Companies will
-              automatically be assigned to this plan when they first subscribe.
-            </p>
-          </div>
-
-          <div className="h-px bg-border/50" />
-
-          <div className="space-y-3">
-            <Label
-              htmlFor="fallback-plan"
-              className="text-sm font-semibold text-foreground"
-            >
-              Fallback Plan
-            </Label>
-            <Select
-              value={settings.fallbackPlan}
-              onValueChange={(v) =>
-                setSettings({ ...settings, fallbackPlan: v })
-              }
-            >
-              <SelectTrigger
-                id="fallback-plan"
-                className="bg-background border-border hover:border-foreground/30 transition-colors max-w-md h-11"
-              >
-                <SelectValue placeholder="No fallback plan selected" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">None</SelectItem>
-                <SelectItem value="Free">Free</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              Choose a plan all companies are assigned to if they don't have an
-              active plan. Leave as "None" to require manual assignment.
-            </p>
+        <div className="p-5 space-y-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div className="space-y-2">
+              <Label htmlFor="initial-plan" className="text-sm font-semibold text-foreground">Initial Plan</Label>
+              <Select value={settings.initialPlan} onValueChange={(v) => setSettings({ ...settings, initialPlan: v })}>
+                <SelectTrigger id="initial-plan" className="h-11 bg-background border-border">
+                  <SelectValue placeholder="Select a plan…" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {catalogPlans.map((p) => (
+                    <SelectItem key={p.id} value={p.tier}>
+                      <div className="flex items-center gap-2">
+                        <span>{p.name}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {parseFloat(p.price) === 0 ? "Free" : `$${parseFloat(p.price).toFixed(2)} USDC`}
+                        </span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">Assigned when a wallet first connects.</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="fallback-plan" className="text-sm font-semibold text-foreground">Fallback Plan</Label>
+              <Select value={settings.fallbackPlan} onValueChange={(v) => setSettings({ ...settings, fallbackPlan: v })}>
+                <SelectTrigger id="fallback-plan" className="h-11 bg-background border-border">
+                  <SelectValue placeholder="No fallback" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {catalogPlans.filter((p) => parseFloat(p.price) === 0).map((p) => (
+                    <SelectItem key={p.id} value={p.tier}>{p.name} (Free)</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">Assigned if a subscription lapses or is cancelled.</p>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Component Display Settings */}
-      <div className="rounded-xl border border-border/50 bg-card shadow-sm overflow-hidden">
-        <div className="p-6 border-b border-border/50 bg-secondary/20">
-          <h3 className="text-lg font-semibold text-foreground tracking-tight">
-            Component Display Settings
-          </h3>
-          <p className="text-sm text-muted-foreground mt-1">
-            Configure how plans, features, and billing data is displayed across
-            all components.
+      {/* ── Component Display ───────────────────────────────────── */}
+      <div className="rounded-xl border border-border bg-card overflow-hidden">
+        <div className="px-5 py-4 border-b border-border bg-secondary/20">
+          <h3 className="text-sm font-bold text-foreground">Component Display</h3>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Control what your end-users see in embedded billing components.
           </p>
         </div>
-
         <div className="divide-y divide-border/50">
-          <div className="flex items-start justify-between gap-6 p-6 hover:bg-secondary/10 transition-colors">
-            <div className="space-y-1.5 flex-1">
-              <Label
-                htmlFor="billing-toggle"
-                className="text-sm font-semibold text-foreground cursor-pointer"
-              >
-                Show billing period toggle
-              </Label>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Filter plans by billing period (yearly and monthly) in checkout
-                and pricing table
-              </p>
-            </div>
-            <Switch
-              id="billing-toggle"
-              checked={settings.showBillingPeriodToggle}
-              onCheckedChange={(checked) =>
-                setSettings({ ...settings, showBillingPeriodToggle: checked })
-              }
-            />
-          </div>
-
-          <div className="flex items-start justify-between gap-6 p-6 hover:bg-secondary/10 transition-colors">
-            <div className="space-y-1.5 flex-1">
-              <Label
-                htmlFor="free-price"
-                className="text-sm font-semibold text-foreground cursor-pointer"
-              >
-                Free plan price display
-              </Label>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Show the word "Free" in checkout and pricing table instead of
-                "$0.00"
-              </p>
-            </div>
-            <Switch
-              id="free-price"
-              checked={settings.freePlanPriceDisplay}
-              onCheckedChange={(checked) =>
-                setSettings({ ...settings, freePlanPriceDisplay: checked })
-              }
-            />
-          </div>
-
-          <div className="flex items-start justify-between gap-6 p-6 hover:bg-secondary/10 transition-colors">
-            <div className="space-y-1.5 flex-1">
-              <Label
-                htmlFor="hide-credits"
-                className="text-sm font-semibold text-foreground cursor-pointer"
-              >
-                Hide credits
-              </Label>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Obscure credit balance and consumption rate from checkout and
-                other elements
-              </p>
-            </div>
-            <Switch
-              id="hide-credits"
-              checked={settings.hideCredits}
-              onCheckedChange={(checked) =>
-                setSettings({ ...settings, hideCredits: checked })
-              }
-            />
-          </div>
-
-          <div className="flex items-start justify-between gap-6 p-6 hover:bg-secondary/10 transition-colors">
-            <div className="space-y-1.5 flex-1">
-              <Label
-                htmlFor="yearly-discount"
-                className="text-sm font-semibold text-foreground cursor-pointer"
-              >
-                Yearly discount display
-              </Label>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Display billed yearly prices as monthly. E.g "$120/year" is
-                shown as "$10/month, billed yearly"
-              </p>
-            </div>
-            <Switch
-              id="yearly-discount"
-              checked={settings.yearlyDiscountDisplay}
-              onCheckedChange={(checked) =>
-                setSettings({ ...settings, yearlyDiscountDisplay: checked })
-              }
-            />
-          </div>
-
-          <div className="flex items-start justify-between gap-6 p-6 hover:bg-secondary/10 transition-colors">
-            <div className="space-y-1.5 flex-1">
-              <Label
-                htmlFor="feature-desc"
-                className="text-sm font-semibold text-foreground cursor-pointer"
-              >
-                Show feature descriptions
-              </Label>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Show descriptions in checkout for plan entitlements
-              </p>
-            </div>
-            <Switch
-              id="feature-desc"
-              checked={settings.showFeatureDescriptions}
-              onCheckedChange={(checked) =>
-                setSettings({ ...settings, showFeatureDescriptions: checked })
-              }
-            />
-          </div>
-
-          <div className="flex items-start justify-between gap-6 p-6 hover:bg-secondary/10 transition-colors">
-            <div className="space-y-1.5 flex-1">
-              <Label
-                htmlFor="hard-limits"
-                className="text-sm font-semibold text-foreground cursor-pointer"
-              >
-                Show hard limits
-              </Label>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Surface defined hard limits for relevant entitlements
-              </p>
-            </div>
-            <Switch
-              id="hard-limits"
-              checked={settings.showHardLimits}
-              onCheckedChange={(checked) =>
-                setSettings({ ...settings, showHardLimits: checked })
-              }
-            />
-          </div>
+          <ToggleRow
+            id="free-price" label='Show "Free" instead of "$0.00"'
+            desc="Display the word Free in the portal and checkout instead of a zero price"
+            checked={settings.freePlanPriceDisplay}
+            onChange={(v) => setSettings({ ...settings, freePlanPriceDisplay: v })}
+          />
+          <ToggleRow
+            id="hide-credits" label="Hide credit balances"
+            desc="Obscure credit balance and USDC consumption from checkout and portal components"
+            checked={settings.hideCredits}
+            onChange={(v) => setSettings({ ...settings, hideCredits: v })}
+          />
+          <ToggleRow
+            id="feature-desc" label="Show feature descriptions"
+            desc="Display entitlement descriptions inside checkout and portal plan cards"
+            checked={settings.showFeatureDescriptions}
+            onChange={(v) => setSettings({ ...settings, showFeatureDescriptions: v })}
+          />
+          <ToggleRow
+            id="hard-limits" label="Show hard limits"
+            desc="Surface defined hard limits (e.g. max API calls) for metered entitlements"
+            checked={settings.showHardLimits}
+            onChange={(v) => setSettings({ ...settings, showHardLimits: v })}
+          />
         </div>
       </div>
 
-      {/* Plan Change Rules */}
-      <div className="rounded-xl border border-border/50 bg-card shadow-sm overflow-hidden">
-        <div className="p-6 border-b border-border/50 bg-secondary/20">
-          <h3 className="text-lg font-semibold text-foreground tracking-tight">
-            Plan Change Rules
-          </h3>
-          <p className="text-sm text-muted-foreground mt-1">
-            Smart contracts will validate plan changes based on the following
-            rules
+      {/* ── Plan Change Rules ───────────────────────────────────── */}
+      <div className="rounded-xl border border-border bg-card overflow-hidden">
+        <div className="px-5 py-4 border-b border-border bg-secondary/20">
+          <h3 className="text-sm font-bold text-foreground">Plan Change Rules</h3>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            On-chain rules applied when subscribers upgrade or downgrade their plan.
           </p>
         </div>
-
-        <div className="p-6 space-y-5">
-          <div className="rounded-xl border border-green-500/20 bg-linear-to-br from-green-500/5 to-green-500/10 p-5 space-y-4">
-            <div className="flex items-center gap-2.5">
-              <div className="w-2 h-2 rounded-full bg-green-500 shadow-sm" />
-              <h4 className="text-sm font-bold text-foreground">On Upgrade</h4>
+        <div className="p-5 space-y-4">
+          {/* Upgrade */}
+          <div className="rounded-lg border border-border bg-secondary/5 overflow-hidden">
+            <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50 bg-secondary/10">
+              <div className="w-2 h-2 rounded-full bg-green-500" />
+              <p className="text-xs font-bold text-foreground uppercase tracking-wider">On Upgrade</p>
+              <p className="text-xs text-muted-foreground ml-1">→ higher cost plan or adding an add-on</p>
             </div>
-            <div className="pl-4 border-l-2 border-green-500/20">
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                • Switching to a higher cost plan
-                <br />• Add an add-on
-              </p>
+            <ToggleRow
+              id="upgrade-immediate" label="Charge the difference immediately on-chain"
+              desc="Apply the upgrade and collect the prorated USDC difference in the same transaction"
+              checked={settings.upgradeImmediately}
+              onChange={(v) => setSettings({ ...settings, upgradeImmediately: v })}
+            />
+          </div>
+          {/* Downgrade */}
+          <div className="rounded-lg border border-border bg-secondary/5 overflow-hidden">
+            <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50 bg-secondary/10">
+              <div className="w-2 h-2 rounded-full bg-orange-500" />
+              <p className="text-xs font-bold text-foreground uppercase tracking-wider">On Downgrade</p>
+              <p className="text-xs text-muted-foreground ml-1">→ lower cost plan or removing an add-on</p>
             </div>
-            <div className="flex items-start justify-between gap-6 pt-2">
-              <div className="space-y-1.5 flex-1">
-                <Label
-                  htmlFor="upgrade-immediate"
-                  className="text-sm font-semibold text-foreground cursor-pointer"
-                >
-                  Upgrade immediately, invoice immediately
-                </Label>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  Apply upgrades and charge the difference immediately on-chain
-                </p>
-              </div>
-              <Switch
-                id="upgrade-immediate"
-                checked={settings.upgradeImmediately}
-                onCheckedChange={(checked) =>
-                  setSettings({ ...settings, upgradeImmediately: checked })
-                }
+            <div className="divide-y divide-border/50">
+              <ToggleRow
+                id="downgrade-immediate" label="Apply downgrade immediately and credit wallet"
+                desc="Downgrade takes effect now and the prorated USDC difference is credited back to the subscriber's wallet"
+                checked={settings.downgradeImmediately}
+                onChange={(v) => setSettings({ ...settings, downgradeImmediately: v })}
+              />
+              <ToggleRow
+                id="prevent-downgrade" label="Block downgrade when subscriber is over the limit"
+                desc="Reject a downgrade transaction if the subscriber is using more than the destination plan allows"
+                checked={settings.preventDowngradeOverLimit}
+                onChange={(v) => setSettings({ ...settings, preventDowngradeOverLimit: v })}
+              />
+              <ToggleRow
+                id="disallow-self-downgrade" label="Require admin approval for downgrades"
+                desc="End-users cannot self-service downgrade — an admin must trigger the on-chain downgrade"
+                checked={settings.disallowSelfServiceDowngrade}
+                onChange={(v) => setSettings({ ...settings, disallowSelfServiceDowngrade: v })}
               />
             </div>
           </div>
-
-          <div className="rounded-xl border border-orange-500/20 bg-linear-to-br from-orange-500/5 to-orange-500/10 p-5 space-y-4">
-            <div className="flex items-center gap-2.5">
-              <div className="w-2 h-2 rounded-full bg-orange-500 shadow-sm" />
-              <h4 className="text-sm font-bold text-foreground">
-                On Downgrade
-              </h4>
-            </div>
-            <div className="pl-4 border-l-2 border-orange-500/20">
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                • Switching to a lower cost plan
-                <br />• Remove an add-on
-              </p>
-            </div>
-            <div className="space-y-4 pt-2">
-              <div className="flex items-start justify-between gap-6">
-                <div className="space-y-1.5 flex-1">
-                  <Label
-                    htmlFor="downgrade-immediate"
-                    className="text-sm font-semibold text-foreground cursor-pointer"
-                  >
-                    Downgrade immediately, apply credit for next period
-                  </Label>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    Apply downgrades immediately and credit the difference to
-                    the customer's wallet
-                  </p>
-                </div>
-                <Switch
-                  id="downgrade-immediate"
-                  checked={settings.downgradeImmediately}
-                  onCheckedChange={(checked) =>
-                    setSettings({ ...settings, downgradeImmediately: checked })
-                  }
-                />
-              </div>
-
-              <div className="h-px bg-border/50" />
-
-              <div className="flex items-start justify-between gap-6">
-                <div className="space-y-1.5 flex-1">
-                  <Label
-                    htmlFor="prevent-downgrade"
-                    className="text-sm font-semibold text-foreground cursor-pointer"
-                  >
-                    Prevent downgrades when over the limit
-                  </Label>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    Disallow downgrades when the user is above the limit for the
-                    destination plan
-                  </p>
-                </div>
-                <Switch
-                  id="prevent-downgrade"
-                  checked={settings.preventDowngradeOverLimit}
-                  onCheckedChange={(checked) =>
-                    setSettings({
-                      ...settings,
-                      preventDowngradeOverLimit: checked,
-                    })
-                  }
-                />
-              </div>
-
-              <div className="h-px bg-border/50" />
-
-              <div className="flex items-start justify-between gap-6">
-                <div className="space-y-1.5 flex-1">
-                  <Label
-                    htmlFor="disallow-self-downgrade"
-                    className="text-sm font-semibold text-foreground cursor-pointer"
-                  >
-                    Disallow self-service downgrades
-                  </Label>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    Require users to contact support to downgrade their plan
-                  </p>
-                </div>
-                <Switch
-                  id="disallow-self-downgrade"
-                  checked={settings.disallowSelfServiceDowngrade}
-                  onCheckedChange={(checked) =>
-                    setSettings({
-                      ...settings,
-                      disallowSelfServiceDowngrade: checked,
-                    })
-                  }
-                />
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 
-      {/* Contract Settings */}
-      <div className="rounded-xl border border-border/50 bg-card shadow-sm overflow-hidden">
-        <div className="p-6 border-b border-border/50 bg-secondary/20">
-          <h3 className="text-lg font-semibold text-foreground tracking-tight">
-            Contract Settings
-          </h3>
-          <p className="text-sm text-muted-foreground mt-1">
-            Configure smart contract behavior and on-chain subscription
-            parameters.
+      {/* ── Network & Contracts ─────────────────────────────────── */}
+      <div className="rounded-xl border border-border bg-card overflow-hidden">
+        <div className="px-5 py-4 border-b border-border bg-secondary/20">
+          <h3 className="text-sm font-bold text-foreground">Network & Contracts</h3>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Blockchain network mapping and deployed contract addresses.
           </p>
         </div>
-
-        <div className="p-6 space-y-5">
-          <div className="rounded-xl border border-border/40 bg-secondary/5 p-5 space-y-4">
-            <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
-                <span className="text-xs font-bold text-primary">⚡</span>
-              </div>
-              <h4 className="text-sm font-bold text-foreground">
-                Gas Optimization
-              </h4>
-            </div>
-            <div className="space-y-4 pl-1">
-              <div className="flex items-start justify-between gap-6">
-                <div className="space-y-1.5 flex-1">
-                  <Label className="text-sm font-semibold text-foreground cursor-pointer">
-                    Batch subscription operations
-                  </Label>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    Combine multiple subscription actions into a single
-                    transaction to reduce gas costs
-                  </p>
-                </div>
-                <Switch defaultChecked={true} />
-              </div>
-
-              <div className="h-px bg-border/50" />
-
-              <div className="flex items-start justify-between gap-6">
-                <div className="space-y-1.5 flex-1">
-                  <Label className="text-sm font-semibold text-foreground cursor-pointer">
-                    Enable meta-transactions
-                  </Label>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    Allow gasless transactions where the platform pays gas fees
-                    for users
-                  </p>
-                </div>
-                <Switch defaultChecked={false} />
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-border/40 bg-secondary/5 p-5 space-y-4">
-            <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
-                <span className="text-xs font-bold text-primary">🔄</span>
-              </div>
-              <h4 className="text-sm font-bold text-foreground">
-                Subscription Behavior
-              </h4>
-            </div>
-            <div className="space-y-4 pl-1">
-              <div className="flex items-start justify-between gap-6">
-                <div className="space-y-1.5 flex-1">
-                  <Label className="text-sm font-semibold text-foreground cursor-pointer">
-                    Auto-renew subscriptions
-                  </Label>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    Automatically renew subscriptions on-chain when they expire
-                  </p>
-                </div>
-                <Switch defaultChecked={true} />
-              </div>
-
-              <div className="h-px bg-border/50" />
-
-              <div className="flex items-start justify-between gap-6">
-                <div className="space-y-1.5 flex-1">
-                  <Label className="text-sm font-semibold text-foreground cursor-pointer">
-                    Grace period on payment failure
-                  </Label>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    Give subscribers 3 days to resolve payment issues before
-                    suspending access
-                  </p>
-                </div>
-                <Switch defaultChecked={true} />
-              </div>
-
-              <div className="h-px bg-border/50" />
-
-              <div className="flex items-start justify-between gap-6">
-                <div className="space-y-1.5 flex-1">
-                  <Label className="text-sm font-semibold text-foreground cursor-pointer">
-                    Emit subscription events
-                  </Label>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    Emit detailed events for all subscription changes for
-                    off-chain indexing
-                  </p>
-                </div>
-                <Switch defaultChecked={true} />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Chain mapping table */}
-      <div className="rounded-xl border border-border/50 bg-card shadow-sm overflow-hidden">
-        <div className="p-6 border-b border-border/50 bg-secondary/20">
-          <h3 className="text-lg font-semibold text-foreground tracking-tight">
-            Chain Mapping
-          </h3>
-          <p className="text-sm text-muted-foreground mt-1">
-            Environment modes are mapped to specific blockchain networks for
-            contract deployments.
-          </p>
-        </div>
-        <div className="overflow-hidden">
-          <table className="w-full">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-border/50 bg-secondary/10">
-                <th className="text-left py-4 px-6 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Environment
-                </th>
-                <th className="text-left py-4 px-6 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Network
-                </th>
-                <th className="text-left py-4 px-6 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Chain ID
-                </th>
+              <tr className="border-b border-border/50 bg-secondary/5">
+                <th className="text-left py-3 px-5 text-xs font-bold uppercase tracking-wider text-muted-foreground">Environment</th>
+                <th className="text-left py-3 px-5 text-xs font-bold uppercase tracking-wider text-muted-foreground">Network</th>
+                <th className="text-left py-3 px-5 text-xs font-bold uppercase tracking-wider text-muted-foreground">Chain ID</th>
+                <th className="text-left py-3 px-5 text-xs font-bold uppercase tracking-wider text-muted-foreground">USDC Contract</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/30">
-              {(
-                Object.entries(CHAIN_INFO) as [
-                  EnvMode,
-                  (typeof CHAIN_INFO)[EnvMode],
-                ][]
-              ).map(([mode, info]) => (
-                <tr
-                  key={mode}
-                  className="hover:bg-secondary/10 transition-colors"
-                >
-                  <td className="py-4 px-6">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`w-3 h-3 rounded-full ${info.color} shadow-sm`}
-                      />
-                      <span className="font-semibold text-sm text-foreground">
-                        {mode}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="py-4 px-6 text-sm text-muted-foreground">
-                    {info.name}
-                  </td>
-                  <td className="py-4 px-6 font-mono text-sm font-medium text-muted-foreground">
-                    {info.chainId}
-                  </td>
-                </tr>
-              ))}
+              {(Object.entries(CHAIN_INFO) as [EnvMode, typeof CHAIN_INFO[EnvMode]][]).map(([mode, info]) => {
+                const usdc = getUsdcAddress(info.chainId);
+                const isActive = mode === envMode;
+                return (
+                  <tr key={mode} className={`transition-colors ${isActive ? "bg-secondary/10" : "hover:bg-secondary/5"}`}>
+                    <td className="py-3.5 px-5">
+                      <div className="flex items-center gap-2.5">
+                        <div className={`w-2 h-2 rounded-full shrink-0 ${info.color}`} />
+                        <span className="font-semibold text-foreground">{mode === "DEVELOPMENT" ? "Development" : "Production"}</span>
+                        {isActive && <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-foreground text-background">Active</span>}
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-5 text-muted-foreground">{info.name}</td>
+                    <td className="py-3.5 px-5 font-mono text-muted-foreground">{info.chainId}</td>
+                    <td className="py-3.5 px-5 font-mono text-xs text-muted-foreground">
+                      {usdc.slice(0, 10)}…{usdc.slice(-6)}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
-      </div>
-
-      {/* Environment switch */}
-      <div className="rounded-xl border border-border/50 bg-card shadow-sm overflow-hidden">
-        <div className="p-6 border-b border-border/50 bg-secondary/20">
-          <h3 className="text-lg font-semibold text-foreground tracking-tight">
-            Switch Environment
-          </h3>
-          <p className="text-sm text-muted-foreground mt-1">
-            Switching the team environment affects which blockchain network your
-            catalog data is published to. Production switches require deployed
-            contracts.
+        {/* Current USDC address */}
+        <div className="px-5 py-3 border-t border-border/50 bg-secondary/5 flex items-center gap-2">
+          <Coins className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+          <p className="text-xs text-muted-foreground">
+            Active USDC ({currentChainInfo.name}):{" "}
+            <span className="font-mono text-foreground">{usdcAddress}</span>
           </p>
         </div>
-        <div className="p-6">
+      </div>
+
+      {/* ── Switch Environment ─────────────────────────────────── */}
+      <div className="rounded-xl border border-border bg-card overflow-hidden">
+        <div className="px-5 py-4 border-b border-border bg-secondary/20">
+          <h3 className="text-sm font-bold text-foreground">Switch Environment</h3>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Switches which blockchain network the catalog is published to. Production requires deployed contracts on Base Mainnet.
+          </p>
+        </div>
+        <div className="p-5">
           <Sheet open={dialogOpen} onOpenChange={setDialogOpen}>
             <SheetTrigger asChild>
-              <Button
-                size="default"
-                variant="outline"
-                className="gap-2 h-11 px-6 hover:bg-secondary transition-colors"
-              >
+              <Button size="default" variant="outline" className="gap-2 h-10 hover:bg-secondary transition-colors">
                 <SlidersHorizontal className="w-4 h-4" />
                 Switch Environment
               </Button>
             </SheetTrigger>
-            <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
+            <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
               <SheetHeader className="pb-4 border-b border-border">
-                <SheetTitle className="text-xl">Switch Environment</SheetTitle>
-                <SheetDescription className="text-sm text-muted-foreground">
-                  Change the active environment mode for your team. This affects
-                  which blockchain network your catalog data is published to.
+                <SheetTitle>Switch Environment</SheetTitle>
+                <SheetDescription>
+                  Change the active environment. All catalog operations will target the new chain.
                 </SheetDescription>
               </SheetHeader>
-              <form onSubmit={handleSwitch} className="space-y-6 py-4">
-                <div className="space-y-3">
-                  <Label htmlFor="target-env" className="text-sm font-semibold">
-                    Target Environment
-                  </Label>
-                  <Select
-                    value={switchTarget}
-                    onValueChange={(v) => setSwitchTarget(v as EnvMode)}
-                  >
-                    <SelectTrigger
-                      id="target-env"
-                      className="bg-background border-border h-11"
-                    >
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="DEVELOPMENT">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-2.5 h-2.5 rounded-full bg-blue-500" />
-                          <span>Development (Sepolia Testnet)</span>
+              <form onSubmit={handleSwitch} className="space-y-5 py-5">
+                {/* Target selector */}
+                <div className="grid grid-cols-2 gap-3">
+                  {(["DEVELOPMENT", "PRODUCTION"] as EnvMode[]).map((mode) => {
+                    const info = CHAIN_INFO[mode];
+                    const isSelected = switchTarget === mode;
+                    return (
+                      <button
+                        key={mode}
+                        type="button"
+                        onClick={() => setSwitchTarget(mode)}
+                        className={`flex flex-col items-start gap-2 p-4 rounded-xl border text-left transition-all ${isSelected ? "border-foreground bg-secondary" : "border-border hover:bg-secondary/50"}`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className={`w-2 h-2 rounded-full ${info.color}`} />
+                          <span className="text-xs font-bold uppercase tracking-wider text-foreground">
+                            {mode === "DEVELOPMENT" ? "Development" : "Production"}
+                          </span>
                         </div>
-                      </SelectItem>
-                      <SelectItem value="PRODUCTION">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-2.5 h-2.5 rounded-full bg-orange-500" />
-                          <span>Production (Base Mainnet)</span>
-                        </div>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
+                        <p className="text-xs text-muted-foreground">{info.name}</p>
+                        <p className="text-[10px] font-mono text-muted-foreground">Chain {info.chainId}</p>
+                        {isSelected && <Check className="w-4 h-4 text-foreground ml-auto mt-1" />}
+                      </button>
+                    );
+                  })}
                 </div>
+
                 {switchTarget === "PRODUCTION" && (
-                  <div className="flex items-start gap-3 rounded-lg border border-orange-500/30 bg-orange-500/5 p-4">
-                    <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5 text-orange-500" />
-                    <div className="space-y-1.5">
-                      <p className="text-sm font-semibold text-orange-600 dark:text-orange-400">
-                        Production deployment required
-                      </p>
-                      <p className="text-xs text-orange-600/80 dark:text-orange-400/80 leading-relaxed">
-                        Ensure your contracts are deployed on Base Mainnet with
-                        non-zero addresses before proceeding.
+                  <div className="flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-4">
+                    <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-destructive" />
+                    <div>
+                      <p className="text-sm font-semibold text-destructive">Production requires deployed contracts</p>
+                      <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                        Ensure PlanFactory and SubscriptionManager are deployed on Base Mainnet before switching.
                       </p>
                     </div>
                   </div>
                 )}
-                <div className="space-y-3">
-                  <Label
-                    htmlFor="confirm-text"
-                    className="text-sm font-semibold"
-                  >
-                    Type{" "}
-                    <span className="font-bold text-foreground">CONFIRM</span>{" "}
-                    to proceed
+
+                <div className="space-y-2">
+                  <Label htmlFor="confirm-text" className="text-sm font-semibold">
+                    Type <span className="font-mono bg-secondary px-1.5 py-0.5 rounded text-foreground">CONFIRM</span> to proceed
                   </Label>
                   <Input
                     id="confirm-text"
@@ -3236,38 +3614,42 @@ function ConfigurationTab() {
                     autoComplete="off"
                   />
                 </div>
+
                 {switchError && (
                   <div className="flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-4">
-                    <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5 text-destructive" />
-                    <span className="text-sm font-medium text-destructive">
-                      {switchError}
-                    </span>
+                    <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-destructive" />
+                    <span className="text-sm text-destructive">{switchError}</span>
                   </div>
                 )}
+
                 <div className="flex justify-end gap-3 pt-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      setDialogOpen(false);
-                      setConfirmText("");
-                      setSwitchError(null);
-                    }}
-                    className="h-11 px-6"
-                  >
+                  <Button type="button" variant="outline" onClick={() => { setDialogOpen(false); setConfirmText(""); setSwitchError(null); }}>
                     Cancel
                   </Button>
-                  <Button
-                    type="submit"
-                    disabled={confirmText !== "CONFIRM" || switching}
-                    className="min-w-28 h-11 px-6"
-                  >
-                    {switching ? "Switching…" : "Switch"}
+                  <Button type="submit" disabled={confirmText !== "CONFIRM" || switching} className="min-w-28">
+                    {switching ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Switching…</> : "Switch"}
                   </Button>
                 </div>
               </form>
             </SheetContent>
           </Sheet>
+        </div>
+      </div>
+
+      {/* Sticky save bar */}
+      <div className="sticky bottom-0 -mx-1 px-1 pb-4 pt-2 bg-gradient-to-t from-background to-transparent">
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-card px-4 py-3 shadow-sm">
+          <p className="text-xs text-muted-foreground">
+            {loadingConfig ? "Loading configuration…" : "Changes saved per environment"}
+          </p>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setSettings(DEFAULT_CONFIG_SETTINGS)} disabled={loadingConfig || savingConfig}>
+              Reset
+            </Button>
+            <Button size="sm" onClick={handleSave} disabled={loadingConfig || savingConfig} className="gap-2 min-w-[120px]">
+              {savingConfig ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" />Saving…</> : "Save changes"}
+            </Button>
+          </div>
         </div>
       </div>
     </div>
@@ -3606,37 +3988,52 @@ function EditPlanDialog({
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 }) {
+  const chainId = useChainId();
+  const connectedToken = getUsdcAddress(chainId);
+
   const [internalOpen, setInternalOpen] = useState(false);
   const open = externalOpen !== undefined ? externalOpen : internalOpen;
   const setOpen = externalOnOpenChange ?? setInternalOpen;
   const [loading, setLoading] = useState(false);
+
+  // Determine initial plan type from price
+  const initPlanType: "free" | "paid" = parseFloat(plan.price) === 0 ? "free" : "paid";
+  const [planType, setPlanType] = useState<"free" | "paid">(initPlanType);
+
+  // Find matching interval or keep raw value
+  const initIntervalDays = plan.billingInterval;
+  const matchedInterval = BILLING_INTERVALS.find((i) => i.days === initIntervalDays);
+  const [billingIntervalDays, setBillingIntervalDays] = useState(initIntervalDays);
+
   const [form, setForm] = useState({
     name: plan.name,
     tier: plan.tier,
     description: plan.description ?? "",
     price: parseFloat(plan.price).toFixed(2),
-    billingInterval: String(plan.billingInterval),
     acceptedToken: plan.acceptedToken,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Auto-derive tier from name
+  const autoTier = form.name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+
+  const selectedChainOpt = USDC_CHAIN_OPTIONS.find((o) => o.address === form.acceptedToken);
+  const chainName = (o: typeof USDC_CHAIN_OPTIONS[number]) =>
+    o.label.replace(/USDC — |Custom USDC — /, "");
+  const chainInitial = (o: typeof USDC_CHAIN_OPTIONS[number]) => {
+    const n = chainName(o);
+    return n.startsWith("Base") ? "B" : n.startsWith("Sepolia") ? "S" : n[0]?.toUpperCase() ?? "?";
+  };
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const errs: Record<string, string> = {};
     if (!form.name.trim()) errs.name = "Required";
-    if (!form.tier.trim()) errs.tier = "Required";
-    if (!form.price || isNaN(Number(form.price)) || Number(form.price) <= 0)
-      errs.price = "Must be positive";
-    if (
-      !form.billingInterval ||
-      isNaN(Number(form.billingInterval)) ||
-      Number(form.billingInterval) <= 0
-    )
-      errs.billingInterval = "Required";
-    if (Object.keys(errs).length) {
-      setErrors(errs);
-      return;
+    if (planType === "paid") {
+      if (!form.price || isNaN(Number(form.price)) || Number(form.price) <= 0)
+        errs.price = "Must be positive";
     }
+    if (Object.keys(errs).length) { setErrors(errs); return; }
     setLoading(true);
     try {
       const res = await fetch("/api/catalog/plans", {
@@ -3645,10 +4042,10 @@ function EditPlanDialog({
         body: JSON.stringify({
           id: plan.id,
           name: form.name,
-          tier: form.tier,
+          tier: form.tier.trim() || autoTier || plan.tier,
           description: form.description || undefined,
-          price: Number(form.price),
-          billingInterval: Number(form.billingInterval),
+          price: planType === "free" ? 0 : Number(form.price),
+          billingInterval: billingIntervalDays,
           acceptedToken: form.acceptedToken,
         }),
       });
@@ -3675,140 +4072,443 @@ function EditPlanDialog({
           </Button>
         </SheetTrigger>
       )}
-      <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
-        <SheetHeader className="pb-4 border-b border-border">
-          <SheetTitle>Edit Plan</SheetTitle>
-          <SheetDescription>
-            Update plan settings. Changes are saved to the catalog.
-          </SheetDescription>
-        </SheetHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 py-4">
-          {errors._global && (
-            <p className="text-sm text-destructive">{errors._global}</p>
-          )}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="editPlanName">Name *</Label>
-              <Input
-                id="editPlanName"
-                value={form.name}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, name: e.target.value }))
-                }
-                className="bg-secondary border-border"
-              />
-              {errors.name && (
-                <p className="text-xs text-destructive">{errors.name}</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="editPlanTier">Tier *</Label>
-              <Input
-                id="editPlanTier"
-                value={form.tier}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, tier: e.target.value }))
-                }
-                className="bg-secondary border-border"
-              />
-              {errors.tier && (
-                <p className="text-xs text-destructive">{errors.tier}</p>
-              )}
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="editPlanDesc">Description</Label>
-            <Input
-              id="editPlanDesc"
-              value={form.description}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, description: e.target.value }))
-              }
-              placeholder="Optional"
-              className="bg-secondary border-border"
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="editPlanPrice">Price (USDC) *</Label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                  $
-                </span>
-                <Input
-                  id="editPlanPrice"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={form.price}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, price: e.target.value }))
-                  }
-                  className="bg-secondary border-border pl-6"
-                />
-              </div>
-              {errors.price && (
-                <p className="text-xs text-destructive">{errors.price}</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="editPlanInterval">
-                Billing Interval (days) *
-              </Label>
-              <Input
-                id="editPlanInterval"
-                type="number"
-                min="1"
-                value={form.billingInterval}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, billingInterval: e.target.value }))
-                }
-                className="bg-secondary border-border"
-              />
-              {errors.billingInterval && (
-                <p className="text-xs text-destructive">
-                  {errors.billingInterval}
+      <SheetContent className="w-full sm:max-w-4xl p-0 overflow-hidden flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
+          <div />
+          <button onClick={() => setOpen(false)} className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-secondary hover:text-foreground transition-all">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="flex flex-1 min-h-0 overflow-hidden">
+          {/* ── LEFT: Plan Preview ── */}
+          <div className="w-[300px] shrink-0 border-r border-border bg-secondary/20 p-6 flex flex-col gap-6 overflow-y-auto">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground mb-4">Edit Plan</p>
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-9 h-9 rounded-full bg-linear-to-br from-zinc-400 to-zinc-700 shrink-0 flex items-center justify-center text-white font-bold text-sm">
+                  {form.name.charAt(0).toUpperCase() || "?"}
+                </div>
+                <p className="text-base font-bold text-foreground truncate">
+                  {form.name || <span className="font-normal text-muted-foreground">Untitled plan</span>}
                 </p>
-              )}
+              </div>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground mb-3">Plan Preview</p>
+              <div className="bg-card border border-border rounded-xl overflow-hidden">
+                <div className="p-4 border-b border-border">
+                  <p className="text-lg font-bold text-foreground leading-tight">{form.name || "—"}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{form.description || form.name || "—"}</p>
+                  <p className="text-sm font-semibold text-foreground mt-1.5">
+                    {planType === "free" ? "Free" : form.price ? `$${form.price} USDC` : "—"}
+                    {planType === "paid" && form.price && (
+                      <span className="text-xs font-normal text-muted-foreground ml-1">
+                        / {matchedInterval?.label.toLowerCase() ?? `${billingIntervalDays}d`}
+                      </span>
+                    )}
+                  </p>
+                </div>
+                <div className="p-4">
+                  <p className="text-xs text-muted-foreground text-center py-3">No entitlements yet</p>
+                </div>
+                <div className="px-4 pb-4">
+                  <button className="w-full py-2.5 rounded-lg bg-secondary border border-border text-sm font-medium text-muted-foreground cursor-default">
+                    Subscribe
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="editPlanToken">Accepted Token *</Label>
-            <Input
-              id="editPlanToken"
-              value={form.acceptedToken}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, acceptedToken: e.target.value }))
-              }
-              className="bg-secondary border-border"
-            />
+
+          {/* ── RIGHT: Settings ── */}
+          <div className="flex-1 overflow-y-auto">
+            <form id="edit-plan-form" onSubmit={handleSubmit}>
+              <div className="p-6 space-y-8">
+                {/* Header */}
+                <div>
+                  <div className="flex items-center gap-3 mb-1">
+                    <h2 className="text-2xl font-bold text-foreground tracking-tight">Plan Settings</h2>
+                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-secondary border border-border text-muted-foreground">
+                      {plan.environmentMode === "DEVELOPMENT" ? "Dev" : "Production"}
+                    </span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">Update this plan's settings.</p>
+                </div>
+
+                {errors._global && (
+                  <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                    <p className="text-sm text-destructive">{errors._global}</p>
+                  </div>
+                )}
+
+                {/* Name + Tier */}
+                <div className="grid grid-cols-[1fr_auto] gap-4 items-start">
+                  <div>
+                    <Label className="text-sm font-medium text-foreground mb-2 block">Name *</Label>
+                    <Input
+                      value={form.name}
+                      onChange={(e) => { setForm((f) => ({ ...f, name: e.target.value })); setErrors((p) => ({ ...p, name: "" })); }}
+                      placeholder="e.g. Pro, Starter, Enterprise"
+                      className="h-11 bg-background border-border"
+                    />
+                    {errors.name && <p className="text-xs text-destructive mt-1">{errors.name}</p>}
+                  </div>
+                  <div className="w-28">
+                    <Label className="text-sm font-medium text-foreground mb-2 block">
+                      Tier
+                      <span className="text-muted-foreground font-normal ml-1">(auto)</span>
+                    </Label>
+                    <Input
+                      value={form.tier || autoTier}
+                      onChange={(e) => setForm((f) => ({ ...f, tier: e.target.value }))}
+                      placeholder={autoTier || plan.tier}
+                      className="h-11 bg-background border-border font-mono text-sm"
+                    />
+                  </div>
+                </div>
+
+                {/* Description */}
+                <div>
+                  <Label className="text-sm font-medium text-foreground mb-2 block">Description</Label>
+                  <Input
+                    value={form.description}
+                    onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                    placeholder="Describe this plan"
+                    className="h-11 bg-background border-border"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1.5">Optional</p>
+                </div>
+
+                {/* Pricing */}
+                <div>
+                  <div className="flex items-center gap-2.5 mb-1">
+                    <h3 className="text-xl font-bold text-foreground tracking-tight">Pricing</h3>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-5">Update pricing and billing settings</p>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Type */}
+                    <div>
+                      <Label className="text-sm font-medium text-foreground mb-2 block">Type</Label>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button type="button" className="w-full flex items-center justify-between h-11 px-3 rounded-lg bg-background border border-border text-sm text-foreground hover:bg-secondary/50 transition-colors">
+                            <span className="font-medium">{planType === "free" ? "Free" : "Paid"}</span>
+                            <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width]">
+                          <DropdownMenuItem onClick={() => { setPlanType("free"); setForm((f) => ({ ...f, price: "0" })); }}>
+                            <div className="flex-1">
+                              <p className="text-sm font-medium">Free</p>
+                              <p className="text-xs text-muted-foreground">No charge — $0.00 USDC</p>
+                            </div>
+                            {planType === "free" && <Check className="w-4 h-4 ml-2 text-foreground" />}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setPlanType("paid")}>
+                            <div className="flex-1">
+                              <p className="text-sm font-medium">Paid</p>
+                              <p className="text-xs text-muted-foreground">Recurring USDC payment</p>
+                            </div>
+                            {planType === "paid" && <Check className="w-4 h-4 ml-2 text-foreground" />}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+
+                    {/* Billing Integration */}
+                    <div>
+                      <Label className="text-sm font-medium text-foreground mb-2 block">Billing Integration</Label>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button type="button" className="w-full flex items-center justify-between h-11 px-3 rounded-lg bg-background border border-border text-sm text-foreground hover:bg-secondary/50 transition-colors">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="font-medium truncate">
+                                {selectedChainOpt ? chainName(selectedChainOpt) : "Select chain"}
+                              </span>
+                              {selectedChainOpt && (
+                                <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0 ${selectedChainOpt.tag === "mainnet" ? "bg-success/10 text-success" : "bg-secondary text-muted-foreground border border-border"}`}>
+                                  {selectedChainOpt.tag}
+                                </span>
+                              )}
+                              {selectedChainOpt?.chainId === chainId && (
+                                <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-foreground text-background shrink-0">Connected</span>
+                              )}
+                            </div>
+                            <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0 ml-1" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="w-80">
+                          {USDC_CHAIN_OPTIONS.some((o) => o.tag === "testnet") && (
+                            <>
+                              <div className="px-2 pt-2 pb-1"><p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Testnets</p></div>
+                              {USDC_CHAIN_OPTIONS.filter((o) => o.tag === "testnet").map((opt) => {
+                                const isConn = opt.chainId === chainId;
+                                return (
+                                  <DropdownMenuItem key={opt.chainId} disabled={!isConn} onClick={() => isConn && setForm((f) => ({ ...f, acceptedToken: opt.address }))} className={`flex items-center justify-between gap-3 py-2.5 ${!isConn ? "opacity-40 cursor-not-allowed" : ""}`}>
+                                    <div className="flex items-center gap-2.5">
+                                      <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 border ${isConn ? "bg-foreground text-background border-foreground" : "bg-secondary text-muted-foreground border-border"}`}>
+                                        <span className="text-[10px] font-bold">{chainInitial(opt)}</span>
+                                      </div>
+                                      <div>
+                                        <div className="flex items-center gap-1.5">
+                                          <p className="text-sm font-medium">{chainName(opt)}</p>
+                                          {isConn && <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-foreground text-background">Connected</span>}
+                                        </div>
+                                        <p className="text-xs font-mono text-muted-foreground mt-0.5">USDC · {opt.address.slice(0, 6)}…{opt.address.slice(-4)}</p>
+                                      </div>
+                                    </div>
+                                    {form.acceptedToken === opt.address && isConn && <Check className="w-3.5 h-3.5 text-foreground shrink-0" />}
+                                    {!isConn && <span className="text-[9px] text-muted-foreground shrink-0">Switch wallet</span>}
+                                  </DropdownMenuItem>
+                                );
+                              })}
+                            </>
+                          )}
+                          {USDC_CHAIN_OPTIONS.some((o) => o.tag === "mainnet") && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <div className="px-2 pt-2 pb-1"><p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Mainnets</p></div>
+                              {USDC_CHAIN_OPTIONS.filter((o) => o.tag === "mainnet").map((opt) => {
+                                const isConn = opt.chainId === chainId;
+                                return (
+                                  <DropdownMenuItem key={opt.chainId} disabled={!isConn} onClick={() => isConn && setForm((f) => ({ ...f, acceptedToken: opt.address }))} className={`flex items-center justify-between gap-3 py-2.5 ${!isConn ? "opacity-40 cursor-not-allowed" : ""}`}>
+                                    <div className="flex items-center gap-2.5">
+                                      <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 border ${isConn ? "bg-foreground text-background border-foreground" : "bg-secondary text-muted-foreground border-border"}`}>
+                                        <span className="text-[10px] font-bold">{chainInitial(opt)}</span>
+                                      </div>
+                                      <div>
+                                        <div className="flex items-center gap-1.5">
+                                          <p className="text-sm font-medium">{chainName(opt)}</p>
+                                          {isConn && <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-foreground text-background">Connected</span>}
+                                        </div>
+                                        <p className="text-xs font-mono text-muted-foreground mt-0.5">USDC · {opt.address.slice(0, 6)}…{opt.address.slice(-4)}</p>
+                                      </div>
+                                    </div>
+                                    {form.acceptedToken === opt.address && isConn && <Check className="w-3.5 h-3.5 text-foreground shrink-0" />}
+                                    {!isConn && <span className="text-[9px] text-muted-foreground shrink-0">Switch wallet</span>}
+                                  </DropdownMenuItem>
+                                );
+                              })}
+                            </>
+                          )}
+                          <div className="px-3 py-2 border-t border-border mt-1">
+                            <p className="text-[10px] text-muted-foreground">Switch your wallet network to enable other chains</p>
+                          </div>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+
+                  {/* Paid-only: Price + Interval */}
+                  {planType === "paid" && (
+                    <div className="grid grid-cols-2 gap-4 mt-4">
+                      <div>
+                        <Label className="text-sm font-medium text-foreground mb-2 block">Price (USDC) *</Label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">$</span>
+                          <Input
+                            value={form.price}
+                            onChange={(e) => { setForm((f) => ({ ...f, price: e.target.value })); setErrors((p) => ({ ...p, price: "" })); }}
+                            placeholder="29.00"
+                            type="number"
+                            min="0.01"
+                            step="0.01"
+                            className="h-11 bg-background border-border pl-6"
+                          />
+                        </div>
+                        {errors.price && <p className="text-xs text-destructive mt-1">{errors.price}</p>}
+                      </div>
+                      <div>
+                        <Label className="text-sm font-medium text-foreground mb-2 block">Billing Interval</Label>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button type="button" className="w-full flex items-center justify-between h-11 px-3 rounded-lg bg-background border border-border text-sm text-foreground hover:bg-secondary/50 transition-colors">
+                              <span className="font-medium">{BILLING_INTERVALS.find((i) => i.days === billingIntervalDays)?.label ?? `${billingIntervalDays} days`}</span>
+                              <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width]">
+                            {BILLING_INTERVALS.map((iv) => (
+                              <DropdownMenuItem key={iv.days} onClick={() => setBillingIntervalDays(iv.days)} className="flex items-center justify-between">
+                                <div>
+                                  <p className="text-sm font-medium">{iv.label}</p>
+                                  <p className="text-xs text-muted-foreground">{iv.sublabel}</p>
+                                </div>
+                                {billingIntervalDays === iv.days && <Check className="w-4 h-4 text-foreground ml-2" />}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </form>
           </div>
-          <div className="flex justify-end gap-2">
-            <Button
-              variant="outline"
-              type="button"
-              onClick={() => setOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Saving…
-                </>
-              ) : (
-                "Save Changes"
-              )}
-            </Button>
-          </div>
-        </form>
+        </div>
+
+        {/* Footer */}
+        <div className="shrink-0 border-t border-border px-6 py-4 flex items-center justify-end gap-3 bg-background">
+          <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={loading}>
+            Cancel
+          </Button>
+          <Button form="edit-plan-form" type="submit" disabled={loading} className="min-w-[140px]">
+            {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving…</> : "Save Changes"}
+          </Button>
+        </div>
       </SheetContent>
     </Sheet>
   );
 }
 
 // ─── Plan Detail View ──────────────────────────────────────────────────────────
+
+function timeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 30) return `${days}d ago`;
+  const months = Math.floor(days / 30);
+  return `${months}mo ago`;
+}
+
+function planPriceLabel(plan: CatalogPlan): string {
+  const price = parseFloat(plan.price);
+  if (price === 0) return "Free";
+  const intervalLabel =
+    plan.billingInterval <= 30
+      ? "mo"
+      : plan.billingInterval <= 92
+        ? "qtr"
+        : "yr";
+  return `$${price.toFixed(2)}/${intervalLabel}`;
+}
+
+function AddCreditGrantDialog({
+  planId,
+  onAdded,
+  existingIds,
+}: {
+  planId: string;
+  onAdded: () => void;
+  existingIds: string[];
+}) {
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [creditTypes, setCreditTypes] = useState<CatalogCreditType[]>([]);
+  const [selectedId, setSelectedId] = useState("");
+  const [amount, setAmount] = useState("100");
+  const { envMode } = useEnvironment();
+
+  useEffect(() => {
+    if (open) {
+      fetch(`/api/catalog/credits?environmentMode=${envMode}&status=PUBLISHED`)
+        .then((res) => res.json())
+        .then((data) => setCreditTypes(data.creditTypes ?? []));
+    }
+  }, [open, envMode]);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!selectedId) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/catalog/plans/${planId}/credit-grants`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ creditTypeId: selectedId, amount: parseFloat(amount) }),
+      });
+      if (res.ok) {
+        onAdded();
+        setOpen(false);
+        toast.success("Credit grant added");
+      } else {
+        const d = await res.json();
+        toast.error(d.error || "Failed to add grant");
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const availableTypes = creditTypes.filter((ct) => !existingIds.includes(ct.id));
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm" className="gap-1.5 font-medium">
+          <Plus className="w-3.5 h-3.5" />
+          Add credit grant
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Add Credit Grant</DialogTitle>
+          <DialogDescription>
+            Automatically allocate credits to subscribers of this plan.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label>Credit Type</Label>
+            <Select value={selectedId} onValueChange={setSelectedId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a credit type" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableTypes.length === 0 ? (
+                  <div className="p-2 text-sm text-muted-foreground text-center">
+                    No available credit types
+                  </div>
+                ) : (
+                  availableTypes.map((ct) => (
+                    <SelectItem key={ct.id} value={ct.id}>
+                      {ct.name} ({ct.code})
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Amount</Label>
+            <Input
+              type="number"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              min="0.000001"
+              step="any"
+              required
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setOpen(false)}
+              disabled={loading}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={loading || !selectedId}>
+              {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Add Grant
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 function PlanDetailView({
   plan,
@@ -3825,9 +4525,13 @@ function PlanDetailView({
   const [entitlements, setEntitlements] = useState<Entitlement[]>([]);
   const [entLoading, setEntLoading] = useState(false);
   const [entRefresh, setEntRefresh] = useState(0);
+  const [entSearch, setEntSearch] = useState("");
   const [deletingKey, setDeletingKey] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState(false);
   const [toggling, setToggling] = useState<string | null>(null);
+  const [creditGrants, setCreditGrants] = useState<any[]>([]);
+  const [cgLoading, setCgLoading] = useState(false);
+  const [cgRefresh, setCgRefresh] = useState(0);
 
   const loadEntitlements = useCallback(async () => {
     setEntLoading(true);
@@ -3842,9 +4546,23 @@ function PlanDetailView({
     }
   }, [plan.id]);
 
+  const loadCreditGrants = useCallback(async () => {
+    setCgLoading(true);
+    try {
+      const res = await fetch(`/api/catalog/plans/${plan.id}/credit-grants`);
+      if (res.ok) {
+        const data = await res.json();
+        setCreditGrants(data.creditGrants ?? []);
+      }
+    } finally {
+      setCgLoading(false);
+    }
+  }, [plan.id]);
+
   useEffect(() => {
     loadEntitlements();
-  }, [loadEntitlements, entRefresh]);
+    loadCreditGrants();
+  }, [loadEntitlements, loadCreditGrants, entRefresh, cgRefresh]);
 
   async function deleteEntitlement(featureKey: string) {
     setDeletingKey(featureKey);
@@ -3878,137 +4596,183 @@ function PlanDetailView({
     }
   }
 
+  async function deleteCreditGrant(creditTypeId: string) {
+    if (!window.confirm("Remove this credit grant?")) return;
+    try {
+      const res = await fetch(
+        `/api/catalog/plans/${plan.id}/credit-grants?creditTypeId=${creditTypeId}`,
+        { method: "DELETE" },
+      );
+      if (res.ok) {
+        setCgRefresh((n) => n + 1);
+        toast.success("Credit grant removed");
+      }
+    } catch {
+      toast.error("Failed to remove credit grant");
+    }
+  }
+
   function copyId() {
     navigator.clipboard.writeText(plan.id);
     setCopiedId(true);
     setTimeout(() => setCopiedId(false), 2000);
   }
 
+  const isFree = parseFloat(plan.price) === 0;
+  const filteredEnt = entitlements.filter(
+    (e) =>
+      e.featureName.toLowerCase().includes(entSearch.toLowerCase()) ||
+      e.featureKey.toLowerCase().includes(entSearch.toLowerCase()),
+  );
+
   const DETAIL_TABS = ["entitlements", "companies", "billing"] as const;
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
       {/* Breadcrumb */}
-      <button
-        onClick={onBack}
-        className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Plans
-      </button>
+      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+        <button
+          onClick={onBack}
+          className="flex items-center gap-1 hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          PLANS
+        </button>
+        <span>/</span>
+        <span className="text-foreground font-medium uppercase">
+          {plan.name}
+        </span>
+      </div>
 
-      {/* Plan header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-accent/30 to-accent/10 border border-border flex items-center justify-center text-xl font-bold text-accent">
-            {plan.name.charAt(0).toUpperCase()}
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold text-foreground">{plan.name}</h2>
-            <div className="flex items-center gap-2 mt-0.5">
-              <button
-                onClick={copyId}
-                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground font-mono transition-colors"
-              >
-                <span>{plan.id.slice(0, 20)}…</span>
-                {copiedId ? (
-                  <Check className="w-3 h-3 text-green-500" />
-                ) : (
-                  <Copy className="w-3 h-3" />
-                )}
-              </button>
+      {/* Plan header card */}
+      <div className="bg-card border border-border rounded-xl p-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          {/* Left: icon + name + meta */}
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-xl bg-linear-to-br from-accent/30 to-accent/10 border border-border flex items-center justify-center text-2xl font-bold text-accent shrink-0">
+              {plan.name.charAt(0).toUpperCase()}
             </div>
-            {plan.description && (
-              <p className="text-sm text-muted-foreground mt-0.5">
-                {plan.description}
+            <div>
+              <h2 className="text-xl font-bold text-foreground leading-tight">
+                {plan.name}
+              </h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Last modified {timeAgo(plan.updatedAt)}
               </p>
-            )}
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="text-center">
-            <p className="text-xs text-muted-foreground">Type</p>
-            <p className="text-sm font-medium flex items-center gap-1">
-              <Package className="w-3.5 h-3.5" /> Plan
-            </p>
-          </div>
-          <div className="text-center">
-            <p className="text-xs text-muted-foreground">Status</p>
-            <StatusBadge status={plan.status} />
-          </div>
-          <EditPlanDialog plan={plan} onSaved={onUpdated} />
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="icon">
-                <MoreHorizontal className="w-4 h-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={copyId}>Copy Plan ID</DropdownMenuItem>
-              {plan.status === "DRAFT" && (
-                <DropdownMenuItem
-                  onClick={async () => {
-                    await fetch("/api/catalog/plans", {
-                      method: "PUT",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({
-                        id: plan.id,
-                        status: "PUBLISHED",
-                      }),
-                    });
-                    onUpdated();
-                    toast.success("Plan published");
-                  }}
-                >
-                  Publish
-                </DropdownMenuItem>
+              {plan.description && (
+                <p className="text-sm text-muted-foreground mt-1 max-w-md">
+                  {plan.description}
+                </p>
               )}
-              {plan.status !== "ARCHIVED" && (
-                <DropdownMenuItem
-                  onClick={async () => {
-                    await fetch("/api/catalog/plans", {
-                      method: "PUT",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ id: plan.id, status: "ARCHIVED" }),
-                    });
-                    onUpdated();
-                    toast.success("Plan archived");
-                  }}
-                  className="text-destructive focus:text-destructive"
-                >
-                  Archive Plan
-                </DropdownMenuItem>
-              )}
-              {!plan.onChainPlanId && plan.status !== "PUBLISHED" && (
-                <DropdownMenuItem
-                  onClick={async () => {
-                    const confirmed = window.confirm(
-                      `Delete plan "${plan.name}"? This cannot be undone.`,
-                    );
-                    if (!confirmed) return;
-                    const res = await fetch("/api/catalog/plans", {
-                      method: "DELETE",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ id: plan.id }),
-                    });
-                    const data = await res
-                      .json()
-                      .catch(() => ({}) as { error?: string });
-                    if (!res.ok) {
-                      toast.error(data.error || "Failed to delete plan");
-                      return;
-                    }
-                    onBack();
-                    onUpdated();
-                    toast.success("Plan deleted");
-                  }}
-                  className="text-destructive focus:text-destructive"
-                >
-                  Delete Plan
-                </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+            </div>
+          </div>
+
+          {/* Right: stats + actions */}
+          <div className="flex items-center gap-6 flex-wrap">
+            {/* Type */}
+            <div className="text-center min-w-[60px]">
+              <p className="text-xs text-muted-foreground mb-1">Type</p>
+              <div className="flex items-center gap-1 text-sm font-medium">
+                <Package className="w-3.5 h-3.5 text-muted-foreground" />
+                Plan
+              </div>
+            </div>
+            {/* Price */}
+            <div className="text-center min-w-[70px]">
+              <p className="text-xs text-muted-foreground mb-1">Price</p>
+              <p className="text-sm font-semibold">
+                {isFree ? (
+                  <span className="text-green-500">Free</span>
+                ) : (
+                  planPriceLabel(plan)
+                )}
+              </p>
+            </div>
+            {/* Status */}
+            <div className="text-center min-w-[70px]">
+              <p className="text-xs text-muted-foreground mb-1">Status</p>
+              <StatusBadge status={plan.status} />
+            </div>
+            {/* Divider */}
+            <div className="h-8 w-px bg-border hidden sm:block" />
+            {/* Actions */}
+            <div className="flex items-center gap-2">
+              <EditPlanDialog plan={plan} onSaved={onUpdated} />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="icon" className="h-9 w-9">
+                    <MoreHorizontal className="w-4 h-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={copyId}>
+                    {copiedId ? (
+                      <><Check className="w-3.5 h-3.5 mr-2 text-green-500" />Copied!</>
+                    ) : (
+                      <><Copy className="w-3.5 h-3.5 mr-2" />Copy Plan ID</>
+                    )}
+                  </DropdownMenuItem>
+                  {plan.status === "DRAFT" && (
+                    <DropdownMenuItem
+                      onClick={async () => {
+                        await fetch("/api/catalog/plans", {
+                          method: "PUT",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ id: plan.id, status: "PUBLISHED" }),
+                        });
+                        onUpdated();
+                        toast.success("Plan published");
+                      }}
+                    >
+                      Publish Plan
+                    </DropdownMenuItem>
+                  )}
+                  {plan.status !== "ARCHIVED" && (
+                    <DropdownMenuItem
+                      onClick={async () => {
+                        await fetch("/api/catalog/plans", {
+                          method: "PUT",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ id: plan.id, status: "ARCHIVED" }),
+                        });
+                        onUpdated();
+                        toast.success("Plan archived");
+                      }}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      Archive Plan
+                    </DropdownMenuItem>
+                  )}
+                  {!plan.onChainPlanId && plan.status !== "PUBLISHED" && (
+                    <DropdownMenuItem
+                      onClick={async () => {
+                        const confirmed = window.confirm(
+                          `Delete plan "${plan.name}"? This cannot be undone.`,
+                        );
+                        if (!confirmed) return;
+                        const res = await fetch("/api/catalog/plans", {
+                          method: "DELETE",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ id: plan.id }),
+                        });
+                        const data = await res.json().catch(() => ({}) as { error?: string });
+                        if (!res.ok) {
+                          toast.error(data.error || "Failed to delete plan");
+                          return;
+                        }
+                        onBack();
+                        onUpdated();
+                        toast.success("Plan deleted");
+                      }}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      Delete Plan
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -4038,229 +4802,921 @@ function PlanDetailView({
 
       {/* Tab content */}
       {detailTab === "entitlements" && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-base font-semibold">
-              {entitlements.length} Entitlement
-              {entitlements.length !== 1 ? "s" : ""}
-            </h3>
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Find entitlement"
-                  className="h-9 w-52 pl-9 pr-3 rounded-lg bg-secondary border border-border text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/20"
-                />
-                <svg
-                  className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+        <div className="space-y-6">
+          {/* ── Entitlements section ── */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-semibold">
+                {entitlements.length} Entitlement
+                {entitlements.length !== 1 ? "s" : ""}
+              </h3>
+              <div className="flex items-center gap-2">
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Find entitlement"
+                    value={entSearch}
+                    onChange={(e) => setEntSearch(e.target.value)}
+                    className="h-9 w-48 pl-9 pr-3 rounded-lg bg-secondary border border-border text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/20"
                   />
-                </svg>
+                  <svg
+                    className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
               </div>
             </div>
+
+            {entLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <>
+                {filteredEnt.length > 0 ? (
+                  <div className="bg-card border border-border rounded-xl overflow-hidden">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-border bg-secondary/50">
+                          <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                            Feature
+                          </th>
+                          <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                            Entitlement Value
+                          </th>
+                          <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                            Type
+                          </th>
+                          <th className="w-12" />
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredEnt.map((ent) => (
+                          <tr
+                            key={ent.featureKey}
+                            className="border-b border-border last:border-0 hover:bg-secondary/20 transition-colors"
+                          >
+                            <td className="py-3 px-4">
+                              <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center">
+                                  {ent.type === "BOOLEAN" ? (
+                                    <ToggleLeft className="w-4 h-4 text-muted-foreground" />
+                                  ) : ent.type === "NUMERIC" ? (
+                                    <Hash className="w-4 h-4 text-muted-foreground" />
+                                  ) : (
+                                    <Package className="w-4 h-4 text-muted-foreground" />
+                                  )}
+                                </div>
+                                <div>
+                                  <p className="text-sm font-medium">{ent.featureName}</p>
+                                  <code className="text-xs text-muted-foreground font-mono">{ent.featureKey}</code>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="py-3 px-4">
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => !toggling && toggleEntitlement(ent.featureKey, !ent.enabled)}
+                                  disabled={toggling === ent.featureKey}
+                                  className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none ${ent.enabled ? "bg-accent" : "bg-input"} ${toggling === ent.featureKey ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}
+                                >
+                                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-lg transition-transform ${ent.enabled ? "translate-x-4" : "translate-x-0"}`} />
+                                </button>
+                                <span className="text-sm text-foreground">
+                                  {ent.type === "NUMERIC"
+                                    ? `${ent.value ?? "—"} per month`
+                                    : ent.enabled
+                                      ? "Enabled"
+                                      : "Disabled"}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="py-3 px-4">
+                              <Badge variant="outline" className="text-xs">
+                                {ent.type === "BOOLEAN"
+                                  ? "Boolean"
+                                  : ent.type === "NUMERIC"
+                                    ? "Numerical limit"
+                                    : "Unlimited"}
+                              </Badge>
+                            </td>
+                            <td className="py-3 px-4 text-right">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                                    <MoreHorizontal className="w-4 h-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem
+                                    onClick={() => toggleEntitlement(ent.featureKey, !ent.enabled)}
+                                    disabled={toggling === ent.featureKey}
+                                  >
+                                    {ent.enabled ? "Disable" : "Enable"}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => deleteEntitlement(ent.featureKey)}
+                                    disabled={deletingKey === ent.featureKey}
+                                    className="text-destructive focus:text-destructive"
+                                  >
+                                    {deletingKey === ent.featureKey ? (
+                                      <><Loader2 className="mr-2 w-4 h-4 animate-spin" />Removing...</>
+                                    ) : (
+                                      "Remove"
+                                    )}
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  entSearch === "" && (
+                    <div className="border border-dashed border-border rounded-xl py-10 flex flex-col items-center justify-center gap-2">
+                      <Hash className="w-8 h-8 text-muted-foreground/40" />
+                      <p className="text-sm text-muted-foreground">No entitlements yet</p>
+                    </div>
+                  )
+                )}
+
+                <div className="flex items-center gap-3">
+                  <AddEntitlementDialog
+                    planId={plan.id}
+                    onAdded={() => setEntRefresh((n) => n + 1)}
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => toast.info("Duplicate from plan — coming soon")}
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                    Duplicate from plan
+                  </Button>
+                </div>
+              </>
+            )}
           </div>
 
-          {entLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+          {/* ── Credit Grants section ── */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-semibold">Credit Grants</h3>
+              <AddCreditGrantDialog
+                planId={plan.id}
+                onAdded={() => setCgRefresh((n) => n + 1)}
+                existingIds={creditGrants.map((g) => g.creditTypeId)}
+              />
             </div>
-          ) : (
-            <>
-              {entitlements.length > 0 && (
-                <div className="bg-card border border-border rounded-xl overflow-hidden">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-border bg-secondary/50">
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                          Feature
-                        </th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                          Entitlement
-                        </th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                          Type
-                        </th>
-                        <th className="w-12" />
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {entitlements.map((ent) => (
-                        <tr
-                          key={ent.featureKey}
-                          className="border-b border-border last:border-0 hover:bg-secondary/20 transition-colors"
-                        >
-                          <td className="py-3 px-4">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center">
-                                {ent.type === "BOOLEAN" ? (
-                                  <ToggleLeft className="w-4 h-4 text-muted-foreground" />
-                                ) : ent.type === "NUMERIC" ? (
-                                  <Hash className="w-4 h-4 text-muted-foreground" />
-                                ) : (
-                                  <Package className="w-4 h-4 text-muted-foreground" />
-                                )}
-                              </div>
-                              <div>
-                                <p className="text-sm font-medium">
-                                  {ent.featureName}
-                                </p>
-                                <code className="text-xs text-muted-foreground font-mono">
-                                  {ent.featureKey}
-                                </code>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="flex items-center gap-2">
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  !toggling &&
-                                  toggleEntitlement(
-                                    ent.featureKey,
-                                    !ent.enabled,
-                                  )
-                                }
-                                disabled={toggling === ent.featureKey}
-                                className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none ${ent.enabled ? "bg-accent" : "bg-input"} ${toggling === ent.featureKey ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}
-                              >
-                                <span
-                                  className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-lg transition-transform ${ent.enabled ? "translate-x-4" : "translate-x-0"}`}
-                                />
-                              </button>
-                              <span className="text-sm text-foreground">
-                                {ent.type === "NUMERIC"
-                                  ? ent.value
-                                  : ent.enabled
-                                    ? "On"
-                                    : "Off"}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="py-3 px-4">
-                            <Badge
-                              variant="outline"
-                              className="text-xs capitalize"
-                            >
-                              {ent.type === "BOOLEAN"
-                                ? "Boolean"
-                                : ent.type === "NUMERIC"
-                                  ? "Numeric"
-                                  : "Unlimited"}
-                            </Badge>
-                          </td>
-                          <td className="py-3 px-4 text-right">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8"
-                                >
-                                  <MoreHorizontal className="w-4 h-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem
-                                  onClick={() =>
-                                    toggleEntitlement(
-                                      ent.featureKey,
-                                      !ent.enabled,
-                                    )
-                                  }
-                                  disabled={toggling === ent.featureKey}
-                                >
-                                  {ent.enabled ? "Disable" : "Enable"}
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() =>
-                                    deleteEntitlement(ent.featureKey)
-                                  }
-                                  disabled={deletingKey === ent.featureKey}
-                                  className="text-destructive focus:text-destructive"
-                                >
-                                  {deletingKey === ent.featureKey ? (
-                                    <>
-                                      <Loader2 className="mr-2 w-4 h-4 animate-spin" />
-                                      Removing...
-                                    </>
-                                  ) : (
-                                    "Remove"
-                                  )}
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-
-              <div className="flex items-center gap-3">
-                <AddEntitlementDialog
-                  planId={plan.id}
-                  onAdded={() => setEntRefresh((n) => n + 1)}
-                />
+            {cgLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
               </div>
-            </>
-          )}
+            ) : creditGrants.length > 0 ? (
+              <div className="bg-card border border-border rounded-xl overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead className="bg-secondary/50 border-b border-border">
+                    <tr>
+                      <th className="text-left py-2.5 px-4 font-semibold text-muted-foreground uppercase text-[10px] tracking-wider">
+                        Credit Type
+                      </th>
+                      <th className="text-left py-2.5 px-4 font-semibold text-muted-foreground uppercase text-[10px] tracking-wider">
+                        Amount
+                      </th>
+                      <th className="w-12" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {creditGrants.map((grant) => (
+                      <tr key={grant.creditTypeId} className="border-b border-border last:border-0 hover:bg-secondary/10">
+                        <td className="py-3 px-4 font-medium flex items-center gap-2">
+                          <Coins className="w-3.5 h-3.5 text-amber-500" />
+                          {grant.creditTypeId} {/* Ideally show name here, but needs a join or fetch */}
+                        </td>
+                        <td className="py-3 px-4 text-foreground">
+                          {grant.amount} units
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => deleteCreditGrant(grant.creditTypeId)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="border border-dashed border-border rounded-xl py-10 flex flex-col items-center justify-center gap-2 bg-secondary/10">
+                <Coins className="w-8 h-8 text-muted-foreground/40" />
+                <p className="text-sm font-medium text-muted-foreground">No Credit Grants</p>
+                <p className="text-xs text-muted-foreground/70 max-w-xs text-center">
+                  Credit grants automatically allocate credits to subscribers of this plan.
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
       {detailTab === "companies" && (
-        <div className="flex flex-col items-center justify-center py-16 text-center">
-          <div className="w-14 h-14 rounded-xl bg-secondary flex items-center justify-center mb-4">
-            <Package className="w-7 h-7 text-muted-foreground" />
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-base font-semibold">Subscribed Companies</h3>
           </div>
-          <p className="text-sm font-medium text-foreground mb-1">
-            No companies subscribed
-          </p>
-          <p className="text-xs text-muted-foreground max-w-xs">
-            Companies that subscribe to this plan will appear here.
-          </p>
+          <div className="border border-dashed border-border rounded-xl py-16 flex flex-col items-center justify-center gap-2">
+            <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center mb-2">
+              <Package className="w-6 h-6 text-muted-foreground/50" />
+            </div>
+            <p className="text-sm font-medium text-foreground">No companies on this plan</p>
+            <p className="text-xs text-muted-foreground max-w-xs text-center">
+              Companies that subscribe to this plan will appear here. Use the SDK to associate companies with plans.
+            </p>
+          </div>
         </div>
       )}
 
       {detailTab === "billing" && (
-        <div className="bg-card border border-border rounded-xl p-6 space-y-4">
-          <h3 className="text-base font-semibold">Billing Details</h3>
-          <div className="grid grid-cols-2 gap-6">
+        <div className="space-y-4">
+          <div className="bg-card border border-border rounded-xl p-6 space-y-6">
+            <h3 className="text-base font-semibold">Billing Details</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
+              <div>
+                <p className="text-xs text-muted-foreground mb-1.5">Price</p>
+                <p className="text-lg font-semibold">
+                  {isFree ? (
+                    <span className="text-green-500">Free</span>
+                  ) : (
+                    `$${parseFloat(plan.price).toFixed(2)}`
+                  )}
+                </p>
+                {!isFree && <p className="text-xs text-muted-foreground">USDC</p>}
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1.5">Billing Interval</p>
+                <p className="text-lg font-semibold">
+                  {plan.billingInterval <= 30
+                    ? "Monthly"
+                    : plan.billingInterval <= 92
+                      ? "Quarterly"
+                      : "Annual"}
+                </p>
+                <p className="text-xs text-muted-foreground">Every {plan.billingInterval} days</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1.5">Accepted Token</p>
+                <p className="text-sm font-medium font-mono break-all">
+                  {tokenLabel(plan.acceptedToken)}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1.5">Environment</p>
+                <EnvBadge mode={plan.environmentMode} />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-card border border-border rounded-xl p-6">
+            <h3 className="text-base font-semibold mb-4">On-Chain Status</h3>
+            <div className="flex items-center gap-3">
+              {plan.chainSyncStatus === "SYNCED" ? (
+                <div className="flex items-center gap-2 text-green-500 text-sm font-medium">
+                  <Check className="w-4 h-4" />
+                  Registered on-chain
+                  {plan.onChainPlanId && (
+                    <code className="ml-2 text-xs text-muted-foreground font-mono">
+                      ID: {plan.onChainPlanId}
+                    </code>
+                  )}
+                </div>
+              ) : plan.chainSyncStatus === "NOT_APPLICABLE" ? (
+                <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                  <Package className="w-4 h-4" />
+                  Off-chain only (free plan)
+                </div>
+              ) : plan.chainSyncStatus === "PENDING" ? (
+                <div className="flex items-center gap-2 text-yellow-500 text-sm">
+                  <Loader2 className="w-4 h-4" />
+                  Pending registration
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 text-destructive text-sm">
+                  <Package className="w-4 h-4" />
+                  Sync failed
+                  {plan.chainSyncError && (
+                    <span className="text-xs text-muted-foreground ml-2">{plan.chainSyncError}</span>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Credit Detail View ─────────────────────────────────────────────────────────
+
+function CreateBundleDialog({
+  creditId,
+  onCreated,
+  bundle,
+}: {
+  creditId: string;
+  onCreated: () => void;
+  bundle?: { id: string; name: string; units: number; price: number };
+}) {
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [name, setName] = useState(bundle?.name || "");
+  const [units, setUnits] = useState(bundle?.units.toString() || "100");
+  const [price, setPrice] = useState(bundle?.price.toString() || "10");
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/catalog/credits/${creditId}/bundles`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: bundle?.id,
+          name,
+          units: parseInt(units),
+          price: parseFloat(price),
+        }),
+      });
+      if (res.ok) {
+        onCreated();
+        setOpen(false);
+        if (!bundle) {
+          setName("");
+          setUnits("100");
+          setPrice("10");
+        }
+        toast.success(bundle ? "Bundle updated" : "Bundle created");
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        {bundle ? (
+          <Button variant="ghost" size="icon" className="h-8 w-8">
+            <Edit2 className="w-3.5 h-3.5" />
+          </Button>
+        ) : (
+          <Button variant="outline" size="sm" className="gap-1.5 font-medium">
+            <Plus className="w-3.5 h-3.5" />
+            Create bundle
+          </Button>
+        )}
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{bundle ? "Edit Bundle" : "Create Credit Bundle"}</DialogTitle>
+          <DialogDescription>
+            Bundles allow customers to purchase a pack of credits.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label>Bundle Name</Label>
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Starter Pack"
+              required
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Units</Label>
+              <Input
+                type="number"
+                value={units}
+                onChange={(e) => setUnits(e.target.value)}
+                min="1"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Price (USDC)</Label>
+              <Input
+                type="number"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                min="0.01"
+                step="0.01"
+                required
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setOpen(false)}
+              disabled={loading}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={loading}>
+              {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              {bundle ? "Save Changes" : "Create Bundle"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function AddPlanGrantDialog({
+  creditId,
+  onAdded,
+  existingPlanIds,
+}: {
+  creditId: string;
+  onAdded: () => void;
+  existingPlanIds: string[];
+}) {
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [plans, setPlans] = useState<CatalogPlan[]>([]);
+  const [selectedPlanId, setSelectedPlanId] = useState("");
+  const [amount, setAmount] = useState("50");
+  const { envMode } = useEnvironment();
+
+  useEffect(() => {
+    if (open) {
+      fetch(`/api/catalog/plans?environmentMode=${envMode}&status=PUBLISHED`)
+        .then((res) => res.json())
+        .then((data) => setPlans(data.plans ?? []));
+    }
+  }, [open, envMode]);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!selectedPlanId) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/catalog/credits/${creditId}/plan-grants`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ planId: selectedPlanId, amount: parseFloat(amount) }),
+      });
+      if (res.ok) {
+        onAdded();
+        setOpen(false);
+        toast.success("Plan grant added");
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const availablePlans = plans.filter((p) => !existingPlanIds.includes(p.id));
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm" className="gap-1.5 font-medium">
+          <Plus className="w-3.5 h-3.5" />
+          Add plan grant
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Add Plan Grant</DialogTitle>
+          <DialogDescription>
+            Grant credits automatically to subscribers of a specific plan.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label>Select Plan</Label>
+            <Select value={selectedPlanId} onValueChange={setSelectedPlanId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a plan" />
+              </SelectTrigger>
+              <SelectContent>
+                {availablePlans.length === 0 ? (
+                  <div className="p-2 text-sm text-muted-foreground text-center">
+                    No available plans
+                  </div>
+                ) : (
+                  availablePlans.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name}
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Amount</Label>
+            <Input
+              type="number"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              min="0.000001"
+              step="any"
+              required
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setOpen(false)}
+              disabled={loading}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={loading || !selectedPlanId}>
+              {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Add Grant
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function CreditDetailView({
+  credit,
+  onBack,
+  onUpdated,
+}: {
+  credit: CatalogCreditType;
+  onBack: () => void;
+  onUpdated: () => void;
+}) {
+  const [detailTab, setDetailTab] = useState<"entitlements" | "companies">("entitlements");
+  const [copiedId, setCopiedId] = useState(false);
+  const [bundles, setBundles] = useState<any[]>([]);
+  const [planGrants, setPlanGrants] = useState<any[]>([]);
+  const [loadingData, setLoadingData] = useState(false);
+  const [refresh, setRefresh] = useState(0);
+
+  const loadData = useCallback(async () => {
+    setLoadingData(true);
+    try {
+      const [bRes, pRes] = await Promise.all([
+        fetch(`/api/catalog/credits/${credit.id}/bundles`),
+        fetch(`/api/catalog/credits/${credit.id}/plan-grants`),
+      ]);
+      if (bRes.ok) {
+        const d = await bRes.json();
+        setBundles(d.bundles ?? []);
+      }
+      if (pRes.ok) {
+        const d = await pRes.json();
+        setPlanGrants(d.planGrants ?? []);
+      }
+    } finally {
+      setLoadingData(false);
+    }
+  }, [credit.id]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData, refresh]);
+
+  async function deleteBundle(bundleId: string) {
+    if (!window.confirm("Remove this bundle?")) return;
+    try {
+      await fetch(`/api/catalog/credits/${credit.id}/bundles?bundleId=${bundleId}`, {
+        method: "DELETE",
+      });
+      setRefresh((n) => n + 1);
+      toast.success("Bundle removed");
+    } catch {
+      toast.error("Failed to remove bundle");
+    }
+  }
+
+  async function deletePlanGrant(planId: string) {
+    if (!window.confirm("Remove this plan grant?")) return;
+    try {
+      await fetch(`/api/catalog/credits/${credit.id}/plan-grants?planId=${planId}`, {
+        method: "DELETE",
+      });
+      setRefresh((n) => n + 1);
+      toast.success("Plan grant removed");
+    } catch {
+      toast.error("Failed to remove plan grant");
+    }
+  }
+
+  function copyId() {
+    navigator.clipboard.writeText(credit.id);
+    setCopiedId(true);
+    setTimeout(() => setCopiedId(false), 2000);
+  }
+
+  const DETAIL_TABS = ["entitlements", "companies"] as const;
+
+  return (
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+      {/* Breadcrumb */}
+      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+        <button
+          onClick={onBack}
+          className="flex items-center gap-1 hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          CREDITS
+        </button>
+        <span>/</span>
+        <span className="text-foreground font-medium uppercase">{credit.name}</span>
+      </div>
+
+      {/* Credit header card */}
+      <div className="bg-card border border-border rounded-xl p-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          {/* Left: icon + name + meta */}
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-xl bg-linear-to-br from-amber-500/30 to-orange-400/10 border border-border flex items-center justify-center text-2xl shrink-0">
+              <Coins className="w-7 h-7 text-amber-500" />
+            </div>
             <div>
+              <h2 className="text-xl font-bold text-foreground leading-tight">{credit.name}</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Last modified {timeAgo(credit.updatedAt)}
+              </p>
+              <code className="text-xs text-muted-foreground font-mono mt-0.5 block">
+                {credit.code}
+              </code>
+            </div>
+          </div>
+
+          {/* Right: stats + actions */}
+          <div className="flex items-center gap-6 flex-wrap">
+            {/* Price per credit */}
+            <div className="text-center min-w-[80px]">
               <p className="text-xs text-muted-foreground mb-1">Price</p>
-              <p className="text-lg font-semibold">
-                ${parseFloat(plan.price).toFixed(2)} USDC
+              <p className="text-sm font-semibold">
+                ${parseFloat(credit.price).toFixed(2)}/credit
               </p>
             </div>
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">
-                Billing Interval
-              </p>
-              <p className="text-lg font-semibold">
-                {plan.billingInterval} days
-              </p>
+            {/* Unit */}
+            <div className="text-center min-w-[70px]">
+              <p className="text-xs text-muted-foreground mb-1">Unit</p>
+              <p className="text-sm font-medium">{credit.unitName}</p>
             </div>
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">
-                Accepted Token
-              </p>
-              <p className="text-sm font-medium font-mono">
-                {tokenLabel(plan.acceptedToken)}
-              </p>
+            {/* Status */}
+            <div className="text-center min-w-[60px]">
+              <p className="text-xs text-muted-foreground mb-1">Status</p>
+              <StatusBadge status={credit.status} />
             </div>
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">Environment</p>
-              <EnvBadge mode={plan.environmentMode} />
+            {/* Divider */}
+            <div className="h-8 w-px bg-border hidden sm:block" />
+            {/* Actions */}
+            <div className="flex items-center gap-2">
+              <EditCreditTypeDialog credit={credit} onSaved={onUpdated} />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="icon" className="h-9 w-9">
+                    <MoreHorizontal className="w-4 h-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={copyId}>
+                    {copiedId ? (
+                      <><Check className="w-3.5 h-3.5 mr-2 text-green-500" />Copied!</>
+                    ) : (
+                      <><Copy className="w-3.5 h-3.5 mr-2" />Copy Credit ID</>
+                    )}
+                  </DropdownMenuItem>
+                  {credit.status === "DRAFT" && (
+                    <DropdownMenuItem
+                      onClick={async () => {
+                        await fetch("/api/catalog/credits", {
+                          method: "PUT",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ id: credit.id, status: "PUBLISHED" }),
+                        });
+                        onUpdated();
+                        toast.success("Credit type published");
+                      }}
+                    >
+                      Publish
+                    </DropdownMenuItem>
+                  )}
+                  {credit.status !== "ARCHIVED" && (
+                    <DropdownMenuItem
+                      onClick={async () => {
+                        await fetch("/api/catalog/credits", {
+                          method: "PUT",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ id: credit.id, status: "ARCHIVED" }),
+                        });
+                        onUpdated();
+                        toast.success("Credit type archived");
+                      }}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      Archive
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Detail tabs */}
+      <div className="border-b border-border">
+        <div className="flex gap-0">
+          {DETAIL_TABS.map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setDetailTab(tab)}
+              className={`px-4 py-3 text-sm font-medium capitalize border-b-2 transition-all -mb-px ${
+                detailTab === tab
+                  ? "border-accent text-foreground"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Tab content */}
+      {detailTab === "entitlements" && (
+        <div className="space-y-6">
+          {/* ── Credit Bundles ── */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-semibold">Credit Bundles</h3>
+              <CreateBundleDialog
+                creditId={credit.id}
+                onCreated={() => setRefresh((n) => n + 1)}
+              />
+            </div>
+            {loadingData ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+              </div>
+            ) : bundles.length > 0 ? (
+              <div className="bg-card border border-border rounded-xl overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead className="bg-secondary/50 border-b border-border">
+                    <tr>
+                      <th className="text-left py-2.5 px-4 font-semibold text-muted-foreground uppercase text-[10px] tracking-wider">
+                        Bundle Name
+                      </th>
+                      <th className="text-left py-2.5 px-4 font-semibold text-muted-foreground uppercase text-[10px] tracking-wider">
+                        Units
+                      </th>
+                      <th className="text-left py-2.5 px-4 font-semibold text-muted-foreground uppercase text-[10px] tracking-wider">
+                        Price
+                      </th>
+                      <th className="w-12" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {bundles.map((b) => (
+                      <tr key={b.id} className="border-b border-border last:border-0 hover:bg-secondary/10">
+                        <td className="py-3 px-4 font-medium">{b.name}</td>
+                        <td className="py-3 px-4">{b.units} units</td>
+                        <td className="py-3 px-4 text-foreground font-medium">
+                          ${parseFloat(b.price).toFixed(2)}
+                        </td>
+                        <td className="py-3 px-4 text-right flex items-center justify-end gap-1">
+                          <CreateBundleDialog
+                            creditId={credit.id}
+                            bundle={b}
+                            onCreated={() => setRefresh((n) => n + 1)}
+                          />
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => deleteBundle(b.id)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="border border-dashed border-border rounded-xl py-12 flex flex-col items-center justify-center gap-2 bg-secondary/10">
+                <Coins className="w-8 h-8 text-muted-foreground/40" />
+                <p className="text-sm font-medium text-muted-foreground">No credit bundles yet</p>
+                <p className="text-xs text-muted-foreground/70 max-w-xs text-center">
+                  Bundles allow customers to purchase a pack of {credit.unitsPerPack} {credit.unitName} for ${parseFloat(credit.price).toFixed(2)}.
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* ── Plan Grants ── */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-semibold">Plan Grants</h3>
+              <AddPlanGrantDialog
+                creditId={credit.id}
+                onAdded={() => setRefresh((n) => n + 1)}
+                existingPlanIds={planGrants.map((g) => g.planId)}
+              />
+            </div>
+            {loadingData ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+              </div>
+            ) : planGrants.length > 0 ? (
+              <div className="bg-card border border-border rounded-xl overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead className="bg-secondary/50 border-b border-border">
+                    <tr>
+                      <th className="text-left py-2.5 px-4 font-semibold text-muted-foreground uppercase text-[10px] tracking-wider">
+                        Plan
+                      </th>
+                      <th className="text-left py-2.5 px-4 font-semibold text-muted-foreground uppercase text-[10px] tracking-wider">
+                        Amount
+                      </th>
+                      <th className="w-12" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {planGrants.map((grant) => (
+                      <tr key={grant.planId} className="border-b border-border last:border-0 hover:bg-secondary/10">
+                        <td className="py-3 px-4 font-medium flex items-center gap-2">
+                          <Package className="w-3.5 h-3.5 text-blue-500" />
+                          {grant.planId} {/* Ideally show plan name here */}
+                        </td>
+                        <td className="py-3 px-4 text-foreground">
+                          {grant.amount} units
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => deletePlanGrant(grant.planId)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="border border-dashed border-border rounded-xl py-12 flex flex-col items-center justify-center gap-2 bg-secondary/10">
+                <Package className="w-8 h-8 text-muted-foreground/40" />
+                <p className="text-sm font-medium text-muted-foreground">No plan grants yet</p>
+                <p className="text-xs text-muted-foreground/70 max-w-xs text-center">
+                  Plan grants automatically allocate {credit.unitName} credits to subscribers of specific plans.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {detailTab === "companies" && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-base font-semibold">Companies with Credit Grants</h3>
+          </div>
+          <div className="border border-dashed border-border rounded-xl py-16 flex flex-col items-center justify-center gap-2">
+            <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center mb-2">
+              <Coins className="w-6 h-6 text-muted-foreground/50" />
+            </div>
+            <p className="text-sm font-medium text-foreground">No companies yet</p>
+            <p className="text-xs text-muted-foreground max-w-xs text-center">
+              Companies that have been granted {credit.unitName} credits will appear here.
+            </p>
           </div>
         </div>
       )}
@@ -4277,6 +5733,7 @@ export function CatalogSection() {
   const [activeTab, setActiveTab] = useState<CatalogTab>("plans");
   const [refresh, setRefresh] = useState(0);
   const [selectedPlan, setSelectedPlan] = useState<CatalogPlan | null>(null);
+  const [selectedCredit, setSelectedCredit] = useState<CatalogCreditType | null>(null);
   const [plans, setPlans] = useState<CatalogPlan[]>([]);
   const [addOns, setAddOns] = useState<CatalogAddOn[]>([]);
   const [plansLoading, setPlansLoading] = useState(true);
@@ -4355,6 +5812,20 @@ export function CatalogSection() {
         onUpdated={() => {
           loadPlans();
           setSelectedPlan(null);
+        }}
+      />
+    );
+  }
+
+  // Credit detail view
+  if (selectedCredit) {
+    return (
+      <CreditDetailView
+        credit={selectedCredit}
+        onBack={() => setSelectedCredit(null)}
+        onUpdated={() => {
+          tr();
+          setSelectedCredit(null);
         }}
       />
     );
@@ -4518,7 +5989,7 @@ export function CatalogSection() {
                       >
                         <td className="py-4 px-4">
                           <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent/30 to-accent/10 border border-border flex items-center justify-center text-sm font-bold text-accent"></div>
+                            <div className="w-8 h-8 rounded-lg bg-linear-to-br from-accent/30 to-accent/10 border border-border flex items-center justify-center text-sm font-bold text-accent"></div>
                             <div>
                               <p className="text-sm font-medium text-foreground">
                                 {plan.name}
@@ -4807,7 +6278,7 @@ export function CatalogSection() {
 
       {/* Credit Types Tab */}
       {activeTab === "credits" && (
-        <CreditTypesTable env={envMode} refresh={refresh} />
+        <CreditTypesTable env={envMode} refresh={refresh} onSelect={(ct) => { setSelectedCredit(ct); }} />
       )}
 
       {/* Configuration Tab */}

@@ -1,14 +1,15 @@
-'use client';
+"use client";
 
-import React, { useState, useCallback } from 'react';
-import { useReadContract, useReadContracts } from 'wagmi';
-import type { Plan } from '@meap/core';
-import { PlanFactoryABI, getContractAddresses } from '@meap/core';
-import { useMEAP } from '../providers/MEAPProvider';
+import React, { useState, useCallback } from "react";
+import { useReadContract, useReadContracts } from "wagmi";
+import type { Plan } from "@meap/core";
+import { PlanFactoryABI, getContractAddresses } from "@meap/core";
+import { useMEAP } from "../providers/MEAPProvider";
 
 // ============================================================
 //  PricingTable — Displays subscription plan tiers
 //  Fetches real plan data from PlanFactory contract
+//  Stablecoin (USDC) payments only — all chains supported
 // ============================================================
 
 interface PricingTableProps {
@@ -17,7 +18,7 @@ interface PricingTableProps {
   /** Provider address — if provided, fetches all plans for this provider */
   providerAddress?: string;
   onSelectPlan?: (planId: bigint) => void;
-  theme?: 'light' | 'dark';
+  theme?: "light" | "dark";
   className?: string;
 }
 
@@ -36,8 +37,8 @@ export function PricingTable({
   planIds: explicitPlanIds,
   providerAddress,
   onSelectPlan,
-  theme = 'dark',
-  className = '',
+  theme = "dark",
+  className = "",
 }: PricingTableProps) {
   const { network } = useMEAP();
   const contracts = getContractAddresses(network.chainId);
@@ -49,7 +50,7 @@ export function PricingTable({
   const { data: fetchedPlanIds } = useReadContract({
     address: factoryAddress,
     abi: PlanFactoryABI,
-    functionName: 'getProviderPlans',
+    functionName: "getProviderPlans",
     args: [providerAddress as `0x${string}`],
     chainId: network.chainId,
     query: { enabled: !!providerAddress && !explicitPlanIds },
@@ -61,7 +62,7 @@ export function PricingTable({
   const planContracts = activePlanIds.map((id) => ({
     address: factoryAddress,
     abi: PlanFactoryABI,
-    functionName: 'getPlan' as const,
+    functionName: "getPlan" as const,
     args: [id] as const,
     chainId: network.chainId,
   }));
@@ -90,10 +91,13 @@ export function PricingTable({
     })
     .filter((p): p is Plan => p !== null && p.active);
 
-  const handleSelect = useCallback((planId: bigint) => {
-    setSelectedPlan(planId);
-    onSelectPlan?.(planId);
-  }, [onSelectPlan]);
+  const handleSelect = useCallback(
+    (planId: bigint) => {
+      setSelectedPlan(planId);
+      onSelectPlan?.(planId);
+    },
+    [onSelectPlan],
+  );
 
   const formatPrice = (price: bigint) => {
     const dollars = Number(price) / 1_000_000;
@@ -101,17 +105,17 @@ export function PricingTable({
   };
 
   const formatInterval = (seconds: number) => {
-    if (seconds >= 31_536_000) return '/year';
-    if (seconds >= 7_776_000) return '/quarter';
-    if (seconds >= 2_592_000) return '/month';
-    return `/${Math.floor(seconds / 86400)} days`;
+    if (seconds >= 31_536_000) return "/yr";
+    if (seconds >= 7_776_000) return "/qtr";
+    if (seconds >= 2_592_000) return "/mo";
+    return `/${Math.floor(seconds / 86400)}d`;
   };
 
   if (isLoading) {
     return (
       <div className={`meap-pricing-loading ${className}`}>
         <div className="meap-spinner" />
-        <p>Loading plans from chain...</p>
+        <p>Fetching plans from chain…</p>
       </div>
     );
   }
@@ -119,7 +123,11 @@ export function PricingTable({
   if (plans.length === 0) {
     return (
       <div className={`meap-pricing-empty ${className}`}>
-        <p>No active plans found.</p>
+        <div style={{ fontSize: 28, marginBottom: 8 }}>◎</div>
+        <p style={{ fontWeight: 600, marginBottom: 4 }}>No active plans</p>
+        <p style={{ fontSize: 12 }}>
+          No subscription plans found on {network.name}.
+        </p>
       </div>
     );
   }
@@ -132,14 +140,20 @@ export function PricingTable({
       {plans.map((plan) => (
         <div
           key={plan.id.toString()}
-          className={`meap-plan-card ${selectedPlan === plan.id ? 'selected' : ''}`}
+          className={`meap-plan-card ${selectedPlan === plan.id ? "selected" : ""}`}
           onClick={() => handleSelect(plan.id)}
         >
           <div className="meap-plan-tier">{plan.tier.toUpperCase()}</div>
           <h3 className="meap-plan-name">{plan.name}</h3>
           <div className="meap-plan-price">
             <span className="meap-plan-amount">{formatPrice(plan.price)}</span>
-            <span className="meap-plan-interval">{formatInterval(plan.billingInterval)}</span>
+            <span className="meap-plan-interval">
+              {formatInterval(plan.billingInterval)}
+            </span>
+          </div>
+          <div className="meap-plan-token-label">
+            <span className="meap-plan-token-dot" />
+            USDC · Stablecoin
           </div>
           <button
             className="meap-plan-select-btn"
@@ -148,10 +162,23 @@ export function PricingTable({
               handleSelect(plan.id);
             }}
           >
-            {selectedPlan === plan.id ? 'Selected' : 'Select Plan'}
+            {selectedPlan === plan.id ? "✓ Selected" : "Get Started"}
           </button>
         </div>
       ))}
+
+      {/* Powered by Arcenpay */}
+      <div className="meap-pricing-footer" style={{ gridColumn: "1 / -1" }}>
+        <a
+          href="https://arcenpay.xyz"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="arcenpay-badge"
+        >
+          <span className="arcenpay-badge-dot" />
+          Powered by Arcenpay
+        </a>
+      </div>
     </div>
   );
 }

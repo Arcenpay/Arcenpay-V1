@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import React from 'react';
-import type { Subscription } from '@meap/core';
-import { useMEAP } from '../providers/MEAPProvider';
-import { useEntitlement } from '../hooks/useEntitlement';
+import React from "react";
+import { useMEAP } from "../providers/MEAPProvider";
+import { useEntitlement } from "../hooks/useEntitlement";
 
 // ============================================================
 //  SubscriptionStatus — Displays current subscription info
+//  Stablecoin (USDC) payments only — all chains supported
 // ============================================================
 
 interface SubscriptionStatusProps {
@@ -17,8 +17,12 @@ interface SubscriptionStatusProps {
 /**
  * SubscriptionStatus — Displays current subscription tier, expiry, and status
  */
-export function SubscriptionStatus({ walletAddress, className = '' }: SubscriptionStatusProps) {
-  const { isSubscribed, planTier, expiresAt, isLoading } = useEntitlement(walletAddress);
+export function SubscriptionStatus({
+  walletAddress,
+  className = "",
+}: SubscriptionStatusProps) {
+  const { isSubscribed, planTier, expiresAt, isLoading } =
+    useEntitlement(walletAddress);
 
   if (isLoading) {
     return (
@@ -29,10 +33,10 @@ export function SubscriptionStatus({ walletAddress, className = '' }: Subscripti
   }
 
   const formatDate = (timestamp: bigint) => {
-    return new Date(Number(timestamp) * 1000).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
+    return new Date(Number(timestamp) * 1000).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
     });
   };
 
@@ -44,15 +48,59 @@ export function SubscriptionStatus({ walletAddress, className = '' }: Subscripti
   };
 
   return (
-    <div className={`meap-subscription-status ${className}`} data-meap-component="subscription-status">
+    <div
+      className={`meap-subscription-status ${className}`}
+      data-meap-component="subscription-status"
+    >
       {isSubscribed ? (
         <div className="meap-status-active">
           <div className="meap-status-badge active">Active</div>
           <div className="meap-status-details">
-            <div className="meap-status-tier">{planTier?.toUpperCase()} Plan</div>
+            <div className="meap-status-tier">
+              {planTier?.toUpperCase()} Plan
+            </div>
             <div className="meap-status-expiry">
-              {isExpiringSoon() ? '⚠️ ' : ''}
+              {isExpiringSoon() ? "⚠ " : ""}
               Renews {formatDate(expiresAt!)}
+            </div>
+          </div>
+
+          {/* USDC indicator */}
+          <div
+            style={{
+              marginLeft: "auto",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "flex-end",
+              gap: 4,
+            }}
+          >
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 4,
+                fontSize: 10,
+                fontWeight: 700,
+                color: "var(--success)",
+                background: "var(--success-dim)",
+                border: "1px solid rgba(34,197,94,0.2)",
+                padding: "2px 7px",
+                borderRadius: 20,
+                letterSpacing: "0.04em",
+              }}
+            >
+              <span
+                style={{
+                  width: 5,
+                  height: 5,
+                  borderRadius: "50%",
+                  background: "var(--success)",
+                  flexShrink: 0,
+                  display: "inline-block",
+                }}
+              />
+              USDC
             </div>
           </div>
         </div>
@@ -62,6 +110,27 @@ export function SubscriptionStatus({ walletAddress, className = '' }: Subscripti
           <p>No active subscription</p>
         </div>
       )}
+
+      {/* Powered by Arcenpay */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "flex-end",
+          marginTop: 10,
+          paddingTop: 10,
+          borderTop: "1px solid var(--border-dim)",
+        }}
+      >
+        <a
+          href="https://arcenpay.xyz"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="arcenpay-badge"
+        >
+          <span className="arcenpay-badge-dot" />
+          Powered by Arcenpay
+        </a>
+      </div>
     </div>
   );
 }
