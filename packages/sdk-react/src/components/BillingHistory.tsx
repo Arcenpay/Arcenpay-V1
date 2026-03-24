@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import React, { useEffect, useState } from 'react';
-import { usePublicClient } from 'wagmi';
-import { SubscriptionRegistryABI, getContractAddresses } from '@meap/core';
-import { useMEAP } from '../providers/MEAPProvider';
+import React, { useEffect, useState } from "react";
+import { usePublicClient } from "wagmi";
+import { SubscriptionRegistryABI, getContractAddresses } from "@meap/core";
+import { useMEAP } from "../providers/MEAPProvider";
 
 // ============================================================
 //  BillingHistory — On-Chain Billing Events Display
@@ -11,7 +11,7 @@ import { useMEAP } from '../providers/MEAPProvider';
 // ============================================================
 
 export interface BillingEvent {
-  type: 'payment' | 'renewal' | 'cancellation' | 'minted';
+  type: "payment" | "renewal" | "cancellation" | "minted";
   tokenId: string;
   planId: string;
   amount: string;
@@ -32,7 +32,7 @@ export interface BillingHistoryProps {
 export function BillingHistory({
   walletAddress,
   maxEvents = 20,
-  className = '',
+  className = "",
 }: BillingHistoryProps) {
   const { network } = useMEAP();
   const contracts = getContractAddresses(network.chainId);
@@ -47,9 +47,9 @@ export function BillingHistory({
   // Explorer URL helper
   const getExplorerBase = () => {
     const explorers: Record<number, string> = {
-      11155111: 'https://sepolia.etherscan.io',
-      84532: 'https://sepolia.basescan.org',
-      8453: 'https://basescan.org',
+      11155111: "https://sepolia.etherscan.io",
+      84532: "https://sepolia.basescan.org",
+      8453: "https://basescan.org",
     };
     return explorers[network.chainId] || explorers[11155111];
   };
@@ -69,27 +69,29 @@ export function BillingHistory({
         const mintedLogs = await publicClient.getLogs({
           address: registryAddress,
           event: {
-            type: 'event',
-            name: 'SubscriptionMinted',
+            type: "event",
+            name: "SubscriptionMinted",
             inputs: [
-              { name: 'subscriber', type: 'address', indexed: true },
-              { name: 'tokenId', type: 'uint256', indexed: true },
-              { name: 'planId', type: 'uint256', indexed: true },
-              { name: 'expiration', type: 'uint64', indexed: false },
+              { name: "subscriber", type: "address", indexed: true },
+              { name: "tokenId", type: "uint256", indexed: true },
+              { name: "planId", type: "uint256", indexed: true },
+              { name: "expiration", type: "uint64", indexed: false },
             ],
           },
           args: { subscriber: walletAddress as `0x${string}` },
           fromBlock: 0n,
-          toBlock: 'latest',
+          toBlock: "latest",
         });
 
         for (const log of mintedLogs) {
-          const block = await publicClient.getBlock({ blockNumber: log.blockNumber });
+          const block = await publicClient.getBlock({
+            blockNumber: log.blockNumber,
+          });
           allEvents.push({
-            type: 'minted',
+            type: "minted",
             tokenId: String(log.args.tokenId),
             planId: String(log.args.planId),
-            amount: '0',
+            amount: "0",
             timestamp: Number(block.timestamp),
             transactionHash: log.transactionHash,
             blockNumber: Number(log.blockNumber),
@@ -100,25 +102,27 @@ export function BillingHistory({
         const renewedLogs = await publicClient.getLogs({
           address: registryAddress,
           event: {
-            type: 'event',
-            name: 'SubscriptionRenewed',
+            type: "event",
+            name: "SubscriptionRenewed",
             inputs: [
-              { name: 'tokenId', type: 'uint256', indexed: true },
-              { name: 'newExpiration', type: 'uint64', indexed: false },
-              { name: 'amountPaid', type: 'uint256', indexed: false },
+              { name: "tokenId", type: "uint256", indexed: true },
+              { name: "newExpiration", type: "uint64", indexed: false },
+              { name: "amountPaid", type: "uint256", indexed: false },
             ],
           },
           fromBlock: 0n,
-          toBlock: 'latest',
+          toBlock: "latest",
         });
 
         for (const log of renewedLogs) {
-          const block = await publicClient.getBlock({ blockNumber: log.blockNumber });
+          const block = await publicClient.getBlock({
+            blockNumber: log.blockNumber,
+          });
           const amountPaid = log.args.amountPaid as bigint;
           allEvents.push({
-            type: 'renewal',
+            type: "renewal",
             tokenId: String(log.args.tokenId),
-            planId: '',
+            planId: "",
             amount: (Number(amountPaid) / 1e6).toFixed(2),
             timestamp: Number(block.timestamp),
             transactionHash: log.transactionHash,
@@ -130,23 +134,23 @@ export function BillingHistory({
         const cancelledLogs = await publicClient.getLogs({
           address: registryAddress,
           event: {
-            type: 'event',
-            name: 'SubscriptionCancelled',
-            inputs: [
-              { name: 'tokenId', type: 'uint256', indexed: true },
-            ],
+            type: "event",
+            name: "SubscriptionCancelled",
+            inputs: [{ name: "tokenId", type: "uint256", indexed: true }],
           },
           fromBlock: 0n,
-          toBlock: 'latest',
+          toBlock: "latest",
         });
 
         for (const log of cancelledLogs) {
-          const block = await publicClient.getBlock({ blockNumber: log.blockNumber });
+          const block = await publicClient.getBlock({
+            blockNumber: log.blockNumber,
+          });
           allEvents.push({
-            type: 'cancellation',
+            type: "cancellation",
             tokenId: String(log.args.tokenId),
-            planId: '',
-            amount: '0',
+            planId: "",
+            amount: "0",
             timestamp: Number(block.timestamp),
             transactionHash: log.transactionHash,
             blockNumber: Number(log.blockNumber),
@@ -158,7 +162,11 @@ export function BillingHistory({
         setEvents(allEvents.slice(0, maxEvents));
         setError(null);
       } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch billing history');
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Failed to fetch billing history",
+        );
       } finally {
         setLoading(false);
       }
@@ -168,17 +176,17 @@ export function BillingHistory({
   }, [walletAddress, publicClient, registryAddress, maxEvents]);
 
   const eventIcons: Record<string, string> = {
-    payment: '💳',
-    renewal: '🔄',
-    cancellation: '❌',
-    minted: '🎫',
+    payment: "◈",
+    renewal: "↻",
+    cancellation: "✕",
+    minted: "◎",
   };
 
   const eventColors: Record<string, string> = {
-    payment: '#22c55e',
-    renewal: '#3b82f6',
-    cancellation: '#ef4444',
-    minted: '#a855f7',
+    payment: "#22c55e",
+    renewal: "#e8e8e8",
+    cancellation: "#ef4444",
+    minted: "#888888",
   };
 
   const explorerBase = getExplorerBase();
@@ -214,20 +222,25 @@ export function BillingHistory({
       ) : (
         <div className="meap-billing-list">
           {events.map((event, index) => (
-            <div key={`${event.transactionHash}-${index}`} className="meap-billing-item">
+            <div
+              key={`${event.transactionHash}-${index}`}
+              className="meap-billing-item"
+            >
               <div className="meap-billing-icon">
-                <span>{eventIcons[event.type] || '📋'}</span>
+                <span>{eventIcons[event.type] || "📋"}</span>
               </div>
               <div className="meap-billing-details">
                 <div className="meap-billing-type">
                   <span
                     className="meap-event-badge"
-                    style={{ color: eventColors[event.type] || '#6b7280' }}
+                    style={{ color: eventColors[event.type] || "#6b7280" }}
                   >
                     {event.type.charAt(0).toUpperCase() + event.type.slice(1)}
                   </span>
-                  {event.amount && event.amount !== '0' && (
-                    <span className="meap-billing-amount">{event.amount} USDC</span>
+                  {event.amount && event.amount !== "0" && (
+                    <span className="meap-billing-amount">
+                      {event.amount} USDC
+                    </span>
                   )}
                 </div>
                 <div className="meap-billing-meta">
@@ -248,6 +261,17 @@ export function BillingHistory({
           ))}
         </div>
       )}
+      <div className="meap-billing-footer">
+        <a
+          href="https://arcenpay.xyz"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="arcenpay-badge"
+        >
+          <span className="arcenpay-badge-dot" />
+          Powered by Arcenpay
+        </a>
+      </div>
     </div>
   );
 }

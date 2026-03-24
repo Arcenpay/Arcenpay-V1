@@ -18,10 +18,10 @@
  * />
  */
 
-'use client';
+"use client";
 
-import React, { useEffect, useState } from 'react';
-import type { ComponentRenderData } from '@meap/core';
+import React, { useEffect, useState } from "react";
+import type { ComponentRenderData } from "@meap/core";
 
 interface ArcenEmbedProps {
   accessToken: string;
@@ -33,7 +33,12 @@ interface ArcenEmbedProps {
   onPlanChange?: (planId: string) => void;
 }
 
-function MeteredFeatureBar({ name, used, limit, unitPlural }: {
+function MeteredFeatureBar({
+  name,
+  used,
+  limit,
+  unitPlural,
+}: {
   name: string;
   used: number;
   limit?: number;
@@ -42,60 +47,89 @@ function MeteredFeatureBar({ name, used, limit, unitPlural }: {
   const pct = limit ? Math.min((used / limit) * 100, 100) : 0;
   return (
     <div style={{ marginBottom: 12 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: 13 }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          marginBottom: 4,
+          fontSize: 13,
+        }}
+      >
         <span>{name}</span>
-        <span style={{ color: '#6b7280' }}>
-          {used}{limit ? ` / ${limit}` : ''} {unitPlural ?? 'uses'}
+        <span style={{ color: "#888888" }}>
+          {used}
+          {limit ? ` / ${limit}` : ""} {unitPlural ?? "uses"}
         </span>
       </div>
       {limit && (
-        <div style={{ height: 6, background: '#e5e7eb', borderRadius: 3 }}>
-          <div style={{
-            height: 6,
-            width: `${pct}%`,
-            background: pct >= 90 ? '#ef4444' : pct >= 70 ? '#f59e0b' : '#3b82f6',
-            borderRadius: 3,
-            transition: 'width 0.3s ease',
-          }} />
+        <div style={{ height: 6, background: "#e5e7eb", borderRadius: 3 }}>
+          <div
+            style={{
+              height: 6,
+              width: `${pct}%`,
+              background:
+                pct >= 90 ? "#ef4444" : pct >= 70 ? "#f59e0b" : "#e8e8e8",
+              borderRadius: 3,
+              transition: "width 0.3s ease",
+            }}
+          />
         </div>
       )}
     </div>
   );
 }
 
-function PlanCard({ plan, isActive, onSelect }: {
-  plan: { id: string; name: string; tier: string; price: string; billingInterval: number };
+function PlanCard({
+  plan,
+  isActive,
+  onSelect,
+}: {
+  plan: {
+    id: string;
+    name: string;
+    tier: string;
+    price: string;
+    billingInterval: number;
+  };
   isActive: boolean;
   onSelect?: (planId: string) => void;
 }) {
   const priceNum = parseFloat(plan.price);
-  const interval = plan.billingInterval === 2592000 ? '/mo' :
-                   plan.billingInterval === 31536000 ? '/yr' : '';
+  const interval =
+    plan.billingInterval === 2592000
+      ? "/mo"
+      : plan.billingInterval === 31536000
+        ? "/yr"
+        : "";
   return (
-    <div style={{
-      border: `2px solid ${isActive ? '#3b82f6' : '#e5e7eb'}`,
-      borderRadius: 8,
-      padding: 16,
-      flex: 1,
-      minWidth: 160,
-      background: isActive ? '#eff6ff' : '#fff',
-    }}>
+    <div
+      style={{
+        border: `2px solid ${isActive ? "#e8e8e8" : "rgba(255,255,255,0.08)"}`,
+        borderRadius: 8,
+        padding: 16,
+        flex: 1,
+        minWidth: 160,
+        background: isActive
+          ? "rgba(255,255,255,0.06)"
+          : "rgba(255,255,255,0.03)",
+      }}
+    >
       <div style={{ fontWeight: 600, marginBottom: 4 }}>{plan.name}</div>
-      <div style={{ fontSize: 22, fontWeight: 700, color: '#111827' }}>
-        {priceNum === 0 ? 'Free' : `$${priceNum.toFixed(2)}${interval}`}
+      <div style={{ fontSize: 22, fontWeight: 700, color: "#f5f5f5" }}>
+        {priceNum === 0 ? "Free" : `$${priceNum.toFixed(2)}${interval}`}
       </div>
       {!isActive && onSelect && (
         <button
           onClick={() => onSelect(plan.id)}
           style={{
             marginTop: 12,
-            width: '100%',
-            padding: '6px 12px',
-            background: '#3b82f6',
-            color: '#fff',
-            border: 'none',
+            width: "100%",
+            padding: "6px 12px",
+            background: "#ffffff",
+            color: "#000000",
+            border: "none",
             borderRadius: 6,
-            cursor: 'pointer',
+            cursor: "pointer",
             fontSize: 13,
           }}
         >
@@ -103,7 +137,14 @@ function PlanCard({ plan, isActive, onSelect }: {
         </button>
       )}
       {isActive && (
-        <div style={{ marginTop: 12, fontSize: 12, color: '#3b82f6', fontWeight: 500 }}>
+        <div
+          style={{
+            marginTop: 12,
+            fontSize: 12,
+            color: "#e8e8e8",
+            fontWeight: 500,
+          }}
+        >
           ✓ Current Plan
         </div>
       )}
@@ -114,7 +155,7 @@ function PlanCard({ plan, isActive, onSelect }: {
 export function ArcenEmbed({
   accessToken,
   componentId,
-  baseUrl = '',
+  baseUrl = "",
   className,
   style,
   onPlanChange,
@@ -138,7 +179,9 @@ export function ArcenEmbed({
         setError(null);
       })
       .catch((err: unknown) => {
-        setError(err instanceof Error ? err.message : 'Failed to load component');
+        setError(
+          err instanceof Error ? err.message : "Failed to load component",
+        );
       })
       .finally(() => setLoading(false));
   }, [accessToken, componentId, baseUrl]);
@@ -147,15 +190,23 @@ export function ArcenEmbed({
   const elements = data?.component.elements ?? [];
 
   const containerStyle: React.CSSProperties = {
-    fontFamily: design.fontFamily ?? 'system-ui, sans-serif',
-    fontSize: design.fontSize ? `${design.fontSize}px` : '14px',
-    color: design.fontColor ?? '#111827',
+    fontFamily: design.fontFamily ?? "system-ui, sans-serif",
+    fontSize: design.fontSize ? `${design.fontSize}px` : "14px",
+    color: design.fontColor ?? "#f5f5f5",
     ...style,
   };
 
   if (loading) {
     return (
-      <div className={className} style={{ ...containerStyle, padding: 24, textAlign: 'center', color: '#6b7280' }}>
+      <div
+        className={className}
+        style={{
+          ...containerStyle,
+          padding: 24,
+          textAlign: "center",
+          color: "#888888",
+        }}
+      >
         Loading...
       </div>
     );
@@ -163,8 +214,11 @@ export function ArcenEmbed({
 
   if (error || !data) {
     return (
-      <div className={className} style={{ ...containerStyle, padding: 24, color: '#ef4444' }}>
-        {error ?? 'Component not available'}
+      <div
+        className={className}
+        style={{ ...containerStyle, padding: 24, color: "#ef4444" }}
+      >
+        {error ?? "Component not available"}
       </div>
     );
   }
@@ -173,29 +227,58 @@ export function ArcenEmbed({
     <div className={className} style={containerStyle}>
       {elements.map((element, i) => {
         switch (element.type) {
-          case 'planManager':
+          case "planManager":
             return (
               <div key={i} style={{ marginBottom: 24 }}>
-                <h3 style={{ fontWeight: 600, marginBottom: 12, fontSize: '1.1em' }}>Current Plan</h3>
+                <h3
+                  style={{
+                    fontWeight: 600,
+                    marginBottom: 12,
+                    fontSize: "1.1em",
+                  }}
+                >
+                  Current Plan
+                </h3>
                 {data.activePlan ? (
-                  <div style={{ padding: 16, background: design.backgroundColor ?? '#f9fafb', borderRadius: design.borderRadius ?? 8 }}>
-                    <div style={{ fontWeight: 700, fontSize: '1.1em' }}>{data.activePlan.name}</div>
-                    <div style={{ color: '#6b7280', fontSize: 13 }}>
-                      {parseFloat(data.activePlan.price) === 0 ? 'Free' : `$${data.activePlan.price}`}
+                  <div
+                    style={{
+                      padding: 16,
+                      background:
+                        design.backgroundColor ?? "rgba(255,255,255,0.04)",
+                      borderRadius: design.borderRadius ?? 8,
+                    }}
+                  >
+                    <div style={{ fontWeight: 700, fontSize: "1.1em" }}>
+                      {data.activePlan.name}
+                    </div>
+                    <div style={{ color: "#888888", fontSize: 13 }}>
+                      {parseFloat(data.activePlan.price) === 0
+                        ? "Free"
+                        : `$${data.activePlan.price}`}
                     </div>
                   </div>
                 ) : (
-                  <div style={{ color: '#6b7280' }}>No active plan</div>
+                  <div style={{ color: "#888888" }}>No active plan</div>
                 )}
               </div>
             );
 
-          case 'meteredFeatures':
+          case "meteredFeatures":
             return (
               <div key={i} style={{ marginBottom: 24 }}>
-                <h3 style={{ fontWeight: 600, marginBottom: 12, fontSize: '1.1em' }}>Usage</h3>
+                <h3
+                  style={{
+                    fontWeight: 600,
+                    marginBottom: 12,
+                    fontSize: "1.1em",
+                  }}
+                >
+                  Usage
+                </h3>
                 {data.usage.length === 0 ? (
-                  <div style={{ color: '#6b7280', fontSize: 13 }}>No metered features</div>
+                  <div style={{ color: "#888888", fontSize: 13 }}>
+                    No metered features
+                  </div>
                 ) : (
                   data.usage.map((u) => (
                     <MeteredFeatureBar
@@ -209,16 +292,34 @@ export function ArcenEmbed({
               </div>
             );
 
-          case 'includedFeatures':
+          case "includedFeatures":
             return (
               <div key={i} style={{ marginBottom: 24 }}>
-                <h3 style={{ fontWeight: 600, marginBottom: 12, fontSize: '1.1em' }}>Features</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <h3
+                  style={{
+                    fontWeight: 600,
+                    marginBottom: 12,
+                    fontSize: "1.1em",
+                  }}
+                >
+                  Features
+                </h3>
+                <div
+                  style={{ display: "flex", flexDirection: "column", gap: 8 }}
+                >
                   {data.entitlements
                     .filter((e) => e.value)
                     .map((e) => (
-                      <div key={e.featureKey} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
-                        <span style={{ color: '#22c55e' }}>✓</span>
+                      <div
+                        key={e.featureKey}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                          fontSize: 13,
+                        }}
+                      >
+                        <span style={{ color: "#22c55e" }}>✓</span>
                         <span>{e.name}</span>
                       </div>
                     ))}
@@ -226,11 +327,19 @@ export function ArcenEmbed({
               </div>
             );
 
-          case 'plansTable':
+          case "plansTable":
             return (
               <div key={i} style={{ marginBottom: 24 }}>
-                <h3 style={{ fontWeight: 600, marginBottom: 12, fontSize: '1.1em' }}>Plans</h3>
-                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                <h3
+                  style={{
+                    fontWeight: 600,
+                    marginBottom: 12,
+                    fontSize: "1.1em",
+                  }}
+                >
+                  Plans
+                </h3>
+                <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
                   {data.plans.map((plan) => (
                     <PlanCard
                       key={plan.id}

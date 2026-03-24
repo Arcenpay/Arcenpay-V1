@@ -157,7 +157,9 @@ export function PlansSection() {
   // Create plan form state
   const [newPlan, setNewPlan] = useState({
     name: "",
+    description: "",
     priceUsdc: "",
+    planType: "free" as "free" | "paid",
     interval: "monthly" as BillingInterval,
     features: "",
     acceptedToken: chainUsdc as `0x${string}`,
@@ -301,9 +303,12 @@ export function PlansSection() {
   const isLoading = (planIdsLoading || plansLoading) && dbLoading;
 
   // ── Write: create plan ────────────────────────────────────
-  const priceInUnits = newPlan.priceUsdc
-    ? BigInt(Math.round(parseFloat(newPlan.priceUsdc) * 1_000_000))
-    : 0n;
+  const priceInUnits =
+    newPlan.planType === "free"
+      ? 0n
+      : newPlan.priceUsdc
+        ? BigInt(Math.round(parseFloat(newPlan.priceUsdc) * 1_000_000))
+        : 0n;
 
   const publicClient = usePublicClient();
   const { writeContractAsync } = useWriteContract();
@@ -329,13 +334,12 @@ export function PlansSection() {
   const validateForm = (): boolean => {
     const errors: Record<string, string> = {};
     if (!newPlan.name.trim()) errors.name = "Plan name is required";
-    if (!newPlan.priceUsdc.trim()) {
-      errors.priceUsdc = "Price is required";
-    } else if (
-      isNaN(Number(newPlan.priceUsdc)) ||
-      Number(newPlan.priceUsdc) <= 0
-    ) {
-      errors.priceUsdc = "Price must be a positive number";
+    if (newPlan.planType === "paid") {
+      if (newPlan.priceUsdc.trim() === "") {
+        errors.priceUsdc = "Price is required for paid plans";
+      } else if (isNaN(Number(newPlan.priceUsdc)) || Number(newPlan.priceUsdc) <= 0) {
+        errors.priceUsdc = "Price must be greater than 0";
+      }
     }
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
@@ -412,7 +416,9 @@ export function PlansSection() {
         setTxHashCreate("");
         setNewPlan({
           name: "",
+          description: "",
           priceUsdc: "",
+          planType: "free",
           interval: "monthly",
           features: "",
           acceptedToken: chainUsdc,
@@ -841,7 +847,9 @@ export function PlansSection() {
     setTxHashCreate("");
     setNewPlan({
       name: "",
+      description: "",
       priceUsdc: "",
+      planType: "free",
       interval: "monthly",
       features: "",
       acceptedToken: chainUsdc,
@@ -1203,7 +1211,7 @@ export function PlansSection() {
         </div>
       </div>
 
-      {/* Create Plan Sheet */}
+      {/* Create Plan Sheet — SchematicHQ split layout */}
       <Sheet
         open={showCreateDialog}
         onOpenChange={(open) => {
@@ -1211,233 +1219,389 @@ export function PlansSection() {
           else setShowCreateDialog(true);
         }}
       >
-        <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
-          <SheetHeader className="pb-4 border-b border-border">
-            <SheetTitle className="flex items-center gap-2">
-              <PanelRightOpen className="w-4 h-4 text-accent" />
-              Create Subscription Plan
-            </SheetTitle>
-            <SheetDescription>
-              Deploy a new plan to PlanFactory on-chain. This requires a wallet
-              transaction (~120k gas).
-            </SheetDescription>
-          </SheetHeader>
+        <SheetContent className="w-full sm:max-w-4xl p-0 overflow-hidden flex flex-col">
+          {/* Header */}
+          <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
+            <div />
+            <button
+              onClick={handleCloseDialog}
+              disabled={txStep === "inflight" || txStep === "pending" || txStep === "simulating"}
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-secondary hover:text-foreground transition-all disabled:opacity-50"
+            >
+              ✕
+            </button>
+          </div>
 
-          <div className="space-y-4 py-4">
-            {/* Plan Name */}
-            <div className="space-y-2 rounded-xl border border-border bg-card p-4">
-              <Label htmlFor="planName">Plan Name</Label>
-              <Input
-                id="planName"
-                placeholder="e.g. Pro, Enterprise, Starter"
-                value={newPlan.name}
-                onChange={(e) => {
-                  setNewPlan((p) => ({ ...p, name: e.target.value }));
-                  setFormErrors((e_) => ({ ...e_, name: "" }));
-                }}
-                className="bg-secondary border-border focus:border-accent"
-                disabled={txStep !== "idle"}
-              />
-              {formErrors.name && (
-                <p className="text-xs text-destructive">{formErrors.name}</p>
-              )}
+          {/* Body — two columns */}
+          <div className="flex flex-1 min-h-0 overflow-hidden">
+            {/* ── LEFT: Plan Preview ───────────────────── */}
+            <div className="w-[320px] shrink-0 border-r border-border bg-secondary/20 p-6 flex flex-col gap-6 overflow-y-auto">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground mb-4">
+                  Create Plan
+                </p>
+                {/* Icon + Name */}
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-400 to-indigo-600 shrink-0" />
+                  <p className="text-base font-bold text-foreground truncate">
+                    {newPlan.name || <span className="text-muted-foreground font-normal">Untitled plan</span>}
+                  </p>
+                </div>
+              </div>
+
+              {/* Preview card */}
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground mb-3">Plan Preview</p>
+                <div className="bg-card border border-border rounded-xl overflow-hidden">
+                  {/* Plan info */}
+                  <div className="p-4 border-b border-border">
+                    <p className="text-lg font-bold text-foreground leading-tight">
+                      {newPlan.name || "—"}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {newPlan.description || newPlan.name || "—"}
+                    </p>
+                    {newPlan.planType === "paid" && newPlan.priceUsdc && (
+                      <p className="text-sm font-semibold text-foreground mt-1">
+                        ${newPlan.priceUsdc} USDC
+                        <span className="text-xs font-normal text-muted-foreground ml-1">
+                          / {INTERVAL_LABELS[newPlan.interval].toLowerCase()}
+                        </span>
+                      </p>
+                    )}
+                    {newPlan.planType === "free" && (
+                      <p className="text-sm font-semibold text-foreground mt-1">Free</p>
+                    )}
+                  </div>
+                  {/* Entitlements placeholder */}
+                  <div className="p-4">
+                    <p className="text-xs text-muted-foreground text-center py-4">
+                      No entitlements exist on the plan yet
+                    </p>
+                  </div>
+                  {/* Subscribe button */}
+                  <div className="px-4 pb-4">
+                    <button className="w-full py-2.5 rounded-lg bg-secondary border border-border text-sm font-medium text-muted-foreground">
+                      Subscribe
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            {/* Price + Interval */}
-            <div className="grid grid-cols-2 gap-4 rounded-xl border border-border bg-card p-4">
-              <div className="space-y-2">
-                <Label htmlFor="planPrice">Price (USDC)</Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                    $
-                  </span>
+            {/* ── RIGHT: Plan Settings ─────────────────── */}
+            <div className="flex-1 overflow-y-auto">
+              <div className="p-6 space-y-8">
+                {/* Header */}
+                <div>
+                  <div className="flex items-center gap-3 mb-1">
+                    <h2 className="text-2xl font-bold text-foreground tracking-tight">Plan Settings</h2>
+                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-secondary border border-border text-muted-foreground">
+                      All Environments
+                    </span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">A company can only have one base plan.</p>
+                </div>
+
+                {/* Icon + Name */}
+                <div className="grid grid-cols-[auto_1fr] gap-4 items-start">
+                  <div>
+                    <p className="text-sm font-medium text-foreground mb-2">Icon</p>
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-indigo-600 border border-border" />
+                  </div>
+                  <div>
+                    <Label htmlFor="planName" className="text-sm font-medium text-foreground mb-2 block">Name</Label>
+                    <Input
+                      id="planName"
+                      placeholder="e.g. Pro, Enterprise, Starter"
+                      value={newPlan.name}
+                      onChange={(e) => {
+                        setNewPlan((p) => ({ ...p, name: e.target.value }));
+                        setFormErrors((e_) => ({ ...e_, name: "" }));
+                      }}
+                      className="h-11 bg-background border-border"
+                      disabled={txStep !== "idle"}
+                    />
+                    {formErrors.name && (
+                      <p className="text-xs text-destructive mt-1">{formErrors.name}</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Description */}
+                <div>
+                  <Label htmlFor="planDesc" className="text-sm font-medium text-foreground mb-2 block">Description</Label>
                   <Input
-                    id="planPrice"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    placeholder="9.99"
-                    value={newPlan.priceUsdc}
-                    onChange={(e) => {
-                      setNewPlan((p) => ({ ...p, priceUsdc: e.target.value }));
-                      setFormErrors((e_) => ({ ...e_, priceUsdc: "" }));
-                    }}
-                    className="bg-secondary border-border focus:border-accent pl-6"
+                    id="planDesc"
+                    placeholder="Describe this plan"
+                    value={newPlan.description}
+                    onChange={(e) => setNewPlan((p) => ({ ...p, description: e.target.value }))}
+                    className="h-11 bg-background border-border"
                     disabled={txStep !== "idle"}
                   />
+                  <p className="text-xs text-muted-foreground mt-1.5">Optional</p>
                 </div>
-                {formErrors.priceUsdc && (
-                  <p className="text-xs text-destructive">
-                    {formErrors.priceUsdc}
+
+                {/* Pricing section */}
+                <div>
+                  <div className="flex items-center gap-2.5 mb-1">
+                    <h3 className="text-xl font-bold text-foreground tracking-tight">Pricing</h3>
+                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-warning/10 text-warning border border-warning/20">
+                      DEV
+                    </span>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-5">Monetize your offering with flexible pricing options</p>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Type */}
+                    <div>
+                      <Label className="text-sm font-medium text-foreground mb-2 block">Type</Label>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            type="button"
+                            disabled={txStep !== "idle"}
+                            className="w-full flex items-center justify-between h-11 px-3 rounded-lg bg-background border border-border text-sm text-foreground hover:bg-secondary/50 transition-colors disabled:opacity-50"
+                          >
+                            <span className="font-medium capitalize">{newPlan.planType === "free" ? "Free" : "Paid"}</span>
+                            <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width]">
+                          <DropdownMenuItem onClick={() => setNewPlan((p) => ({ ...p, planType: "free", priceUsdc: "" }))}>
+                            <div>
+                              <p className="text-sm font-medium">Free</p>
+                              <p className="text-xs text-muted-foreground">No charge — $0.00 USDC</p>
+                            </div>
+                            {newPlan.planType === "free" && <Check className="w-4 h-4 ml-auto text-foreground" />}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setNewPlan((p) => ({ ...p, planType: "paid" }))}>
+                            <div>
+                              <p className="text-sm font-medium">Paid</p>
+                              <p className="text-xs text-muted-foreground">Recurring USDC payment</p>
+                            </div>
+                            {newPlan.planType === "paid" && <Check className="w-4 h-4 ml-auto text-foreground" />}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+
+                    {/* Billing Integration — chains */}
+                    <div>
+                      <Label className="text-sm font-medium text-foreground mb-2 block">Billing Integration</Label>
+                      {(() => {
+                        const connectedOpt = USDC_OPTIONS.find((o) => o.chainId === chainId);
+                        const selected = USDC_OPTIONS.find((o) => o.address === newPlan.acceptedToken) ?? connectedOpt;
+                        const chainName = (opt: typeof USDC_OPTIONS[number]) =>
+                          opt.label.replace(/USDC — |Custom USDC — /, "");
+                        const chainInitial = (opt: typeof USDC_OPTIONS[number]) => {
+                          const name = chainName(opt);
+                          if (name.includes("Base")) return "B";
+                          if (name.includes("Sepolia")) return "S";
+                          return name[0]?.toUpperCase() ?? "?";
+                        };
+
+                        const renderRow = (opt: typeof USDC_OPTIONS[number]) => {
+                          const isConnected = opt.chainId === chainId;
+                          const isSelected = newPlan.acceptedToken === opt.address;
+                          return (
+                            <DropdownMenuItem
+                              key={opt.chainId}
+                              disabled={!isConnected}
+                              onClick={() => isConnected && setNewPlan((p) => ({ ...p, acceptedToken: opt.address }))}
+                              className={cn(
+                                "flex items-center justify-between gap-3 py-2.5",
+                                !isConnected && "opacity-40 cursor-not-allowed"
+                              )}
+                            >
+                              <div className="flex items-center gap-2.5">
+                                <div className={cn(
+                                  "w-7 h-7 rounded-full flex items-center justify-center shrink-0 border",
+                                  isConnected
+                                    ? "bg-foreground text-background border-foreground"
+                                    : "bg-secondary text-muted-foreground border-border"
+                                )}>
+                                  <span className="text-[10px] font-bold">{chainInitial(opt)}</span>
+                                </div>
+                                <div>
+                                  <div className="flex items-center gap-1.5">
+                                    <p className="text-sm font-medium leading-tight">{chainName(opt)}</p>
+                                    {isConnected && (
+                                      <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-foreground text-background leading-none">
+                                        Connected
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-xs font-mono text-muted-foreground mt-0.5">
+                                    USDC · {truncateAddress(opt.address)}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                {!isConnected && (
+                                  <span className="text-[9px] font-medium text-muted-foreground">Switch wallet</span>
+                                )}
+                                {isSelected && isConnected && (
+                                  <Check className="w-3.5 h-3.5 text-foreground" />
+                                )}
+                              </div>
+                            </DropdownMenuItem>
+                          );
+                        };
+
+                        return (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button
+                                type="button"
+                                disabled={txStep !== "idle"}
+                                className="w-full flex items-center justify-between h-11 px-3 rounded-lg bg-background border border-border text-sm text-foreground hover:bg-secondary/50 transition-colors disabled:opacity-50"
+                              >
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <span className="font-medium truncate">
+                                    {selected ? chainName(selected) : "Select chain"}
+                                  </span>
+                                  {selected && (
+                                    <span className={cn(
+                                      "text-[9px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0",
+                                      selected.tag === "mainnet"
+                                        ? "bg-success/10 text-success"
+                                        : "bg-secondary text-muted-foreground border border-border"
+                                    )}>
+                                      {selected.tag}
+                                    </span>
+                                  )}
+                                  {selected?.chainId === chainId && (
+                                    <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-foreground text-background shrink-0">
+                                      Connected
+                                    </span>
+                                  )}
+                                </div>
+                                <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0 ml-1" />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent className="w-80">
+                              {/* Testnets */}
+                              {USDC_OPTIONS.some((o) => o.tag === "testnet") && (
+                                <>
+                                  <div className="px-2 pt-2 pb-1">
+                                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Testnets</p>
+                                  </div>
+                                  {USDC_OPTIONS.filter((o) => o.tag === "testnet").map(renderRow)}
+                                </>
+                              )}
+                              {/* Mainnets */}
+                              {USDC_OPTIONS.some((o) => o.tag === "mainnet") && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <div className="px-2 pt-2 pb-1">
+                                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Mainnets</p>
+                                  </div>
+                                  {USDC_OPTIONS.filter((o) => o.tag === "mainnet").map(renderRow)}
+                                </>
+                              )}
+                              {/* Footer hint */}
+                              <div className="px-2 py-2 mt-1 border-t border-border">
+                                <p className="text-[10px] text-muted-foreground">
+                                  Switch your wallet network to enable other chains
+                                </p>
+                              </div>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        );
+                      })()}
+                    </div>
+                  </div>
+
+                  {/* Paid-only: Price + Interval */}
+                  {newPlan.planType === "paid" && (
+                    <div className="grid grid-cols-2 gap-4 mt-4">
+                      <div>
+                        <Label htmlFor="planPrice" className="text-sm font-medium text-foreground mb-2 block">Price (USDC)</Label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">$</span>
+                          <Input
+                            id="planPrice"
+                            type="number"
+                            min="0.01"
+                            step="0.01"
+                            placeholder="9.99"
+                            value={newPlan.priceUsdc}
+                            onChange={(e) => {
+                              setNewPlan((p) => ({ ...p, priceUsdc: e.target.value }));
+                              setFormErrors((e_) => ({ ...e_, priceUsdc: "" }));
+                            }}
+                            className="h-11 bg-background border-border pl-6"
+                            disabled={txStep !== "idle"}
+                          />
+                        </div>
+                        {formErrors.priceUsdc && (
+                          <p className="text-xs text-destructive mt-1">{formErrors.priceUsdc}</p>
+                        )}
+                      </div>
+                      <div>
+                        <Label className="text-sm font-medium text-foreground mb-2 block">Billing Interval</Label>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button
+                              type="button"
+                              disabled={txStep !== "idle"}
+                              className="w-full flex items-center justify-between h-11 px-3 rounded-lg bg-background border border-border text-sm text-foreground hover:bg-secondary/50 transition-colors disabled:opacity-50"
+                            >
+                              <span className="font-medium">{INTERVAL_LABELS[newPlan.interval]}</span>
+                              <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width]">
+                            {(["monthly", "quarterly", "annual"] as BillingInterval[]).map((iv) => (
+                              <DropdownMenuItem key={iv} onClick={() => setNewPlan((p) => ({ ...p, interval: iv }))} className="flex items-center justify-between">
+                                <div>
+                                  <p className="text-sm font-medium">{INTERVAL_LABELS[iv]}</p>
+                                  <p className="text-xs text-muted-foreground">{(INTERVAL_SECONDS[iv] / 86400).toFixed(0)} days</p>
+                                </div>
+                                {newPlan.interval === iv && <Check className="w-4 h-4 text-foreground ml-auto" />}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Transaction flow */}
+                {txStep !== "idle" && (
+                  <TransactionFlow
+                    step={txStep}
+                    txHash={txHashCreate}
+                    blockExplorerUrl={getBlockExplorerBase(chainId)}
+                    gasEstimate="~120k gas"
+                    errorMessage={txError}
+                    onDismiss={() => {
+                      setTxStep("idle");
+                      setTxError("");
+                    }}
+                  />
+                )}
+
+                {/* Gas note */}
+                {txStep === "idle" && (
+                  <p className="text-xs text-muted-foreground">
+                    Deploying on-chain via{" "}
+                    <code className="font-mono text-foreground">PlanFactory.createPlan()</code>{" "}
+                    · ~120,000 gas
                   </p>
                 )}
               </div>
-              <div className="space-y-2">
-                <Label>Billing Interval</Label>
-                <div className="flex flex-col gap-1">
-                  {(
-                    ["monthly", "quarterly", "annual"] as BillingInterval[]
-                  ).map((interval) => (
-                    <button
-                      key={interval}
-                      onClick={() => setNewPlan((p) => ({ ...p, interval }))}
-                      disabled={txStep !== "idle"}
-                      className={cn(
-                        "w-full px-3 py-1.5 rounded-lg text-xs font-medium border text-left transition-all duration-200",
-                        newPlan.interval === interval
-                          ? "bg-accent text-accent-foreground border-accent"
-                          : "bg-secondary border-border text-muted-foreground hover:text-foreground",
-                      )}
-                    >
-                      {INTERVAL_LABELS[interval]}
-                      <span className="ml-1 opacity-60 text-xs">
-                        ({(INTERVAL_SECONDS[interval] / 86400).toFixed(0)}d)
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
             </div>
-
-            <div className="space-y-2 rounded-xl border border-border bg-card p-4">
-              <Label>Accepted Token</Label>
-              {(() => {
-                const selected = USDC_OPTIONS.find(
-                  (o) => o.address === newPlan.acceptedToken,
-                );
-                return (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button
-                        type="button"
-                        disabled={txStep !== "idle"}
-                        className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-secondary border border-border text-left hover:bg-secondary/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-foreground">
-                            USDC — {selected?.label ?? "Select chain"}
-                          </span>
-                          {selected && (
-                            <span
-                              className={cn(
-                                "text-[10px] font-medium uppercase px-1.5 py-0.5 rounded",
-                                selected.tag === "mainnet"
-                                  ? "bg-success/10 text-success"
-                                  : "bg-secondary text-muted-foreground border border-border",
-                              )}
-                            >
-                              {selected.tag}
-                            </span>
-                          )}
-                          {selected && (
-                            <span className="text-xs font-mono text-muted-foreground">
-                              {truncateAddress(selected.address)}
-                            </span>
-                          )}
-                        </div>
-                        <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width]">
-                      {USDC_OPTIONS.map((opt) => {
-                        const isSelected =
-                          newPlan.acceptedToken === opt.address;
-                        return (
-                          <DropdownMenuItem
-                            key={opt.chainId}
-                            onClick={() =>
-                              setNewPlan((p) => ({
-                                ...p,
-                                acceptedToken: opt.address,
-                              }))
-                            }
-                            className="flex items-center justify-between gap-3 py-2.5"
-                          >
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium">
-                                USDC — {opt.label}
-                              </span>
-                              <span
-                                className={cn(
-                                  "text-[10px] font-medium uppercase px-1.5 py-0.5 rounded",
-                                  opt.tag === "mainnet"
-                                    ? "bg-success/10 text-success"
-                                    : "bg-secondary text-muted-foreground border border-border",
-                                )}
-                              >
-                                {opt.tag}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs font-mono text-muted-foreground">
-                                {truncateAddress(opt.address)}
-                              </span>
-                              {isSelected && (
-                                <Check className="w-3.5 h-3.5 text-accent shrink-0" />
-                              )}
-                            </div>
-                          </DropdownMenuItem>
-                        );
-                      })}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                );
-              })()}
-            </div>
-
-            {/* Features */}
-            <div className="space-y-2 rounded-xl border border-border bg-card p-4">
-              <Label htmlFor="planFeatures">Feature Keys (optional)</Label>
-              <Input
-                id="planFeatures"
-                placeholder="e.g. advanced_analytics, custom_domain"
-                value={newPlan.features}
-                onChange={(e) =>
-                  setNewPlan((p) => ({ ...p, features: e.target.value }))
-                }
-                className="bg-secondary border-border focus:border-accent"
-                disabled={txStep !== "idle"}
-              />
-              <p className="text-xs text-muted-foreground">
-                Comma-separated feature flag keys to bundle with this plan
-              </p>
-            </div>
-
-            {/* Gas estimate */}
-            <div className="flex items-center gap-2 p-3 rounded-lg bg-secondary/50 border border-border">
-              <span className="text-xs text-muted-foreground">
-                Estimated gas:{" "}
-                <span className="text-foreground font-medium">~120,000</span>{" "}
-                units · calls{" "}
-                <code className="font-mono text-accent text-xs">
-                  PlanFactory.createPlan()
-                </code>
-              </span>
-            </div>
-
-            {/* Transaction flow */}
-            <TransactionFlow
-              step={txStep}
-              txHash={txHashCreate}
-              blockExplorerUrl={getBlockExplorerBase(chainId)}
-              gasEstimate="~120k gas"
-              errorMessage={txError}
-              onDismiss={() => {
-                setTxStep("idle");
-                setTxError("");
-              }}
-            />
           </div>
 
-          <div className="sticky bottom-0 bg-background/95 backdrop-blur border-t border-border pt-4 mt-4 flex items-center justify-end gap-2">
+          {/* Footer */}
+          <div className="shrink-0 border-t border-border px-6 py-4 flex items-center justify-end gap-3 bg-background">
             <Button
               variant="outline"
               onClick={handleCloseDialog}
-              disabled={
-                txStep === "inflight" ||
-                txStep === "pending" ||
-                txStep === "simulating"
-              }
+              disabled={txStep === "inflight" || txStep === "pending" || txStep === "simulating"}
             >
               Cancel
             </Button>
@@ -1446,36 +1610,11 @@ export function PlansSection() {
               onClick={handleCreatePlan}
               disabled={txStep !== "idle" && txStep !== "error"}
             >
-              {txStep === "simulating" && (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Simulating…
-                </>
-              )}
-              {txStep === "pending" && (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Confirm in Wallet
-                </>
-              )}
-              {txStep === "inflight" && (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Submitting…
-                </>
-              )}
-              {txStep === "success" && (
-                <>
-                  <CheckCircle2 className="w-4 h-4 mr-2 text-success" />
-                  Plan Created!
-                </>
-              )}
-              {(txStep === "idle" || txStep === "error") && (
-                <>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Deploy Plan
-                </>
-              )}
+              {txStep === "simulating" && <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Simulating…</>}
+              {txStep === "pending" && <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Confirm in Wallet</>}
+              {txStep === "inflight" && <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Submitting…</>}
+              {txStep === "success" && <><CheckCircle2 className="w-4 h-4 mr-2 text-success" />Plan Created!</>}
+              {(txStep === "idle" || txStep === "error") && <>Save Changes</>}
             </Button>
           </div>
         </SheetContent>

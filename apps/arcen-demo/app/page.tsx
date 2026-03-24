@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import { useAccount, useConnect, useDisconnect } from "wagmi";
 import { injected } from "wagmi/connectors";
 import {
@@ -18,7 +18,7 @@ import {
 
 // ─── Constants ───────────────────────────────────────────────
 const DEMO_COMPANY_EMAIL =
-  process.env.NEXT_PUBLIC_DEMO_COMPANY_EMAIL || "demo@acmescan.xyz";
+  process.env.NEXT_PUBLIC_DEMO_COMPANY_EMAIL || "demo@arcenpay.xyz";
 const API_BASE = "";
 
 // ─── Types ───────────────────────────────────────────────────
@@ -37,7 +37,8 @@ function Badge({
   variant?: "default" | "success" | "warning" | "danger" | "accent";
 }) {
   const cls: Record<string, string> = {
-    default: "bg-[var(--surface-3)] text-[var(--text-dim)] border-[var(--border-dim)]",
+    default:
+      "bg-[var(--surface-3)] text-[var(--text-dim)] border-[var(--border-dim)]",
     success:
       "bg-[var(--success-dim)] text-[var(--success)] border-[var(--border-dim)]",
     warning:
@@ -84,11 +85,38 @@ function SectionHeading({
   return (
     <div className="mb-5">
       <div className="flex items-center gap-2 mb-1">
-        <span className="text-lg">{icon}</span>
-        <h2 className="text-base font-bold text-[var(--text)]">{title}</h2>
+        <span className="text-base leading-none">{icon}</span>
+        <h2 className="text-sm font-bold text-[var(--text)] tracking-tight">
+          {title}
+        </h2>
       </div>
-      <p className="text-xs text-[var(--text-muted)] pl-7">{sub}</p>
+      <p className="text-xs text-[var(--text-muted)] pl-[26px] leading-relaxed">
+        {sub}
+      </p>
     </div>
+  );
+}
+
+// ─── Primary Button ───────────────────────────────────────────
+function PrimaryButton({
+  children,
+  onClick,
+  disabled,
+  className = "",
+}: {
+  children: React.ReactNode;
+  onClick?: () => void;
+  disabled?: boolean;
+  className?: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={`px-4 py-2 rounded-lg bg-white text-black text-xs font-bold hover:opacity-85 disabled:opacity-40 transition-all tracking-tight ${className}`}
+    >
+      {children}
+    </button>
   );
 }
 
@@ -102,14 +130,11 @@ function WalletBar() {
     return (
       <div className="flex items-center gap-3">
         <span className="text-xs text-[var(--text-muted)] hidden sm:block">
-          Connect wallet for on-chain components
+          Connect wallet to enable on-chain features
         </span>
-        <button
-          onClick={() => connect({ connector: injected() })}
-          className="px-3 py-1.5 rounded-lg bg-[var(--accent)] text-white text-xs font-semibold hover:opacity-85 transition-opacity"
-        >
+        <PrimaryButton onClick={() => connect({ connector: injected() })}>
           Connect Wallet
-        </button>
+        </PrimaryButton>
       </div>
     );
   }
@@ -118,11 +143,11 @@ function WalletBar() {
     <div className="flex items-center gap-2">
       <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[var(--success-dim)] border border-[var(--border-dim)]">
         <span className="w-1.5 h-1.5 rounded-full bg-[var(--success)] inline-block" />
-        <span className="text-xs text-[var(--success)] font-semibold">
+        <span className="text-xs text-[var(--success)] font-semibold font-mono">
           {truncateAddress(address!)}
         </span>
       </div>
-      {chain && <Badge variant="warning">{chain.name}</Badge>}
+      {chain && <Badge variant="default">{chain.name}</Badge>}
       <button
         onClick={() => disconnect()}
         className="px-2.5 py-1.5 rounded-lg bg-[var(--surface-3)] border border-[var(--border-dim)] text-[var(--text-dim)] text-xs hover:text-[var(--text)] transition-all"
@@ -140,26 +165,31 @@ function PlansTab({ walletAddress }: { walletAddress?: string }) {
   return (
     <div className="space-y-6">
       <SectionHeading
-        icon="💳"
+        icon="◎"
         title="Subscription Plans"
-        sub="PricingTable fetches plans from the PlanFactory contract. CheckoutModal handles the full on-chain subscribe flow with smart account support."
+        sub="On-chain subscription plans powered by Arcenpay. Payments are processed in USDC stablecoin across all supported chains — no credit cards."
       />
 
       {walletAddress && (
         <div>
-          <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-2">
-            Current Subscription
+          <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest mb-2">
+            Your Subscription
           </p>
-          {/* SDK: SubscriptionStatus */}
           <SubscriptionStatus walletAddress={walletAddress} />
         </div>
       )}
 
       <div>
-        <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-3">
-          Available Plans
-        </p>
-        {/* SDK: PricingTable */}
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">
+            Available Plans
+          </p>
+          <div className="flex items-center gap-1.5 text-[10px] text-[var(--text-muted)]">
+            <span className="w-1.5 h-1.5 rounded-full bg-[var(--success)] inline-block" />
+            USDC · Stablecoin only
+          </div>
+        </div>
+
         <PricingTable
           onSelectPlan={(planId) => {
             if (walletAddress) {
@@ -169,25 +199,25 @@ function PlansTab({ walletAddress }: { walletAddress?: string }) {
             }
           }}
         />
+
         {!walletAddress && (
           <p className="mt-3 text-xs text-[var(--text-muted)] text-center">
-            ⚠️ Connect a wallet to subscribe to a plan
+            ↑ Connect a wallet to subscribe
           </p>
         )}
       </div>
 
-      {/* SDK: CheckoutModal */}
       {checkoutPlanId !== null && walletAddress && (
         <CheckoutModal
           planId={checkoutPlanId}
           isOpen
           onClose={() => setCheckoutPlanId(null)}
           onSuccess={(tokenId) => {
-            console.log("[AcmeScan] Checkout success, tokenId:", tokenId);
+            console.log("[Arcenpay] Subscription minted, tokenId:", tokenId);
             setCheckoutPlanId(null);
           }}
           onError={(err) => {
-            console.error("[AcmeScan] Checkout error:", err);
+            console.error("[Arcenpay] Checkout error:", err);
           }}
         />
       )}
@@ -201,31 +231,28 @@ function FeaturesTab({ walletAddress }: { walletAddress?: string }) {
     ? { wallet: walletAddress }
     : { email: DEMO_COMPANY_EMAIL };
 
-  // SDK Hook: useFlag
   const scanFlag = useFlag("scan", companyKeys, undefined, {
     baseUrl: API_BASE,
   });
 
-  // SDK Hook: useFlags
   const { flags: bulkFlags, loading: bulkLoading } = useFlags(
     ["advanced_analytics", "api_access", "custom_exports", "sso"],
     companyKeys,
     undefined,
-    { baseUrl: API_BASE }
+    { baseUrl: API_BASE },
   );
 
   return (
     <div className="space-y-6">
       <SectionHeading
-        icon="🚩"
-        title="Feature Flags"
-        sub="useFlag / useFlags check flags via /api/v1/flags/check. FeatureFlagGuard renders children or fallback based on entitlement."
+        icon="◈"
+        title="Feature Entitlements"
+        sub="On-chain entitlement checks via useFlag / useFlags. FeatureFlagGuard conditionally renders content based on active subscription tier."
       />
 
-      {/* SDK: FeatureFlagGuard */}
       <div>
-        <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-3">
-          FeatureFlagGuard — &quot;scan&quot; feature gate
+        <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest mb-3">
+          FeatureFlagGuard — scan feature gate
         </p>
         {walletAddress ? (
           <FeatureFlagGuard
@@ -234,14 +261,14 @@ function FeaturesTab({ walletAddress }: { walletAddress?: string }) {
             fallback={
               <Card className="border-[var(--warning)]">
                 <div className="flex items-start gap-3">
-                  <span className="text-xl">🔒</span>
+                  <span className="text-base leading-none mt-0.5">◉</span>
                   <div>
-                    <p className="text-sm font-semibold text-[var(--warning)]">
-                      Scan Feature Locked
+                    <p className="text-sm font-bold text-[var(--warning)] tracking-tight">
+                      Feature Locked
                     </p>
-                    <p className="text-xs text-[var(--text-muted)] mt-1">
-                      This feature requires an active subscription with the
-                      scan entitlement. Upgrade your plan to unlock.
+                    <p className="text-xs text-[var(--text-muted)] mt-1 leading-relaxed">
+                      This feature requires an active subscription with the scan
+                      entitlement. Upgrade your plan to unlock access.
                     </p>
                   </div>
                 </div>
@@ -250,17 +277,19 @@ function FeaturesTab({ walletAddress }: { walletAddress?: string }) {
           >
             <Card className="border-[var(--success)]">
               <div className="flex items-start gap-3">
-                <span className="text-xl">✅</span>
+                <span className="text-base leading-none mt-0.5 text-[var(--success)]">
+                  ✓
+                </span>
                 <div>
-                  <p className="text-sm font-semibold text-[var(--success)]">
-                    Scan Feature Unlocked
+                  <p className="text-sm font-bold text-[var(--success)] tracking-tight">
+                    Feature Unlocked
                   </p>
-                  <p className="text-xs text-[var(--text-muted)] mt-1">
-                    Your subscription includes document scanning.
+                  <p className="text-xs text-[var(--text-muted)] mt-1 leading-relaxed">
+                    Your subscription includes full scan access.
                   </p>
                   <div className="mt-3 p-3 rounded-lg bg-[var(--surface-3)] border border-[var(--border-dim)]">
-                    <p className="text-xs font-mono text-[var(--accent)]">
-                      📄 Protected content — only visible to entitled users
+                    <p className="text-xs font-mono text-[var(--text-dim)]">
+                      ◎ Protected content — visible to entitled subscribers only
                     </p>
                   </div>
                 </div>
@@ -270,28 +299,26 @@ function FeaturesTab({ walletAddress }: { walletAddress?: string }) {
         ) : (
           <Card>
             <p className="text-sm text-[var(--text-muted)]">
-              Connect a wallet to test FeatureFlagGuard with on-chain
-              entitlement checking.
+              Connect a wallet to test on-chain entitlement gating.
             </p>
           </Card>
         )}
       </div>
 
-      {/* useFlag single */}
       <div>
-        <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-3">
+        <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest mb-3">
           useFlag — Single flag check
         </p>
         <Card>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-semibold text-[var(--text)]">
-                Flag: <code>scan</code>
+              <p className="text-sm font-bold text-[var(--text)] tracking-tight">
+                <code>scan</code>
               </p>
-              <p className="text-xs text-[var(--text-muted)] mt-0.5">
+              <p className="text-xs text-[var(--text-muted)] mt-0.5 font-mono">
                 {walletAddress
-                  ? `wallet=${truncateAddress(walletAddress)}`
-                  : `email=${DEMO_COMPANY_EMAIL}`}
+                  ? truncateAddress(walletAddress)
+                  : DEMO_COMPANY_EMAIL}
               </p>
             </div>
             <div className="text-right">
@@ -303,11 +330,11 @@ function FeaturesTab({ walletAddress }: { walletAddress?: string }) {
                     {scanFlag.value === null
                       ? "null"
                       : scanFlag.value
-                      ? "true"
-                      : "false"}
+                        ? "true"
+                        : "false"}
                   </Badge>
                   {scanFlag.reason && (
-                    <p className="text-[10px] text-[var(--text-muted)] max-w-[180px]">
+                    <p className="text-[10px] text-[var(--text-muted)] max-w-[180px] text-right">
                       {scanFlag.reason}
                     </p>
                   )}
@@ -329,22 +356,21 @@ function FeaturesTab({ walletAddress }: { walletAddress?: string }) {
         </Card>
       </div>
 
-      {/* useFlags bulk */}
       <div>
-        <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-3">
+        <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest mb-3">
           useFlags — Bulk check (4 flags)
         </p>
         <Card>
           {bulkLoading ? (
             <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
               <div className="meap-spinner" />
-              Checking flags…
+              Checking entitlements…
             </div>
           ) : (
             <div className="space-y-2.5">
               {Object.entries(bulkFlags).map(([key, value]) => (
                 <div key={key} className="flex items-center justify-between">
-                  <code className="text-xs text-[var(--accent)]">{key}</code>
+                  <code className="text-xs text-[var(--text-dim)]">{key}</code>
                   <Badge variant={value ? "success" : "default"}>
                     {value === null ? "null" : value ? "true" : "false"}
                   </Badge>
@@ -364,7 +390,6 @@ function UsageTab({ walletAddress }: { walletAddress?: string }) {
     ? { wallet: walletAddress }
     : { email: DEMO_COMPANY_EMAIL };
 
-  // SDK Hook: useTrack
   const { track } = useTrack({ baseUrl: API_BASE });
 
   const [tracking, setTracking] = useState<string | null>(null);
@@ -379,7 +404,7 @@ function UsageTab({ walletAddress }: { walletAddress?: string }) {
         await track({
           name: eventName,
           company: companyKeys,
-          traits: { source: "arcen-demo", ts: Date.now() },
+          traits: { source: "arcenpay-sdk", ts: Date.now() },
         });
         setTrackLog((log) => [
           { name: eventName, ts: Date.now(), ok: true },
@@ -395,62 +420,59 @@ function UsageTab({ walletAddress }: { walletAddress?: string }) {
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [track, walletAddress]
+    [track, walletAddress],
   );
 
   return (
     <div className="space-y-6">
       <SectionHeading
-        icon="📊"
-        title="Usage Tracking"
-        sub="useTrack sends events to /api/v1/events. UsageDashboard reads live ZKVUB session metrics from the on-chain SessionVault contract."
+        icon="⬡"
+        title="Usage Metering"
+        sub="useTrack sends usage events for metered billing. UsageDashboard reads live session metrics from the on-chain SessionVault contract."
       />
 
-      {/* useTrack buttons */}
       <div>
-        <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-3">
+        <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest mb-3">
           useTrack — Send usage events
         </p>
         <Card>
-          <p className="text-xs text-[var(--text-dim)] mb-4">
-            Calls{" "}
-            <code>{"track({ name, company, traits })"}</code> → POST{" "}
+          <p className="text-xs text-[var(--text-dim)] mb-4 leading-relaxed">
+            Fires <code>track({"{ name, company, traits }"})</code> → POST{" "}
             <code>/api/v1/events</code>
           </p>
           <div className="flex flex-wrap gap-2 mb-4">
-            {["scan", "advanced_analytics", "api_call", "export", "login"].map(
-              (evt) => (
-                <button
-                  key={evt}
-                  disabled={tracking !== null}
-                  onClick={() => sendEvent(evt)}
-                  className="px-3 py-1.5 rounded-lg bg-[var(--accent)] text-white text-xs font-semibold hover:opacity-85 disabled:opacity-50 transition-all"
-                >
-                  {tracking === evt ? (
-                    <span className="flex items-center gap-1.5">
-                      <span
-                        style={{
-                          width: 10,
-                          height: 10,
-                          border: "2px solid rgba(255,255,255,0.3)",
-                          borderTopColor: "white",
-                          borderRadius: "50%",
-                          display: "inline-block",
-                          animation: "spin 0.8s linear infinite",
-                        }}
-                      />
-                      {evt}
-                    </span>
-                  ) : (
-                    `"${evt}"`
-                  )}
-                </button>
-              )
-            )}
+            {["api_call", "scan", "export", "analytics", "login"].map((evt) => (
+              <button
+                key={evt}
+                disabled={tracking !== null}
+                onClick={() => sendEvent(evt)}
+                className="px-3 py-1.5 rounded-lg bg-white text-black text-xs font-bold hover:opacity-80 disabled:opacity-40 transition-all"
+              >
+                {tracking === evt ? (
+                  <span className="flex items-center gap-1.5">
+                    <span
+                      style={{
+                        width: 10,
+                        height: 10,
+                        border: "2px solid rgba(0,0,0,0.2)",
+                        borderTopColor: "#000",
+                        borderRadius: "50%",
+                        display: "inline-block",
+                        animation: "spin 0.7s linear infinite",
+                      }}
+                    />
+                    {evt}
+                  </span>
+                ) : (
+                  `"${evt}"`
+                )}
+              </button>
+            ))}
           </div>
+
           {trackLog.length > 0 && (
             <div className="border-t border-[var(--border-dim)] pt-3">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-2">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)] mb-2">
                 Event Log
               </p>
               <div className="space-y-1.5 max-h-40 overflow-y-auto">
@@ -460,8 +482,18 @@ function UsageTab({ walletAddress }: { walletAddress?: string }) {
                     className="flex items-center justify-between text-xs"
                   >
                     <span className="flex items-center gap-2">
-                      <span>{entry.ok ? "✅" : "❌"}</span>
-                      <code className="text-[var(--accent)]">{entry.name}</code>
+                      <span
+                        className={
+                          entry.ok
+                            ? "text-[var(--success)]"
+                            : "text-[var(--danger)]"
+                        }
+                      >
+                        {entry.ok ? "✓" : "✕"}
+                      </span>
+                      <code className="text-[var(--text-dim)]">
+                        {entry.name}
+                      </code>
                     </span>
                     <span className="text-[var(--text-muted)]">
                       {new Date(entry.ts).toLocaleTimeString()}
@@ -474,9 +506,8 @@ function UsageTab({ walletAddress }: { walletAddress?: string }) {
         </Card>
       </div>
 
-      {/* SDK: UsageDashboard */}
       <div>
-        <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-3">
+        <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest mb-3">
           UsageDashboard — On-chain ZKVUB metrics
         </p>
         {walletAddress ? (
@@ -484,7 +515,7 @@ function UsageTab({ walletAddress }: { walletAddress?: string }) {
         ) : (
           <Card>
             <p className="text-sm text-[var(--text-muted)]">
-              Connect a wallet to view ZKVUB session usage from the on-chain
+              Connect a wallet to view live session usage from the on-chain
               SessionVault contract.
             </p>
           </Card>
@@ -499,24 +530,23 @@ function BillingTab({ walletAddress }: { walletAddress?: string }) {
   return (
     <div className="space-y-6">
       <SectionHeading
-        icon="🧾"
+        icon="↻"
         title="Billing History"
-        sub="BillingHistory queries SubscriptionRegistry events (Minted, Renewed, Cancelled) on-chain via viem getLogs."
+        sub="On-chain billing records. Queries SubscriptionRegistry events — Minted, Renewed, Cancelled — directly from the blockchain via viem."
       />
 
       {walletAddress ? (
-        /* SDK: BillingHistory */
         <BillingHistory walletAddress={walletAddress} maxEvents={25} />
       ) : (
         <Card>
-          <div className="flex items-center gap-3 py-3">
-            <span className="text-2xl">🔗</span>
+          <div className="flex items-center gap-3 py-2">
+            <span className="text-xl leading-none">⛓</span>
             <div>
-              <p className="text-sm font-semibold text-[var(--text)]">
+              <p className="text-sm font-bold text-[var(--text)] tracking-tight">
                 Wallet Required
               </p>
-              <p className="text-xs text-[var(--text-muted)] mt-0.5">
-                Connect a wallet to view on-chain billing history and
+              <p className="text-xs text-[var(--text-muted)] mt-0.5 leading-relaxed">
+                Connect a wallet to view on-chain billing history and stablecoin
                 transaction records from SubscriptionRegistry events.
               </p>
             </div>
@@ -563,44 +593,44 @@ function PortalTab({ walletAddress }: { walletAddress?: string }) {
   return (
     <div className="space-y-6">
       <SectionHeading
-        icon="🏗️"
-        title="Embedded Billing Portal"
-        sub="ArcenEmbed renders a self-serve billing portal. Uses a short-lived access token from ArcenClient.createAccessToken() on your backend."
+        icon="◫"
+        title="Billing Portal"
+        sub="ArcenEmbed renders a self-serve billing portal for your users. Drop it into any app with a short-lived access token from your backend."
       />
 
       {!walletAddress ? (
         <Card>
           <p className="text-sm text-[var(--text-muted)]">
-            Connect a wallet to generate an access token and render the
-            embedded ArcenEmbed billing portal.
+            Connect a wallet to generate an access token and render the embedded
+            billing portal.
           </p>
         </Card>
       ) : !accessToken ? (
         <Card>
-          <p className="text-xs text-[var(--text-dim)] mb-4">
-            Generate a short-lived access token to load the embedded component.
-            In production this happens server-side via{" "}
-            <code>arcen.createAccessToken()</code>.
+          <p className="text-xs text-[var(--text-dim)] mb-4 leading-relaxed">
+            Generate a short-lived access token to load the embedded billing
+            portal. In production, call <code>arcen.createAccessToken()</code>{" "}
+            server-side.
           </p>
           <div className="flex gap-3 mb-3">
             <div className="flex-1">
-              <label className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)] block mb-1">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)] block mb-1.5">
                 Component ID
               </label>
               <input
                 value={componentId}
                 onChange={(e) => setComponentId(e.target.value)}
-                className="w-full bg-[var(--surface-3)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] outline-none focus:border-[var(--accent)]"
+                className="w-full bg-[var(--surface-3)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] outline-none focus:border-[rgba(255,255,255,0.3)] font-mono"
                 placeholder="cmpn_xxx"
               />
             </div>
-            <button
+            <PrimaryButton
               onClick={fetchAccessToken}
               disabled={tokenLoading}
-              className="self-end px-4 py-2 rounded-lg bg-[var(--accent)] text-white text-sm font-semibold hover:opacity-85 disabled:opacity-50 transition-all"
+              className="self-end py-2.5"
             >
               {tokenLoading ? "Generating…" : "Generate Token"}
-            </button>
+            </PrimaryButton>
           </div>
           {tokenError && (
             <p className="text-xs text-[var(--danger)]">{tokenError}</p>
@@ -622,7 +652,6 @@ function PortalTab({ walletAddress }: { walletAddress?: string }) {
               Regenerate
             </button>
           </div>
-          {/* SDK: ArcenEmbed */}
           <ArcenEmbed
             accessToken={accessToken}
             componentId={componentId}
@@ -630,7 +659,7 @@ function PortalTab({ walletAddress }: { walletAddress?: string }) {
               process.env.NEXT_PUBLIC_ARCEN_BASE_URL || "http://localhost:3000"
             }
             onPlanChange={(planId) => {
-              console.log("[AcmeScan] Plan changed via embed:", planId);
+              console.log("[Arcenpay] Plan changed via embed:", planId);
             }}
           />
         </div>
@@ -639,180 +668,69 @@ function PortalTab({ walletAddress }: { walletAddress?: string }) {
   );
 }
 
-// ─── Setup Screen ─────────────────────────────────────────────
-function SetupScreen({
-  onComplete,
-}: {
-  onComplete: (apiKey: string, baseUrl: string) => void;
-}) {
-  const [apiKey, setApiKey] = useState("");
-  const [baseUrl, setBaseUrl] = useState("http://localhost:3000");
-  const [saving, setSaving] = useState(false);
-
-  const handleSave = async () => {
-    if (!apiKey.trim()) return;
-    setSaving(true);
-    await onComplete(apiKey.trim(), baseUrl.trim());
-    setSaving(false);
-  };
-
-  return (
-    <div className="min-h-screen flex items-center justify-center p-6">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 rounded-2xl bg-[var(--accent)] flex items-center justify-center text-3xl mx-auto mb-4">
-            🔬
-          </div>
-          <h1 className="text-2xl font-bold text-[var(--text)]">AcmeScan</h1>
-          <p className="text-sm text-[var(--text-dim)] mt-1">
-            ArcenPay SDK Demo App
-          </p>
-        </div>
-
-        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6 space-y-5">
-          <div>
-            <h2 className="text-base font-bold text-[var(--text)] mb-1">
-              Quick Setup
-            </h2>
-            <p className="text-xs text-[var(--text-muted)]">
-              Enter your ArcenPay API key to connect this demo to your
-              dashboard. Create keys in{" "}
-              <strong>Settings → Protocol Keys</strong>.
-            </p>
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-[var(--text-dim)] block">
-              Dashboard URL
-            </label>
-            <input
-              value={baseUrl}
-              onChange={(e) => setBaseUrl(e.target.value)}
-              className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] outline-none focus:border-[var(--accent)]"
-              placeholder="http://localhost:3000"
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-[var(--text-dim)] block">
-              API Key{" "}
-              <span className="text-[var(--danger)]">*</span>
-            </label>
-            <input
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSave()}
-              type="password"
-              className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text)] outline-none focus:border-[var(--accent)] font-mono"
-              placeholder="api_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-            />
-            <p className="text-[10px] text-[var(--text-muted)]">
-              Stored in memory only — never sent to third parties
-            </p>
-          </div>
-
-          <button
-            onClick={handleSave}
-            disabled={!apiKey.trim() || saving}
-            className="w-full py-2.5 rounded-xl bg-[var(--accent)] text-white font-semibold text-sm hover:opacity-85 disabled:opacity-40 transition-all"
-          >
-            {saving ? "Connecting…" : "Launch Demo App →"}
-          </button>
-        </div>
-
-        <p className="text-center text-[10px] text-[var(--text-muted)] mt-4">
-          Or set <code>ARCEN_API_KEY</code> in <code>.env.local</code> to skip
-          this screen
-        </p>
-      </div>
-    </div>
-  );
-}
-
 // ─── Main App ─────────────────────────────────────────────────
 export default function DemoPage() {
   const { address, isConnected } = useAccount();
   const [tab, setTab] = useState<Tab>("plans");
-  const [configured, setConfigured] = useState(false);
-  const [checking, setChecking] = useState(true);
-
-  useEffect(() => {
-    fetch("/api/config")
-      .then((r) => r.json())
-      .then((d: { configured?: boolean }) => {
-        if (d.configured) setConfigured(true);
-      })
-      .catch(() => {})
-      .finally(() => setChecking(false));
-  }, []);
-
-  const handleSetup = async (apiKey: string, baseUrl: string) => {
-    await fetch("/api/config", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ apiKey, baseUrl }),
-    });
-    setConfigured(true);
-  };
-
-  if (checking) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="meap-spinner" />
-      </div>
-    );
-  }
-
-  if (!configured) {
-    return <SetupScreen onComplete={handleSetup} />;
-  }
 
   const tabs: { id: Tab; label: string; icon: string }[] = [
-    { id: "plans", label: "Plans", icon: "💳" },
-    { id: "features", label: "Features", icon: "🚩" },
-    { id: "usage", label: "Usage", icon: "📊" },
-    { id: "billing", label: "Billing", icon: "🧾" },
-    { id: "portal", label: "Portal", icon: "🏗️" },
+    { id: "plans", label: "Plans", icon: "◎" },
+    { id: "features", label: "Features", icon: "◈" },
+    { id: "usage", label: "Usage", icon: "⬡" },
+    { id: "billing", label: "Billing", icon: "↻" },
+    { id: "portal", label: "Portal", icon: "◫" },
   ];
 
   return (
-    <div className="min-h-screen">
-      {/* Header */}
+    <div className="min-h-screen flex flex-col">
+      {/* ── Header ── */}
       <header className="border-b border-[var(--border-dim)] bg-[var(--surface)] sticky top-0 z-50">
-        <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
+        <div className="max-w-5xl mx-auto px-5 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-[var(--accent)] flex items-center justify-center text-sm">
-              🔬
+            {/* Logo mark */}
+            <div
+              className="w-7 h-7 rounded-lg flex items-center justify-center text-sm font-black text-black"
+              style={{ background: "#ffffff" }}
+            >
+              A
             </div>
-            <span className="text-sm font-bold text-[var(--text)]">
-              AcmeScan
-            </span>
-            <span className="text-[10px] bg-[var(--accent-dim)] text-[var(--accent)] border border-[var(--border-dim)] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
-              SDK Demo
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold text-[var(--text)] tracking-tight">
+                Arcenpay
+              </span>
+              <span className="hidden sm:inline text-[10px] text-[var(--text-muted)] border border-[var(--border-dim)] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
+                SDK
+              </span>
+            </div>
           </div>
-          <WalletBar />
+
+          <div className="flex items-center gap-4">
+            {/* Chain support indicator */}
+            <div className="hidden md:flex items-center gap-1.5 text-[10px] text-[var(--text-muted)]">
+              <span className="w-1.5 h-1.5 rounded-full bg-[var(--success)] inline-block" />
+              All chains · Stablecoin only
+            </div>
+            <WalletBar />
+          </div>
         </div>
       </header>
 
-      <div className="max-w-5xl mx-auto px-6 py-6">
-        {/* SDK Banner */}
-        <div className="mb-6 px-4 py-3 rounded-xl bg-[var(--accent-dim)] border border-[var(--border-dim)] flex items-start gap-3">
-          <span className="text-base mt-0.5">ℹ️</span>
-          <p className="text-xs text-[var(--text-dim)]">
-            <strong className="text-[var(--accent)]">@meap/react</strong>{" "}
-            components are live here:{" "}
-            <code>PricingTable</code>, <code>CheckoutModal</code>,{" "}
-            <code>SubscriptionStatus</code>, <code>FeatureFlagGuard</code>,{" "}
-            <code>UsageDashboard</code>, <code>BillingHistory</code>,{" "}
-            <code>ArcenEmbed</code> + hooks.{" "}
-            {isConnected
-              ? "Wallet connected — on-chain components active."
-              : "Connect a wallet to enable on-chain components."}
-          </p>
-        </div>
+      <div className="max-w-5xl mx-auto px-5 py-6 w-full flex-1">
+        {/* ── Status Banner ── */}
+        {isConnected && address && (
+          <div className="mb-5 px-4 py-2.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border-dim)] flex items-center gap-2.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-[var(--success)] flex-shrink-0 inline-block" />
+            <p className="text-xs text-[var(--text-dim)]">
+              Wallet connected —{" "}
+              <span className="font-mono text-[var(--accent-2)]">
+                {truncateAddress(address)}
+              </span>{" "}
+              — on-chain components active.
+            </p>
+          </div>
+        )}
 
-        {/* Tab Bar */}
+        {/* ── Tab Bar ── */}
         <div className="flex gap-1 mb-6 p-1 bg-[var(--surface-2)] rounded-xl border border-[var(--border-dim)]">
           {tabs.map((t) => (
             <button
@@ -820,17 +738,17 @@ export default function DemoPage() {
               onClick={() => setTab(t.id)}
               className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold transition-all ${
                 tab === t.id
-                  ? "bg-[var(--surface)] text-[var(--text)] shadow-sm border border-[var(--border-dim)]"
+                  ? "bg-white text-black shadow-sm"
                   : "text-[var(--text-muted)] hover:text-[var(--text-dim)]"
               }`}
             >
-              <span>{t.icon}</span>
+              <span className="text-[11px] leading-none">{t.icon}</span>
               <span className="hidden sm:inline">{t.label}</span>
             </button>
           ))}
         </div>
 
-        {/* Tab Content */}
+        {/* ── Tab Content ── */}
         <div>
           {tab === "plans" && <PlansTab walletAddress={address} />}
           {tab === "features" && <FeaturesTab walletAddress={address} />}
@@ -839,6 +757,25 @@ export default function DemoPage() {
           {tab === "portal" && <PortalTab walletAddress={address} />}
         </div>
       </div>
+
+      {/* ── Footer ── */}
+      <footer className="border-t border-[var(--border-dim)] mt-auto">
+        <div className="max-w-5xl mx-auto px-5 py-4 flex items-center justify-between">
+          <p className="text-[11px] text-[var(--text-muted)]">
+            All payments processed on-chain in USDC stablecoin. Multi-chain
+            supported.
+          </p>
+          <a
+            href="https://arcenpay.xyz"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="arcenpay-badge"
+          >
+            <span className="arcenpay-badge-dot" />
+            Powered by Arcenpay
+          </a>
+        </div>
+      </footer>
     </div>
   );
 }

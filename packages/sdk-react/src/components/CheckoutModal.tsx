@@ -30,7 +30,7 @@ import { useMEAP } from "../providers/MEAPProvider";
 
 type CheckoutStep =
   | "connect"
-  | "email"      // optional — between connect and account
+  | "email" // optional — between connect and account
   | "account"
   | "autopay"
   | "approve"
@@ -110,7 +110,15 @@ export interface CheckoutModalProps {
 }
 
 export function getCheckoutStepOrder(): CheckoutStep[] {
-  return ["connect", "email", "account", "autopay", "approve", "subscribe", "success"];
+  return [
+    "connect",
+    "email",
+    "account",
+    "autopay",
+    "approve",
+    "subscribe",
+    "success",
+  ];
 }
 
 /**
@@ -170,7 +178,6 @@ export function CheckoutModal({
       setStep("email");
     }
   }, [isConnected, step]);
-
 
   // Fetch plan details for pricing
   const { data: planData } = useReadContract({
@@ -383,13 +390,19 @@ export function CheckoutModal({
   // Handle errors from contract writes
   useEffect(() => {
     if (approveError) {
-      emitCheckoutError(CHECKOUT_ERROR_CODES.TOKEN_APPROVAL_FAILED, approveError);
+      emitCheckoutError(
+        CHECKOUT_ERROR_CODES.TOKEN_APPROVAL_FAILED,
+        approveError,
+      );
     }
   }, [approveError, emitCheckoutError]);
 
   useEffect(() => {
     if (mintError) {
-      emitCheckoutError(CHECKOUT_ERROR_CODES.SUBSCRIPTION_MINT_FAILED, mintError);
+      emitCheckoutError(
+        CHECKOUT_ERROR_CODES.SUBSCRIPTION_MINT_FAILED,
+        mintError,
+      );
     }
   }, [mintError, emitCheckoutError]);
 
@@ -503,7 +516,10 @@ export function CheckoutModal({
         }
       }
     } catch (err) {
-      emitCheckoutError(CHECKOUT_ERROR_CODES.SMART_ACCOUNT_DEPLOYMENT_FAILED, err);
+      emitCheckoutError(
+        CHECKOUT_ERROR_CODES.SMART_ACCOUNT_DEPLOYMENT_FAILED,
+        err,
+      );
     } finally {
       setLoading(false);
     }
@@ -529,7 +545,10 @@ export function CheckoutModal({
           CHECKOUT_ERROR_CODES.INVALID_EMAIL,
           "Enter a valid email address or leave it blank.",
         );
-        emitCheckoutError(CHECKOUT_ERROR_CODES.INVALID_EMAIL, invalidEmailError);
+        emitCheckoutError(
+          CHECKOUT_ERROR_CODES.INVALID_EMAIL,
+          invalidEmailError,
+        );
         return;
       }
 
@@ -552,7 +571,13 @@ export function CheckoutModal({
 
     setStep("account");
     setLoading(false);
-  }, [subscriberEmail, address, planId, emitCheckoutError, subscriberEmailEndpoint]);
+  }, [
+    subscriberEmail,
+    address,
+    planId,
+    emitCheckoutError,
+    subscriberEmailEndpoint,
+  ]);
 
   const handleInstallAutopay = useCallback(() => {
     if (
@@ -683,59 +708,62 @@ export function CheckoutModal({
   > = {
     connect: {
       title: "Connect Wallet",
-      description: "Connect your wallet to start the subscription process.",
+      description:
+        "Connect your Web3 wallet to begin. All payments are processed on-chain using stablecoins.",
       action: handleConnect,
       actionLabel: "Connect Wallet",
     },
     email: {
-      title: "Add Email (Optional)",
-      description: "Get billing updates and renewal reminders. You can skip this.",
+      title: "Billing Email",
+      description:
+        "Optionally add an email for renewal reminders. Your wallet address is your primary identifier.",
       action: handleEmailContinue,
       actionLabel: "Continue",
     },
     account: {
-      title: "Smart Account Check",
-      description: "Checking your account type for automated billing support.",
+      title: "Verify Account",
+      description:
+        "Checking your account type for automated on-chain billing support.",
       action: handleDeployAccount,
       actionLabel: "Continue",
     },
     autopay: {
-      title: "Install Autopay Module",
+      title: "Enable Autopay",
       description: isAutopayInitialized
-        ? "Autopay module is already installed for your payment account."
-        : "Install autopay module with plan constraints (merchant, token, interval, max amount).",
+        ? "Autopay is already active on your account."
+        : "Authorize the autopay module to handle recurring stablecoin billing on your behalf.",
       action: isAutopayInitialized
         ? () => setStep("approve")
         : handleInstallAutopay,
       actionLabel: isInstallingAutopay
-        ? "Confirm in Wallet..."
+        ? "Confirm in Wallet…"
         : isAutopayInitialized
           ? "Continue"
-          : "Install Autopay",
+          : "Enable Autopay",
     },
     approve: {
       title: "Approve USDC",
       description: planPrice
-        ? `Approve ${formatPrice(planPrice * 13n)} USDC for the subscription billing contract.`
-        : "Approve USDC spending for the billing contract.",
+        ? `Authorize ${formatPrice(planPrice * 13n)} USDC for the subscription billing contract. This covers your current cycle plus renewals.`
+        : "Authorize USDC spending for the billing contract.",
       action: handleApprove,
-      actionLabel: isApproving ? "Confirm in Wallet..." : "Approve USDC",
+      actionLabel: isApproving ? "Confirm in Wallet…" : "Approve USDC",
     },
     subscribe: {
-      title: `Subscribe to ${planName || "Plan"}`,
+      title: `Subscribe — ${planName || "Plan"}`,
       description: planPrice
-        ? `Mint your subscription NFT. ${formatPrice(planPrice)} USDC will be charged now.`
-        : "Mint your subscription NFT and activate your plan.",
+        ? `Mint your subscription NFT. ${formatPrice(planPrice)} USDC will be charged from your wallet now.`
+        : "Mint your subscription NFT to activate your plan.",
       action: handleSubscribe,
-      actionLabel: isMinting ? "Confirm in Wallet..." : "Subscribe Now",
+      actionLabel: isMinting ? "Confirm in Wallet…" : "Subscribe Now",
     },
     success: {
-      title: "🎉 Subscription Active!",
+      title: "Subscription Active",
       description:
-        "Your subscription NFT has been minted. You now have access to all premium features.",
+        "Your subscription NFT has been minted on-chain. You now have full access to all plan features.",
     },
     error: {
-      title: "Something went wrong",
+      title: "Transaction Failed",
       description:
         (errorCode ? `[${errorCode}] ` : "") +
         (error || "An unexpected error occurred. Please try again."),
@@ -755,32 +783,73 @@ export function CheckoutModal({
   const latestTxHash =
     mintHash || approveHash || autopayInstallHash || smartAccountDeployTxHash;
 
+  const stepLabels: Partial<Record<CheckoutStep, string>> = {
+    connect: "Wallet",
+    email: "Email",
+    account: "Account",
+    autopay: "Autopay",
+    approve: "Approve",
+    subscribe: "Subscribe",
+  };
+
   return (
     <div className={`meap-checkout-overlay ${className}`} onClick={onClose}>
       <div className="meap-checkout-modal" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="meap-checkout-header">
-          <h2>{currentStep.title}</h2>
-          <button className="meap-checkout-close" onClick={onClose}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            <h2>{currentStep.title}</h2>
+            {planName && step !== "success" && step !== "error" && (
+              <span
+                style={{
+                  fontSize: 11,
+                  color: "var(--text-muted)",
+                  fontWeight: 500,
+                }}
+              >
+                {planName} · {planPrice ? formatPrice(planPrice) : "—"} USDC
+              </span>
+            )}
+          </div>
+          <button
+            className="meap-checkout-close"
+            onClick={onClose}
+            aria-label="Close"
+          >
             ✕
           </button>
+        </div>
+
+        {/* Crypto Identity Strip */}
+        <div className="meap-checkout-crypto-strip">
+          <span style={{ fontSize: 12 }}>⛓</span>
+          <span className="meap-checkout-chain-pill">{network.name}</span>
+          <span className="meap-checkout-usdc-badge">USDC · Stablecoin</span>
+          <span
+            style={{
+              marginLeft: "auto",
+              fontSize: 10,
+              color: "var(--text-muted)",
+            }}
+          >
+            On-chain only
+          </span>
         </div>
 
         {/* Progress */}
         {step !== "success" && step !== "error" && (
           <div className="meap-checkout-progress">
-            {progressSteps.map(
-              (s, i) => (
-                <div
-                  key={s}
-                  className={`meap-checkout-step ${i + 1 <= stepNumber ? "active" : ""} ${i + 1 < stepNumber ? "completed" : ""}`}
-                >
-                  <div className="meap-step-dot">
-                    {i + 1 < stepNumber ? "✓" : i + 1}
-                  </div>
+            {progressSteps.map((s, i) => (
+              <div
+                key={s}
+                className={`meap-checkout-step ${i + 1 <= stepNumber ? "active" : ""} ${i + 1 < stepNumber ? "completed" : ""}`}
+                title={stepLabels[s]}
+              >
+                <div className="meap-step-dot">
+                  {i + 1 < stepNumber ? "✓" : i + 1}
                 </div>
-              ),
-            )}
+              </div>
+            ))}
           </div>
         )}
 
@@ -802,22 +871,62 @@ export function CheckoutModal({
             </div>
           )}
 
+          {step === "success" && mintedTokenId > 0n && (
+            <div
+              style={{
+                background: "var(--success-dim)",
+                border: "1px solid rgba(34,197,94,0.2)",
+                borderRadius: 8,
+                padding: "10px 14px",
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                fontSize: 12,
+                color: "var(--success)",
+                fontWeight: 600,
+              }}
+            >
+              <span>◈</span>
+              <span>NFT Token #{mintedTokenId.toString()}</span>
+            </div>
+          )}
+
           {isTestnet && (
             <div className="meap-testnet-badge">
-              🔧 Testnet Mode ({network.name})
+              ◎ Testnet Mode — {network.name}
             </div>
           )}
 
-          {paymentAccount && (
-            <div className="meap-testnet-badge">
-              Payment Account: {paymentAccount.slice(0, 6)}...
-              {paymentAccount.slice(-4)}
+          {paymentAccount && step !== "connect" && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                fontSize: 11,
+                color: "var(--text-muted)",
+                fontFamily: '"JetBrains Mono", monospace',
+              }}
+            >
+              <span style={{ color: "var(--success)", fontSize: 12 }}>●</span>
+              {paymentAccount.slice(0, 8)}…{paymentAccount.slice(-6)}
             </div>
           )}
 
-          {(autopayInstalledLocally || isAutopayInitialized) && (
-            <div className="meap-testnet-badge">Autopay: Installed</div>
-          )}
+          {(autopayInstalledLocally || isAutopayInitialized) &&
+            step !== "connect" && (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  fontSize: 11,
+                  color: "var(--success)",
+                }}
+              >
+                <span>✓</span> Autopay active
+              </div>
+            )}
 
           {latestTxHash && (
             <div className="meap-tx-hash">
@@ -826,7 +935,7 @@ export function CheckoutModal({
                 target="_blank"
                 rel="noreferrer"
               >
-                View Transaction →
+                View on Explorer →
               </a>
             </div>
           )}
@@ -846,7 +955,31 @@ export function CheckoutModal({
                 isRevokingAutopay
               }
             >
-              {loading ? "Processing..." : currentStep.actionLabel}
+              {loading ? (
+                <span
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 8,
+                  }}
+                >
+                  <span
+                    style={{
+                      width: 13,
+                      height: 13,
+                      border: "2px solid rgba(0,0,0,0.2)",
+                      borderTopColor: "#000",
+                      borderRadius: "50%",
+                      display: "inline-block",
+                      animation: "spin 0.7s linear infinite",
+                    }}
+                  />
+                  Processing…
+                </span>
+              ) : (
+                currentStep.actionLabel
+              )}
             </button>
           )}
 
@@ -858,7 +991,7 @@ export function CheckoutModal({
                   onClick={handleRevokeAutopay}
                   disabled={isRevokingAutopay}
                 >
-                  {isRevokingAutopay ? "Revoking..." : "Revoke Autopay"}
+                  {isRevokingAutopay ? "Revoking…" : "Revoke Autopay"}
                 </button>
               )}
               <button className="meap-checkout-btn primary" onClick={onClose}>
@@ -884,11 +1017,19 @@ export function CheckoutModal({
             </button>
           )}
         </div>
-        {step === "success" && mintedTokenId > 0n && (
-          <div className="meap-checkout-body">
-            <p>Subscription token minted: #{mintedTokenId.toString()}</p>
-          </div>
-        )}
+
+        {/* Powered by Arcenpay Footer */}
+        <div className="meap-checkout-footer">
+          <a
+            href="https://arcenpay.xyz"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="arcenpay-badge"
+          >
+            <span className="arcenpay-badge-dot" />
+            Powered by Arcenpay
+          </a>
+        </div>
       </div>
     </div>
   );

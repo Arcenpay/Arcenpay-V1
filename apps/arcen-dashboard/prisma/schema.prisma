@@ -346,6 +346,7 @@ model CatalogCreditType {
   price        Decimal @db.Decimal(20, 6)
   acceptedToken String
 
+  metadata    Json?
   active          Boolean         @default(true)
   version         Int             @default(1)
   publishedAt     DateTime?
