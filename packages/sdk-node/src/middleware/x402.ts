@@ -1,5 +1,5 @@
 // ============================================================
-//  @meap/node — x402 Middleware
+//  @arcenpay/node — x402 Middleware
 //  Express middleware for x402 payment-gated API endpoints
 //  Implements real EIP-712 signature validation per PRD §7.1
 // ============================================================
@@ -9,14 +9,14 @@ import type {
   X402Response,
   X402RejectionReason,
   X402VerifiedPaymentContext,
-} from "@meap/core";
+} from "@arcenpay/sdk";
 import type { NonceStore } from "../services/nonce-store";
 import {
   X402_VERSION,
   X402_SCHEME,
   SessionVaultABI,
   getChainEnvironment,
-} from "@meap/core";
+} from "@arcenpay/sdk";
 import {
   createPublicClient,
   http,

@@ -1,10 +1,12 @@
 // ============================================================
-//  @meap/node — Tableland Feature Flags Service
+//  @arcenpay/node — Tableland Feature Flags Service
 //  CRUD operations for feature flags stored in Tableland
 // ============================================================
 
 import { Database } from '@tableland/sdk';
-import type { PlanTier, TablelandEntitlement } from '@meap/core';
+import type { PlanTier, TablelandEntitlement } from '@arcenpay/sdk';
+// Tableland SDK requires a full ethers Signer — ethers is an explicit dependency.
+// Viem is used everywhere else; this is the one place ethers is intentional.
 import { JsonRpcProvider, Wallet } from 'ethers';
 
 export interface TablelandConfig {
@@ -39,6 +41,8 @@ export class TablelandService {
     });
 
     if (this.config.privateKey && this.config.rpcUrl) {
+      // Tableland SDK is built on ethers and requires a real ethers Signer.
+      // ethers is an explicit peer in package.json — this usage is intentional.
       const provider = new JsonRpcProvider(this.config.rpcUrl);
       const signer = new Wallet(this.config.privateKey, provider);
       this.dbWrite = new Database({

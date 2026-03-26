@@ -1,5 +1,5 @@
 // ============================================================
-//  @meap/node — Usage Logging & Proof Generation Service
+//  @arcenpay/node — Usage Logging & Proof Generation Service
 //  Deterministic ZKVUB runtime with strict/dev proof modes.
 // ============================================================
 
@@ -10,8 +10,8 @@ import { pathToFileURL } from "url";
 import { createPublicClient, createWalletClient, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { sepolia, baseSepolia, base } from "viem/chains";
-import type { PublicInputs, UsageProof, BillingSettlement } from "@meap/core";
-import { ZKUsageVerifierABI, getContractAddresses } from "@meap/core";
+import type { PublicInputs, UsageProof, BillingSettlement } from "@arcenpay/sdk";
+import { ZKUsageVerifierABI, getContractAddresses } from "@arcenpay/sdk";
 
 interface UsageLogEntry {
   sessionId: string;

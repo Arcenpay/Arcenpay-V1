@@ -1,5 +1,5 @@
 // ============================================================
-//  @meap/node — Proof Submission Orchestrator
+//  @arcenpay/node — Proof Submission Orchestrator
 //  Ties usage aggregation → proof generation → on-chain submission
 //  with deterministic retry, idempotency, and nullifier tracking.
 // ============================================================

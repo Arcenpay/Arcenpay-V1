@@ -27,7 +27,7 @@ export function TemplateRenderer({
   className = '',
 }: TemplateRendererProps) {
   return (
-    <div className={`meap-template-renderer ${className}`} data-template-name={name}>
+    <div className={`arcenpay-template-renderer ${className}`} data-template-name={name}>
       {blocks.map((block, index) => {
         if (block.type === 'heading') {
           return <h2 key={`${block.type}-${index}`}>{block.content}</h2>;

@@ -18,7 +18,7 @@ export default function DocsHome() {
       <h2>What is ArcenPay?</h2>
       <p>
         ArcenPay is a protocol-level decentralized billing and access control framework. It replaces
-        legacy SaaS monetization infrastructure (Stripe + LaunchDarkly + SchematicHQ) with on-chain
+        legacy SaaS monetization infrastructure (Stripe + LaunchDarkly) with on-chain
         primitives designed for wallets, DAOs, AI agents, and multi-chain environments.
       </p>
 
@@ -30,20 +30,20 @@ export default function DocsHome() {
 
       <h2>Quick Install</h2>
       <pre><code>{`# React SDK (frontend)
-npm install @meap/react @meap/core viem
+npm install @arcenpay/react @arcenpay/sdk viem
 
 # Node SDK (backend)
-npm install @meap/node
+npm install @arcenpay/node
 
 # Agent SDK (AI runtimes)
-npm install @meap/agent`}</code></pre>
+npm install @arcenpay/agent`}</code></pre>
 
       <h2>30-Second Example</h2>
-      <pre><code>{`import { MEAPProvider, PricingTable, CheckoutModal } from '@meap/react';
+      <pre><code>{`import { ArcenPayProvider, PricingTable, CheckoutModal } from '@arcenpay/react';
 
 function App() {
   return (
-    <MEAPProvider
+    <ArcenPayProvider
       planRegistryAddress="0xc736f5d91aC0039b97A4Fc3540B8f3d59E7FdBa6"
       chainId={11155111}
     >
@@ -55,7 +55,7 @@ function App() {
         planId={1}
         onSuccess={(tx) => console.log('Subscribed!', tx)}
       />
-    </MEAPProvider>
+    </ArcenPayProvider>
   );
 }`}</code></pre>
 

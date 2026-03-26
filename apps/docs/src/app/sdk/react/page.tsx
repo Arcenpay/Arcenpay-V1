@@ -1,27 +1,27 @@
 // ============================================================
-//  Documentation — @meap/react SDK Reference
+//  Documentation — @arcenpay/react SDK Reference
 //  PRD Section 5.1: Frontend Component Library
 // ============================================================
 
 export default function ReactSDKPage() {
   return (
     <>
-      <h1>@meap/react</h1>
+      <h1>@arcenpay/react</h1>
       <p>Frontend component library for Web3 subscription checkout and feature gating.</p>
 
-      <pre><code>npm install @meap/react @meap/core viem</code></pre>
+      <pre><code>npm install @arcenpay/react @arcenpay/sdk viem</code></pre>
 
-      <h2>MEAPProvider</h2>
+      <h2>ArcenPayProvider</h2>
       <p>Wrap your app to provide protocol context to all child components.</p>
-      <pre><code>{`import { MEAPProvider } from '@meap/react';
+      <pre><code>{`import { ArcenPayProvider } from '@arcenpay/react';
 
-<MEAPProvider
+<ArcenPayProvider
   chainId={11155111}
   config={{
     tablelandConfig: { providerUrl: 'http://localhost:3402' },
     litConfig: { decryptEndpoint: 'http://localhost:3402/api/lit/decrypt' }
   }}
->`}</code></pre>
+/>`}</code></pre>
 
       <h2>Components</h2>
 

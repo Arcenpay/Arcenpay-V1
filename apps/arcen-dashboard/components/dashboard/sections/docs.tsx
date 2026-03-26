@@ -79,13 +79,13 @@ const TOC: Record<DocSection, { id: string; label: string }[]> = {
     { id: "features", label: "Feature Flags" },
     { id: "flag-schema", label: "Flag schema" },
     { id: "reading-flags", label: "Reading flags in your app" },
-    { id: "meap-react-hook", label: "@meap/react hook" },
+    { id: "meap-react-hook", label: "@arcenpay/react hook" },
   ],
   sdk: [
     { id: "sdk", label: "SDK Reference" },
     { id: "installation", label: "Installation" },
-    { id: "core-exports", label: "@meap/core exports" },
-    { id: "react-hooks", label: "@meap/react hooks" },
+    { id: "core-exports", label: "@arcenpay/sdk exports" },
+    { id: "react-hooks", label: "@arcenpay/react hooks" },
     { id: "quick-start", label: "Quick start example" },
   ],
   contracts: [
@@ -456,7 +456,7 @@ function SubscriptionsDoc() {
 
       <H3 id="on-chain-check">On-chain subscriber check (SDK)</H3>
       <CodeBlock lang="ts" code={`import { useReadContract } from "wagmi";
-import { SubscriptionRegistryABI } from "@meap/core";
+import { SubscriptionRegistryABI } from "@arcenpay/sdk";
 
 const { data: isActive } = useReadContract({
   address: "0xf45A9E5280F72260a713c50b0Ca4e4FB1e22Cc8A",
@@ -556,8 +556,8 @@ const res = await fetch(
 const { flags } = await res.json();
 const canUseAnalytics = flags.find(f => f.key === "advanced_analytics")?.enabled;`} />
 
-      <H3 id="meap-react-hook">@meap/react hook</H3>
-      <CodeBlock lang="tsx" code={`import { useFeatureFlag } from "@meap/react";
+      <H3 id="meap-react-hook">@arcenpay/react hook</H3>
+      <CodeBlock lang="tsx" code={`import { useFeatureFlag } from "@arcenpay/react";
 
 function AnalyticsDashboard() {
   const enabled = useFeatureFlag("advanced_analytics");
@@ -578,15 +578,15 @@ function SDKDoc() {
     <div>
       <SectionHeading title="SDK Reference" breadcrumb="Developers" />
       <Lead>
-        Two packages ship with ArcenPay: <code className="font-mono text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded border border-border/50">@meap/core</code> for
-        contract ABIs and addresses, and <code className="font-mono text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded border border-border/50">@meap/react</code> for
+        Two packages ship with ArcenPay: <code className="font-mono text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded border border-border/50">@arcenpay/sdk</code> for
+        contract ABIs and addresses, and <code className="font-mono text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded border border-border/50">@arcenpay/react</code> for
         React hooks.
       </Lead>
 
       <H3 id="installation">Installation</H3>
-      <CodeBlock lang="bash" code={`npm install @meap/core @meap/react`} />
+      <CodeBlock lang="bash" code={`npm install @arcenpay/sdk @arcenpay/react`} />
 
-      <H3 id="core-exports">@meap/core exports</H3>
+      <H3 id="core-exports">@arcenpay/sdk exports</H3>
       <PropTable
         rows={[
           { name: "getContractAddresses(chainId)", type: "function", description: "Returns all 7 contract addresses for the given chain." },
@@ -600,7 +600,7 @@ function SDKDoc() {
         ]}
       />
 
-      <H3 id="react-hooks">@meap/react hooks</H3>
+      <H3 id="react-hooks">@arcenpay/react hooks</H3>
       <PropTable
         rows={[
           { name: "useContractAddresses()",        type: "hook", description: "Returns addresses for the connected chain, falls back to Sepolia." },
@@ -611,7 +611,7 @@ function SDKDoc() {
       />
 
       <H3 id="quick-start">Quick start example</H3>
-      <CodeBlock lang="tsx" code={`import { useContractAddresses, PlanFactoryABI } from "@meap/core";
+      <CodeBlock lang="tsx" code={`import { useContractAddresses, PlanFactoryABI } from "@arcenpay/sdk";
 import { useWriteContract } from "wagmi";
 
 export function CreatePlanButton() {
@@ -648,7 +648,7 @@ function ContractsDoc() {
         All production contracts are verified on their respective block
         explorers. Use these addresses directly in wagmi/viem or via{" "}
         <code className="font-mono text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded border border-border/50">getContractAddresses(chainId)</code> from{" "}
-        <code className="font-mono text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded border border-border/50">@meap/core</code>.
+        <code className="font-mono text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded border border-border/50">@arcenpay/sdk</code>.
       </Lead>
 
       <H3 id="sepolia">Sepolia (testnet)</H3>

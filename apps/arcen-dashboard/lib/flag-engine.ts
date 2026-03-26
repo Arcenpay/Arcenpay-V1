@@ -2,7 +2,7 @@
  * ArcenPay Web3 Flag Evaluation Engine
  *
  * Evaluates feature flags using priority-ordered targeting rules.
- * Equivalent to SchematicHQ's flag check system but Web3-native.
+ * Web3-native flag check system.
  *
  * Evaluation order:
  *  1. Company overrides (always win)
@@ -47,7 +47,7 @@ export async function resolveCompany(
   if (keys.wallet) where.push({ teamId, walletAddress: keys.wallet.toLowerCase() });
   if (keys.email) where.push({ teamId, email: keys.email });
 
-  const company = await db.schematicCompany.findFirst({
+  const company = await db.arcenCompany.findFirst({
     where: { OR: where },
     select: {
       id: true,
@@ -60,7 +60,7 @@ export async function resolveCompany(
   if (!company) return null;
 
   // Update lastSeenAt in background — non-blocking
-  db.schematicCompany
+  db.arcenCompany
     .update({ where: { id: company.id }, data: { lastSeenAt: new Date() } })
     .catch(() => {});
 
@@ -83,14 +83,14 @@ export async function resolveUser(
   if (keys.clerkUserId) where.push({ teamId, clerkUserId: keys.clerkUserId });
   if (keys.wallet) where.push({ teamId, walletAddress: keys.wallet.toLowerCase() });
 
-  const user = await db.schematicUser.findFirst({
+  const user = await db.arcenUser.findFirst({
     where: { OR: where },
     select: { id: true, traits: true },
   });
 
   if (!user) return null;
 
-  db.schematicUser
+  db.arcenUser
     .update({ where: { id: user.id }, data: { lastSeenAt: new Date() } })
     .catch(() => {});
 

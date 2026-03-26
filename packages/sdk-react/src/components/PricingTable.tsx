@@ -2,8 +2,8 @@
 
 import React, { useState, useCallback } from "react";
 import { useReadContract, useReadContracts } from "wagmi";
-import type { Plan } from "@meap/core";
-import { PlanFactoryABI, getContractAddresses } from "@meap/core";
+import type { Plan } from "@arcenpay/sdk";
+import { PlanFactoryABI, getContractAddresses } from "@arcenpay/sdk";
 import { useMEAP } from "../providers/MEAPProvider";
 
 // ============================================================
@@ -113,8 +113,8 @@ export function PricingTable({
 
   if (isLoading) {
     return (
-      <div className={`meap-pricing-loading ${className}`}>
-        <div className="meap-spinner" />
+      <div className={`arcenpay-pricing-loading ${className}`}>
+        <div className="arcenpay-spinner" />
         <p>Fetching plans from chain…</p>
       </div>
     );
@@ -122,7 +122,7 @@ export function PricingTable({
 
   if (plans.length === 0) {
     return (
-      <div className={`meap-pricing-empty ${className}`}>
+      <div className={`arcenpay-pricing-empty ${className}`}>
         <div style={{ fontSize: 28, marginBottom: 8 }}>◎</div>
         <p style={{ fontWeight: 600, marginBottom: 4 }}>No active plans</p>
         <p style={{ fontSize: 12 }}>
@@ -134,29 +134,29 @@ export function PricingTable({
 
   return (
     <div
-      className={`meap-pricing-table ${theme} ${className}`}
-      data-meap-component="pricing-table"
+      className={`arcenpay-pricing-table ${theme} ${className}`}
+      data-arcenpay-component="pricing-table"
     >
       {plans.map((plan) => (
         <div
           key={plan.id.toString()}
-          className={`meap-plan-card ${selectedPlan === plan.id ? "selected" : ""}`}
+          className={`arcenpay-plan-card ${selectedPlan === plan.id ? "selected" : ""}`}
           onClick={() => handleSelect(plan.id)}
         >
-          <div className="meap-plan-tier">{plan.tier.toUpperCase()}</div>
-          <h3 className="meap-plan-name">{plan.name}</h3>
-          <div className="meap-plan-price">
-            <span className="meap-plan-amount">{formatPrice(plan.price)}</span>
-            <span className="meap-plan-interval">
+          <div className="arcenpay-plan-tier">{plan.tier.toUpperCase()}</div>
+          <h3 className="arcenpay-plan-name">{plan.name}</h3>
+          <div className="arcenpay-plan-price">
+            <span className="arcenpay-plan-amount">{formatPrice(plan.price)}</span>
+            <span className="arcenpay-plan-interval">
               {formatInterval(plan.billingInterval)}
             </span>
           </div>
-          <div className="meap-plan-token-label">
-            <span className="meap-plan-token-dot" />
+          <div className="arcenpay-plan-token-label">
+            <span className="arcenpay-plan-token-dot" />
             USDC · Stablecoin
           </div>
           <button
-            className="meap-plan-select-btn"
+            className="arcenpay-plan-select-btn"
             onClick={(e) => {
               e.stopPropagation();
               handleSelect(plan.id);
@@ -168,7 +168,7 @@ export function PricingTable({
       ))}
 
       {/* Powered by Arcenpay */}
-      <div className="meap-pricing-footer" style={{ gridColumn: "1 / -1" }}>
+      <div className="arcenpay-pricing-footer" style={{ gridColumn: "1 / -1" }}>
         <a
           href="https://arcenpay.xyz"
           target="_blank"

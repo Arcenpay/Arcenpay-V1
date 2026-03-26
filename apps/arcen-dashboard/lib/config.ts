@@ -12,7 +12,7 @@
 //    let it reach a production runtime
 // ============================================================
 
-import * as MEAPCore from "@meap/core";
+import * as MEAPCore from "@arcenpay/sdk";
 
 const isProd =
   process.env.NODE_ENV === "production" &&

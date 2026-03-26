@@ -1,5 +1,5 @@
 // ============================================================
-//  @meap/node — Webhook Delivery Service
+//  @arcenpay/node — Webhook Delivery Service
 //  HMAC-SHA256 signed webhook delivery with retry queue
 //  PRD §9.3 — Provider Webhook System
 // ============================================================
@@ -194,7 +194,7 @@ export class WebhookService {
      *
      * @example
      * ```ts
-     * import { verifyWebhookSignature } from '@meap/node';
+     * import { verifyWebhookSignature } from '@arcenpay/node';
      *
      * app.post('/webhooks/meap', (req, res) => {
      *   const raw = JSON.stringify(req.body);

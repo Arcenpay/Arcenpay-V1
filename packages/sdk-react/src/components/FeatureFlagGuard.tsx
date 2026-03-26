@@ -223,8 +223,8 @@ export function FeatureFlagGuard({
 
   if (isLoading || (requireDecryption && decrypting)) {
     return (
-      <div className={`meap-guard-loading ${className}`}>
-        <div className="meap-spinner" />
+      <div className={`arcenpay-guard-loading ${className}`}>
+        <div className="arcenpay-spinner" />
       </div>
     );
   }

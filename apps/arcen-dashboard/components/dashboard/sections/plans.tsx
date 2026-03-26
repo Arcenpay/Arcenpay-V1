@@ -1211,7 +1211,7 @@ export function PlansSection() {
         </div>
       </div>
 
-      {/* Create Plan Sheet — SchematicHQ split layout */}
+      {/* Create Plan Sheet */}
       <Sheet
         open={showCreateDialog}
         onOpenChange={(open) => {

@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
   }
   const search = url.searchParams.get("search");
 
-  const companies = await db.schematicCompany.findMany({
+  const companies = await db.arcenCompany.findMany({
     where: {
       teamId,
       ...(search
@@ -113,7 +113,7 @@ export async function POST(req: NextRequest) {
 
   // Check for duplicates
   if (walletAddress) {
-    const existing = await db.schematicCompany.findUnique({
+    const existing = await db.arcenCompany.findUnique({
       where: { teamId_walletAddress: { teamId, walletAddress } },
     });
     if (existing) {
@@ -124,7 +124,7 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const company = await db.schematicCompany.create({
+  const company = await db.arcenCompany.create({
     data: {
       teamId,
       name: body.name,

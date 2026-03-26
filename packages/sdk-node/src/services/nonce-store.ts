@@ -1,5 +1,5 @@
 // ============================================================
-//  @meap/node — Nonce Store
+//  @arcenpay/node — Nonce Store
 //  Pluggable nonce deduplication for x402 anti-replay
 //  PRD §7.1 — Durable replay protection
 // ============================================================

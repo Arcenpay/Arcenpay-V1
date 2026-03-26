@@ -1235,7 +1235,7 @@ function SdkViewportPreview({
       );
     }
 
-    // ── Checkout — plan selection + subscription summary (SchematicHQ style) ──
+    // ── Checkout — plan selection + subscription summary (ArcenPay style) ──
     case "customer-portal:checkout":
     case "checkout:checkout":
     case "checkout-modal:checkout": {
@@ -1387,7 +1387,7 @@ function SdkViewportPreview({
       );
     }
 
-    // ── Payment Method — modal dialog overlay (SchematicHQ style) ──
+    // ── Payment Method — modal dialog overlay (ArcenPay style) ──
     case "customer-portal:payment-method": {
       return (
         <div
@@ -1498,7 +1498,7 @@ function SdkViewportPreview({
       );
     }
 
-    // ── Unsubscribe — cancel dialog (SchematicHQ style) ──────
+    // ── Unsubscribe — cancel dialog (ArcenPay style) ──────
     case "customer-portal:unsubscribe": {
       if (simCancelled) {
         return (
@@ -1661,7 +1661,7 @@ function SdkViewportPreview({
       );
     }
 
-    // ── Disabled — Portal not found (SchematicHQ style) ──────
+    // ── Disabled — Portal not found (ArcenPay style) ──────
     case "customer-portal:disabled":
     case "pricing-table:disabled": {
       return (
@@ -2125,7 +2125,7 @@ export function ComponentEditor({
       ? `import { useState } from 'react';\n`
       : "";
 
-    return `${reactImports}import { ${Array.from(imports).join(", ")}, MEAPProvider } from '@meap/react';
+    return `${reactImports}import { ${Array.from(imports).join(", ")}, ArcenPayProvider } from '@arcenpay/react';
 
 export function ${config.name.replace(/\s+/g, "")}() {${
       hasCheckoutModal
@@ -2134,7 +2134,7 @@ export function ${config.name.replace(/\s+/g, "")}() {${
         : ""
     }
   return (
-    <MEAPProvider>
+    <ArcenPayProvider>
       <div className="container mx-auto p-6 space-y-6">
 ${elements
   .map((el) => {
@@ -2150,16 +2150,16 @@ ${elements
   })
   .join("\n")}
       </div>
-    </MEAPProvider>
+    </ArcenPayProvider>
   );
 }`;
   };
 
   const generateInstallCode = () => {
     return `# Install via npm / pnpm
-npm install @meap/react @meap/core wagmi viem
+npm install @arcenpay/react @arcenpay/sdk wagmi viem
 
-# Then wrap your app with MEAPProvider (see Installation guide)
+# Then wrap your app with ArcenPayProvider (see Installation guide)
 # and drop the component into your page.`;
   };
 
@@ -3192,7 +3192,7 @@ npm install @meap/react @meap/core wagmi viem
                       1. Install Dependencies
                     </p>
                     <pre className="bg-secondary/30 p-3 rounded-lg text-xs font-mono border border-border">
-                      npm install @meap/react @meap/core wagmi viem
+                      npm install @arcenpay/react @arcenpay/sdk wagmi viem
                     </pre>
                   </div>
                   <div>
@@ -3200,7 +3200,7 @@ npm install @meap/react @meap/core wagmi viem
                       2. Configure Provider
                     </p>
                     <pre className="bg-secondary/30 p-3 rounded-lg text-xs font-mono border border-border overflow-x-auto">
-                      <code>{`import { MEAPProvider } from '@meap/react';
+                      <code>{`import { ArcenPayProvider } from '@arcenpay/react';
 import { WagmiProvider, createConfig } from 'wagmi';
 import { base, baseSepolia } from 'wagmi/chains';
 
@@ -3212,9 +3212,9 @@ const config = createConfig({
 function App() {
   return (
     <WagmiProvider config={config}>
-      <MEAPProvider>
+      <ArcenPayProvider>
         {/* Your component here */}
-      </MEAPProvider>
+      </ArcenPayProvider>
     </WagmiProvider>
   );
 }`}</code>

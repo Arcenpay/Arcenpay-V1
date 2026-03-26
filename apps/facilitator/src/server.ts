@@ -46,7 +46,7 @@ import {
   AxelarTransport,
   CCIPTransport,
   type ProtocolEventName,
-} from "@meap/node";
+} from "@arcenpay/node";
 import {
   PlanFactoryABI,
   SessionVaultABI,
@@ -55,7 +55,7 @@ import {
   validateChainEnvironment,
   type PlanTier,
   type X402VerifiedPaymentContext,
-} from "@meap/core";
+} from "@arcenpay/sdk";
 import {
   createPublicClient,
   encodePacked,
@@ -3354,22 +3354,27 @@ app.post(
 // ============================================================
 
 function logStartupBanner() {
+  const statusLine = (label: string, active: boolean, activeLabel = "Active", inactiveLabel = "Off (set env var)") => {
+    const status = active ? `✅  ${activeLabel}` : `⚠️  ${inactiveLabel}`;
+    return `║   ${label}: ${status.padEnd(37 - label.length)}║`;
+  };
+
   console.log(`
-╔══════════════════════════════════════════════╗
-║                                              ║
-║   🚀  MEAP Facilitator Node v0.1.0          ║
-║   📡  Port: ${String(PORT).padEnd(33)}║
-║   🔗  Chain: ${String(CHAIN_ID).padEnd(32)}║
-║   💰  x402 Protocol: Active                 ║
-║   📣  Events: ${(eventListenerActive ? "Watching" : "Failed").padEnd(29)}║
-║   🔔  Webhooks: ${(webhookService ? "Active" : "Off").padEnd(28)}║
-║   ✉️   Email: ${(emailService ? "Active" : "Off").padEnd(30)}║
-║   ⛓️   Settlement: ${(settlementWriter ? "On-chain" : "Verify-only").padEnd(25)}║
-║   🧠  Redis Logs: ${(redisUsageStore ? "Active" : "Off").padEnd(27)}║
-║   🔬  Proof Mode: ${PROOF_MODE.padEnd(31)}║
-║   🧪  Proof Orchestrator: Active            ║
-║                                              ║
-╚══════════════════════════════════════════════╝
+╔══════════════════════════════════════════════════╗
+║                                                  ║
+║   🚀  ArcenPay Facilitator v0.1.0               ║
+║   📡  Port: ${String(PORT).padEnd(37)}║
+║   🔗  Chain: ${String(CHAIN_ID).padEnd(36)}║
+║   💰  x402 Protocol: Active                     ║
+║   📣  Events: ${(eventListenerActive ? "✅  Watching" : "❌  Failed — check RPC_URL").padEnd(35)}║
+${statusLine("Webhooks", !!webhookService, "Active", "Off — set SVIX_SIGNING_SECRET")}
+${statusLine("Email   ", !!emailService, "Active", "Off — set RESEND_API_KEY")}
+║   ⛓️  Settlement: ${(settlementWriter ? "✅  On-chain" : "⚠️  Verify-only — set SETTLEMENT_PRIVATE_KEY").padEnd(31)}║
+${statusLine("Redis   ", !!redisUsageStore, "Active", "Off — set REDIS_URL")}
+║   🔬  Proof Mode: ${PROOF_MODE.padEnd(35)}║
+║   🧪  Proof Orchestrator: Active                ║
+║                                                  ║
+╚══════════════════════════════════════════════════╝
   `);
 }
 

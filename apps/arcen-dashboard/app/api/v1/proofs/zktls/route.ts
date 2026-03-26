@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
 
   // Update company traits with verified claims (so flag rules can also use company_trait conditions)
   if (company) {
-    const existingCompany = await db.schematicCompany.findUnique({
+    const existingCompany = await db.arcenCompany.findUnique({
       where: { id: company.id },
       select: { traits: true },
     });
@@ -109,7 +109,7 @@ export async function POST(req: NextRequest) {
           ]),
         ),
       };
-      await db.schematicCompany.update({
+      await db.arcenCompany.update({
         where: { id: company.id },
         data: { traits: mergedTraits as unknown as Prisma.InputJsonValue },
       });

@@ -187,10 +187,10 @@ model Team {
   tierHistory        TierUpgradeHistory[]
   supportTickets     SupportTicket[]
 
-  // Web3 SchematicHQ Protocol Layer
-  schematicCompanies  SchematicCompany[]
+  // Web3 ArcenPay Protocol Layer
+  arcenCompanies      ArcenCompany[]
   featureFlags        CatalogFeatureFlag[]
-  schematicApiKeys    SchematicApiKey[]
+  arcenApiKeys        ArcenApiKey[]
   embedComponents     EmbedComponent[]
 
   @@index([slug])
@@ -716,11 +716,11 @@ model SupportTicket {
   @@index([status, priority])
 }
 
-// ─── Web3 SchematicHQ Protocol Layer ──────────────────────────────────────────
+// ─── Web3 ArcenPay Protocol Layer ─────────────────────────────────────────────
 // Companies, Users, Events, Feature Flags, Rules, Overrides, Access Tokens,
 // API Keys, zkTLS Proofs, Embeddable Components
 
-model SchematicCompany {
+model ArcenCompany {
   id            String   @id @default(cuid())
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -739,19 +739,20 @@ model SchematicCompany {
   // Active add-on IDs (JSON array of CatalogAddOn.id)
   activeAddOnIds Json    @default("[]")
 
-  team      Team               @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  users     SchematicUser[]
+  team      Team             @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  users     ArcenUser[]
   overrides CompanyOverride[]
-  events    SchematicEvent[]
+  events    ArcenEvent[]
   zkProofs  ZkTlsProof[]
 
   @@unique([teamId, walletAddress])
   @@unique([teamId, externalId])
   @@index([teamId, email])
   @@index([teamId, lastSeenAt])
+  @@map("SchematicCompany")
 }
 
-model SchematicUser {
+model ArcenUser {
   id            String   @id @default(cuid())
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -766,7 +767,7 @@ model SchematicUser {
   externalId    String?
   traits        Json     @default("{}")
 
-  company SchematicCompany @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  company ArcenCompany @relation(fields: [companyId], references: [id], onDelete: Cascade)
   zkProofs ZkTlsProof[]
 
   @@unique([teamId, walletAddress])
@@ -774,9 +775,10 @@ model SchematicUser {
   @@index([teamId, companyId])
   @@index([teamId, externalId])
   @@index([teamId, email])
+  @@map("SchematicUser")
 }
 
-model SchematicEvent {
+model ArcenEvent {
   id        String   @id @default(cuid())
   sentAt    DateTime @default(now())
   teamId    String
@@ -787,11 +789,12 @@ model SchematicEvent {
   userId    String?
   traits    Json     @default("{}")
 
-  company SchematicCompany? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  company ArcenCompany? @relation(fields: [companyId], references: [id], onDelete: SetNull)
 
   @@index([teamId, name, companyId, sentAt])
   @@index([teamId, eventType, sentAt])
   @@index([teamId, companyId, sentAt])
+  @@map("SchematicEvent")
 }
 
 model CatalogFeatureFlag {
@@ -805,11 +808,11 @@ model CatalogFeatureFlag {
   description  String?
   defaultValue Boolean  @default(false)
 
-  // Feature type mirrors SchematicHQ: boolean | event_based | trait_based
+  // Feature type: boolean | event_based | trait_based
   featureType  String   @default("boolean")
 
   // For event_based features
-  eventKey         String?  // e.g., "scan" — matches SchematicEvent.name
+  eventKey         String?  // e.g., "scan" — matches ArcenEvent.name
   unitSingular     String?  // e.g., "Scan"
   unitPlural       String?  // e.g., "Scans"
 
@@ -844,7 +847,7 @@ model FlagRuleCondition {
   values       Json    @default("[]")
 
   // For usage criteria
-  metricKey    String? // matches SchematicEvent.name (e.g., "scan")
+  metricKey    String? // matches ArcenEvent.name (e.g., "scan")
   metricValue  Float?  // threshold (e.g., 300)
   metricPeriod String? // "monthly" | "daily" | "weekly"
 
@@ -870,7 +873,7 @@ model CompanyOverride {
   value      Boolean
   reason     String?
 
-  company SchematicCompany @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  company ArcenCompany @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@unique([companyId, featureKey])
   @@index([teamId, companyId])
@@ -891,8 +894,8 @@ model EmbedAccessToken {
   @@index([expiresAt])
 }
 
-// External API keys for SchematicHQ-style developer access
-model SchematicApiKey {
+// External API keys for ArcenPay developer access
+model ArcenApiKey {
   id          String    @id @default(cuid())
   createdAt   DateTime  @default(now())
   lastUsedAt  DateTime?
@@ -906,6 +909,7 @@ model SchematicApiKey {
   team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
 
   @@index([teamId])
+  @@map("SchematicApiKey")
 }
 
 // zkTLS proofs submitted via Reclaim Protocol
@@ -922,15 +926,15 @@ model ZkTlsProof {
   proofHash     String   @unique  // prevents replay attacks
   expiresAt     DateTime?
 
-  company SchematicCompany? @relation(fields: [companyId], references: [id], onDelete: SetNull)
-  user    SchematicUser?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  company ArcenCompany? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  user    ArcenUser?    @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([teamId, companyId])
   @@index([teamId, providerId])
   @@index([expiresAt])
 }
 
-// Embeddable UI components (like SchematicHQ components)
+// Embeddable UI components
 model EmbedComponent {
   id        String   @id @default(cuid())
   createdAt DateTime @default(now())

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createPublicClient, http } from "viem";
 import { requirePermission, isErrorResponse } from "@/lib/api-auth";
-import { getContractAddresses } from "@meap/core";
+import { getContractAddresses } from "@arcenpay/sdk";
 import { getRpcUrl } from "@/lib/config";
 import { sepolia, baseSepolia, base } from "viem/chains";
 import type { Chain } from "viem";

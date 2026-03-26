@@ -11,33 +11,39 @@ import { WagmiProvider, createConfig, http } from "wagmi";
 import { sepolia, baseSepolia, base } from "wagmi/chains";
 import { injected, walletConnect } from "wagmi/connectors";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import type { MEAPConfig, ContractAddresses, NetworkConfig } from "@meap/core";
+import type { MEAPConfig, ContractAddresses, NetworkConfig } from "@arcenpay/sdk";
 import {
   getChainEnvironment,
   DEFAULT_CHAIN_ID,
   validateChainEnvironment,
-} from "@meap/core";
+} from "@arcenpay/sdk";
 
 // ============================================================
-//  MEAPProvider — Root Context Provider
+//  MEAPProvider / ArcenPayProvider — Root Context Provider
 //  Wraps application with Wagmi + React Query + protocol config
 // ============================================================
 
-interface MEAPContextValue {
+export interface MEAPContextValue {
   config: MEAPConfig;
   contracts: ContractAddresses;
   network: NetworkConfig;
   isTestnet: boolean;
 }
 
+/** @alias MEAPContextValue */
+export type ArcenPayContextValue = MEAPContextValue;
+
 const MEAPContext = createContext<MEAPContextValue | null>(null);
 
-interface MEAPProviderProps {
+export interface MEAPProviderProps {
   children: ReactNode;
   config?: Partial<MEAPConfig>;
   chainId?: number;
   walletConnectProjectId?: string;
 }
+
+/** @alias MEAPProviderProps */
+export type ArcenPayProviderProps = MEAPProviderProps;
 
 /**
  * MEAPProvider — Root provider for MEAP protocol integration.
@@ -157,7 +163,13 @@ export function MEAPProvider({
 export function useMEAP(): MEAPContextValue {
   const context = useContext(MEAPContext);
   if (!context) {
-    throw new Error("useMEAP must be used within a MEAPProvider");
+    throw new Error("useArcenPay must be used within an ArcenPayProvider");
   }
   return context;
 }
+
+/** @alias MEAPProvider — ArcenPay-branded alias */
+export const ArcenPayProvider = MEAPProvider;
+
+/** @alias useMEAP — ArcenPay-branded alias */
+export const useArcenPay = useMEAP;

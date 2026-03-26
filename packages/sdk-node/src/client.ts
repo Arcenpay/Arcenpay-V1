@@ -1,5 +1,5 @@
 /**
- * ArcenClient — Node.js SDK for the ArcenPay Web3 SchematicHQ Protocol.
+ * ArcenClient — Node.js SDK for the ArcenPay Protocol.
  *
  * Use this in your backend to:
  *  - Track usage events
@@ -27,15 +27,15 @@
  */
 
 import type {
-  SchematicCompanyKeys,
-  SchematicUserKeys,
+  ArcenCompanyKeys,
+  ArcenUserKeys,
   FlagCheckResult,
-  SchematicCompany,
+  ArcenCompany,
   EmbedAccessTokenResponse,
 } from '@meap/core';
 
 export interface ArcenClientConfig {
-  /** Your SchematicHQ-style API key (starts with api_) */
+  /** Your ArcenPay API key (starts with api_) */
   apiKey: string;
   /** Base URL of your ArcenPay dashboard (default: https://dashboard.arcenpay.xyz) */
   baseUrl?: string;
@@ -45,14 +45,14 @@ export interface ArcenClientConfig {
 
 export interface TrackEventInput {
   name: string;
-  company: SchematicCompanyKeys;
-  user?: SchematicUserKeys;
+  company: ArcenCompanyKeys;
+  user?: ArcenUserKeys;
   traits?: Record<string, unknown>;
 }
 
 export interface IdentifyInput {
-  company?: SchematicCompanyKeys & { name?: string };
-  user?: SchematicUserKeys & { name?: string; email?: string };
+  company?: ArcenCompanyKeys & { name?: string };
+  user?: ArcenUserKeys & { name?: string; email?: string };
   traits?: Record<string, unknown>;
 }
 
@@ -75,8 +75,8 @@ export class ArcenClient {
     path: string,
     options: {
       body?: unknown;
-      companyKeys?: SchematicCompanyKeys;
-      userKeys?: SchematicUserKeys;
+      companyKeys?: ArcenCompanyKeys;
+      userKeys?: ArcenUserKeys;
       query?: Record<string, string>;
     } = {},
   ): Promise<T> {
@@ -176,8 +176,8 @@ export class ArcenClient {
   /** Check if a feature flag is enabled for a company/user */
   async checkFlag(
     featureKey: string,
-    companyKeys: SchematicCompanyKeys,
-    userKeys?: SchematicUserKeys,
+    companyKeys: ArcenCompanyKeys,
+    userKeys?: ArcenUserKeys,
   ): Promise<FlagCheckResult> {
     const res = await this.request<{ data: FlagCheckResult }>(
       'GET',
@@ -190,8 +190,8 @@ export class ArcenClient {
   /** Check multiple flags at once */
   async checkFlags(
     featureKeys: string[],
-    companyKeys: SchematicCompanyKeys,
-    userKeys?: SchematicUserKeys,
+    companyKeys: ArcenCompanyKeys,
+    userKeys?: ArcenUserKeys,
   ): Promise<Record<string, FlagCheckResult>> {
     const results = await Promise.all(
       featureKeys.map((key) => this.checkFlag(key, companyKeys, userKeys)),
@@ -203,7 +203,7 @@ export class ArcenClient {
 
   /** List companies (paginated) */
   async listCompanies(options: { limit?: number; search?: string; cursor?: string } = {}): Promise<{
-    data: SchematicCompany[];
+    data: ArcenCompany[];
     count: number;
     nextCursor?: string;
   }> {
@@ -215,7 +215,7 @@ export class ArcenClient {
   }
 
   /** Get a company by ID */
-  async getCompany(id: string): Promise<{ data: SchematicCompany & { entitlements: unknown[] } }> {
+  async getCompany(id: string): Promise<{ data: ArcenCompany & { entitlements: unknown[] } }> {
     return this.request('GET', `/api/v1/companies/${id}`);
   }
 
@@ -226,7 +226,7 @@ export class ArcenClient {
     email?: string;
     id?: string;
     traits?: Record<string, unknown>;
-  }): Promise<{ data: SchematicCompany }> {
+  }): Promise<{ data: ArcenCompany }> {
     return this.request('POST', '/api/v1/companies', { body: data });
   }
 
@@ -238,7 +238,7 @@ export class ArcenClient {
       traits?: Record<string, unknown>;
       activePlanId?: string | null;
     },
-  ): Promise<{ data: SchematicCompany }> {
+  ): Promise<{ data: ArcenCompany }> {
     return this.request('PATCH', `/api/v1/companies/${id}`, { body: data });
   }
 
@@ -258,8 +258,8 @@ export class ArcenClient {
 
   /** Generate a short-lived access token for embedding ArcenEmbed in customer portals */
   async createAccessToken(
-    companyKeys?: SchematicCompanyKeys,
-    userKeys?: SchematicUserKeys,
+    companyKeys?: ArcenCompanyKeys,
+    userKeys?: ArcenUserKeys,
     expiresIn = 3600,
   ): Promise<EmbedAccessTokenResponse> {
     const res = await this.request<{ data: EmbedAccessTokenResponse }>(

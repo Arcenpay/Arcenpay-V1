@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useAccount, useReadContract, useReadContracts } from 'wagmi';
-import { SessionVaultABI, ZKUsageVerifierABI, getContractAddresses } from '@meap/core';
+import { SessionVaultABI, ZKUsageVerifierABI, getContractAddresses } from '@arcenpay/sdk';
 import { useMEAP } from '../providers/MEAPProvider';
 
 // ============================================================
@@ -111,75 +111,75 @@ export function UsageDashboard({
 
   if (loading) {
     return (
-      <div className={`meap-usage-dashboard meap-loading ${className}`}>
-        <div className="meap-spinner" />
+      <div className={`arcenpay-usage-dashboard arcenpay-loading ${className}`}>
+        <div className="arcenpay-spinner" />
         <p>Loading session metrics from chain...</p>
       </div>
     );
   }
 
   return (
-    <div className={`meap-usage-dashboard ${className}`}>
-      <div className="meap-usage-header">
+    <div className={`arcenpay-usage-dashboard ${className}`}>
+      <div className="arcenpay-usage-header">
         <h3>ZKVUB Session Usage</h3>
         <span
-          className="meap-status-badge"
+          className="arcenpay-status-badge"
           style={{ backgroundColor: statusColors[sessionStatus] || '#6b7280' }}
         >
           {sessionStatus}
         </span>
       </div>
 
-      <div className="meap-usage-grid">
-        <div className="meap-metric-card">
-          <span className="meap-metric-label">Total Balance</span>
-          <span className="meap-metric-value">${formatUSDC(totalBalance)} USDC</span>
+      <div className="arcenpay-usage-grid">
+        <div className="arcenpay-metric-card">
+          <span className="arcenpay-metric-label">Total Balance</span>
+          <span className="arcenpay-metric-value">${formatUSDC(totalBalance)} USDC</span>
         </div>
 
         {session && (
           <>
-            <div className="meap-metric-card">
-              <span className="meap-metric-label">Session Balance</span>
-              <span className="meap-metric-value">${formatUSDC(session.balance)} USDC</span>
+            <div className="arcenpay-metric-card">
+              <span className="arcenpay-metric-label">Session Balance</span>
+              <span className="arcenpay-metric-value">${formatUSDC(session.balance)} USDC</span>
             </div>
 
-            <div className="meap-metric-card">
-              <span className="meap-metric-label">Total Funded</span>
-              <span className="meap-metric-value">${formatUSDC(session.totalFunded)} USDC</span>
+            <div className="arcenpay-metric-card">
+              <span className="arcenpay-metric-label">Total Funded</span>
+              <span className="arcenpay-metric-value">${formatUSDC(session.totalFunded)} USDC</span>
             </div>
 
-            <div className="meap-metric-card">
-              <span className="meap-metric-label">Total Settled</span>
-              <span className="meap-metric-value">${formatUSDC(session.totalSettled)} USDC</span>
+            <div className="arcenpay-metric-card">
+              <span className="arcenpay-metric-label">Total Settled</span>
+              <span className="arcenpay-metric-value">${formatUSDC(session.totalSettled)} USDC</span>
             </div>
           </>
         )}
 
-        <div className="meap-metric-card">
-          <span className="meap-metric-label">Rate/Call</span>
-          <span className="meap-metric-value">
+        <div className="arcenpay-metric-card">
+          <span className="arcenpay-metric-label">Rate/Call</span>
+          <span className="arcenpay-metric-value">
             {rate ? `$${formatUSDC(rate)}` : '—'} USDC
           </span>
         </div>
 
-        <div className="meap-metric-card">
-          <span className="meap-metric-label">Est. Calls Remaining</span>
-          <span className="meap-metric-value">
+        <div className="arcenpay-metric-card">
+          <span className="arcenpay-metric-label">Est. Calls Remaining</span>
+          <span className="arcenpay-metric-value">
             ~{estimatedCalls.toLocaleString()}
           </span>
         </div>
 
-        <div className="meap-metric-card">
-          <span className="meap-metric-label">Pending Settlement</span>
-          <span className="meap-metric-value">${formatUSDC(pending)} USDC</span>
+        <div className="arcenpay-metric-card">
+          <span className="arcenpay-metric-label">Pending Settlement</span>
+          <span className="arcenpay-metric-value">${formatUSDC(pending)} USDC</span>
         </div>
       </div>
 
-      <div className="meap-usage-footer">
+      <div className="arcenpay-usage-footer">
         {sessionId && (
-          <span className="meap-session-id">Session: {sessionId.slice(0, 10)}...</span>
+          <span className="arcenpay-session-id">Session: {sessionId.slice(0, 10)}...</span>
         )}
-        <span className="meap-last-updated">
+        <span className="arcenpay-last-updated">
           Chain: {network.name} ({network.chainId})
         </span>
       </div>

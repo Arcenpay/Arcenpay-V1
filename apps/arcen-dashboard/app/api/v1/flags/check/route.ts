@@ -1,7 +1,7 @@
 /**
  * GET /api/v1/flags/check?key=<featureKey>
  *
- * SchematicHQ-compatible flag evaluation endpoint.
+ * ArcenPay flag evaluation endpoint.
  * Evaluates a single feature flag for a company/user and returns True or False.
  *
  * Authorization: Bearer api_xxx
@@ -51,11 +51,11 @@ export async function GET(req: NextRequest) {
   // Parse company + user key headers
   const rawCompanyKeys = parseKeyHeader(
     req.headers.get("x-arcen-company-keys") ??
-    req.headers.get("x-schematic-company-keys"), // SchematicHQ compat header
+    req.headers.get("x-schematic-company-keys"), // backward compat header
   );
   const rawUserKeys = parseKeyHeader(
     req.headers.get("x-arcen-user-keys") ??
-    req.headers.get("x-schematic-user-keys"), // SchematicHQ compat header
+    req.headers.get("x-schematic-user-keys"), // backward compat header
   );
 
   const companyKeys: CompanyKeys = {
@@ -90,7 +90,7 @@ export async function GET(req: NextRequest) {
 
   // Log the flag check event in background
   if (result.companyId) {
-    db.schematicEvent
+    db.arcenEvent
       .create({
         data: {
           teamId,

@@ -9,14 +9,14 @@ export default function QuickStartPage() {
       <p>Get from zero to a working Web3 subscription checkout in under 30 minutes.</p>
 
       <h2>1. Install Dependencies</h2>
-      <pre><code>{`npm install @meap/react @meap/core viem`}</code></pre>
+      <pre><code>{`npm install @arcenpay/react @arcenpay/sdk viem`}</code></pre>
 
       <h2>2. Wrap Your App</h2>
-      <pre><code>{`import { MEAPProvider } from '@meap/react';
+      <pre><code>{`import { ArcenPayProvider } from '@arcenpay/react';
 
 function App() {
   return (
-    <MEAPProvider
+    <ArcenPayProvider
       chainId={11155111}
       config={{
         tablelandConfig: {
@@ -28,12 +28,12 @@ function App() {
       }}
     >
       {/* Your app content */}
-    </MEAPProvider>
+    </ArcenPayProvider>
   );
 }`}</code></pre>
 
       <h2>3. Add Pricing Table</h2>
-      <pre><code>{`import { PricingTable } from '@meap/react';
+      <pre><code>{`import { PricingTable } from '@arcenpay/react';
 
 function PricingPage() {
   return (
@@ -46,7 +46,7 @@ function PricingPage() {
 }`}</code></pre>
 
       <h2>4. Add Checkout Modal</h2>
-      <pre><code>{`import { CheckoutModal } from '@meap/react';
+      <pre><code>{`import { CheckoutModal } from '@arcenpay/react';
 
 function Checkout({ planId }) {
   return (
@@ -62,7 +62,7 @@ function Checkout({ planId }) {
 }`}</code></pre>
 
       <h2>5. Gate Premium Features</h2>
-      <pre><code>{`import { FeatureFlagGuard } from '@meap/react';
+      <pre><code>{`import { FeatureFlagGuard } from '@arcenpay/react';
 
 function PremiumContent() {
   const walletAddress = '0x1234...';
@@ -79,7 +79,7 @@ function PremiumContent() {
 }`}</code></pre>
 
       <h2>6. Check Subscription Status</h2>
-      <pre><code>{`import { useEntitlement } from '@meap/react';
+      <pre><code>{`import { useEntitlement } from '@arcenpay/react';
 
 function ProfilePage() {
   const { isSubscribed, planTier, expiresAt, features, isLoading } =
@@ -92,8 +92,8 @@ function ProfilePage() {
 }`}</code></pre>
 
       <div className="callout tip">
-        <strong>Next Steps:</strong> Set up the backend with <code>@meap/node</code> for
-        x402 payment middleware, or integrate <code>@meap/agent</code> for AI agent payments.
+        <strong>Next Steps:</strong> Set up the backend with <code>@arcenpay/node</code> for
+        x402 payment middleware, or integrate <code>@arcenpay/agent</code> for AI agent payments.
       </div>
     </>
   );

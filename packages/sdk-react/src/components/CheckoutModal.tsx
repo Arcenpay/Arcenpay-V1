@@ -19,7 +19,7 @@ import {
   getBlockExplorerUrl,
   TOKENS,
   createSmartAccount,
-} from "@meap/core";
+} from "@arcenpay/sdk";
 import { useMEAP } from "../providers/MEAPProvider";
 
 // ============================================================
@@ -793,10 +793,10 @@ export function CheckoutModal({
   };
 
   return (
-    <div className={`meap-checkout-overlay ${className}`} onClick={onClose}>
-      <div className="meap-checkout-modal" onClick={(e) => e.stopPropagation()}>
+    <div className={`arcenpay-checkout-overlay ${className}`} onClick={onClose}>
+      <div className="arcenpay-checkout-modal" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div className="meap-checkout-header">
+        <div className="arcenpay-checkout-header">
           <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
             <h2>{currentStep.title}</h2>
             {planName && step !== "success" && step !== "error" && (
@@ -812,7 +812,7 @@ export function CheckoutModal({
             )}
           </div>
           <button
-            className="meap-checkout-close"
+            className="arcenpay-checkout-close"
             onClick={onClose}
             aria-label="Close"
           >
@@ -821,10 +821,10 @@ export function CheckoutModal({
         </div>
 
         {/* Crypto Identity Strip */}
-        <div className="meap-checkout-crypto-strip">
+        <div className="arcenpay-checkout-crypto-strip">
           <span style={{ fontSize: 12 }}>⛓</span>
-          <span className="meap-checkout-chain-pill">{network.name}</span>
-          <span className="meap-checkout-usdc-badge">USDC · Stablecoin</span>
+          <span className="arcenpay-checkout-chain-pill">{network.name}</span>
+          <span className="arcenpay-checkout-usdc-badge">USDC · Stablecoin</span>
           <span
             style={{
               marginLeft: "auto",
@@ -838,14 +838,14 @@ export function CheckoutModal({
 
         {/* Progress */}
         {step !== "success" && step !== "error" && (
-          <div className="meap-checkout-progress">
+          <div className="arcenpay-checkout-progress">
             {progressSteps.map((s, i) => (
               <div
                 key={s}
-                className={`meap-checkout-step ${i + 1 <= stepNumber ? "active" : ""} ${i + 1 < stepNumber ? "completed" : ""}`}
+                className={`arcenpay-checkout-step ${i + 1 <= stepNumber ? "active" : ""} ${i + 1 < stepNumber ? "completed" : ""}`}
                 title={stepLabels[s]}
               >
-                <div className="meap-step-dot">
+                <div className="arcenpay-step-dot">
                   {i + 1 < stepNumber ? "✓" : i + 1}
                 </div>
               </div>
@@ -854,19 +854,19 @@ export function CheckoutModal({
         )}
 
         {/* Body */}
-        <div className="meap-checkout-body">
+        <div className="arcenpay-checkout-body">
           <p>{currentStep.description}</p>
 
           {step === "email" && (
-            <div className="meap-email-input-group">
-              <label htmlFor="meap-subscriber-email">Email (optional)</label>
+            <div className="arcenpay-email-input-group">
+              <label htmlFor="arcenpay-subscriber-email">Email (optional)</label>
               <input
-                id="meap-subscriber-email"
+                id="arcenpay-subscriber-email"
                 type="email"
                 placeholder="you@company.com"
                 value={subscriberEmail}
                 onChange={(event) => setSubscriberEmail(event.target.value)}
-                className="meap-email-input"
+                className="arcenpay-email-input"
               />
             </div>
           )}
@@ -892,7 +892,7 @@ export function CheckoutModal({
           )}
 
           {isTestnet && (
-            <div className="meap-testnet-badge">
+            <div className="arcenpay-testnet-badge">
               ◎ Testnet Mode — {network.name}
             </div>
           )}
@@ -929,7 +929,7 @@ export function CheckoutModal({
             )}
 
           {latestTxHash && (
-            <div className="meap-tx-hash">
+            <div className="arcenpay-tx-hash">
               <a
                 href={getBlockExplorerUrl(network.chainId, latestTxHash)}
                 target="_blank"
@@ -942,10 +942,10 @@ export function CheckoutModal({
         </div>
 
         {/* Actions */}
-        <div className="meap-checkout-actions">
+        <div className="arcenpay-checkout-actions">
           {currentStep.action && (
             <button
-              className="meap-checkout-btn primary"
+              className="arcenpay-checkout-btn primary"
               onClick={currentStep.action}
               disabled={
                 loading ||
@@ -987,14 +987,14 @@ export function CheckoutModal({
             <>
               {(autopayInstalledLocally || isAutopayInitialized) && (
                 <button
-                  className="meap-checkout-btn secondary"
+                  className="arcenpay-checkout-btn secondary"
                   onClick={handleRevokeAutopay}
                   disabled={isRevokingAutopay}
                 >
                   {isRevokingAutopay ? "Revoking…" : "Revoke Autopay"}
                 </button>
               )}
-              <button className="meap-checkout-btn primary" onClick={onClose}>
+              <button className="arcenpay-checkout-btn primary" onClick={onClose}>
                 Done
               </button>
             </>
@@ -1002,7 +1002,7 @@ export function CheckoutModal({
 
           {step === "error" && (
             <button
-              className="meap-checkout-btn secondary"
+              className="arcenpay-checkout-btn secondary"
               onClick={() => {
                 resetApprove();
                 resetMint();
@@ -1019,7 +1019,7 @@ export function CheckoutModal({
         </div>
 
         {/* Powered by Arcenpay Footer */}
-        <div className="meap-checkout-footer">
+        <div className="arcenpay-checkout-footer">
           <a
             href="https://arcenpay.xyz"
             target="_blank"

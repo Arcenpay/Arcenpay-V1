@@ -1,5 +1,5 @@
 {
-  "name": "@meap/facilitator",
+  "name": "@arcenpay/facilitator",
   "version": "0.0.1",
   "private": true,
   "description": "MEAP Facilitator Node — x402 payment validation and on-chain submission",
@@ -12,8 +12,8 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@meap/core": "*",
-    "@meap/node": "*",
+    "@arcenpay/sdk": "*",
+    "@arcenpay/node": "*",
     "@sentry/node": "^8.0.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.0",

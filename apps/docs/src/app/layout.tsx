@@ -29,10 +29,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
             <div className="docs-nav-section">
               <h4>SDK Reference</h4>
-              <a href="/sdk/react" className="docs-nav-link">@meap/react</a>
-              <a href="/sdk/node" className="docs-nav-link">@meap/node</a>
-              <a href="/sdk/agent" className="docs-nav-link">@meap/agent</a>
-              <a href="/sdk/core" className="docs-nav-link">@meap/core</a>
+              <a href="/sdk/react" className="docs-nav-link">@arcenpay/react</a>
+              <a href="/sdk/node" className="docs-nav-link">@arcenpay/node</a>
+              <a href="/sdk/agent" className="docs-nav-link">@arcenpay/agent</a>
+              <a href="/sdk/core" className="docs-nav-link">@arcenpay/sdk</a>
             </div>
 
             <div className="docs-nav-section">

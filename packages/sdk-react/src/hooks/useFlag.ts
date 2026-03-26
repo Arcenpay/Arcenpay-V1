@@ -14,7 +14,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type { FlagCheckResult, SchematicCompanyKeys, SchematicUserKeys } from '@meap/core';
+import type { FlagCheckResult, ArcenCompanyKeys, ArcenUserKeys } from '@meap/core';
 
 export interface UseFlagOptions {
   /** Base URL for the ArcenPay dashboard API (defaults to '') */
@@ -40,16 +40,16 @@ const flagCache = new Map<string, { result: FlagCheckResult; expiresAt: number }
 
 function buildCacheKey(
   featureKey: string,
-  companyKeys: SchematicCompanyKeys,
-  userKeys?: SchematicUserKeys,
+  companyKeys: ArcenCompanyKeys,
+  userKeys?: ArcenUserKeys,
 ): string {
   return `${featureKey}:${JSON.stringify(companyKeys)}:${JSON.stringify(userKeys ?? {})}`;
 }
 
 export function useFlag(
   featureKey: string,
-  companyKeys: SchematicCompanyKeys,
-  userKeys?: SchematicUserKeys,
+  companyKeys: ArcenCompanyKeys,
+  userKeys?: ArcenUserKeys,
   options: UseFlagOptions = {},
 ): UseFlagResult {
   const { baseUrl = '', apiKey, cacheMs = 30_000, skip = false } = options;
@@ -148,8 +148,8 @@ export function useFlag(
  */
 export function useFlags(
   featureKeys: string[],
-  companyKeys: SchematicCompanyKeys,
-  userKeys?: SchematicUserKeys,
+  companyKeys: ArcenCompanyKeys,
+  userKeys?: ArcenUserKeys,
   options: UseFlagOptions = {},
 ): { flags: Record<string, boolean | null>; loading: boolean } {
   const [flags, setFlags] = useState<Record<string, boolean | null>>({});

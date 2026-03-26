@@ -1,5 +1,5 @@
 // ============================================================
-//  @meap/node — Off-Chain Usage Aggregator
+//  @arcenpay/node — Off-Chain Usage Aggregator
 //  Merkle tree-based usage log accumulation for zk-SNARK proving
 //  PRD §7.2 — Off-Chain Aggregation Service
 // ============================================================

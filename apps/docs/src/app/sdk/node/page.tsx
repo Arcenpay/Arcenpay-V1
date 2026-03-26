@@ -1,19 +1,19 @@
 // ============================================================
-//  Documentation — @meap/node SDK Reference
+//  Documentation — @arcenpay/node SDK Reference
 //  PRD Section 5.2: Backend & Facilitator SDK
 // ============================================================
 
 export default function NodeSDKPage() {
   return (
     <>
-      <h1>@meap/node</h1>
+      <h1>@arcenpay/node</h1>
       <p>Backend SDK for x402 middleware, usage logging, proof generation, and settlement monitoring.</p>
 
-      <pre><code>npm install @meap/node</code></pre>
+      <pre><code>npm install @arcenpay/node</code></pre>
 
       <h2>x402 Middleware</h2>
       <p>Drop-in Express middleware for x402 payment-gated API endpoints.</p>
-      <pre><code>{`import { x402Middleware } from '@meap/node';
+      <pre><code>{`import { x402Middleware } from '@arcenpay/node';
 
 // Gate a premium endpoint
 app.use('/api/premium', x402Middleware({
@@ -30,7 +30,7 @@ app.get('/api/premium/data', (req, res) => {
 
       <h2>UsageService</h2>
       <p>Usage logging and zk-SNARK proof generation for ZKVUB sessions.</p>
-      <pre><code>{`import { UsageService } from '@meap/node';
+      <pre><code>{`import { UsageService } from '@arcenpay/node';
 
 const usage = new UsageService({
   proofMode: 'strict',
@@ -58,7 +58,7 @@ const settlement = await usage.submitProof(proof, publicInputs);`}</code></pre>
 
       <h2>SettlementService</h2>
       <p>Monitor on-chain settlements and query session vault balances.</p>
-      <pre><code>{`import { SettlementService } from '@meap/node';
+      <pre><code>{`import { SettlementService } from '@arcenpay/node';
 
 const settlements = new SettlementService({
   rpcUrl: 'https://ethereum-sepolia-rpc.publicnode.com',

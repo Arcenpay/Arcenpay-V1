@@ -2,11 +2,11 @@
 
 import { useReadContracts, useWatchBlockNumber, useWatchContractEvent } from 'wagmi';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { EntitlementFreshness, EntitlementSources, PlanTier } from '@meap/core';
+import type { EntitlementFreshness, EntitlementSources, PlanTier } from '@arcenpay/sdk';
 import {
   SubscriptionRegistryABI,
   getContractAddresses,
-} from '@meap/core';
+} from '@arcenpay/sdk';
 import { useMEAP } from '../providers/MEAPProvider';
 
 // ============================================================

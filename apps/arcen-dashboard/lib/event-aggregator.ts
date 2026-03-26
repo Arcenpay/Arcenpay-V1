@@ -1,7 +1,7 @@
 /**
  * Usage event aggregator.
  *
- * Counts SchematicEvent rows for a company within a billing period window.
+ * Counts ArcenEvent rows for a company within a billing period window.
  * Used by the flag engine's "usage" condition type.
  */
 
@@ -46,7 +46,7 @@ export async function aggregateUsage(
 
   const window = getPeriodWindow(period as Period);
 
-  const count = await db.schematicEvent.count({
+  const count = await db.arcenEvent.count({
     where: {
       teamId,
       companyId,

@@ -1,5 +1,5 @@
 // ============================================================
-//  @meap/node — Redis Usage Store
+//  @arcenpay/node — Redis Usage Store
 //  Persistent usage log storage for x402/settlement pipelines
 // ============================================================
 

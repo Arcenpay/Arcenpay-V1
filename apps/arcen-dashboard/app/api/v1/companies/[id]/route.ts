@@ -22,7 +22,7 @@ export async function GET(
   const { id } = await params;
   const { teamId } = ctx;
 
-  const company = await db.schematicCompany.findFirst({
+  const company = await db.arcenCompany.findFirst({
     where: { id, teamId },
     include: {
       users: {
@@ -122,7 +122,7 @@ export async function PATCH(
     return NextResponse.json({ error: "traits must be a plain object" }, { status: 400 });
   }
 
-  const company = await db.schematicCompany.findFirst({
+  const company = await db.arcenCompany.findFirst({
     where: { id, teamId },
   });
 
@@ -130,7 +130,7 @@ export async function PATCH(
     return NextResponse.json({ error: "Company not found" }, { status: 404 });
   }
 
-  const updated = await db.schematicCompany.update({
+  const updated = await db.arcenCompany.update({
     where: { id },
     data: {
       ...(body.name !== undefined ? { name: body.name } : {}),
@@ -155,11 +155,11 @@ export async function DELETE(
   const { id } = await params;
   const { teamId } = ctx;
 
-  const company = await db.schematicCompany.findFirst({ where: { id, teamId } });
+  const company = await db.arcenCompany.findFirst({ where: { id, teamId } });
   if (!company) {
     return NextResponse.json({ error: "Company not found" }, { status: 404 });
   }
 
-  await db.schematicCompany.delete({ where: { id } });
+  await db.arcenCompany.delete({ where: { id } });
   return NextResponse.json({ ok: true });
 }

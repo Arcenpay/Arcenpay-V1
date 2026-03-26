@@ -1,5 +1,5 @@
 // ============================================================
-//  @meap/node — Typed Protocol Event Contracts
+//  @arcenpay/node — Typed Protocol Event Contracts
 //  Canonical event names + idempotency helpers shared by services.
 // ============================================================
 

@@ -1,12 +1,12 @@
 // ============================================================
-//  @meap/node — Settlement Writer Service
+//  @arcenpay/node — Settlement Writer Service
 //  Executes on-chain session settlements for validated x402 payments
 // ============================================================
 
 import { createPublicClient, createWalletClient, http, isAddress, type Hex } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { sepolia, baseSepolia, base } from 'viem/chains';
-import { SessionVaultABI, FeeCollectorABI, getContractAddresses } from '@meap/core';
+import { SessionVaultABI, FeeCollectorABI, getContractAddresses } from '@arcenpay/sdk';
 
 const CHAIN_MAP: Record<number, any> = {
   11155111: sepolia,

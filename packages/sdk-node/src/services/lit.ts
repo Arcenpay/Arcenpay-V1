@@ -1,11 +1,11 @@
 // ============================================================
-//  @meap/node — Lit Protocol Access Control Integration
+//  @arcenpay/node — Lit Protocol Access Control Integration
 // ============================================================
 
 import { LIT_NETWORK } from '@lit-protocol/constants';
 import { decryptToString, encryptString } from '@lit-protocol/encryption';
 import { LitNodeClient } from '@lit-protocol/lit-node-client';
-import type { PlanTier } from '@meap/core';
+import type { PlanTier } from '@arcenpay/sdk';
 
 export interface LitAccessCondition {
   contractAddress: string;

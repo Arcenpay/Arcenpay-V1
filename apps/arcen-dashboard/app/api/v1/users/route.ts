@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
   const companyId = url.searchParams.get("companyId");
   const search = url.searchParams.get("search");
 
-  const users = await db.schematicUser.findMany({
+  const users = await db.arcenUser.findMany({
     where: {
       teamId,
       ...(companyId ? { companyId } : {}),
@@ -113,7 +113,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Verify company belongs to team
-  const company = await db.schematicCompany.findFirst({
+  const company = await db.arcenCompany.findFirst({
     where: { id: body.companyId, teamId },
     select: { id: true },
   });
@@ -130,7 +130,7 @@ export async function POST(req: NextRequest) {
   if (body.clerk_user_id) where.push({ teamId, clerkUserId: body.clerk_user_id });
 
   if (where.length > 0) {
-    const existing = await db.schematicUser.findFirst({ where: { OR: where } });
+    const existing = await db.arcenUser.findFirst({ where: { OR: where } });
     if (existing) {
       return NextResponse.json(
         { error: "User already exists", userId: existing.id },
@@ -139,7 +139,7 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const user = await db.schematicUser.create({
+  const user = await db.arcenUser.create({
     data: {
       teamId,
       companyId: body.companyId,

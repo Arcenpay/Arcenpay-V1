@@ -1,24 +1,24 @@
 // ============================================================
-//  Documentation — @meap/agent SDK Reference
+//  Documentation — @arcenpay/agent SDK Reference
 //  PRD Section 5.3: AI Agent SDK
 // ============================================================
 
 export default function AgentSDKPage() {
   return (
     <>
-      <h1>@meap/agent</h1>
+      <h1>@arcenpay/agent</h1>
       <p>Minimal SDK for AI agent runtimes. Drop-in <code>fetch()</code> replacement with automatic x402 payment negotiation.</p>
 
-      <pre><code>npm install @meap/agent</code></pre>
+      <pre><code>npm install @arcenpay/agent</code></pre>
 
       <div className="callout info">
         Designed for embedding in agent frameworks: LangChain, AutoGen, CrewAI, and custom runtimes.
       </div>
 
       <h2>Quick Start</h2>
-      <pre><code>{`import { MEAPAgent } from '@meap/agent';
+      <pre><code>{`import { ArcenPayAgent } from '@arcenpay/agent';
 
-const agent = new MEAPAgent({
+const agent = new ArcenPayAgent({
   privateKey: process.env.AGENT_PRIVATE_KEY!,
   rpcUrl: 'https://ethereum-sepolia-rpc.publicnode.com',
   chainId: 11155111,
@@ -70,16 +70,16 @@ const data = await response.json();`}</code></pre>
 // }`}</code></pre>
 
       <h2>LangChain Integration</h2>
-      <pre><code>{`import { MEAPAgent } from '@meap/agent';
+      <pre><code>{`import { ArcenPayAgent } from '@arcenpay/agent';
 
 // Use in a LangChain tool
-const meapAgent = new MEAPAgent({ ... });
+const arcenPayAgent = new ArcenPayAgent({ ... });
 
 const tool = {
   name: 'premium_api',
   description: 'Call a premium API with automatic payment',
   func: async (input: string) => {
-    const res = await meapAgent.fetch(
+    const res = await arcenPayAgent.fetch(
       \`https://api.example.com/query?q=\${input}\`
     );
     return await res.text();

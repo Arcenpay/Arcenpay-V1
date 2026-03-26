@@ -1,5 +1,5 @@
 // ============================================================
-//  @meap/node — Billing Automation Keeper
+//  @arcenpay/node — Billing Automation Keeper
 //  Polls for expired subscriptions and triggers automated
 //  renewal via ERC-7579 AutopayModule.execute()
 //  PRD MEAP-004 — Automated Renewal Execution
@@ -13,7 +13,7 @@ import {
     ERC7579AutopayModuleABI,
     PlanFactoryABI,
     getContractAddresses,
-} from "@meap/core";
+} from "@arcenpay/sdk";
 
 const CHAIN_MAP: Record<number, any> = {
     11155111: sepolia,

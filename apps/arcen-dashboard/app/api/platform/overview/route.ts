@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createPublicClient, http } from "viem";
-import { FeeCollectorABI, TOKENS, getContractAddresses } from "@meap/core";
+import { FeeCollectorABI, TOKENS, getContractAddresses } from "@arcenpay/sdk";
 import { db } from "@/lib/db";
 import { isErrorResponse, requirePermission } from "@/lib/api-auth";
 import { getGraphUrl, getRpcUrl } from "@/lib/config";
