@@ -99,7 +99,7 @@ export async function GET(
   let entitlements: Record<string, unknown>[] = [];
 
   if (companyId) {
-    const company = await db.schematicCompany.findFirst({
+    const company = await db.arcenCompany.findFirst({
       where: { id: companyId, teamId },
       select: {
         id: true,

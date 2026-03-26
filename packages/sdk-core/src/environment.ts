@@ -1,5 +1,5 @@
 // ============================================================
-//  @meap/core — Shared Environment Manifest
+//  @arcenpay/sdk — Shared Environment Manifest
 //  Single source of truth for chain contracts + service URLs.
 // ============================================================
 
@@ -40,25 +40,31 @@ type ServiceKey = keyof ChainServiceEndpoints;
 
 const SERVICE_ENV_KEYS: Record<ServiceKey, (chainId: number) => string[]> = {
   rpcUrl: (chainId) => [
+    `ARCENPAY_RPC_URL_${chainId}`,
     `MEAP_RPC_URL_${chainId}`,
     `RPC_URL_${chainId}`,
     `NEXT_PUBLIC_RPC_URL_${chainId}`,
+    "ARCENPAY_RPC_URL",
     "MEAP_RPC_URL",
     "RPC_URL",
     "NEXT_PUBLIC_RPC_URL",
   ],
   subgraphUrl: (chainId) => [
+    `ARCENPAY_SUBGRAPH_URL_${chainId}`,
     `MEAP_SUBGRAPH_URL_${chainId}`,
     `NEXT_PUBLIC_GRAPH_URL_${chainId}`,
+    "ARCENPAY_SUBGRAPH_URL",
     "MEAP_SUBGRAPH_URL",
     "NEXT_PUBLIC_GRAPH_URL",
   ],
   facilitatorUrl: (chainId) => [
+    `ARCENPAY_FACILITATOR_URL_${chainId}`,
     `MEAP_FACILITATOR_URL_${chainId}`,
     `FACILITATOR_BASE_URL_${chainId}`,
     `FACILITATOR_URL_${chainId}`,
     `NEXT_PUBLIC_FACILITATOR_BASE_URL_${chainId}`,
     `NEXT_PUBLIC_FACILITATOR_URL_${chainId}`,
+    "ARCENPAY_FACILITATOR_URL",
     "MEAP_FACILITATOR_URL",
     "FACILITATOR_BASE_URL",
     "FACILITATOR_URL",

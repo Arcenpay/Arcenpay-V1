@@ -1,5 +1,5 @@
 {
-  "name": "@meap/dashboard",
+  "name": "@arcenpay/dashboard",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -22,8 +22,8 @@
     "@apollo/client": "^3.14.0",
     "@clerk/nextjs": "^7.0.1",
     "@hookform/resolvers": "^3.10.0",
-    "@meap/core": "*",
-    "@meap/react": "*",
+    "@arcenpay/sdk": "*",
+    "@arcenpay/react": "*",
     "@prisma/adapter-pg": "^7.4.2",
     "@prisma/client": "^7.4.2",
     "@radix-ui/react-accordion": "1.2.2",

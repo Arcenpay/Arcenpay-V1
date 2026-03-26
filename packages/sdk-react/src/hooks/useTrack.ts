@@ -10,7 +10,7 @@
  */
 
 import { useCallback, useRef } from 'react';
-import type { SchematicCompanyKeys, SchematicUserKeys } from '@meap/core';
+import type { ArcenCompanyKeys, ArcenUserKeys } from '@meap/core';
 
 export interface TrackOptions {
   baseUrl?: string;
@@ -19,8 +19,8 @@ export interface TrackOptions {
 
 export interface TrackEventInput {
   name: string;
-  company: SchematicCompanyKeys;
-  user?: SchematicUserKeys;
+  company: ArcenCompanyKeys;
+  user?: ArcenUserKeys;
   traits?: Record<string, unknown>;
 }
 

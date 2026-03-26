@@ -17,7 +17,7 @@ export async function GET(_req: NextRequest) {
 
   const { team } = ctx;
 
-  const keys = await db.schematicApiKey.findMany({
+  const keys = await db.arcenApiKey.findMany({
     where: { teamId: team.teamId },
     orderBy: { createdAt: "desc" },
     select: {
@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
 
   const { raw, hash, prefix } = generateApiKey();
 
-  const apiKey = await db.schematicApiKey.create({
+  const apiKey = await db.arcenApiKey.create({
     data: {
       teamId: team.teamId,
       name: body.name.trim(),
@@ -89,7 +89,7 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: "id query param required" }, { status: 400 });
   }
 
-  const key = await db.schematicApiKey.findFirst({
+  const key = await db.arcenApiKey.findFirst({
     where: { id: keyId, teamId: team.teamId },
   });
 
@@ -97,7 +97,7 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: "API key not found" }, { status: 404 });
   }
 
-  await db.schematicApiKey.delete({ where: { id: keyId } });
+  await db.arcenApiKey.delete({ where: { id: keyId } });
 
   return NextResponse.json({ ok: true });
 }

@@ -1,5 +1,5 @@
 // ============================================================
-//  @meap/node — Email Notification Service
+//  @arcenpay/node — Email Notification Service
 //  Transactional email templates using Resend
 //  PRD §9.2 — Email Notifications
 // ============================================================

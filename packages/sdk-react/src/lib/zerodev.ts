@@ -21,7 +21,7 @@ import { sepolia, baseSepolia, base } from "viem/chains";
 import {
     getContractAddresses,
     ERC7579AutopayModuleABI,
-} from "@meap/core";
+} from "@arcenpay/sdk";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const CHAIN_MAP: Record<number, any> = {

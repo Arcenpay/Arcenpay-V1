@@ -1,9 +1,10 @@
 // ============================================================
-//  @meap/react — Main Entry Point
+//  @arcenpay/react — Main Entry Point
 // ============================================================
 
 // Provider
-export { MEAPProvider, useMEAP } from './providers/MEAPProvider';
+export { MEAPProvider, useMEAP, ArcenPayProvider, useArcenPay } from './providers/MEAPProvider';
+export type { MEAPContextValue, MEAPProviderProps, ArcenPayContextValue, ArcenPayProviderProps } from './providers/MEAPProvider';
 
 // Components
 export { PricingTable } from './components/PricingTable';
@@ -27,15 +28,8 @@ export { TemplateRenderer } from './components/TemplateRenderer';
 export type { TemplateRendererProps, TemplateBlock } from './components/TemplateRenderer';
 export { InvoiceList } from './components/InvoiceList';
 export type { InvoiceListProps } from './components/InvoiceList';
-
-// Web3 SchematicHQ Protocol — Embeddable component
 export { ArcenEmbed } from './components/ArcenEmbed';
-
-// Web3 SchematicHQ Protocol — Hooks
-export { useFlag, useFlags } from './hooks/useFlag';
-export type { UseFlagOptions } from './hooks/useFlag';
-export { useTrack } from './hooks/useTrack';
-export type { TrackEventInput, TrackOptions } from './hooks/useTrack';
+export type { ArcenEmbedProps } from './components/ArcenEmbed';
 
 // Hooks
 export { useEntitlement } from './hooks/useEntitlement';

@@ -34,7 +34,7 @@ export default function QuickstartPage() {
         <div className="docs-callout info">
           <span className="docs-callout-icon">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+              <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
             </svg>
           </span>
           <div>
@@ -191,13 +191,13 @@ REGISTRY_ADDRESS=0xA0Cf798816D4b9b9866b5704098F9C09F279c2C4`} />
         <div className="docs-callout tip">
           <span className="docs-callout-icon">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="m9 12 2 2 4-4"/>
+              <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" /><path d="m9 12 2 2 4-4" />
             </svg>
           </span>
           <div>
-            <strong>Done!</strong> Your app now has on-chain subscription billing. 
-            Next, explore <a href="/core-concepts/plans" style={{ color: 'var(--accent)' }}>Plans</a>, 
-            {' '}<a href="/core-concepts/feature-flags" style={{ color: 'var(--accent)' }}>Feature Flags</a>, 
+            <strong>Done!</strong> Your app now has on-chain subscription billing.
+            Next, explore <a href="/core-concepts/plans" style={{ color: 'var(--accent)' }}>Plans</a>,
+            {' '}<a href="/core-concepts/feature-flags" style={{ color: 'var(--accent)' }}>Feature Flags</a>,
             {' '}or the full <a href="/sdk-reference" style={{ color: 'var(--accent)' }}>SDK Reference</a>.
           </div>
         </div>

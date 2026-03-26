@@ -1,5 +1,5 @@
 // ============================================================
-//  @meap/core — Types
+//  @arcenpay/sdk — Types
 //  Protocol-wide TypeScript type definitions
 // ============================================================
 
@@ -265,7 +265,7 @@ export interface ContractAddresses {
   sessionVault: string;
   zkUsageVerifier: string;
   mirrorRegistry?: string;
-  /** Optional ERC-4626 yield vault — set MEAP_CONTRACT_<chainId>_yieldSessionVault to enable */
+  /** Optional ERC-4626 yield vault — set ARCENPAY_CONTRACT_<chainId>_yieldSessionVault to enable */
   yieldSessionVault?: string;
 }
 
@@ -315,123 +315,44 @@ export interface UsageReport {
   settled: boolean;
 }
 
-// ─── Web3 SchematicHQ Protocol Types ──────────────────────────────────────────
+// --- ArcenEmbed Component Render Data ---
 
-/** Multi-key identity for a company (Web3-native + Web2 compatible) */
-export interface SchematicCompanyKeys {
-  id?: string;       // caller's internal company UUID
-  wallet?: string;   // wallet address (checksummed or lowercase)
-  email?: string;
-}
-
-/** Multi-key identity for a user */
-export interface SchematicUserKeys {
-  id?: string;             // caller's internal user UUID
-  clerkUserId?: string;    // Clerk authentication user ID
-  wallet?: string;         // wallet address
-}
-
-/** Result of a flag check evaluation */
-export interface FlagCheckResult {
-  flag: string;
-  value: boolean;
-  reason: string;
-  companyId?: string;
-  userId?: string;
-}
-
-/** Track event payload (usage reporting) */
-export interface TrackEventPayload {
-  event_type: 'track';
+export interface ComponentEntitlement {
+  featureKey: string;
   name: string;
-  company: SchematicCompanyKeys;
-  user?: SchematicUserKeys;
-  traits?: Record<string, unknown>;
+  value: boolean | string | number;
 }
 
-/** Identify event payload (company/user upsert) */
-export interface IdentifyEventPayload {
-  event_type: 'identify';
-  company?: SchematicCompanyKeys & { name?: string };
-  user?: SchematicUserKeys & { name?: string; email?: string };
-  traits?: Record<string, unknown>;
+export interface ComponentUsageItem {
+  featureKey: string;
+  name: string;
+  used: number;
+  limit?: number;
+  unitSingular: string | null;
+  unitPlural?: string | null;
 }
 
-/** A SchematicHQ-style company with Web3 identity */
-export interface SchematicCompany {
+export interface ComponentPlanSummary {
   id: string;
   name: string;
-  walletAddress: string | null;
-  email: string | null;
-  externalId: string | null;
-  traits: Record<string, unknown>;
-  activePlanId: string | null;
-  logoUrl: string | null;
-  createdAt: string;
-  lastSeenAt: string;
+  tier: string;
+  price: string;
+  billingInterval: number;
 }
-
-/** A SchematicHQ-style user */
-export interface SchematicUser {
-  id: string;
-  name: string | null;
-  email: string | null;
-  walletAddress: string | null;
-  clerkUserId: string | null;
-  externalId: string | null;
-  companyId: string;
-  traits: Record<string, unknown>;
-  createdAt: string;
-  lastSeenAt: string;
-}
-
-/** A verified zkTLS proof from Reclaim Protocol */
-export interface ZkTlsProof {
-  id: string;
-  providerId: string;
-  providerName: string;
-  claims: Record<string, string>;
-  verifiedAt: string;
-  expiresAt: string | null;
-  companyId: string | null;
-  userId: string | null;
-}
-
-/** Embed access token response */
-export interface EmbedAccessTokenResponse {
-  token: string;
-  expires_at: string;
-  company_id: string | null;
-  user_id: string | null;
-}
-
-/** Component element types for ArcenEmbed */
-export type ComponentElementType =
-  | 'planManager'
-  | 'includedFeatures'
-  | 'meteredFeatures'
-  | 'plansTable'
-  | 'invoices'
-  | 'paymentMethod';
 
 export interface ComponentElement {
-  type: ComponentElementType;
+  type: 'planManager' | 'meteredFeatures' | 'includedFeatures' | 'plansTable' | string;
   config?: Record<string, unknown>;
 }
 
 export interface ComponentDesign {
-  primaryColor?: string;
-  secondaryColor?: string;
-  backgroundColor?: string;
-  borderRadius?: number;
   fontFamily?: string;
   fontSize?: number;
   fontColor?: string;
-  fontWeight?: 'regular' | 'medium' | 'bold';
-  columns?: 1 | 2 | 3;
+  backgroundColor?: string;
+  borderRadius?: number;
 }
 
-/** Render data returned by /api/v1/components/:id/render */
 export interface ComponentRenderData {
   component: {
     id: string;
@@ -439,12 +360,10 @@ export interface ComponentRenderData {
     elements: ComponentElement[];
     design: ComponentDesign;
   };
-  company: { id: string; name: string; walletAddress: string | null } | null;
-  activePlan: { id: string; name: string; tier: string; price: string } | null;
-  plans: Array<{ id: string; name: string; tier: string; price: string; billingInterval: number }>;
-  entitlements: Array<{ featureKey: string; name: string; value: boolean }>;
-  usage: Array<{ featureKey: string; name: string; used: number; unitSingular: string | null }>;
-  userId: string | null;
+  activePlan: ComponentPlanSummary | null;
+  entitlements: ComponentEntitlement[];
+  usage: ComponentUsageItem[];
+  plans: ComponentPlanSummary[];
 }
 
 // --- SDK Config ---
@@ -484,3 +403,85 @@ export interface MEAPConfig {
    */
   tierFeatureFallback?: Record<string, Record<string, boolean | string | number>>;
 }
+
+/** @alias MEAPConfig — ArcenPay-branded alias */
+export type ArcenPayConfig = MEAPConfig;
+
+// --- ArcenPay Company/User Key Types ---
+
+/** Keys used to identify a company in API calls */
+export interface ArcenCompanyKeys {
+  /** Caller's own internal company ID (maps to externalId) */
+  id?: string;
+  /** Wallet address (checksummed or lowercase) */
+  wallet?: string;
+  /** Company email address */
+  email?: string;
+}
+
+/** Keys used to identify a user in API calls */
+export interface ArcenUserKeys {
+  /** Caller's own internal user ID (maps to externalId) */
+  id?: string;
+  /** Clerk user ID */
+  clerkUserId?: string;
+  /** Wallet address */
+  wallet?: string;
+}
+
+/** A company entity in the entitlement system */
+export interface ArcenCompany {
+  id: string;
+  teamId: string;
+  name: string;
+  walletAddress?: string | null;
+  email?: string | null;
+  externalId?: string | null;
+  logoUrl?: string | null;
+  traits: Record<string, unknown>;
+  activePlanId?: string | null;
+  activeAddOnIds: string[];
+  createdAt: string;
+  lastSeenAt: string;
+}
+
+/** A user entity linked to a company */
+export interface ArcenUser {
+  id: string;
+  teamId: string;
+  companyId: string;
+  name?: string | null;
+  email?: string | null;
+  walletAddress?: string | null;
+  clerkUserId?: string | null;
+  externalId?: string | null;
+  traits: Record<string, unknown>;
+  createdAt: string;
+  lastSeenAt: string;
+}
+
+/** Result of a feature flag check */
+export interface FlagCheckResult {
+  flag: string;
+  value: boolean;
+  reason: string;
+  companyId?: string;
+  userId?: string;
+}
+
+/** Response from the access token creation endpoint */
+export interface EmbedAccessTokenResponse {
+  token: string;
+  expiresAt: string;
+}
+
+// --- Backward compatibility aliases ---
+
+/** @deprecated Use ArcenCompanyKeys instead */
+export type SchematicCompanyKeys = ArcenCompanyKeys;
+/** @deprecated Use ArcenUserKeys instead */
+export type SchematicUserKeys = ArcenUserKeys;
+/** @deprecated Use ArcenCompany instead */
+export type SchematicCompany = ArcenCompany;
+/** @deprecated Use ArcenUser instead */
+export type SchematicUser = ArcenUser;

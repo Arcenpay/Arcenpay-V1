@@ -1,5 +1,5 @@
 // ============================================================
-//  @meap/node — Chainlink CCIP Transport Adapter
+//  @arcenpay/node — Chainlink CCIP Transport Adapter
 //  Fallback cross-chain message transport via Chainlink CCIP
 //  PRD §7.2 — Cross-Chain Transport Layer (Fallback)
 // ============================================================

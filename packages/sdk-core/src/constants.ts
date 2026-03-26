@@ -1,5 +1,5 @@
 // ============================================================
-//  @meap/core — Protocol Constants
+//  @arcenpay/sdk — Protocol Constants
 // ============================================================
 
 /** Subscription protocol fee: 0.5% (50 basis points) */

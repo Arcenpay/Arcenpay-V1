@@ -17,7 +17,7 @@ import {
   SessionVaultABI,
   MirrorRegistryABI,
   getContractAddresses,
-} from "@meap/core";
+} from "@arcenpay/sdk";
 import { getRpcUrl } from "@/lib/config";
 
 // ── Internal helpers ──────────────────────────────────────────

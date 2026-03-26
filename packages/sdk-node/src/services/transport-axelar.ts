@@ -1,5 +1,5 @@
 // ============================================================
-//  @meap/node — Axelar GMP Transport Adapter
+//  @arcenpay/node — Axelar GMP Transport Adapter
 //  Primary cross-chain message transport via Axelar Network
 //  PRD §7.2 — Cross-Chain Transport Layer
 // ============================================================

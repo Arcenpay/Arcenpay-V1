@@ -10,7 +10,6 @@ import {
   Layers,
   Users,
   ReceiptText,
-  Cpu,
   Settings,
   ChevronLeft,
   ChevronRight,
@@ -23,9 +22,9 @@ import {
   Coins,
   SlidersHorizontal,
   CreditCard,
-  BookOpen,
   Activity,
   Zap,
+  Bot,
 } from "lucide-react";
 import { useEnvironment } from "@/contexts/environment-context";
 
@@ -56,27 +55,29 @@ const navGroups: NavGroup[] = [
   {
     label: "Manage",
     items: [
-      { id: "invoices", label: "Invoices", icon: ReceiptText },
       { id: "companies", label: "Companies", icon: Building2 },
-      { id: "feature-flags", label: "Feature Flags", icon: Zap },
+      { id: "subscribers", label: "Users", icon: Users },
+      { id: "features", label: "Features", icon: Flag },
+      { id: "feature-flags", label: "Flags", icon: Zap },
     ],
   },
   {
-    label: "Customers",
-    items: [{ id: "subscribers", label: "Subscribers", icon: Users }],
+    label: "Connections",
+    items: [
+      { id: "events-stream", label: "Events", icon: Activity },
+      { id: "components", label: "Components", icon: LayoutTemplate },
+    ],
   },
   {
-    label: "Developer",
+    label: "Agent",
     items: [
-      { id: "sessions", label: "Sessions", icon: Cpu },
-      { id: "features", label: "Entitlements", icon: Flag },
-      { id: "components", label: "Components", icon: LayoutTemplate },
-      { id: "events-stream", label: "Events", icon: Activity },
+      { id: "agent", label: "Agent", icon: Bot },
     ],
   },
   {
     label: "Admin",
     items: [
+      { id: "invoices", label: "Invoices", icon: ReceiptText },
       { id: "billing", label: "Billing & Plan", icon: CreditCard },
       { id: "audit-log", label: "Audit Log", icon: ClipboardList },
       { id: "settings", label: "Settings", icon: Settings },

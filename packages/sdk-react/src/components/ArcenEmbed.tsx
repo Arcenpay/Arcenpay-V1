@@ -21,9 +21,15 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import type { ComponentRenderData } from "@meap/core";
+import type {
+  ComponentRenderData,
+  ComponentElement,
+  ComponentUsageItem,
+  ComponentEntitlement,
+  ComponentPlanSummary,
+} from "@arcenpay/sdk";
 
-interface ArcenEmbedProps {
+export interface ArcenEmbedProps {
   accessToken: string;
   componentId: string;
   baseUrl?: string;
@@ -225,7 +231,7 @@ export function ArcenEmbed({
 
   return (
     <div className={className} style={containerStyle}>
-      {elements.map((element, i) => {
+      {elements.map((element: ComponentElement, i: number) => {
         switch (element.type) {
           case "planManager":
             return (
@@ -280,7 +286,7 @@ export function ArcenEmbed({
                     No metered features
                   </div>
                 ) : (
-                  data.usage.map((u) => (
+                  data.usage.map((u: ComponentUsageItem) => (
                     <MeteredFeatureBar
                       key={u.featureKey}
                       name={u.name}
@@ -308,8 +314,8 @@ export function ArcenEmbed({
                   style={{ display: "flex", flexDirection: "column", gap: 8 }}
                 >
                   {data.entitlements
-                    .filter((e) => e.value)
-                    .map((e) => (
+                    .filter((e: ComponentEntitlement) => e.value)
+                    .map((e: ComponentEntitlement) => (
                       <div
                         key={e.featureKey}
                         style={{
@@ -340,7 +346,7 @@ export function ArcenEmbed({
                   Plans
                 </h3>
                 <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-                  {data.plans.map((plan) => (
+                  {data.plans.map((plan: ComponentPlanSummary) => (
                     <PlanCard
                       key={plan.id}
                       plan={plan}

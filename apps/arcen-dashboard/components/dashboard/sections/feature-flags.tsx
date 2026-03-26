@@ -3,9 +3,11 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   Flag, Plus, RefreshCw, Trash2, GripVertical, Check, X,
-  Zap, Shield, ChevronRight, Settings2, Info,
+  Zap, Shield, ChevronRight, Settings2, Info, ArrowLeft,
+  MoreHorizontal, Copy, Building2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter,
@@ -495,14 +497,231 @@ function TypeBadge({ flag }: { flag: FeatureFlag }) {
   return <Badge variant="outline" className="text-xs">Boolean</Badge>;
 }
 
+// ─── Flag Detail View ──────────────────────────────────────────────────────────
+
+function FlagDetailView({
+  flag,
+  onBack,
+  onSaved,
+}: {
+  flag: FeatureFlag;
+  onBack: () => void;
+  onSaved: () => void;
+}) {
+  const [detailTab, setDetailTab] = useState<"rules" | "companies">("rules");
+  const [rules, setRules] = useState<(Partial<FlagRule> & { conditions: Partial<FlagCondition>[] })[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [copiedKey, setCopiedKey] = useState(false);
+
+  // Initialize rules from flag
+  useState(() => {
+    setRules(flag.rules.map((r) => ({ ...r })));
+  });
+
+  // Re-sync when flag changes
+  useEffect(() => {
+    setRules(flag.rules.map((r) => ({ ...r })));
+  }, [flag]);
+
+  const saveRules = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/v1/feature-flags/${flag.id}/rules`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rules: rules.map((r, i) => ({ ...r, priority: i })) }),
+      });
+      if (res.ok) {
+        setSaved(true);
+        setTimeout(() => { setSaved(false); onSaved(); }, 1500);
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  function copyKey() {
+    navigator.clipboard.writeText(flag.featureKey);
+    setCopiedKey(true);
+    setTimeout(() => setCopiedKey(false), 2000);
+  }
+
+  const DETAIL_TABS = ["rules", "companies"] as const;
+
+  return (
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+      {/* Breadcrumb */}
+      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+        <button
+          onClick={onBack}
+          className="flex items-center gap-1 hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          FEATURE FLAGS
+        </button>
+        <ChevronRight className="w-3.5 h-3.5" />
+        <span className="text-foreground font-medium">{flag.name}</span>
+      </div>
+
+      {/* Flag header card */}
+      <div className="bg-card border border-border rounded-xl p-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          {/* Left: icon + name + key */}
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shrink-0">
+              <Zap className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-foreground leading-tight">{flag.name}</h2>
+              <div className="flex items-center gap-2 mt-0.5">
+                <code className="text-xs font-mono text-muted-foreground">{flag.featureKey}</code>
+                <button onClick={copyKey} className="text-muted-foreground hover:text-foreground transition-colors">
+                  {copiedKey ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Right: type badge + actions */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <TypeBadge flag={flag} />
+            <Badge
+              variant={flag.defaultValue ? "default" : "outline"}
+              className={`text-xs ${flag.defaultValue ? "bg-emerald-500/15 text-emerald-600 border-emerald-500/30 dark:text-emerald-400" : ""}`}
+            >
+              Default: {flag.defaultValue ? "True" : "False"}
+            </Badge>
+            <div className="h-6 w-px bg-border hidden sm:block" />
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={saveRules} disabled={saving} className="gap-1.5">
+                {saving ? (
+                  <><RefreshCw className="w-3.5 h-3.5 animate-spin" />Saving…</>
+                ) : saved ? (
+                  <><Check className="w-3.5 h-3.5 text-green-500" />Saved</>
+                ) : (
+                  "Save Rules"
+                )}
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="icon" className="h-9 w-9">
+                    <MoreHorizontal className="w-4 h-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={copyKey}>
+                    {copiedKey ? (
+                      <><Check className="w-3.5 h-3.5 mr-2 text-green-500" />Copied!</>
+                    ) : (
+                      <><Copy className="w-3.5 h-3.5 mr-2" />Copy Feature Key</>
+                    )}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Description */}
+      {flag.description && (
+        <p className="text-sm text-muted-foreground -mt-2">{flag.description}</p>
+      )}
+
+      {/* Detail tabs */}
+      <div className="border-b border-border">
+        <div className="flex gap-0">
+          {DETAIL_TABS.map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setDetailTab(tab)}
+              className={`px-4 py-3 text-sm font-medium capitalize border-b-2 transition-all -mb-px ${
+                detailTab === tab
+                  ? "border-accent text-foreground"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {tab}
+              {tab === "rules" && rules.length > 0 && (
+                <span className="ml-2 text-xs bg-secondary rounded-full px-1.5 py-0.5">
+                  {rules.length}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Rules tab */}
+      {detailTab === "rules" && (
+        <div className="space-y-3">
+          {rules.map((rule, i) => (
+            <RuleEditor
+              key={i}
+              rule={rule}
+              index={i}
+              onChange={(updated) => {
+                const next = [...rules];
+                next[i] = updated;
+                setRules(next);
+              }}
+              onDelete={() => setRules(rules.filter((_, idx) => idx !== i))}
+            />
+          ))}
+
+          {/* Default catch-all */}
+          <div className="flex items-center justify-between px-4 py-3 rounded-xl border border-dashed border-border/60 bg-muted/20">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Default (ELSE)</span>
+              <span className="text-xs text-muted-foreground">— no rules matched</span>
+            </div>
+            <Badge variant={flag.defaultValue ? "default" : "outline"} className="text-xs">
+              {flag.defaultValue ? "True" : "False"}
+            </Badge>
+          </div>
+
+          <button
+            onClick={() => setRules([...rules, { priority: rules.length, value: true, conditions: [] }])}
+            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors px-4 py-3 rounded-xl border border-dashed border-border/50 w-full justify-center hover:bg-muted/30 hover:border-border"
+          >
+            <Plus className="h-4 w-4" /> Add Rule
+          </button>
+        </div>
+      )}
+
+      {/* Companies tab */}
+      {detailTab === "companies" && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-base font-semibold">Company Overrides</h3>
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {}}>
+              <Plus className="w-3.5 h-3.5" />
+              Add override
+            </Button>
+          </div>
+          <div className="border border-dashed border-border rounded-xl py-16 flex flex-col items-center justify-center gap-2">
+            <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center mb-2">
+              <Building2 className="w-6 h-6 text-muted-foreground/50" />
+            </div>
+            <p className="text-sm font-medium text-foreground">No company overrides</p>
+            <p className="text-xs text-muted-foreground max-w-xs text-center">
+              Companies with manual flag overrides will appear here, regardless of rule evaluation.
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export function FeatureFlagsSection() {
   const [flags, setFlags] = useState<FeatureFlag[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
-  const [detailFlag, setDetailFlag] = useState<FeatureFlag | null>(null);
-  const [detailOpen, setDetailOpen] = useState(false);
+  const [selectedFlag, setSelectedFlag] = useState<FeatureFlag | null>(null);
 
   const fetchFlags = useCallback(async () => {
     setLoading(true);
@@ -519,10 +738,19 @@ export function FeatureFlagsSection() {
 
   useEffect(() => { fetchFlags(); }, [fetchFlags]);
 
-  const openDetail = (flag: FeatureFlag) => {
-    setDetailFlag(flag);
-    setDetailOpen(true);
-  };
+  // Flag detail view (inline navigation)
+  if (selectedFlag) {
+    return (
+      <FlagDetailView
+        flag={selectedFlag}
+        onBack={() => setSelectedFlag(null)}
+        onSaved={() => {
+          fetchFlags();
+          // Keep the flag selected but refresh its data
+        }}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -581,7 +809,7 @@ export function FeatureFlagsSection() {
               {flags.map((f) => (
                 <tr
                   key={f.id}
-                  onClick={() => openDetail(f)}
+                  onClick={() => setSelectedFlag(f)}
                   className="hover:bg-muted/30 cursor-pointer transition-colors group"
                 >
                   <td className="px-4 py-3">
@@ -616,18 +844,11 @@ export function FeatureFlagsSection() {
         </div>
       )}
 
-      {/* Sheets */}
+      {/* Create flag sheet */}
       <CreateFlagSheet
         open={showCreate}
         onOpenChange={setShowCreate}
         onCreated={fetchFlags}
-      />
-
-      <FlagDetailSheet
-        flag={detailFlag}
-        open={detailOpen}
-        onClose={() => { setDetailOpen(false); setDetailFlag(null); }}
-        onSaved={fetchFlags}
       />
     </div>
   );

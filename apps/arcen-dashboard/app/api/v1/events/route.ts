@@ -2,7 +2,7 @@
  * GET  /api/v1/events   — List events (dashboard session auth for UI)
  * POST /api/v1/events   — Ingest event (API key auth for external callers)
  *
- * SchematicHQ-compatible event ingestion.
+ * ArcenPay-compatible event ingestion.
  * Supports "track" (usage) and "identify" (company/user upsert) events.
  *
  * Authorization: Bearer api_xxx
@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
   const eventType = url.searchParams.get("eventType");
   const companyId = url.searchParams.get("companyId");
 
-  const events = await db.schematicEvent.findMany({
+  const events = await db.arcenEvent.findMany({
     where: {
       teamId: team.teamId,
       ...(eventType ? { eventType } : {}),
@@ -92,7 +92,7 @@ async function upsertCompany(
   if (walletAddress) where.push({ teamId, walletAddress });
   if (input.email) where.push({ teamId, email: input.email });
 
-  const existing = await db.schematicCompany.findFirst({
+  const existing = await db.arcenCompany.findFirst({
     where: { OR: where },
     select: { id: true, traits: true },
   });
@@ -102,7 +102,7 @@ async function upsertCompany(
       ...(existing.traits as Record<string, unknown>),
       ...(traits ?? {}),
     };
-    await db.schematicCompany.update({
+    await db.arcenCompany.update({
       where: { id: existing.id },
       data: { traits: mergedTraits as unknown as Prisma.InputJsonValue, lastSeenAt: new Date() },
     });
@@ -110,7 +110,7 @@ async function upsertCompany(
   }
 
   // Create new company
-  const company = await db.schematicCompany.create({
+  const company = await db.arcenCompany.create({
     data: {
       teamId,
       name: input.name ?? input.email ?? input.wallet ?? input.id ?? "Unknown",
@@ -140,7 +140,7 @@ async function upsertUser(
   if (input.clerk_user_id) where.push({ teamId, clerkUserId: input.clerk_user_id });
   if (walletAddress) where.push({ teamId, walletAddress });
 
-  const existing = await db.schematicUser.findFirst({
+  const existing = await db.arcenUser.findFirst({
     where: { OR: where },
     select: { id: true, traits: true },
   });
@@ -150,7 +150,7 @@ async function upsertUser(
       ...(existing.traits as Record<string, unknown>),
       ...(traits ?? {}),
     };
-    await db.schematicUser.update({
+    await db.arcenUser.update({
       where: { id: existing.id },
       data: {
         traits: mergedTraits as unknown as Prisma.InputJsonValue,
@@ -162,7 +162,7 @@ async function upsertUser(
     return existing.id;
   }
 
-  const user = await db.schematicUser.create({
+  const user = await db.arcenUser.create({
     data: {
       teamId,
       companyId,
@@ -289,7 +289,7 @@ export async function POST(req: NextRequest) {
   const userId =
     b.user && companyId ? await upsertUser(teamId, companyId, b.user) : null;
 
-  await db.schematicEvent.create({
+  await db.arcenEvent.create({
     data: {
       teamId,
       eventType: "track",

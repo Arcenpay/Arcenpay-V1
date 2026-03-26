@@ -2109,7 +2109,15 @@ function PlansTable({
 
 // ─── Add-Ons Table ─────────────────────────────────────────────────────────────
 
-function AddOnsTable({ env, refresh }: { env: EnvMode; refresh: number }) {
+function AddOnsTable({
+  env,
+  refresh,
+  onSelect,
+}: {
+  env: EnvMode;
+  refresh: number;
+  onSelect?: (addon: CatalogAddOn) => void;
+}) {
   const { address } = useAccount();
 
   // ── Entitlements types ────────────────────────────────────────────────────
@@ -2497,6 +2505,11 @@ function AddOnsTable({ env, refresh }: { env: EnvMode; refresh: number }) {
               return (
                 <TableRow
                   key={addon.id}
+                  className="cursor-pointer hover:bg-secondary/20 transition-colors"
+                  onClick={(e) => {
+                    if ((e.target as HTMLElement).closest("button") || (e.target as HTMLElement).closest("[role='menuitem']")) return;
+                    onSelect?.(addon);
+                  }}
                 >
                   <TableCell className="font-medium">{addon.name}</TableCell>
                   <TableCell className="font-mono text-xs text-muted-foreground">
@@ -3661,9 +3674,25 @@ function ConfigurationTab() {
 export function CatalogAddOnsSection() {
   const { envMode } = useEnvironment();
   const [refresh, setRefresh] = useState(0);
+  const [selectedAddOn, setSelectedAddOn] = useState<CatalogAddOn | null>(null);
+
   function tr() {
     setRefresh((n) => n + 1);
   }
+
+  if (selectedAddOn) {
+    return (
+      <AddOnDetailView
+        addon={selectedAddOn}
+        onBack={() => setSelectedAddOn(null)}
+        onUpdated={() => {
+          tr();
+          setSelectedAddOn(null);
+        }}
+      />
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -3681,7 +3710,7 @@ export function CatalogAddOnsSection() {
           <CreateAddOnDialog env={envMode} onCreated={tr} />
         </div>
       </div>
-      <AddOnsTable env={envMode} refresh={refresh} />
+      <AddOnsTable env={envMode} refresh={refresh} onSelect={setSelectedAddOn} />
     </div>
   );
 }
@@ -3689,9 +3718,25 @@ export function CatalogAddOnsSection() {
 export function CatalogCreditsSection() {
   const { envMode } = useEnvironment();
   const [refresh, setRefresh] = useState(0);
+  const [selectedCredit, setSelectedCredit] = useState<CatalogCreditType | null>(null);
+
   function tr() {
     setRefresh((n) => n + 1);
   }
+
+  if (selectedCredit) {
+    return (
+      <CreditDetailView
+        credit={selectedCredit}
+        onBack={() => setSelectedCredit(null)}
+        onUpdated={() => {
+          tr();
+          setSelectedCredit(null);
+        }}
+      />
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -3708,7 +3753,7 @@ export function CatalogCreditsSection() {
           <CreateCreditTypeDialog env={envMode} onCreated={tr} />
         </div>
       </div>
-      <CreditTypesTable env={envMode} refresh={refresh} />
+      <CreditTypesTable env={envMode} refresh={refresh} onSelect={setSelectedCredit} />
     </div>
   );
 }
@@ -4638,7 +4683,7 @@ function PlanDetailView({
           <ArrowLeft className="w-3.5 h-3.5" />
           PLANS
         </button>
-        <span>/</span>
+        <ChevronRight className="w-3.5 h-3.5" />
         <span className="text-foreground font-medium uppercase">
           {plan.name}
         </span>
@@ -4649,52 +4694,39 @@ function PlanDetailView({
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           {/* Left: icon + name + meta */}
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-xl bg-linear-to-br from-accent/30 to-accent/10 border border-border flex items-center justify-center text-2xl font-bold text-accent shrink-0">
-              {plan.name.charAt(0).toUpperCase()}
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-violet-500 to-blue-600 flex items-center justify-center shrink-0">
+              <Package className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-foreground leading-tight">
+              <h2 className="text-2xl font-bold text-foreground leading-tight">
                 {plan.name}
               </h2>
               <p className="text-xs text-muted-foreground mt-0.5">
                 Last modified {timeAgo(plan.updatedAt)}
               </p>
-              {plan.description && (
-                <p className="text-sm text-muted-foreground mt-1 max-w-md">
-                  {plan.description}
-                </p>
-              )}
             </div>
           </div>
 
-          {/* Right: stats + actions */}
-          <div className="flex items-center gap-6 flex-wrap">
-            {/* Type */}
-            <div className="text-center min-w-[60px]">
-              <p className="text-xs text-muted-foreground mb-1">Type</p>
-              <div className="flex items-center gap-1 text-sm font-medium">
-                <Package className="w-3.5 h-3.5 text-muted-foreground" />
-                Plan
-              </div>
-            </div>
-            {/* Price */}
-            <div className="text-center min-w-[70px]">
-              <p className="text-xs text-muted-foreground mb-1">Price</p>
-              <p className="text-sm font-semibold">
-                {isFree ? (
-                  <span className="text-green-500">Free</span>
-                ) : (
-                  planPriceLabel(plan)
-                )}
-              </p>
-            </div>
-            {/* Status */}
-            <div className="text-center min-w-[70px]">
-              <p className="text-xs text-muted-foreground mb-1">Status</p>
-              <StatusBadge status={plan.status} />
-            </div>
+          {/* Right: badges + actions */}
+          <div className="flex items-center gap-3 flex-wrap">
+            {/* Type badge */}
+            <Badge variant="outline" className="text-xs gap-1">
+              <Package className="w-3 h-3" />
+              Plan
+            </Badge>
+            {/* Price badge */}
+            <Badge
+              variant="secondary"
+              className={`text-xs font-semibold ${isFree ? "text-green-600" : ""}`}
+            >
+              {isFree ? "Free" : planPriceLabel(plan)}
+            </Badge>
+            {/* Chain sync badge */}
+            {plan.chainSyncStatus && (
+              <ChainSyncBadge status={plan.chainSyncStatus} />
+            )}
             {/* Divider */}
-            <div className="h-8 w-px bg-border hidden sm:block" />
+            <div className="h-6 w-px bg-border hidden sm:block" />
             {/* Actions */}
             <div className="flex items-center gap-2">
               <EditPlanDialog plan={plan} onSaved={onUpdated} />
@@ -4775,6 +4807,11 @@ function PlanDetailView({
           </div>
         </div>
       </div>
+
+      {/* Description line below header */}
+      {plan.description && (
+        <p className="text-sm text-muted-foreground -mt-2">{plan.description}</p>
+      )}
 
       {/* Detail tabs */}
       <div className="border-b border-border">
@@ -4969,7 +5006,7 @@ function PlanDetailView({
           {/* ── Credit Grants section ── */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-base font-semibold">Credit Grants</h3>
+              <h3 className="text-base font-semibold">No Credit Grants</h3>
               <AddCreditGrantDialog
                 planId={plan.id}
                 onAdded={() => setCgRefresh((n) => n + 1)}
@@ -5020,12 +5057,21 @@ function PlanDetailView({
                 </table>
               </div>
             ) : (
-              <div className="border border-dashed border-border rounded-xl py-10 flex flex-col items-center justify-center gap-2 bg-secondary/10">
-                <Coins className="w-8 h-8 text-muted-foreground/40" />
-                <p className="text-sm font-medium text-muted-foreground">No Credit Grants</p>
-                <p className="text-xs text-muted-foreground/70 max-w-xs text-center">
-                  Credit grants automatically allocate credits to subscribers of this plan.
-                </p>
+              <div className="border border-dashed border-border rounded-xl p-5 flex items-center justify-between bg-secondary/10">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">🪙</span>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">No Credit Grants</p>
+                    <p className="text-xs text-muted-foreground/70">
+                      Add credit grant to this plan to allocate credits to subscribers.
+                    </p>
+                  </div>
+                </div>
+                <AddCreditGrantDialog
+                  planId={plan.id}
+                  onAdded={() => setCgRefresh((n) => n + 1)}
+                  existingIds={creditGrants.map((g) => g.creditTypeId)}
+                />
               </div>
             )}
           </div>
@@ -5051,6 +5097,7 @@ function PlanDetailView({
 
       {detailTab === "billing" && (
         <div className="space-y-4">
+          {/* Billing info grid */}
           <div className="bg-card border border-border rounded-xl p-6 space-y-6">
             <h3 className="text-base font-semibold">Billing Details</h3>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
@@ -5077,9 +5124,10 @@ function PlanDetailView({
                 <p className="text-xs text-muted-foreground">Every {plan.billingInterval} days</p>
               </div>
               <div>
-                <p className="text-xs text-muted-foreground mb-1.5">Accepted Token</p>
-                <p className="text-sm font-medium font-mono break-all">
-                  {tokenLabel(plan.acceptedToken)}
+                <p className="text-xs text-muted-foreground mb-1.5">Token</p>
+                <p className="text-sm font-medium">USDC</p>
+                <p className="text-xs font-mono text-muted-foreground">
+                  {plan.acceptedToken.slice(0, 6)}…{plan.acceptedToken.slice(-4)}
                 </p>
               </div>
               <div>
@@ -5089,38 +5137,267 @@ function PlanDetailView({
             </div>
           </div>
 
+          {/* On-chain status card */}
           <div className="bg-card border border-border rounded-xl p-6">
-            <h3 className="text-base font-semibold mb-4">On-Chain Status</h3>
-            <div className="flex items-center gap-3">
-              {plan.chainSyncStatus === "SYNCED" ? (
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-base font-semibold">On-Chain Status</h3>
+              {plan.chainSyncStatus && <ChainSyncBadge status={plan.chainSyncStatus} />}
+            </div>
+
+            {plan.chainSyncStatus === "NOT_APPLICABLE" ? (
+              <div className="flex items-center gap-3 p-4 rounded-lg bg-secondary/40 border border-border">
+                <Package className="w-5 h-5 text-muted-foreground shrink-0" />
+                <p className="text-sm text-muted-foreground">
+                  This is a free plan — no on-chain registration required.
+                </p>
+              </div>
+            ) : plan.chainSyncStatus === "SYNCED" ? (
+              <div className="space-y-3">
                 <div className="flex items-center gap-2 text-green-500 text-sm font-medium">
                   <Check className="w-4 h-4" />
                   Registered on-chain
-                  {plan.onChainPlanId && (
-                    <code className="ml-2 text-xs text-muted-foreground font-mono">
-                      ID: {plan.onChainPlanId}
-                    </code>
-                  )}
                 </div>
-              ) : plan.chainSyncStatus === "NOT_APPLICABLE" ? (
-                <div className="flex items-center gap-2 text-muted-foreground text-sm">
-                  <Package className="w-4 h-4" />
-                  Off-chain only (free plan)
-                </div>
-              ) : plan.chainSyncStatus === "PENDING" ? (
-                <div className="flex items-center gap-2 text-yellow-500 text-sm">
+                {plan.onChainPlanId && (
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-secondary/40 border border-border">
+                    <p className="text-xs text-muted-foreground">On-chain Plan ID:</p>
+                    <code className="text-xs font-mono text-foreground">{plan.onChainPlanId}</code>
+                  </div>
+                )}
+              </div>
+            ) : plan.chainSyncStatus === "PENDING" ? (
+              <div className="flex items-center justify-between p-4 rounded-lg bg-yellow-500/5 border border-yellow-500/20">
+                <div className="flex items-center gap-2 text-yellow-600 text-sm dark:text-yellow-400">
                   <Loader2 className="w-4 h-4" />
-                  Pending registration
+                  Pending on-chain registration
                 </div>
-              ) : (
-                <div className="flex items-center gap-2 text-destructive text-sm">
-                  <Package className="w-4 h-4" />
-                  Sync failed
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-1.5 border-yellow-500/30 text-yellow-600 hover:bg-yellow-500/10 dark:text-yellow-400"
+                  onClick={() => toast.info("Use the Register on-chain button in the plans list")}
+                >
+                  Register on-chain
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-destructive text-sm p-4 rounded-lg bg-destructive/5 border border-destructive/20">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <div>
+                  <p className="font-medium">Sync failed</p>
                   {plan.chainSyncError && (
-                    <span className="text-xs text-muted-foreground ml-2">{plan.chainSyncError}</span>
+                    <p className="text-xs text-muted-foreground mt-0.5">{plan.chainSyncError}</p>
                   )}
                 </div>
-              )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── AddOn Detail View ──────────────────────────────────────────────────────────
+
+function AddOnDetailView({
+  addon,
+  onBack,
+  onUpdated,
+}: {
+  addon: CatalogAddOn;
+  onBack: () => void;
+  onUpdated: () => void;
+}) {
+  const [detailTab, setDetailTab] = useState<"companies" | "billing">("companies");
+  const [copiedId, setCopiedId] = useState(false);
+
+  function copyId() {
+    navigator.clipboard.writeText(addon.id);
+    setCopiedId(true);
+    setTimeout(() => setCopiedId(false), 2000);
+  }
+
+  const priceLabel = `$${parseFloat(addon.price).toFixed(2)} ${addon.billingType === "ONE_TIME" ? "one-time" : "/ mo"}`;
+
+  const DETAIL_TABS = ["companies", "billing"] as const;
+
+  return (
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+      {/* Breadcrumb */}
+      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+        <button
+          onClick={onBack}
+          className="flex items-center gap-1 hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          ADD-ONS
+        </button>
+        <ChevronRight className="w-3.5 h-3.5" />
+        <span className="text-foreground font-medium uppercase">{addon.name}</span>
+      </div>
+
+      {/* Add-on header card */}
+      <div className="bg-card border border-border rounded-xl p-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          {/* Left: icon + name + meta */}
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center shrink-0">
+              <Package className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-foreground leading-tight">{addon.name}</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Last modified {timeAgo(addon.updatedAt)}
+              </p>
+            </div>
+          </div>
+
+          {/* Right: badges + actions */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <Badge variant="outline" className="text-xs gap-1">
+              <Package className="w-3 h-3" />
+              Add-on
+            </Badge>
+            <Badge variant="secondary" className="text-xs font-semibold">
+              {priceLabel}
+            </Badge>
+            <StatusBadge status={addon.status} />
+            <div className="h-6 w-px bg-border hidden sm:block" />
+            <div className="flex items-center gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="icon" className="h-9 w-9">
+                    <MoreHorizontal className="w-4 h-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={copyId}>
+                    {copiedId ? (
+                      <><Check className="w-3.5 h-3.5 mr-2 text-green-500" />Copied!</>
+                    ) : (
+                      <><Copy className="w-3.5 h-3.5 mr-2" />Copy Add-On ID</>
+                    )}
+                  </DropdownMenuItem>
+                  {addon.status === "DRAFT" && (
+                    <DropdownMenuItem
+                      onClick={async () => {
+                        await fetch("/api/catalog/add-ons", {
+                          method: "PUT",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ id: addon.id, status: "PUBLISHED" }),
+                        });
+                        onUpdated();
+                        toast.success("Add-on published");
+                      }}
+                    >
+                      Publish Add-On
+                    </DropdownMenuItem>
+                  )}
+                  {addon.status !== "ARCHIVED" && (
+                    <DropdownMenuItem
+                      onClick={async () => {
+                        await fetch("/api/catalog/add-ons", {
+                          method: "PUT",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ id: addon.id, status: "ARCHIVED" }),
+                        });
+                        onUpdated();
+                        toast.success("Add-on archived");
+                      }}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      Archive Add-On
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Description */}
+      {addon.description && (
+        <p className="text-sm text-muted-foreground -mt-2">{addon.description}</p>
+      )}
+
+      {/* Detail tabs */}
+      <div className="border-b border-border">
+        <div className="flex gap-0">
+          {DETAIL_TABS.map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setDetailTab(tab)}
+              className={`px-4 py-3 text-sm font-medium capitalize border-b-2 transition-all -mb-px ${
+                detailTab === tab
+                  ? "border-accent text-foreground"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Tab content */}
+      {detailTab === "companies" && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-base font-semibold">Companies with this Add-On</h3>
+          </div>
+          <div className="bg-card border border-border rounded-xl overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-secondary/50 border-b border-border">
+                <tr>
+                  <th className="text-left py-2.5 px-4 font-semibold text-muted-foreground uppercase text-[10px] tracking-wider">Company</th>
+                  <th className="text-left py-2.5 px-4 font-semibold text-muted-foreground uppercase text-[10px] tracking-wider">Subscribed Since</th>
+                  <th className="text-left py-2.5 px-4 font-semibold text-muted-foreground uppercase text-[10px] tracking-wider">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td colSpan={3} className="py-16 text-center">
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center mb-2">
+                        <Package className="w-6 h-6 text-muted-foreground/50" />
+                      </div>
+                      <p className="text-sm font-medium text-foreground">No companies on this add-on yet</p>
+                      <p className="text-xs text-muted-foreground max-w-xs text-center">
+                        Companies that purchase this add-on will appear here.
+                      </p>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {detailTab === "billing" && (
+        <div className="space-y-4">
+          <div className="bg-card border border-border rounded-xl p-6 space-y-6">
+            <h3 className="text-base font-semibold">Billing Details</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-6">
+              <div>
+                <p className="text-xs text-muted-foreground mb-1.5">Price</p>
+                <p className="text-lg font-semibold">${parseFloat(addon.price).toFixed(2)}</p>
+                <p className="text-xs text-muted-foreground">USDC</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1.5">Billing Type</p>
+                <p className="text-sm font-semibold">
+                  {addon.billingType === "ONE_TIME" ? "One-time" : "Recurring"}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1.5">Token</p>
+                <p className="text-sm font-medium">USDC</p>
+                <p className="text-xs font-mono text-muted-foreground">
+                  {addon.acceptedToken.slice(0, 6)}…{addon.acceptedToken.slice(-4)}
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -5448,7 +5725,7 @@ function CreditDetailView({
           <ArrowLeft className="w-3.5 h-3.5" />
           CREDITS
         </button>
-        <span>/</span>
+        <ChevronRight className="w-3.5 h-3.5" />
         <span className="text-foreground font-medium uppercase">{credit.name}</span>
       </div>
 
@@ -5457,41 +5734,27 @@ function CreditDetailView({
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           {/* Left: icon + name + meta */}
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-xl bg-linear-to-br from-amber-500/30 to-orange-400/10 border border-border flex items-center justify-center text-2xl shrink-0">
-              <Coins className="w-7 h-7 text-amber-500" />
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-400 to-orange-600 flex items-center justify-center shrink-0">
+              <Coins className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-foreground leading-tight">{credit.name}</h2>
+              <h2 className="text-2xl font-bold text-foreground leading-tight">{credit.name}</h2>
               <p className="text-xs text-muted-foreground mt-0.5">
                 Last modified {timeAgo(credit.updatedAt)}
               </p>
-              <code className="text-xs text-muted-foreground font-mono mt-0.5 block">
-                {credit.code}
-              </code>
             </div>
           </div>
 
-          {/* Right: stats + actions */}
-          <div className="flex items-center gap-6 flex-wrap">
-            {/* Price per credit */}
-            <div className="text-center min-w-[80px]">
-              <p className="text-xs text-muted-foreground mb-1">Price</p>
-              <p className="text-sm font-semibold">
-                ${parseFloat(credit.price).toFixed(2)}/credit
-              </p>
-            </div>
-            {/* Unit */}
-            <div className="text-center min-w-[70px]">
-              <p className="text-xs text-muted-foreground mb-1">Unit</p>
-              <p className="text-sm font-medium">{credit.unitName}</p>
-            </div>
-            {/* Status */}
-            <div className="text-center min-w-[60px]">
-              <p className="text-xs text-muted-foreground mb-1">Status</p>
-              <StatusBadge status={credit.status} />
-            </div>
-            {/* Divider */}
-            <div className="h-8 w-px bg-border hidden sm:block" />
+          {/* Right: badges + actions */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <Badge variant="outline" className="text-xs gap-1 font-mono">
+              {credit.code}
+            </Badge>
+            <Badge variant="secondary" className="text-xs font-semibold">
+              ${parseFloat(credit.price).toFixed(2)}/credit
+            </Badge>
+            <StatusBadge status={credit.status} />
+            <div className="h-6 w-px bg-border hidden sm:block" />
             {/* Actions */}
             <div className="flex items-center gap-2">
               <EditCreditTypeDialog credit={credit} onSaved={onUpdated} />
@@ -5733,6 +5996,7 @@ export function CatalogSection() {
   const [activeTab, setActiveTab] = useState<CatalogTab>("plans");
   const [refresh, setRefresh] = useState(0);
   const [selectedPlan, setSelectedPlan] = useState<CatalogPlan | null>(null);
+  const [selectedAddOn, setSelectedAddOn] = useState<CatalogAddOn | null>(null);
   const [selectedCredit, setSelectedCredit] = useState<CatalogCreditType | null>(null);
   const [plans, setPlans] = useState<CatalogPlan[]>([]);
   const [addOns, setAddOns] = useState<CatalogAddOn[]>([]);
@@ -5817,6 +6081,20 @@ export function CatalogSection() {
     );
   }
 
+  // Add-on detail view
+  if (selectedAddOn) {
+    return (
+      <AddOnDetailView
+        addon={selectedAddOn}
+        onBack={() => setSelectedAddOn(null)}
+        onUpdated={() => {
+          loadAddOns();
+          setSelectedAddOn(null);
+        }}
+      />
+    );
+  }
+
   // Credit detail view
   if (selectedCredit) {
     return (
@@ -5840,7 +6118,7 @@ export function CatalogSection() {
 
   return (
     <div className="space-y-0">
-      {/* Tab bar header — matches Schematic style */}
+      {/* Tab bar header */}
       <div className="flex items-center justify-between border-b border-border pb-0 mb-6">
         <div className="flex gap-0">
           {TABS.map((tab) => (
@@ -6181,7 +6459,11 @@ export function CatalogSection() {
                   filteredAddOns.map((addon) => (
                     <tr
                       key={addon.id}
-                      className="border-b border-border last:border-0 hover:bg-secondary/20 transition-colors"
+                      onClick={(e) => {
+                        if ((e.target as HTMLElement).closest("button") || (e.target as HTMLElement).closest("[role='menuitem']")) return;
+                        setSelectedAddOn(addon);
+                      }}
+                      className="border-b border-border last:border-0 hover:bg-secondary/20 transition-colors cursor-pointer"
                     >
                       <td className="py-4 px-4">
                         <div className="flex items-center gap-3">

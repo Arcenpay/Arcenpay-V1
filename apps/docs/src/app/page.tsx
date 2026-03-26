@@ -16,7 +16,7 @@ export default function OverviewPage() {
         <div className="docs-callout info">
           <span className="docs-callout-icon">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+              <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
             </svg>
           </span>
           <div>
@@ -53,7 +53,7 @@ export default function OverviewPage() {
 npm install @meap/react @meap/core viem
 
 # Node SDK (backend)
-npm install @meap/node
+npm install @arcenpay/node
 
 # Agent SDK (AI runtimes)
 npm install @meap/agent`}</code></pre>
@@ -80,7 +80,7 @@ function App() {
         planId={1}
         onSuccess={(tx) => console.log('Subscribed!', tx)}
       />
-    </MEAPProvider>
+    </ArcenPayProvider>
   );
 }`}</code></pre>
         </div>

@@ -1,5 +1,5 @@
 // ============================================================
-//  @meap/core — Smart Account Helpers (ZeroDev / ERC-7579)
+//  @arcenpay/sdk — Smart Account Helpers (ZeroDev / ERC-7579)
 //  PRD §04 — ERC-7579 Smart Account Integration
 //
 //  Requires these packages to be installed in the consuming app:

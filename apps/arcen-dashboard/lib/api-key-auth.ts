@@ -1,5 +1,5 @@
 /**
- * SchematicHQ-style external API key authentication.
+ * ArcenPay external API key authentication.
  *
  * Validates "Authorization: Bearer api_xxx" headers on public v1 routes.
  * Keys are stored as SHA-256 hashes — never in plaintext.
@@ -70,7 +70,7 @@ export async function requireApiKey(
 
   const hash = hashApiKey(raw);
 
-  const apiKey = await db.schematicApiKey.findUnique({
+  const apiKey = await db.arcenApiKey.findUnique({
     where: { keyHash: hash },
     select: { id: true, teamId: true },
   });
@@ -94,7 +94,7 @@ export async function requireApiKey(
   }
 
   // Update lastUsedAt in background
-  db.schematicApiKey
+  db.arcenApiKey
     .update({ where: { id: apiKey.id }, data: { lastUsedAt: new Date() } })
     .catch(() => {});
 

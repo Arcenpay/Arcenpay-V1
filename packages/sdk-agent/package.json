@@ -1,16 +1,17 @@
 {
-  "name": "@meap/agent",
+  "name": "@arcenpay/agent",
   "version": "0.0.1",
-  "description": "MEAP Protocol — AI Agent SDK for autonomous x402 payments",
+  "description": "ArcenPay SDK — AI agent client for autonomous x402 payments",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
-  "types": "./src/index.ts",
+  "types": "./dist/index.d.ts",
+  "typings": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./src/index.ts",
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs",
       "require": "./dist/index.js",
-      "default": "./src/index.ts"
+      "default": "./dist/index.mjs"
     }
   },
   "files": [
@@ -18,7 +19,7 @@
     "src"
   ],
   "scripts": {
-    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "build": "tsup src/index.ts --format cjs,esm --dts --dts-resolve --sourcemap",
     "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -26,7 +27,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@meap/core": "*",
+    "@arcenpay/sdk": "*",
     "viem": "^2.21.0"
   },
   "devDependencies": {

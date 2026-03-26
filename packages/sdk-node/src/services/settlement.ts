@@ -1,12 +1,12 @@
 // ============================================================
-//  @meap/node — Settlement Watcher & Session Balance Service
+//  @arcenpay/node — Settlement Watcher & Session Balance Service
 //  Real viem integration for on-chain reads and event watching
 // ============================================================
 
 import { createPublicClient, http } from 'viem';
 import { sepolia, baseSepolia, base } from 'viem/chains';
-import type { BillingSettlement } from '@meap/core';
-import { SessionVaultABI, ZKUsageVerifierABI, getContractAddresses } from '@meap/core';
+import type { BillingSettlement } from '@arcenpay/sdk';
+import { SessionVaultABI, ZKUsageVerifierABI, getContractAddresses } from '@arcenpay/sdk';
 
 type SettlementCallback = (settlement: BillingSettlement) => void;
 

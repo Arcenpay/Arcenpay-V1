@@ -1,24 +1,9 @@
 // ============================================================
-//  @meap/core — Main Entry Point
+//  @arcenpay/sdk — Main Entry Point
 // ============================================================
 
 // Types
 export type {
-  // Web3 SchematicHQ Protocol types
-  SchematicCompanyKeys,
-  SchematicUserKeys,
-  FlagCheckResult,
-  TrackEventPayload,
-  IdentifyEventPayload,
-  SchematicCompany,
-  SchematicUser,
-  ZkTlsProof,
-  EmbedAccessTokenResponse,
-  ComponentElement,
-  ComponentElementType,
-  ComponentDesign,
-  ComponentRenderData,
-  // Core types
   Plan,
   PlanTier,
   EnvironmentMode,
@@ -51,8 +36,25 @@ export type {
   ChainEnvironmentManifest,
   EnvironmentManifest,
   MEAPConfig,
+  ArcenPayConfig,
   TablelandEntitlement,
   UsageReport,
+  ComponentRenderData,
+  ComponentElement,
+  ComponentDesign,
+  ComponentEntitlement,
+  ComponentUsageItem,
+  ComponentPlanSummary,
+  ArcenCompanyKeys,
+  ArcenUserKeys,
+  ArcenCompany,
+  ArcenUser,
+  FlagCheckResult,
+  EmbedAccessTokenResponse,
+  SchematicCompanyKeys,
+  SchematicUserKeys,
+  SchematicCompany,
+  SchematicUser,
 } from './types';
 
 // Chain configs
@@ -110,10 +112,11 @@ export {
   parseContractError,
   normalizeError,
   MEAPError,
+  ArcenPayError,
   ContractError,
   AuthError,
 } from './errors';
-export type { MEAPErrorCode } from './errors';
+export type { MEAPErrorCode, ArcenPayErrorCode } from './errors';
 
 // Smart Account helpers (ZeroDev ERC-7579)
 export { createSmartAccount } from './accounts';

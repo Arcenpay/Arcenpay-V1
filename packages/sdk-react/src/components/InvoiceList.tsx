@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import type { InvoiceSummary } from '@meap/core';
+import type { InvoiceSummary } from '@arcenpay/sdk';
 
 export interface InvoiceListProps {
   endpoint?: string;
@@ -56,7 +56,7 @@ export function InvoiceList({
 
   if (loading) {
     return (
-      <div className={`meap-invoice-list meap-loading ${className}`}>
+      <div className={`arcenpay-invoice-list arcenpay-loading ${className}`}>
         <p>Loading invoices...</p>
       </div>
     );
@@ -64,7 +64,7 @@ export function InvoiceList({
 
   if (error) {
     return (
-      <div className={`meap-invoice-list meap-error ${className}`}>
+      <div className={`arcenpay-invoice-list arcenpay-error ${className}`}>
         <p>{error}</p>
       </div>
     );
@@ -72,16 +72,16 @@ export function InvoiceList({
 
   if (items.length === 0) {
     return (
-      <div className={`meap-invoice-list ${className}`}>
+      <div className={`arcenpay-invoice-list ${className}`}>
         <p>No invoices found.</p>
       </div>
     );
   }
 
   return (
-    <div className={`meap-invoice-list ${className}`}>
+    <div className={`arcenpay-invoice-list ${className}`}>
       {items.map((invoice) => (
-        <div key={invoice.id} className="meap-invoice-row">
+        <div key={invoice.id} className="arcenpay-invoice-row">
           <div>
             <strong>{invoice.number || invoice.id}</strong>
             <p>{invoice.customerEmail || invoice.customerWallet || 'Unknown customer'}</p>

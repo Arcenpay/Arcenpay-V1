@@ -1,5 +1,5 @@
 {
-  "name": "@meap/contracts",
+  "name": "@arcenpay/contracts",
   "version": "0.0.1",
   "private": true,
   "description": "MEAP + ZKVUB Protocol Smart Contracts",

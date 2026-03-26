@@ -1,5 +1,5 @@
 // ============================================================
-//  @meap/agent — AI Agent Client
+//  @arcenpay/agent — AI Agent Client
 //  Autonomous x402 payment negotiation with real viem signing
 // ============================================================
 
@@ -14,8 +14,8 @@ import {
 } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { sepolia, baseSepolia, base } from 'viem/chains';
-import type { X402Response, X402PaymentHeader } from '@meap/core';
-import { X402_VERSION, X402_SCHEME, SessionVaultABI, getContractAddresses, TOKENS } from '@meap/core';
+import type { X402Response, X402PaymentHeader } from '@arcenpay/sdk';
+import { X402_VERSION, X402_SCHEME, SessionVaultABI, getContractAddresses, TOKENS } from '@arcenpay/sdk';
 
 interface AgentConfig {
   /** Agent's wallet private key (for signing payments) */
@@ -77,7 +77,7 @@ const ERC20_APPROVE_ABI = [{
  *
  * @example
  * ```ts
- * import { MEAPAgent } from '@meap/agent';
+ * import { MEAPAgent } from '@arcenpay/agent';
  *
  * const agent = new MEAPAgent({
  *   privateKey: process.env.AGENT_PRIVATE_KEY!,
@@ -350,3 +350,6 @@ export class MEAPAgent {
     return Buffer.from(JSON.stringify(payload)).toString('base64');
   }
 }
+
+/** @alias MEAPAgent — ArcenPay-branded alias */
+export { MEAPAgent as ArcenPayAgent };

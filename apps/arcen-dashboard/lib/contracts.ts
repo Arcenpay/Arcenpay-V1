@@ -15,7 +15,7 @@ import {
   ERC7579AutopayModuleABI,
   YieldSessionVaultABI,
   TOKENS,
-} from "@meap/core";
+} from "@arcenpay/sdk";
 
 export {
   getContractAddresses,

@@ -1,5 +1,5 @@
 // ============================================================
-//  @meap/agent — Main Entry Point
+//  @arcenpay/agent — Main Entry Point
 // ============================================================
 
-export { MEAPAgent } from './agent';
+export { MEAPAgent, ArcenPayAgent } from './agent';

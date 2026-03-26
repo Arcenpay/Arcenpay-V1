@@ -1,5 +1,5 @@
 // ============================================================
-//  @meap/core — Chain Configurations
+//  @arcenpay/sdk — Chain Configurations
 //  Supported blockchain network definitions
 // ============================================================
 

@@ -26,8 +26,8 @@ export function SubscriptionStatus({
 
   if (isLoading) {
     return (
-      <div className={`meap-status-loading ${className}`}>
-        <div className="meap-spinner" />
+      <div className={`arcenpay-status-loading ${className}`}>
+        <div className="arcenpay-spinner" />
       </div>
     );
   }
@@ -49,17 +49,17 @@ export function SubscriptionStatus({
 
   return (
     <div
-      className={`meap-subscription-status ${className}`}
-      data-meap-component="subscription-status"
+      className={`arcenpay-subscription-status ${className}`}
+      data-arcenpay-component="subscription-status"
     >
       {isSubscribed ? (
-        <div className="meap-status-active">
-          <div className="meap-status-badge active">Active</div>
-          <div className="meap-status-details">
-            <div className="meap-status-tier">
+        <div className="arcenpay-status-active">
+          <div className="arcenpay-status-badge active">Active</div>
+          <div className="arcenpay-status-details">
+            <div className="arcenpay-status-tier">
               {planTier?.toUpperCase()} Plan
             </div>
-            <div className="meap-status-expiry">
+            <div className="arcenpay-status-expiry">
               {isExpiringSoon() ? "⚠ " : ""}
               Renews {formatDate(expiresAt!)}
             </div>
@@ -105,8 +105,8 @@ export function SubscriptionStatus({
           </div>
         </div>
       ) : (
-        <div className="meap-status-inactive">
-          <div className="meap-status-badge inactive">Inactive</div>
+        <div className="arcenpay-status-inactive">
+          <div className="arcenpay-status-badge inactive">Inactive</div>
           <p>No active subscription</p>
         </div>
       )}

@@ -1,10 +1,10 @@
 // ============================================================
-//  @meap/core — Contract Addresses
+//  @arcenpay/sdk — Contract Addresses
 //  Deployed contract address registry per network
 //
-//  Runtime override: set MEAP_CONTRACT_<chainId>_<key> to inject
+//  Runtime override: set ARCENPAY_CONTRACT_<chainId>_<key> to inject
 //  addresses without redeploying the package — e.g.:
-//    MEAP_CONTRACT_8453_planFactory=0xAbCd...
+//    ARCENPAY_CONTRACT_8453_planFactory=0xAbCd...
 //
 //  Zero-address guard: calling getContractAddresses() for a chain
 //  whose addresses are all zero-address placeholders throws in
@@ -25,7 +25,7 @@ const ADDRESSES: Record<number, ContractAddresses> = {
     zkUsageVerifier: '0x1f75d66692416cE880d51Baf6CdcBeE98E5837c0',
     mirrorRegistry: '0xC187CD32d569ec0E84B9b378f8E63f3a74afac74',
   },
-  // Base Sepolia (Testnet) — set MEAP_CONTRACT_84532_* env vars after deployment
+  // Base Sepolia (Testnet) — set ARCENPAY_CONTRACT_84532_* env vars after deployment
   84532: {
     subscriptionRegistry: '0x0000000000000000000000000000000000000000',
     autopayModule: '0x0000000000000000000000000000000000000000',
@@ -35,7 +35,7 @@ const ADDRESSES: Record<number, ContractAddresses> = {
     zkUsageVerifier: '0x0000000000000000000000000000000000000000',
     mirrorRegistry: '0x0000000000000000000000000000000000000000',
   },
-  // Base Mainnet — set MEAP_CONTRACT_8453_* env vars after audit + deployment
+  // Base Mainnet — set ARCENPAY_CONTRACT_8453_* env vars after audit + deployment
   8453: {
     subscriptionRegistry: '0x0000000000000000000000000000000000000000',
     autopayModule: '0x0000000000000000000000000000000000000000',
@@ -59,25 +59,28 @@ const CONTRACT_KEYS: (keyof ContractAddresses)[] = [
 ];
 
 /**
- * Applies MEAP_CONTRACT_<chainId>_<key> env var overrides to a base addresses object.
+ * Applies ARCENPAY_CONTRACT_<chainId>_<key> (or legacy MEAP_CONTRACT_<chainId>_<key>) env var
+ * overrides to a base addresses object.
  * This allows injecting deployed addresses for new chains without redeploying the package.
  */
 function applyEnvOverrides(chainId: number, base: ContractAddresses): ContractAddresses {
   if (typeof process === 'undefined') return base;
   const result = { ...base };
   for (const key of CONTRACT_KEYS) {
-    const envKey = `MEAP_CONTRACT_${chainId}_${key}`;
-    const override = process.env[envKey];
+    // Check new prefix first, fall back to legacy MEAP_ prefix
+    const envKey = `ARCENPAY_CONTRACT_${chainId}_${key}`;
+    const legacyKey = `MEAP_CONTRACT_${chainId}_${key}`;
+    const override = process.env[envKey] ?? process.env[legacyKey];
     if (override && override.startsWith('0x')) {
       (result as unknown as Record<string, string>)[key] = override;
     }
   }
-  // optional extension contracts — check separately
-  const mirrorOverride = process.env[`MEAP_CONTRACT_${chainId}_mirrorRegistry`];
+  // optional extension contracts
+  const mirrorOverride = process.env[`ARCENPAY_CONTRACT_${chainId}_mirrorRegistry`] ?? process.env[`MEAP_CONTRACT_${chainId}_mirrorRegistry`];
   if (mirrorOverride && mirrorOverride.startsWith('0x')) {
     result.mirrorRegistry = mirrorOverride;
   }
-  const yieldOverride = process.env[`MEAP_CONTRACT_${chainId}_yieldSessionVault`];
+  const yieldOverride = process.env[`ARCENPAY_CONTRACT_${chainId}_yieldSessionVault`] ?? process.env[`MEAP_CONTRACT_${chainId}_yieldSessionVault`];
   if (yieldOverride && yieldOverride.startsWith('0x')) {
     result.yieldSessionVault = yieldOverride;
   }
@@ -110,7 +113,7 @@ export function getContractAddresses(chainId: number): ContractAddresses {
     if (allZero) {
       throw new Error(
         `[getContractAddresses] Chain ${chainId} has no deployed contracts. ` +
-          `Set MEAP_CONTRACT_${chainId}_<key> env vars or deploy contracts before using this chain in production.`,
+          `Set ARCENPAY_CONTRACT_${chainId}_<key> env vars or deploy contracts before using this chain in production.`,
       );
     }
   }

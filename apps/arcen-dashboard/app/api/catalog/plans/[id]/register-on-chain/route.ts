@@ -12,7 +12,7 @@ import {
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { sepolia, base, baseSepolia } from "viem/chains";
-import { PlanFactoryABI, getContractAddresses, TOKENS } from "@meap/core";
+import { PlanFactoryABI, getContractAddresses, TOKENS } from "@arcenpay/sdk";
 import { isAddress, type Chain } from "viem";
 import { z } from "zod";
 

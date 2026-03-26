@@ -1,12 +1,12 @@
 // ============================================================
-//  @meap/node — Event Listener Service
+//  @arcenpay/node — Event Listener Service
 //  Watches SubscriptionMinted, SubscriptionRenewed,
 //  SubscriptionCancelled events from SubscriptionRegistry
 // ============================================================
 
 import { createPublicClient, http, type Log } from 'viem';
 import { sepolia, baseSepolia, base } from 'viem/chains';
-import { SubscriptionRegistryABI, getContractAddresses } from '@meap/core';
+import { SubscriptionRegistryABI, getContractAddresses } from '@arcenpay/sdk';
 
 export type SubscriptionEventType = 'minted' | 'renewed' | 'cancelled';
 

@@ -1,4 +1,4 @@
-import type { X402VerifiedPaymentContext } from '@meap/core';
+import type { X402VerifiedPaymentContext } from '@arcenpay/sdk';
 
 declare global {
   namespace Express {

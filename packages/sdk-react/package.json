@@ -1,16 +1,17 @@
 {
-  "name": "@meap/react",
+  "name": "@arcenpay/react",
   "version": "0.0.1",
-  "description": "MEAP Protocol — React component library for Web3 subscriptions",
+  "description": "ArcenPay SDK — React components for Web3 subscription billing",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
-  "types": "./src/index.ts",
+  "types": "./dist/index.d.ts",
+  "typings": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./src/index.ts",
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs",
       "require": "./dist/index.js",
-      "default": "./src/index.ts"
+      "default": "./dist/index.mjs"
     }
   },
   "files": [
@@ -18,7 +19,7 @@
     "src"
   ],
   "scripts": {
-    "build": "tsup src/index.ts --format cjs,esm --dts --external react --external @zerodev/sdk --external @zerodev/ecdsa-validator",
+    "build": "tsup src/index.ts --format cjs,esm --dts --dts-resolve --sourcemap --external react --external @zerodev/sdk --external @zerodev/ecdsa-validator",
     "dev": "tsup src/index.ts --format cjs,esm --dts --external react --external @zerodev/sdk --external @zerodev/ecdsa-validator --watch",
     "test": "vitest run",
     "typecheck": "tsc --noEmit --skipLibCheck",
@@ -39,7 +40,7 @@
     }
   },
   "dependencies": {
-    "@meap/core": "*",
+    "@arcenpay/sdk": "*",
     "@tanstack/react-query": "^5.62.0",
     "viem": "^2.21.0",
     "wagmi": "^2.14.0"

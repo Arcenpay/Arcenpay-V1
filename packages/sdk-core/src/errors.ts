@@ -1,5 +1,5 @@
 // ============================================================
-//  @meap/core — Contract Error Mapping
+//  @arcenpay/sdk — Contract Error Mapping
 //  Human-readable error messages for Solidity revert reasons
 //  PRD §3.4 — Error Message Mapping
 // ============================================================
@@ -163,3 +163,8 @@ export function normalizeError(error: unknown): MEAPError {
 
     return new MEAPError(message, 'UNKNOWN', { cause: error });
 }
+
+/** @alias MEAPError — ArcenPay-branded alias */
+export { MEAPError as ArcenPayError };
+/** @alias MEAPErrorCode — ArcenPay-branded alias */
+export type { MEAPErrorCode as ArcenPayErrorCode };

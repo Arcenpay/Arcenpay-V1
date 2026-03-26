@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { usePublicClient } from "wagmi";
-import { SubscriptionRegistryABI, getContractAddresses } from "@meap/core";
+import { SubscriptionRegistryABI, getContractAddresses } from "@arcenpay/sdk";
 import { useMEAP } from "../providers/MEAPProvider";
 
 // ============================================================
@@ -193,8 +193,8 @@ export function BillingHistory({
 
   if (loading) {
     return (
-      <div className={`meap-billing-history meap-loading ${className}`}>
-        <div className="meap-spinner" />
+      <div className={`arcenpay-billing-history arcenpay-loading ${className}`}>
+        <div className="arcenpay-spinner" />
         <p>Loading billing history from chain...</p>
       </div>
     );
@@ -202,56 +202,56 @@ export function BillingHistory({
 
   if (error) {
     return (
-      <div className={`meap-billing-history meap-error ${className}`}>
+      <div className={`arcenpay-billing-history arcenpay-error ${className}`}>
         <p>⚠️ Error: {error}</p>
       </div>
     );
   }
 
   return (
-    <div className={`meap-billing-history ${className}`}>
-      <div className="meap-billing-header">
+    <div className={`arcenpay-billing-history ${className}`}>
+      <div className="arcenpay-billing-header">
         <h3>Billing History</h3>
-        <span className="meap-event-count">{events.length} events</span>
+        <span className="arcenpay-event-count">{events.length} events</span>
       </div>
 
       {events.length === 0 ? (
-        <div className="meap-billing-empty">
+        <div className="arcenpay-billing-empty">
           <p>No billing events found for this wallet.</p>
         </div>
       ) : (
-        <div className="meap-billing-list">
+        <div className="arcenpay-billing-list">
           {events.map((event, index) => (
             <div
               key={`${event.transactionHash}-${index}`}
-              className="meap-billing-item"
+              className="arcenpay-billing-item"
             >
-              <div className="meap-billing-icon">
+              <div className="arcenpay-billing-icon">
                 <span>{eventIcons[event.type] || "📋"}</span>
               </div>
-              <div className="meap-billing-details">
-                <div className="meap-billing-type">
+              <div className="arcenpay-billing-details">
+                <div className="arcenpay-billing-type">
                   <span
-                    className="meap-event-badge"
+                    className="arcenpay-event-badge"
                     style={{ color: eventColors[event.type] || "#6b7280" }}
                   >
                     {event.type.charAt(0).toUpperCase() + event.type.slice(1)}
                   </span>
                   {event.amount && event.amount !== "0" && (
-                    <span className="meap-billing-amount">
+                    <span className="arcenpay-billing-amount">
                       {event.amount} USDC
                     </span>
                   )}
                 </div>
-                <div className="meap-billing-meta">
-                  <span className="meap-billing-date">
+                <div className="arcenpay-billing-meta">
+                  <span className="arcenpay-billing-date">
                     {new Date(event.timestamp * 1000).toLocaleDateString()}
                   </span>
                   <a
                     href={`${explorerBase}/tx/${event.transactionHash}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="meap-tx-link"
+                    className="arcenpay-tx-link"
                   >
                     {event.transactionHash.slice(0, 10)}...
                   </a>
@@ -261,7 +261,7 @@ export function BillingHistory({
           ))}
         </div>
       )}
-      <div className="meap-billing-footer">
+      <div className="arcenpay-billing-footer">
         <a
           href="https://arcenpay.xyz"
           target="_blank"
