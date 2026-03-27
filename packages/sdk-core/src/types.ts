@@ -365,6 +365,7 @@ export interface ComponentDesign {
   fontSize?: string | number;
   cardStyle?: 'minimal' | 'bordered' | 'elevated';
   columns?: number;
+  sections?: 'merged' | 'separate';
   // Normalized / alias fields
   fontColor?: string;
   backgroundColor?: string;

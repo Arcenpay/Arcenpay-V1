@@ -50,19 +50,31 @@ export async function POST(request: NextRequest) {
     });
 
     const text = await upstream.text();
+    if (upstream.status === 503 && text.includes("Webhooks not configured")) {
+      // Facilitator is running but its own global webhooks are not set up.
+      // Fall through to direct delivery for the provider's own webhook.
+      throw new Error("Facilitator not configured");
+    }
+
     const response = new NextResponse(text, { status: upstream.status });
     const contentType = upstream.headers.get("content-type");
     if (contentType) response.headers.set("content-type", contentType);
     return response;
-  } catch {
-    // Facilitator is unavailable — fall through to direct delivery
+  } catch (err) {
+    // Facilitator is unavailable or unconfigured — fall through to direct delivery
+    console.log(
+      "[api/webhooks/test] Facilitator fallback triggered:",
+      err instanceof Error ? err.message : "Service error",
+    );
   }
 
   // ── Direct fallback: POST straight to the webhook URL ────────────────────
   // Resolve the webhook URL: prefer the one sent in the request body,
   // then fall back to whatever is saved in the provider profile.
-  let webhookUrl = typeof reqPayload.url === "string" ? reqPayload.url.trim() : "";
-  let signingSecret = typeof reqPayload.secret === "string" ? reqPayload.secret.trim() : "";
+  let webhookUrl =
+    typeof reqPayload.url === "string" ? reqPayload.url.trim() : "";
+  let signingSecret =
+    typeof reqPayload.secret === "string" ? reqPayload.secret.trim() : "";
 
   if (!webhookUrl) {
     // Load from DB
@@ -74,7 +86,8 @@ export async function POST(request: NextRequest) {
         select: { webhookUrl: true, webhookSigningSecret: true },
       });
       if (profile?.webhookUrl) webhookUrl = profile.webhookUrl;
-      if (profile?.webhookSigningSecret) signingSecret = profile.webhookSigningSecret;
+      if (profile?.webhookSigningSecret)
+        signingSecret = profile.webhookSigningSecret;
     }
   }
 

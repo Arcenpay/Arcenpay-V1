@@ -3001,6 +3001,8 @@ export function ComponentEditor({
           cardStyle: (config.styling.cardStyle.cardShadow
             ? "elevated"
             : "minimal") as ComponentDesign["cardStyle"],
+          columns: config.styling.columns ?? 1,
+          sections: (config.styling.sections ?? "separate") as ComponentDesign["sections"],
         } as ComponentDesign,
       },
       company: {
@@ -3029,6 +3031,10 @@ export function ComponentEditor({
   const [activeViewState, setActiveViewState] = useState<string>(
     componentViews[0]?.id ?? "portal",
   );
+  // Separate mount key so tab clicks force an embed remount with the correct
+  // initialView, while internal ArcenEmbed navigation only updates the tab
+  // indicator without causing a remount.
+  const [embedMountKey, setEmbedMountKey] = useState(0);
 
   // Collapsible design panel sections
   const [openSections, setOpenSections] = useState({
@@ -3873,7 +3879,11 @@ const { data } = await res.json();
                 {componentViews.map((vs) => (
                   <button
                     key={vs.id}
-                    onClick={() => setActiveViewState(vs.id)}
+                    onClick={() => {
+                      setActiveViewState(vs.id);
+                      // Force ArcenEmbed remount so it starts from the chosen view
+                      if (isCustom) setEmbedMountKey((k) => k + 1);
+                    }}
                     className={cn(
                       "px-4 py-3 text-xs font-medium border-b-2 -mb-px transition-colors whitespace-nowrap",
                       activeViewState === vs.id
@@ -3933,327 +3943,86 @@ const { data } = await res.json();
                     transition: "max-width 0.2s ease",
                   }}
                 >
-                  {isCustom && activeViewState === "portal" ? (
-                    <div
-                      onDrop={handleDrop}
-                      onDragOver={handleDragOver}
-                      className="min-h-full"
-                    >
-                      {elements.length === 0 ? (
-                        /* ── Empty canvas ── */
-                        <div
-                          className={cn(
-                            "flex flex-col items-center justify-center min-h-[520px] rounded-2xl border-2 border-dashed transition-all duration-200 select-none",
-                            draggedElement
-                              ? "border-foreground/40 bg-foreground/5"
-                              : "border-border bg-background/40",
-                          )}
-                        >
-                          <div className="w-14 h-14 rounded-2xl bg-secondary flex items-center justify-center mb-4 border border-border">
-                            <LayoutTemplate className="w-6 h-6 text-muted-foreground/40" />
-                          </div>
-                          <p className="text-sm font-bold text-foreground tracking-tight mb-1">
-                            {draggedElement
-                              ? `Drop "${draggedElement.label}" here`
-                              : "Empty canvas"}
-                          </p>
-                          <p className="text-xs text-muted-foreground mb-5 text-center max-w-[200px] leading-relaxed">
-                            {draggedElement
-                              ? "Release to add this element"
-                              : "Add elements from the panel on the right"}
-                          </p>
-                          {!draggedElement && (
-                            <button
-                              onClick={() => setRightTab("elements")}
-                              className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border text-xs font-semibold text-foreground hover:bg-secondary transition-colors"
-                            >
-                              <Plus className="w-3.5 h-3.5" /> Add Elements
-                            </button>
-                          )}
+                  {isCustom ? (
+                    /* ── Custom component: ArcenEmbed for ALL views ── */
+                    elements.length === 0 && activeViewState === "portal" ? (
+                      /* Empty portal canvas */
+                      <div
+                        onDrop={handleDrop}
+                        onDragOver={handleDragOver}
+                        className={cn(
+                          "flex flex-col items-center justify-center min-h-[520px] rounded-2xl border-2 border-dashed transition-all duration-200 select-none",
+                          draggedElement
+                            ? "border-foreground/40 bg-foreground/5"
+                            : "border-border bg-background/40",
+                        )}
+                      >
+                        <div className="w-14 h-14 rounded-2xl bg-secondary flex items-center justify-center mb-4 border border-border">
+                          <LayoutTemplate className="w-6 h-6 text-muted-foreground/40" />
                         </div>
-                      ) : (
-                        /* ── Portal canvas layout — editable element cards ── */
-                        <>
-                          {/* Layout indicator pill */}
-                          <div className="flex items-center gap-2 mb-3">
-                            <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-secondary border border-border text-[10px] font-semibold text-muted-foreground">
-                              <svg
-                                className="w-3 h-3"
-                                viewBox="0 0 12 12"
-                                fill="none"
-                              >
-                                {Array.from({
-                                  length: config.styling.columns ?? 1,
-                                }).map((_, i) => (
-                                  <rect
-                                    key={i}
-                                    x={
-                                      i * (10 / (config.styling.columns ?? 1)) +
-                                      1
-                                    }
-                                    y="1"
-                                    width={
-                                      10 / (config.styling.columns ?? 1) - 1.5
-                                    }
-                                    height="10"
-                                    rx="1"
-                                    fill="currentColor"
-                                    opacity="0.6"
-                                  />
-                                ))}
-                              </svg>
-                              {config.styling.columns ?? 1} col
-                              {(config.styling.columns ?? 1) !== 1 ? "s" : ""}
-                            </span>
-                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-secondary border border-border text-[10px] font-semibold text-muted-foreground capitalize">
-                              {config.styling.sections ?? "separate"}
-                            </span>
-                          </div>
-
-                          {config.styling.sections === "merged" ? (
-                            /* MERGED: all elements live inside one unified card */
-                            <div
-                              className={cn(
-                                "rounded-xl border-2 overflow-hidden bg-background transition-all duration-150",
-                                draggedElement
-                                  ? "border-foreground/40 ring-2 ring-inset ring-foreground/20"
-                                  : "border-border",
-                              )}
-                              onDrop={handleDrop}
-                              onDragOver={handleDragOver}
-                            >
-                              {elements.map((el, index) => {
-                                const isSelected = selectedElement === el.id;
-                                return (
-                                  <div
-                                    key={el.id}
-                                    onClick={() => {
-                                      setSelectedElement(el.id);
-                                      if (
-                                        (
-                                          EDITABLE_TYPES as readonly string[]
-                                        ).includes(el.type)
-                                      )
-                                        setRightTab("properties");
-                                    }}
-                                    className={cn(
-                                      "group relative cursor-pointer transition-all duration-150",
-                                      index > 0 && "border-t border-border",
-                                      isSelected
-                                        ? "bg-accent/5"
-                                        : "hover:bg-secondary/20",
-                                    )}
-                                  >
-                                    {/* Element action toolbar */}
-                                    <div
-                                      className={cn(
-                                        "absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10",
-                                        isSelected && "opacity-100",
-                                      )}
-                                    >
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          moveElement(index, "up");
-                                        }}
-                                        disabled={index === 0}
-                                        className="h-6 w-6 rounded border bg-background shadow-sm flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed"
-                                      >
-                                        <ChevronUp className="w-3 h-3" />
-                                      </button>
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          moveElement(index, "down");
-                                        }}
-                                        disabled={index === elements.length - 1}
-                                        className="h-6 w-6 rounded border bg-background shadow-sm flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed"
-                                      >
-                                        <ChevronDown className="w-3 h-3" />
-                                      </button>
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          removeElement(el.id);
-                                        }}
-                                        className="h-6 w-6 rounded border bg-background shadow-sm flex items-center justify-center text-muted-foreground hover:text-destructive"
-                                      >
-                                        <X className="w-3 h-3" />
-                                      </button>
-                                    </div>
-
-                                    {/* Element type label */}
-                                    <div className="absolute top-2 left-2">
-                                      <span
-                                        className={cn(
-                                          "px-2 py-0.5 rounded text-[10px] font-semibold border bg-background",
-                                          isSelected
-                                            ? "text-foreground border-foreground"
-                                            : "text-muted-foreground border-border",
-                                        )}
-                                      >
-                                        {el.label}
-                                      </span>
-                                    </div>
-
-                                    {/* Element preview content */}
-                                    <div className="px-4 pb-4 pt-9 select-none">
-                                      <ElementPreview
-                                        type={el.type}
-                                        styling={config.styling}
-                                        fullData={canvasMockData}
-                                        elementProps={el.props}
-                                        onChangePlan={() =>
-                                          setActiveViewState("checkout")
-                                        }
-                                      />
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          ) : (
-                            /* SEPARATE: each element is its own card, arranged in a columns grid */
-                            <div
-                              className={cn(
-                                "transition-all duration-150",
-                                draggedElement &&
-                                  "ring-2 ring-inset ring-foreground/20 rounded-2xl p-2",
-                              )}
-                              style={{
-                                display: "grid",
-                                gridTemplateColumns: `repeat(${config.styling.columns ?? 1}, 1fr)`,
-                                gap: "12px",
-                                alignItems: "start",
-                              }}
-                              onDrop={handleDrop}
-                              onDragOver={handleDragOver}
-                            >
-                              {elements.map((el, index) => {
-                                const isSelected = selectedElement === el.id;
-                                return (
-                                  <div
-                                    key={el.id}
-                                    onClick={() => {
-                                      setSelectedElement(el.id);
-                                      if (
-                                        (
-                                          EDITABLE_TYPES as readonly string[]
-                                        ).includes(el.type)
-                                      )
-                                        setRightTab("properties");
-                                    }}
-                                    className={cn(
-                                      "group relative rounded-xl border-2 bg-background cursor-pointer transition-all duration-150",
-                                      isSelected
-                                        ? "border-foreground shadow-sm"
-                                        : "border-border hover:border-foreground/30",
-                                    )}
-                                  >
-                                    {/* Element action toolbar */}
-                                    <div
-                                      className={cn(
-                                        "absolute -top-3 right-3 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10",
-                                        isSelected && "opacity-100",
-                                      )}
-                                    >
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          moveElement(index, "up");
-                                        }}
-                                        disabled={index === 0}
-                                        className="h-6 w-6 rounded border bg-background shadow-sm flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed"
-                                      >
-                                        <ChevronUp className="w-3 h-3" />
-                                      </button>
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          moveElement(index, "down");
-                                        }}
-                                        disabled={index === elements.length - 1}
-                                        className="h-6 w-6 rounded border bg-background shadow-sm flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed"
-                                      >
-                                        <ChevronDown className="w-3 h-3" />
-                                      </button>
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          removeElement(el.id);
-                                        }}
-                                        className="h-6 w-6 rounded border bg-background shadow-sm flex items-center justify-center text-muted-foreground hover:text-destructive"
-                                      >
-                                        <X className="w-3 h-3" />
-                                      </button>
-                                    </div>
-
-                                    {/* Element type label */}
-                                    <div className="absolute -top-3 left-3 flex items-center gap-1">
-                                      <span
-                                        className={cn(
-                                          "px-2 py-0.5 rounded text-[10px] font-semibold border bg-background",
-                                          isSelected
-                                            ? "text-foreground border-foreground"
-                                            : "text-muted-foreground border-border",
-                                        )}
-                                      >
-                                        {el.label}
-                                      </span>
-                                    </div>
-
-                                    {/* Element preview content */}
-                                    <div className="p-4 pt-5 select-none">
-                                      <ElementPreview
-                                        type={el.type}
-                                        styling={config.styling}
-                                        fullData={canvasMockData}
-                                        elementProps={el.props}
-                                        onChangePlan={() =>
-                                          setActiveViewState("checkout")
-                                        }
-                                      />
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </>
-                      )}
-                      {/* Drop zone when dragging */}
-                      {draggedElement && elements.length > 0 && (
-                        <div className="mt-4 h-12 rounded-xl border-2 border-dashed border-foreground/30 bg-foreground/5 flex items-center justify-center gap-2">
-                          <Plus className="w-4 h-4 text-foreground/50" />
-                          <span className="text-sm text-foreground/50 font-medium">
-                            Drop &quot;{draggedElement.label}&quot; here
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  ) : isCustom ? (
-                    /* ── Custom component non-portal views: real ArcenEmbed ── */
-                    activeViewState === "disabled" ? (
+                        <p className="text-sm font-bold text-foreground tracking-tight mb-1">
+                          {draggedElement
+                            ? `Drop "${draggedElement.label}" here`
+                            : "Empty canvas"}
+                        </p>
+                        <p className="text-xs text-muted-foreground mb-5 text-center max-w-[200px] leading-relaxed">
+                          {draggedElement
+                            ? "Release to add this element"
+                            : "Add elements from the panel on the right"}
+                        </p>
+                        {!draggedElement && (
+                          <button
+                            onClick={() => setRightTab("elements")}
+                            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border text-xs font-semibold text-foreground hover:bg-secondary transition-colors"
+                          >
+                            <Plus className="w-3.5 h-3.5" /> Add Elements
+                          </button>
+                        )}
+                      </div>
+                    ) : activeViewState === "disabled" ? (
                       <div className="flex flex-col items-center justify-center min-h-[400px] gap-3 text-muted-foreground">
                         <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center">
                           <MinusCircle className="w-5 h-5" />
                         </div>
-                        <p className="text-sm font-semibold">
-                          Component disabled
-                        </p>
+                        <p className="text-sm font-semibold">Component disabled</p>
                         <p className="text-xs text-center max-w-[220px] leading-relaxed">
-                          This is how the component appears when disabled for a
-                          user segment.
+                          This is how the component appears when disabled for a user segment.
                         </p>
                       </div>
                     ) : (
-                      <ArcenEmbed
-                        key={activeViewState}
-                        mockData={canvasMockData}
-                        initialView={tabToEmbedView(activeViewState)}
-                        baseUrl=""
-                        accessToken="preview"
-                      />
+                      /* Live ArcenEmbed preview — portal, checkout, wallet, unsubscribe */
+                      <div
+                        onDrop={handleDrop}
+                        onDragOver={handleDragOver}
+                        className="min-h-full"
+                      >
+                        <ArcenEmbed
+                          key={embedMountKey}
+                          mockData={canvasMockData}
+                          initialView={tabToEmbedView(activeViewState)}
+                          baseUrl=""
+                          accessToken="preview"
+                          onViewChange={(v) => {
+                            const reverseMap: Record<string, string> = {
+                              portal: "portal",
+                              checkout: "checkout",
+                              payment: "payment-method",
+                              unsubscribe: "unsubscribe",
+                              success: "portal",
+                            };
+                            setActiveViewState(reverseMap[v] ?? "portal");
+                          }}
+                        />
+                        {/* Drop zone overlay for adding elements via drag */}
+                        {draggedElement && (
+                          <div className="mt-4 h-12 rounded-xl border-2 border-dashed border-foreground/30 bg-foreground/5 flex items-center justify-center gap-2">
+                            <Plus className="w-4 h-4 text-foreground/50" />
+                            <span className="text-sm text-foreground/50 font-medium">
+                              Drop &quot;{draggedElement.label}&quot; here to add
+                            </span>
+                          </div>
+                        )}
+                      </div>
                     )
                   ) : (
                     /* ── Non-custom SDK components: simulation preview ── */
