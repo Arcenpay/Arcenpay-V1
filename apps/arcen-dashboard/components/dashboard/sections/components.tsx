@@ -19,6 +19,7 @@ import {
   Clock,
   ReceiptText,
   FileText,
+  AlertTriangle,
 } from "lucide-react";
 import {
   ComponentEditor,
@@ -26,6 +27,7 @@ import {
   type ComponentElement,
 } from "@/components/dashboard/component-editor";
 import { cn } from "@/lib/utils";
+import type { Section } from "@/app/(dashboard)/page";
 
 // ─── Customer Portal preset elements ─────────────────────────
 const PORTAL_ELEMENTS: ComponentElement[] = [
@@ -336,7 +338,11 @@ function CreateComponentModal({
 // Main Components Section
 // ============================================================
 
-export function ComponentsSection() {
+interface ComponentsSectionProps {
+  onSectionChange?: (section: Section) => void;
+}
+
+export function ComponentsSection({ onSectionChange }: ComponentsSectionProps = {}) {
   const [searchQuery, setSearchQuery] = useState("");
   const [customComponents, setCustomComponents] = useState<ComponentConfig[]>(
     [],
@@ -345,6 +351,42 @@ export function ComponentsSection() {
     useState<ComponentConfig | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+
+  // ── Prerequisite check ────────────────────────────────────
+  const [prereqs, setPrereqs] = useState<{
+    publishedPlans: number;
+    onChainPlans: number;
+    featureFlags: number;
+    loading: boolean;
+  }>({ publishedPlans: 0, onChainPlans: 0, featureFlags: 0, loading: true });
+
+  useEffect(() => {
+    Promise.all([
+      fetch("/api/catalog/plans").then((r) => (r.ok ? r.json() : null)),
+      fetch("/api/v1/feature-flags").then((r) => (r.ok ? r.json() : null)),
+    ])
+      .then(([plansData, flagsData]) => {
+        const plans: Array<{ status: string; chainSyncStatus: string }> =
+          Array.isArray(plansData?.plans)
+            ? plansData.plans
+            : Array.isArray(plansData)
+              ? plansData
+              : [];
+        setPrereqs({
+          publishedPlans: plans.filter((p) => p.status === "PUBLISHED").length,
+          onChainPlans: plans.filter(
+            (p) => p.chainSyncStatus === "SYNCED",
+          ).length,
+          featureFlags: Array.isArray(flagsData?.data)
+            ? flagsData.data.length
+            : 0,
+          loading: false,
+        });
+      })
+      .catch(() =>
+        setPrereqs((p) => ({ ...p, loading: false })),
+      );
+  }, []);
 
   // Load components from server on mount
   useEffect(() => {
@@ -575,6 +617,74 @@ export function ComponentsSection() {
             Create Component
           </Button>
         </div>
+
+        {/* Prerequisite banner */}
+        {!prereqs.loading &&
+          (prereqs.publishedPlans === 0 || prereqs.featureFlags === 0) && (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 p-4">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
+                <div className="space-y-1.5">
+                  <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">
+                    Complete setup to unlock components
+                  </p>
+                  <ul className="text-xs text-amber-700 dark:text-amber-300 space-y-1">
+                    {prereqs.publishedPlans === 0 && (
+                      <li>
+                        •{" "}
+                        {onSectionChange ? (
+                          <button
+                            className="underline underline-offset-2 hover:text-amber-900 dark:hover:text-amber-100 transition-colors"
+                            onClick={() => onSectionChange("catalog-plans")}
+                          >
+                            Create and publish at least one plan
+                          </button>
+                        ) : (
+                          "Create and publish at least one plan"
+                        )}
+                        {prereqs.onChainPlans === 0 &&
+                          prereqs.publishedPlans === 0 &&
+                          " (then register it on-chain for stablecoin billing)"}
+                      </li>
+                    )}
+                    {prereqs.publishedPlans > 0 &&
+                      prereqs.onChainPlans === 0 && (
+                        <li>
+                          •{" "}
+                          {onSectionChange ? (
+                            <button
+                              className="underline underline-offset-2 hover:text-amber-900 dark:hover:text-amber-100 transition-colors"
+                              onClick={() => onSectionChange("catalog-plans")}
+                            >
+                              Register your plans on-chain
+                            </button>
+                          ) : (
+                            "Register your plans on-chain"
+                          )}{" "}
+                          for stablecoin billing to work
+                        </li>
+                      )}
+                    {prereqs.featureFlags === 0 && (
+                      <li>
+                        •{" "}
+                        {onSectionChange ? (
+                          <button
+                            className="underline underline-offset-2 hover:text-amber-900 dark:hover:text-amber-100 transition-colors"
+                            onClick={() => onSectionChange("feature-flags")}
+                          >
+                            Configure at least one feature flag
+                          </button>
+                        ) : (
+                          "Configure at least one feature flag"
+                        )}{" "}
+                        to power entitlements in embedded components
+                      </li>
+                    )}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
 
         {/* Search */}
         {customComponents.length > 0 && (

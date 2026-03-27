@@ -25,6 +25,8 @@ import {
   Activity,
   Zap,
   Bot,
+  Webhook,
+  BookOpen,
 } from "lucide-react";
 import { useEnvironment } from "@/contexts/environment-context";
 
@@ -66,13 +68,12 @@ const navGroups: NavGroup[] = [
     items: [
       { id: "events-stream", label: "Events", icon: Activity },
       { id: "components", label: "Components", icon: LayoutTemplate },
+      { id: "webhooks", label: "Webhooks", icon: Webhook },
     ],
   },
   {
     label: "Agent",
-    items: [
-      { id: "agent", label: "Agent", icon: Bot },
-    ],
+    items: [{ id: "agent", label: "Agent", icon: Bot }],
   },
   {
     label: "Admin",
@@ -82,6 +83,10 @@ const navGroups: NavGroup[] = [
       { id: "audit-log", label: "Audit Log", icon: ClipboardList },
       { id: "settings", label: "Settings", icon: Settings },
     ],
+  },
+  {
+    label: "Help",
+    items: [{ id: "docs", label: "Docs & SDK", icon: BookOpen }],
   },
 ];
 
@@ -226,11 +231,15 @@ export function Sidebar({
           <div
             className={cn(
               "w-1.5 h-1.5 rounded-full shrink-0",
-              mounted && isConnected ? "bg-success" : "bg-warning animate-pulse",
+              mounted && isConnected
+                ? "bg-success"
+                : "bg-warning animate-pulse",
             )}
           />
           <span className="truncate">
-            {mounted && isConnected && shortAddress ? shortAddress : "Not connected"}
+            {mounted && isConnected && shortAddress
+              ? shortAddress
+              : "Not connected"}
           </span>
         </div>
         {mounted && isConnected && (

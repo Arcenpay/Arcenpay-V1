@@ -1,7 +1,10 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
+import { ArcenEmbed, renderElement, getDesignTokens } from "@arcenpay/react";
+import type { ComponentRenderData, ComponentDesign } from "@arcenpay/sdk";
+import type { ComponentElement as SdkComponentElement } from "@arcenpay/sdk";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -41,6 +44,10 @@ import {
   ArrowUpDown,
   Users,
   Zap,
+  CreditCard,
+  MinusCircle,
+  Type,
+  Square,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -69,6 +76,8 @@ export interface RealFlag {
 export interface RealData {
   plans: RealPlan[];
   flags: RealFlag[];
+  activePlan?: Record<string, unknown> | null;
+  usage?: Array<Record<string, unknown>>;
 }
 
 export interface ComponentElement {
@@ -125,27 +134,22 @@ const ELEMENT_LIBRARY: {
         icon: ShieldCheck,
       },
       { type: "metered-features", label: "Metered Features", icon: Gauge },
-      { type: "pricing-table", label: "Pricing Table", icon: Layers },
     ],
   },
   {
     category: "Billing",
     elements: [
       { type: "next-bill-due", label: "Next Bill Due", icon: Clock },
+      { type: "payment-method", label: "Payment Methods", icon: CreditCard },
       { type: "invoices", label: "Invoices", icon: ReceiptText },
-      { type: "billing-history", label: "Billing History", icon: FileText },
-      { type: "checkout-modal", label: "Checkout", icon: Zap },
+      { type: "unsubscribe", label: "Unsubscribe", icon: MinusCircle },
     ],
   },
   {
     category: "Basics",
     elements: [
-      {
-        type: "subscription-status",
-        label: "Subscription Status",
-        icon: Shield,
-      },
-      { type: "usage-dashboard", label: "Usage Dashboard", icon: BarChart3 },
+      { type: "text", label: "Text", icon: Type },
+      { type: "button", label: "Button", icon: Square },
     ],
   },
 ];
@@ -239,25 +243,154 @@ const TEMPLATES = [
 
 function ElementPreview({
   type,
+  elementProps,
+  onChangePlan,
+  fullData,
+  styling,
+}: {
+  type: string;
+  elementProps?: Record<string, unknown>;
+  onChangePlan?: () => void;
+  fullData?: ComponentRenderData;
+  styling?: {
+    primaryColor?: string;
+    secondaryColor?: string;
+    typography: { fontFamily?: string; fontSize?: string };
+    cardStyle: {
+      cardShadow?: boolean;
+      borderRadius?: string;
+      backgroundColor?: string;
+      cardPadding?: string;
+    };
+  };
+  // Legacy props kept for compatibility but no longer used
+  primaryColor?: string;
+  secondaryColor?: string;
+  fontFamily?: string;
+  realData?: unknown;
+}) {
+  if (fullData && styling) {
+    const design: ComponentDesign = {
+      primaryColor: styling.primaryColor ?? "#000000",
+      fontFamily: styling.typography.fontFamily ?? "system-ui, sans-serif",
+      fontSize: parseFloat(styling.typography.fontSize || "14") || 14,
+      fontColor: "#111827",
+      backgroundColor: styling.cardStyle.backgroundColor || "#ffffff",
+      borderRadius: parseFloat(styling.cardStyle.borderRadius || "8") || 8,
+      cardStyle: (styling.cardStyle.cardShadow
+        ? "elevated"
+        : "minimal") as ComponentDesign["cardStyle"],
+    };
+    const tokens = getDesignTokens(design);
+
+    // Map editor kebab-case types → SDK camelCase types
+    const typeMap: Record<string, string> = {
+      "plan-manager": "planManager",
+      "included-features": "includedFeatures",
+      "metered-features": "meteredFeatures",
+      "next-bill-due": "nextBillDue",
+      "payment-method": "paymentMethod",
+      "billing-history": "billingHistory",
+    };
+    const el = {
+      type: typeMap[type] ?? type,
+      ...elementProps,
+    } as SdkComponentElement & Record<string, unknown>;
+    const result = renderElement(
+      el,
+      0,
+      fullData,
+      tokens,
+      onChangePlan ?? (() => {}),
+      () => {},
+    );
+    return result ? (
+      <>{result}</>
+    ) : (
+      <div style={{ color: tokens.mutedColor, fontSize: 12, padding: "8px 0" }}>
+        No preview for this element type.
+      </div>
+    );
+  }
+
+  // Fallback: bare-bones placeholder when fullData not provided
+  return (
+    <div style={{ padding: "12px 0", color: "#6b7280", fontSize: 13 }}>
+      {type} element
+    </div>
+  );
+}
+
+// ============================================================
+// LEGACY ElementPreview implementation (kept below for reference, unreachable)
+// ============================================================
+
+function ElementPreviewLegacy({
+  type,
   primaryColor,
   secondaryColor,
   fontFamily,
+  realData,
+  elementProps,
+  onChangePlan,
 }: {
   type: string;
   primaryColor?: string;
   secondaryColor?: string;
   fontFamily?: string;
+  realData?: RealData;
+  elementProps?: Record<string, unknown>;
+  onChangePlan?: () => void;
 }) {
   const accent = primaryColor || "#000000";
   const secBg = secondaryColor || "#f5f5f5";
   const font = fontFamily || "inherit";
+
+  // Use real plans/flags when available, fall back to demo placeholders
+  const previewPlans: Array<{
+    name: string;
+    price: number;
+    billingInterval: string;
+    acceptedToken: string;
+  }> = realData?.plans?.length
+    ? realData.plans.slice(0, 3).map((p) => ({
+        name: p.name,
+        price: p.price,
+        billingInterval: p.billingInterval,
+        acceptedToken: p.acceptedToken ?? "USDC",
+      }))
+    : [
+        {
+          name: "Starter",
+          price: 9,
+          billingInterval: "monthly",
+          acceptedToken: "USDC",
+        },
+        {
+          name: "Pro",
+          price: 29,
+          billingInterval: "monthly",
+          acceptedToken: "USDC",
+        },
+        {
+          name: "Enterprise",
+          price: 99,
+          billingInterval: "monthly",
+          acceptedToken: "USDC",
+        },
+      ];
+
+  const previewFlags = realData?.flags?.length
+    ? realData.flags.slice(0, 4)
+    : null; // null = no real data yet, show skeletons
+
+  const firstPlan = previewPlans[0];
+  const hasRealPlans = (realData?.plans?.length ?? 0) > 0;
+  const hasRealFlags = (realData?.flags?.length ?? 0) > 0;
+
   switch (type) {
     case "pricing-table": {
-      const demoPlans = [
-        { name: "Starter", price: 9, billingInterval: "monthly" },
-        { name: "Pro", price: 29, billingInterval: "monthly" },
-        { name: "Enterprise", price: 99, billingInterval: "monthly" },
-      ];
+      const demoPlans = previewPlans;
       return (
         <div className="space-y-2">
           <div
@@ -317,24 +450,43 @@ function ElementPreview({
     }
 
     case "plan-manager": {
+      if (realData && !hasRealPlans) {
+        return (
+          <div
+            className="flex flex-col items-center justify-center py-4 gap-1.5 opacity-50"
+            style={{ fontFamily: font }}
+          >
+            <p className="text-xs font-semibold text-foreground">
+              No plans configured
+            </p>
+            <p className="text-[10px] text-muted-foreground">
+              Create and publish a plan first
+            </p>
+          </div>
+        );
+      }
       return (
         <div className="space-y-3" style={{ fontFamily: font }}>
           <div className="flex items-start justify-between">
             <div>
               <p className="text-2xl font-bold text-foreground tracking-tight">
-                Pro
+                {firstPlan.name}
               </p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                For growing teams
-              </p>
-              <div className="flex items-baseline gap-1 mt-1">
-                <span className="text-sm font-bold text-foreground">
-                  $29.00
-                </span>
-                <span className="text-[10px] text-muted-foreground">
-                  /mo · USDC
-                </span>
-              </div>
+              {firstPlan.price === 0 ? (
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Free plan
+                </p>
+              ) : (
+                <div className="flex items-baseline gap-1 mt-1">
+                  <span className="text-sm font-bold text-foreground">
+                    ${firstPlan.price.toFixed(2)}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground">
+                    /{firstPlan.billingInterval === "yearly" ? "yr" : "mo"} ·
+                    USDC
+                  </span>
+                </div>
+              )}
             </div>
             <span
               className="text-[10px] font-bold px-2 py-0.5 rounded-full"
@@ -354,6 +506,10 @@ function ElementPreview({
               backgroundColor: accent ?? "hsl(var(--foreground))",
               color: "#fff",
             }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onChangePlan?.();
+            }}
           >
             Change Plan
           </button>
@@ -362,12 +518,38 @@ function ElementPreview({
     }
 
     case "included-features": {
-      const feats = [
-        { name: "API Access", enabled: true },
-        { name: "Webhooks", enabled: true },
-        { name: "Custom Domain", enabled: false },
-        { name: "SSO", enabled: false },
-      ];
+      if (realData && !hasRealFlags) {
+        return (
+          <div
+            className="flex flex-col items-center justify-center py-4 gap-1.5 opacity-50"
+            style={{ fontFamily: font }}
+          >
+            <p className="text-xs font-semibold text-foreground">
+              No features selected
+            </p>
+            <p className="text-[10px] text-muted-foreground">
+              Configure feature flags first
+            </p>
+          </div>
+        );
+      }
+      // Only show boolean flags (featureType === "boolean" or undefined)
+      const booleanFlags = previewFlags
+        ? previewFlags.filter(
+            (f) => !f.featureType || f.featureType === "boolean",
+          )
+        : null;
+      const feats = booleanFlags
+        ? booleanFlags.map((f) => ({
+            name: f.name,
+            enabled: f.defaultValue ?? true,
+          }))
+        : [
+            { name: "API Access", enabled: true },
+            { name: "Webhooks", enabled: true },
+            { name: "Custom Domain", enabled: false },
+            { name: "SSO", enabled: false },
+          ];
       return (
         <div style={{ fontFamily: font }}>
           <p className="text-sm font-bold text-foreground mb-3">
@@ -397,13 +579,41 @@ function ElementPreview({
       );
     }
 
-    case "metered-features":
+    case "metered-features": {
+      if (realData && !hasRealFlags) {
+        return (
+          <div
+            className="flex flex-col items-center justify-center py-4 gap-1.5 opacity-50"
+            style={{ fontFamily: font }}
+          >
+            <p className="text-xs font-semibold text-foreground">
+              No metered features
+            </p>
+            <p className="text-[10px] text-muted-foreground">
+              Configure event-based flags first
+            </p>
+          </div>
+        );
+      }
+      // Only show event_based flags for metered features
+      const eventBasedFlags = previewFlags
+        ? previewFlags.filter((f) => f.featureType === "event_based")
+        : null;
+      const meteredItems =
+        eventBasedFlags && eventBasedFlags.length > 0
+          ? eventBasedFlags.slice(0, 2).map((f, i) => ({
+              name: f.name,
+              used: i === 0 ? 7500 : 3,
+              limit: i === 0 ? 10000 : 10,
+              unit: i === 0 ? "" : " GB",
+            }))
+          : [
+              { name: "API Calls", used: 7_500, limit: 10_000, unit: "" },
+              { name: "Storage", used: 3.2, limit: 10, unit: " GB" },
+            ];
       return (
         <div className="space-y-4">
-          {[
-            { name: "API Calls", used: 7_500, limit: 10_000, unit: "" },
-            { name: "Storage", used: 3.2, limit: 10, unit: " GB" },
-          ].map((m, i) => (
+          {meteredItems.map((m, i) => (
             <div key={i}>
               <div className="flex items-center justify-between mb-1.5">
                 <p className="text-sm font-semibold text-foreground">
@@ -434,6 +644,7 @@ function ElementPreview({
           ))}
         </div>
       );
+    }
 
     case "usage-dashboard":
       return (
@@ -445,20 +656,37 @@ function ElementPreview({
               { label: "Success", value: "99.8%" },
             ].map((s, i) => (
               <div key={i} className="text-center p-1 rounded bg-secondary/50">
-                <p className="text-[10px] font-bold text-foreground">{s.value}</p>
+                <p className="text-[10px] font-bold text-foreground">
+                  {s.value}
+                </p>
                 <p className="text-[7px] text-muted-foreground">{s.label}</p>
               </div>
             ))}
           </div>
           <div className="flex items-end gap-0.5 h-8">
             {[40, 55, 35, 70, 60, 80, 65, 90, 75, 85, 70, 95].map((h, i) => (
-              <div key={i} className="flex-1 rounded-sm" style={{ height: `${h}%`, backgroundColor: accent, opacity: 0.25 + (h / 95) * 0.5 }} />
+              <div
+                key={i}
+                className="flex-1 rounded-sm"
+                style={{
+                  height: `${h}%`,
+                  backgroundColor: accent,
+                  opacity: 0.25 + (h / 95) * 0.5,
+                }}
+              />
             ))}
           </div>
         </div>
       );
 
-    case "next-bill-due":
+    case "next-bill-due": {
+      const nbdPlan = firstPlan;
+      const nbdPrice = nbdPlan
+        ? nbdPlan.price === 0
+          ? "Free"
+          : `$${nbdPlan.price.toFixed(2)}`
+        : "$29.00";
+      const nbdToken = nbdPlan?.acceptedToken ?? "USDC";
       return (
         <div className="space-y-3" style={{ fontFamily: font }}>
           <div className="flex items-center justify-between">
@@ -470,9 +698,13 @@ function ElementPreview({
           <div>
             <div className="flex items-baseline gap-1">
               <span className="text-3xl font-bold text-foreground tracking-tight">
-                $29.00
+                {nbdPrice}
               </span>
-              <span className="text-xs text-muted-foreground">USDC</span>
+              {nbdPlan?.price !== 0 ? (
+                <span className="text-xs text-muted-foreground">
+                  {nbdToken}
+                </span>
+              ) : null}
             </div>
             <p className="text-[10px] text-muted-foreground mt-0.5">
               Estimated bill · Mar 1 – Mar 31
@@ -489,6 +721,7 @@ function ElementPreview({
           </div>
         </div>
       );
+    }
 
     case "payment-method":
       return (
@@ -569,11 +802,129 @@ function ElementPreview({
         </div>
       );
 
+    case "unsubscribe": {
+      const unsubPlan = firstPlan;
+      const unsubPlanName = unsubPlan?.name ?? "Pro Plan";
+      return (
+        <div className="space-y-3" style={{ fontFamily: font }}>
+          <div className="flex flex-col items-center gap-2 py-2">
+            <div
+              className="w-10 h-10 rounded-full flex items-center justify-center"
+              style={{ backgroundColor: "hsl(var(--destructive) / 0.1)" }}
+            >
+              <MinusCircle
+                className="w-5 h-5"
+                style={{ color: "hsl(var(--destructive))" }}
+              />
+            </div>
+            <div className="text-center">
+              <p className="text-sm font-bold text-foreground">
+                Cancel Subscription
+              </p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">
+                You are currently on{" "}
+                <span className="font-semibold">{unsubPlanName}</span>
+              </p>
+            </div>
+          </div>
+          <p className="text-[10px] text-muted-foreground text-center leading-relaxed">
+            Your access will continue until the end of the current billing
+            period.
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="h-7 rounded-lg border border-border flex items-center justify-center text-[10px] font-medium text-muted-foreground cursor-pointer">
+              Keep Plan
+            </div>
+            <div
+              className="h-7 rounded-lg flex items-center justify-center text-[10px] font-semibold text-white cursor-pointer"
+              style={{ backgroundColor: "hsl(var(--destructive))" }}
+            >
+              Cancel
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    case "text": {
+      const txtHeading = elementProps?.heading
+        ? String(elementProps.heading)
+        : "Your heading here";
+      const txtBody = elementProps?.body
+        ? String(elementProps.body)
+        : "Add your custom text content here. Use this block to provide information, instructions, or any message to your users.";
+      const txtAlign = (elementProps?.alignment as string) || "left";
+      return (
+        <div
+          className="space-y-2"
+          style={{
+            fontFamily: font,
+            textAlign: txtAlign as React.CSSProperties["textAlign"],
+          }}
+        >
+          <p className="text-base font-bold text-foreground">{txtHeading}</p>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            {txtBody}
+          </p>
+        </div>
+      );
+    }
+
+    case "button": {
+      const btnLabel = elementProps?.label
+        ? String(elementProps.label)
+        : "Click Me";
+      const btnVariant = (elementProps?.variant as string) || "filled";
+      const btnFullWidth = Boolean(elementProps?.fullWidth);
+      return (
+        <div
+          className="flex flex-col items-start gap-2"
+          style={{ fontFamily: font }}
+        >
+          <button
+            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-opacity hover:opacity-90${btnFullWidth ? " w-full" : ""}`}
+            style={
+              btnVariant === "filled"
+                ? {
+                    backgroundColor: accent ?? "hsl(var(--foreground))",
+                    color: "#fff",
+                  }
+                : btnVariant === "outlined"
+                  ? {
+                      border: `2px solid ${accent ?? "hsl(var(--foreground))"}`,
+                      color: accent ?? "hsl(var(--foreground))",
+                      background: "transparent",
+                    }
+                  : {
+                      color: accent ?? "hsl(var(--foreground))",
+                      background: "transparent",
+                    }
+            }
+          >
+            {btnLabel}
+          </button>
+          {!elementProps?.label && (
+            <p className="text-[10px] text-muted-foreground">
+              Customise label & action in settings
+            </p>
+          )}
+        </div>
+      );
+    }
+
     case "checkout-modal": {
-      const planName = "Pro Plan";
-      const planPrice = "$29";
-      const billingLabel = "/mo";
-      const token = "USDC";
+      const cmPlan = firstPlan;
+      const cmPlanName = cmPlan?.name ?? "Pro Plan";
+      const cmPlanPrice = cmPlan
+        ? cmPlan.price === 0
+          ? "Free"
+          : `$${cmPlan.price.toFixed(2)}`
+        : "$29";
+      const cmBillingLabel =
+        cmPlan && cmPlan.price > 0
+          ? `/${cmPlan.billingInterval === "yearly" ? "yr" : "mo"}`
+          : "";
+      const cmToken = cmPlan?.acceptedToken ?? "USDC";
       const steps = ["Wallet", "Approve", "Subscribe"];
       const activeStep = 1;
       return (
@@ -581,8 +932,12 @@ function ElementPreview({
           <div className="rounded-lg border border-border bg-card p-2.5 space-y-2.5 shadow-sm">
             {/* Modal header */}
             <div className="flex items-center justify-between pb-1.5 border-b border-border">
-              <span className="text-[10px] font-semibold text-foreground">Subscribe to {planName}</span>
-              <div className="w-3.5 h-3.5 rounded-full bg-secondary flex items-center justify-center text-[8px] text-muted-foreground cursor-pointer">✕</div>
+              <span className="text-[10px] font-semibold text-foreground">
+                Subscribe to {cmPlanName}
+              </span>
+              <div className="w-3.5 h-3.5 rounded-full bg-secondary flex items-center justify-center text-[8px] text-muted-foreground cursor-pointer">
+                ✕
+              </div>
             </div>
             {/* Step bar */}
             <div className="flex items-center gap-0.5">
@@ -591,41 +946,71 @@ function ElementPreview({
                   <div
                     className="flex items-center justify-center w-4 h-4 rounded-full text-[7px] font-bold shrink-0"
                     style={{
-                      backgroundColor: i <= activeStep ? accent : "hsl(var(--secondary))",
-                      color: i <= activeStep ? "#fff" : "hsl(var(--muted-foreground))",
+                      backgroundColor:
+                        i <= activeStep ? accent : "hsl(var(--secondary))",
+                      color:
+                        i <= activeStep
+                          ? "#fff"
+                          : "hsl(var(--muted-foreground))",
                     }}
                   >
                     {i < activeStep ? "✓" : i + 1}
                   </div>
                   {i < steps.length - 1 && (
-                    <div className="h-0.5 flex-1" style={{ backgroundColor: i < activeStep ? accent : "hsl(var(--border))" }} />
+                    <div
+                      className="h-0.5 flex-1"
+                      style={{
+                        backgroundColor:
+                          i < activeStep ? accent : "hsl(var(--border))",
+                      }}
+                    />
                   )}
                 </React.Fragment>
               ))}
             </div>
             {/* Plan + wallet */}
-            <div className="flex items-center justify-between p-1.5 rounded-md border border-border" style={{ backgroundColor: secBg + "40" }}>
+            <div
+              className="flex items-center justify-between p-1.5 rounded-md border border-border"
+              style={{ backgroundColor: secBg + "40" }}
+            >
               <div>
-                <p className="text-[8px] text-muted-foreground">Subscribing to</p>
-                <p className="text-[9px] font-semibold text-foreground">{planName}</p>
+                <p className="text-[8px] text-muted-foreground">
+                  Subscribing to
+                </p>
+                <p className="text-[9px] font-semibold text-foreground">
+                  {cmPlanName}
+                </p>
               </div>
               <div className="text-right">
-                <p className="text-[9px] font-bold text-foreground">{planPrice}<span className="text-[7px] font-normal text-muted-foreground">{billingLabel}</span></p>
-                <p className="text-[7px] text-muted-foreground">{token}</p>
+                <p className="text-[9px] font-bold text-foreground">
+                  {cmPlanPrice}
+                  <span className="text-[7px] font-normal text-muted-foreground">
+                    {cmBillingLabel}
+                  </span>
+                </p>
+                <p className="text-[7px] text-muted-foreground">{cmToken}</p>
               </div>
             </div>
             {/* Wallet connected */}
             <div className="flex items-center gap-1.5 p-1.5 rounded-md bg-secondary/30 border border-border">
-              <div className="w-4 h-4 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: `${accent}20` }}>
+              <div
+                className="w-4 h-4 rounded-full flex items-center justify-center shrink-0"
+                style={{ backgroundColor: `${accent}20` }}
+              >
                 <Check className="w-2.5 h-2.5" style={{ color: accent }} />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-[8px] text-muted-foreground">Wallet</p>
-                <p className="text-[8px] font-mono text-foreground truncate">0x4a2f…8c3d · Base</p>
+                <p className="text-[8px] font-mono text-foreground truncate">
+                  0x4a2f…8c3d · Base
+                </p>
               </div>
             </div>
             {/* CTA */}
-            <div className="h-6 rounded-md text-[8px] font-semibold flex items-center justify-center text-white" style={{ backgroundColor: accent }}>
+            <div
+              className="h-6 rounded-md text-[8px] font-semibold flex items-center justify-center text-white"
+              style={{ backgroundColor: accent }}
+            >
               Approve &amp; Subscribe
             </div>
           </div>
@@ -686,7 +1071,10 @@ function ElementPreview({
       return (
         <div className="space-y-2" style={{ fontFamily: font }}>
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: accent }} />
+            <div
+              className="w-2 h-2 rounded-full animate-pulse"
+              style={{ backgroundColor: accent }}
+            />
             <span className="text-[10px] font-semibold text-foreground">
               Active Subscription
             </span>
@@ -943,6 +1331,46 @@ function ElementMiniPreview({ type }: { type: string }) {
           <div className="h-3 rounded bg-accent/50" />
         </div>
       );
+    case "unsubscribe":
+      return (
+        <div className="w-full px-3 scale-[0.85] flex flex-col items-center gap-1">
+          <div
+            className="w-5 h-5 rounded-full flex items-center justify-center"
+            style={{ backgroundColor: "hsl(var(--destructive) / 0.12)" }}
+          >
+            <div
+              className="w-2 h-0.5 rounded-full"
+              style={{ backgroundColor: "hsl(var(--destructive))" }}
+            />
+          </div>
+          <div className="h-1 w-2/3 rounded bg-foreground/20" />
+          <div className="h-0.5 w-1/2 rounded bg-foreground/10" />
+          <div className="grid grid-cols-2 gap-1 w-full mt-0.5">
+            <div className="h-2.5 rounded border border-foreground/15" />
+            <div
+              className="h-2.5 rounded"
+              style={{ backgroundColor: "hsl(var(--destructive) / 0.5)" }}
+            />
+          </div>
+        </div>
+      );
+    case "text":
+      return (
+        <div className="w-full px-3 scale-[0.85] space-y-1">
+          <div className="h-2 w-2/3 rounded bg-foreground/30" />
+          <div className="h-1 w-full rounded bg-foreground/10" />
+          <div className="h-1 w-4/5 rounded bg-foreground/10" />
+          <div className="h-1 w-3/5 rounded bg-foreground/10" />
+        </div>
+      );
+    case "button":
+      return (
+        <div className="w-full px-3 scale-[0.85] flex items-center justify-start">
+          <div className="h-4 w-16 rounded-md bg-accent/70 flex items-center justify-center">
+            <div className="h-1 w-8 rounded bg-white/50" />
+          </div>
+        </div>
+      );
     default:
       return <div className="w-8 h-8 rounded-lg bg-foreground/10" />;
   }
@@ -977,8 +1405,8 @@ function SdkViewportPreview({
   useEffect(() => {
     setSimCancelled(false);
   }, [viewState, componentId]);
-  // Always use clean demo data — never show raw blockchain data in preview
-  const plans: RealPlan[] = [
+  // Use real plans from the provider when available, fall back to demo data
+  const DEMO_PLANS: RealPlan[] = [
     {
       id: "s",
       name: "Starter",
@@ -1001,12 +1429,25 @@ function SdkViewportPreview({
       acceptedToken: "USDC",
     },
   ];
-  const demoFlags = [
+  const DEMO_FLAGS = [
     { featureKey: "api", name: "API Access", defaultValue: true },
     { featureKey: "hooks", name: "Webhooks", defaultValue: true },
     { featureKey: "domain", name: "Custom Domain", defaultValue: false },
     { featureKey: "sso", name: "SSO", defaultValue: false },
   ];
+  const plans: RealPlan[] = realData?.plans?.length
+    ? realData.plans
+    : DEMO_PLANS;
+  const demoFlags = realData?.flags?.length ? realData.flags : DEMO_FLAGS;
+  const hasRealPlans = (realData?.plans?.length ?? 0) > 0;
+  const hasRealFlags = (realData?.flags?.length ?? 0) > 0;
+
+  // Reset selected plan index when real data loads
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  useEffect(() => {
+    setSelectedPlanIdx(0);
+  }, [realData?.plans?.length]);
+
   const activePlan = plans[selectedPlanIdx] ?? plans[0];
   const token = "USDC";
 
@@ -1042,14 +1483,14 @@ function SdkViewportPreview({
     fontFamily: font,
   };
   const btnSecondary: React.CSSProperties = {
-    backgroundColor: "hsl(var(--secondary))",
-    color: "hsl(var(--foreground))",
+    backgroundColor: "#f3f4f6",
+    color: "#111827",
     borderRadius: `calc(${radius} - 2px)`,
     fontSize: 13,
     fontWeight: 500,
     padding: "10px 20px",
     cursor: "pointer",
-    border: "1px solid hsl(var(--border))",
+    border: "1px solid #d1d5db",
     display: "inline-block",
     fontFamily: font,
   };
@@ -1060,54 +1501,123 @@ function SdkViewportPreview({
     // ── customer-portal: Portal ───────────────────────────────
     case "customer-portal:portal": {
       const docIcon = (
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-          <polyline points="14 2 14 8 20 8"/>
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        >
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+          <polyline points="14 2 14 8 20 8" />
         </svg>
       );
       const includedFeatures = [
         { name: "Scan", limit: "3 Scans", resets: "4/24" },
         { name: "API Access", limit: "Unlimited", resets: null },
       ];
-      const cardNoPad: React.CSSProperties = { ...card, padding: 0, overflow: "hidden" };
+      const cardNoPad: React.CSSProperties = {
+        ...card,
+        padding: 0,
+        overflow: "hidden",
+      };
       return (
         <div style={{ fontFamily: font, fontSize: fs }}>
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: twoCol ? "1.4fr 1fr" : "1fr",
-            gap: 16,
-            alignItems: "start",
-          }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: twoCol ? "1.4fr 1fr" : "1fr",
+              gap: 16,
+              alignItems: "start",
+            }}
+          >
             {/* ── Left: Plan + Features ─────────────────────── */}
             <div style={cardNoPad}>
               {/* Subscription canceled banner */}
               {simCancelled && (
-                <div style={{
-                  background: "hsl(var(--secondary))",
-                  padding: "12px 20px",
-                  textAlign: "center",
-                  borderBottom: "1px solid hsl(var(--border))",
-                }}>
-                  <p style={{ fontSize: fs, fontWeight: 600, color: "hsl(var(--foreground))", margin: 0 }}>Subscription canceled</p>
-                  <p style={{ fontSize: fs - 2, color: "hsl(var(--muted-foreground))", margin: "2px 0 0" }}>Access to plan will end on 4/24/2026</p>
+                <div
+                  style={{
+                    background: "hsl(var(--secondary))",
+                    padding: "12px 20px",
+                    textAlign: "center",
+                    borderBottom: "1px solid hsl(var(--border))",
+                  }}
+                >
+                  <p
+                    style={{
+                      fontSize: fs,
+                      fontWeight: 600,
+                      color: "hsl(var(--foreground))",
+                      margin: 0,
+                    }}
+                  >
+                    Subscription canceled
+                  </p>
+                  <p
+                    style={{
+                      fontSize: fs - 2,
+                      color: "hsl(var(--muted-foreground))",
+                      margin: "2px 0 0",
+                    }}
+                  >
+                    Access to plan will end on 4/24/2026
+                  </p>
                 </div>
               )}
 
               {/* Plan info */}
               <div style={{ padding }}>
-                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 14 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    justifyContent: "space-between",
+                    marginBottom: 14,
+                  }}
+                >
                   <div>
-                    <p style={{ fontSize: fs + 18, fontWeight: 800, lineHeight: 1.05, color: "hsl(var(--foreground))", margin: 0 }}>{activePlan.name}</p>
-                    <p style={{ fontSize: fs - 2, color: "hsl(var(--muted-foreground))", marginTop: 4 }}>
-                      {activePlan.description || "Included with your subscription"}
+                    <p
+                      style={{
+                        fontSize: fs + 18,
+                        fontWeight: 800,
+                        lineHeight: 1.05,
+                        color: "hsl(var(--foreground))",
+                        margin: 0,
+                      }}
+                    >
+                      {activePlan.name}
+                    </p>
+                    <p
+                      style={{
+                        fontSize: fs - 2,
+                        color: "hsl(var(--muted-foreground))",
+                        marginTop: 4,
+                      }}
+                    >
+                      {activePlan.description ||
+                        "Included with your subscription"}
                     </p>
                   </div>
-                  <p style={{ fontSize: fs + 4, fontWeight: 700, color: "hsl(var(--foreground))", margin: 0, whiteSpace: "nowrap" }}>
+                  <p
+                    style={{
+                      fontSize: fs + 4,
+                      fontWeight: 700,
+                      color: "hsl(var(--foreground))",
+                      margin: 0,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
                     ${activePlan.price.toFixed(2)}
                   </p>
                 </div>
                 <button
-                  style={{ ...btnPrimary, width: "100%", textAlign: "center", display: "block" }}
+                  style={{
+                    ...btnPrimary,
+                    width: "100%",
+                    textAlign: "center",
+                    display: "block",
+                  }}
                   onClick={() => onViewChange?.("checkout")}
                 >
                   Change plan
@@ -1119,29 +1629,80 @@ function SdkViewportPreview({
 
               {/* Included features */}
               <div style={{ padding }}>
-                <p style={{ fontSize: fs, fontWeight: 700, color: "hsl(var(--foreground))", margin: "0 0 12px" }}>Included features</p>
+                <p
+                  style={{
+                    fontSize: fs,
+                    fontWeight: 700,
+                    color: "hsl(var(--foreground))",
+                    margin: "0 0 12px",
+                  }}
+                >
+                  Included features
+                </p>
                 {includedFeatures.map((feat, i) => (
-                  <div key={i} style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    padding: "10px 0",
-                    borderBottom: i < includedFeatures.length - 1 ? "1px solid hsl(var(--border))" : undefined,
-                  }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <div style={{
-                        width: 32, height: 32,
-                        borderRadius: "50%",
-                        background: "hsl(var(--secondary))",
-                        border: "1px solid hsl(var(--border))",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        flexShrink: 0,
-                      }}>{docIcon}</div>
-                      <span style={{ fontSize: fs, fontWeight: 500, color: "hsl(var(--foreground))" }}>{feat.name}</span>
+                  <div
+                    key={i}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "10px 0",
+                      borderBottom:
+                        i < includedFeatures.length - 1
+                          ? "1px solid hsl(var(--border))"
+                          : undefined,
+                    }}
+                  >
+                    <div
+                      style={{ display: "flex", alignItems: "center", gap: 10 }}
+                    >
+                      <div
+                        style={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: "50%",
+                          background: "hsl(var(--secondary))",
+                          border: "1px solid hsl(var(--border))",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flexShrink: 0,
+                        }}
+                      >
+                        {docIcon}
+                      </div>
+                      <span
+                        style={{
+                          fontSize: fs,
+                          fontWeight: 500,
+                          color: "hsl(var(--foreground))",
+                        }}
+                      >
+                        {feat.name}
+                      </span>
                     </div>
                     <div style={{ textAlign: "right" }}>
-                      <p style={{ fontSize: fs - 1, fontWeight: 600, color: "hsl(var(--foreground))", margin: 0 }}>{feat.limit}</p>
-                      {feat.resets && <p style={{ fontSize: fs - 3, color: "hsl(var(--muted-foreground))", margin: "1px 0 0" }}>Resets {feat.resets}</p>}
+                      <p
+                        style={{
+                          fontSize: fs - 1,
+                          fontWeight: 600,
+                          color: "hsl(var(--foreground))",
+                          margin: 0,
+                        }}
+                      >
+                        {feat.limit}
+                      </p>
+                      {feat.resets && (
+                        <p
+                          style={{
+                            fontSize: fs - 3,
+                            color: "hsl(var(--muted-foreground))",
+                            margin: "1px 0 0",
+                          }}
+                        >
+                          Resets {feat.resets}
+                        </p>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -1149,37 +1710,100 @@ function SdkViewportPreview({
 
               {/* Metered feature card */}
               <div style={{ padding: `0 ${padding} ${padding}` }}>
-                <div style={{
-                  border: "1px solid hsl(var(--border))",
-                  borderRadius: radius,
-                  padding: 16,
-                }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
-                    <div style={{
-                      width: 36, height: 36,
-                      borderRadius: "50%",
-                      background: "hsl(var(--secondary))",
-                      border: "1px solid hsl(var(--border))",
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      flexShrink: 0,
-                    }}>
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                        <polyline points="14 2 14 8 20 8"/>
+                <div
+                  style={{
+                    border: "1px solid hsl(var(--border))",
+                    borderRadius: radius,
+                    padding: 16,
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                      marginBottom: 6,
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: "50%",
+                        background: "hsl(var(--secondary))",
+                        border: "1px solid hsl(var(--border))",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <svg
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                        <polyline points="14 2 14 8 20 8" />
                       </svg>
                     </div>
-                    <p style={{ fontSize: fs + 6, fontWeight: 700, color: "hsl(var(--foreground))", margin: 0 }}>Scan</p>
+                    <p
+                      style={{
+                        fontSize: fs + 6,
+                        fontWeight: 700,
+                        color: "hsl(var(--foreground))",
+                        margin: 0,
+                      }}
+                    >
+                      Scan
+                    </p>
                   </div>
-                  <p style={{ fontSize: fs - 1, color: "hsl(var(--muted-foreground))", margin: "0 0 8px" }}>Scan the receipt for information</p>
-                  <p style={{ fontSize: fs, fontWeight: 600, color: "hsl(var(--foreground))", margin: "0 0 2px" }}>0 Scans used</p>
-                  <p style={{ fontSize: fs - 2, color: "hsl(var(--muted-foreground))", margin: 0 }}>Limit of 3 · Resets 4/24</p>
+                  <p
+                    style={{
+                      fontSize: fs - 1,
+                      color: "hsl(var(--muted-foreground))",
+                      margin: "0 0 8px",
+                    }}
+                  >
+                    Scan the receipt for information
+                  </p>
+                  <p
+                    style={{
+                      fontSize: fs,
+                      fontWeight: 600,
+                      color: "hsl(var(--foreground))",
+                      margin: "0 0 2px",
+                    }}
+                  >
+                    0 Scans used
+                  </p>
+                  <p
+                    style={{
+                      fontSize: fs - 2,
+                      color: "hsl(var(--muted-foreground))",
+                      margin: 0,
+                    }}
+                  >
+                    Limit of 3 · Resets 4/24
+                  </p>
                 </div>
               </div>
 
               {/* Cancel subscription */}
               <div style={{ padding: `0 ${padding} ${padding}` }}>
                 <button
-                  style={{ background: "none", border: "none", cursor: "pointer", fontSize: fs - 1, color: "hsl(var(--muted-foreground))", padding: 0, fontFamily: font }}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    fontSize: fs - 1,
+                    color: "hsl(var(--muted-foreground))",
+                    padding: 0,
+                    fontFamily: font,
+                  }}
                   onClick={() => onViewChange?.("unsubscribe")}
                 >
                   Cancel subscription
@@ -1191,31 +1815,81 @@ function SdkViewportPreview({
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {/* Payment Method */}
               <div style={card}>
-                <p style={{ fontSize: fs + 2, fontWeight: 700, color: "hsl(var(--foreground))", margin: "0 0 12px" }}>
+                <p
+                  style={{
+                    fontSize: fs + 2,
+                    fontWeight: 700,
+                    color: "hsl(var(--foreground))",
+                    margin: "0 0 12px",
+                  }}
+                >
                   Payment Method
                 </p>
-                <div style={{
-                  display: "flex", alignItems: "center", gap: 10,
-                  padding: "10px 12px",
-                  background: "hsl(var(--secondary))",
-                  borderRadius: `calc(${radius} - 2px)`,
-                  border: "1px solid hsl(var(--border))",
-                }}>
-                  <div style={{
-                    width: 28, height: 28,
-                    borderRadius: 6,
-                    background: "#000",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    flexShrink: 0,
-                  }}>
-                    <span style={{ color: "#fff", fontSize: 12, lineHeight: 1 }}>⬡</span>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    padding: "10px 12px",
+                    background: "hsl(var(--secondary))",
+                    borderRadius: `calc(${radius} - 2px)`,
+                    border: "1px solid hsl(var(--border))",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: 6,
+                      background: "#000",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <span
+                      style={{ color: "#fff", fontSize: 12, lineHeight: 1 }}
+                    >
+                      ⬡
+                    </span>
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ fontSize: fs - 1, fontFamily: "monospace", fontWeight: 600, color: "hsl(var(--foreground))", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>0x4a2f…8c3d</p>
-                    <p style={{ fontSize: fs - 3, color: "hsl(var(--muted-foreground))", margin: "2px 0 0" }}>Base · USDC</p>
+                    <p
+                      style={{
+                        fontSize: fs - 1,
+                        fontFamily: "monospace",
+                        fontWeight: 600,
+                        color: "hsl(var(--foreground))",
+                        margin: 0,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      0x4a2f…8c3d
+                    </p>
+                    <p
+                      style={{
+                        fontSize: fs - 3,
+                        color: "hsl(var(--muted-foreground))",
+                        margin: "2px 0 0",
+                      }}
+                    >
+                      Base · USDC
+                    </p>
                   </div>
                   <button
-                    style={{ background: "none", border: "none", cursor: "pointer", fontSize: fs - 1, fontWeight: 600, color: primary, fontFamily: font, flexShrink: 0 }}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      fontSize: fs - 1,
+                      fontWeight: 600,
+                      color: primary,
+                      fontFamily: font,
+                      flexShrink: 0,
+                    }}
                     onClick={() => onViewChange?.("payment-method")}
                   >
                     Edit
@@ -1225,8 +1899,20 @@ function SdkViewportPreview({
 
               {/* ArcenPay branding */}
               <div style={{ textAlign: "center", paddingTop: 4 }}>
-                <p style={{ fontSize: 11, color: "hsl(var(--muted-foreground))", margin: 0 }}>
-                  Secured by <strong style={{ color: "hsl(var(--foreground))", fontWeight: 600 }}>ArcenPay</strong> · On-chain stablecoin billing
+                <p
+                  style={{
+                    fontSize: 11,
+                    color: "hsl(var(--muted-foreground))",
+                    margin: 0,
+                  }}
+                >
+                  Secured by{" "}
+                  <strong
+                    style={{ color: "hsl(var(--foreground))", fontWeight: 600 }}
+                  >
+                    ArcenPay
+                  </strong>{" "}
+                  · On-chain stablecoin billing
                 </p>
               </div>
             </div>
@@ -1240,6 +1926,25 @@ function SdkViewportPreview({
     case "checkout:checkout":
     case "checkout-modal:checkout": {
       const chosenPlan = plans[selectedPlanIdx] ?? plans[0];
+      if (realData && !hasRealPlans) {
+        return (
+          <div
+            style={{
+              fontFamily: font,
+              padding: 40,
+              textAlign: "center",
+              color: "hsl(var(--muted-foreground))",
+            }}
+          >
+            <p style={{ fontWeight: 600, fontSize: fs + 2, marginBottom: 8 }}>
+              No plans configured
+            </p>
+            <p style={{ fontSize: fs - 1 }}>
+              Create and publish at least one plan to enable checkout.
+            </p>
+          </div>
+        );
+      }
       return (
         <div style={{ fontFamily: font }} className="max-w-3xl mx-auto">
           {/* Step indicator */}
@@ -1298,29 +2003,26 @@ function SdkViewportPreview({
                     <p className="text-lg font-bold text-foreground mb-0.5">
                       {plan.name}
                     </p>
-                    <p className="text-xs text-muted-foreground mb-3">
-                      {plan.price === 9
-                        ? "Perfect for Starter Business"
-                        : plan.price === 29
-                          ? "For growing teams"
-                          : "For large organizations"}
-                    </p>
+                    {plan.description ? (
+                      <p className="text-xs text-muted-foreground mb-3">
+                        {plan.description}
+                      </p>
+                    ) : null}
                     <p className="text-2xl font-bold text-foreground mb-3">
-                      ${plan.price.toFixed(2)}
-                      <span className="text-sm font-normal text-muted-foreground">
-                        /month
-                      </span>
+                      {plan.price === 0 ? "Free" : `$${plan.price.toFixed(2)}`}
+                      {plan.price > 0 ? (
+                        <span className="text-sm font-normal text-muted-foreground">
+                          /{plan.billingInterval === "yearly" ? "yr" : "mo"}
+                        </span>
+                      ) : null}
                     </p>
                     <div className="flex items-center gap-2 mb-4">
                       <div className="w-5 h-5 rounded bg-secondary flex items-center justify-center">
                         <Layers className="w-3 h-3 text-muted-foreground" />
                       </div>
                       <span className="text-xs text-muted-foreground">
-                        {plan.price === 9
-                          ? "3 Scans per month"
-                          : plan.price === 29
-                            ? "50 Scans per month"
-                            : "Unlimited"}
+                        {plan.acceptedToken ?? "USDC"} ·{" "}
+                        {plan.tier ?? "Standard"}
                       </span>
                     </div>
                     <div
@@ -1366,20 +2068,28 @@ function SdkViewportPreview({
               </div>
               <button
                 style={{
-                  ...btnSecondary,
+                  ...btnPrimary,
                   width: "100%",
                   textAlign: "center",
-                  opacity: 0.6,
+                  display: "block",
+                  opacity: 0.7,
                   cursor: "default",
                 }}
               >
                 Subscribe and close
               </button>
               <p className="text-[10px] text-muted-foreground mt-3 text-center leading-relaxed">
-                You will be billed ${chosenPlan.price.toFixed(2)} USDC for this subscription every month unless you unsubscribe.
+                You will be billed ${chosenPlan.price.toFixed(2)} USDC for this
+                subscription every month unless you unsubscribe.
               </p>
               <div className="mt-4 pt-3 border-t border-border text-center">
-                <p className="text-[9px] text-muted-foreground">Secured by <span className="font-semibold text-foreground">ArcenPay</span> · On-chain</p>
+                <p className="text-[9px] text-muted-foreground">
+                  Secured by{" "}
+                  <span className="font-semibold text-foreground">
+                    ArcenPay
+                  </span>{" "}
+                  · On-chain
+                </p>
               </div>
             </div>
           </div>
@@ -1489,7 +2199,11 @@ function SdkViewportPreview({
               {/* ArcenPay branding */}
               <div className="mt-5 pt-4 border-t border-border text-center">
                 <p className="text-[10px] text-muted-foreground">
-                  Secured by <span className="font-semibold text-foreground">ArcenPay</span> · On-chain stablecoin billing
+                  Secured by{" "}
+                  <span className="font-semibold text-foreground">
+                    ArcenPay
+                  </span>{" "}
+                  · On-chain stablecoin billing
                 </p>
               </div>
             </div>
@@ -1651,7 +2365,10 @@ function SdkViewportPreview({
                   </button>
                   {/* ArcenPay branding */}
                   <p className="text-[10px] text-muted-foreground text-center mt-3">
-                    Secured by <span className="font-semibold text-foreground">ArcenPay</span>
+                    Secured by{" "}
+                    <span className="font-semibold text-foreground">
+                      ArcenPay
+                    </span>
                   </p>
                 </div>
               </div>
@@ -2010,6 +2727,179 @@ export function ComponentEditor({
 
   const isCustom = config.type === "custom";
 
+  // ── Live data from the provider (real plans + feature flags) ─────────────
+  const [liveData, setLiveData] = useState<RealData | undefined>(undefined);
+
+  useEffect(() => {
+    Promise.all([
+      fetch("/api/catalog/plans").then((r) => (r.ok ? r.json() : null)),
+      fetch("/api/v1/feature-flags").then((r) => (r.ok ? r.json() : null)),
+    ])
+      .then(([plansRes, flagsRes]) => {
+        const rawPlans: Array<Record<string, unknown>> = Array.isArray(
+          plansRes?.plans,
+        )
+          ? plansRes.plans
+          : Array.isArray(plansRes)
+            ? plansRes
+            : [];
+        const rawFlags: Array<Record<string, unknown>> = Array.isArray(
+          flagsRes?.data,
+        )
+          ? flagsRes.data
+          : [];
+
+        const plans: RealPlan[] = rawPlans
+          .filter((p) => p.status === "PUBLISHED")
+          .map((p) => ({
+            id: String(p.id ?? ""),
+            name: String(p.name ?? ""),
+            price: parseFloat(String(p.price ?? "0")),
+            billingInterval:
+              Number(p.billingInterval) === 31536000 ? "yearly" : "monthly",
+            tier: p.tier ? String(p.tier) : undefined,
+            description: p.description ? String(p.description) : undefined,
+            acceptedToken: p.acceptedToken ? String(p.acceptedToken) : "USDC",
+          }))
+          // Free plans (price=0) first, then ascending by price
+          .sort((a, b) => a.price - b.price);
+
+        const flags: RealFlag[] = rawFlags.map((f) => ({
+          featureKey: String(f.featureKey ?? f.key ?? ""),
+          name: String(f.name ?? ""),
+          featureType: f.featureType ? String(f.featureType) : undefined,
+          defaultValue: Boolean(f.defaultValue),
+        }));
+
+        setLiveData({ plans, flags });
+      })
+      .catch(() => {
+        // Set empty real data so the "no data" states are shown instead of demo
+        setLiveData({ plans: [], flags: [] });
+      });
+  }, []);
+
+  // ── Company selector for preview ─────────────────────────────────────────
+  interface PreviewCompany {
+    id: string;
+    name: string;
+    externalId?: string | null;
+  }
+  const [companies, setCompanies] = useState<PreviewCompany[]>([]);
+  const [previewCompanyId, setPreviewCompanyId] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/v1/companies")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((res) => {
+        const raw: Array<Record<string, unknown>> = Array.isArray(res?.data)
+          ? res.data
+          : Array.isArray(res)
+            ? res
+            : [];
+        setCompanies(
+          raw.slice(0, 50).map((c) => ({
+            id: String(c.id ?? ""),
+            name: String(c.name ?? c.id ?? "Unknown"),
+            externalId: c.externalId ? String(c.externalId) : null,
+          })),
+        );
+      })
+      .catch(() => {
+        /* silently ignore */
+      });
+  }, []);
+
+  async function loadCompanyPreviewData(companyId: string) {
+    try {
+      const tokenRes = await fetch("/api/internal/preview-token", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ companyId, componentId: config.id }),
+      });
+      if (!tokenRes.ok) return;
+      const { token } = await tokenRes.json();
+
+      const renderRes = await fetch(`/api/v1/components/${config.id}/render`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!renderRes.ok) return;
+      const { data } = await renderRes.json();
+
+      // Map to the liveData format used by SdkViewportPreview
+      setLiveData({
+        plans: (data.plans as Array<Record<string, unknown>>).map((p) => ({
+          id: String(p.id ?? ""),
+          name: String(p.name ?? ""),
+          price: parseFloat(String(p.price ?? "0")),
+          billingInterval:
+            Number(p.billingInterval) === 31536000 ? "yearly" : "monthly",
+          acceptedToken: p.acceptedToken ? String(p.acceptedToken) : "USDC",
+          tier: p.tier ? String(p.tier) : undefined,
+          description: p.description ? String(p.description) : undefined,
+        })),
+        flags: (data.entitlements as Array<Record<string, unknown>>).map(
+          (e) => ({
+            id: String(e.featureKey ?? ""),
+            name: String(e.name ?? e.featureKey ?? ""),
+            featureKey: String(e.featureKey ?? ""),
+            defaultValue: e.value === true || e.value === "true",
+            featureType: e.featureType ? String(e.featureType) : "boolean",
+          }),
+        ),
+        activePlan: data.activePlan as Record<string, unknown> | null,
+        usage: data.usage as Array<Record<string, unknown>>,
+      });
+      setPreviewCompanyId(companyId);
+    } catch (err) {
+      console.error("Failed to load company preview data:", err);
+    }
+  }
+
+  function resetToSampleData() {
+    setPreviewCompanyId(null);
+    // Re-fetch live data from catalog
+    Promise.all([
+      fetch("/api/catalog/plans").then((r) => (r.ok ? r.json() : null)),
+      fetch("/api/v1/feature-flags").then((r) => (r.ok ? r.json() : null)),
+    ])
+      .then(([plansRes, flagsRes]) => {
+        const rawPlans: Array<Record<string, unknown>> = Array.isArray(
+          plansRes?.plans,
+        )
+          ? plansRes.plans
+          : Array.isArray(plansRes)
+            ? plansRes
+            : [];
+        const rawFlags: Array<Record<string, unknown>> = Array.isArray(
+          flagsRes?.data,
+        )
+          ? flagsRes.data
+          : [];
+        const plans: RealPlan[] = rawPlans
+          .filter((p) => p.status === "PUBLISHED")
+          .map((p) => ({
+            id: String(p.id ?? ""),
+            name: String(p.name ?? ""),
+            price: parseFloat(String(p.price ?? "0")),
+            billingInterval:
+              Number(p.billingInterval) === 31536000 ? "yearly" : "monthly",
+            tier: p.tier ? String(p.tier) : undefined,
+            description: p.description ? String(p.description) : undefined,
+            acceptedToken: p.acceptedToken ? String(p.acceptedToken) : "USDC",
+          }))
+          .sort((a, b) => a.price - b.price);
+        const flags: RealFlag[] = rawFlags.map((f) => ({
+          featureKey: String(f.featureKey ?? f.key ?? ""),
+          name: String(f.name ?? ""),
+          featureType: f.featureType ? String(f.featureType) : undefined,
+          defaultValue: Boolean(f.defaultValue),
+        }));
+        setLiveData({ plans, flags });
+      })
+      .catch(() => setLiveData({ plans: [], flags: [] }));
+  }
+
   // Both custom AND SDK components use the same view states.
   // Custom components use customer-portal views (Portal = their assembled elements, rest = standard flows).
   // SDK components use their own view map.
@@ -2018,6 +2908,123 @@ export function ComponentEditor({
     : (COMPONENT_VIEWS[component.id] ??
       COMPONENT_VIEWS[component.template] ??
       COMPONENT_VIEWS["customer-portal"]);
+
+  // Map editor tab IDs → ArcenEmbed view names
+  function tabToEmbedView(
+    tab: string,
+  ): "portal" | "checkout" | "payment" | "unsubscribe" | "success" {
+    const map: Record<
+      string,
+      "portal" | "checkout" | "payment" | "unsubscribe" | "success"
+    > = {
+      portal: "portal",
+      checkout: "checkout",
+      "payment-method": "payment",
+      payment: "payment",
+      unsubscribe: "unsubscribe",
+      success: "success",
+    };
+    return map[tab] ?? "portal";
+  }
+
+  // Build mock data for ArcenEmbed preview (used for checkout/payment/unsubscribe previews)
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const canvasMockData = useMemo((): ComponentRenderData => {
+    const sdkPlans = liveData?.plans?.length
+      ? liveData.plans.slice(0, 4).map((p) => ({
+          id: p.id,
+          name: p.name,
+          tier: p.tier ?? "standard",
+          price: String(p.price),
+          billingInterval: p.billingInterval === "yearly" ? 31536000 : 2592000,
+          description: p.description ?? "",
+          acceptedToken: p.acceptedToken,
+        }))
+      : [
+          {
+            id: "free",
+            name: "Free",
+            tier: "free",
+            price: "0",
+            billingInterval: 2592000,
+            description: "Get started for free",
+          },
+          {
+            id: "starter",
+            name: "Starter",
+            tier: "starter",
+            price: "9.00",
+            billingInterval: 2592000,
+            description: "",
+          },
+          {
+            id: "pro",
+            name: "Pro",
+            tier: "pro",
+            price: "29.00",
+            billingInterval: 2592000,
+            description: "",
+          },
+        ];
+
+    const typeMap: Record<string, string> = {
+      "plan-manager": "planManager",
+      "included-features": "includedFeatures",
+      "metered-features": "meteredFeatures",
+      "next-bill-due": "nextBillDue",
+      "payment-method": "paymentMethod",
+      "billing-history": "billingHistory",
+    };
+
+    return {
+      component: {
+        id: "preview",
+        name: "Preview",
+        elements: elements.map((el) => ({
+          type: typeMap[el.type] ?? el.type,
+          ...el.props,
+        })),
+        design: {
+          primaryColor: config.styling.primaryColor ?? "#000000",
+          secondaryColor: config.styling.secondaryColor ?? "#f3f4f6",
+          fontFamily:
+            config.styling.typography.fontFamily ?? "system-ui, sans-serif",
+          fontSize: config.styling.typography.fontSize
+            ? parseFloat(config.styling.typography.fontSize) || 14
+            : 14,
+          fontColor: "#111827",
+          backgroundColor:
+            config.styling.cardStyle.backgroundColor || "#ffffff",
+          borderRadius: config.styling.cardStyle.borderRadius
+            ? parseFloat(config.styling.cardStyle.borderRadius) || 8
+            : 8,
+          cardStyle: (config.styling.cardStyle.cardShadow
+            ? "elevated"
+            : "minimal") as ComponentDesign["cardStyle"],
+        } as ComponentDesign,
+      },
+      company: {
+        id: "preview",
+        name: "Preview Company",
+        walletAddress: "0x1234567890abcdef1234",
+      },
+      activePlan: sdkPlans[0] ?? null,
+      plans: sdkPlans,
+      entitlements:
+        liveData?.flags?.map((f) => ({
+          featureKey: f.featureKey,
+          name: f.name,
+          value: f.defaultValue ?? true,
+          featureType: (f.featureType ?? "boolean") as
+            | "boolean"
+            | "event_based"
+            | "trait_based"
+            | "credit",
+        })) ?? [],
+      usage: [],
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [elements, config.styling, liveData]);
 
   const [activeViewState, setActiveViewState] = useState<string>(
     componentViews[0]?.id ?? "portal",
@@ -2108,59 +3115,50 @@ export function ComponentEditor({
   };
 
   const generateCode = () => {
-    const imports = new Set<string>();
-    const hasCheckoutModal = elements.some(
-      (el) => el.type === "checkout-modal",
-    );
+    const compId = config.id.startsWith("custom-")
+      ? "YOUR_COMPONENT_ID"
+      : config.id;
+    return `import { ArcenpayEmbed } from '@arcenpay/react';
 
-    elements.forEach((el) => {
-      const componentName = el.type
-        .split("-")
-        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-        .join("");
-      imports.add(componentName);
-    });
+const App = () => {
+  // Generate this token server-side — see the "Backend" snippet below
+  const token = "...your_access_token...";
 
-    const reactImports = hasCheckoutModal
-      ? `import { useState } from 'react';\n`
-      : "";
-
-    return `${reactImports}import { ${Array.from(imports).join(", ")}, ArcenPayProvider } from '@arcenpay/react';
-
-export function ${config.name.replace(/\s+/g, "")}() {${
-      hasCheckoutModal
-        ? `
-  const [checkoutOpen, setCheckoutOpen] = useState(false);`
-        : ""
-    }
   return (
-    <ArcenPayProvider>
-      <div className="container mx-auto p-6 space-y-6">
-${elements
-  .map((el) => {
-    const componentName = el.type
-      .split("-")
-      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-      .join("");
-    if (el.type === "checkout-modal") {
-      return `        <button onClick={() => setCheckoutOpen(true)}>Upgrade Plan</button>
-        <${componentName} isOpen={checkoutOpen} onClose={() => setCheckoutOpen(false)} />`;
-    }
-    return `        <${componentName} />`;
-  })
-  .join("\n")}
-      </div>
-    </ArcenPayProvider>
+    <ArcenpayEmbed
+      accessToken={token}
+      id="${compId}"
+      baseUrl="https://dashboard.arcenpay.xyz"
+    />
   );
-}`;
+};`;
+  };
+
+  const generateBackendCode = () => {
+    const compId = config.id.startsWith("custom-")
+      ? "YOUR_COMPONENT_ID"
+      : config.id;
+    return `// Node.js / server-side — generate a short-lived access token
+const res = await fetch('https://dashboard.arcenpay.xyz/api/v1/access-tokens', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer api_your_api_key',
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    company: { id: 'your_company_id' },
+    expires_in: 3600,
+  }),
+});
+const { data } = await res.json();
+// data.token  → pass this as the accessToken prop
+// data.expires_at → ISO timestamp
+
+// Component ID (already known): "${compId}"`;
   };
 
   const generateInstallCode = () => {
-    return `# Install via npm / pnpm
-npm install @arcenpay/react @arcenpay/sdk wagmi viem
-
-# Then wrap your app with ArcenPayProvider (see Installation guide)
-# and drop the component into your page.`;
+    return `npm install @arcenpay/react @arcenpay/sdk wagmi viem`;
   };
 
   const handleSave = () => {
@@ -2214,15 +3212,26 @@ npm install @arcenpay/react @arcenpay/sdk wagmi viem
       },
     }));
 
-  // Right panel tab state — "elements" (custom only) vs "design"
-  const [rightTab, setRightTab] = useState<"elements" | "design">(
-    isCustom ? "elements" : "design",
-  );
+  // Right panel tab state — "elements" (custom only) | "design" | "properties" (when editable element selected)
+  const [rightTab, setRightTab] = useState<
+    "elements" | "design" | "properties"
+  >(isCustom ? "elements" : "design");
+
+  // Types whose props are user-editable in the Properties panel
+  const EDITABLE_TYPES = ["text", "button"] as const;
+
+  // Update a single element's props by id
+  const updateElementProps = (id: string, patch: Record<string, unknown>) =>
+    setElements((els) =>
+      els.map((el) =>
+        el.id === id ? { ...el, props: { ...el.props, ...patch } } : el,
+      ),
+    );
 
   // ── Right sidebar panel ─────────────────────────────────────
   const rightPanel = (
     <div className="w-[280px] border-l border-border overflow-y-auto bg-card shrink-0 flex flex-col">
-      {/* Tab switcher — Elements | Design */}
+      {/* Tab switcher — Elements | Design | Properties */}
       <div className="border-b border-border shrink-0">
         <div className="flex">
           {isCustom && (
@@ -2249,6 +3258,22 @@ npm install @arcenpay/react @arcenpay/sdk wagmi viem
           >
             Design
           </button>
+          {selectedElement &&
+            (EDITABLE_TYPES as readonly string[]).includes(
+              elements.find((e) => e.id === selectedElement)?.type ?? "",
+            ) && (
+              <button
+                onClick={() => setRightTab("properties")}
+                className={cn(
+                  "flex-1 py-3 text-xs font-medium border-b-2 -mb-px transition-colors",
+                  rightTab === "properties"
+                    ? "border-accent text-accent"
+                    : "border-transparent text-muted-foreground hover:text-foreground",
+                )}
+              >
+                Properties
+              </button>
+            )}
         </div>
       </div>
 
@@ -2312,7 +3337,8 @@ npm install @arcenpay/react @arcenpay/sdk wagmi viem
               </p>
               <div className="grid grid-cols-2 gap-1.5">
                 {cat.elements.map((el) => {
-                  const Icon: React.ElementType = typeof el.icon === "function" ? el.icon : Layers;
+                  const Icon: React.ElementType =
+                    typeof el.icon === "function" ? el.icon : Layers;
                   const isAdded = elements.some((e) => e.type === el.type);
                   return (
                     <div
@@ -2350,6 +3376,149 @@ npm install @arcenpay/react @arcenpay/sdk wagmi viem
           <div className="h-3" />
         </div>
       )}
+
+      {/* ── PROPERTIES TAB — text / button element config ── */}
+      {rightTab === "properties" &&
+        (() => {
+          const selEl = elements.find((e) => e.id === selectedElement);
+          if (!selEl) return null;
+          const p = selEl.props ?? {};
+          if (selEl.type === "text") {
+            return (
+              <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                  Text Block
+                </p>
+                <div className="space-y-1.5">
+                  <label className="text-xs text-muted-foreground">
+                    Heading
+                  </label>
+                  <Input
+                    className="h-8 text-xs"
+                    placeholder="Your heading here"
+                    value={String(p.heading ?? "")}
+                    onChange={(e) =>
+                      updateElementProps(selEl.id, { heading: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs text-muted-foreground">
+                    Body text
+                  </label>
+                  <Textarea
+                    className="text-xs resize-none"
+                    rows={4}
+                    placeholder="Add your text content here..."
+                    value={String(p.body ?? "")}
+                    onChange={(e) =>
+                      updateElementProps(selEl.id, { body: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs text-muted-foreground">
+                    Alignment
+                  </label>
+                  <div className="flex gap-1">
+                    {(["left", "center", "right"] as const).map((a) => (
+                      <button
+                        key={a}
+                        onClick={() =>
+                          updateElementProps(selEl.id, { alignment: a })
+                        }
+                        className={cn(
+                          "flex-1 h-7 rounded text-xs font-medium capitalize transition-all",
+                          (p.alignment ?? "left") === a
+                            ? "bg-accent text-accent-foreground"
+                            : "bg-secondary text-muted-foreground hover:text-foreground",
+                        )}
+                      >
+                        {a}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            );
+          }
+          if (selEl.type === "button") {
+            return (
+              <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                  Button
+                </p>
+                <div className="space-y-1.5">
+                  <label className="text-xs text-muted-foreground">Label</label>
+                  <Input
+                    className="h-8 text-xs"
+                    placeholder="Click Me"
+                    value={String(p.label ?? "")}
+                    onChange={(e) =>
+                      updateElementProps(selEl.id, { label: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs text-muted-foreground">
+                    Link / URL
+                  </label>
+                  <Input
+                    className="h-8 text-xs font-mono"
+                    placeholder="https://..."
+                    value={String(p.href ?? "")}
+                    onChange={(e) =>
+                      updateElementProps(selEl.id, { href: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs text-muted-foreground">Style</label>
+                  <div className="flex gap-1">
+                    {(["filled", "outlined", "ghost"] as const).map((v) => (
+                      <button
+                        key={v}
+                        onClick={() =>
+                          updateElementProps(selEl.id, { variant: v })
+                        }
+                        className={cn(
+                          "flex-1 h-7 rounded text-xs font-medium capitalize transition-all",
+                          (p.variant ?? "filled") === v
+                            ? "bg-accent text-accent-foreground"
+                            : "bg-secondary text-muted-foreground hover:text-foreground",
+                        )}
+                      >
+                        {v}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs text-muted-foreground">
+                    Full width
+                  </label>
+                  <button
+                    onClick={() =>
+                      updateElementProps(selEl.id, { fullWidth: !p.fullWidth })
+                    }
+                    className={cn(
+                      "w-9 h-5 rounded-full relative transition-colors",
+                      p.fullWidth ? "bg-accent" : "bg-secondary",
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        "absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-all",
+                        p.fullWidth ? "right-0.5" : "left-0.5",
+                      )}
+                    />
+                  </button>
+                </div>
+              </div>
+            );
+          }
+          return null;
+        })()}
 
       {/* ── DESIGN TAB ── */}
       {rightTab === "design" && (
@@ -2503,7 +3672,9 @@ npm install @arcenpay/react @arcenpay/sdk wagmi viem
                 <div
                   className={cn(
                     "absolute top-0.5 w-4 h-4 rounded-full transition-all",
-                    config.styling.cardStyle.cardShadow ? "bg-background" : "bg-muted-foreground/40",
+                    config.styling.cardStyle.cardShadow
+                      ? "bg-background"
+                      : "bg-muted-foreground/40",
                     config.styling.cardStyle.cardShadow
                       ? "right-0.5"
                       : "left-0.5",
@@ -2537,7 +3708,7 @@ npm install @arcenpay/react @arcenpay/sdk wagmi viem
                 <SelectTrigger className="h-7 w-[108px] text-xs">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="z-[10000]">
                   {["Inter", "DM Sans", "system-ui", "Geist"].map((f) => (
                     <SelectItem key={f} value={f}>
                       {f}
@@ -2554,7 +3725,7 @@ npm install @arcenpay/react @arcenpay/sdk wagmi viem
                 <SelectTrigger className="h-7 w-[108px] text-xs">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="z-[10000]">
                   {["12px", "13px", "14px", "15px", "16px"].map((f) => (
                     <SelectItem key={f} value={f}>
                       {f}
@@ -2683,11 +3854,7 @@ npm install @arcenpay/react @arcenpay/sdk wagmi viem
             <Download className="w-3.5 h-3.5" />
             Export
           </Button>
-          <Button
-            size="sm"
-            onClick={handleSave}
-            className="gap-2 text-xs"
-          >
+          <Button size="sm" onClick={handleSave} className="gap-2 text-xs">
             <Save className="w-3.5 h-3.5" />
             Save
           </Button>
@@ -2717,6 +3884,39 @@ npm install @arcenpay/react @arcenpay/sdk wagmi viem
                     {vs.label}
                   </button>
                 ))}
+                {/* Company data selector */}
+                <div className="ml-auto flex items-center gap-2 py-2">
+                  <span className="text-[10px] text-muted-foreground shrink-0">
+                    Preview as:
+                  </span>
+                  <Select
+                    value={previewCompanyId ?? "__sample__"}
+                    onValueChange={(val) => {
+                      if (val === "__sample__") {
+                        resetToSampleData();
+                      } else {
+                        loadCompanyPreviewData(val);
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="h-7 text-xs w-[160px]">
+                      <SelectValue placeholder="Sample Data" />
+                    </SelectTrigger>
+                    <SelectContent className="z-[10000]">
+                      <SelectItem value="__sample__">Sample Data</SelectItem>
+                      {companies.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {previewCompanyId && (
+                    <span className="text-[10px] text-blue-600 font-medium whitespace-nowrap">
+                      Live data
+                    </span>
+                  )}
+                </div>
               </div>
 
               {/* Viewport content */}
@@ -2772,336 +3972,254 @@ npm install @arcenpay/react @arcenpay/sdk wagmi viem
                           )}
                         </div>
                       ) : (
-                        /* ── Two-column portal layout ── */
-                        <div
-                          className={cn(
-                            "transition-all duration-150",
-                            draggedElement &&
-                              "ring-2 ring-inset ring-foreground/20 rounded-2xl",
-                          )}
-                          style={{
-                            display: "grid",
-                            gridTemplateColumns:
-                              elements.some((e) =>
-                                [
-                                  "next-bill-due",
-                                  "invoices",
-                                  "billing-history",
-                                  "checkout-modal",
-                                ].includes(e.type),
-                              ) &&
-                              elements.some((e) =>
-                                [
-                                  "plan-manager",
-                                  "metered-features",
-                                  "included-features",
-                                  "pricing-table",
-                                  "subscription-status",
-                                  "usage-dashboard",
-                                ].includes(e.type),
-                              )
-                                ? "1.5fr 1fr"
-                                : "1fr",
-                            gap: "16px",
-                            fontFamily:
-                              config.styling.typography.fontFamily || "inherit",
-                          }}
-                        >
-                          {/* Left column — plan/usage/features */}
-                          {(() => {
-                            const leftTypes = [
-                              "plan-manager",
-                              "metered-features",
-                              "included-features",
-                              "pricing-table",
-                              "subscription-status",
-                              "usage-dashboard",
-                            ];
-                            const leftEls = elements.filter((e) =>
-                              leftTypes.includes(e.type),
-                            );
-                            const rightTypes = [
-                              "next-bill-due",
-                              "invoices",
-                              "billing-history",
-                              "checkout-modal",
-                            ];
-                            const allRight = elements.every((e) =>
-                              rightTypes.includes(e.type),
-                            );
-                            if (leftEls.length === 0 && !allRight) return null;
-                            const displayEls =
-                              leftEls.length > 0 ? leftEls : elements;
-                            return (
-                              <div className="space-y-3">
-                                {displayEls.map((element) => {
-                                  const elIdx = elements.findIndex(
-                                    (e) => e.id === element.id,
-                                  );
-                                  const isSelected =
-                                    selectedElement === element.id;
-                                  return (
-                                    <div
-                                      key={element.id}
-                                      className={cn(
-                                        "relative group/el rounded-xl border overflow-hidden cursor-pointer transition-all duration-150",
-                                        isSelected
-                                          ? "ring-2 ring-foreground border-foreground"
-                                          : "border-border hover:border-foreground/30 hover:shadow-sm",
-                                      )}
-                                      style={{
-                                        borderRadius:
-                                          config.styling.cardStyle
-                                            .borderRadius || "10px",
-                                        backgroundColor:
-                                          config.styling.cardStyle
-                                            .backgroundColor || undefined,
-                                        boxShadow: isSelected
-                                          ? undefined
-                                          : config.styling.cardStyle.cardShadow
-                                            ? "0 1px 4px rgba(0,0,0,0.06)"
-                                            : undefined,
-                                        fontFamily:
-                                          config.styling.typography
-                                            .fontFamily || undefined,
-                                        padding:
-                                          config.styling.cardStyle
-                                            .cardPadding || "24px",
-                                      }}
-                                      onClick={() =>
-                                        setSelectedElement(
-                                          isSelected ? null : element.id,
-                                        )
-                                      }
-                                    >
-                                      {isSelected && (
-                                        <div className="absolute top-0 left-0 right-0 h-7 bg-foreground flex items-center justify-between px-3 z-10">
-                                          <span className="text-[10px] font-bold text-background tracking-wide uppercase">
-                                            {element.label}
-                                          </span>
-                                          <div className="flex items-center gap-0.5">
-                                            <button
-                                              className="w-5 h-5 flex items-center justify-center rounded hover:bg-background/20 transition-colors"
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                if (elIdx > 0) {
-                                                  const ne = [...elements];
-                                                  [ne[elIdx], ne[elIdx - 1]] = [
-                                                    ne[elIdx - 1],
-                                                    ne[elIdx],
-                                                  ];
-                                                  setElements(ne);
-                                                }
-                                              }}
-                                            >
-                                              <ChevronUp className="w-3 h-3 text-background" />
-                                            </button>
-                                            <button
-                                              className="w-5 h-5 flex items-center justify-center rounded hover:bg-background/20 transition-colors"
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                if (
-                                                  elIdx <
-                                                  elements.length - 1
-                                                ) {
-                                                  const ne = [...elements];
-                                                  [ne[elIdx], ne[elIdx + 1]] = [
-                                                    ne[elIdx + 1],
-                                                    ne[elIdx],
-                                                  ];
-                                                  setElements(ne);
-                                                }
-                                              }}
-                                            >
-                                              <ChevronDown className="w-3 h-3 text-background" />
-                                            </button>
-                                            <button
-                                              className="w-5 h-5 flex items-center justify-center rounded hover:bg-background/20 transition-colors ml-1"
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                setElements(
-                                                  elements.filter(
-                                                    (el) =>
-                                                      el.id !== element.id,
-                                                  ),
-                                                );
-                                                setSelectedElement(null);
-                                              }}
-                                            >
-                                              <Trash2 className="w-3 h-3 text-background" />
-                                            </button>
-                                          </div>
-                                        </div>
-                                      )}
-                                      <div
-                                        style={{
-                                          paddingTop: isSelected
-                                            ? "28px"
-                                            : undefined,
-                                        }}
-                                      >
-                                        <ElementPreview
-                                          type={element.type}
-                                          primaryColor={config.styling.primaryColor}
-                                          secondaryColor={config.styling.secondaryColor}
-                                          fontFamily={config.styling.typography.fontFamily}
-                                        />
-                                      </div>
-                                      {!isSelected && (
-                                        <div className="absolute top-2 left-2 opacity-0 group-hover/el:opacity-100 transition-opacity">
-                                          <span className="text-[9px] font-bold uppercase tracking-wider bg-foreground text-background px-2 py-0.5 rounded-full">
-                                            {element.label}
-                                          </span>
-                                        </div>
-                                      )}
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            );
-                          })()}
+                        /* ── Portal canvas layout — editable element cards ── */
+                        <>
+                          {/* Layout indicator pill */}
+                          <div className="flex items-center gap-2 mb-3">
+                            <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-secondary border border-border text-[10px] font-semibold text-muted-foreground">
+                              <svg
+                                className="w-3 h-3"
+                                viewBox="0 0 12 12"
+                                fill="none"
+                              >
+                                {Array.from({
+                                  length: config.styling.columns ?? 1,
+                                }).map((_, i) => (
+                                  <rect
+                                    key={i}
+                                    x={
+                                      i * (10 / (config.styling.columns ?? 1)) +
+                                      1
+                                    }
+                                    y="1"
+                                    width={
+                                      10 / (config.styling.columns ?? 1) - 1.5
+                                    }
+                                    height="10"
+                                    rx="1"
+                                    fill="currentColor"
+                                    opacity="0.6"
+                                  />
+                                ))}
+                              </svg>
+                              {config.styling.columns ?? 1} col
+                              {(config.styling.columns ?? 1) !== 1 ? "s" : ""}
+                            </span>
+                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-secondary border border-border text-[10px] font-semibold text-muted-foreground capitalize">
+                              {config.styling.sections ?? "separate"}
+                            </span>
+                          </div>
 
-                          {/* Right column — billing/payments */}
-                          {(() => {
-                            const rightTypes = [
-                              "next-bill-due",
-                              "invoices",
-                              "billing-history",
-                              "checkout-modal",
-                            ];
-                            const rightEls = elements.filter((e) =>
-                              rightTypes.includes(e.type),
-                            );
-                            if (rightEls.length === 0) return null;
-                            return (
-                              <div className="space-y-3">
-                                {rightEls.map((element) => {
-                                  const elIdx = elements.findIndex(
-                                    (e) => e.id === element.id,
-                                  );
-                                  const isSelected =
-                                    selectedElement === element.id;
-                                  return (
+                          {config.styling.sections === "merged" ? (
+                            /* MERGED: all elements live inside one unified card */
+                            <div
+                              className={cn(
+                                "rounded-xl border-2 overflow-hidden bg-background transition-all duration-150",
+                                draggedElement
+                                  ? "border-foreground/40 ring-2 ring-inset ring-foreground/20"
+                                  : "border-border",
+                              )}
+                              onDrop={handleDrop}
+                              onDragOver={handleDragOver}
+                            >
+                              {elements.map((el, index) => {
+                                const isSelected = selectedElement === el.id;
+                                return (
+                                  <div
+                                    key={el.id}
+                                    onClick={() => {
+                                      setSelectedElement(el.id);
+                                      if (
+                                        (
+                                          EDITABLE_TYPES as readonly string[]
+                                        ).includes(el.type)
+                                      )
+                                        setRightTab("properties");
+                                    }}
+                                    className={cn(
+                                      "group relative cursor-pointer transition-all duration-150",
+                                      index > 0 && "border-t border-border",
+                                      isSelected
+                                        ? "bg-accent/5"
+                                        : "hover:bg-secondary/20",
+                                    )}
+                                  >
+                                    {/* Element action toolbar */}
                                     <div
-                                      key={element.id}
                                       className={cn(
-                                        "relative group/el rounded-xl border overflow-hidden cursor-pointer transition-all duration-150",
-                                        isSelected
-                                          ? "ring-2 ring-foreground border-foreground"
-                                          : "border-border hover:border-foreground/30 hover:shadow-sm",
+                                        "absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10",
+                                        isSelected && "opacity-100",
                                       )}
-                                      style={{
-                                        borderRadius:
-                                          config.styling.cardStyle
-                                            .borderRadius || "10px",
-                                        backgroundColor:
-                                          config.styling.cardStyle
-                                            .backgroundColor || undefined,
-                                        boxShadow: isSelected
-                                          ? undefined
-                                          : config.styling.cardStyle.cardShadow
-                                            ? "0 1px 4px rgba(0,0,0,0.06)"
-                                            : undefined,
-                                        fontFamily:
-                                          config.styling.typography
-                                            .fontFamily || undefined,
-                                        padding:
-                                          config.styling.cardStyle
-                                            .cardPadding || "24px",
-                                      }}
-                                      onClick={() =>
-                                        setSelectedElement(
-                                          isSelected ? null : element.id,
-                                        )
-                                      }
                                     >
-                                      {isSelected && (
-                                        <div className="absolute top-0 left-0 right-0 h-7 bg-foreground flex items-center justify-between px-3 z-10">
-                                          <span className="text-[10px] font-bold text-background tracking-wide uppercase">
-                                            {element.label}
-                                          </span>
-                                          <div className="flex items-center gap-0.5">
-                                            <button
-                                              className="w-5 h-5 flex items-center justify-center rounded hover:bg-background/20"
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                if (elIdx > 0) {
-                                                  const ne = [...elements];
-                                                  [ne[elIdx], ne[elIdx - 1]] = [
-                                                    ne[elIdx - 1],
-                                                    ne[elIdx],
-                                                  ];
-                                                  setElements(ne);
-                                                }
-                                              }}
-                                            >
-                                              <ChevronUp className="w-3 h-3 text-background" />
-                                            </button>
-                                            <button
-                                              className="w-5 h-5 flex items-center justify-center rounded hover:bg-background/20"
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                if (
-                                                  elIdx <
-                                                  elements.length - 1
-                                                ) {
-                                                  const ne = [...elements];
-                                                  [ne[elIdx], ne[elIdx + 1]] = [
-                                                    ne[elIdx + 1],
-                                                    ne[elIdx],
-                                                  ];
-                                                  setElements(ne);
-                                                }
-                                              }}
-                                            >
-                                              <ChevronDown className="w-3 h-3 text-background" />
-                                            </button>
-                                            <button
-                                              className="w-5 h-5 flex items-center justify-center rounded hover:bg-background/20 ml-1"
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                setElements(
-                                                  elements.filter(
-                                                    (el) =>
-                                                      el.id !== element.id,
-                                                  ),
-                                                );
-                                                setSelectedElement(null);
-                                              }}
-                                            >
-                                              <Trash2 className="w-3 h-3 text-background" />
-                                            </button>
-                                          </div>
-                                        </div>
-                                      )}
-                                      <div
-                                        style={{
-                                          paddingTop: isSelected
-                                            ? "28px"
-                                            : undefined,
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          moveElement(index, "up");
                                         }}
+                                        disabled={index === 0}
+                                        className="h-6 w-6 rounded border bg-background shadow-sm flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed"
                                       >
-                                        <ElementPreview
-                                          type={element.type}
-                                          primaryColor={config.styling.primaryColor}
-                                          secondaryColor={config.styling.secondaryColor}
-                                          fontFamily={config.styling.typography.fontFamily}
-                                        />
-                                      </div>
-                                      {!isSelected && (
-                                        <div className="absolute top-2 left-2 opacity-0 group-hover/el:opacity-100 transition-opacity">
-                                          <span className="text-[9px] font-bold uppercase tracking-wider bg-foreground text-background px-2 py-0.5 rounded-full">
-                                            {element.label}
-                                          </span>
-                                        </div>
-                                      )}
+                                        <ChevronUp className="w-3 h-3" />
+                                      </button>
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          moveElement(index, "down");
+                                        }}
+                                        disabled={index === elements.length - 1}
+                                        className="h-6 w-6 rounded border bg-background shadow-sm flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed"
+                                      >
+                                        <ChevronDown className="w-3 h-3" />
+                                      </button>
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          removeElement(el.id);
+                                        }}
+                                        className="h-6 w-6 rounded border bg-background shadow-sm flex items-center justify-center text-muted-foreground hover:text-destructive"
+                                      >
+                                        <X className="w-3 h-3" />
+                                      </button>
                                     </div>
-                                  );
-                                })}
-                              </div>
-                            );
-                          })()}
-                        </div>
+
+                                    {/* Element type label */}
+                                    <div className="absolute top-2 left-2">
+                                      <span
+                                        className={cn(
+                                          "px-2 py-0.5 rounded text-[10px] font-semibold border bg-background",
+                                          isSelected
+                                            ? "text-foreground border-foreground"
+                                            : "text-muted-foreground border-border",
+                                        )}
+                                      >
+                                        {el.label}
+                                      </span>
+                                    </div>
+
+                                    {/* Element preview content */}
+                                    <div className="px-4 pb-4 pt-9 select-none">
+                                      <ElementPreview
+                                        type={el.type}
+                                        styling={config.styling}
+                                        fullData={canvasMockData}
+                                        elementProps={el.props}
+                                        onChangePlan={() =>
+                                          setActiveViewState("checkout")
+                                        }
+                                      />
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            /* SEPARATE: each element is its own card, arranged in a columns grid */
+                            <div
+                              className={cn(
+                                "transition-all duration-150",
+                                draggedElement &&
+                                  "ring-2 ring-inset ring-foreground/20 rounded-2xl p-2",
+                              )}
+                              style={{
+                                display: "grid",
+                                gridTemplateColumns: `repeat(${config.styling.columns ?? 1}, 1fr)`,
+                                gap: "12px",
+                                alignItems: "start",
+                              }}
+                              onDrop={handleDrop}
+                              onDragOver={handleDragOver}
+                            >
+                              {elements.map((el, index) => {
+                                const isSelected = selectedElement === el.id;
+                                return (
+                                  <div
+                                    key={el.id}
+                                    onClick={() => {
+                                      setSelectedElement(el.id);
+                                      if (
+                                        (
+                                          EDITABLE_TYPES as readonly string[]
+                                        ).includes(el.type)
+                                      )
+                                        setRightTab("properties");
+                                    }}
+                                    className={cn(
+                                      "group relative rounded-xl border-2 bg-background cursor-pointer transition-all duration-150",
+                                      isSelected
+                                        ? "border-foreground shadow-sm"
+                                        : "border-border hover:border-foreground/30",
+                                    )}
+                                  >
+                                    {/* Element action toolbar */}
+                                    <div
+                                      className={cn(
+                                        "absolute -top-3 right-3 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10",
+                                        isSelected && "opacity-100",
+                                      )}
+                                    >
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          moveElement(index, "up");
+                                        }}
+                                        disabled={index === 0}
+                                        className="h-6 w-6 rounded border bg-background shadow-sm flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed"
+                                      >
+                                        <ChevronUp className="w-3 h-3" />
+                                      </button>
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          moveElement(index, "down");
+                                        }}
+                                        disabled={index === elements.length - 1}
+                                        className="h-6 w-6 rounded border bg-background shadow-sm flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed"
+                                      >
+                                        <ChevronDown className="w-3 h-3" />
+                                      </button>
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          removeElement(el.id);
+                                        }}
+                                        className="h-6 w-6 rounded border bg-background shadow-sm flex items-center justify-center text-muted-foreground hover:text-destructive"
+                                      >
+                                        <X className="w-3 h-3" />
+                                      </button>
+                                    </div>
+
+                                    {/* Element type label */}
+                                    <div className="absolute -top-3 left-3 flex items-center gap-1">
+                                      <span
+                                        className={cn(
+                                          "px-2 py-0.5 rounded text-[10px] font-semibold border bg-background",
+                                          isSelected
+                                            ? "text-foreground border-foreground"
+                                            : "text-muted-foreground border-border",
+                                        )}
+                                      >
+                                        {el.label}
+                                      </span>
+                                    </div>
+
+                                    {/* Element preview content */}
+                                    <div className="p-4 pt-5 select-none">
+                                      <ElementPreview
+                                        type={el.type}
+                                        styling={config.styling}
+                                        fullData={canvasMockData}
+                                        elementProps={el.props}
+                                        onChangePlan={() =>
+                                          setActiveViewState("checkout")
+                                        }
+                                      />
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </>
                       )}
                       {/* Drop zone when dragging */}
                       {draggedElement && elements.length > 0 && (
@@ -3113,16 +4231,39 @@ npm install @arcenpay/react @arcenpay/sdk wagmi viem
                         </div>
                       )}
                     </div>
+                  ) : isCustom ? (
+                    /* ── Custom component non-portal views: real ArcenEmbed ── */
+                    activeViewState === "disabled" ? (
+                      <div className="flex flex-col items-center justify-center min-h-[400px] gap-3 text-muted-foreground">
+                        <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center">
+                          <MinusCircle className="w-5 h-5" />
+                        </div>
+                        <p className="text-sm font-semibold">
+                          Component disabled
+                        </p>
+                        <p className="text-xs text-center max-w-[220px] leading-relaxed">
+                          This is how the component appears when disabled for a
+                          user segment.
+                        </p>
+                      </div>
+                    ) : (
+                      <ArcenEmbed
+                        key={activeViewState}
+                        mockData={canvasMockData}
+                        initialView={tabToEmbedView(activeViewState)}
+                        baseUrl=""
+                        accessToken="preview"
+                      />
+                    )
                   ) : (
-                    /* ── Checkout / Payment Method / Unsubscribe / Disabled views ── */
+                    /* ── Non-custom SDK components: simulation preview ── */
                     <div className="max-w-3xl mx-auto">
                       <SdkViewportPreview
-                        componentId={
-                          isCustom ? "customer-portal" : component.id
-                        }
+                        componentId={component.id}
                         viewState={activeViewState}
                         styling={config.styling}
                         viewportSize={viewportSize}
+                        realData={liveData}
                         onViewChange={(vs) => setActiveViewState(vs)}
                       />
                     </div>
@@ -3142,18 +4283,78 @@ npm install @arcenpay/react @arcenpay/sdk wagmi viem
             <div className="max-w-3xl mx-auto space-y-4">
               <div>
                 <h3 className="text-sm font-semibold text-foreground">
-                  Installation Code
+                  Embed this component
                 </h3>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Embed this component in your app
+                  Drop{" "}
+                  <code className="font-mono bg-secondary rounded px-1">
+                    {"<ArcenpayEmbed />"}
+                  </code>{" "}
+                  into your dApp with a server-generated access token.
                 </p>
               </div>
 
-              {/* React / Next.js */}
+              {/* Component ID */}
+              {!config.id.startsWith("custom-") && (
+                <div className="bg-card border border-border rounded-xl p-4">
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                    Component ID
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 text-sm font-mono text-foreground bg-secondary rounded-lg px-3 py-2 truncate">
+                      {config.id}
+                    </code>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => navigator.clipboard.writeText(config.id)}
+                      className="h-9 w-9 p-0 shrink-0"
+                      title="Copy component ID"
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-1.5">
+                    Pass this as the{" "}
+                    <code className="font-mono bg-secondary rounded px-1">
+                      id
+                    </code>{" "}
+                    prop to{" "}
+                    <code className="font-mono bg-secondary rounded px-1">
+                      {"<ArcenpayEmbed />"}
+                    </code>
+                  </p>
+                </div>
+              )}
+              {config.id.startsWith("custom-") && (
+                <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
+                  <p className="text-xs font-semibold text-amber-800 dark:text-amber-200 mb-1">
+                    Save your component first
+                  </p>
+                  <p className="text-xs text-amber-700 dark:text-amber-300">
+                    Click &quot;Save&quot; to persist this component and get a
+                    permanent component ID you can embed.
+                  </p>
+                </div>
+              )}
+
+              {/* 1. Install */}
+              <div className="bg-card border border-border rounded-xl overflow-hidden">
+                <div className="px-4 py-3 border-b border-border bg-secondary/30">
+                  <span className="text-xs font-semibold text-foreground">
+                    1 — Install
+                  </span>
+                </div>
+                <pre className="p-4 overflow-x-auto text-xs font-mono text-foreground/80">
+                  <code>{generateInstallCode()}</code>
+                </pre>
+              </div>
+
+              {/* 2. Frontend embed snippet */}
               <div className="bg-card border border-border rounded-xl overflow-hidden">
                 <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-secondary/30">
                   <span className="text-xs font-semibold text-foreground">
-                    React / Next.js
+                    2 — Frontend (React / Next.js)
                   </span>
                   <Button
                     variant="ghost"
@@ -3179,58 +4380,62 @@ npm install @arcenpay/react @arcenpay/sdk wagmi viem
                 </pre>
               </div>
 
-              {/* Setup Instructions */}
+              {/* 3. Backend token generation */}
               <div className="bg-card border border-border rounded-xl overflow-hidden">
-                <div className="px-4 py-3 border-b border-border bg-secondary/30">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-secondary/30">
                   <span className="text-xs font-semibold text-foreground">
-                    Setup Instructions
+                    3 — Backend: Generate Access Token (Node.js)
                   </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      navigator.clipboard.writeText(generateBackendCode());
+                    }}
+                    className="h-7 gap-1.5 text-xs"
+                  >
+                    <Copy className="w-3 h-3" />
+                    Copy
+                  </Button>
                 </div>
-                <div className="p-4 space-y-4">
-                  <div>
-                    <p className="text-xs font-semibold text-foreground mb-2">
-                      1. Install Dependencies
-                    </p>
-                    <pre className="bg-secondary/30 p-3 rounded-lg text-xs font-mono border border-border">
-                      npm install @arcenpay/react @arcenpay/sdk wagmi viem
-                    </pre>
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-foreground mb-2">
-                      2. Configure Provider
-                    </p>
-                    <pre className="bg-secondary/30 p-3 rounded-lg text-xs font-mono border border-border overflow-x-auto">
-                      <code>{`import { ArcenPayProvider } from '@arcenpay/react';
-import { WagmiProvider, createConfig } from 'wagmi';
-import { base, baseSepolia } from 'wagmi/chains';
+                <pre className="p-4 overflow-x-auto text-xs font-mono text-foreground/80">
+                  <code>{generateBackendCode()}</code>
+                </pre>
+              </div>
 
-const config = createConfig({
-  chains: [base, baseSepolia],
-  // ... your wagmi config
-});
-
-function App() {
-  return (
-    <WagmiProvider config={config}>
-      <ArcenPayProvider>
-        {/* Your component here */}
-      </ArcenPayProvider>
-    </WagmiProvider>
-  );
-}`}</code>
-                    </pre>
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-foreground mb-1">
-                      3. Use Component
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Copy the React code above and paste it into your
-                      application. The component will automatically connect to
-                      your Web3 subscription infrastructure.
-                    </p>
-                  </div>
-                </div>
+              {/* Notes */}
+              <div className="bg-secondary/30 rounded-xl p-4 space-y-1.5">
+                <p className="text-xs font-semibold text-foreground">
+                  How it works
+                </p>
+                <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
+                  <li>
+                    Your backend calls{" "}
+                    <code className="font-mono bg-secondary rounded px-1">
+                      POST /api/v1/access-tokens
+                    </code>{" "}
+                    with your API key to get a short-lived token (1 hr).
+                  </li>
+                  <li>
+                    Pass that token + the component ID to{" "}
+                    <code className="font-mono bg-secondary rounded px-1">
+                      {"<ArcenpayEmbed />"}
+                    </code>
+                    .
+                  </li>
+                  <li>
+                    The component fetches your configured elements (plan
+                    manager, usage bars, features) and renders them — no extra
+                    code needed.
+                  </li>
+                  <li>
+                    Manage your API keys in{" "}
+                    <span className="text-foreground font-medium">
+                      Settings → API Keys
+                    </span>
+                    .
+                  </li>
+                </ul>
               </div>
             </div>
           </div>

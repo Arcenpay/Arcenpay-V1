@@ -9,7 +9,7 @@
  *  - Manage companies programmatically
  *
  * @example
- * import { ArcenClient } from '@meap/node';
+ * import { ArcenClient } from '@arcenpay/node';
  *
  * const arcen = new ArcenClient({
  *   apiKey: process.env.ARCEN_API_KEY!,
@@ -32,7 +32,7 @@ import type {
   FlagCheckResult,
   ArcenCompany,
   EmbedAccessTokenResponse,
-} from '@meap/core';
+} from '@arcenpay/sdk';
 
 export interface ArcenClientConfig {
   /** Your ArcenPay API key (starts with api_) */

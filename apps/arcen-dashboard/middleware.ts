@@ -10,6 +10,8 @@ const isPublicRoute = createRouteMatcher([
   "/api/auth/link-wallet(.*)",
   "/api/webhooks/clerk(.*)",
   "/api/entitlements/(.*)",
+  // External v1 API — uses API key auth, not Clerk session auth
+  "/api/v1/(.*)",
 ]);
 
 export default clerkMiddleware(async (auth, request) => {

@@ -36,6 +36,8 @@ const sectionTitles: Record<Section, string> = {
   companies: "Companies",
   "events-stream": "Events",
   "feature-flags": "Feature Flags",
+  agent: "Agent",
+  webhooks: "Webhooks",
 };
 
 const sectionDescriptions: Record<Section, string> = {
@@ -56,6 +58,8 @@ const sectionDescriptions: Record<Section, string> = {
   companies: "Manage companies, entitlements, and overrides",
   "events-stream": "Live stream of track and identify events",
   "feature-flags": "Manage flags, targeting rules, and zkTLS conditions",
+  agent: "AI agent SDK, API keys, and session management",
+  webhooks: "Configure endpoints, signing secrets, and delivery logs",
 };
 
 export function Header({ activeSection }: HeaderProps) {

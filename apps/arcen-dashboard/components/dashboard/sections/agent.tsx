@@ -109,10 +109,13 @@ function ApiKeysTab() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: newKeyName }),
       });
-      const data = await res.json();
-      if (data.key) {
+      const data = await res.json() as {
+        key?: string;
+        apiKey?: { id: string; name: string; prefix: string; createdAt: string; lastUsedAt: string | null };
+      };
+      if (data.key && data.apiKey) {
         setCreatedKey(data.key);
-        setKeys((prev) => [data.apiKey, ...prev]);
+        setKeys((prev) => [{ ...data.apiKey!, expiresAt: null }, ...prev]);
         setNewKeyName("");
         setShowCreate(false);
       }

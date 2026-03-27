@@ -1,5 +1,5 @@
 // ============================================================
-//  @meap/react — ZeroDev Smart Account Integration
+//  @arcenpay/react — ZeroDev Smart Account Integration
 //  ERC-7579 Kernel account provisioning with AutopayModule
 //  PRD MEAP-001 — Smart Account Provisioning
 // ============================================================

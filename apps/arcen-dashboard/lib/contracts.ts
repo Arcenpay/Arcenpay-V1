@@ -1,6 +1,6 @@
 // ============================================================
 //  Dashboard — Contract helpers
-//  Re-exports @meap/core ABIs + addresses; exposes a hook
+//  Re-exports @arcenpay/sdk ABIs + addresses; exposes a hook
 //  that resolves addresses for the currently connected chain.
 // ============================================================
 

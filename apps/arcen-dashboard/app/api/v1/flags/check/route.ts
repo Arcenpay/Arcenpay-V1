@@ -50,12 +50,10 @@ export async function GET(req: NextRequest) {
 
   // Parse company + user key headers
   const rawCompanyKeys = parseKeyHeader(
-    req.headers.get("x-arcen-company-keys") ??
-    req.headers.get("x-schematic-company-keys"), // backward compat header
+    req.headers.get("x-arcen-company-keys"),
   );
   const rawUserKeys = parseKeyHeader(
-    req.headers.get("x-arcen-user-keys") ??
-    req.headers.get("x-schematic-user-keys"), // backward compat header
+    req.headers.get("x-arcen-user-keys"),
   );
 
   const companyKeys: CompanyKeys = {
