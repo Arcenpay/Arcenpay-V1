@@ -24,23 +24,23 @@ export default function ReactSDKPage() {
         <div className="docs-page-title-row"><h1>React SDK</h1></div>
 
         <p className="docs-lead" id="react-sdk">
-          The <code>@meap/react</code> SDK is the primary tool for building customer-facing ArcenPay integrations.
+          The <code>@arcenpay/react</code> SDK is the primary tool for building customer-facing ArcenPay integrations.
           It provides high-level components for checkout and portals, and hooks for access control.
         </p>
 
         <h2 id="installation">Installation</h2>
-        <CodeBlock lang="bash" code={`npm install @meap/react wagmi viem @tanstack/react-query`} />
+        <CodeBlock lang="bash" code={`npm install @arcenpay/react wagmi viem @tanstack/react-query`} />
 
         <h2 id="setup">Setup</h2>
-        <p>Wrap your application in the <code>MEAPProvider</code>. It requires a <code>wagmi</code> config.</p>
-        <CodeBlock lang="tsx" code={`import { MEAPProvider } from '@meap/react';
+        <p>Wrap your application in the <code>ArcenPayProvider</code>. It requires a <code>wagmi</code> config.</p>
+        <CodeBlock lang="tsx" code={`import { ArcenPayProvider } from '@arcenpay/react';
 import { config } from './wagmi';
 
 function App() {
   return (
-    <MEAPProvider config={config}>
+    <ArcenPayProvider config={config}>
       <YourAppContent />
-    </MEAPProvider>
+    </ArcenPayProvider>
   );
 }
 `} />
@@ -103,7 +103,7 @@ return (
 
         <h2 id="custom-themes">Custom themes</h2>
         <p>Style all components using the theme object in the provider.</p>
-        <CodeBlock lang="tsx" code={`<MEAPProvider theme={{
+        <CodeBlock lang="tsx" code={`<ArcenPayProvider theme={{
   colors: {
     primary: '#2563eb',
     background: '#ffffff',
@@ -112,7 +112,7 @@ return (
   borderRadius: 'md'
 }}>
   {children}
-</MEAPProvider>`} />
+</ArcenPayProvider>`} />
 
         <div className="docs-callout tip">
           <span className="docs-callout-icon">🚀</span>

@@ -36,7 +36,7 @@ export default function AIAgentPaymentsGuide() {
 
         <h2 id="step-1">1. Deposit to SessionVault</h2>
         <p>The agent (or its owner) must fund a session with USDC.</p>
-        <CodeBlock lang="typescript" code={`import { SessionManager } from '@meap/agent';
+        <CodeBlock lang="typescript" code={`import { SessionManager } from '@arcenpay/agent';
 
 const manager = new SessionManager(RPC_URL);
 const sessionId = await manager.fundSession("10.0"); // 10 USDC`} />
@@ -72,7 +72,7 @@ await verifierContract.submitSettlement(sessionId, proof);`} />
         <div className="docs-callout warning">
           <span className="docs-callout-icon">🤖</span>
           <div>
-            The <code>@meap/agent</code> SDK handles top-ups automatically. If the session balance
+            The <code>@arcenpay/agent</code> SDK handles top-ups automatically. If the session balance
             drops below $1.00, it will trigger a re-funding transaction using the agent&apos;s wallet.
           </div>
         </div>

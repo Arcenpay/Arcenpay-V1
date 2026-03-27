@@ -88,10 +88,10 @@ export default function WebhooksPage() {
 }`} />
 
         <h2 id="security">Verifying signatures</h2>
-        <p>Always verify the signature using the <code>@meap/node</code> SDK to prevent spoofing.</p>
-        <CodeBlock lang="typescript" code={`import { MEAPClient } from '@meap/node';
+        <p>Always verify the signature using the <code>@arcenpay/node</code> SDK to prevent spoofing.</p>
+        <CodeBlock lang="typescript" code={`import { ArcenPayClient } from '@arcenpay/node';
 
-const client = new MEAPClient();
+const client = new ArcenPayClient();
 
 // In your route handler
 const signature = req.headers['x-arcenpay-signature'];

@@ -32,7 +32,7 @@ export default function CustomerPortalPage() {
         <p>
           You can embed the portal directly into your application settings page using the <code>Portal</code> component.
         </p>
-        <CodeBlock lang="tsx" code={`import { Portal } from '@meap/react';
+        <CodeBlock lang="tsx" code={`import { Portal } from '@arcenpay/react';
 
 function AccountSettings() {
   return (

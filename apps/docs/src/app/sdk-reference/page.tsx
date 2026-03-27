@@ -35,29 +35,29 @@ export default function SDKReferencePage() {
           <thead><tr><th>Package</th><th>Runtime</th><th>Install</th></tr></thead>
           <tbody>
             <tr>
-              <td><code>@meap/react</code></td>
+              <td><code>@arcenpay/react</code></td>
               <td>Browser (React 18+)</td>
-              <td><code>npm install @meap/react @meap/core viem wagmi</code></td>
+              <td><code>npm install @arcenpay/react @arcenpay/sdk viem wagmi</code></td>
             </tr>
             <tr>
-              <td><code>@meap/node</code></td>
+              <td><code>@arcenpay/node</code></td>
               <td>Node.js 18+</td>
-              <td><code>npm install @meap/node viem</code></td>
+              <td><code>npm install @arcenpay/node viem</code></td>
             </tr>
             <tr>
-              <td><code>@meap/agent</code></td>
+              <td><code>@arcenpay/agent</code></td>
               <td>AI Agents / Bun / Edge</td>
-              <td><code>npm install @meap/agent viem</code></td>
+              <td><code>npm install @arcenpay/agent viem</code></td>
             </tr>
           </tbody>
         </table>
 
-        <h2 id="meap-react">@meap/react</h2>
+        <h2 id="meap-react">@arcenpay/react</h2>
         <p>React components and hooks for adding subscription billing to any dApp.</p>
 
-        <h3>MEAPProvider</h3>
+        <h3>ArcenPayProvider</h3>
         <p>Wraps your app with contract configuration and wallet context. Must be placed above any <code>useSubscription</code> or <code>useFeatureFlag</code> calls.</p>
-        <CodeBlock lang="TypeScript" code={`import { MEAPProvider } from '@meap/react';
+        <CodeBlock lang="TypeScript" code={`import { ArcenPayProvider } from '@arcenpay/react';
 import { WagmiProvider, createConfig } from 'wagmi';
 
 const wagmiConfig = createConfig({ /* ... */ });
@@ -65,20 +65,20 @@ const wagmiConfig = createConfig({ /* ... */ });
 function App() {
   return (
     <WagmiProvider config={wagmiConfig}>
-      <MEAPProvider
+      <ArcenPayProvider
         planFactoryAddress="0x18707519A062AbCC3E73fBd4150C3B30B241f536"
         registryAddress="0xA0Cf798816D4b9b9866b5704098F9C09F279c2C4"
         chainId={11155111}  // Sepolia
       >
         <YourApp />
-      </MEAPProvider>
+      </ArcenPayProvider>
     </WagmiProvider>
   );
 }`} />
 
         <h3>useSubscription</h3>
         <p>Returns the current wallet&apos;s subscription state.</p>
-        <CodeBlock lang="TypeScript" code={`import { useSubscription } from '@meap/react';
+        <CodeBlock lang="TypeScript" code={`import { useSubscription } from '@arcenpay/react';
 
 const {
   isActive,      // boolean — wallet has a valid subscription
@@ -91,7 +91,7 @@ const {
 } = useSubscription();`} />
 
         <h3>useFeatureFlag</h3>
-        <CodeBlock lang="TypeScript" code={`import { useFeatureFlag } from '@meap/react';
+        <CodeBlock lang="TypeScript" code={`import { useFeatureFlag } from '@arcenpay/react';
 
 const {
   enabled,    // boolean
@@ -99,7 +99,7 @@ const {
 } = useFeatureFlag('analytics:export');`} />
 
         <h3>useFeatureFlags</h3>
-        <CodeBlock lang="TypeScript" code={`import { useFeatureFlags } from '@meap/react';
+        <CodeBlock lang="TypeScript" code={`import { useFeatureFlags } from '@arcenpay/react';
 
 const {
   flags,     // Record<string, boolean>
@@ -107,7 +107,7 @@ const {
 } = useFeatureFlags(['analytics:export', 'api:webhooks', 'seats:unlimited']);`} />
 
         <h3>PricingTable</h3>
-        <CodeBlock lang="TypeScript" code={`import { PricingTable } from '@meap/react';
+        <CodeBlock lang="TypeScript" code={`import { PricingTable } from '@arcenpay/react';
 
 <PricingTable
   planIds={[1, 2, 3]}                    // Plan IDs to display
@@ -117,7 +117,7 @@ const {
 />`} />
 
         <h3>CheckoutModal</h3>
-        <CodeBlock lang="TypeScript" code={`import { CheckoutModal } from '@meap/react';
+        <CodeBlock lang="TypeScript" code={`import { CheckoutModal } from '@arcenpay/react';
 
 <CheckoutModal
   planId={2}
@@ -128,13 +128,13 @@ const {
   }}
 />`} />
 
-        <h2 id="meap-node">@meap/node</h2>
+        <h2 id="meap-node">@arcenpay/node</h2>
         <p>Server-side SDK for verifying subscriptions, evaluating flags, and listening to on-chain events.</p>
 
-        <h3>createMEAPClient</h3>
-        <CodeBlock lang="TypeScript" code={`import { createMEAPClient } from '@meap/node';
+        <h3>createArcenPayClient</h3>
+        <CodeBlock lang="TypeScript" code={`import { createArcenPayClient } from '@arcenpay/node';
 
-const meap = createMEAPClient({
+const client = createArcenPayClient({
   planFactoryAddress: process.env.PLAN_FACTORY_ADDRESS,
   registryAddress:    process.env.REGISTRY_ADDRESS,
   rpcUrl:             process.env.RPC_URL,
@@ -144,38 +144,38 @@ const meap = createMEAPClient({
         <h3>meap.subscriptions.verify</h3>
         <CodeBlock lang="TypeScript" code={`// Verify a wallet has an active subscription (server-side)
 const { isActive, tokenId, tier, expiresAt } =
-  await meap.subscriptions.verify({ wallet: '0xABC...' });
+  await client.subscriptions.verify({ wallet: '0xABC...' });
 
 // Use in middleware
 app.use(async (req, res, next) => {
   const wallet = req.headers['x-wallet-address'];
-  const { isActive } = await meap.subscriptions.verify({ wallet });
+  const { isActive } = await client.subscriptions.verify({ wallet });
   if (!isActive) return res.status(401).json({ error: 'Subscription required' });
   next();
 });`} />
 
         <h3>meap.featureFlags.evaluate</h3>
-        <CodeBlock lang="TypeScript" code={`const { enabled } = await meap.featureFlags.evaluate({
+        <CodeBlock lang="TypeScript" code={`const { enabled } = await client.featureFlags.evaluate({
   wallet: '0xABC...',
   flag: 'analytics:export',
 });`} />
 
-        <h3>meap.events.on</h3>
+        <h3>client.events.on</h3>
         <CodeBlock lang="TypeScript" code={`// Listen for subscription events
-meap.events.on('SubscriptionMinted', (event) => {
+client.events.on('SubscriptionMinted', (event) => {
   const { to, tokenId, planId, expiration } = event;
   // Provision access, send welcome email, etc.
 });
 
-meap.events.on('SubscriptionCancelled', ({ tokenId }) => {
+client.events.on('SubscriptionCancelled', ({ tokenId }) => {
   // Revoke access, send cancellation email
 });`} />
 
-        <h2 id="meap-agent">@meap/agent</h2>
+        <h2 id="meap-agent">@arcenpay/agent</h2>
         <p>SDK for AI agents making x402 HTTP payments and managing ZKVUB session vaults.</p>
 
         <h3>useSessionVault</h3>
-        <CodeBlock lang="TypeScript" code={`import { useSessionVault } from '@meap/agent';
+        <CodeBlock lang="TypeScript" code={`import { useSessionVault } from '@arcenpay/agent';
 import { parseUnits } from 'viem';
 
 const { fundSession, topUp, withdraw, getBalance } = useSessionVault({
@@ -195,7 +195,7 @@ const balance = await getBalance({ sessionId });
 console.log('Remaining:', balance); // BigInt (USDC units)`} />
 
         <h3>x402Client</h3>
-        <CodeBlock lang="TypeScript" code={`import { x402Client } from '@meap/agent';
+        <CodeBlock lang="TypeScript" code={`import { x402Client } from '@arcenpay/agent';
 
 const client = x402Client({
   sessionId,
@@ -228,9 +228,9 @@ const data = await response.json();`} />
         <ul className="docs-toc-list">
           <li className="docs-toc-item active"><a href="#sdk-reference">SDK Reference</a></li>
           <li className="docs-toc-item"><a href="#packages">Packages</a></li>
-          <li className="docs-toc-item"><a href="#meap-react">@meap/react</a></li>
-          <li className="docs-toc-item"><a href="#meap-node">@meap/node</a></li>
-          <li className="docs-toc-item"><a href="#meap-agent">@meap/agent</a></li>
+          <li className="docs-toc-item"><a href="#meap-react">@arcenpay/react</a></li>
+          <li className="docs-toc-item"><a href="#meap-node">@arcenpay/node</a></li>
+          <li className="docs-toc-item"><a href="#meap-agent">@arcenpay/agent</a></li>
           <li className="docs-toc-item"><a href="#error-codes">Error codes</a></li>
         </ul>
       </nav>

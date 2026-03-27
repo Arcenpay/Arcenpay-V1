@@ -18,9 +18,9 @@ function CodeBlock({ lang, code }: { lang: string; code: string }) {
 
 export default function ContractsIndexPage() {
   const contracts = [
-    { name: 'PlanFactory', href: '/contracts/plan-factory', desc: 'Creates and manages on-chain subscription plans. Provider registration, token allowlist.', badge: 'MEAP' },
-    { name: 'SubscriptionRegistry', href: '/contracts/subscription-registry', desc: 'ERC-721 + ERC-5643 subscription NFT lifecycle. Mint, renew, cancel, cross-chain dispatch.', badge: 'MEAP' },
-    { name: 'ERC7579AutopayModule', href: '/contracts/autopay-module', desc: 'Executor module for ERC-7579 smart accounts. Automated recurring billing with velocity limits.', badge: 'MEAP' },
+    { name: 'PlanFactory', href: '/contracts/plan-factory', desc: 'Creates and manages on-chain subscription plans. Provider registration, token allowlist.', badge: 'ArcenPay' },
+    { name: 'SubscriptionRegistry', href: '/contracts/subscription-registry', desc: 'ERC-721 + ERC-5643 subscription NFT lifecycle. Mint, renew, cancel, cross-chain dispatch.', badge: 'ArcenPay' },
+    { name: 'ERC7579AutopayModule', href: '/contracts/autopay-module', desc: 'Executor module for ERC-7579 smart accounts. Automated recurring billing with velocity limits.', badge: 'ArcenPay' },
     { name: 'SessionVault', href: '/contracts/session-vault', desc: 'Pre-funded USDC vault for ZKVUB sessions. Fund, top-up, settle, withdraw.', badge: 'ZKVUB' },
     { name: 'ZKUsageVerifier', href: '/contracts/zk-usage-verifier', desc: 'On-chain Groth16 zk-SNARK proof verification and usage-based settlement.', badge: 'ZKVUB' },
     { name: 'FeeCollector', href: '/contracts/fee-collector', desc: 'Protocol fee collection. Tier-based rates, per-provider overrides, treasury withdrawal.', badge: 'SHARED' },
@@ -28,7 +28,7 @@ export default function ContractsIndexPage() {
   ];
 
   const badgeColors: Record<string, { bg: string; color: string }> = {
-    MEAP: { bg: 'rgba(99,102,241,0.1)', color: '#6366f1' },
+    ArcenPay: { bg: 'rgba(99,102,241,0.1)', color: '#6366f1' },
     ZKVUB: { bg: 'rgba(14,165,233,0.1)', color: '#0ea5e9' },
     SHARED: { bg: 'rgba(16,185,129,0.1)', color: '#10b981' },
   };

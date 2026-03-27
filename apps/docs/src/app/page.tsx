@@ -33,7 +33,7 @@ export default function OverviewPage() {
 
         <ul>
           <li>
-            <strong>MEAP</strong> (Modular Entitlement and Access Protocol) — Automated recurring
+            <strong>ArcenPay Protocol</strong> — Automated recurring
             billing and cryptographic feature gating using ERC-7579 smart accounts and ERC-5643
             subscription NFTs.
           </li>
@@ -50,13 +50,13 @@ export default function OverviewPage() {
             <span className="docs-codeblock-lang">bash</span>
           </div>
           <pre><code>{`# React SDK (frontend)
-npm install @meap/react @meap/core viem
+npm install @arcenpay/react @arcenpay/sdk viem
 
 # Node SDK (backend)
 npm install @arcenpay/node
 
 # Agent SDK (AI runtimes)
-npm install @meap/agent`}</code></pre>
+npm install @arcenpay/agent`}</code></pre>
         </div>
 
         <h2 id="quick-example">30-second example</h2>
@@ -64,11 +64,11 @@ npm install @meap/agent`}</code></pre>
           <div className="docs-codeblock-header">
             <span className="docs-codeblock-lang">TypeScript</span>
           </div>
-          <pre><code>{`import { MEAPProvider, PricingTable, CheckoutModal } from '@meap/react';
+          <pre><code>{`import { ArcenPayProvider, PricingTable, CheckoutModal } from '@arcenpay/react';
 
 function App() {
   return (
-    <MEAPProvider
+    <ArcenPayProvider
       planRegistryAddress="0x18707519A062AbCC3E73fBd4150C3B30B241f536"
       chainId={11155111}
     >

@@ -28,7 +28,7 @@ export default function FeatureFlagsPage() {
         <p className="docs-lead" id="feature-flags">
           Feature flags let you gate individual product capabilities based on a subscriber&apos;s active plan tier.
           Flags are stored in <strong>Tableland</strong> (a decentralized SQL database) and evaluated on-chain via
-          <strong> Lit Protocol Access Control Conditions (ACCs)</strong>. Off-chain checks use the <code>@meap/react</code> SDK hook.
+          <strong> Lit Protocol Access Control Conditions (ACCs)</strong>. Off-chain checks use the <code>@arcenpay/react</code> SDK hook.
         </p>
 
         <h2 id="how-flags-work">How feature flags work</h2>
@@ -50,7 +50,7 @@ export default function FeatureFlagsPage() {
         </div>
 
         <h2 id="react-sdk">React SDK</h2>
-        <CodeBlock lang="TypeScript" code={`import { useFeatureFlag, useSubscription } from '@meap/react';
+        <CodeBlock lang="TypeScript" code={`import { useFeatureFlag, useSubscription } from '@arcenpay/react';
 
 function ExportButton() {
   // Check a single flag
@@ -92,9 +92,9 @@ function Dashboard() {
 
         <h2 id="server-side">Server-side verification</h2>
         <p>Never trust client-side flag evaluation alone for sensitive features. Verify on the server using the Node SDK:</p>
-        <CodeBlock lang="TypeScript" code={`import { createMEAPClient } from '@meap/node';
+        <CodeBlock lang="TypeScript" code={`import { createArcenPayClient } from '@arcenpay/node';
 
-const meap = createMEAPClient({
+const meap = createArcenPayClient({
   registryAddress: '0xA0Cf798816D4b9b9866b5704098F9C09F279c2C4',
   rpcUrl: process.env.RPC_URL,
 });

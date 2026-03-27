@@ -8,7 +8,7 @@ export default function ChangelogPage() {
       title: 'ZKVUB Mainnet Alpha',
       changes: [
         'Launched ZKUsageVerifier for automated AI agent settlements.',
-        'Added @meap/agent SDK for autonomous top-ups.',
+        'Added @arcenpay/agent SDK for autonomous top-ups.',
         'Integrated Lit Protocol for encrypted feature flags.'
       ]
     },
@@ -29,7 +29,7 @@ export default function ChangelogPage() {
       changes: [
         'Initial release of PlanFactory and SubscriptionRegistry.',
         'ERC-5643 implementation for time-bound NFTs.',
-        'Launched @meap/react SDK.'
+        'Launched @arcenpay/react SDK.'
       ]
     }
   ];

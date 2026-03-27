@@ -30,12 +30,12 @@ export default function NextJSPage() {
 
         <h2 id="setup">Project Setup</h2>
         <CodeBlock lang="bash" code={`npx create-next-app@latest
-npm install @meap/react @meap/node wagmi viem`} />
+npm install @arcenpay/react @arcenpay/node wagmi viem`} />
 
         <h2 id="client-side">Client Side: Access Gating</h2>
-        <p>Wrap your Root Layout with <code>MEAPProvider</code> and check status in your pages.</p>
+        <p>Wrap your Root Layout with <code>ArcenPayProvider</code> and check status in your pages.</p>
         <CodeBlock lang="tsx" code={`"use client";
-import { useSubscription } from '@meap/react';
+import { useSubscription } from '@arcenpay/react';
 
 export default function PremiumDashboard() {
   const { status, loading } = useSubscription();
@@ -50,11 +50,11 @@ export default function PremiumDashboard() {
         <p>Use Middleware to block entire route segments for non-subscribers at the edge.</p>
         <CodeBlock lang="typescript" code={`// middleware.ts
 import { NextResponse } from 'next/server'
-import { MEAPClient } from '@meap/node'
+import { ArcenPayClient } from '@arcenpay/node'
 
 export async function middleware(request) {
   const wallet = request.cookies.get('user-wallet');
-  const client = new MEAPClient({ rpcUrl: process.env.RPC_URL });
+  const client = new ArcenPayClient({ rpcUrl: process.env.RPC_URL });
 
   const { isValid } = await client.verifySubscription(wallet);
 

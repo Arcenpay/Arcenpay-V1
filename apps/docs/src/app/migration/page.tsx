@@ -97,7 +97,7 @@ export default function MigrationPage() {
             <div className="docs-step-body">
               <div className="docs-step-title">Install ArcenPay SDKs</div>
               <p className="docs-step-desc">
-                Replace your Stripe.js integration with <code>@meap/react</code>. Wrap your app in <code>MEAPProvider</code>.
+                Replace your Stripe.js integration with <code>@arcenpay/react</code>. Wrap your app in <code>ArcenPayProvider</code>.
               </p>
             </div>
           </div>

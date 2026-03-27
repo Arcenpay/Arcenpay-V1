@@ -24,7 +24,7 @@ export default function BillingFeesPage() {
         <div className="docs-page-title-row"><h1>Billing & Fees</h1></div>
 
         <p className="docs-lead" id="billing-fees">
-          The <strong>FeeCollector</strong> contract accumulates protocol fees from both subscription renewals (MEAP) and
+          The <strong>FeeCollector</strong> contract accumulates protocol fees from both subscription renewals (ArcenPay Protocol) and
           ZKVUB usage settlements. Fees are tier-dependent — providers on higher ArcenPay platform tiers pay lower rates.
         </p>
 

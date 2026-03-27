@@ -24,16 +24,16 @@ export default function AgentSDKPage() {
         <div className="docs-page-title-row"><h1>Agent SDK</h1></div>
 
         <p className="docs-lead" id="agent-sdk">
-          The <code>@meap/agent</code> SDK enables autonomous AI agents to manage their own payment sessions and 
+          The <code>@arcenpay/agent</code> SDK enables autonomous AI agents to manage their own payment sessions and 
           participate in the 402-based metered billing ecosystem (ZKVUB).
         </p>
 
         <h2 id="installation">Installation</h2>
-        <CodeBlock lang="bash" code={`npm install @meap/agent`} />
+        <CodeBlock lang="bash" code={`npm install @arcenpay/agent`} />
 
         <h2 id="x402-client">x402 Client</h2>
         <p>This client automatically manages the HTTP 402 flow — attaching session IDs to headers and handling top-ups when a session is low.</p>
-        <CodeBlock lang="typescript" code={`import { x402Client } from '@meap/agent';
+        <CodeBlock lang="typescript" code={`import { x402Client } from '@arcenpay/agent';
 
 const agent = new x402Client({
   sessionId: '0x...', 
@@ -47,7 +47,7 @@ const response = await agent.fetch('https://api.provider.com/generate', {
 
         <h2 id="session-management">Session Management</h2>
         <p>Agents can monitor and fund their own sessions on-chain.</p>
-        <CodeBlock lang="typescript" code={`import { SessionManager } from '@meap/agent';
+        <CodeBlock lang="typescript" code={`import { SessionManager } from '@arcenpay/agent';
 
 const manager = new SessionManager(rpcUrl);
 
@@ -60,7 +60,7 @@ console.log(\`Remaining: \${balance} USDC\`);`} />
 
         <h2 id="zk-proofs">Proof Generation (Advanced)</h2>
         <p>If your agent is acting as a facilitator, use the SDK to generate Groth16 zk-SNARK proofs of usage.</p>
-        <CodeBlock lang="typescript" code={`import { ZKProver } from '@meap/agent';
+        <CodeBlock lang="typescript" code={`import { ZKProver } from '@arcenpay/agent';
 
 const prover = new ZKProver();
 const proof = await prover.generateUsageProof({

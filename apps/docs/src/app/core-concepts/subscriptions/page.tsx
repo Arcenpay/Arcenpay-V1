@@ -106,7 +106,7 @@ contract MyGatedFeature {
 }`} />
 
         <h2 id="checking-access-react">Checking access in React</h2>
-        <CodeBlock lang="TypeScript" code={`import { useSubscription } from '@meap/react';
+        <CodeBlock lang="TypeScript" code={`import { useSubscription } from '@arcenpay/react';
 
 function PremiumFeature() {
   const { isActive, expiresAt, tokenId, isLoading } = useSubscription();

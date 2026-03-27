@@ -24,7 +24,7 @@ export default function FeeCollectorPage() {
         <div className="docs-page-title-row"><h1>FeeCollector</h1></div>
 
         <p className="docs-lead" id="fee-collector">
-          <code>FeeCollector</code> accumulates protocol fees from both MEAP subscription renewals and ZKVUB usage settlements.
+          <code>FeeCollector</code> accumulates protocol fees from both ArcenPay subscription renewals and ZKVUB usage settlements.
           Fees are tier-dependent. The protocol owner withdraws accumulated USDC to the treasury via <code>withdrawFees(token)</code>.
         </p>
 

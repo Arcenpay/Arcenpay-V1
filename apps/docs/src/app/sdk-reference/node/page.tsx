@@ -24,17 +24,17 @@ export default function NodeSDKPage() {
         <div className="docs-page-title-row"><h1>Node.js SDK</h1></div>
 
         <p className="docs-lead" id="node-sdk">
-          The <code>@meap/node</code> SDK is designed for server-side verification, webhook handling, and 
+          The <code>@arcenpay/node</code> SDK is designed for server-side verification, webhook handling, and 
           automated billing operations. It directly interacts with the ArcenPay smart contracts via a JSON-RPC provider.
         </p>
 
         <h2 id="installation">Installation</h2>
-        <CodeBlock lang="bash" code={`npm install @meap/node viem`} />
+        <CodeBlock lang="bash" code={`npm install @arcenpay/node viem`} />
 
         <h2 id="initialization">Initialization</h2>
-        <CodeBlock lang="typescript" code={`import { MEAPClient } from '@meap/node';
+        <CodeBlock lang="typescript" code={`import { ArcenPayClient } from '@arcenpay/node';
 
-const client = new MEAPClient({
+const client = new ArcenPayClient({
   rpcUrl: process.env.RPC_URL,
   privateKey: process.env.PROVIDER_PRIVATE_KEY, // Optional
 });`} />

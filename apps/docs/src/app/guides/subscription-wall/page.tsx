@@ -43,7 +43,7 @@ export default function SubscriptionWallGuide() {
         <h2 id="step-2">Step 2: Protecting Routes</h2>
         <p>Create a <code>ProtectedRoute</code> component that wraps sensitive pages.</p>
         <CodeBlock lang="tsx" code={`"use client";
-import { useSubscription } from '@meap/react';
+import { useSubscription } from '@arcenpay/react';
 import { useRouter } from 'next/navigation';
 
 export default function ProtectedRoute({ children, tier = 'pro' }) {

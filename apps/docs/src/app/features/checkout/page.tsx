@@ -29,11 +29,11 @@ export default function CheckoutPage() {
         </p>
 
         <h2 id="checkout-components">Checkout components</h2>
-        <p>The <code>@meap/react</code> SDK provides three ways to trigger checkout:</p>
+        <p>The <code>@arcenpay/react</code> SDK provides three ways to trigger checkout:</p>
 
         <h3>1. CheckoutModal</h3>
         <p>A pre-built overlay that opens when triggered. It handles the entire multi-step blockchain process.</p>
-        <CodeBlock lang="tsx" code={`import { CheckoutModal } from '@meap/react';
+        <CodeBlock lang="tsx" code={`import { CheckoutModal } from '@arcenpay/react';
 
 <CheckoutModal 
   planId={1} 
@@ -44,7 +44,7 @@ export default function CheckoutPage() {
 
         <h3>2. PricingTable</h3>
         <p>A full-featured pricing grid that displays your plans and includes &quot;Subscribe&quot; buttons that trigger the checkout flow.</p>
-        <CodeBlock lang="tsx" code={`import { PricingTable } from '@meap/react';
+        <CodeBlock lang="tsx" code={`import { PricingTable } from '@arcenpay/react';
 
 <PricingTable 
   planIds={[1, 2, 3]} 
@@ -85,8 +85,8 @@ export default function CheckoutPage() {
         </div>
 
         <h2 id="customization">Customization</h2>
-        <p>You can theme the checkout to match your brand via the <code>MEAPProvider</code>:</p>
-        <CodeBlock lang="tsx" code={`<MEAPProvider config={{
+        <p>You can theme the checkout to match your brand via the <code>ArcenPayProvider</code>:</p>
+        <CodeBlock lang="tsx" code={`<ArcenPayProvider config={{
   theme: {
     accentColor: '#4f46e5',
     borderRadius: '8px',
@@ -94,7 +94,7 @@ export default function CheckoutPage() {
   }
 }}>
   {children}
-</MEAPProvider>`} />
+</ArcenPayProvider>`} />
 
         <h2 id="multi-currency">Multi-currency support</h2>
         <p>The checkout automatically detects which token the plan requires (USDC, USDT, or custom stables) and checks the user&apos;s balance before proceeding.</p>

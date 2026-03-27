@@ -95,7 +95,7 @@ function getAgentBalance(address agent) external view returns (uint256);`} />
 }`} />
 
         <h2 id="funding-in-code">Funding a session in code</h2>
-        <CodeBlock lang="TypeScript" code={`import { useSessionVault } from '@meap/agent';
+        <CodeBlock lang="TypeScript" code={`import { useSessionVault } from '@arcenpay/agent';
 import { parseUnits } from 'viem';
 
 const { fundSession, withdraw } = useSessionVault();

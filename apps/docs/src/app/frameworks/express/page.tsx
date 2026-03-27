@@ -29,13 +29,13 @@ export default function ExpressPage() {
         </p>
 
         <h2 id="setup">Project Setup</h2>
-        <CodeBlock lang="bash" code={`npm install express @meap/node`} />
+        <CodeBlock lang="bash" code={`npm install express @arcenpay/node`} />
 
         <h2 id="middleware">The Gating Middleware</h2>
         <p>Create a reusable middleware function to protect your premium routes.</p>
-        <CodeBlock lang="typescript" code={`import { MEAPClient } from '@meap/node';
+        <CodeBlock lang="typescript" code={`import { ArcenPayClient } from '@arcenpay/node';
 
-const client = new MEAPClient({ rpcUrl: process.env.RPC_URL });
+const client = new ArcenPayClient({ rpcUrl: process.env.RPC_URL });
 
 export const requireSubscription = async (req, res, next) => {
   const wallet = req.headers['x-user-wallet'];

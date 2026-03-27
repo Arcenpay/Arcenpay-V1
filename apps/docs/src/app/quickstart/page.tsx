@@ -27,7 +27,7 @@ export default function QuickstartPage() {
 
         <p className="docs-lead" id="quickstart">
           Get ArcenPay subscription billing running in your React app in under 10 minutes.
-          This guide covers installing the SDK, wrapping your app with <code>MEAPProvider</code>,
+          This guide covers installing the SDK, wrapping your app with <code>ArcenPayProvider</code>,
           and adding a pricing table with a checkout flow.
         </p>
 
@@ -52,13 +52,13 @@ export default function QuickstartPage() {
         </p>
 
         <h2 id="step-2-install">Step 2 — Install the SDK</h2>
-        <CodeBlock lang="bash" code={`npm install @meap/react @meap/core viem wagmi`} />
+        <CodeBlock lang="bash" code={`npm install @arcenpay/react @arcenpay/sdk viem wagmi`} />
 
         <h2 id="step-3-wrap-app">Step 3 — Wrap your app</h2>
-        <p>Add <code>MEAPProvider</code> inside your Wagmi/wallet provider. Pass the deployed contract addresses for your chain.</p>
+        <p>Add <code>ArcenPayProvider</code> inside your Wagmi/wallet provider. Pass the deployed contract addresses for your chain.</p>
         <CodeBlock lang="TypeScript" code={`// app/providers.tsx
 'use client';
-import { MEAPProvider } from '@meap/react';
+import { ArcenPayProvider } from '@arcenpay/react';
 import { WagmiProvider, createConfig } from 'wagmi';
 import { sepolia } from 'wagmi/chains';
 import { injected } from 'wagmi/connectors';
@@ -71,13 +71,13 @@ const config = createConfig({
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <WagmiProvider config={config}>
-      <MEAPProvider
+      <ArcenPayProvider
         planFactoryAddress="0x18707519A062AbCC3E73fBd4150C3B30B241f536"
         registryAddress="0xA0Cf798816D4b9b9866b5704098F9C09F279c2C4"
         chainId={11155111}
       >
         {children}
-      </MEAPProvider>
+      </ArcenPayProvider>
     </WagmiProvider>
   );
 }`} />
@@ -85,7 +85,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         <h2 id="step-4-pricing-table">Step 4 — Add a pricing table</h2>
         <CodeBlock lang="TypeScript" code={`// app/pricing/page.tsx
 'use client';
-import { PricingTable, CheckoutModal } from '@meap/react';
+import { PricingTable, CheckoutModal } from '@arcenpay/react';
 import { useState } from 'react';
 
 export default function PricingPage() {
@@ -121,7 +121,7 @@ export default function PricingPage() {
         <p>Use the <code>useSubscription</code> hook anywhere in your app to check access:</p>
         <CodeBlock lang="TypeScript" code={`// components/PremiumFeature.tsx
 'use client';
-import { useSubscription } from '@meap/react';
+import { useSubscription } from '@arcenpay/react';
 
 export function PremiumFeature() {
   const { isActive, tier, expiresAt, isLoading } = useSubscription();
@@ -151,9 +151,9 @@ export function PremiumFeature() {
         <h2 id="step-6-verify-server-side">Step 6 — Verify subscriptions server-side</h2>
         <p>Never trust client-side state for sensitive data. Verify the wallet&apos;s subscription in your API routes:</p>
         <CodeBlock lang="TypeScript" code={`// app/api/premium/route.ts
-import { createMEAPClient } from '@meap/node';
+import { createArcenPayClient } from '@arcenpay/node';
 
-const meap = createMEAPClient({
+const meap = createArcenPayClient({
   planFactoryAddress: process.env.PLAN_FACTORY_ADDRESS!,
   registryAddress:    process.env.REGISTRY_ADDRESS!,
   rpcUrl:             process.env.RPC_URL!,

@@ -24,7 +24,7 @@ export default function ArchitecturePage() {
         <div className="docs-page-title-row"><h1>Architecture</h1></div>
 
         <p className="docs-lead" id="architecture">
-          ArcenPay is a two-subsystem protocol. <strong>MEAP</strong> handles structured recurring billing for humans
+          ArcenPay is a two-subsystem protocol. <strong>ArcenPay Protocol</strong> handles structured recurring billing for humans
           and organizations; <strong>ZKVUB</strong> handles metered AI agent micropayments with cryptographic proof of usage.
           Both subsystems share the same <code>PlanFactory</code> and <code>FeeCollector</code> primitives.
         </p>
@@ -34,7 +34,7 @@ export default function ArchitecturePage() {
           <thead><tr><th>Subsystem</th><th>Stands for</th><th>Use case</th><th>Key contracts</th></tr></thead>
           <tbody>
             <tr>
-              <td><strong>MEAP</strong></td>
+              <td><strong>ArcenPay Protocol</strong></td>
               <td>Modular Entitlement & Access Protocol</td>
               <td>Recurring subscriptions, feature gating</td>
               <td>PlanFactory, SubscriptionRegistry, ERC7579AutopayModule</td>
@@ -67,7 +67,7 @@ export default function ArchitecturePage() {
           ))}
         </div>
 
-        <h2 id="meap-flow">MEAP: recurring billing flow</h2>
+        <h2 id="meap-flow">ArcenPay: recurring billing flow</h2>
         <div className="docs-steps">
           <div className="docs-step">
             <div className="docs-step-num">1</div>
@@ -147,7 +147,7 @@ export default function ArchitecturePage() {
 
         <h2 id="account-abstraction">Account abstraction</h2>
         <p>
-          MEAP uses ERC-7579 (the modular smart account standard) for subscribers. This means:
+          ArcenPay uses ERC-7579 (the modular smart account standard) for subscribers. This means:
         </p>
         <ul>
           <li>Subscribers can pay gas in USDC (using a Paymaster)</li>
@@ -183,7 +183,7 @@ export default function ArchitecturePage() {
           <li className="docs-toc-item active"><a href="#architecture">Architecture</a></li>
           <li className="docs-toc-item"><a href="#system-overview">System overview</a></li>
           <li className="docs-toc-item"><a href="#contract-map">Contract map</a></li>
-          <li className="docs-toc-item"><a href="#meap-flow">MEAP billing flow</a></li>
+          <li className="docs-toc-item"><a href="#meap-flow">ArcenPay billing flow</a></li>
           <li className="docs-toc-item"><a href="#zkvub-flow">ZKVUB metered flow</a></li>
           <li className="docs-toc-item"><a href="#cross-chain">Cross-chain</a></li>
           <li className="docs-toc-item"><a href="#account-abstraction">Account abstraction</a></li>
