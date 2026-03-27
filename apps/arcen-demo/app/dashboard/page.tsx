@@ -45,7 +45,7 @@ export default function DashboardPage() {
       });
       if (res.ok) {
         setScanCount((c) => c + 1);
-        setTrackStatus("Scan tracked via ArcenClient.track()");
+        setTrackStatus("Tracked via ArcenClient.track()");
       } else {
         setTrackStatus("Error: Could not track event");
       }
@@ -53,9 +53,12 @@ export default function DashboardPage() {
       setTrackStatus("Error: Network request failed");
     } finally {
       setTracking(false);
-      setTimeout(() => setTrackStatus(null), 3000);
+      setTimeout(() => setTrackStatus(null), 3500);
     }
   }
+
+  const wallet = company?.companyKeys?.wallet;
+  const walletShort = wallet ? `${wallet.slice(0, 10)}…${wallet.slice(-6)}` : "—";
 
   return (
     <div className={styles.root}>
@@ -63,9 +66,7 @@ export default function DashboardPage() {
       <div className={styles.header}>
         <div>
           <h1 className={styles.title}>Overview</h1>
-          <p className={styles.subtitle}>
-            Welcome back. Here&apos;s your ScanBot dashboard.
-          </p>
+          <p className={styles.subtitle}>Welcome back. Here&apos;s your ScanBot dashboard.</p>
         </div>
         <Link href="/dashboard/billing" className={styles.btnPrimary}>
           Manage Plan
@@ -75,11 +76,11 @@ export default function DashboardPage() {
       {/* Config notice */}
       {!loading && !company?.flags?.scan && (
         <div className={styles.configNotice}>
-          <span className={styles.configIcon}>⚙</span>
+          <span className={styles.configIcon}>⚠</span>
           <div>
             <strong>Connect ArcenPay to see live data.</strong> Copy{" "}
-            <code>.env.local.example</code> → <code>.env.local</code> and set
-            your <code>ARCENPAY_API_KEY</code>.
+            <code>.env.local.example</code> → <code>.env.local</code> and set your{" "}
+            <code>ARCENPAY_API_KEY</code>.
           </div>
           <Link href="/dashboard/settings" className={styles.configLink}>
             Settings →
@@ -87,15 +88,30 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* Wallet */}
+      {wallet && (
+        <div className={styles.walletRow}>
+          <div className={styles.walletDot} />
+          <span className={styles.walletLabel}>Wallet</span>
+          <span className={styles.walletAddr}>{walletShort}</span>
+        </div>
+      )}
+
       {/* Stats */}
       <div className={styles.statsGrid}>
         <div className={styles.statCard}>
-          <div className={styles.statLabel}>Scans this session</div>
-          <div className={styles.statValue}>{scanCount}</div>
-          <div className={styles.statNote}>Click &quot;Run Scan&quot; below to track</div>
+          <div className={styles.statHeader}>
+            <div className={styles.statLabel}>Scans this session</div>
+            <span className={styles.statIcon}>◈</span>
+          </div>
+          <div className={`${styles.statValue} ${styles.accent}`}>{scanCount}</div>
+          <div className={styles.statNote}>Click &ldquo;Run Scan&rdquo; below to track</div>
         </div>
         <div className={styles.statCard}>
-          <div className={styles.statLabel}>Scan feature</div>
+          <div className={styles.statHeader}>
+            <div className={styles.statLabel}>Scan feature</div>
+            <span className={styles.statIcon}>🚩</span>
+          </div>
           <div className={`${styles.statValue} ${company?.flags?.scan?.value ? styles.green : styles.muted}`}>
             {loading ? "—" : company?.flags?.scan?.value ? "Enabled" : "Disabled"}
           </div>
@@ -104,14 +120,20 @@ export default function DashboardPage() {
           </div>
         </div>
         <div className={styles.statCard}>
-          <div className={styles.statLabel}>PDF Export</div>
+          <div className={styles.statHeader}>
+            <div className={styles.statLabel}>PDF Export</div>
+            <span className={styles.statIcon}>📄</span>
+          </div>
           <div className={`${styles.statValue} ${company?.flags?.["export-pdf"]?.value ? styles.green : styles.muted}`}>
             {loading ? "—" : company?.flags?.["export-pdf"]?.value ? "Enabled" : "Disabled"}
           </div>
           <div className={styles.statNote}>Plan entitlement</div>
         </div>
         <div className={styles.statCard}>
-          <div className={styles.statLabel}>API Access</div>
+          <div className={styles.statHeader}>
+            <div className={styles.statLabel}>API Access</div>
+            <span className={styles.statIcon}>⚡</span>
+          </div>
           <div className={`${styles.statValue} ${company?.flags?.["api-access"]?.value ? styles.green : styles.muted}`}>
             {loading ? "—" : company?.flags?.["api-access"]?.value ? "Enabled" : "Disabled"}
           </div>
@@ -123,19 +145,15 @@ export default function DashboardPage() {
       <div className={styles.section}>
         <h2 className={styles.sectionTitle}>Try it live</h2>
         <p className={styles.sectionDesc}>
-          This button calls <code>/api/track</code> → <code>ArcenClient.track(&#123; name: &quot;scan&quot; &#125;)</code>{" "}
-          on your ArcenPay dashboard. Open the Events stream in your dashboard to see it appear in real time.
+          Calls <code>/api/track</code> → <code>ArcenClient.track({"{ name: \"scan\" }"})</code> on your ArcenPay dashboard.
+          Open the Events stream to see it appear in real time.
         </p>
         <div className={styles.demoArea}>
-          <button
-            onClick={handleScan}
-            disabled={tracking}
-            className={styles.btnScan}
-          >
-            {tracking ? "Scanning..." : "◈ Run Scan"}
+          <button onClick={handleScan} disabled={tracking} className={styles.btnScan}>
+            {tracking ? "⏳ Scanning…" : "◈ Run Scan"}
           </button>
           {trackStatus && (
-            <div className={styles.trackStatus}>{trackStatus}</div>
+            <div className={styles.trackStatus}>✓ {trackStatus}</div>
           )}
         </div>
       </div>
@@ -144,8 +162,8 @@ export default function DashboardPage() {
       <div className={styles.section}>
         <h2 className={styles.sectionTitle}>Feature gates</h2>
         <p className={styles.sectionDesc}>
-          Features below are gated by ArcenPay flag evaluation. The flags are
-          checked server-side via <code>ArcenClient.checkFlag()</code>.
+          Features below are gated by ArcenPay flag evaluation, checked server-side via{" "}
+          <code>ArcenClient.checkFlag()</code>.
         </p>
         <div className={styles.gateGrid}>
           <FeatureGateCard
@@ -176,16 +194,15 @@ export default function DashboardPage() {
       <div className={styles.section}>
         <h2 className={styles.sectionTitle}>Integration</h2>
         <p className={styles.sectionDesc}>
-          Here&apos;s how ArcenPay is integrated in this demo. Check{" "}
-          <code>lib/arcen-client.ts</code> and <code>app/api/</code>.
+          How ArcenPay is wired in this demo. See <code>lib/arcen-client.ts</code> and{" "}
+          <code>app/api/</code>.
         </p>
         <CodeBlock
-          title="Server-side tracking (app/api/track/route.ts)"
+          title="app/api/track/route.ts — server-side event tracking"
           code={`import { ArcenClient } from "@arcenpay/node";
 
 const client = new ArcenClient({
   apiKey: process.env.ARCENPAY_API_KEY!,
-  baseUrl: process.env.ARCENPAY_BASE_URL,
 });
 
 await client.track({
@@ -194,23 +211,21 @@ await client.track({
 });`}
         />
         <CodeBlock
-          title="Flag check (app/api/flags/route.ts)"
+          title="app/api/flags/route.ts — flag evaluation"
           code={`const result = await client.checkFlag(
-  "scan",          // feature key
-  { wallet: "0x..." },  // company keys
+  "scan",               // feature key
+  { wallet: "0x..." },  // company identity
 );
 // → { flag: "scan", value: true, reason: "Pro plan" }`}
         />
         <CodeBlock
-          title="ArcenEmbed in billing page"
+          title="app/dashboard/billing/page.tsx — ArcenEmbed"
           code={`import { ArcenEmbed } from "@arcenpay/react";
 
-// 1. Get access token from your backend
 const { token } = await fetch("/api/access-token", {
   method: "POST",
 }).then(r => r.json());
 
-// 2. Render the custom component you built in the dashboard
 <ArcenEmbed
   accessToken={token}
   componentId={process.env.NEXT_PUBLIC_ARCENPAY_COMPONENT_ID}
@@ -223,11 +238,7 @@ const { token } = await fetch("/api/access-token", {
 }
 
 function FeatureGateCard({
-  name,
-  flagKey,
-  enabled,
-  loading,
-  description,
+  name, flagKey, enabled, loading, description,
 }: {
   name: string;
   flagKey: string;
@@ -246,7 +257,7 @@ function FeatureGateCard({
             : styles.gateBadgeOff
           }`}
         >
-          {loading ? "..." : enabled ? "Enabled" : "Disabled"}
+          {loading ? "…" : enabled ? "✓ Enabled" : "✗ Disabled"}
         </div>
       </div>
       <p className={styles.gateDesc}>{description}</p>

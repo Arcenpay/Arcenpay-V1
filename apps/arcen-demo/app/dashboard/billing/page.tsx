@@ -6,7 +6,6 @@ import Link from "next/link";
 import styles from "./page.module.css";
 
 interface AccessTokenResponse {
-  // Our /api/access-token returns { token: EmbedAccessTokenResponse }
   token?: { token: string; expiresAt: string };
   error?: string;
 }
@@ -25,19 +24,15 @@ export default function BillingPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Load config first
     fetch("/api/config")
       .then((r) => r.json())
       .then((cfg: Config) => {
         setConfig(cfg);
         if (!cfg.hasApiKey) {
-          setError(
-            "ARCENPAY_API_KEY is not set. Add it to .env.local to enable billing features.",
-          );
+          setError("ARCENPAY_API_KEY is not set. Add it to .env.local to enable billing features.");
           setLoading(false);
           return;
         }
-        // Then fetch access token
         return fetch("/api/access-token", { method: "POST" });
       })
       .then((res) => {
@@ -46,11 +41,8 @@ export default function BillingPage() {
       })
       .then((data) => {
         if (!data) return;
-        if (data.error) {
-          setError(data.error);
-        } else if (data.token) {
-          setAccessToken(data.token.token);
-        }
+        if (data.error) setError(data.error);
+        else if (data.token) setAccessToken(data.token.token);
       })
       .catch((err: unknown) => {
         setError(err instanceof Error ? err.message : "Failed to load billing data");
@@ -63,7 +55,7 @@ export default function BillingPage() {
       {/* Header */}
       <div className={styles.header}>
         <div>
-          <h1 className={styles.title}>Billing & Plan</h1>
+          <h1 className={styles.title}>Billing &amp; Plan</h1>
           <p className={styles.subtitle}>
             Manage your subscription, usage, and payment settings.
           </p>
@@ -75,16 +67,13 @@ export default function BillingPage() {
         <div className={styles.embedHeader}>
           <h2 className={styles.embedTitle}>Your Plan</h2>
           <div className={styles.embedMeta}>
-            Rendered by{" "}
             <code className={styles.code}>&lt;ArcenEmbed /&gt;</code>
             {config?.componentId ? (
               <span className={styles.compId}>
-                componentId: {config.componentId.slice(0, 16)}...
+                id: {config.componentId.slice(0, 14)}…
               </span>
             ) : (
-              <span className={styles.compIdMissing}>
-                Set NEXT_PUBLIC_ARCENPAY_COMPONENT_ID to load your custom component
-              </span>
+              <span className={styles.compIdMissing}>component ID not set</span>
             )}
           </div>
         </div>
@@ -93,7 +82,7 @@ export default function BillingPage() {
           {loading ? (
             <div className={styles.embedLoading}>
               <div className={styles.spinner} />
-              <span>Loading billing portal...</span>
+              <span>Loading billing portal…</span>
             </div>
           ) : error ? (
             <div className={styles.embedError}>
@@ -111,8 +100,7 @@ export default function BillingPage() {
               <p className={styles.placeholderDesc}>
                 Create a component in your ArcenPay dashboard under{" "}
                 <strong>Connections → Components</strong>, then set its ID as{" "}
-                <code>NEXT_PUBLIC_ARCENPAY_COMPONENT_ID</code> in{" "}
-                <code>.env.local</code>.
+                <code>NEXT_PUBLIC_ARCENPAY_COMPONENT_ID</code> in <code>.env.local</code>.
               </p>
               <div className={styles.placeholderLinks}>
                 <a
@@ -121,7 +109,7 @@ export default function BillingPage() {
                   rel="noopener noreferrer"
                   className={styles.btnPrimary}
                 >
-                  Open Dashboard
+                  Open Dashboard →
                 </a>
                 <Link href="/dashboard/settings" className={styles.btnSecondary}>
                   Set Component ID
@@ -140,7 +128,7 @@ export default function BillingPage() {
             />
           ) : (
             <div className={styles.embedLoading}>
-              <span>Waiting for access token...</span>
+              <span>Waiting for access token…</span>
             </div>
           )}
         </div>
@@ -150,51 +138,44 @@ export default function BillingPage() {
       <div className={styles.howSection}>
         <h2 className={styles.sectionTitle}>How ArcenEmbed works</h2>
         <div className={styles.steps}>
-          <Step
-            num="1"
-            title="Build your component"
-            desc='Go to Connections → Components in your dashboard. Design the billing portal with the elements you want (Plan Manager, Usage, Plans Table, etc.).'
-          />
-          <Step
-            num="2"
-            title="Generate an access token"
-            desc="Your backend calls ArcenClient.createAccessToken() with the company's wallet/ID. This creates a short-lived token scoped to that company."
-          />
-          <Step
-            num="3"
-            title="Render <ArcenEmbed />"
-            desc="Pass the access token + component ID to <ArcenEmbed />. It fetches the component config and company data, then renders the billing portal."
-          />
+          <div className={styles.step}>
+            <div className={styles.stepNum}>1</div>
+            <div className={styles.stepContent}>
+              <div className={styles.stepTitle}>Build your component</div>
+              <p className={styles.stepDesc}>
+                Go to Connections → Components in your dashboard. Design the billing portal with plan
+                manager, usage meters, plan tables, and more.
+              </p>
+            </div>
+          </div>
+          <div className={styles.step}>
+            <div className={styles.stepNum}>2</div>
+            <div className={styles.stepContent}>
+              <div className={styles.stepTitle}>Generate an access token</div>
+              <p className={styles.stepDesc}>
+                Your backend calls <code>ArcenClient.createAccessToken()</code> with the company
+                wallet/ID. This creates a short-lived, scoped token.
+              </p>
+            </div>
+          </div>
+          <div className={styles.step}>
+            <div className={styles.stepNum}>3</div>
+            <div className={styles.stepContent}>
+              <div className={styles.stepTitle}>Render &lt;ArcenEmbed /&gt;</div>
+              <p className={styles.stepDesc}>
+                Pass the access token + component ID to <code>&lt;ArcenEmbed /&gt;</code>. It fetches
+                the component config and company data, then renders the billing portal inline.
+              </p>
+            </div>
+          </div>
         </div>
 
         <div className={styles.codeBlock}>
-          <div className={styles.codeTitle}>
-            Full integration (app/dashboard/billing/page.tsx)
-          </div>
+          <div className={styles.codeTitle}>Full integration — app/dashboard/billing/page.tsx</div>
           <pre className={styles.codePre}>
             <code>{INTEGRATION_CODE}</code>
           </pre>
         </div>
-      </div>
-    </div>
-  );
-}
-
-function Step({
-  num,
-  title,
-  desc,
-}: {
-  num: string;
-  title: string;
-  desc: string;
-}) {
-  return (
-    <div className={styles.step}>
-      <div className={styles.stepNum}>{num}</div>
-      <div className={styles.stepContent}>
-        <div className={styles.stepTitle}>{title}</div>
-        <p className={styles.stepDesc}>{desc}</p>
       </div>
     </div>
   );

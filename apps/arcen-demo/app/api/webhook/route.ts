@@ -1,0 +1,78 @@
+import { NextRequest, NextResponse } from "next/server";
+import { createHmac, timingSafeEqual } from "crypto";
+
+/**
+ * POST /api/webhook
+ *
+ * ArcenPay webhook receiver. Add this URL to your ArcenPay dashboard
+ * under Settings → Webhooks.
+ *
+ * Signature format (sent by ArcenPay):
+ *   X-MEAP-Signature: sha256=<hmac-hex>
+ *   X-MEAP-Event:     <event-type>
+ *   X-MEAP-Timestamp: <unix-seconds>
+ *
+ * Set ARCENPAY_WEBHOOK_SECRET in .env.local (the full whsec_... value).
+ * The whsec_ prefix is stripped automatically before verifying.
+ */
+export async function POST(req: NextRequest) {
+  const rawBody = await req.text();
+
+  // ── Signature verification ─────────────────────────────────────────────────
+  const rawSecret = process.env.ARCENPAY_WEBHOOK_SECRET ?? "";
+  if (rawSecret) {
+    // Strip the whsec_ prefix if present — ArcenPay stores secrets prefixed
+    const secret = rawSecret.startsWith("whsec_")
+      ? rawSecret.slice("whsec_".length)
+      : rawSecret;
+
+    // ArcenPay sends: X-MEAP-Signature: sha256=<hex>
+    const sigHeader = req.headers.get("x-meap-signature") ?? "";
+    const sigHex = sigHeader.startsWith("sha256=")
+      ? sigHeader.slice("sha256=".length)
+      : sigHeader;
+
+    if (!sigHex) {
+      console.warn("[webhook] Missing X-MEAP-Signature header — rejected.");
+      return NextResponse.json({ error: "Missing signature" }, { status: 401 });
+    }
+
+    const expected = createHmac("sha256", secret).update(rawBody).digest("hex");
+
+    try {
+      const sigBuf = Buffer.from(sigHex, "hex");
+      const expBuf = Buffer.from(expected, "hex");
+      if (sigBuf.length !== expBuf.length || !timingSafeEqual(sigBuf, expBuf)) {
+        console.warn("[webhook] Signature mismatch — rejected.");
+        return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+      }
+    } catch {
+      return NextResponse.json({ error: "Signature verification failed" }, { status: 401 });
+    }
+  } else {
+    console.warn("[webhook] ARCENPAY_WEBHOOK_SECRET not set — skipping signature check.");
+  }
+
+  // ── Parse & log the event ──────────────────────────────────────────────────
+  let event: unknown;
+  try {
+    event = JSON.parse(rawBody);
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+
+  const eventType =
+    typeof event === "object" && event !== null && "event" in event
+      ? (event as Record<string, unknown>).event
+      : "unknown";
+
+  const meapEvent = req.headers.get("x-meap-event") ?? String(eventType);
+  const meapTs = req.headers.get("x-meap-timestamp") ?? "";
+
+  console.log(
+    `[webhook] ✅ Received: ${meapEvent}${meapTs ? ` (ts=${meapTs})` : ""}`,
+    JSON.stringify(event, null, 2),
+  );
+
+  return NextResponse.json({ received: true, event: meapEvent });
+}

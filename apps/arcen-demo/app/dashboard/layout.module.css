@@ -1,76 +1,111 @@
+/* ─── Root ──────────────────────────────────────────────────────────────────── */
 .root {
   display: flex;
   min-height: 100vh;
 }
 
-/* ─── Sidebar ────────────────────────────────────────────────────────────────── */
+/* ─── Sidebar ───────────────────────────────────────────────────────────────── */
 .sidebar {
-  width: 220px;
+  width: 228px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   background: var(--bg-card);
   border-right: 1px solid var(--border);
-  padding: 20px 0;
+  padding: 0;
   position: sticky;
   top: 0;
   height: 100vh;
+  z-index: 50;
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ─── Sidebar Top Bar ────────────────────────────────────────────────────────── */
+.sidebarTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 60px;
+  padding: 0 18px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
 }
 
 .sidebarBrand {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 0 20px 20px;
-  border-bottom: 1px solid var(--border);
-  margin-bottom: 12px;
+  gap: 10px;
 }
 
-.brandIcon {
-  font-size: 18px;
+.brandMark {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: var(--grad-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 800;
+  color: #080b0f;
+  letter-spacing: -0.03em;
+  flex-shrink: 0;
 }
 
 .brandName {
   font-weight: 700;
-  font-size: 15px;
-  letter-spacing: -0.01em;
+  font-size: 14.5px;
+  letter-spacing: -0.02em;
+  color: var(--text);
 }
 
-/* ─── Nav ────────────────────────────────────────────────────────────────────── */
+.sidebarClose {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 18px;
+  padding: 4px;
+  line-height: 1;
+}
+
+/* ─── Nav ───────────────────────────────────────────────────────────────────── */
 .nav {
   flex: 1;
   overflow-y: auto;
-  padding: 0 10px;
+  padding: 12px 10px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 2px;
 }
 
 .navSection {
   display: flex;
   flex-direction: column;
   gap: 1px;
-  padding-bottom: 8px;
+  padding-bottom: 16px;
 }
 
 .navLabel {
   font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
+  font-weight: 700;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--text-dim);
-  padding: 8px 10px 4px;
+  padding: 8px 10px 5px;
 }
 
 .navItem {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
   padding: 7px 10px;
-  border-radius: 6px;
+  border-radius: var(--radius);
   font-size: 13px;
+  font-weight: 500;
   color: var(--text-muted);
-  transition: background 0.1s, color 0.1s;
+  transition: background 0.12s, color 0.12s;
+  position: relative;
 }
 
 .navItem:hover {
@@ -78,46 +113,188 @@
   color: var(--text);
 }
 
+.navItemActive {
+  background: var(--accent-muted);
+  color: var(--accent);
+}
+
+.navItemActive::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 16px;
+  background: var(--accent);
+  border-radius: 0 2px 2px 0;
+}
+
 .navIcon {
-  font-size: 13px;
-  width: 16px;
+  font-size: 14px;
+  width: 18px;
   text-align: center;
   flex-shrink: 0;
+  opacity: 0.85;
 }
 
 /* ─── Sidebar Footer ─────────────────────────────────────────────────────────── */
 .sidebarFooter {
-  padding: 16px 20px;
+  padding: 14px 18px;
   border-top: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  flex-shrink: 0;
 }
 
-.sidebarFooterLabel {
-  font-size: 10px;
-  color: var(--text-dim);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+.walletChip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 12px;
+}
+
+.walletDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--green);
+  flex-shrink: 0;
+  box-shadow: 0 0 6px var(--green);
+}
+
+.walletAddr {
+  font-size: 11px;
+  font-family: 'DM Mono', monospace;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
 }
 
 .arcenBadge {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-muted);
   display: flex;
   align-items: center;
   gap: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-dim);
   transition: color 0.15s;
 }
 
 .arcenBadge:hover {
-  color: var(--text);
+  color: var(--text-muted);
+}
+
+.arcenBadgeMark {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  background: var(--grad-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  font-weight: 800;
+  color: #080b0f;
+}
+
+/* ─── Mobile top bar ─────────────────────────────────────────────────────────── */
+.mobileTopBar {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  height: 56px;
+  padding: 0 20px;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 49;
+}
+
+.mobileBrand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: -0.02em;
+}
+
+.hamburger {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  background: none;
+  border: none;
+  padding: 6px;
+  cursor: pointer;
+}
+
+.hamburger span {
+  display: block;
+  width: 20px;
+  height: 1.5px;
+  background: var(--text-muted);
+  border-radius: 2px;
+}
+
+/* Overlay */
+.overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 48;
 }
 
 /* ─── Main ───────────────────────────────────────────────────────────────────── */
 .main {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   background: var(--bg);
+  min-width: 0;
+}
+
+/* ─── Responsive ────────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .root {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    z-index: 50;
+    transform: translateX(-100%);
+    box-shadow: 4px 0 24px rgba(0,0,0,0.5);
+    width: 240px;
+  }
+
+  .sidebarOpen {
+    transform: translateX(0);
+  }
+
+  .sidebarClose {
+    display: block;
+  }
+
+  .mobileTopBar {
+    display: flex;
+  }
+
+  .overlay {
+    display: block;
+  }
+
+  .main {
+    /* no top offset needed, mobileTopBar is sticky */
+  }
 }

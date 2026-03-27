@@ -1,5 +1,6 @@
+/* ─── Root ──────────────────────────────────────────────────────────────────── */
 .root {
-  padding: 40px;
+  padding: 36px 40px;
   max-width: 760px;
 }
 
@@ -8,90 +9,146 @@
 }
 
 .title {
-  font-size: 24px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  margin-bottom: 4px;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  margin-bottom: 3px;
 }
 
 .subtitle {
-  font-size: 14px;
+  font-size: 13px;
   color: var(--text-muted);
+}
+
+/* ─── Buttons ────────────────────────────────────────────────────────────────── */
+.btnPrimary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 22px;
+  background: var(--grad-accent);
+  color: #080b0f;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 13.5px;
+  font-weight: 700;
+  transition: opacity 0.15s, transform 0.15s;
+  cursor: pointer;
+  letter-spacing: -0.01em;
+}
+
+.btnPrimary:hover { opacity: 0.88; transform: translateY(-1px); }
+
+.btnSecondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 22px;
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  font-size: 13.5px;
+  font-weight: 500;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.btnSecondary:hover {
+  background: var(--bg-hover);
+  border-color: rgba(255, 255, 255, 0.22);
 }
 
 /* ─── Scan Area ──────────────────────────────────────────────────────────────── */
 .scanArea {
-  background: var(--bg-card);
+  margin-bottom: 28px;
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  min-height: 320px;
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  background: linear-gradient(145deg, var(--bg-card) 0%, var(--bg-card-2) 100%);
+  min-height: 300px;
   display: flex;
-  align-items: stretch;
-  margin-bottom: 24px;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Dropzone */
 .dropzone {
-  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 10px;
-  padding: 48px;
+  padding: 56px 40px;
   text-align: center;
-  border: 2px dashed var(--border-strong);
-  border-radius: var(--radius-lg);
-  margin: 16px;
-  transition: border-color 0.15s;
+  width: 100%;
 }
 
-.dropzone:hover {
-  border-color: rgba(255, 255, 255, 0.25);
+.dropBorder {
+  width: 88px;
+  height: 88px;
+  border-radius: 22px;
+  border: 2px dashed var(--border-strong);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+  transition: border-color 0.2s;
+}
+
+.dropzone:hover .dropBorder {
+  border-color: var(--accent);
 }
 
 .dropIcon {
-  font-size: 36px;
+  font-size: 32px;
   color: var(--text-dim);
-  margin-bottom: 4px;
+}
+
+.dropzone:hover .dropIcon {
+  color: var(--accent);
 }
 
 .dropTitle {
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text);
 }
 
 .dropDesc {
-  font-size: 12px;
+  font-size: 12.5px;
   color: var(--text-muted);
 }
 
 .dropOr {
   font-size: 12px;
   color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 2px 0;
 }
 
 .dropNote {
-  font-size: 11px;
+  font-size: 11.5px;
   color: var(--text-dim);
   margin-top: 4px;
 }
 
-/* Scanning */
+/* Scanning state */
 .scanning {
-  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: 14px;
+  padding: 56px 40px;
 }
 
-.spinner {
-  width: 28px;
-  height: 28px;
-  border: 2px solid var(--border-strong);
-  border-top-color: var(--text);
+.scanSpinner {
+  width: 44px;
+  height: 44px;
+  border: 3px solid var(--border-strong);
+  border-top-color: var(--accent);
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
 }
@@ -102,63 +159,89 @@
 
 .scanningText {
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
 .scanningSubtext {
-  font-size: 13px;
+  font-size: 12.5px;
   color: var(--text-muted);
 }
 
-/* Result */
+/* Result state */
 .result {
-  flex: 1;
-  padding: 28px;
   display: flex;
   flex-direction: column;
   gap: 16px;
+  padding: 28px;
+  width: 100%;
 }
 
 .resultHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
   flex-wrap: wrap;
-  gap: 10px;
 }
 
 .resultTitle {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 14.5px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
 
 .resultIcon {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--green-muted);
+  border: 1px solid rgba(52, 211, 153, 0.25);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
   color: var(--green);
+  flex-shrink: 0;
 }
 
 .trackBadge {
-  font-size: 11px;
+  font-size: 11.5px;
   color: var(--green);
-  background: rgba(34, 197, 94, 0.08);
-  border: 1px solid rgba(34, 197, 94, 0.2);
+  background: var(--green-muted);
+  border: 1px solid rgba(52, 211, 153, 0.2);
   padding: 4px 10px;
-  border-radius: var(--radius);
+  border-radius: 20px;
+}
+
+.resultCard {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.resultCardHeader {
+  padding: 8px 14px;
+  background: rgba(255,255,255,0.03);
+  border-bottom: 1px solid var(--border);
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
 .resultText {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  font-family: 'DM Mono', 'SF Mono', monospace;
+  font-size: 12.5px;
+  line-height: 1.75;
+  color: rgba(238, 242, 247, 0.75);
   padding: 16px;
-  font-family: "SF Mono", "Fira Code", monospace;
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.75);
-  line-height: 1.7;
   white-space: pre-wrap;
-  flex: 1;
 }
 
 .resultActions {
@@ -167,59 +250,45 @@
   flex-wrap: wrap;
 }
 
-/* ─── Buttons ────────────────────────────────────────────────────────────────── */
-.btnPrimary {
-  display: inline-flex;
-  align-items: center;
-  padding: 8px 18px;
-  background: var(--text);
-  color: var(--bg);
-  border: none;
-  border-radius: var(--radius);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: opacity 0.15s;
-}
-
-.btnPrimary:hover {
-  opacity: 0.85;
-}
-
-.btnSecondary {
-  display: inline-flex;
-  align-items: center;
-  padding: 8px 18px;
-  background: transparent;
-  color: var(--text);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius);
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.btnSecondary:hover {
-  background: var(--accent-muted);
-}
-
-/* ─── Info Box ───────────────────────────────────────────────────────────────── */
+/* ─── Info box ────────────────────────────────────────────────────────────────── */
 .infoBox {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 18px;
+  padding: 18px 20px;
+  background: var(--accent-glow);
+  border: 1px solid rgba(99, 196, 235, 0.12);
+  border-radius: var(--radius-lg);
+  position: relative;
+  overflow: hidden;
+}
+
+.infoBox::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  opacity: 0.3;
 }
 
 .infoTitle {
   font-size: 13px;
-  font-weight: 600;
-  margin-bottom: 8px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin-bottom: 6px;
+  color: var(--accent);
 }
 
 .infoDesc {
-  font-size: 12px;
+  font-size: 12.5px;
   color: var(--text-muted);
-  line-height: 1.6;
+  line-height: 1.65;
+}
+
+/* ─── Responsive ────────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .root { padding: 24px 20px; }
+  .dropzone { padding: 40px 24px; }
+  .result { padding: 20px; }
+  .resultActions { flex-direction: column; }
+  .resultActions .btnPrimary,
+  .resultActions .btnSecondary { width: 100%; justify-content: center; }
 }
