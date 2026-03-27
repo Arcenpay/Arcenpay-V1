@@ -21,8 +21,12 @@ export async function GET(
   const { id } = await params;
   const { teamId } = ctx;
 
-  const company = await db.arcenCompany.findFirst({ where: { id, teamId }, select: { id: true } });
-  if (!company) return NextResponse.json({ error: "Company not found" }, { status: 404 });
+  const company = await db.arcenCompany.findFirst({
+    where: { id, teamId },
+    select: { id: true },
+  });
+  if (!company)
+    return NextResponse.json({ error: "Company not found" }, { status: 404 });
 
   const overrides = await db.companyOverride.findMany({
     where: { companyId: id, teamId },
@@ -56,11 +60,17 @@ export async function POST(
     );
   }
 
-  const company = await db.arcenCompany.findFirst({ where: { id, teamId }, select: { id: true } });
-  if (!company) return NextResponse.json({ error: "Company not found" }, { status: 404 });
+  const company = await db.arcenCompany.findFirst({
+    where: { id, teamId },
+    select: { id: true },
+  });
+  if (!company)
+    return NextResponse.json({ error: "Company not found" }, { status: 404 });
 
   const override = await db.companyOverride.upsert({
-    where: { companyId_featureKey: { companyId: id, featureKey: body.featureKey } },
+    where: {
+      companyId_featureKey: { companyId: id, featureKey: body.featureKey },
+    },
     create: {
       teamId,
       companyId: id,
@@ -91,11 +101,18 @@ export async function DELETE(
   const featureKey = req.nextUrl.searchParams.get("featureKey");
 
   if (!featureKey) {
-    return NextResponse.json({ error: "featureKey query param required" }, { status: 400 });
+    return NextResponse.json(
+      { error: "featureKey query param required" },
+      { status: 400 },
+    );
   }
 
-  const company = await db.arcenCompany.findFirst({ where: { id, teamId }, select: { id: true } });
-  if (!company) return NextResponse.json({ error: "Company not found" }, { status: 404 });
+  const company = await db.arcenCompany.findFirst({
+    where: { id, teamId },
+    select: { id: true },
+  });
+  if (!company)
+    return NextResponse.json({ error: "Company not found" }, { status: 404 });
 
   await db.companyOverride.deleteMany({
     where: { companyId: id, featureKey },

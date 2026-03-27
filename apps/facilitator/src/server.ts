@@ -508,14 +508,16 @@ function normalizePrivateKey(value: string): `0x${string}` {
 
 const enableOnchainSettlement =
   process.env.X402_ENABLE_SETTLEMENT === "true" ||
-  Boolean(process.env.PRIVATE_KEY);
+  Boolean(process.env.SETTLEMENT_PRIVATE_KEY || process.env.PRIVATE_KEY);
 
 let settlementWriter: SettlementWriterService | null = null;
 if (enableOnchainSettlement) {
-  const privateKeyRaw = process.env.PRIVATE_KEY;
+  // Prefer SETTLEMENT_PRIVATE_KEY; fall back to PRIVATE_KEY for backward compat
+  const privateKeyRaw =
+    process.env.SETTLEMENT_PRIVATE_KEY || process.env.PRIVATE_KEY;
   if (!privateKeyRaw) {
     console.warn(
-      "[Facilitator] On-chain settlement requested but PRIVATE_KEY is not set.",
+      "[Facilitator] On-chain settlement requested but SETTLEMENT_PRIVATE_KEY is not set.",
     );
   } else {
     try {
@@ -717,11 +719,14 @@ const eventListener = new EventListenerService({
 });
 
 // Optional: Webhook service (if webhook URL is configured)
+// Accepts WEBHOOK_SIGNING_SECRET or SVIX_SIGNING_SECRET (alias)
 let webhookService: WebhookService | null = null;
-if (process.env.WEBHOOK_URL && process.env.WEBHOOK_SIGNING_SECRET) {
+const webhookSecret =
+  process.env.WEBHOOK_SIGNING_SECRET || process.env.SVIX_SIGNING_SECRET;
+if (process.env.WEBHOOK_URL && webhookSecret) {
   webhookService = new WebhookService({
     url: process.env.WEBHOOK_URL,
-    secret: process.env.WEBHOOK_SIGNING_SECRET,
+    secret: webhookSecret,
     onDelivery: persistWebhookDelivery,
   });
 }
@@ -3367,7 +3372,7 @@ function logStartupBanner() {
 ║   🔗  Chain: ${String(CHAIN_ID).padEnd(36)}║
 ║   💰  x402 Protocol: Active                     ║
 ║   📣  Events: ${(eventListenerActive ? "✅  Watching" : "❌  Failed — check RPC_URL").padEnd(35)}║
-${statusLine("Webhooks", !!webhookService, "Active", "Off — set SVIX_SIGNING_SECRET")}
+${statusLine("Webhooks", !!webhookService, "Active", "Off — set WEBHOOK_URL")}
 ${statusLine("Email   ", !!emailService, "Active", "Off — set RESEND_API_KEY")}
 ║   ⛓️  Settlement: ${(settlementWriter ? "✅  On-chain" : "⚠️  Verify-only — set SETTLEMENT_PRIVATE_KEY").padEnd(31)}║
 ${statusLine("Redis   ", !!redisUsageStore, "Active", "Off — set REDIS_URL")}

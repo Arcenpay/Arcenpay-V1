@@ -19,7 +19,10 @@ export async function GET(req: NextRequest) {
   const limit = Math.min(Number(url.searchParams.get("limit") ?? 50), 200);
   const cursor = url.searchParams.get("cursor");
   if (cursor !== null && cursor.trim() === "") {
-    return NextResponse.json({ error: "cursor must be a non-empty string" }, { status: 400 });
+    return NextResponse.json(
+      { error: "cursor must be a non-empty string" },
+      { status: 400 },
+    );
   }
   const search = url.searchParams.get("search");
 
@@ -96,17 +99,31 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "email too long" }, { status: 400 });
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email)) {
-      return NextResponse.json({ error: "Invalid email format" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid email format" },
+        { status: 400 },
+      );
     }
   }
   if (body.wallet !== undefined && !/^0x[0-9a-fA-F]{40}$/.test(body.wallet)) {
-    return NextResponse.json({ error: "Invalid wallet address format" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Invalid wallet address format" },
+      { status: 400 },
+    );
   }
   if (body.id !== undefined && body.id.length > 64) {
     return NextResponse.json({ error: "id too long" }, { status: 400 });
   }
-  if (body.traits !== undefined && (typeof body.traits !== "object" || body.traits === null || Array.isArray(body.traits))) {
-    return NextResponse.json({ error: "traits must be a plain object" }, { status: 400 });
+  if (
+    body.traits !== undefined &&
+    (typeof body.traits !== "object" ||
+      body.traits === null ||
+      Array.isArray(body.traits))
+  ) {
+    return NextResponse.json(
+      { error: "traits must be a plain object" },
+      { status: 400 },
+    );
   }
 
   const walletAddress = body.wallet?.toLowerCase();
@@ -118,7 +135,10 @@ export async function POST(req: NextRequest) {
     });
     if (existing) {
       return NextResponse.json(
-        { error: "Company with this wallet already exists", companyId: existing.id },
+        {
+          error: "Company with this wallet already exists",
+          companyId: existing.id,
+        },
         { status: 409 },
       );
     }

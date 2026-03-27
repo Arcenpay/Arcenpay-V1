@@ -26,12 +26,24 @@ export async function GET(
     where: { id, teamId },
     include: {
       users: {
-        select: { id: true, name: true, email: true, walletAddress: true, lastSeenAt: true },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          walletAddress: true,
+          lastSeenAt: true,
+        },
         orderBy: { lastSeenAt: "desc" },
         take: 20,
       },
       overrides: {
-        select: { id: true, featureKey: true, value: true, reason: true, createdAt: true },
+        select: {
+          id: true,
+          featureKey: true,
+          value: true,
+          reason: true,
+          createdAt: true,
+        },
       },
     },
   });
@@ -45,7 +57,13 @@ export async function GET(
   if (company.activePlanId) {
     activePlan = await db.catalogPlan.findUnique({
       where: { id: company.activePlanId },
-      select: { id: true, name: true, tier: true, price: true, billingInterval: true },
+      select: {
+        id: true,
+        name: true,
+        tier: true,
+        price: true,
+        billingInterval: true,
+      },
     });
   }
 
@@ -61,9 +79,14 @@ export async function GET(
     email: company.email ?? undefined,
   };
 
-  const flagResults = flags.length > 0
-    ? await evaluateFlags(teamId, flags.map((f) => f.featureKey), companyKeys)
-    : [];
+  const flagResults =
+    flags.length > 0
+      ? await evaluateFlags(
+          teamId,
+          flags.map((f) => f.featureKey),
+          companyKeys,
+        )
+      : [];
 
   const entitlements = flagResults.map((r) => ({
     featureKey: r.flag,
@@ -118,8 +141,16 @@ export async function PATCH(
   if (body.name !== undefined && body.name.length > 128) {
     return NextResponse.json({ error: "name too long" }, { status: 400 });
   }
-  if (body.traits !== undefined && (typeof body.traits !== "object" || body.traits === null || Array.isArray(body.traits))) {
-    return NextResponse.json({ error: "traits must be a plain object" }, { status: 400 });
+  if (
+    body.traits !== undefined &&
+    (typeof body.traits !== "object" ||
+      body.traits === null ||
+      Array.isArray(body.traits))
+  ) {
+    return NextResponse.json(
+      { error: "traits must be a plain object" },
+      { status: 400 },
+    );
   }
 
   const company = await db.arcenCompany.findFirst({
@@ -135,10 +166,19 @@ export async function PATCH(
     data: {
       ...(body.name !== undefined ? { name: body.name } : {}),
       ...(body.traits !== undefined
-        ? { traits: { ...(company.traits as Record<string, unknown>), ...body.traits } as unknown as Prisma.InputJsonValue }
+        ? {
+            traits: {
+              ...(company.traits as Record<string, unknown>),
+              ...body.traits,
+            } as unknown as Prisma.InputJsonValue,
+          }
         : {}),
-      ...(body.activePlanId !== undefined ? { activePlanId: body.activePlanId } : {}),
-      ...(body.activeAddOnIds !== undefined ? { activeAddOnIds: body.activeAddOnIds } : {}),
+      ...(body.activePlanId !== undefined
+        ? { activePlanId: body.activePlanId }
+        : {}),
+      ...(body.activeAddOnIds !== undefined
+        ? { activeAddOnIds: body.activeAddOnIds }
+        : {}),
     },
   });
 

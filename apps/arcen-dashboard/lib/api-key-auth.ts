@@ -25,7 +25,11 @@ export function hashApiKey(rawKey: string): string {
 
 // ─── Key generation ───────────────────────────────────────────────────────────
 
-export function generateApiKey(): { raw: string; hash: string; prefix: string } {
+export function generateApiKey(): {
+  raw: string;
+  hash: string;
+  prefix: string;
+} {
   const bytes = randomBytes(32);
   const raw = "api_" + bytes.toString("base64url");
   const hash = hashApiKey(raw);
@@ -76,7 +80,10 @@ export async function requireApiKey(
   });
 
   if (!apiKey) {
-    return NextResponse.json({ error: "Invalid or revoked API key" }, { status: 401 });
+    return NextResponse.json(
+      { error: "Invalid or revoked API key" },
+      { status: 401 },
+    );
   }
 
   // Apply per-key rate limiting
@@ -86,7 +93,10 @@ export async function requireApiKey(
   if (!result.ok) {
     const headers = new Headers();
     applyRateLimitHeaders(headers, result, rl.limit);
-    headers.set("Retry-After", String(Math.ceil((result.resetAt - Date.now()) / 1000)));
+    headers.set(
+      "Retry-After",
+      String(Math.ceil((result.resetAt - Date.now()) / 1000)),
+    );
     return NextResponse.json(
       { error: "Rate limit exceeded" },
       { status: 429, headers },
