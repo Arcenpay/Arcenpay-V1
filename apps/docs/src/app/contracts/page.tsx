@@ -1,115 +1,103 @@
-// ============================================================
-//  Documentation — Contract Reference
-//  PRD Section 4: All 7 deployed contracts with addresses
-// ============================================================
+'use client';
+import { useState } from 'react';
 
-export default function ContractsPage() {
+function CodeBlock({ lang, code }: { lang: string; code: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <div className="docs-codeblock">
+      <div className="docs-codeblock-header">
+        <span className="docs-codeblock-lang">{lang}</span>
+        <button className="docs-codeblock-copy" onClick={() => { navigator.clipboard.writeText(code); setCopied(true); setTimeout(() => setCopied(false), 2000); }}>
+          {copied ? '✓ Copied' : 'Copy'}
+        </button>
+      </div>
+      <pre><code>{code}</code></pre>
+    </div>
+  );
+}
+
+export default function ContractsIndexPage() {
   const contracts = [
-    { name: 'PlanFactory', address: '0xc736f5d91aC0039b97A4Fc3540B8f3d59E7FdBa6', purpose: 'SaaS provider plan configuration and deployment' },
-    { name: 'FeeCollector', address: '0x513fab5218045790364b33A38D95FE8E17403BAe', purpose: 'Protocol fee collection (0.5% subscriptions, 0.3% settlements)' },
-    { name: 'SubscriptionRegistry', address: '0xf45A9E5280F72260a713c50b0Ca4e4FB1e22Cc8A', purpose: 'ERC-5643 subscription NFT lifecycle management' },
-    { name: 'SessionVault', address: '0x2dccEaad8551a620E4Fc736bb4d0fbb8D1A17D7C', purpose: 'Pre-funded USDC vault for ZKVUB billing sessions' },
-    { name: 'ZKUsageVerifier', address: '0x265E0dC80b00044d183AFa83237F5976bB4d585c', purpose: 'On-chain zk-SNARK proof verification and settlement' },
-    { name: 'ERC7579AutopayModule', address: '0x3f3734fb45D1511c23384D18Eb1927492E5e3764', purpose: 'Automated recurring billing for ERC-7579 smart accounts' },
-    { name: 'MirrorRegistry', address: '0x05BdaB1b4A87a4a5DF3Af1Ebb9Da853A0d31592E', purpose: 'Cross-chain entitlement state mirror' },
+    { name: 'PlanFactory', href: '/contracts/plan-factory', desc: 'Creates and manages on-chain subscription plans. Provider registration, token allowlist.', badge: 'ArcenPay' },
+    { name: 'SubscriptionRegistry', href: '/contracts/subscription-registry', desc: 'ERC-721 + ERC-5643 subscription NFT lifecycle. Mint, renew, cancel, cross-chain dispatch.', badge: 'ArcenPay' },
+    { name: 'ERC7579AutopayModule', href: '/contracts/autopay-module', desc: 'Executor module for ERC-7579 smart accounts. Automated recurring billing with velocity limits.', badge: 'ArcenPay' },
+    { name: 'SessionVault', href: '/contracts/session-vault', desc: 'Pre-funded USDC vault for ZKVUB sessions. Fund, top-up, settle, withdraw.', badge: 'ZKVUB' },
+    { name: 'ZKUsageVerifier', href: '/contracts/zk-usage-verifier', desc: 'On-chain Groth16 zk-SNARK proof verification and usage-based settlement.', badge: 'ZKVUB' },
+    { name: 'FeeCollector', href: '/contracts/fee-collector', desc: 'Protocol fee collection. Tier-based rates, per-provider overrides, treasury withdrawal.', badge: 'SHARED' },
+    { name: 'MirrorRegistry', href: '/contracts/mirror-registry', desc: 'Cross-chain subscription state mirror. Axelar primary + CCIP fallback GMP transport.', badge: 'SHARED' },
   ];
 
+  const badgeColors: Record<string, { bg: string; color: string }> = {
+    ArcenPay: { bg: 'rgba(99,102,241,0.1)', color: '#6366f1' },
+    ZKVUB: { bg: 'rgba(14,165,233,0.1)', color: '#0ea5e9' },
+    SHARED: { bg: 'rgba(16,185,129,0.1)', color: '#10b981' },
+  };
+
   return (
-    <>
-      <h1>Smart Contracts</h1>
-      <p>All 7 core contracts deployed on Sepolia ETH (chainId 11155111).</p>
+    <div className="docs-body" style={{ width: '100%' }}>
+      <article className="docs-article">
+        <div className="docs-page-breadcrumb">Contracts</div>
+        <div className="docs-page-title-row"><h1>Contract Reference</h1></div>
 
-      <div className="callout info">
-        <strong>Network:</strong> Sepolia Testnet &bull;
-        <strong> Chain ID:</strong> 11155111 &bull;
-        <strong> USDC:</strong> <code>0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238</code>
-      </div>
+        <p className="docs-lead" id="contracts">
+          ArcenPay is composed of 7 auditable Solidity contracts deployed on Sepolia ETH.<br />
+          All contracts use Solidity 0.8.24 with OpenZeppelin 5.x base contracts.
+        </p>
 
-      <h2>Deployed Addresses</h2>
-      <table className="contract-table">
-        <thead>
-          <tr>
-            <th>Contract</th>
-            <th>Address</th>
-            <th>Purpose</th>
-          </tr>
-        </thead>
-        <tbody>
-          {contracts.map((c) => (
-            <tr key={c.name}>
-              <td><strong>{c.name}</strong></td>
-              <td><code style={{ fontSize: 11 }}>{c.address}</code></td>
-              <td style={{ color: '#8b949e', fontSize: 13 }}>{c.purpose}</td>
-            </tr>
+        <h2 id="contract-list">All contracts</h2>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 32 }}>
+          {contracts.map(({ name, href, desc, badge }) => (
+            <a key={name} href={href} style={{ display: 'flex', gap: 12, padding: '16px 20px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, textDecoration: 'none', color: 'inherit', transition: 'border-color 0.15s' }}
+               onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'var(--accent)')}
+               onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--border)')}>
+              <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, fontSize: 14, color: 'var(--txt)' }}>{name}</span>
+                  <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 4, background: badgeColors[badge].bg, color: badgeColors[badge].color }}>{badge}</span>
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--txt-muted)', lineHeight: 1.5 }}>{desc}</div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', color: 'var(--txt-muted)' }}>→</div>
+            </a>
           ))}
-        </tbody>
-      </table>
+        </div>
 
-      <h2>SubscriptionRegistry</h2>
-      <p>ERC-5643 extension for subscription NFT lifecycle management. Mints time-constrained NFTs upon payment that serve as on-chain proof of subscription status.</p>
-      <h3>Key Functions</h3>
-      <pre><code>{`// Mint a new subscription NFT
-function mint(address to, uint256 planId, uint64 duration) → uint256 tokenId
+        <h2 id="inheritance">Inheritance & dependencies</h2>
+        <table className="docs-table">
+          <thead><tr><th>Contract</th><th>Inherits</th><th>Depends on</th></tr></thead>
+          <tbody>
+            <tr><td>PlanFactory</td><td>Ownable, ReentrancyGuard</td><td>—</td></tr>
+            <tr><td>SubscriptionRegistry</td><td>ERC721, ERC721Enumerable, IERC5643, Ownable, ReentrancyGuard</td><td>PlanFactory</td></tr>
+            <tr><td>ERC7579AutopayModule</td><td>ReentrancyGuard</td><td>PlanFactory, SubscriptionRegistry, FeeCollector</td></tr>
+            <tr><td>SessionVault</td><td>Ownable, ReentrancyGuard</td><td>—</td></tr>
+            <tr><td>ZKUsageVerifier</td><td>Ownable, ReentrancyGuard</td><td>SessionVault, FeeCollector, PlanFactory, IGroth16Verifier</td></tr>
+            <tr><td>FeeCollector</td><td>Ownable, ReentrancyGuard</td><td>—</td></tr>
+            <tr><td>MirrorRegistry</td><td>Ownable</td><td>—</td></tr>
+          </tbody>
+        </table>
 
-// Extend subscription expiry
-function renew(uint256 tokenId, uint64 extension)
+        <h2 id="solidity-version">Solidity version</h2>
+        <CodeBlock lang="bash" code={`# Compile all contracts
+cd packages/contracts
+npm install
+npx hardhat compile
 
-// Cancel subscription (access until period end)
-function cancel(uint256 tokenId)
+# Run tests
+npx hardhat test
 
-// Check if subscription is currently active
-function isValid(uint256 tokenId) → bool
+# Deploy to Sepolia
+npx hardhat run scripts/deploy.ts --network sepolia`} />
+      </article>
 
-// Get subscription expiry timestamp
-function expiresAt(uint256 tokenId) → uint64`}</code></pre>
-
-      <h2>ERC7579AutopayModule</h2>
-      <p>ERC-7579 Executor module for automated recurring billing. Installed into smart accounts to authorize constrained pull payments.</p>
-      <h3>Configuration</h3>
-      <pre><code>{`struct AutopayConfig {
-  address merchant;    // Provider's billing contract
-  uint256 maxAmount;   // Max pull per interval (USDC base units)
-  address token;       // Approved stablecoin (USDC)
-  uint32 interval;     // Min 2,592,000s (30 days)
-  uint64 startTime;    // Must be >= block.timestamp
-  uint256 planId;      // Reference to PlanFactory plan
-}`}</code></pre>
-
-      <h2>ZKUsageVerifier</h2>
-      <p>On-chain Groth16 zk-SNARK verification for usage-based billing. Verifies proofs and executes precise settlements.</p>
-      <h3>Key Functions</h3>
-      <pre><code>{`// Submit proof for verification and settlement
-function submitProof(Proof proof, PublicInputs inputs)
-
-// Check if a nullifier has been used (double-spend prevention)
-function isNullifierUsed(bytes32 nullifier) → bool
-
-// Get rate schedule for a plan
-function getRateSchedule(uint256 planId) → uint256 ratePerCall`}</code></pre>
-
-      <h2>SessionVault</h2>
-      <p>Pre-funded USDC vault for ZKVUB billing sessions. Agents deposit stablecoins, and settlement occurs from vault balances.</p>
-      <h3>Key Functions</h3>
-      <pre><code>{`// Fund a new session
-function fundSession(uint256 amount, address token) → bytes32 sessionId
-
-// Settle from session vault (called by authorized settlers)
-function settle(bytes32 sessionId, uint256 amount, address provider)
-
-// Withdraw remaining balance
-function withdraw(bytes32 sessionId)
-
-// Query agent balance
-function getAgentBalance(address agent) → uint256`}</code></pre>
-
-      <h2>Post-Deployment Wiring</h2>
-      <p>After deployment, contracts are wired together:</p>
-      <ul>
-        <li><strong>AutopayModule</strong> → authorized as biller on SubscriptionRegistry</li>
-        <li><strong>AutopayModule</strong> → authorized as collector on FeeCollector</li>
-        <li><strong>ZKUsageVerifier</strong> → authorized as settler on SessionVault</li>
-        <li><strong>ZKUsageVerifier</strong> → authorized as collector on FeeCollector</li>
-      </ul>
-    </>
+      <nav className="docs-toc">
+        <div className="docs-toc-heading">On this page</div>
+        <ul className="docs-toc-list">
+          <li className="docs-toc-item active"><a href="#contracts">Contract Reference</a></li>
+          <li className="docs-toc-item"><a href="#contract-list">All contracts</a></li>
+          <li className="docs-toc-item"><a href="#inheritance">Inheritance</a></li>
+          <li className="docs-toc-item"><a href="#solidity-version">Compile & test</a></li>
+        </ul>
+      </nav>
+    </div>
   );
 }
