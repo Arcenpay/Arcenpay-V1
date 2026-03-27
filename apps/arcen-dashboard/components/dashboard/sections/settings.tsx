@@ -27,7 +27,6 @@ import {
 import {
   User,
   Bell,
-  Shield,
   Link2,
   Globe,
   Copy,
@@ -40,7 +39,6 @@ import {
   Info,
   Key,
   Wallet,
-  Webhook,
 } from "lucide-react";
 import { ProtocolKeysPanel } from "@/components/dashboard/sections/api-keys";
 import { useUser } from "@clerk/nextjs";
@@ -131,142 +129,6 @@ const REGISTRY_GMP_ABI = [
   },
 ] as const;
 
-interface WebhookLogEntry {
-  id: string;
-  eventType: string;
-  status: "delivered" | "failed" | "pending";
-  retries: number;
-  createdAt: string;
-  responseCode?: number;
-}
-
-function WebhookLogCard() {
-  const [entries, setEntries] = useState<WebhookLogEntry[]>([]);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-
-  const fetchLog = async () => {
-    setIsRefreshing(true);
-    try {
-      const res = await fetch("/api/webhooks/log?limit=20");
-      if (res.ok) {
-        const data = await res.json();
-        const rows = Array.isArray(data.entries)
-          ? data.entries
-          : Array.isArray(data.log)
-            ? data.log
-            : [];
-        const normalized: WebhookLogEntry[] = rows.map(
-          (entry: Record<string, unknown>, index: number) => ({
-            id: String(entry.id || `entry-${index}`),
-            eventType: String(entry.event || entry.eventType || "unknown"),
-            status:
-              entry.success === true
-                ? "delivered"
-                : entry.success === false
-                  ? "failed"
-                  : "pending",
-            retries: Math.max(
-              0,
-              Number(entry.attemptNumber || entry.retries || 1) - 1,
-            ),
-            createdAt:
-              typeof entry.createdAt === "string"
-                ? entry.createdAt
-                : new Date(
-                    Number(entry.deliveredAt || entry.createdAt || Date.now()),
-                  ).toISOString(),
-            responseCode:
-              Number(entry.statusCode || entry.responseCode || 0) || undefined,
-          }),
-        );
-        setEntries(normalized);
-      }
-    } catch {
-      // Silent — facilitator may not be running in dev
-    } finally {
-      setIsRefreshing(false);
-    }
-  };
-
-  useEffect(() => {
-    void fetchLog();
-  }, []);
-
-  const statusColor = (status: string) => {
-    if (status === "delivered")
-      return "bg-success/10 text-success border-success/20";
-    if (status === "failed")
-      return "bg-destructive/10 text-destructive border-destructive/20";
-    return "bg-warning/10 text-warning border-warning/20";
-  };
-
-  return (
-    <Card className="border-border bg-card">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div>
-          <CardTitle className="text-base font-medium">
-            Webhook Delivery Log
-          </CardTitle>
-          <CardDescription>
-            Recent webhook delivery attempts with status and retry count
-          </CardDescription>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={fetchLog}
-          disabled={isRefreshing}
-        >
-          <RefreshCw
-            className={`w-3.5 h-3.5 mr-1.5 ${isRefreshing ? "animate-spin" : ""}`}
-          />
-          Refresh
-        </Button>
-      </CardHeader>
-      <CardContent>
-        {entries.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground text-sm">
-            {isRefreshing
-              ? "Loading..."
-              : "No webhook deliveries yet. Configure a webhook URL above and trigger a test event."}
-          </div>
-        ) : (
-          <div className="space-y-1">
-            <div className="grid grid-cols-[1fr,90px,90px,70px] gap-3 pb-2 border-b border-border text-xs text-muted-foreground font-medium">
-              <span>Event</span>
-              <span>Status</span>
-              <span>Time</span>
-              <span className="text-right">Retries</span>
-            </div>
-            {entries.map((entry) => (
-              <div
-                key={entry.id}
-                className="grid grid-cols-[1fr,90px,90px,70px] gap-3 py-2.5 border-b border-border/50 last:border-0 text-sm items-center"
-              >
-                <span className="text-foreground font-mono text-xs truncate">
-                  {entry.eventType}
-                </span>
-                <Badge
-                  variant="secondary"
-                  className={`text-xs ${statusColor(entry.status)}`}
-                >
-                  {entry.status}
-                </Badge>
-                <span className="text-muted-foreground text-xs">
-                  {new Date(entry.createdAt).toLocaleTimeString()}
-                </span>
-                <span className="text-right text-muted-foreground text-xs">
-                  {entry.retries}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
 // ── Main SettingsSection ──────────────────────────────────────────────────────
 
 export function SettingsSection() {
@@ -288,10 +150,6 @@ export function SettingsSection() {
   const [providerName, setProviderName] = useState("");
   const [website, setWebsite] = useState("");
   const [contactEmail, setContactEmail] = useState("");
-
-  // Webhook
-  const [webhookUrl, setWebhookUrl] = useState("");
-  const [webhookSecret, setWebhookSecret] = useState("");
 
   // API key
   const [apiKeyPrefix, setApiKeyPrefix] = useState<string | null>(null);
@@ -398,7 +256,6 @@ export function SettingsSection() {
         if (profile.providerName) setProviderName(profile.providerName);
         if (profile.website) setWebsite(profile.website);
         if (profile.contactEmail) setContactEmail(profile.contactEmail);
-        if (profile.webhookUrl) setWebhookUrl(profile.webhookUrl);
         if (profile.apiKeyPrefix) setApiKeyPrefix(profile.apiKeyPrefix);
       })
       .catch(() => {});
@@ -540,33 +397,6 @@ export function SettingsSection() {
     }
   };
 
-  const handleSaveWebhookConfig = async () => {
-    setIsSaving(true);
-    const notifyEmail = notifications.some((n) => n.email);
-    const notifyWebhook = notifications.some((n) => n.webhook);
-    try {
-      const res = await fetch("/api/provider/profile", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          webhookUrl: webhookUrl || "",
-          notifyEmail,
-          notifyWebhook,
-          // Only send if user has entered a new secret (min 16 chars)
-          ...(webhookSecret.length >= 16 && {
-            webhookSigningSecret: webhookSecret,
-          }),
-        }),
-      });
-      if (!res.ok) throw new Error("Save failed");
-      toast.success("Webhook config saved");
-    } catch {
-      toast.error("Could not save webhook config");
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   const handleGenerateApiKey = async () => {
     setIsGeneratingKey(true);
     try {
@@ -602,25 +432,7 @@ export function SettingsSection() {
     setTimeout(() => setCopiedKey(false), 2000);
   };
 
-  const handleTestWebhook = async () => {
-    if (!webhookUrl) {
-      toast.error("Enter a webhook URL first");
-      return;
-    }
-    try {
-      const response = await fetch("/api/webhooks/test", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: webhookUrl, secret: webhookSecret }),
-      });
-      if (!response.ok) throw new Error("Webhook test failed");
-      toast.success("Test event sent to webhook");
-    } catch {
-      toast.error("Could not reach facilitator server");
-    }
-  };
-
-  const toggleNotification = (id: string, type: "email" | "webhook") => {
+  const toggleNotification = (id: string, type: "email") => {
     const updated = notifications.map((n) =>
       n.id === id ? { ...n, [type]: !n[type] } : n,
     );
@@ -688,13 +500,6 @@ export function SettingsSection() {
           >
             <Bell className="w-4 h-4 mr-2" />
             Notifications
-          </TabsTrigger>
-          <TabsTrigger
-            value="apikeys"
-            className="data-[state=active]:bg-card data-[state=active]:text-foreground"
-          >
-            <Webhook className="w-4 h-4 mr-2" />
-            Webhook Key
           </TabsTrigger>
           <TabsTrigger
             value="protocolkeys"
@@ -1034,28 +839,32 @@ export function SettingsSection() {
           value="notifications"
           className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300"
         >
-          {/* Event Notification Toggles */}
+          {/* Email Notification Toggles */}
           <Card className="border-border bg-card">
             <CardHeader>
               <CardTitle className="text-base font-medium">
-                Event Notifications
+                Email Notifications
               </CardTitle>
               <CardDescription>
-                Configure how you receive billing and protocol event
-                notifications
+                Choose which billing and protocol events trigger an email to
+                your contact address. To configure webhook delivery for these
+                events, go to{" "}
+                <strong className="text-foreground">
+                  Connections → Webhooks
+                </strong>
+                .
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-1">
-                <div className="grid grid-cols-[1fr,80px,80px] gap-4 pb-3 border-b border-border text-sm text-muted-foreground">
+                <div className="grid grid-cols-[1fr,80px] gap-4 pb-3 border-b border-border text-sm text-muted-foreground">
                   <span>Event Type</span>
                   <span className="text-center">Email</span>
-                  <span className="text-center">Webhook</span>
                 </div>
                 {notifications.map((notification, index) => (
                   <div
                     key={notification.id}
-                    className="grid grid-cols-[1fr,80px,80px] gap-4 py-4 border-b border-border last:border-0 animate-in fade-in slide-in-from-left-2"
+                    className="grid grid-cols-[1fr,80px] gap-4 py-4 border-b border-border last:border-0 animate-in fade-in slide-in-from-left-2"
                     style={{
                       animationDelay: `${index * 50}ms`,
                       animationFillMode: "both",
@@ -1077,277 +886,8 @@ export function SettingsSection() {
                         }
                       />
                     </div>
-                    <div className="flex items-center justify-center">
-                      <Switch
-                        checked={notification.webhook}
-                        onCheckedChange={() =>
-                          toggleNotification(notification.id, "webhook")
-                        }
-                      />
-                    </div>
                   </div>
                 ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Webhook Configuration */}
-          <Card className="border-border bg-card">
-            <CardHeader>
-              <CardTitle className="text-base font-medium">
-                Webhook Configuration
-              </CardTitle>
-              <CardDescription>
-                Configure your webhook endpoint for real-time event delivery.
-                Signed with HMAC-SHA256 (X-MEAP-Signature).
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="webhookUrl">Webhook URL</Label>
-                <Input
-                  id="webhookUrl"
-                  placeholder="https://api.example.com/webhook/arcenpay"
-                  value={webhookUrl}
-                  onChange={(e) => setWebhookUrl(e.target.value)}
-                  className="bg-secondary border-border focus:border-accent font-mono text-sm"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="webhookSecret">Signing Secret</Label>
-                <Input
-                  id="webhookSecret"
-                  type="password"
-                  placeholder="whsec_..."
-                  value={webhookSecret}
-                  onChange={(e) => setWebhookSecret(e.target.value)}
-                  className="bg-secondary border-border focus:border-accent font-mono text-sm"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Used to sign payloads with HMAC-SHA256 via X-MEAP-Signature
-                  header. Retry policy: exponential backoff up to 5 retries.
-                </p>
-              </div>
-              <div className="flex items-center gap-3">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleTestWebhook}
-                  disabled={!webhookUrl}
-                >
-                  Test Webhook
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={handleSaveWebhookConfig}
-                  disabled={isSaving}
-                >
-                  {isSaving ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                      Saving…
-                    </>
-                  ) : (
-                    <>
-                      <Check className="w-4 h-4 mr-2" />
-                      Save Webhook Config
-                    </>
-                  )}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Webhook Delivery Log */}
-          <WebhookLogCard />
-        </TabsContent>
-
-        {/* Webhook Key Tab */}
-        <TabsContent
-          value="apikeys"
-          className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300"
-        >
-          <div className="flex items-start gap-3 p-4 rounded-xl bg-accent/5 border border-accent/20">
-            <Webhook className="w-4 h-4 text-accent shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-medium text-foreground">Webhook Signing Key</p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                This key is used exclusively to sign outbound webhook payloads with{" "}
-                <code className="text-foreground">HMAC-SHA256</code>. When ArcenPay sends an event
-                to your webhook URL, it includes an <code className="text-foreground">X-MEAP-Signature</code>{" "}
-                header signed with this key — use it to verify the payload came from us.{" "}
-                <span className="text-foreground font-medium">Do not use this key for API calls</span> —
-                use an API Key from the API Keys tab instead.
-              </p>
-            </div>
-          </div>
-          <Card className="border-border bg-card">
-            <CardHeader>
-              <CardTitle className="text-base font-medium flex items-center gap-2">
-                <Webhook className="w-4 h-4" />
-                Webhook Signing Key
-              </CardTitle>
-              <CardDescription>
-                Signs outbound webhook payloads via HMAC-SHA256 so your server can verify
-                that events came from ArcenPay. One key per workspace. Shown only once — store it securely.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between p-4 rounded-xl bg-secondary/50 border border-border">
-                <div>
-                  <p className="text-sm font-medium text-foreground">
-                    Current Key
-                  </p>
-                  {apiKeyPrefix ? (
-                    <code className="text-xs text-chart-1 font-mono mt-1 block">
-                      {apiKeyPrefix}••••••••••••••••••••••••••••••••••••••••
-                    </code>
-                  ) : (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      No active key
-                    </p>
-                  )}
-                </div>
-                <Badge
-                  variant="secondary"
-                  className={
-                    apiKeyPrefix
-                      ? "bg-success/10 text-success border-success/20"
-                      : "bg-muted/50 text-muted-foreground border-border"
-                  }
-                >
-                  {apiKeyPrefix ? "Active" : "None"}
-                </Badge>
-              </div>
-
-              {newlyGeneratedKey && (
-                <div className="space-y-2 p-4 rounded-xl border border-warning/30 bg-warning/5">
-                  <p className="text-xs font-medium text-warning flex items-center gap-1.5">
-                    <AlertTriangle className="w-3.5 h-3.5" />
-                    Copy this key now — it will not be shown again
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <code className="flex-1 text-xs font-mono text-foreground bg-secondary px-3 py-2 rounded-lg border border-border break-all">
-                      {newlyGeneratedKey}
-                    </code>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="shrink-0"
-                      onClick={handleCopyApiKey}
-                    >
-                      {copiedKey ? (
-                        <Check className="w-3.5 h-3.5 text-success" />
-                      ) : (
-                        <Copy className="w-3.5 h-3.5" />
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              <div className="flex items-center gap-3 pt-2">
-                <Button
-                  disabled={isGeneratingKey}
-                  onClick={() => setGenerateKeySheetOpen(true)}
-                >
-                  {isGeneratingKey ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                      Generating…
-                    </>
-                  ) : (
-                    <>
-                      <RefreshCw className="w-4 h-4 mr-2" />
-                      {apiKeyPrefix ? "Regenerate Key" : "Generate Key"}
-                    </>
-                  )}
-                </Button>
-                <AlertDialog
-                  open={generateKeySheetOpen}
-                  onOpenChange={setGenerateKeySheetOpen}
-                >
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>
-                        {apiKeyPrefix
-                          ? "Regenerate API Key?"
-                          : "Generate API Key?"}
-                      </AlertDialogTitle>
-                      <AlertDialogDescription>
-                        {apiKeyPrefix
-                          ? "This will invalidate your existing key immediately. Any integrations using the old key will stop working."
-                          : "A new API key will be generated. You will only see the full key once."}
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={() => {
-                          void handleGenerateApiKey();
-                          setGenerateKeySheetOpen(false);
-                        }}
-                        disabled={isGeneratingKey}
-                      >
-                        {apiKeyPrefix ? "Regenerate" : "Generate"}
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-
-                {apiKeyPrefix && (
-                  <>
-                    <Button
-                      variant="outline"
-                      className="border-destructive/30 text-destructive hover:bg-destructive/10"
-                      onClick={() => setRevokeKeySheetOpen(true)}
-                    >
-                      Revoke Key
-                    </Button>
-                    <AlertDialog
-                      open={revokeKeySheetOpen}
-                      onOpenChange={setRevokeKeySheetOpen}
-                    >
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Revoke API Key?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            This will permanently invalidate the current API
-                            key. Any integrations using it will immediately lose
-                            access.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            onClick={() => {
-                              void handleRevokeApiKey();
-                              setRevokeKeySheetOpen(false);
-                            }}
-                          >
-                            Revoke
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </>
-                )}
-              </div>
-
-              <div className="flex items-start gap-2 p-3 rounded-lg bg-secondary/50 border border-border">
-                <Info className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
-                <p className="text-xs text-muted-foreground">
-                  This key signs webhook payloads with HMAC-SHA256. On your server, verify incoming webhooks
-                  by computing{" "}
-                  <code className="text-foreground">
-                    HMAC-SHA256(body, ak_live_…)
-                  </code>{" "}
-                  and comparing it to the{" "}
-                  <code className="text-foreground">X-MEAP-Signature</code> header.
-                  Only one key per workspace. Regenerating invalidates the previous key immediately.
-                  For SDK/API authentication, use an API Key from the <strong>API Keys</strong> tab.
-                </p>
               </div>
             </CardContent>
           </Card>
@@ -1656,10 +1196,9 @@ export function SettingsSection() {
                 Use these keys to authenticate your server-side SDK and backend API calls to ArcenPay —
                 feature flag checks, event tracking, company management, usage queries, and access token generation.
                 Pass as <code className="text-foreground">Authorization: Bearer api_…</code> on all{" "}
-                <code className="text-foreground">/api/v1/*</code> endpoints. Keys are hashed (Argon2) and
-                never stored in plaintext — the raw key is shown only once on creation.{" "}
-                <span className="text-foreground font-medium">These are not webhook keys</span> — for webhook
-                verification use the Webhook Key tab.
+                <code className="text-foreground">/api/v1/*</code> endpoints. Keys are shown only once on creation.{" "}
+                <span className="text-foreground font-medium">For webhook verification</span>, use the signing
+                secret from <strong>Connections → Webhooks</strong>.
               </p>
             </div>
           </div>

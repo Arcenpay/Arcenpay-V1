@@ -28,8 +28,10 @@ export { TemplateRenderer } from './components/TemplateRenderer';
 export type { TemplateRendererProps, TemplateBlock } from './components/TemplateRenderer';
 export { InvoiceList } from './components/InvoiceList';
 export type { InvoiceListProps } from './components/InvoiceList';
-export { ArcenEmbed } from './components/ArcenEmbed';
-export type { ArcenEmbedProps } from './components/ArcenEmbed';
+export { ArcenEmbed, ArcenpayEmbed } from './components/ArcenEmbed';
+export type { ArcenEmbedProps, ArcenpayEmbedProps } from './components/ArcenEmbed';
+export { renderElement, getDesignTokens } from './components/ArcenEmbed';
+export type { Tokens } from './components/ArcenEmbed';
 
 // Hooks
 export { useEntitlement } from './hooks/useEntitlement';

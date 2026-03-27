@@ -14,7 +14,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type { FlagCheckResult, ArcenCompanyKeys, ArcenUserKeys } from '@meap/core';
+import type { FlagCheckResult, ArcenCompanyKeys, ArcenUserKeys } from '@arcenpay/sdk';
 
 export interface UseFlagOptions {
   /** Base URL for the ArcenPay dashboard API (defaults to '') */

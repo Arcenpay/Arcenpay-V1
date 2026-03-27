@@ -2092,7 +2092,7 @@ function PlansTable({
       {entTarget && (
         <AddEntitlementDialog
           key={entTarget.id}
-          planId={entTarget.id}
+          plan={entTarget}
           open={true}
           onOpenChange={(o) => {
             if (!o) setEntTarget(null);
@@ -3784,93 +3784,116 @@ interface Entitlement {
   featureKey: string;
   type: "BOOLEAN" | "NUMERIC" | "UNLIMITED";
   value?: boolean | number | null;
+  valueUnit?: string | null;
   enabled: boolean;
 }
 
 // ─── Add Entitlement Dialog ────────────────────────────────────────────────────
 
+type CatalogFeatureDef = {
+  id: string;
+  name: string;
+  featureKey: string;
+  featureType: "boolean" | "event" | "trait";
+  eventKey: string | null;
+  description: string | null;
+};
+
 function AddEntitlementDialog({
-  planId,
+  plan,
   onAdded,
   open: externalOpen,
   onOpenChange: externalOnOpenChange,
+  currentEntitlements,
 }: {
-  planId: string;
+  plan: CatalogPlan;
   onAdded: () => void;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  currentEntitlements?: Entitlement[];
 }) {
   const [internalOpen, setInternalOpen] = useState(false);
   const open = externalOpen !== undefined ? externalOpen : internalOpen;
   const setOpen = externalOnOpenChange ?? setInternalOpen;
   const [loading, setLoading] = useState(false);
+  const [catalogFeatures, setCatalogFeatures] = useState<CatalogFeatureDef[]>([]);
+  const [featuresLoading, setFeaturesLoading] = useState(false);
+  const [selectedFeature, setSelectedFeature] = useState<CatalogFeatureDef | null>(null);
   const [form, setForm] = useState({
     featureName: "",
     featureKey: "",
     type: "BOOLEAN" as "BOOLEAN" | "NUMERIC" | "UNLIMITED",
     value: "",
+    valueUnit: "",
     enabled: true,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  function autoKey(name: string) {
-    return name
-      .toLowerCase()
-      .replace(/\s+/g, "_")
-      .replace(/[^a-z0-9_-]/g, "");
+  // Load features from catalog when dialog opens
+  useEffect(() => {
+    if (!open) return;
+    setFeaturesLoading(true);
+    fetch("/api/v1/features")
+      .then((r) => r.ok ? r.json() : { features: [] })
+      .then((d: { features?: CatalogFeatureDef[] }) => setCatalogFeatures(d.features ?? []))
+      .catch(() => setCatalogFeatures([]))
+      .finally(() => setFeaturesLoading(false));
+  }, [open]);
+
+  function selectFeature(feat: CatalogFeatureDef) {
+    setSelectedFeature(feat);
+    const type: "BOOLEAN" | "NUMERIC" | "UNLIMITED" =
+      feat.featureType === "event" ? "NUMERIC" : "BOOLEAN";
+    setForm({
+      featureName: feat.name,
+      featureKey: feat.featureKey,
+      type,
+      value: "",
+      valueUnit: feat.eventKey ?? "",
+      enabled: true,
+    });
+    setErrors({});
   }
 
-  function validate() {
+  function clearFeature() {
+    setSelectedFeature(null);
+    setForm({ featureName: "", featureKey: "", type: "BOOLEAN", value: "", valueUnit: "", enabled: true });
+    setErrors({});
+  }
+
+  async function handleSave() {
     const e: Record<string, string> = {};
-    if (!form.featureName.trim()) e.featureName = "Required";
-    if (!form.featureKey.trim()) e.featureKey = "Required";
-    else if (!/^[a-z0-9_-]+$/i.test(form.featureKey))
-      e.featureKey = "Letters, numbers, _ and - only";
+    if (!form.featureKey.trim()) e.featureKey = "Feature is required";
     if (form.type === "NUMERIC") {
       const n = Number(form.value);
-      if (form.value === "" || isNaN(n) || n < 0)
-        e.value = "Must be a non-negative number";
+      if (form.value === "" || isNaN(n) || n < 0) e.value = "Enter a valid limit";
     }
-    return e;
-  }
+    if (Object.keys(e).length) { setErrors(e); return; }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const errs = validate();
-    if (Object.keys(errs).length) {
-      setErrors(errs);
-      return;
-    }
     setLoading(true);
     try {
       let val: boolean | number | null = null;
       if (form.type === "BOOLEAN") val = form.enabled;
       else if (form.type === "NUMERIC") val = Number(form.value);
-      const res = await fetch(`/api/catalog/plans/${planId}/entitlements`, {
+      const res = await fetch(`/api/catalog/plans/${plan.id}/entitlements`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          featureName: form.featureName,
+          featureName: form.featureName || form.featureKey,
           featureKey: form.featureKey,
           type: form.type,
           value: val,
           enabled: form.enabled,
+          valueUnit: form.valueUnit || null,
         }),
       });
       if (res.ok) {
         setOpen(false);
-        setForm({
-          featureName: "",
-          featureKey: "",
-          type: "BOOLEAN",
-          value: "",
-          enabled: true,
-        });
-        setErrors({});
+        clearFeature();
         onAdded();
         toast.success("Entitlement added");
       } else {
-        const data = await res.json();
+        const data = (await res.json()) as { error?: string };
         setErrors({ _global: data.error || "Failed to add entitlement" });
       }
     } finally {
@@ -3878,8 +3901,11 @@ function AddEntitlementDialog({
     }
   }
 
+  const isFree = parseFloat(plan.price) === 0;
+  const planPrice = isFree ? "Free" : `$${parseFloat(plan.price).toFixed(2)}/month`;
+
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
+    <Sheet open={open} onOpenChange={(v) => { if (!v) clearFeature(); setOpen(v); }}>
       {externalOpen === undefined && (
         <SheetTrigger asChild>
           <Button className="gap-2">
@@ -3888,133 +3914,234 @@ function AddEntitlementDialog({
           </Button>
         </SheetTrigger>
       )}
-      <SheetContent className="w-full sm:max-w-md overflow-y-auto">
-        <SheetHeader className="pb-4 border-b border-border">
-          <SheetTitle>Add Entitlement</SheetTitle>
-          <SheetDescription>
-            Add a feature entitlement to this plan.
-          </SheetDescription>
+      <SheetContent className="w-full sm:max-w-lg flex flex-col p-0 gap-0">
+        {/* Header */}
+        <SheetHeader className="px-6 py-5 border-b border-border shrink-0">
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            Plan Entitlement
+          </p>
+          <div className="flex items-center gap-2 mt-0.5">
+            <SheetTitle className="text-lg font-semibold">{plan.name}</SheetTitle>
+            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+            <span className="text-lg text-muted-foreground font-normal">
+              {selectedFeature ? selectedFeature.name : "Choose feature"}
+            </span>
+          </div>
         </SheetHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 py-4">
-          {errors._global && (
-            <p className="text-sm text-destructive">{errors._global}</p>
-          )}
+
+        {/* Scrollable body */}
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+          {/* ── Feature selector ── */}
           <div className="space-y-2">
-            <Label htmlFor="entFeatureName">Feature Name *</Label>
-            <Input
-              id="entFeatureName"
-              value={form.featureName}
-              onChange={(e) => {
-                const name = e.target.value;
-                setForm((f) => ({
-                  ...f,
-                  featureName: name,
-                  featureKey: f.featureKey || autoKey(name),
-                }));
-              }}
-              placeholder="e.g. Advanced Analytics"
-              className="bg-secondary border-border"
-            />
-            {errors.featureName && (
-              <p className="text-xs text-destructive">{errors.featureName}</p>
-            )}
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="entFeatureKey">Feature Key *</Label>
-            <Input
-              id="entFeatureKey"
-              value={form.featureKey}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, featureKey: e.target.value }))
-              }
-              placeholder="e.g. advanced_analytics"
-              className="bg-secondary border-border font-mono text-sm"
-            />
-            {errors.featureKey && (
-              <p className="text-xs text-destructive">{errors.featureKey}</p>
-            )}
-          </div>
-          <div className="space-y-2">
-            <Label>Entitlement Type *</Label>
-            <div className="grid grid-cols-3 gap-2">
-              {(["BOOLEAN", "NUMERIC", "UNLIMITED"] as const).map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => setForm((f) => ({ ...f, type: t, value: "" }))}
-                  className={`flex flex-col items-center gap-1.5 py-3 px-2 rounded-lg border text-xs font-medium transition-all ${
-                    form.type === t
-                      ? "bg-accent text-accent-foreground border-accent"
-                      : "bg-secondary border-border text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {t === "BOOLEAN" ? (
-                    <ToggleLeft className="w-4 h-4" />
-                  ) : t === "NUMERIC" ? (
-                    <Hash className="w-4 h-4" />
+            <Label className="text-sm font-medium">Feature</Label>
+            {featuresLoading ? (
+              <div className="h-11 bg-secondary rounded-lg animate-pulse" />
+            ) : (
+              <Select
+                value={selectedFeature?.id ?? ""}
+                onValueChange={(id) => {
+                  const feat = catalogFeatures.find((f) => f.id === id);
+                  if (feat) selectFeature(feat);
+                }}
+              >
+                <SelectTrigger className="h-11 bg-secondary border-border">
+                  <SelectValue placeholder="Select..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {catalogFeatures.length === 0 ? (
+                    <div className="px-3 py-6 text-center">
+                      <p className="text-sm text-muted-foreground">No features yet</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Go to <strong>Manage → Features</strong> to create features first
+                      </p>
+                    </div>
                   ) : (
-                    <Package className="w-4 h-4" />
+                    catalogFeatures.map((f) => (
+                      <SelectItem key={f.id} value={f.id}>
+                        <div className="flex items-center gap-2 py-0.5">
+                          <div className="w-5 h-5 rounded bg-secondary border border-border flex items-center justify-center shrink-0">
+                            {f.featureType === "event" ? (
+                              <Hash className="w-3 h-3 text-violet-500" />
+                            ) : (
+                              <ToggleLeft className="w-3 h-3 text-blue-500" />
+                            )}
+                          </div>
+                          <span className="font-medium">{f.name}</span>
+                          <code className="text-xs text-muted-foreground font-mono">{f.featureKey}</code>
+                        </div>
+                      </SelectItem>
+                    ))
                   )}
-                  {t === "BOOLEAN"
-                    ? "On/Off"
-                    : t === "NUMERIC"
-                      ? "Numeric"
-                      : "Unlimited"}
+                </SelectContent>
+              </Select>
+            )}
+            {errors._global && <p className="text-sm text-destructive">{errors._global}</p>}
+          </div>
+
+          {/* ── Monetization Settings (shown once feature selected) ── */}
+          {!selectedFeature ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center rounded-xl border border-dashed border-border bg-secondary/20">
+              <ToggleLeft className="w-8 h-8 text-muted-foreground/30 mb-2" />
+              <p className="text-sm font-medium text-muted-foreground">Select a feature to configure entitlement</p>
+            </div>
+          ) : (
+            <>
+              {/* Feature info pill */}
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-secondary/50 border border-border">
+                <div className="w-8 h-8 rounded-lg bg-card border border-border flex items-center justify-center shrink-0">
+                  {selectedFeature.featureType === "event" ? (
+                    <Hash className="w-4 h-4 text-violet-500" />
+                  ) : (
+                    <ToggleLeft className="w-4 h-4 text-blue-500" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground">{selectedFeature.name}</p>
+                  <code className="text-xs text-muted-foreground font-mono">{selectedFeature.featureKey}</code>
+                </div>
+                <button
+                  type="button"
+                  onClick={clearFeature}
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <X className="w-4 h-4" />
                 </button>
-              ))}
-            </div>
-          </div>
-          {form.type === "NUMERIC" && (
-            <div className="space-y-2">
-              <Label htmlFor="entValue">Value *</Label>
-              <Input
-                id="entValue"
-                type="number"
-                min="0"
-                value={form.value}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, value: e.target.value }))
-                }
-                placeholder="e.g. 1000"
-                className="bg-secondary border-border"
-              />
-              {errors.value && (
-                <p className="text-xs text-destructive">{errors.value}</p>
+              </div>
+
+              {/* Entitlement type */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Entitlement type</Label>
+                <div className="space-y-2">
+                  {(["BOOLEAN", "NUMERIC", "UNLIMITED"] as const).map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => setForm((f) => ({ ...f, type: t, value: "" }))}
+                      className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg border text-sm transition-all text-left ${
+                        form.type === t
+                          ? "bg-accent/5 border-accent text-foreground"
+                          : "bg-secondary border-border text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${form.type === t ? "bg-accent/10" : "bg-card border border-border"}`}>
+                        {t === "BOOLEAN" ? (
+                          <ToggleLeft className={`w-4 h-4 ${form.type === t ? "text-accent" : "text-muted-foreground"}`} />
+                        ) : t === "NUMERIC" ? (
+                          <Hash className={`w-4 h-4 ${form.type === t ? "text-accent" : "text-muted-foreground"}`} />
+                        ) : (
+                          <Package className={`w-4 h-4 ${form.type === t ? "text-accent" : "text-muted-foreground"}`} />
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium leading-none">
+                          {t === "BOOLEAN" ? "Boolean" : t === "NUMERIC" ? "Numeric limit" : "Unlimited"}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {t === "BOOLEAN" ? "On / Off access" : t === "NUMERIC" ? "Usage cap per billing period" : "No cap enforced"}
+                        </p>
+                      </div>
+                      {form.type === t && <Check className="w-4 h-4 text-accent shrink-0" />}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* NUMERIC fields */}
+              {form.type === "NUMERIC" && (
+                <div className="space-y-3 p-4 rounded-lg bg-secondary/30 border border-border">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Monthly limit *</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      value={form.value}
+                      onChange={(e) => setForm((f) => ({ ...f, value: e.target.value }))}
+                      placeholder="e.g. 300"
+                      className="bg-background border-border"
+                    />
+                    {errors.value && <p className="text-xs text-destructive">{errors.value}</p>}
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Unit label</Label>
+                    <Input
+                      value={form.valueUnit}
+                      onChange={(e) => setForm((f) => ({ ...f, valueUnit: e.target.value }))}
+                      placeholder="e.g. Scans, API calls"
+                      className="bg-background border-border"
+                    />
+                    {form.value && (
+                      <p className="text-xs text-muted-foreground">
+                        Displays as: <strong>{form.value} {form.valueUnit || "units"} per month</strong>
+                      </p>
+                    )}
+                  </div>
+                </div>
               )}
-            </div>
+
+              {/* BOOLEAN toggle */}
+              {form.type === "BOOLEAN" && (
+                <div className="flex items-center justify-between p-4 rounded-lg bg-secondary/30 border border-border">
+                  <div>
+                    <p className="text-sm font-medium">Enabled by default</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Feature is on for all subscribers of this plan</p>
+                  </div>
+                  <Switch
+                    checked={form.enabled}
+                    onCheckedChange={(v) => setForm((f) => ({ ...f, enabled: v }))}
+                  />
+                </div>
+              )}
+
+              {/* Plan preview */}
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Plan Preview</Label>
+                <div className="rounded-xl border border-border bg-card p-4">
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <p className="font-semibold text-foreground">{plan.name}</p>
+                      {plan.description && <p className="text-xs text-muted-foreground mt-0.5">{plan.description}</p>}
+                    </div>
+                    <p className="text-base font-bold text-foreground whitespace-nowrap">
+                      {isFree ? "Free" : `$${parseFloat(plan.price).toFixed(2)}/mo`}
+                    </p>
+                  </div>
+                  <div className="space-y-1.5 pt-3 border-t border-border">
+                    {(currentEntitlements ?? []).map((ent) => (
+                      <div key={ent.featureKey} className="flex items-center gap-2">
+                        <div className="w-5 h-5 rounded bg-secondary border border-border flex items-center justify-center shrink-0">
+                          {ent.type === "NUMERIC" ? <Hash className="w-2.5 h-2.5 text-violet-500" /> : <ToggleLeft className="w-2.5 h-2.5 text-blue-500" />}
+                        </div>
+                        <p className="text-xs text-foreground">{ent.featureName}</p>
+                        <p className="text-xs text-muted-foreground ml-auto">
+                          {ent.type === "NUMERIC" ? `${ent.value} ${ent.valueUnit ?? ""} /mo` : ent.enabled ? "On" : "Off"}
+                        </p>
+                      </div>
+                    ))}
+                    {/* New entitlement preview */}
+                    <div className="flex items-center gap-2 pt-1 border-t border-dashed border-border/50">
+                      <div className="w-5 h-5 rounded bg-accent/10 border border-accent/30 flex items-center justify-center shrink-0">
+                        {form.type === "NUMERIC" ? <Hash className="w-2.5 h-2.5 text-violet-500" /> : <ToggleLeft className="w-2.5 h-2.5 text-blue-500" />}
+                      </div>
+                      <p className="text-xs font-medium text-foreground">{selectedFeature.name}</p>
+                      <p className="text-xs text-muted-foreground ml-auto">
+                        {form.type === "NUMERIC" && form.value ? `${form.value} ${form.valueUnit || ""} /mo` : form.type === "UNLIMITED" ? "Unlimited" : form.enabled ? "On" : "Off"}
+                      </p>
+                      <span className="text-xs text-accent font-semibold">New</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </>
           )}
-          <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/50 border border-border">
-            <div>
-              <p className="text-sm font-medium">Enabled</p>
-              <p className="text-xs text-muted-foreground">
-                Is this entitlement active on the plan?
-              </p>
-            </div>
-            <Switch
-              checked={form.enabled}
-              onCheckedChange={(v) => setForm((f) => ({ ...f, enabled: v }))}
-            />
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button
-              variant="outline"
-              type="button"
-              onClick={() => setOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Adding…
-                </>
-              ) : (
-                "Add Entitlement"
-              )}
-            </Button>
-          </div>
-        </form>
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 border-t border-border bg-card shrink-0 flex items-center justify-end gap-2">
+          <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+          <Button disabled={!selectedFeature || loading} onClick={handleSave}>
+            {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving…</> : "Save changes"}
+          </Button>
+        </div>
       </SheetContent>
     </Sheet>
   );
@@ -4439,119 +4566,212 @@ function planPriceLabel(plan: CatalogPlan): string {
 }
 
 function AddCreditGrantDialog({
-  planId,
+  plan,
   onAdded,
   existingIds,
 }: {
-  planId: string;
+  plan: CatalogPlan;
   onAdded: () => void;
   existingIds: string[];
 }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [creditTypes, setCreditTypes] = useState<CatalogCreditType[]>([]);
+  const [creditsLoading, setCreditsLoading] = useState(false);
   const [selectedId, setSelectedId] = useState("");
-  const [amount, setAmount] = useState("100");
+  const [amount, setAmount] = useState("50");
+  const [resetPeriod, setResetPeriod] = useState("plan_period");
+  const [autoTopUp, setAutoTopUp] = useState(false);
   const { envMode } = useEnvironment();
 
   useEffect(() => {
-    if (open) {
-      fetch(`/api/catalog/credits?environmentMode=${envMode}&status=PUBLISHED`)
-        .then((res) => res.json())
-        .then((data) => setCreditTypes(data.creditTypes ?? []));
-    }
+    if (!open) return;
+    setCreditsLoading(true);
+    // Load all credits (published + draft) so users can always link them
+    fetch(`/api/catalog/credits?environmentMode=${envMode}`)
+      .then((r) => r.ok ? r.json() : { creditTypes: [] })
+      .then((d: { creditTypes?: CatalogCreditType[] }) => setCreditTypes(d.creditTypes ?? []))
+      .catch(() => setCreditTypes([]))
+      .finally(() => setCreditsLoading(false));
   }, [open, envMode]);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!selectedId) return;
+  const availableTypes = creditTypes.filter((ct) => !existingIds.includes(ct.id));
+  const selectedCredit = creditTypes.find((ct) => ct.id === selectedId);
+
+  async function handleSubmit() {
+    if (!selectedId || !amount) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/catalog/plans/${planId}/credit-grants`, {
+      const res = await fetch(`/api/catalog/plans/${plan.id}/credit-grants`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ creditTypeId: selectedId, amount: parseFloat(amount) }),
+        body: JSON.stringify({
+          creditTypeId: selectedId,
+          amount: parseFloat(amount),
+          resetPeriod,
+          autoTopUp,
+        }),
       });
       if (res.ok) {
         onAdded();
         setOpen(false);
+        setSelectedId("");
+        setAmount("50");
         toast.success("Credit grant added");
       } else {
-        const d = await res.json();
-        toast.error(d.error || "Failed to add grant");
+        const d = (await res.json()) as { error?: string };
+        toast.error(d.error || "Failed to add credit grant");
       }
     } finally {
       setLoading(false);
     }
   }
 
-  const availableTypes = creditTypes.filter((ct) => !existingIds.includes(ct.id));
-
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
+    <Sheet open={open} onOpenChange={(v) => { if (!v) { setSelectedId(""); setAmount("50"); } setOpen(v); }}>
+      <SheetTrigger asChild>
         <Button variant="outline" size="sm" className="gap-1.5 font-medium">
           <Plus className="w-3.5 h-3.5" />
           Add credit grant
         </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Add Credit Grant</DialogTitle>
-          <DialogDescription>
-            Automatically allocate credits to subscribers of this plan.
-          </DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label>Credit Type</Label>
-            <Select value={selectedId} onValueChange={setSelectedId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select a credit type" />
-              </SelectTrigger>
-              <SelectContent>
-                {availableTypes.length === 0 ? (
-                  <div className="p-2 text-sm text-muted-foreground text-center">
-                    No available credit types
-                  </div>
-                ) : (
-                  availableTypes.map((ct) => (
-                    <SelectItem key={ct.id} value={ct.id}>
-                      {ct.name} ({ct.code})
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
+      </SheetTrigger>
+      <SheetContent className="w-full sm:max-w-md flex flex-col p-0 gap-0">
+        <SheetHeader className="px-6 py-5 border-b border-border shrink-0">
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Credit Grant</p>
+          <SheetTitle className="text-lg font-semibold mt-0.5">
+            Create Credit Grant for {plan.name}
+          </SheetTitle>
+          <SheetDescription className="text-sm text-muted-foreground">
+            Select a credit type and amount to grant to companies with this plan
+          </SheetDescription>
+        </SheetHeader>
+
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+          {/* Plan (read-only) */}
+          <div className="space-y-1.5">
+            <Label className="text-sm font-medium">Plan</Label>
+            <div className="h-10 px-3 flex items-center rounded-lg bg-secondary border border-border">
+              <span className="text-sm text-foreground">{plan.name}</span>
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label>Amount</Label>
-            <Input
-              type="number"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              min="0.000001"
-              step="any"
-              required
-            />
+
+          {/* Credit Type */}
+          <div className="space-y-1.5">
+            <Label className="text-sm font-medium">Credit Type</Label>
+            {creditsLoading ? (
+              <div className="h-10 bg-secondary rounded-lg animate-pulse" />
+            ) : (
+              <Select value={selectedId} onValueChange={setSelectedId}>
+                <SelectTrigger className="bg-secondary border-border h-10">
+                  <SelectValue placeholder="Select a credit type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableTypes.length === 0 ? (
+                    <div className="px-3 py-5 text-center">
+                      <p className="text-sm text-muted-foreground">No credit types available</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Go to <strong>Catalog → Credits</strong> to create credit types first
+                      </p>
+                    </div>
+                  ) : (
+                    availableTypes.map((ct) => (
+                      <SelectItem key={ct.id} value={ct.id}>
+                        <div className="flex items-center gap-2 py-0.5">
+                          <div className="w-5 h-5 rounded bg-secondary border border-border flex items-center justify-center shrink-0">
+                            <Coins className="w-3 h-3 text-amber-500" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium">{ct.name}</p>
+                            <p className="text-xs text-muted-foreground font-mono">{ct.code}</p>
+                          </div>
+                        </div>
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            )}
           </div>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => setOpen(false)}
-              disabled={loading}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={loading || !selectedId}>
-              {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-              Add Grant
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+
+          {/* Amount */}
+          {selectedId && (
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">Amount</Label>
+              <div className="relative">
+                <Input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  className="bg-secondary border-border pr-40"
+                  placeholder="50"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">
+                  credits included in plan
+                </span>
+              </div>
+              {selectedCredit && (
+                <p className="text-xs text-muted-foreground">
+                  {amount || "0"} {selectedCredit.unitName || selectedCredit.name} will be granted per reset period
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Reset period */}
+          {selectedId && (
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium flex items-center gap-1">
+                Reset <span className="text-destructive">*</span>
+              </Label>
+              <Select value={resetPeriod} onValueChange={setResetPeriod}>
+                <SelectTrigger className="bg-secondary border-border">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="plan_period">Plan period</SelectItem>
+                  <SelectItem value="monthly">Monthly</SelectItem>
+                  <SelectItem value="yearly">Yearly</SelectItem>
+                  <SelectItem value="never">Never (one-time)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* Auto Top-up */}
+          {selectedId && (
+            <div className="flex items-start gap-3 p-4 rounded-lg border border-border bg-secondary/20">
+              <input
+                type="checkbox"
+                id="autoTopUp"
+                checked={autoTopUp}
+                onChange={(e) => setAutoTopUp(e.target.checked)}
+                className="mt-0.5 rounded border-border"
+              />
+              <div>
+                <label htmlFor="autoTopUp" className="text-sm font-medium text-foreground cursor-pointer">
+                  Enable Auto Top-up
+                </label>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Automatically replenish credits when the balance runs low
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="px-6 py-4 border-t border-border bg-card shrink-0 flex items-center justify-end gap-2">
+          <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+          <Button
+            disabled={!selectedId || !amount || loading}
+            onClick={handleSubmit}
+          >
+            {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Creating…</> : "Create plan grant"}
+          </Button>
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 }
 
@@ -4915,30 +5135,43 @@ function PlanDetailView({
                               </div>
                             </td>
                             <td className="py-3 px-4">
-                              <div className="flex items-center gap-2">
+                              {ent.type === "NUMERIC" ? (
+                                <div>
+                                  <p className="text-sm font-medium text-foreground">
+                                    {ent.value ?? "—"}{" "}
+                                    {ent.valueUnit
+                                      ? `${ent.valueUnit} per month`
+                                      : "per month"}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">Numerical limit</p>
+                                </div>
+                              ) : ent.type === "UNLIMITED" ? (
+                                <div className="flex items-center gap-1.5">
+                                  <div className="w-2 h-2 rounded-full bg-green-500" />
+                                  <span className="text-sm text-foreground">Unlimited</span>
+                                </div>
+                              ) : (
                                 <button
                                   type="button"
                                   onClick={() => !toggling && toggleEntitlement(ent.featureKey, !ent.enabled)}
                                   disabled={toggling === ent.featureKey}
-                                  className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none ${ent.enabled ? "bg-accent" : "bg-input"} ${toggling === ent.featureKey ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}
+                                  className="flex items-center gap-2 group"
                                 >
-                                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-lg transition-transform ${ent.enabled ? "translate-x-4" : "translate-x-0"}`} />
+                                  <div className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border-2 border-transparent transition-colors ${ent.enabled ? "bg-green-500" : "bg-input"} ${toggling === ent.featureKey ? "opacity-60" : ""}`}>
+                                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${ent.enabled ? "translate-x-4" : "translate-x-0"}`} />
+                                  </div>
+                                  <span className={`text-sm font-medium ${ent.enabled ? "text-green-600" : "text-muted-foreground"}`}>
+                                    {ent.enabled ? "On" : "Off"}
+                                  </span>
                                 </button>
-                                <span className="text-sm text-foreground">
-                                  {ent.type === "NUMERIC"
-                                    ? `${ent.value ?? "—"} per month`
-                                    : ent.enabled
-                                      ? "Enabled"
-                                      : "Disabled"}
-                                </span>
-                              </div>
+                              )}
                             </td>
                             <td className="py-3 px-4">
-                              <Badge variant="outline" className="text-xs">
+                              <Badge variant="secondary" className="text-xs">
                                 {ent.type === "BOOLEAN"
                                   ? "Boolean"
                                   : ent.type === "NUMERIC"
-                                    ? "Numerical limit"
+                                    ? "Event-based"
                                     : "Unlimited"}
                               </Badge>
                             </td>
@@ -4986,7 +5219,8 @@ function PlanDetailView({
 
                 <div className="flex items-center gap-3">
                   <AddEntitlementDialog
-                    planId={plan.id}
+                    plan={plan}
+                    currentEntitlements={entitlements}
                     onAdded={() => setEntRefresh((n) => n + 1)}
                   />
                   <Button
@@ -5006,9 +5240,13 @@ function PlanDetailView({
           {/* ── Credit Grants section ── */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-base font-semibold">No Credit Grants</h3>
+              <h3 className="text-base font-semibold">
+                {creditGrants.length > 0
+                  ? `${creditGrants.length} Credit Grant${creditGrants.length !== 1 ? "s" : ""}`
+                  : "No Credit Grants"}
+              </h3>
               <AddCreditGrantDialog
-                planId={plan.id}
+                plan={plan}
                 onAdded={() => setCgRefresh((n) => n + 1)}
                 existingIds={creditGrants.map((g) => g.creditTypeId)}
               />
@@ -5068,7 +5306,7 @@ function PlanDetailView({
                   </div>
                 </div>
                 <AddCreditGrantDialog
-                  planId={plan.id}
+                  plan={plan}
                   onAdded={() => setCgRefresh((n) => n + 1)}
                   existingIds={creditGrants.map((g) => g.creditTypeId)}
                 />
@@ -6574,32 +6812,37 @@ export function CatalogSection() {
 export function CatalogPlansSection() {
   const { envMode } = useEnvironment();
   const [refresh, setRefresh] = useState(0);
+  const [selectedPlan, setSelectedPlan] = useState<CatalogPlan | null>(null);
 
   function tr() {
     setRefresh((n) => n + 1);
   }
 
+  if (selectedPlan) {
+    return (
+      <PlanDetailView
+        plan={selectedPlan}
+        onBack={() => setSelectedPlan(null)}
+        onUpdated={() => {
+          tr();
+          setSelectedPlan(null);
+        }}
+      />
+    );
+  }
+
   return (
     <div className="space-y-6">
-      <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-card to-secondary/25 p-5 sm:p-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-2">
-            <h2 className="text-2xl font-semibold tracking-tight text-foreground">
-              Plans Catalog
-            </h2>
-            <p className="max-w-2xl text-sm text-muted-foreground">
-              Create and manage production-ready catalog plans. Plan data is
-              scoped to the active environment, and switching environment
-              instantly loads that network's dataset.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2 flex-wrap">
-            <CreatePlanDialog env={envMode} onCreated={tr} />
-          </div>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-semibold text-foreground mb-1">Plans</h2>
+          <p className="text-sm text-muted-foreground">
+            Create and manage subscription plans. Click a plan to configure entitlements, companies, and billing.
+          </p>
         </div>
+        <CreatePlanDialog env={envMode} onCreated={tr} />
       </div>
-      <PlansTable env={envMode} refresh={refresh} />
+      <PlansTable env={envMode} refresh={refresh} onSelect={setSelectedPlan} />
     </div>
   );
 }

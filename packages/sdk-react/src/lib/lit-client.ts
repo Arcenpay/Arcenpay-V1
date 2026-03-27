@@ -1,5 +1,5 @@
 // ============================================================
-//  @meap/react — Lit Protocol Client Singleton
+//  @arcenpay/react — Lit Protocol Client Singleton
 //  PRD §05 — Lit Protocol MPC Access Control
 //
 //  Lazily initializes a LitNodeClient and caches session

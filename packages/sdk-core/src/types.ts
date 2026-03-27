@@ -321,6 +321,10 @@ export interface ComponentEntitlement {
   featureKey: string;
   name: string;
   value: boolean | string | number;
+  featureType?: "boolean" | "event_based" | "trait_based" | "credit";
+  limit?: number;
+  unitSingular?: string;
+  unitPlural?: string;
 }
 
 export interface ComponentUsageItem {
@@ -335,22 +339,36 @@ export interface ComponentUsageItem {
 export interface ComponentPlanSummary {
   id: string;
   name: string;
-  tier: string;
   price: string;
+  tier: string;
   billingInterval: number;
+  acceptedToken?: string;
+  description?: string;
 }
 
 export interface ComponentElement {
-  type: 'planManager' | 'meteredFeatures' | 'includedFeatures' | 'plansTable' | string;
+  type:
+    | 'planManager'    | 'meteredFeatures' | 'includedFeatures' | 'plansTable'
+    | 'nextBillDue'    | 'paymentMethod'   | 'invoices'         | 'unsubscribe'
+    | 'text'           | 'button'
+    | string;
   config?: Record<string, unknown>;
+  // Flat props saved directly by the editor (heading, body, label, href, etc.)
+  [key: string]: unknown;
 }
 
 export interface ComponentDesign {
+  // Editor-native fields (saved by dashboard component builder)
+  primaryColor?: string;
+  secondaryColor?: string;
   fontFamily?: string;
-  fontSize?: number;
+  fontSize?: string | number;
+  cardStyle?: 'minimal' | 'bordered' | 'elevated';
+  columns?: number;
+  // Normalized / alias fields
   fontColor?: string;
   backgroundColor?: string;
-  borderRadius?: number;
+  borderRadius?: string | number;
 }
 
 export interface ComponentRenderData {
@@ -364,6 +382,8 @@ export interface ComponentRenderData {
   entitlements: ComponentEntitlement[];
   usage: ComponentUsageItem[];
   plans: ComponentPlanSummary[];
+  company?: Record<string, unknown> | null;
+  userId?: string | null;
 }
 
 // --- SDK Config ---

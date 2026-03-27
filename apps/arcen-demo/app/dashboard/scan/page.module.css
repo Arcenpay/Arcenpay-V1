@@ -1,0 +1,225 @@
+.root {
+  padding: 40px;
+  max-width: 760px;
+}
+
+.header {
+  margin-bottom: 28px;
+}
+
+.title {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 4px;
+}
+
+.subtitle {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+/* ─── Scan Area ──────────────────────────────────────────────────────────────── */
+.scanArea {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  min-height: 320px;
+  display: flex;
+  align-items: stretch;
+  margin-bottom: 24px;
+}
+
+/* Dropzone */
+.dropzone {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 48px;
+  text-align: center;
+  border: 2px dashed var(--border-strong);
+  border-radius: var(--radius-lg);
+  margin: 16px;
+  transition: border-color 0.15s;
+}
+
+.dropzone:hover {
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.dropIcon {
+  font-size: 36px;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+}
+
+.dropTitle {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.dropDesc {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.dropOr {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.dropNote {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: 4px;
+}
+
+/* Scanning */
+.scanning {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.spinner {
+  width: 28px;
+  height: 28px;
+  border: 2px solid var(--border-strong);
+  border-top-color: var(--text);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.scanningText {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.scanningSubtext {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* Result */
+.result {
+  flex: 1;
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.resultHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.resultTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.resultIcon {
+  color: var(--green);
+}
+
+.trackBadge {
+  font-size: 11px;
+  color: var(--green);
+  background: rgba(34, 197, 94, 0.08);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  padding: 4px 10px;
+  border-radius: var(--radius);
+}
+
+.resultText {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  font-family: "SF Mono", "Fira Code", monospace;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.75);
+  line-height: 1.7;
+  white-space: pre-wrap;
+  flex: 1;
+}
+
+.resultActions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* ─── Buttons ────────────────────────────────────────────────────────────────── */
+.btnPrimary {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 18px;
+  background: var(--text);
+  color: var(--bg);
+  border: none;
+  border-radius: var(--radius);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.btnPrimary:hover {
+  opacity: 0.85;
+}
+
+.btnSecondary {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 18px;
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btnSecondary:hover {
+  background: var(--accent-muted);
+}
+
+/* ─── Info Box ───────────────────────────────────────────────────────────────── */
+.infoBox {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px;
+}
+
+.infoTitle {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.infoDesc {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}

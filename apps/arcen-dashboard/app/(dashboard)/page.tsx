@@ -25,6 +25,7 @@ import { CompaniesSection } from "@/components/dashboard/sections/companies";
 import { EventsStreamSection } from "@/components/dashboard/sections/events-stream";
 import { FeatureFlagsSection } from "@/components/dashboard/sections/feature-flags";
 import { AgentSection } from "@/components/dashboard/sections/agent";
+import { WebhooksSection } from "@/components/dashboard/sections/webhooks";
 import { SectionErrorBoundary } from "@/components/dashboard/section-error-boundary";
 import { SubgraphLagBanner } from "@/components/dashboard/subgraph-lag-banner";
 import { EnvironmentProvider } from "@/contexts/environment-context";
@@ -47,7 +48,8 @@ export type Section =
   | "companies"
   | "events-stream"
   | "feature-flags"
-  | "agent";
+  | "agent"
+  | "webhooks";
 
 export default function Dashboard() {
   const router = useRouter();
@@ -129,7 +131,7 @@ export default function Dashboard() {
       case "components":
         return (
           <SectionErrorBoundary fallbackLabel="Components failed to load">
-            <ComponentsSection />
+            <ComponentsSection onSectionChange={handleSectionChange} />
           </SectionErrorBoundary>
         );
       case "settings":
@@ -178,6 +180,12 @@ export default function Dashboard() {
         return (
           <SectionErrorBoundary fallbackLabel="Agent failed to load">
             <AgentSection />
+          </SectionErrorBoundary>
+        );
+      case "webhooks":
+        return (
+          <SectionErrorBoundary fallbackLabel="Webhooks failed to load">
+            <WebhooksSection />
           </SectionErrorBoundary>
         );
       default:

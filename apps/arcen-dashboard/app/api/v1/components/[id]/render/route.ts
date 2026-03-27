@@ -46,6 +46,58 @@ function verifyAccessToken(token: string, secret: string): {
   }
 }
 
+// ─── Normalization helpers ────────────────────────────────────────────────────
+
+/** Map editor kebab-case element types → camelCase SDK types */
+function normalizeElementType(type: string): string {
+  const map: Record<string, string> = {
+    "plan-manager":       "planManager",
+    "included-features":  "includedFeatures",
+    "metered-features":   "meteredFeatures",
+    "next-bill-due":      "nextBillDue",
+    "payment-method":     "paymentMethod",
+    "pricing-table":      "plansTable",
+    // kebab self-maps (already correct but include for safety)
+    "invoices":        "invoices",
+    "unsubscribe":     "unsubscribe",
+    "text":            "text",
+    "button":          "button",
+    "billing-history": "billingHistory",
+  };
+  return map[type] ?? type;
+}
+
+/**
+ * Normalize the design/styling object saved by the dashboard editor.
+ * Editor saves: { primaryColor, secondaryColor, fontFamily, fontSize, cardStyle, columns }
+ * SDK reads:    { primaryColor, fontFamily, fontSize, fontColor, backgroundColor, borderRadius }
+ */
+function normalizeDesign(raw: Record<string, unknown>): Record<string, unknown> {
+  return {
+    ...raw,
+    primaryColor:    raw.primaryColor    ?? "#000000",
+    secondaryColor:  raw.secondaryColor  ?? "#f3f4f6",
+    fontFamily:      raw.fontFamily      ?? "system-ui, sans-serif",
+    fontSize:        raw.fontSize        ?? "14",
+    cardStyle:       raw.cardStyle       ?? "minimal",
+    fontColor:       raw.fontColor       ?? "#111827",
+    backgroundColor: raw.backgroundColor ?? "#ffffff",
+    borderRadius:    raw.borderRadius    ?? "8",
+  };
+}
+
+// Handle CORS preflight requests from embedded apps
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET,OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type,Authorization",
+    },
+  });
+}
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
@@ -176,13 +228,19 @@ export async function GET(
     select: { id: true, name: true, tier: true, price: true, billingInterval: true, description: true, metadata: true },
   });
 
+  const rawElements = Array.isArray(component.elements) ? component.elements as Array<Record<string, unknown>> : [];
+  const rawDesign = (component.design ?? {}) as Record<string, unknown>;
+
   return NextResponse.json({
     data: {
       component: {
         id: component.id,
         name: component.name,
-        elements: component.elements,
-        design: component.design,
+        elements: rawElements.map((el) => ({
+          ...el,
+          type: normalizeElementType(String(el.type ?? "")),
+        })),
+        design: normalizeDesign(rawDesign),
       },
       company: companyData,
       activePlan,

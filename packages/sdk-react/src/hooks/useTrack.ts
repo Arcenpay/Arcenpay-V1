@@ -10,7 +10,7 @@
  */
 
 import { useCallback, useRef } from 'react';
-import type { ArcenCompanyKeys, ArcenUserKeys } from '@meap/core';
+import type { ArcenCompanyKeys, ArcenUserKeys } from '@arcenpay/sdk';
 
 export interface TrackOptions {
   baseUrl?: string;

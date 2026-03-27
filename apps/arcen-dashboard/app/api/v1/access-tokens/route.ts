@@ -53,9 +53,28 @@ export async function POST(req: NextRequest) {
   const expiresAt = new Date(Date.now() + expiresIn * 1000);
 
   // Resolve company and user IDs
-  const company = body.company ? await resolveCompany(teamId, body.company) : null;
+  let company = body.company ? await resolveCompany(teamId, body.company) : null;
   const user =
     body.user && company ? await resolveUser(teamId, body.user) : null;
+
+  // ── Auto-assign free plan to companies with no active plan ───────────────
+  // When a known company has no activePlanId, find the lowest-priced published
+  // plan (free tier) and assign it automatically. This ensures new customers
+  // always start on the free plan rather than seeing "No active plan."
+  if (company && !company.activePlanId) {
+    const freePlan = await db.catalogPlan.findFirst({
+      where: { teamId, status: "PUBLISHED", active: true },
+      orderBy: [{ price: "asc" }],
+      select: { id: true },
+    });
+    if (freePlan) {
+      await db.arcenCompany.update({
+        where: { id: company.id },
+        data: { activePlanId: freePlan.id },
+      });
+      company = { ...company, activePlanId: freePlan.id };
+    }
+  }
 
   const secret = process.env.ACCESS_TOKEN_SECRET;
   if (!secret) {

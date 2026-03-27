@@ -1,0 +1,123 @@
+.root {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* ─── Sidebar ────────────────────────────────────────────────────────────────── */
+.sidebar {
+  width: 220px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-card);
+  border-right: 1px solid var(--border);
+  padding: 20px 0;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+}
+
+.sidebarBrand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 20px 20px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 12px;
+}
+
+.brandIcon {
+  font-size: 18px;
+}
+
+.brandName {
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: -0.01em;
+}
+
+/* ─── Nav ────────────────────────────────────────────────────────────────────── */
+.nav {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.navSection {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding-bottom: 8px;
+}
+
+.navLabel {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  padding: 8px 10px 4px;
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--text-muted);
+  transition: background 0.1s, color 0.1s;
+}
+
+.navItem:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.navIcon {
+  font-size: 13px;
+  width: 16px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+/* ─── Sidebar Footer ─────────────────────────────────────────────────────────── */
+.sidebarFooter {
+  padding: 16px 20px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sidebarFooterLabel {
+  font-size: 10px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.arcenBadge {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 0.15s;
+}
+
+.arcenBadge:hover {
+  color: var(--text);
+}
+
+/* ─── Main ───────────────────────────────────────────────────────────────────── */
+.main {
+  flex: 1;
+  overflow-y: auto;
+  background: var(--bg);
+}

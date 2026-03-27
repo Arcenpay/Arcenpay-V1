@@ -45,7 +45,7 @@ function getChainEnvironmentCompat(chainId: number) {
     return maybe(chainId);
   }
 
-  // Backward compatibility for stale @meap/core dist builds that don't yet
+  // Backward compatibility for stale @arcenpay/sdk dist builds that don't yet
   // export getChainEnvironment.
   const chain = MEAPCore.getChain(chainId);
   return {
