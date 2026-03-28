@@ -180,6 +180,19 @@ export async function POST(
     return NextResponse.json({ error: "Plan not found" }, { status: 404 });
   }
 
+  // Free plans cannot be registered on-chain (PlanFactory requires price > 0)
+  if (parseFloat(plan.price.toString()) === 0) {
+    // Fix the chainSyncStatus if it was incorrectly set
+    await db.catalogPlan.update({
+      where: { id: plan.id },
+      data: { chainSyncStatus: "NOT_APPLICABLE" },
+    });
+    return NextResponse.json(
+      { error: "Free plans cannot be registered on-chain. The PlanFactory contract requires price > 0. Free plan access is managed off-chain." },
+      { status: 400 },
+    );
+  }
+
   const relayerPrivateKey = normalizePrivateKey(
     process.env.DEPLOYER_PRIVATE_KEY,
   );

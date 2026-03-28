@@ -12,6 +12,7 @@ import { clerkClient } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
 import { slugify } from "@/lib/auth";
 import type { TeamRole } from "@/lib/auth";
+import { sendWelcomeEmail } from "@/lib/email";
 
 
 /**
@@ -142,6 +143,13 @@ async function handleEvent(event: ClerkWebhookEvent) {
         });
       } catch (err) {
         console.warn("[clerk-webhook] Could not create personal org:", err);
+      }
+
+      // Send welcome email (non-blocking)
+      if (email) {
+        sendWelcomeEmail(email, firstName || undefined).catch((err) => {
+          console.warn("[clerk-webhook] Could not send welcome email:", err);
+        });
       }
       break;
     }

@@ -6,13 +6,13 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { requireApiKey, isApiKeyError } from "@/lib/api-key-auth";
+import { requireAnyAuth, isAnyAuthError } from "@/lib/require-any-auth";
 import { db } from "@/lib/db";
 import { Prisma } from "@/src/generated/prisma/client";
 
 export async function GET(req: NextRequest) {
-  const ctx = await requireApiKey(req);
-  if (isApiKeyError(ctx)) return ctx;
+  const ctx = await requireAnyAuth(req);
+  if (isAnyAuthError(ctx)) return ctx;
 
   const { teamId } = ctx;
   const url = req.nextUrl;
@@ -68,8 +68,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const ctx = await requireApiKey(req);
-  if (isApiKeyError(ctx)) return ctx;
+  const ctx = await requireAnyAuth(req);
+  if (isAnyAuthError(ctx)) return ctx;
 
   const { teamId } = ctx;
 

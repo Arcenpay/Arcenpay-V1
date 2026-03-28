@@ -73,6 +73,9 @@ const OPERATORS_BY_CRITERIA: Record<string, { value: string; label: string }[]> 
 
 // ─── ConditionEditor ──────────────────────────────────────────────────────────
 
+interface CatalogPlanOption { id: string; name: string; tier: string; }
+interface CatalogAddOnOption { id: string; name: string; }
+
 function ConditionEditor({ condition, onChange, onDelete }: {
   condition: Partial<FlagCondition>;
   onChange: (c: Partial<FlagCondition>) => void;
@@ -80,6 +83,39 @@ function ConditionEditor({ condition, onChange, onDelete }: {
 }) {
   const type = condition.criteriaType ?? "base_plan";
   const ops  = OPERATORS_BY_CRITERIA[type] ?? [];
+
+  const [plans, setPlans] = useState<CatalogPlanOption[]>([]);
+  const [addOns, setAddOns] = useState<CatalogAddOnOption[]>([]);
+
+  useEffect(() => {
+    if (type === "base_plan") {
+      fetch("/api/catalog/plans?status=PUBLISHED")
+        .then((r) => r.json())
+        .then((d) => {
+          const items = (d?.data ?? d?.plans ?? []) as CatalogPlanOption[];
+          setPlans(items);
+        })
+        .catch(() => {});
+    }
+    if (type === "add_on") {
+      fetch("/api/catalog/add-ons")
+        .then((r) => r.json())
+        .then((d) => {
+          const items = (d?.data ?? d?.addOns ?? []) as CatalogAddOnOption[];
+          setAddOns(items);
+        })
+        .catch(() => {});
+    }
+  }, [type]);
+
+  const selectedValues = (condition.values as string[]) ?? [];
+
+  function toggleOption(id: string) {
+    const next = selectedValues.includes(id)
+      ? selectedValues.filter((v) => v !== id)
+      : [...selectedValues, id];
+    onChange({ ...condition, values: next });
+  }
 
   const selectCls = "h-8 text-xs border-border bg-background rounded-md px-2 w-full focus:ring-1 focus:ring-ring";
 
@@ -147,12 +183,68 @@ function ConditionEditor({ condition, onChange, onDelete }: {
             className="col-span-2 h-8 text-xs border border-border rounded-md px-2 bg-background focus:outline-none focus:ring-1 focus:ring-ring font-mono" />
         )}
 
-        {/* Plan / add-on values */}
-        {(type === "base_plan" || type === "add_on") && (
-          <input type="text" placeholder="Plan IDs (comma-separated)"
-            value={(condition.values as string[])?.join(",") ?? ""}
-            onChange={(e) => onChange({ ...condition, values: e.target.value.split(",").map((v) => v.trim()) })}
-            className="col-span-2 h-8 text-xs border border-border rounded-md px-2 bg-background focus:outline-none focus:ring-1 focus:ring-ring font-mono" />
+        {/* Plan picker */}
+        {type === "base_plan" && (
+          <div className="col-span-2 space-y-1">
+            {plans.length === 0 ? (
+              <p className="text-xs text-muted-foreground italic">No published plans found</p>
+            ) : (
+              <div className="flex flex-wrap gap-1.5">
+                {plans.map((p) => {
+                  const selected = selectedValues.includes(p.id);
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => toggleOption(p.id)}
+                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium border transition-colors ${
+                        selected
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-background border-border text-muted-foreground hover:border-primary/60"
+                      }`}
+                    >
+                      {selected && <Check className="w-3 h-3" />}
+                      {p.name}
+                      <span className="opacity-60">· {p.tier}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            {selectedValues.length === 0 && (
+              <p className="text-xs text-destructive/70">Select at least one plan</p>
+            )}
+          </div>
+        )}
+
+        {/* Add-on picker */}
+        {type === "add_on" && (
+          <div className="col-span-2 space-y-1">
+            {addOns.length === 0 ? (
+              <p className="text-xs text-muted-foreground italic">No add-ons found</p>
+            ) : (
+              <div className="flex flex-wrap gap-1.5">
+                {addOns.map((a) => {
+                  const selected = selectedValues.includes(a.id);
+                  return (
+                    <button
+                      key={a.id}
+                      type="button"
+                      onClick={() => toggleOption(a.id)}
+                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium border transition-colors ${
+                        selected
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-background border-border text-muted-foreground hover:border-primary/60"
+                      }`}
+                    >
+                      {selected && <Check className="w-3 h-3" />}
+                      {a.name}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         )}
       </div>
 

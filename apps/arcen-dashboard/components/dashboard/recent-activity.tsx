@@ -78,9 +78,9 @@ export function RecentActivity({ chainId }: RecentActivityProps) {
                     <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center mb-4">
                         <Activity className="w-6 h-6 text-muted-foreground" />
                     </div>
-                    <p className="text-sm font-medium text-foreground mb-1">No recent activity</p>
-                    <p className="text-xs text-muted-foreground max-w-[240px]">
-                        On-chain events like subscriptions, renewals, and settlements will appear here
+                    <p className="text-sm font-medium text-foreground mb-1">No activity yet</p>
+                    <p className="text-xs text-muted-foreground max-w-[200px]">
+                        Subscriptions and settlements will show up here
                     </p>
                 </div>
             ) : (

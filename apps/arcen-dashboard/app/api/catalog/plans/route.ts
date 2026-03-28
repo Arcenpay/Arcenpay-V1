@@ -16,6 +16,7 @@ const createSchema = z.object({
   tier: z.string().min(1),
   description: z.string().optional(),
   price: z.coerce.number().nonnegative(),
+  annualPrice: z.coerce.number().nonnegative().optional(),
   billingInterval: z.coerce.number().int().positive(),
   acceptedToken: z.string().min(1),
   metadata: z.record(z.unknown()).optional(),
@@ -28,6 +29,7 @@ const updateSchema = z.object({
   tier: z.string().min(1).optional(),
   description: z.string().nullable().optional(),
   price: z.coerce.number().positive().optional(),
+  annualPrice: z.coerce.number().nonnegative().nullable().optional(),
   billingInterval: z.coerce.number().int().positive().optional(),
   acceptedToken: z.string().min(1).optional(),
   metadata: z.record(z.unknown()).optional(),
@@ -63,6 +65,20 @@ export async function GET(request: NextRequest) {
     },
     orderBy: [{ updatedAt: "desc" }],
   });
+
+  // Fix any free plans that have incorrect chainSyncStatus (pre-fix data)
+  const freePlansToFix = plans.filter(
+    (p) => parseFloat(p.price.toString()) === 0 && p.chainSyncStatus !== "NOT_APPLICABLE",
+  );
+  if (freePlansToFix.length > 0) {
+    await db.catalogPlan.updateMany({
+      where: { id: { in: freePlansToFix.map((p) => p.id) } },
+      data: { chainSyncStatus: "NOT_APPLICABLE" },
+    });
+    for (const p of freePlansToFix) {
+      (p as unknown as Record<string, string>).chainSyncStatus = "NOT_APPLICABLE";
+    }
+  }
 
   return NextResponse.json({ plans });
 }
@@ -110,6 +126,9 @@ export async function POST(request: NextRequest) {
       tier: data.tier,
       description: data.description,
       price: data.price.toFixed(6),
+      ...(data.annualPrice !== undefined && {
+        annualPrice: data.annualPrice.toFixed(6),
+      }),
       billingInterval: data.billingInterval,
       acceptedToken: data.acceptedToken,
       metadata: toPrismaNullableJson(data.metadata),
@@ -185,6 +204,12 @@ export async function PUT(request: NextRequest) {
       }),
       ...(parsed.data.price !== undefined && {
         price: parsed.data.price.toFixed(6),
+      }),
+      ...(parsed.data.annualPrice !== undefined && {
+        annualPrice:
+          parsed.data.annualPrice === null
+            ? null
+            : parsed.data.annualPrice.toFixed(6),
       }),
       ...(parsed.data.billingInterval !== undefined && {
         billingInterval: parsed.data.billingInterval,

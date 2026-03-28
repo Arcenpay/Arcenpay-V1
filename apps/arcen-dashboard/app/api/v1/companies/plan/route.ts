@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createHash } from "crypto";
 import { db } from "@/lib/db";
+import { deliverWebhook } from "@/lib/deliver-webhook";
 
 function verifyAccessToken(token: string, secret: string) {
   try {
@@ -54,24 +55,40 @@ export async function POST(req: NextRequest) {
   const { teamId, companyId } = decoded;
   if (!companyId) return NextResponse.json({ error: "No company associated with this token" }, { status: 400, headers: corsHeaders() });
 
-  let body: { planId?: string };
+  let body: { planId?: string; billingPeriod?: string; txHash?: string };
   try { body = await req.json(); } catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400, headers: corsHeaders() }); }
 
-  const { planId } = body;
+  const { planId, billingPeriod, txHash } = body;
   if (!planId) return NextResponse.json({ error: "planId is required" }, { status: 400, headers: corsHeaders() });
 
   // Verify the plan belongs to this team and is published
   const plan = await db.catalogPlan.findFirst({
     where: { id: planId, teamId, status: "PUBLISHED", active: true },
-    select: { id: true, name: true, price: true },
+    select: { id: true, name: true, price: true, annualPrice: true },
   });
   if (!plan) return NextResponse.json({ error: "Plan not found or not published" }, { status: 404, headers: corsHeaders() });
+
+  // Fetch previous plan for webhook payload
+  const prevCompany = await db.arcenCompany.findUnique({
+    where: { id: companyId },
+    select: { activePlanId: true },
+  });
 
   // Update the company's active plan
   await db.arcenCompany.update({
     where: { id: companyId },
     data: { activePlanId: planId },
   });
+
+  // Fire outbound webhook (non-blocking)
+  deliverWebhook(teamId, "company.plan.changed", {
+    companyId,
+    planId,
+    planName: plan.name,
+    billingPeriod: billingPeriod ?? "monthly",
+    previousPlanId: prevCompany?.activePlanId ?? null,
+    ...(txHash ? { txHash } : {}),
+  }).catch(() => {});
 
   return NextResponse.json({ data: { success: true, planId, planName: plan.name } }, { headers: corsHeaders() });
 }

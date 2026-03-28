@@ -281,6 +281,7 @@ model CatalogPlan {
   tier           String
   description    String?
   price          Decimal          @db.Decimal(20, 6)
+  annualPrice    Decimal?         @db.Decimal(20, 6)
   billingInterval Int
   acceptedToken  String
   metadata       Json?

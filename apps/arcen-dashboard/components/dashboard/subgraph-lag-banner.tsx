@@ -51,10 +51,10 @@ export function SubgraphLagBanner() {
     : "bg-yellow-500/10 border-yellow-500/30 text-yellow-600 dark:text-yellow-400";
 
   const message = health.error
-    ? `Subgraph unreachable: ${health.error}`
+    ? `Indexer unreachable — on-chain data may be outdated`
     : isUnhealthy
-    ? `Subgraph is ${lag}s behind chain tip — data may be significantly stale`
-    : `Subgraph is ${lag}s behind chain tip — some data may be delayed`;
+    ? `Indexer is ${lag}s behind — displayed data may be stale`
+    : `Indexer is ${lag}s behind — minor delay in on-chain data`;
 
   return (
     <div

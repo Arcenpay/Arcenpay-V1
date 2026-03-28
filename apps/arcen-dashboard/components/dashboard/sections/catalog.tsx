@@ -70,6 +70,7 @@ import {
   Edit2,
   Edit,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useEnvironment } from "@/contexts/environment-context";
 import { useAccount, useSignTypedData, useChainId } from "wagmi";
 import { getUsdcAddress, getUsdcTokenOptions } from "@/lib/contracts";
@@ -87,6 +88,7 @@ interface CatalogPlan {
   tier: string;
   description?: string | null;
   price: string;
+  annualPrice?: string | null;
   billingInterval: number;
   acceptedToken: string;
   environmentMode: EnvMode;
@@ -315,11 +317,14 @@ function CreatePlanDialog({
   const [loading, setLoading] = useState(false);
   const [planType, setPlanType] = useState<"free" | "paid">("paid");
   const [billingIntervalDays, setBillingIntervalDays] = useState(30);
+  const [hasAnnualPrice, setHasAnnualPrice] = useState(false);
+  const [annualDiscount, setAnnualDiscount] = useState("20");
   const [form, setForm] = useState({
     name: "",
     tier: "",
     description: "",
     price: "",
+    annualPrice: "",
     acceptedToken: connectedToken,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -333,6 +338,10 @@ function CreatePlanDialog({
     if (planType === "paid") {
       const p = Number(form.price);
       if (!form.price || isNaN(p) || p <= 0) e.price = "Must be a positive number";
+      if (hasAnnualPrice) {
+        const ap = Number(form.annualPrice);
+        if (!form.annualPrice || isNaN(ap) || ap <= 0) e.annualPrice = "Must be a positive number";
+      }
     }
     return e;
   }
@@ -340,7 +349,9 @@ function CreatePlanDialog({
   function resetForm() {
     setPlanType("paid");
     setBillingIntervalDays(30);
-    setForm({ name: "", tier: "", description: "", price: "", acceptedToken: connectedToken });
+    setHasAnnualPrice(false);
+    setAnnualDiscount("20");
+    setForm({ name: "", tier: "", description: "", price: "", annualPrice: "", acceptedToken: connectedToken });
     setErrors({});
   }
 
@@ -358,6 +369,9 @@ function CreatePlanDialog({
           tier: form.tier.trim() || autoTier || "base",
           description: form.description || undefined,
           price: planType === "free" ? 0 : Number(form.price),
+          ...(planType === "paid" && hasAnnualPrice && form.annualPrice
+            ? { annualPrice: Number(form.annualPrice) }
+            : {}),
           billingInterval: billingIntervalDays,
           acceptedToken: form.acceptedToken,
           environmentMode: env,
@@ -368,7 +382,7 @@ function CreatePlanDialog({
         setErrors({ _global: data.error || "Failed to create plan" });
         return;
       }
-      toast.success(`Plan created! Click "Register on-chain" in the table to activate it.`);
+      toast.success("Plan created — register it on-chain to activate.");
       setOpen(false);
       resetForm();
       onCreated();
@@ -429,6 +443,16 @@ function CreatePlanDialog({
                       </span>
                     )}
                   </p>
+                  {hasAnnualPrice && form.annualPrice && (
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      or ${form.annualPrice} USDC / year
+                      {form.price && Number(form.annualPrice) < Number(form.price) * 12 && (
+                        <span className="text-green-500 ml-1">
+                          (save {Math.round((1 - Number(form.annualPrice) / (Number(form.price) * 12)) * 100)}%)
+                        </span>
+                      )}
+                    </p>
+                  )}
                 </div>
                 <div className="p-4">
                   <p className="text-xs text-muted-foreground text-center py-3">No entitlements yet</p>
@@ -509,7 +533,7 @@ function CreatePlanDialog({
                       {env === "DEVELOPMENT" ? "DEV" : "PROD"}
                     </span>
                   </div>
-                  <p className="text-sm text-muted-foreground mb-5">Monetize your offering with flexible pricing options</p>
+                  <p className="text-sm text-muted-foreground mb-5">Set a price or keep it free.</p>
 
                   <div className="grid grid-cols-2 gap-4">
                     {/* Type */}
@@ -627,46 +651,174 @@ function CreatePlanDialog({
 
                   {/* Paid-only: Price + Interval */}
                   {planType === "paid" && (
-                    <div className="grid grid-cols-2 gap-4 mt-4">
-                      <div>
-                        <Label className="text-sm font-medium text-foreground mb-2 block">Price (USDC) *</Label>
-                        <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">$</span>
-                          <Input
-                            value={form.price}
-                            onChange={(e) => { setForm({ ...form, price: e.target.value }); setErrors((p) => ({ ...p, price: "" })); }}
-                            placeholder="29.00"
-                            type="number"
-                            min="0.01"
-                            step="0.01"
-                            className="h-11 bg-background border-border pl-6"
-                          />
+                    <>
+                      <div className="grid grid-cols-2 gap-4 mt-4">
+                        <div>
+                          <Label className="text-sm font-medium text-foreground mb-2 block">Monthly Price (USDC) *</Label>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">$</span>
+                            <Input
+                              value={form.price}
+                              onChange={(e) => { setForm({ ...form, price: e.target.value }); setErrors((p) => ({ ...p, price: "" })); }}
+                              placeholder="29.00"
+                              type="number"
+                              min="0.01"
+                              step="0.01"
+                              className="h-11 bg-background border-border pl-6"
+                            />
+                          </div>
+                          {errors.price && <p className="text-xs text-destructive mt-1">{errors.price}</p>}
                         </div>
-                        {errors.price && <p className="text-xs text-destructive mt-1">{errors.price}</p>}
+                        <div>
+                          <Label className="text-sm font-medium text-foreground mb-2 block">Billing Interval</Label>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button type="button" className="w-full flex items-center justify-between h-11 px-3 rounded-lg bg-background border border-border text-sm text-foreground hover:bg-secondary/50 transition-colors">
+                                <span className="font-medium">{BILLING_INTERVALS.find((i) => i.days === billingIntervalDays)?.label ?? `${billingIntervalDays} days`}</span>
+                                <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width]">
+                              {BILLING_INTERVALS.map((iv) => (
+                                <DropdownMenuItem key={iv.days} onClick={() => setBillingIntervalDays(iv.days)} className="flex items-center justify-between">
+                                  <div>
+                                    <p className="text-sm font-medium">{iv.label}</p>
+                                    <p className="text-xs text-muted-foreground">{iv.sublabel}</p>
+                                  </div>
+                                  {billingIntervalDays === iv.days && <Check className="w-4 h-4 text-foreground ml-2" />}
+                                </DropdownMenuItem>
+                              ))}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       </div>
-                      <div>
-                        <Label className="text-sm font-medium text-foreground mb-2 block">Billing Interval</Label>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <button type="button" className="w-full flex items-center justify-between h-11 px-3 rounded-lg bg-background border border-border text-sm text-foreground hover:bg-secondary/50 transition-colors">
-                              <span className="font-medium">{BILLING_INTERVALS.find((i) => i.days === billingIntervalDays)?.label ?? `${billingIntervalDays} days`}</span>
-                              <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                            </button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width]">
-                            {BILLING_INTERVALS.map((iv) => (
-                              <DropdownMenuItem key={iv.days} onClick={() => setBillingIntervalDays(iv.days)} className="flex items-center justify-between">
-                                <div>
-                                  <p className="text-sm font-medium">{iv.label}</p>
-                                  <p className="text-xs text-muted-foreground">{iv.sublabel}</p>
+
+                      {/* Annual pricing toggle */}
+                      <div className="mt-4 rounded-lg border border-border bg-secondary/20 p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-foreground">Annual Pricing</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              Optional discounted rate for yearly subscribers
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            role="switch"
+                            aria-checked={hasAnnualPrice}
+                            onClick={() => {
+                              const next = !hasAnnualPrice;
+                              setHasAnnualPrice(next);
+                              if (!next) {
+                                setForm((p) => ({ ...p, annualPrice: "" }));
+                              } else if (form.price) {
+                                // Auto-seed 20% discount on enable
+                                const computed = (Number(form.price) * 12 * 0.8).toFixed(2);
+                                setForm((p) => ({ ...p, annualPrice: computed }));
+                                setAnnualDiscount("20");
+                              }
+                            }}
+                            className={cn(
+                              "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors",
+                              hasAnnualPrice ? "bg-primary" : "bg-secondary",
+                            )}
+                          >
+                            <span className={cn(
+                              "pointer-events-none block h-5 w-5 rounded-full bg-background shadow-lg transition-transform",
+                              hasAnnualPrice ? "translate-x-5" : "translate-x-0",
+                            )} />
+                          </button>
+                        </div>
+                        {hasAnnualPrice && (
+                          <div className="mt-4 space-y-3">
+                            {/* Discount % row */}
+                            <div className="flex items-center gap-3">
+                              <div className="flex-1">
+                                <Label className="text-xs text-muted-foreground mb-1.5 block">Discount off monthly × 12</Label>
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    type="range"
+                                    min="0"
+                                    max="60"
+                                    step="1"
+                                    value={annualDiscount}
+                                    onChange={(e) => {
+                                      const pct = e.target.value;
+                                      setAnnualDiscount(pct);
+                                      if (form.price) {
+                                        const computed = (Number(form.price) * 12 * (1 - Number(pct) / 100)).toFixed(2);
+                                        setForm((p) => ({ ...p, annualPrice: computed }));
+                                        setErrors((p) => ({ ...p, annualPrice: "" }));
+                                      }
+                                    }}
+                                    className="flex-1 h-1.5 accent-primary cursor-pointer"
+                                  />
+                                  <div className="flex items-center gap-0.5 w-16 h-9 rounded-md border border-border bg-background px-2">
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      max="60"
+                                      value={annualDiscount}
+                                      onChange={(e) => {
+                                        const pct = Math.min(60, Math.max(0, Number(e.target.value) || 0)).toString();
+                                        setAnnualDiscount(pct);
+                                        if (form.price) {
+                                          const computed = (Number(form.price) * 12 * (1 - Number(pct) / 100)).toFixed(2);
+                                          setForm((p) => ({ ...p, annualPrice: computed }));
+                                          setErrors((p) => ({ ...p, annualPrice: "" }));
+                                        }
+                                      }}
+                                      className="w-full text-sm text-foreground bg-transparent outline-none"
+                                    />
+                                    <span className="text-xs text-muted-foreground">%</span>
+                                  </div>
                                 </div>
-                                {billingIntervalDays === iv.days && <Check className="w-4 h-4 text-foreground ml-2" />}
-                              </DropdownMenuItem>
-                            ))}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                              </div>
+                            </div>
+
+                            {/* Computed annual price + override */}
+                            <div className="flex items-start gap-3">
+                              <div className="flex-1">
+                                <Label className="text-xs text-muted-foreground mb-1.5 block">Annual price (USDC)</Label>
+                                <div className="relative">
+                                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">$</span>
+                                  <Input
+                                    value={form.annualPrice}
+                                    onChange={(e) => {
+                                      const val = e.target.value;
+                                      setForm({ ...form, annualPrice: val });
+                                      setErrors((p) => ({ ...p, annualPrice: "" }));
+                                      // Back-calculate discount
+                                      if (form.price && val && Number(val) > 0) {
+                                        const backPct = Math.round((1 - Number(val) / (Number(form.price) * 12)) * 100);
+                                        if (backPct >= 0 && backPct <= 60) setAnnualDiscount(String(backPct));
+                                      }
+                                    }}
+                                    placeholder={form.price ? (Number(form.price) * 12 * 0.8).toFixed(2) : "278.40"}
+                                    type="number"
+                                    min="0.01"
+                                    step="0.01"
+                                    className="h-9 bg-background border-border pl-6 text-sm"
+                                  />
+                                </div>
+                                {errors.annualPrice && <p className="text-xs text-destructive mt-1">{errors.annualPrice}</p>}
+                              </div>
+
+                              {form.price && form.annualPrice && Number(form.annualPrice) > 0 && (
+                                <div className="pt-6 text-right">
+                                  <p className="text-xs font-semibold text-green-500">
+                                    {Math.round((1 - Number(form.annualPrice) / (Number(form.price) * 12)) * 100)}% off
+                                  </p>
+                                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                                    vs ${(Number(form.price) * 12).toFixed(2)}/yr
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    </div>
+                    </>
                   )}
                 </div>
 
@@ -1722,16 +1874,33 @@ function PlansTable({
   async function registerOnChain(plan: CatalogPlan) {
     // Check wallet connection
     if (!isConnected || !address) {
-      toast.error("Please connect your wallet first");
+      toast.error("Connect your wallet to continue");
       return;
+    }
+
+    // Verify the connected wallet matches the stored provider wallet
+    try {
+      const walletRes = await fetch("/api/auth/wallet-status");
+      if (walletRes.ok) {
+        const { storedWallet } = await walletRes.json();
+        if (
+          storedWallet &&
+          address.toLowerCase() !== storedWallet.toLowerCase()
+        ) {
+          toast.error(
+            `Wrong wallet connected. Switch to ${storedWallet.slice(0, 6)}…${storedWallet.slice(-4)} to register on-chain.`,
+            { duration: 6000 },
+          );
+          return;
+        }
+      }
+    } catch {
+      // Non-blocking — proceed if wallet-status check fails
     }
 
     // Free plans (price = 0) cannot be registered — PlanFactory requires price > 0
     if (parseFloat(plan.price) === 0) {
-      toast.error(
-        "Free plans cannot be registered on-chain. The PlanFactory contract requires price > 0. Free plan access is managed off-chain.",
-        { duration: 6000 },
-      );
+      toast.error("Free plans don't need on-chain registration.", { duration: 4000 });
       return;
     }
 
@@ -1823,9 +1992,7 @@ function PlansTable({
         }
         throw new Error(data.error || "Registration failed");
       }
-      toast.success(
-        `Plan registered on-chain — you are the owner! Tx: ${(data.txHash ?? "").slice(0, 10)}…`,
-      );
+      toast.success(`Registered on-chain · ${(data.txHash ?? "").slice(0, 10)}…`);
       load();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Registration failed";
@@ -1835,7 +2002,7 @@ function PlansTable({
         msg.includes("denied") ||
         msg.includes("User rejected")
       ) {
-        toast.error("Signature request was rejected");
+        toast.error("Signature cancelled");
       } else {
         toast.error(msg);
       }
@@ -1978,7 +2145,19 @@ function PlansTable({
                     {isFree ? (
                       <span className="text-sm font-medium text-foreground">Free</span>
                     ) : (
-                      <span className="text-sm">${parseFloat(plan.price).toFixed(2)} USDC</span>
+                      <div>
+                        <span className="text-sm">${parseFloat(plan.price).toFixed(2)} USDC</span>
+                        {plan.annualPrice && parseFloat(plan.annualPrice) > 0 && (
+                          <span className="block text-[10px] text-muted-foreground">
+                            ${parseFloat(plan.annualPrice).toFixed(2)}/yr
+                            {parseFloat(plan.price) > 0 && (
+                              <span className="ml-1 text-green-500">
+                                · {Math.round((1 - parseFloat(plan.annualPrice) / (parseFloat(plan.price) * 12)) * 100)}% off
+                              </span>
+                            )}
+                          </span>
+                        )}
+                      </div>
                     )}
                   </TableCell>
                   <TableCell className="text-muted-foreground text-xs">
@@ -4941,6 +5120,17 @@ function PlanDetailView({
             >
               {isFree ? "Free" : planPriceLabel(plan)}
             </Badge>
+            {/* Annual price badge */}
+            {!isFree && plan.annualPrice && parseFloat(plan.annualPrice) > 0 && (
+              <Badge variant="outline" className="text-xs font-semibold text-green-600 border-green-500/30 bg-green-500/5">
+                ${parseFloat(plan.annualPrice).toFixed(2)}/yr
+                {parseFloat(plan.price) > 0 && (
+                  <span className="ml-1 opacity-70">
+                    · {Math.round((1 - parseFloat(plan.annualPrice) / (parseFloat(plan.price) * 12)) * 100)}% off
+                  </span>
+                )}
+              </Badge>
+            )}
             {/* Chain sync badge */}
             {plan.chainSyncStatus && (
               <ChainSyncBadge status={plan.chainSyncStatus} />
@@ -5340,7 +5530,7 @@ function PlanDetailView({
             <h3 className="text-base font-semibold">Billing Details</h3>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
               <div>
-                <p className="text-xs text-muted-foreground mb-1.5">Price</p>
+                <p className="text-xs text-muted-foreground mb-1.5">Monthly price</p>
                 <p className="text-lg font-semibold">
                   {isFree ? (
                     <span className="text-green-500">Free</span>
@@ -5348,10 +5538,28 @@ function PlanDetailView({
                     `$${parseFloat(plan.price).toFixed(2)}`
                   )}
                 </p>
-                {!isFree && <p className="text-xs text-muted-foreground">USDC</p>}
+                {!isFree && <p className="text-xs text-muted-foreground">USDC / mo</p>}
               </div>
               <div>
-                <p className="text-xs text-muted-foreground mb-1.5">Billing Interval</p>
+                <p className="text-xs text-muted-foreground mb-1.5">Annual price</p>
+                {plan.annualPrice && parseFloat(plan.annualPrice) > 0 ? (
+                  <>
+                    <p className="text-lg font-semibold">${parseFloat(plan.annualPrice).toFixed(2)}</p>
+                    <p className="text-xs text-muted-foreground">
+                      USDC / yr
+                      {parseFloat(plan.price) > 0 && (
+                        <span className="ml-1.5 text-green-500 font-medium">
+                          {Math.round((1 - parseFloat(plan.annualPrice) / (parseFloat(plan.price) * 12)) * 100)}% off
+                        </span>
+                      )}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground">—</p>
+                )}
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1.5">Billing interval</p>
                 <p className="text-lg font-semibold">
                   {plan.billingInterval <= 30
                     ? "Monthly"
@@ -5368,6 +5576,8 @@ function PlanDetailView({
                   {plan.acceptedToken.slice(0, 6)}…{plan.acceptedToken.slice(-4)}
                 </p>
               </div>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 pt-2 border-t border-border">
               <div>
                 <p className="text-xs text-muted-foreground mb-1.5">Environment</p>
                 <EnvBadge mode={plan.environmentMode} />

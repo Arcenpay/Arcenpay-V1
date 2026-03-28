@@ -250,3 +250,63 @@ export async function sendInvoiceEmail(input: InvoiceEmailInput): Promise<void> 
 </html>`,
   });
 }
+
+/** Sends a welcome email to new ArcenPay providers on sign-up */
+export async function sendWelcomeEmail(
+  email: string,
+  firstName?: string,
+): Promise<void> {
+  const greeting = firstName ? `Welcome, ${firstName}!` : "Welcome to ArcenPay!";
+  const dashboardUrl = APP_URL ?? "https://app.arcenpay.xyz";
+
+  await resend.emails.send({
+    from: FROM,
+    to: email,
+    subject: "Welcome to ArcenPay — your billing infrastructure is ready",
+    html: `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Welcome to ArcenPay</title>
+</head>
+<body style="margin:0;padding:0;background:#0a0a0a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 16px;">
+    <tr><td align="center">
+      <table width="480" cellpadding="0" cellspacing="0"
+             style="background:#111113;border:1px solid #222225;border-radius:12px;padding:40px;">
+        <tr><td>
+          <p style="margin:0 0 32px;font-size:22px;font-weight:700;color:#ffffff;">ArcenPay</p>
+
+          <h1 style="margin:0 0 12px;font-size:20px;font-weight:600;color:#ffffff;">${greeting}</h1>
+          <p style="margin:0 0 20px;font-size:14px;color:#888;line-height:1.6;">
+            Your ArcenPay provider account is ready. You can now set up plans, feature flags,
+            and embed a billing portal directly into your product — no backend required.
+          </p>
+
+          <p style="margin:0 0 8px;font-size:13px;font-weight:600;color:#ccc;">Get started in 3 steps:</p>
+          <ol style="margin:0 0 28px;padding-left:20px;font-size:13px;color:#888;line-height:2;">
+            <li>Create an API key in your dashboard</li>
+            <li>Call <code style="color:#6366f1;font-size:12px;">/api/v1/access-tokens</code> from your backend to identify customers</li>
+            <li>Embed <code style="color:#6366f1;font-size:12px;">&lt;ArcenEmbed /&gt;</code> in your product</li>
+          </ol>
+
+          <a href="${dashboardUrl}"
+             style="display:inline-block;padding:12px 28px;background:#6366f1;color:#fff;
+                    text-decoration:none;border-radius:8px;font-size:14px;font-weight:600;">
+            Open Dashboard
+          </a>
+
+          <hr style="margin:32px 0;border:none;border-top:1px solid #222225;" />
+          <p style="margin:0;font-size:12px;color:#444;">
+            Questions? Reply to this email — we read every one.
+          </p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`,
+  });
+}

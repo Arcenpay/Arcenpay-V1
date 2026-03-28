@@ -1095,14 +1095,52 @@ export function SubscribeButton({ planId }: { planId: string }) {
             ],
             code: `import { ArcenpayEmbed } from "@arcenpay/react";
 
-// 1. Get access token from your backend
-// POST /api/v1/access-tokens  →  { token: "at_xxx" }
+// ─── Step 1: Generate a token SERVER-SIDE (e.g. Next.js API route) ───────────
+// This auto-creates the company if it doesn't exist and assigns a free plan.
 
-export function BillingPortal({ token }: { token: string }) {
+// app/api/billing-token/route.ts
+export async function GET(req: Request) {
+  const session = await getSession(req); // your auth
+
+  const res = await fetch("https://dashboard.arcenpay.xyz/api/v1/access-tokens", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: \`Bearer \${process.env.ARCENPAY_API_KEY}\`, // api_xxx
+    },
+    body: JSON.stringify({
+      company: {
+        id: session.userId,          // your internal user/company ID
+        email: session.email,        // optional — used for display
+        name: session.orgName,       // optional — company display name
+      },
+      // user: { id: session.userId, email: session.email }, // optional user record
+      expires_in: 3600,              // 1 hour (60–86400)
+    }),
+  });
+
+  const { data } = await res.json();
+  return Response.json({ token: data.token });
+}
+
+// ─── Step 2: Fetch token client-side and render the embed ─────────────────────
+
+export function BillingPortal() {
+  const [token, setToken] = React.useState("");
+
+  React.useEffect(() => {
+    fetch("/api/billing-token")
+      .then((r) => r.json())
+      .then((d) => setToken(d.token));
+  }, []);
+
+  if (!token) return null;
+
   return (
     <ArcenpayEmbed
-      id="comp_abc123"
+      componentId="cmn_xxxxxxxxxxxxxxxx"  // from Components dashboard
       accessToken={token}
+      baseUrl="https://dashboard.arcenpay.xyz"
     />
   );
 }`,

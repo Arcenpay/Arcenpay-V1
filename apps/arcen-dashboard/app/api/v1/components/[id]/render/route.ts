@@ -174,7 +174,7 @@ export async function GET(
       if (company.activePlanId) {
         activePlan = (await db.catalogPlan.findUnique({
           where: { id: company.activePlanId },
-          select: { id: true, name: true, tier: true, price: true, billingInterval: true, description: true },
+          select: { id: true, name: true, tier: true, price: true, annualPrice: true, billingInterval: true, description: true },
         })) as Record<string, unknown> | null;
       }
 
@@ -225,8 +225,15 @@ export async function GET(
   const allPlans = await db.catalogPlan.findMany({
     where: { teamId, status: "PUBLISHED", active: true },
     orderBy: { price: "asc" },
-    select: { id: true, name: true, tier: true, price: true, billingInterval: true, description: true, metadata: true },
+    select: { id: true, name: true, tier: true, price: true, annualPrice: true, billingInterval: true, description: true, metadata: true, acceptedToken: true },
   });
+
+  // Get provider's wallet (team owner) for payment routing
+  const teamOwnerMember = await db.teamMember.findFirst({
+    where: { teamId: teamId ?? "", role: "OWNER" },
+    select: { user: { select: { walletAddress: true } } },
+  });
+  const providerWallet = teamOwnerMember?.user?.walletAddress ?? null;
 
   const rawElements = Array.isArray(component.elements) ? component.elements as Array<Record<string, unknown>> : [];
   const rawDesign = (component.design ?? {}) as Record<string, unknown>;
@@ -248,6 +255,7 @@ export async function GET(
       entitlements,
       usage: usageData,
       userId,
+      providerWallet,
     },
   });
 }

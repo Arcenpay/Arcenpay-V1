@@ -54,9 +54,11 @@ interface PortalState {
   error: string | null;
   view: PortalView;
   selectedPlanId: string | null;
+  billingPeriod: "monthly" | "annual";
   processing: boolean;
   flashMsg: string | null;
   successMsg: string | null;
+  successTxHash: string | null;
 }
 
 type PortalAction =
@@ -67,8 +69,9 @@ type PortalAction =
   | { type: "OPEN_UNSUBSCRIBE" }
   | { type: "OPEN_PAYMENT" }
   | { type: "GOTO_PORTAL"; flashMsg?: string }
-  | { type: "GOTO_SUCCESS"; successMsg: string }
+  | { type: "GOTO_SUCCESS"; successMsg: string; txHash?: string }
   | { type: "SELECT_PLAN"; planId: string }
+  | { type: "SET_BILLING_PERIOD"; period: "monthly" | "annual" }
   | { type: "PROCESSING_START" }
   | { type: "PROCESSING_DONE"; flashMsg?: string }
   | { type: "PROCESSING_ERR"; error: string };
@@ -79,9 +82,11 @@ const initialState: PortalState = {
   error: null,
   view: "portal",
   selectedPlanId: null,
+  billingPeriod: "monthly",
   processing: false,
   flashMsg: null,
   successMsg: null,
+  successTxHash: null,
 };
 
 function reducer(state: PortalState, action: PortalAction): PortalState {
@@ -122,9 +127,12 @@ function reducer(state: PortalState, action: PortalAction): PortalState {
         view: "success",
         processing: false,
         successMsg: action.successMsg,
+        successTxHash: action.txHash ?? null,
       };
     case "SELECT_PLAN":
       return { ...state, selectedPlanId: action.planId };
+    case "SET_BILLING_PERIOD":
+      return { ...state, billingPeriod: action.period };
     case "PROCESSING_START":
       return { ...state, processing: true };
     case "PROCESSING_DONE":
@@ -560,7 +568,7 @@ function ViewHeader({
   );
 }
 
-// ─── Safe wagmi hook (avoids crash if wagmi not installed) ────────────────────
+// ─── Safe wagmi hooks (avoids crash if wagmi not installed) ───────────────────
 
 function useSafeAccount(): {
   address: string | undefined;
@@ -574,6 +582,38 @@ function useSafeAccount(): {
   } catch {
     return { address: undefined, isConnected: false };
   }
+}
+
+function useSafeSendTransaction(): {
+  sendTransactionAsync: ((args: { to: string; data: string; value?: bigint }) => Promise<string>) | null;
+} {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const wagmi = require("wagmi");
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    const { sendTransactionAsync } = wagmi.useSendTransaction();
+    return { sendTransactionAsync };
+  } catch {
+    return { sendTransactionAsync: null };
+  }
+}
+
+// ─── Responsive container width hook ─────────────────────────────────────────
+
+function useContainerWidth(ref: React.RefObject<HTMLDivElement | null>): number {
+  const [width, setWidth] = useState(800);
+  useEffect(() => {
+    if (!ref.current) return;
+    const el = ref.current;
+    const ro = new ResizeObserver((entries) => {
+      const w = entries[0]?.contentRect.width;
+      if (w) setWidth(w);
+    });
+    ro.observe(el);
+    setWidth(el.offsetWidth);
+    return () => ro.disconnect();
+  }, [ref]);
+  return width;
 }
 
 // ─── Portal element renderers ─────────────────────────────────────────────────
@@ -2114,512 +2154,676 @@ function PortalContent({
 function CheckoutContent({
   data,
   selectedPlanId,
+  billingPeriod,
   processing,
   tokens,
   onSelectPlan,
+  onBillingPeriodChange,
   onSubscribeClose,
   onNextPayment,
   onBack,
+  containerWidth,
 }: {
   data: ComponentRenderData;
   selectedPlanId: string | null;
+  billingPeriod: "monthly" | "annual";
   processing: boolean;
   tokens: Tokens;
   onSelectPlan: (id: string) => void;
+  onBillingPeriodChange: (p: "monthly" | "annual") => void;
   onSubscribeClose: () => void;
   onNextPayment: () => void;
   onBack: () => void;
+  containerWidth: number;
 }) {
+  const [coupon, setCoupon] = useState("");
+  const [couponApplied, setCouponApplied] = useState<{ code: string; discount: number } | null>(null);
+  const [couponError, setCouponError] = useState("");
+  const [couponLoading, setCouponLoading] = useState(false);
+
+  // Show toggle whenever ANY plan has annual pricing configured; also always render it
+  // so users can switch even if only some plans have annual prices.
+  const hasAnyAnnualPrice = data.plans.some(
+    (p: ComponentPlanSummary) => p.annualPrice && parseFloat(String(p.annualPrice)) > 0,
+  );
+
+  const isMobile = containerWidth < 640;
+  const isNarrow = containerWidth < 820;
+
   const currentPlan = data.activePlan;
   const currentPlanId = currentPlan?.id;
-  const selectedPlan = data.plans.find(
-    (p: ComponentPlanSummary) => p.id === selectedPlanId,
-  );
-  const isCurrentPlanSelected =
-    selectedPlanId === currentPlanId || !selectedPlanId;
-  const isFreePlanSelected = selectedPlan
-    ? parseFloat(String(selectedPlan.price)) === 0
-    : false;
-  const needsPayment =
-    selectedPlanId && !isCurrentPlanSelected && !isFreePlanSelected;
+  const selectedPlan = data.plans.find((p: ComponentPlanSummary) => p.id === selectedPlanId);
+  const isCurrentPlanSelected = selectedPlanId === currentPlanId || !selectedPlanId;
+  const isFreePlanSelected = selectedPlan ? parseFloat(String(selectedPlan.price)) === 0 : false;
+  const needsPayment = selectedPlanId && !isCurrentPlanSelected && !isFreePlanSelected;
+
+  // Compute displayed price based on billing period
+  const getDisplayPrice = (plan: ComponentPlanSummary) => {
+    const monthly = parseFloat(String(plan.price));
+    const annual = plan.annualPrice ? parseFloat(String(plan.annualPrice)) : 0;
+    return billingPeriod === "annual" && annual > 0 ? annual : monthly;
+  };
+
+  const selectedDisplayPrice = selectedPlan ? getDisplayPrice(selectedPlan) : 0;
+  const discountedPrice = couponApplied
+    ? selectedDisplayPrice * (1 - couponApplied.discount / 100)
+    : selectedDisplayPrice;
+
+  // Next billing date (28th of next month)
+  const nextBill = (() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() + 1);
+    d.setDate(28);
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  })();
+
+  async function applyCoupon() {
+    if (!coupon.trim()) return;
+    setCouponLoading(true);
+    setCouponError("");
+    try {
+      const res = await fetch(`/api/v1/coupons/validate?code=${encodeURIComponent(coupon.trim())}`);
+      if (res.ok) {
+        const d = await res.json();
+        setCouponApplied({ code: coupon.trim().toUpperCase(), discount: d.discount });
+      } else {
+        setCouponError("Invalid or expired coupon");
+      }
+    } catch {
+      // offline fallback — treat as invalid
+      setCouponError("Could not validate coupon");
+    } finally {
+      setCouponLoading(false);
+    }
+  }
+
+  const S = {
+    label: { fontSize: tokens.size - 2, color: tokens.mutedColor, marginBottom: 2 } as React.CSSProperties,
+    value: { fontSize: tokens.size, fontWeight: 600, color: tokens.textColor } as React.CSSProperties,
+    divider: { height: 1, background: "#e5e7eb", margin: "12px 0" } as React.CSSProperties,
+  };
 
   return (
     <div>
-      <ViewHeader
-        title="Select Plan"
-        onBack={onBack}
-        step={1}
-        tokens={tokens}
-      />
+      {/* Step header */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ width: 20, height: 20, borderRadius: "50%", border: `2px solid ${tokens.mutedColor}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ width: 8, height: 8, borderRadius: "50%", background: tokens.mutedColor }} />
+          </div>
+          <span style={{ fontSize: tokens.size - 1, color: tokens.mutedColor, fontWeight: 500 }}>1. Plan</span>
+        </div>
+        <button onClick={onBack} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, color: tokens.mutedColor, lineHeight: 1 }}>×</button>
+      </div>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 280px",
-          gap: 24,
-          alignItems: "start",
-        }}
-      >
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ fontSize: tokens.size + 4, fontWeight: 700, color: tokens.textColor, marginBottom: 2 }}>Select plan</div>
+        <div style={{ fontSize: tokens.size - 1, color: tokens.mutedColor }}>Choose your base plan</div>
+      </div>
+
+      {/* Billing period toggle — always shown so users know annual billing is available */}
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 20 }}>
+        <div style={{ display: "inline-flex", background: "#f0f0f0", borderRadius: 999, padding: 3 }}>
+          {(["monthly", "annual"] as const).map((period) => (
+            <button
+              key={period}
+              onClick={() => onBillingPeriodChange(period)}
+              style={{
+                padding: "6px 16px",
+                borderRadius: 999,
+                border: "none",
+                cursor: "pointer",
+                fontSize: tokens.size - 1,
+                fontWeight: 600,
+                background: billingPeriod === period ? "#fff" : "transparent",
+                color: billingPeriod === period ? tokens.textColor : tokens.mutedColor,
+                boxShadow: billingPeriod === period ? "0 1px 4px rgba(0,0,0,0.12)" : "none",
+                transition: "all 0.15s",
+                position: "relative",
+              }}
+            >
+              {period === "monthly" ? "Billed monthly" : "Billed yearly"}
+              {period === "annual" && hasAnyAnnualPrice && (
+                <span style={{
+                  marginLeft: 5, fontSize: tokens.size - 3, fontWeight: 700,
+                  color: billingPeriod === "annual" ? "#16a34a" : "#16a34a",
+                  background: "#dcfce7", padding: "1px 5px", borderRadius: 4,
+                }}>
+                  Save
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Main grid: plan cards + sidebar */}
+      <div style={{
+        display: "flex",
+        flexDirection: isNarrow ? "column" : "row",
+        gap: 20,
+        alignItems: "start",
+      }}>
         {/* Left: plan cards */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-            gap: 12,
-          }}
-        >
+        <div style={{
+          flex: 1,
+          display: "grid",
+          gridTemplateColumns: isMobile
+            ? "1fr"
+            : `repeat(${Math.min(data.plans.length, 3)}, 1fr)`,
+          gap: 12,
+          minWidth: 0,
+        }}>
           {data.plans.map((plan: ComponentPlanSummary) => {
             const isActive = plan.id === currentPlanId;
             const isSelected = plan.id === selectedPlanId;
-            const price = parseFloat(String(plan.price));
+            const price = getDisplayPrice(plan);
+            const monthlyPrice = parseFloat(String(plan.price));
+            const annualVal = plan.annualPrice ? parseFloat(String(plan.annualPrice)) : 0;
+
             return (
               <div
                 key={plan.id}
                 onClick={() => onSelectPlan(plan.id)}
                 style={{
-                  padding: 20,
+                  padding: "24px 20px",
                   borderRadius: tokens.radius,
-                  border: isSelected
-                    ? `2px solid ${tokens.primary}`
-                    : `1px solid #e5e7eb`,
-                  background: isSelected ? `${tokens.primary}08` : tokens.bg,
+                  border: isSelected ? `2px solid ${tokens.textColor}` : `1px solid #e5e7eb`,
+                  background: tokens.bg,
                   cursor: "pointer",
                   position: "relative",
-                  transition: "border-color 0.15s, background 0.15s",
+                  display: "flex",
+                  flexDirection: "column",
+                  minHeight: 180,
                 }}
               >
-                {isActive ? (
-                  <div
-                    style={{
-                      position: "absolute",
-                      top: -10,
-                      left: 12,
-                      background: tokens.primary,
-                      color: isLightColor(tokens.primary) ? "#000" : "#fff",
-                      fontSize: 10,
-                      fontWeight: 700,
-                      padding: "2px 8px",
-                      borderRadius: 999,
-                    }}
-                  >
-                    Current
-                  </div>
-                ) : null}
-                <div
-                  style={{
-                    fontWeight: 700,
-                    fontSize: tokens.size + 2,
-                    color: tokens.textColor,
-                    marginBottom: 2,
-                  }}
-                >
-                  {plan.name}
-                </div>
-                {plan.description ? (
-                  <div
-                    style={{
-                      fontSize: tokens.size - 2,
-                      color: tokens.mutedColor,
-                      marginBottom: 10,
-                    }}
-                  >
-                    {plan.description}
-                  </div>
-                ) : null}
-                <div
-                  style={{
-                    fontSize: tokens.size + 8,
-                    fontWeight: 800,
-                    color: tokens.textColor,
-                    marginBottom: 16,
-                  }}
-                >
-                  {price === 0 ? "Free" : `$${price.toFixed(2)}`}
-                  {price > 0 ? (
-                    <span
-                      style={{
-                        fontSize: tokens.size - 1,
-                        fontWeight: 400,
-                        color: tokens.mutedColor,
-                      }}
-                    >
-                      {intervalLabel(plan.billingInterval)}
+                {isActive && (
+                  <div style={{
+                    position: "absolute", top: 12, right: 12,
+                    background: tokens.textColor, color: tokens.bg,
+                    fontSize: 10, fontWeight: 700, padding: "3px 10px", borderRadius: 999,
+                    letterSpacing: "0.03em",
+                  }}>Active</div>
+                )}
+                <div style={{ fontWeight: 700, fontSize: tokens.size + 6, color: tokens.textColor, marginBottom: 4 }}>{plan.name}</div>
+                {plan.description && (
+                  <div style={{ fontSize: tokens.size - 1, color: tokens.mutedColor, marginBottom: 14, lineHeight: 1.45 }}>{plan.description}</div>
+                )}
+                <div style={{ marginBottom: 20 }}>
+                  <span style={{ fontSize: tokens.size + 14, fontWeight: 800, color: tokens.textColor, letterSpacing: "-0.02em" }}>
+                    {price === 0 ? "$0.00" : `$${price.toFixed(2)}`}
+                  </span>
+                  {price > 0 && (
+                    <span style={{ fontSize: tokens.size, color: tokens.mutedColor }}>
+                      /{billingPeriod === "annual" && annualVal > 0 ? "month" : "month"}
                     </span>
-                  ) : null}
+                  )}
+                  {billingPeriod === "annual" && annualVal > 0 && monthlyPrice > 0 && (
+                    <div style={{ fontSize: tokens.size - 1, color: "#16a34a", marginTop: 4, fontWeight: 500 }}>
+                      Save {Math.round((1 - annualVal / (monthlyPrice * 12)) * 100)}% vs monthly
+                    </div>
+                  )}
                 </div>
-                <div
-                  style={{
-                    width: "100%",
-                    padding: "7px 0",
-                    background: isActive
-                      ? "transparent"
-                      : isSelected
-                        ? tokens.primary
-                        : "#f3f4f6",
-                    color: isActive
-                      ? tokens.mutedColor
-                      : isSelected
-                        ? isLightColor(tokens.primary)
-                          ? "#000"
-                          : "#fff"
-                        : tokens.textColor,
-                    border: isActive ? `1px solid #e5e7eb` : "none",
-                    borderRadius: tokens.radius / 1.5,
-                    textAlign: "center",
-                    fontSize: tokens.size - 1,
-                    fontWeight: 600,
-                  }}
-                >
-                  {isActive
-                    ? "✓ Current plan"
-                    : isSelected
-                      ? "✓ Plan selected"
-                      : "Choose plan"}
-                </div>
+                <div style={{ flex: 1 }} />
+                {isActive ? (
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: tokens.size - 1, color: tokens.mutedColor, paddingTop: 12, borderTop: "1px solid #f0f0f0" }}>
+                    <span>✓</span> Current plan
+                  </div>
+                ) : (
+                  <button
+                    style={{
+                      width: "100%", padding: "11px 0", borderRadius: tokens.radius / 1.5,
+                      background: tokens.textColor, color: tokens.bg,
+                      border: "none", cursor: "pointer",
+                      fontSize: tokens.size, fontWeight: 600,
+                    }}
+                  >
+                    Choose plan
+                  </button>
+                )}
               </div>
             );
           })}
         </div>
 
-        {/* Right: summary */}
-        <div
-          style={{
-            background: "#fafafa",
-            border: `1px solid #f0f0f0`,
-            borderRadius: tokens.radius,
-            padding: "20px",
-            display: "flex",
-            flexDirection: "column",
-            gap: 16,
-          }}
-        >
-          <div
-            style={{
-              fontWeight: 700,
-              fontSize: tokens.size + 2,
-              color: tokens.textColor,
-            }}
-          >
-            Summary
+        {/* Right: subscription summary */}
+        <div style={{ width: isNarrow ? "100%" : 300, flexShrink: 0, background: "#fff", border: "1px solid #e5e7eb", borderRadius: tokens.radius, overflow: "hidden" }}>
+          <div style={{ padding: "16px 20px", borderBottom: "1px solid #f0f0f0" }}>
+            <div style={{ fontSize: tokens.size - 1, color: tokens.mutedColor, fontWeight: 500 }}>Subscription</div>
           </div>
-
-          {selectedPlan && !isCurrentPlanSelected ? (
-            <div>
-              {currentPlan ? (
-                <div
-                  style={{
-                    marginBottom: 12,
-                    paddingBottom: 12,
-                    borderBottom: `1px solid #e5e7eb`,
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: tokens.size - 2,
-                      color: tokens.mutedColor,
-                      marginBottom: 4,
-                    }}
-                  >
-                    Current
-                  </div>
-                  <div
-                    style={{
-                      fontWeight: 500,
-                      color: tokens.mutedColor,
-                      textDecoration: "line-through",
-                      fontSize: tokens.size,
-                    }}
-                  >
-                    {currentPlan.name} —{" "}
-                    {fmtPrice(currentPlan.price, currentPlan.billingInterval)}
+          <div style={{ padding: "16px 20px" }}>
+            {/* Plan row */}
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 2 }}>
+                <div>
+                  <div style={{ fontSize: tokens.size - 2, color: tokens.mutedColor }}>Plan</div>
+                  <div style={{ fontWeight: 700, fontSize: tokens.size, color: tokens.textColor }}>
+                    {selectedPlan?.name ?? currentPlan?.name ?? "Free"}
                   </div>
                 </div>
-              ) : null}
-              <div
-                style={{
-                  marginBottom: 16,
-                  paddingBottom: 12,
-                  borderBottom: `1px solid #e5e7eb`,
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: tokens.size - 2,
-                    color: tokens.mutedColor,
-                    marginBottom: 4,
-                  }}
-                >
-                  New plan
-                </div>
-                <div
-                  style={{
-                    fontWeight: 700,
-                    color: tokens.textColor,
-                    fontSize: tokens.size,
-                  }}
-                >
-                  {selectedPlan.name} —{" "}
-                  {fmtPrice(selectedPlan.price, selectedPlan.billingInterval)}
+                <div style={{ fontWeight: 600, fontSize: tokens.size, color: tokens.textColor }}>
+                  {selectedDisplayPrice === 0 ? "$0.00/mo" : `$${selectedDisplayPrice.toFixed(2)}/${billingPeriod === "annual" ? "yr" : "mo"}`}
                 </div>
               </div>
-              {needsPayment ? (
-                <PrimaryButton
-                  tokens={tokens}
-                  fullWidth
-                  onClick={onNextPayment}
-                >
-                  Next: Payment →
-                </PrimaryButton>
-              ) : (
-                <PrimaryButton
-                  tokens={tokens}
-                  fullWidth
-                  disabled={processing}
-                  onClick={onSubscribeClose}
-                >
-                  {processing ? "Processing..." : "Subscribe and close"}
-                </PrimaryButton>
-              )}
-              {selectedPlan ? (
-                <div
-                  style={{
-                    marginTop: 10,
-                    fontSize: 11,
-                    color: tokens.mutedColor,
-                    lineHeight: 1.5,
-                  }}
-                >
-                  {parseFloat(String(selectedPlan.price)) === 0
-                    ? "You are switching to the free plan. Your subscription will be cancelled."
-                    : `You will be billed ${fmtPrice(selectedPlan.price, selectedPlan.billingInterval)} unless you unsubscribe.`}
+            </div>
+
+            <div style={S.divider} />
+
+            {/* Coupon code */}
+            <div style={{ marginBottom: 12 }}>
+              {couponApplied ? (
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <div style={{ fontSize: tokens.size - 1, color: "#16a34a", fontWeight: 500 }}>
+                    {couponApplied.code} — {couponApplied.discount}% off
+                  </div>
+                  <button onClick={() => { setCouponApplied(null); setCoupon(""); }} style={{ background: "none", border: "none", cursor: "pointer", fontSize: tokens.size - 2, color: tokens.mutedColor }}>Remove</button>
                 </div>
-              ) : null}
+              ) : (
+                <div style={{ display: "flex", gap: 6 }}>
+                  <input
+                    value={coupon}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => { setCoupon(e.target.value); setCouponError(""); }}
+                    onKeyDown={(e: React.KeyboardEvent) => { if (e.key === "Enter") applyCoupon(); }}
+                    placeholder="Coupon code"
+                    style={{
+                      flex: 1, padding: "6px 10px", borderRadius: 6, border: "1px solid #e5e7eb",
+                      fontSize: tokens.size - 1, outline: "none", fontFamily: tokens.font,
+                    }}
+                  />
+                  <button
+                    onClick={applyCoupon}
+                    disabled={couponLoading || !coupon.trim()}
+                    style={{
+                      padding: "6px 12px", borderRadius: 6, border: "1px solid #e5e7eb",
+                      background: "#fff", cursor: "pointer", fontSize: tokens.size - 1, fontWeight: 500,
+                      color: tokens.textColor, opacity: couponLoading ? 0.6 : 1,
+                    }}
+                  >
+                    {couponLoading ? "…" : "Apply"}
+                  </button>
+                </div>
+              )}
+              {couponError && <div style={{ fontSize: tokens.size - 2, color: "#ef4444", marginTop: 4 }}>{couponError}</div>}
             </div>
-          ) : (
-            <div
-              style={{ color: tokens.mutedColor, fontSize: tokens.size - 1 }}
-            >
-              {selectedPlanId === currentPlanId
-                ? "You are already on this plan."
-                : "Select a plan to see pricing."}
+
+            <div style={S.divider} />
+
+            {/* Totals */}
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+              <span style={{ fontSize: tokens.size - 1, color: tokens.mutedColor }}>
+                {billingPeriod === "annual" ? "Annual total:" : "Monthly total:"}
+              </span>
+              <span style={{ fontSize: tokens.size - 1, fontWeight: 600, color: tokens.textColor }}>
+                ${discountedPrice.toFixed(2)}/{billingPeriod === "annual" ? "yr" : "mo"}
+              </span>
             </div>
-          )}
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
+              <span style={{ fontSize: tokens.size - 1, color: tokens.mutedColor }}>Due today:</span>
+              <span style={{ fontSize: tokens.size - 1, fontWeight: 700, color: tokens.textColor }}>
+                ${isCurrentPlanSelected ? "0.00" : discountedPrice.toFixed(2)}
+              </span>
+            </div>
+
+            {/* CTA */}
+            {isCurrentPlanSelected ? (
+              <button
+                onClick={onBack}
+                style={{
+                  width: "100%", padding: "12px 0", borderRadius: tokens.radius / 1.5,
+                  background: tokens.textColor, color: tokens.bg,
+                  border: "none", cursor: "pointer", fontSize: tokens.size - 1, fontWeight: 700,
+                }}
+              >
+                Close
+              </button>
+            ) : needsPayment ? (
+              <button
+                onClick={onNextPayment}
+                style={{
+                  width: "100%", padding: "12px 0", borderRadius: tokens.radius / 1.5,
+                  background: tokens.textColor, color: tokens.bg,
+                  border: "none", cursor: "pointer", fontSize: tokens.size - 1, fontWeight: 700,
+                }}
+              >
+                Next: Payment
+              </button>
+            ) : (
+              <button
+                onClick={onSubscribeClose}
+                disabled={processing}
+                style={{
+                  width: "100%", padding: "12px 0", borderRadius: tokens.radius / 1.5,
+                  background: tokens.textColor, color: tokens.bg,
+                  border: "none", cursor: processing ? "not-allowed" : "pointer",
+                  fontSize: tokens.size - 1, fontWeight: 700, opacity: processing ? 0.7 : 1,
+                }}
+              >
+                {processing ? "Processing…" : "Subscribe and close"}
+              </button>
+            )}
+
+            {/* Billing fine print */}
+            {selectedPlan && !isCurrentPlanSelected && discountedPrice > 0 && (
+              <div style={{ fontSize: 11, color: tokens.mutedColor, marginTop: 10, lineHeight: 1.5 }}>
+                You will be billed ${discountedPrice.toFixed(2)}/{billingPeriod === "annual" ? "yr" : "mo"} every {billingPeriod === "annual" ? "year" : "month"} on the 28th unless you unsubscribe.
+              </div>
+            )}
+          </div>
+
+          {/* Next bill info */}
+          <div style={{ padding: "10px 20px", borderTop: "1px solid #f0f0f0", background: "#fafafa" }}>
+            <div style={{ fontSize: 11, color: tokens.mutedColor }}>
+              Next bill due <strong style={{ color: tokens.textColor }}>{nextBill}</strong>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
-// ─── Payment content (inline) ─────────────────────────────────────────────────
+// ─── Payment content (inline) — real USDC transfer ────────────────────────────
+
+// Minimal ERC-20 transfer ABI
+const ERC20_TRANSFER_ABI = [
+  {
+    name: "transfer",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "to", type: "address" },
+      { name: "amount", type: "uint256" },
+    ],
+    outputs: [{ name: "", type: "bool" }],
+  },
+] as const;
 
 function PaymentContent({
   data,
   selectedPlanId,
+  billingPeriod,
   processing,
   tokens,
   onConfirm,
   onBack,
+  containerWidth,
 }: {
   data: ComponentRenderData;
   selectedPlanId: string | null;
+  billingPeriod: "monthly" | "annual";
   processing: boolean;
   tokens: Tokens;
-  onConfirm: () => void;
+  onConfirm: (txHash?: string) => void;
   onBack: () => void;
+  containerWidth: number;
 }) {
-  const selectedPlan = data.plans.find(
-    (p: ComponentPlanSummary) => p.id === selectedPlanId,
-  );
+  const selectedPlan = data.plans.find((p: ComponentPlanSummary) => p.id === selectedPlanId);
   const { address, isConnected } = useSafeAccount();
+  const { sendTransactionAsync } = useSafeSendTransaction();
   const [localAddress, setLocalAddress] = useState<string | null>(null);
   const [connecting, setConnecting] = useState(false);
-  const price = selectedPlan ? parseFloat(String(selectedPlan.price)) : 0;
-  const acceptedToken = selectedPlan?.acceptedToken ?? "USDC";
+  const [txStatus, setTxStatus] = useState<"idle" | "approving" | "confirmed" | "error">("idle");
+  const [txError, setTxError] = useState("");
 
+  const monthlyPrice = selectedPlan ? parseFloat(String(selectedPlan.price)) : 0;
+  const annualPrice = selectedPlan?.annualPrice ? parseFloat(String(selectedPlan.annualPrice)) : 0;
+  const price = billingPeriod === "annual" && annualPrice > 0 ? annualPrice : monthlyPrice;
+  const usdcContract = selectedPlan?.acceptedToken as `0x${string}` | undefined;
+  const providerWallet = data.providerWallet as `0x${string}` | null | undefined;
+
+  const isNarrowPayment = containerWidth < 700;
   const finalAddress = address || localAddress;
   const finalConnected = isConnected || !!localAddress;
 
   async function connectWindowEthereum() {
-    if (typeof window === "undefined") return;
-    const eth = (
-      window as unknown as {
-        ethereum?: { request: (args: { method: string }) => Promise<string[]> };
-      }
-    ).ethereum;
+    const eth = (window as unknown as { ethereum?: { request: (a: { method: string }) => Promise<string[]> } }).ethereum;
     if (!eth) return;
     setConnecting(true);
     try {
       const accounts = await eth.request({ method: "eth_requestAccounts" });
       setLocalAddress(accounts[0] ?? null);
-    } catch {
-      // user rejected
-    } finally {
-      setConnecting(false);
+    } catch { /* rejected */ } finally { setConnecting(false); }
+  }
+
+  async function handlePay() {
+    setTxError("");
+    // If no on-chain contract or provider wallet, fall back to off-chain record
+    if (!usdcContract || !providerWallet || !sendTransactionAsync || price === 0) {
+      onConfirm(undefined);
+      return;
+    }
+
+    setTxStatus("approving");
+    try {
+      // Encode ERC-20 transfer(to, amount) — USDC has 6 decimals
+      const amountMicro = BigInt(Math.round(price * 1_000_000));
+      // transfer(address,uint256) selector = 0xa9059cbb
+      const toBytes = providerWallet.toLowerCase().replace("0x", "").padStart(64, "0");
+      const amountHex = amountMicro.toString(16).padStart(64, "0");
+      const data = `0xa9059cbb${toBytes}${amountHex}` as `0x${string}`;
+
+      const txHash = await sendTransactionAsync({ to: usdcContract, data });
+      setTxStatus("confirmed");
+      onConfirm(txHash);
+    } catch (err: unknown) {
+      setTxStatus("error");
+      const msg = err instanceof Error ? err.message : "Transaction failed";
+      if (msg.includes("rejected") || msg.includes("denied")) {
+        setTxError("Transaction cancelled");
+      } else {
+        setTxError(msg.slice(0, 120));
+      }
     }
   }
 
+  // Determine payment mode
+  const isOnChain = !!(usdcContract && providerWallet && price > 0);
+  const needsWallet = isOnChain && (!finalConnected || !finalAddress);
+  const hasWindowEth = typeof window !== "undefined" && !!(window as unknown as { ethereum?: unknown }).ethereum;
+
   return (
     <div>
-      <ViewHeader title="Payment" onBack={onBack} step={2} tokens={tokens} />
-
-      {/* Plan summary card */}
-      {selectedPlan ? (
-        <Card tokens={tokens} style={{ marginBottom: 20 }}>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
-            <div>
-              <div
-                style={{
-                  fontSize: tokens.size - 2,
-                  color: tokens.mutedColor,
-                  marginBottom: 2,
-                }}
-              >
-                Selected plan
-              </div>
-              <div
-                style={{
-                  fontWeight: 700,
-                  fontSize: tokens.size + 2,
-                  color: tokens.textColor,
-                }}
-              >
-                {selectedPlan.name}
-              </div>
-            </div>
-            <div style={{ textAlign: "right" }}>
-              <div
-                style={{
-                  fontWeight: 800,
-                  fontSize: tokens.size + 6,
-                  color: tokens.textColor,
-                }}
-              >
-                ${price.toFixed(2)}
-              </div>
-              <div
-                style={{ fontSize: tokens.size - 2, color: tokens.mutedColor }}
-              >
-                {intervalLabel(selectedPlan.billingInterval)} · {acceptedToken}
-              </div>
-            </div>
-          </div>
-        </Card>
-      ) : null}
-
-      {/* Wallet section */}
-      <Card tokens={tokens} style={{ marginBottom: 20 }}>
-        <div
-          style={{
-            fontWeight: 600,
-            fontSize: tokens.size,
-            color: tokens.textColor,
-            marginBottom: 14,
-          }}
-        >
-          Wallet
+      {/* Step header */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{
+            width: 20, height: 20, borderRadius: "50%",
+            background: tokens.primary, color: isLightColor(tokens.primary) ? "#000" : "#fff",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 11, fontWeight: 700,
+          }}>2</div>
+          <span style={{ fontSize: tokens.size, color: tokens.textColor, fontWeight: 600 }}>Payment</span>
         </div>
-        {finalConnected && finalAddress ? (
-          <div>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                padding: "10px 12px",
-                background: "#f0fdf4",
-                border: "1px solid #bbf7d0",
-                borderRadius: 8,
-                marginBottom: 12,
-              }}
-            >
-              <span style={{ fontSize: 16 }}>✓</span>
-              <div>
-                <div
-                  style={{
-                    fontWeight: 600,
-                    color: "#166534",
-                    fontSize: tokens.size - 1,
-                  }}
-                >
-                  Wallet connected
+        <button onClick={onBack} style={{ background: "none", border: "none", cursor: "pointer", fontSize: tokens.size - 1, color: tokens.mutedColor, display: "flex", alignItems: "center", gap: 4 }}>
+          ← Back
+        </button>
+      </div>
+
+      <div style={{ display: "flex", flexDirection: isNarrowPayment ? "column" : "row", gap: 20, alignItems: "start" }}>
+        {/* Left: payment section */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {isOnChain ? (
+            /* ── On-chain USDC payment ── */
+            <Card tokens={tokens} style={{ marginBottom: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+                <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#2775ca", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <span style={{ color: "#fff", fontSize: 14, fontWeight: 800 }}>$</span>
                 </div>
-                <div
-                  style={{
-                    color: "#4ade80",
-                    fontSize: 11,
-                    fontFamily: "monospace",
-                    marginTop: 1,
-                  }}
-                >
-                  {finalAddress.slice(0, 6)}...{finalAddress.slice(-4)}
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: tokens.size, color: tokens.textColor }}>Pay with USDC</div>
+                  <div style={{ fontSize: 11, color: tokens.mutedColor }}>On-chain payment · EVM</div>
                 </div>
               </div>
-            </div>
-            <PrimaryButton
-              tokens={tokens}
-              fullWidth
-              disabled={processing}
-              onClick={onConfirm}
-            >
-              {processing
-                ? "Processing..."
-                : `Confirm — Pay $${price.toFixed(2)} ${acceptedToken}`}
-            </PrimaryButton>
-          </div>
-        ) : (
-          <div>
-            <div
-              style={{
-                color: tokens.mutedColor,
-                fontSize: tokens.size - 1,
-                marginBottom: 12,
-              }}
-            >
-              Connect your wallet to pay with {acceptedToken}
-            </div>
-            {typeof window !== "undefined" &&
-            (window as unknown as { ethereum?: unknown }).ethereum ? (
-              <PrimaryButton
-                tokens={tokens}
-                fullWidth
-                disabled={connecting}
-                onClick={connectWindowEthereum}
-              >
-                {connecting ? "Connecting..." : "Connect Wallet"}
+
+              {needsWallet ? (
+                <div>
+                  <div style={{ fontSize: tokens.size - 1, color: tokens.mutedColor, marginBottom: 14, lineHeight: 1.5 }}>
+                    Connect your crypto wallet to pay <strong>${price.toFixed(2)} USDC</strong> on-chain.
+                  </div>
+                  {hasWindowEth ? (
+                    <PrimaryButton tokens={tokens} fullWidth disabled={connecting} onClick={connectWindowEthereum}>
+                      {connecting ? "Connecting…" : "Connect wallet"}
+                    </PrimaryButton>
+                  ) : (
+                    <div style={{ padding: "12px 14px", background: "#fef9c3", border: "1px solid #fde68a", borderRadius: 8 }}>
+                      <div style={{ fontWeight: 600, fontSize: tokens.size - 1, color: "#92400e", marginBottom: 2 }}>No wallet found</div>
+                      <div style={{ fontSize: tokens.size - 2, color: "#78350f" }}>
+                        Install <a href="https://metamask.io" target="_blank" rel="noreferrer" style={{ color: "#d97706" }}>MetaMask</a> or use a Web3-enabled browser.
+                      </div>
+                    </div>
+                  )}
+                  {/* Off-chain fallback option */}
+                  <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid #f0f0f0", textAlign: "center" }}>
+                    <div style={{ fontSize: 11, color: tokens.mutedColor, marginBottom: 8 }}>No wallet? Activate without on-chain payment:</div>
+                    <button
+                      onClick={() => onConfirm(undefined)}
+                      disabled={processing}
+                      style={{
+                        background: "none", border: `1px solid #e5e7eb`, borderRadius: 6,
+                        padding: "7px 16px", cursor: "pointer", fontSize: tokens.size - 1,
+                        color: tokens.mutedColor, fontWeight: 500,
+                      }}
+                    >
+                      {processing ? "Activating…" : "Activate without payment"}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  {/* Connected wallet badge */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 8, marginBottom: 16 }}>
+                    <span style={{ color: "#16a34a", fontWeight: 700, fontSize: 16 }}>✓</span>
+                    <div>
+                      <div style={{ fontWeight: 600, color: "#166534", fontSize: tokens.size - 1 }}>Wallet connected</div>
+                      <div style={{ color: tokens.mutedColor, fontSize: 11, fontFamily: "monospace", marginTop: 1 }}>
+                        {finalAddress!.slice(0, 10)}…{finalAddress!.slice(-6)}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => { setLocalAddress(null); }}
+                      style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", fontSize: 11, color: tokens.mutedColor }}
+                    >
+                      Disconnect
+                    </button>
+                  </div>
+
+                  {txStatus === "error" && (
+                    <div style={{ padding: "10px 12px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, fontSize: tokens.size - 2, color: "#dc2626", marginBottom: 12 }}>
+                      {txError || "Transaction failed. Please try again."}
+                    </div>
+                  )}
+
+                  <PrimaryButton tokens={tokens} fullWidth disabled={processing || txStatus === "approving"} onClick={handlePay}>
+                    {txStatus === "approving"
+                      ? "Confirm in wallet…"
+                      : processing
+                        ? "Processing…"
+                        : `Pay $${price.toFixed(2)} USDC`}
+                  </PrimaryButton>
+
+                  <div style={{ fontSize: 11, color: tokens.mutedColor, marginTop: 10, lineHeight: 1.6 }}>
+                    Sending USDC to{" "}
+                    <span style={{ fontFamily: "monospace" }}>{providerWallet!.slice(0, 6)}…{providerWallet!.slice(-4)}</span>.
+                    Your plan activates immediately after the transaction confirms.
+                  </div>
+                </div>
+              )}
+            </Card>
+          ) : (
+            /* ── Off-chain / free plan activation ── */
+            <Card tokens={tokens} style={{ marginBottom: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+                <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#f0fdf4", border: "1px solid #86efac", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                </div>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: tokens.size, color: tokens.textColor }}>Confirm subscription</div>
+                  <div style={{ fontSize: 11, color: tokens.mutedColor }}>
+                    {price === 0 ? "Free plan · no payment required" : "Billed externally"}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ padding: "12px 14px", background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 8, marginBottom: 16 }}>
+                <div style={{ fontSize: tokens.size - 1, color: tokens.mutedColor, lineHeight: 1.6 }}>
+                  {price === 0
+                    ? "This is a free plan. Click below to activate it — no payment needed."
+                    : "Your subscription will be activated and billing handled separately by the provider."}
+                </div>
+              </div>
+
+              {txStatus === "error" && (
+                <div style={{ padding: "10px 12px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, fontSize: tokens.size - 2, color: "#dc2626", marginBottom: 12 }}>
+                  {txError || "Something went wrong. Please try again."}
+                </div>
+              )}
+
+              <PrimaryButton tokens={tokens} fullWidth disabled={processing} onClick={() => onConfirm(undefined)}>
+                {processing ? "Activating…" : price === 0 ? "Activate free plan" : "Confirm subscription"}
               </PrimaryButton>
+            </Card>
+          )}
+        </div>
+
+        {/* Right: order summary */}
+        <div style={{
+          width: isNarrowPayment ? "100%" : 260, flexShrink: 0,
+          background: "#fff", border: "1px solid #e5e7eb",
+          borderRadius: tokens.radius, overflow: "hidden",
+        }}>
+          <div style={{ padding: "14px 18px", borderBottom: "1px solid #f0f0f0", background: "#fafafa" }}>
+            <div style={{ fontSize: 11, color: tokens.mutedColor, fontWeight: 600, letterSpacing: "0.02em", textTransform: "uppercase" as const }}>
+              Order summary
+            </div>
+          </div>
+          <div style={{ padding: "16px 18px" }}>
+            {selectedPlan ? (
+              <>
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ fontSize: tokens.size - 2, color: tokens.mutedColor, marginBottom: 2 }}>Plan</div>
+                  <div style={{ fontWeight: 700, fontSize: tokens.size + 1, color: tokens.textColor }}>{selectedPlan.name}</div>
+                  {selectedPlan.description && (
+                    <div style={{ fontSize: tokens.size - 2, color: tokens.mutedColor, marginTop: 2 }}>{selectedPlan.description}</div>
+                  )}
+                </div>
+
+                <div style={{ height: 1, background: "#e5e7eb", margin: "12px 0" }} />
+
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                  <span style={{ fontSize: tokens.size - 1, color: tokens.mutedColor }}>
+                    {billingPeriod === "annual" ? "Annual price" : "Monthly price"}
+                  </span>
+                  <span style={{ fontSize: tokens.size - 1, fontWeight: 600, color: tokens.textColor }}>
+                    {price === 0 ? "Free" : `$${price.toFixed(2)}`}
+                  </span>
+                </div>
+
+                <div style={{ height: 1, background: "#e5e7eb", margin: "10px 0" }} />
+
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                  <span style={{ fontSize: tokens.size - 1, color: tokens.mutedColor, fontWeight: 600 }}>Due today</span>
+                  <span style={{ fontWeight: 800, fontSize: tokens.size + 1, color: tokens.textColor }}>
+                    {price === 0 ? "$0.00" : `$${price.toFixed(2)}`}
+                  </span>
+                </div>
+
+                {price > 0 && isOnChain && (
+                  <div style={{ fontSize: 11, color: tokens.mutedColor, marginTop: 6 }}>Paid in USDC · EVM</div>
+                )}
+              </>
             ) : (
-              <div
-                style={{
-                  fontSize: tokens.size - 2,
-                  color: tokens.mutedColor,
-                  padding: "10px 12px",
-                  background: "#f9fafb",
-                  border: "1px solid #f0f0f0",
-                  borderRadius: 8,
-                }}
-              >
-                No wallet detected. Install MetaMask or another Web3 wallet to
-                pay on-chain.
-              </div>
+              <div style={{ fontSize: tokens.size - 1, color: tokens.mutedColor }}>No plan selected</div>
             )}
           </div>
-        )}
-      </Card>
-
-      <div style={{ fontSize: 11, color: tokens.mutedColor, lineHeight: 1.5 }}>
-        {acceptedToken} payments are processed on-chain.
+        </div>
       </div>
     </div>
   );
 }
 
-// ─── Unsubscribe content (inline) ─────────────────────────────────────────────
+// ─── Unsubscribe content ──────────────────────────────────────────────────────
 
 function UnsubscribeContent({
   data,
@@ -2627,82 +2831,77 @@ function UnsubscribeContent({
   tokens,
   onConfirm,
   onBack,
+  containerWidth,
 }: {
   data: ComponentRenderData;
   processing: boolean;
   tokens: Tokens;
   onConfirm: () => void;
   onBack: () => void;
+  containerWidth: number;
 }) {
   const activePlan = data.activePlan;
-  return (
-    <div>
-      <ViewHeader title="Cancel Subscription" onBack={onBack} tokens={tokens} />
+  const price = activePlan ? parseFloat(String(activePlan.price)) : 0;
+  const isMobileUnsub = containerWidth < 600;
 
-      <div
-        style={{
-          color: tokens.mutedColor,
-          fontSize: tokens.size - 1,
-          lineHeight: 1.7,
-          marginBottom: 20,
-        }}
-      >
-        You will retain access until the end of the billing period. After that,
-        your account will be moved to the Free plan.
+  const endDate = (() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() + 1);
+    d.setDate(28);
+    return d.toLocaleDateString("en-US", { month: "numeric", day: "numeric", year: "numeric" });
+  })();
+
+  return (
+    <div style={{ display: "flex", flexDirection: isMobileUnsub ? "column" : "row", minHeight: 260 }}>
+      {/* Left */}
+      <div style={{ flex: 1, padding: "32px 28px", borderRight: isMobileUnsub ? "none" : "1px solid #f0f0f0", borderBottom: isMobileUnsub ? "1px solid #f0f0f0" : "none" }}>
+        <button onClick={onBack} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, color: tokens.mutedColor, lineHeight: 1, marginBottom: 20, padding: 0 }}>×</button>
+        <div style={{ fontWeight: 800, fontSize: tokens.size + 10, color: tokens.textColor, marginBottom: 8 }}>Cancel subscription</div>
+        <div style={{ fontSize: tokens.size - 1, color: tokens.mutedColor, lineHeight: 1.6, marginBottom: 24 }}>
+          You will retain access to your plan until the end of the billing period, on {endDate}
+        </div>
+        <div style={{ fontSize: tokens.size - 1, color: tokens.mutedColor, marginBottom: 8 }}>Not ready to cancel?</div>
+        <button
+          onClick={onBack}
+          style={{
+            padding: "8px 16px", borderRadius: tokens.radius / 1.5,
+            border: `1px solid #e5e7eb`, background: "#fff",
+            cursor: "pointer", fontSize: tokens.size - 1, fontWeight: 500,
+            color: tokens.textColor,
+          }}
+        >
+          Manage plan
+        </button>
       </div>
 
-      {activePlan ? (
-        <Card tokens={tokens} style={{ marginBottom: 24 }}>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              marginBottom: 8,
-            }}
-          >
-            <span
-              style={{ fontSize: tokens.size - 1, color: tokens.mutedColor }}
-            >
-              Current plan
-            </span>
-            <span style={{ fontWeight: 600, color: tokens.textColor }}>
-              {activePlan.name}
+      {/* Right: summary + action */}
+      <div style={{ width: isMobileUnsub ? "100%" : 260, flexShrink: 0, padding: "24px 20px", display: "flex", flexDirection: "column" }}>
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: tokens.size - 2, color: tokens.mutedColor, marginBottom: 2 }}>Plan</div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+            <span style={{ fontWeight: 700, fontSize: tokens.size, color: tokens.textColor }}>{activePlan?.name ?? "Free"}</span>
+            <span style={{ fontWeight: 600, fontSize: tokens.size - 1, color: tokens.mutedColor }}>
+              ${price.toFixed(2)}/mo
             </span>
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between" }}>
-            <span
-              style={{ fontSize: tokens.size - 1, color: tokens.mutedColor }}
-            >
-              Charge
-            </span>
-            <span style={{ fontWeight: 600, color: tokens.textColor }}>
-              {fmtPrice(activePlan.price, activePlan.billingInterval)}
-            </span>
-          </div>
-        </Card>
-      ) : null}
-
-      <div style={{ display: "flex", gap: 12 }}>
-        <SecondaryButton tokens={tokens} onClick={onBack} style={{ flex: 1 }}>
-          Keep plan
-        </SecondaryButton>
+        </div>
+        <div style={{ height: 1, background: "#f0f0f0", marginBottom: 12 }} />
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+          <span style={{ fontSize: tokens.size - 1, color: tokens.mutedColor }}>Monthly total:</span>
+          <span style={{ fontSize: tokens.size - 1, fontWeight: 600, color: tokens.textColor }}>${price.toFixed(2)}/mo</span>
+        </div>
+        <div style={{ flex: 1 }} />
         <button
           onClick={onConfirm}
           disabled={processing}
           style={{
-            flex: 1,
-            padding: "10px 0",
-            background: "#ef4444",
-            border: "none",
-            borderRadius: tokens.radius / 1.5,
-            cursor: processing ? "not-allowed" : "pointer",
-            fontWeight: 600,
-            fontSize: tokens.size - 1,
-            color: "#fff",
-            opacity: processing ? 0.7 : 1,
+            width: "100%", padding: "12px 0", borderRadius: tokens.radius / 1.5,
+            background: tokens.textColor, color: tokens.bg,
+            border: "none", cursor: processing ? "not-allowed" : "pointer",
+            fontWeight: 700, fontSize: tokens.size - 1, opacity: processing ? 0.7 : 1,
           }}
         >
-          {processing ? "Cancelling..." : "Cancel subscription"}
+          {processing ? "Cancelling…" : "Cancel subscription"}
         </button>
       </div>
     </div>
@@ -2715,12 +2914,14 @@ function SuccessContent({
   data,
   selectedPlanId,
   successMsg,
+  txHash,
   tokens,
   onDone,
 }: {
   data: ComponentRenderData;
   selectedPlanId: string | null;
   successMsg: string | null;
+  txHash: string | null;
   tokens: Tokens;
   onDone: () => void;
 }) {
@@ -2728,41 +2929,93 @@ function SuccessContent({
     data.plans.find((p: ComponentPlanSummary) => p.id === selectedPlanId) ??
     data.activePlan;
 
+  const [countdown, setCountdown] = useState(5);
+
   useEffect(() => {
-    const t = setTimeout(onDone, 3000);
-    return () => clearTimeout(t);
+    const interval = setInterval(() => {
+      setCountdown((c) => {
+        if (c <= 1) { clearInterval(interval); onDone(); return 0; }
+        return c - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
   }, [onDone]);
 
+  const price = selectedPlan
+    ? parseFloat(String(selectedPlan.price))
+    : 0;
+
   return (
-    <div style={{ textAlign: "center", padding: "40px 20px" }}>
-      <div style={{ fontSize: 64, marginBottom: 16 }}>✓</div>
-      <div
-        style={{
-          fontWeight: 800,
-          fontSize: tokens.size + 10,
-          color: tokens.textColor,
-          marginBottom: 8,
-        }}
-      >
-        {successMsg ?? "Plan activated!"}
+    <div style={{ padding: "40px 24px", textAlign: "center", maxWidth: 480, margin: "0 auto" }}>
+      {/* Success circle */}
+      <div style={{
+        width: 72, height: 72, borderRadius: "50%",
+        background: "#dcfce7", border: "2px solid #86efac",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        margin: "0 auto 24px",
+      }}>
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="20 6 9 17 4 12" />
+        </svg>
       </div>
-      {selectedPlan ? (
-        <div
-          style={{
-            color: tokens.mutedColor,
-            fontSize: tokens.size,
-            marginBottom: 24,
-          }}
-        >
-          {selectedPlan.name} —{" "}
-          {fmtPrice(selectedPlan.price, selectedPlan.billingInterval)}
+
+      <div style={{ fontWeight: 800, fontSize: tokens.size + 10, color: tokens.textColor, marginBottom: 6, letterSpacing: "-0.02em" }}>
+        {successMsg ?? "You're all set!"}
+      </div>
+      <div style={{ fontSize: tokens.size - 1, color: tokens.mutedColor, marginBottom: 28, lineHeight: 1.6 }}>
+        Your subscription is now active and ready to use.
+      </div>
+
+      {/* Plan summary card */}
+      {selectedPlan && (
+        <div style={{
+          background: "#f9fafb", border: "1px solid #e5e7eb",
+          borderRadius: tokens.radius, padding: "16px 20px",
+          marginBottom: 20, textAlign: "left",
+        }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+            <div>
+              <div style={{ fontSize: tokens.size - 2, color: tokens.mutedColor, marginBottom: 2 }}>Plan</div>
+              <div style={{ fontWeight: 700, fontSize: tokens.size + 2, color: tokens.textColor }}>{selectedPlan.name}</div>
+            </div>
+            <div style={{
+              background: "#dcfce7", color: "#166534",
+              fontSize: 11, fontWeight: 700, padding: "4px 10px",
+              borderRadius: 999,
+            }}>Active</div>
+          </div>
+          {price > 0 && (
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: tokens.size - 1 }}>
+              <span style={{ color: tokens.mutedColor }}>Amount paid</span>
+              <span style={{ fontWeight: 600, color: tokens.textColor }}>${price.toFixed(2)}</span>
+            </div>
+          )}
+          {txHash && (
+            <>
+              <div style={{ height: 1, background: "#e5e7eb", margin: "12px 0" }} />
+              <div style={{ fontSize: tokens.size - 2, color: tokens.mutedColor, marginBottom: 4 }}>Transaction</div>
+              <a
+                href={`https://basescan.org/tx/${txHash}`}
+                target="_blank"
+                rel="noreferrer"
+                style={{
+                  fontFamily: "monospace", fontSize: 11,
+                  color: tokens.primary, textDecoration: "none",
+                  wordBreak: "break-all",
+                }}
+              >
+                {txHash.slice(0, 20)}…{txHash.slice(-8)} ↗
+              </a>
+            </>
+          )}
         </div>
-      ) : null}
-      <PrimaryButton tokens={tokens} onClick={onDone}>
-        Done
+      )}
+
+      <PrimaryButton tokens={tokens} onClick={onDone} fullWidth style={{ fontSize: tokens.size, padding: "12px 0" }}>
+        Return to portal
       </PrimaryButton>
       <div style={{ fontSize: 11, color: tokens.mutedColor, marginTop: 12 }}>
-        Returning to portal in 3 seconds…
+        Redirecting in {countdown}s…
       </div>
     </div>
   );
@@ -2782,6 +3035,8 @@ export function ArcenEmbed({
   onViewChange,
 }: ArcenEmbedProps) {
   const resolvedId = componentId ?? id ?? "";
+
+  // All hooks must run unconditionally before any early returns
   const [state, dispatch] = useReducer(
     reducer,
     initialView ?? "portal",
@@ -2789,6 +3044,8 @@ export function ArcenEmbed({
   );
   const tokenRef = useRef(accessToken);
   const baseRef = useRef(baseUrl);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const containerWidth = useContainerWidth(containerRef);
 
   // Notify parent whenever view changes
   useEffect(() => {
@@ -2856,6 +3113,8 @@ export function ArcenEmbed({
         body: JSON.stringify(body ?? {}),
       });
       if (!res.ok) {
+        // Detect token expiry specifically — bubble up a sentinel so callers can show a refresh UI
+        if (res.status === 401) throw new Error("__TOKEN_EXPIRED__");
         const err = await res.json().catch(() => ({}));
         throw new Error(
           ((err as Record<string, unknown>).error as string) ??
@@ -2868,20 +3127,25 @@ export function ArcenEmbed({
   );
 
   const handleSwitchPlan = useCallback(
-    async (planId: string) => {
+    async (planId: string, txHash?: string) => {
       dispatch({ type: "PROCESSING_START" });
       try {
-        await callApi("/api/v1/companies/plan", { planId });
+        await callApi("/api/v1/companies/plan", {
+          planId,
+          billingPeriod: state.billingPeriod,
+          ...(txHash ? { txHash } : {}),
+        });
         await fetchData();
-        dispatch({ type: "GOTO_SUCCESS", successMsg: "Plan activated!" });
+        dispatch({ type: "GOTO_SUCCESS", successMsg: "Plan activated!", txHash });
       } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : "Failed to switch plan";
         dispatch({
-          type: "PROCESSING_ERR",
-          error: e instanceof Error ? e.message : "Failed to switch plan",
+          type: "FETCH_ERR",
+          error: msg === "__TOKEN_EXPIRED__" ? "__TOKEN_EXPIRED__" : msg,
         });
       }
     },
-    [callApi, fetchData],
+    [callApi, fetchData, state.billingPeriod],
   );
 
   const handleUnsubscribe = useCallback(async () => {
@@ -2894,9 +3158,10 @@ export function ArcenEmbed({
         flashMsg: "Subscription cancelled. You are now on the Free plan.",
       });
     } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Failed to cancel subscription";
       dispatch({
-        type: "PROCESSING_ERR",
-        error: e instanceof Error ? e.message : "Failed to cancel subscription",
+        type: msg === "__TOKEN_EXPIRED__" ? "FETCH_ERR" : "PROCESSING_ERR",
+        error: msg === "__TOKEN_EXPIRED__" ? "__TOKEN_EXPIRED__" : msg,
       });
     }
   }, [callApi, fetchData]);
@@ -2907,10 +3172,39 @@ export function ArcenEmbed({
     error,
     view,
     selectedPlanId,
+    billingPeriod,
     processing,
     flashMsg,
     successMsg,
+    successTxHash,
   } = state;
+
+  // Guard: missing required props — rendered after all hooks to comply with Rules of Hooks
+  if (!accessToken) {
+    return (
+      <div style={{ fontFamily: "system-ui, sans-serif", padding: 32, textAlign: "center" }}>
+        <div style={{ fontSize: 28, marginBottom: 8 }}>🔑</div>
+        <div style={{ fontWeight: 700, color: "#111827", marginBottom: 4 }}>Access token required</div>
+        <div style={{ fontSize: 13, color: "#6b7280" }}>
+          Pass an <code style={{ background: "#f3f4f6", padding: "2px 5px", borderRadius: 4 }}>accessToken</code> prop to{" "}
+          <code style={{ background: "#f3f4f6", padding: "2px 5px", borderRadius: 4 }}>ArcenEmbed</code>.
+        </div>
+      </div>
+    );
+  }
+
+  if (!resolvedId && !mockData) {
+    return (
+      <div style={{ fontFamily: "system-ui, sans-serif", padding: 32, textAlign: "center" }}>
+        <div style={{ fontSize: 28, marginBottom: 8 }}>🧩</div>
+        <div style={{ fontWeight: 700, color: "#111827", marginBottom: 4 }}>Component ID required</div>
+        <div style={{ fontSize: 13, color: "#6b7280" }}>
+          Pass a <code style={{ background: "#f3f4f6", padding: "2px 5px", borderRadius: 4 }}>componentId</code> prop to{" "}
+          <code style={{ background: "#f3f4f6", padding: "2px 5px", borderRadius: 4 }}>ArcenEmbed</code>.
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -2938,20 +3232,62 @@ export function ArcenEmbed({
   }
 
   if (error) {
+    const isExpired =
+      error.includes("__TOKEN_EXPIRED__") ||
+      error.toLowerCase().includes("expired") ||
+      error.toLowerCase().includes("invalid") ||
+      error === "401";
     return (
       <div
+        ref={containerRef}
         className={className}
         style={{
           fontFamily: "system-ui, sans-serif",
-          padding: 24,
+          padding: 40,
           textAlign: "center",
           color: "#6b7280",
           ...style,
         }}
       >
-        <div style={{ fontSize: 32, marginBottom: 8 }}>⚠️</div>
-        <div style={{ fontWeight: 600, marginBottom: 4 }}>Portal not found</div>
-        <div style={{ fontSize: 13 }}>{error}</div>
+        {isExpired ? (
+          <>
+            <div style={{ fontSize: 40, marginBottom: 12 }}>🔒</div>
+            <div style={{ fontWeight: 700, fontSize: 16, color: "#111827", marginBottom: 6 }}>
+              Session expired
+            </div>
+            <div style={{ fontSize: 13, marginBottom: 20, lineHeight: 1.6 }}>
+              Your billing session has timed out. Please refresh the page to continue.
+            </div>
+            <button
+              onClick={() => window.location.reload()}
+              style={{
+                padding: "10px 24px", background: "#111827", color: "#fff",
+                border: "none", borderRadius: 8, cursor: "pointer",
+                fontSize: 14, fontWeight: 600,
+              }}
+            >
+              Refresh page
+            </button>
+          </>
+        ) : (
+          <>
+            <div style={{ fontSize: 40, marginBottom: 12 }}>⚠️</div>
+            <div style={{ fontWeight: 700, fontSize: 16, color: "#111827", marginBottom: 6 }}>
+              Unable to load portal
+            </div>
+            <div style={{ fontSize: 13, marginBottom: 20 }}>{error}</div>
+            <button
+              onClick={() => fetchData()}
+              style={{
+                padding: "10px 24px", background: "#111827", color: "#fff",
+                border: "none", borderRadius: 8, cursor: "pointer",
+                fontSize: 14, fontWeight: 600,
+              }}
+            >
+              Try again
+            </button>
+          </>
+        )}
       </div>
     );
   }
@@ -2972,7 +3308,7 @@ export function ArcenEmbed({
   };
 
   return (
-    <div className={className} style={containerStyle}>
+    <div ref={containerRef} className={className} style={containerStyle}>
       {view === "portal" && (
         <PortalContent
           data={data}
@@ -2986,9 +3322,12 @@ export function ArcenEmbed({
         <CheckoutContent
           data={data}
           selectedPlanId={selectedPlanId}
+          billingPeriod={billingPeriod}
           processing={processing}
           tokens={tokens}
+          containerWidth={containerWidth}
           onSelectPlan={(planId) => dispatch({ type: "SELECT_PLAN", planId })}
+          onBillingPeriodChange={(p) => dispatch({ type: "SET_BILLING_PERIOD", period: p })}
           onSubscribeClose={() => {
             const targetId = selectedPlanId ?? data.activePlan?.id ?? "";
             if (targetId && targetId !== data.activePlan?.id) {
@@ -3005,10 +3344,12 @@ export function ArcenEmbed({
         <PaymentContent
           data={data}
           selectedPlanId={selectedPlanId}
+          billingPeriod={billingPeriod}
           processing={processing}
           tokens={tokens}
-          onConfirm={() => {
-            if (selectedPlanId) handleSwitchPlan(selectedPlanId);
+          containerWidth={containerWidth}
+          onConfirm={(txHash) => {
+            if (selectedPlanId) handleSwitchPlan(selectedPlanId, txHash);
           }}
           onBack={() => dispatch({ type: "OPEN_CHECKOUT" })}
         />
@@ -3018,6 +3359,7 @@ export function ArcenEmbed({
           data={data}
           processing={processing}
           tokens={tokens}
+          containerWidth={containerWidth}
           onConfirm={handleUnsubscribe}
           onBack={() => dispatch({ type: "GOTO_PORTAL" })}
         />
@@ -3027,6 +3369,7 @@ export function ArcenEmbed({
           data={data}
           selectedPlanId={selectedPlanId}
           successMsg={successMsg}
+          txHash={successTxHash}
           tokens={tokens}
           onDone={() => dispatch({ type: "GOTO_PORTAL" })}
         />

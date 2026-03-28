@@ -340,9 +340,11 @@ export interface ComponentPlanSummary {
   id: string;
   name: string;
   price: string;
+  annualPrice?: string | null;
   tier: string;
   billingInterval: number;
   acceptedToken?: string;
+  acceptedChainId?: number;
   description?: string;
 }
 
@@ -385,6 +387,7 @@ export interface ComponentRenderData {
   plans: ComponentPlanSummary[];
   company?: Record<string, unknown> | null;
   userId?: string | null;
+  providerWallet?: string | null;
 }
 
 // --- SDK Config ---

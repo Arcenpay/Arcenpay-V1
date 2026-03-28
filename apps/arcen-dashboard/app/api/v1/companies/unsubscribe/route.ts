@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createHash } from "crypto";
 import { db } from "@/lib/db";
+import { deliverWebhook } from "@/lib/deliver-webhook";
 
 function verifyAccessToken(token: string, secret: string) {
   try {
@@ -63,6 +64,12 @@ export async function POST(req: NextRequest) {
     where: { id: companyId },
     data: { activePlanId: freePlan?.id ?? null },
   });
+
+  // Fire outbound webhook (non-blocking)
+  deliverWebhook(teamId, "company.plan.cancelled", {
+    companyId,
+    freePlanId: freePlan?.id ?? null,
+  }).catch(() => {});
 
   return NextResponse.json({ data: { success: true, planId: freePlan?.id ?? null } }, { headers: corsHeaders() });
 }

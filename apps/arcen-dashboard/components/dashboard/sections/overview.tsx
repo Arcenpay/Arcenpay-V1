@@ -112,7 +112,7 @@ export function OverviewSection() {
         <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-warning/5 border border-warning/20 animate-in fade-in slide-in-from-top-2 duration-300">
           <AlertTriangle className="w-4 h-4 text-warning shrink-0" />
           <p className="text-sm text-muted-foreground">
-            Wallet is disconnected. Showing workspace default chain data.
+            Wallet disconnected — showing data for the default network.
           </p>
         </div>
       )}

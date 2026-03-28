@@ -9,7 +9,8 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { requireApiKey, isApiKeyError } from "@/lib/api-key-auth";
+import { requireAnyAuth, isAnyAuthError } from "@/lib/require-any-auth";
+import { deliverWebhook } from "@/lib/deliver-webhook";
 import { requirePermission, isErrorResponse } from "@/lib/api-auth";
 import { db } from "@/lib/db";
 import { invalidateUsageCache } from "@/lib/event-aggregator";
@@ -81,7 +82,7 @@ async function upsertCompany(
   teamId: string,
   input: CompanyInput & { name?: string },
   traits?: Record<string, unknown>,
-): Promise<string | null> {
+): Promise<{ id: string; created: boolean } | null> {
   if (!input.id && !input.wallet && !input.email) return null;
 
   const walletAddress = input.wallet?.toLowerCase();
@@ -106,7 +107,7 @@ async function upsertCompany(
       where: { id: existing.id },
       data: { traits: mergedTraits as unknown as Prisma.InputJsonValue, lastSeenAt: new Date() },
     });
-    return existing.id;
+    return { id: existing.id, created: false };
   }
 
   // Create new company
@@ -120,7 +121,7 @@ async function upsertCompany(
       traits: (traits ?? {}) as unknown as Prisma.InputJsonValue,
     },
   });
-  return company.id;
+  return { id: company.id, created: true };
 }
 
 // ─── User upsert ──────────────────────────────────────────────────────────────
@@ -130,7 +131,7 @@ async function upsertUser(
   companyId: string,
   input: UserInput & { name?: string; email?: string },
   traits?: Record<string, unknown>,
-): Promise<string | null> {
+): Promise<{ id: string; created: boolean } | null> {
   if (!input.id && !input.clerk_user_id && !input.wallet) return null;
 
   const walletAddress = input.wallet?.toLowerCase();
@@ -159,7 +160,7 @@ async function upsertUser(
         ...(input.email ? { email: input.email } : {}),
       },
     });
-    return existing.id;
+    return { id: existing.id, created: false };
   }
 
   const user = await db.arcenUser.create({
@@ -174,14 +175,14 @@ async function upsertUser(
       traits: (traits ?? {}) as unknown as Prisma.InputJsonValue,
     },
   });
-  return user.id;
+  return { id: user.id, created: true };
 }
 
 // ─── Route handler ────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
-  const ctx = await requireApiKey(req, { rateLimit: { limit: 1000, windowMs: 60_000 } });
-  if (isApiKeyError(ctx)) return ctx;
+  const ctx = await requireAnyAuth(req);
+  if (isAnyAuthError(ctx)) return ctx;
 
   let body: EventBody;
   try {
@@ -265,15 +266,26 @@ export async function POST(req: NextRequest) {
     let companyId: string | null = null;
 
     if (b.company) {
-      companyId = await upsertCompany(teamId, b.company, b.traits);
+      const result = await upsertCompany(teamId, b.company, b.traits);
+      companyId = result?.id ?? null;
       if (companyId) {
         invalidateFlagCache(`${teamId}:`);
+        if (result?.created) {
+          deliverWebhook(teamId, "company.created", {
+            companyId,
+            externalId: b.company.id ?? null,
+          }).catch(() => {});
+        }
       }
     }
 
     let userId: string | null = null;
     if (b.user && companyId) {
-      userId = await upsertUser(teamId, companyId, b.user, b.traits);
+      const result = await upsertUser(teamId, companyId, b.user, b.traits);
+      userId = result?.id ?? null;
+      if (result?.created && companyId) {
+        deliverWebhook(teamId, "user.created", { userId, companyId }).catch(() => {});
+      }
     }
 
     return NextResponse.json({ ok: true, data: { companyId, userId } });
@@ -285,9 +297,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "name is required for track events" }, { status: 400 });
   }
 
-  const companyId = b.company ? await upsertCompany(teamId, b.company) : null;
-  const userId =
+  const companyResult = b.company ? await upsertCompany(teamId, b.company) : null;
+  const companyId = companyResult?.id ?? null;
+  const userResult =
     b.user && companyId ? await upsertUser(teamId, companyId, b.user) : null;
+  const userId = userResult?.id ?? null;
 
   await db.arcenEvent.create({
     data: {

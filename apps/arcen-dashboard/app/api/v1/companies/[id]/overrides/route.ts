@@ -7,7 +7,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { requireApiKey, isApiKeyError } from "@/lib/api-key-auth";
+import { requireAnyAuth, isAnyAuthError } from "@/lib/require-any-auth";
 import { db } from "@/lib/db";
 import { invalidateFlagCache } from "@/lib/flag-cache";
 
@@ -15,8 +15,8 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const ctx = await requireApiKey(req);
-  if (isApiKeyError(ctx)) return ctx;
+  const ctx = await requireAnyAuth(req);
+  if (isAnyAuthError(ctx)) return ctx;
 
   const { id } = await params;
   const { teamId } = ctx;
@@ -40,8 +40,8 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const ctx = await requireApiKey(req);
-  if (isApiKeyError(ctx)) return ctx;
+  const ctx = await requireAnyAuth(req);
+  if (isAnyAuthError(ctx)) return ctx;
 
   const { id } = await params;
   const { teamId } = ctx;
@@ -93,8 +93,8 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const ctx = await requireApiKey(req);
-  if (isApiKeyError(ctx)) return ctx;
+  const ctx = await requireAnyAuth(req);
+  if (isAnyAuthError(ctx)) return ctx;
 
   const { id } = await params;
   const { teamId } = ctx;
