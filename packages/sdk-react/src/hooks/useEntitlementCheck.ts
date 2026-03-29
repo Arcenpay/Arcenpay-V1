@@ -39,7 +39,10 @@ export function useEntitlementCheck(
   const abortRef = useRef<AbortController | null>(null);
 
   const fetchEntitlement = useCallback(async () => {
-    if (!session.token) return;
+    if (!session.token) {
+      setLoading(false);
+      return;
+    }
 
     const cacheKey = `entitlement:${session.token}:${featureKey}`;
     const cached = cache.get(cacheKey);
