@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { requirePermission, isErrorResponse } from "@/lib/api-auth";
 import { writeAuditEvent } from "@/lib/audit";
+import { syncEntitlementsToFlagRules, type PlanEntitlement } from "@/lib/sync-entitlements";
 
 // Entitlements are stored as JSON in CatalogPlan.metadata under the key "entitlements"
 // Shape: { featureName: string, featureKey: string, type: "BOOLEAN" | "NUMERIC" | "UNLIMITED", value: boolean | number | null, enabled: boolean }[]
@@ -89,6 +90,11 @@ export async function POST(
         data: { metadata: updatedMeta },
     });
 
+    // Auto-sync entitlements to flag rules (fire-and-forget for performance)
+    syncEntitlementsToFlagRules(auth.team.teamId, plan.id, newEntitlements as PlanEntitlement[]).catch(
+        (err) => console.error("[Entitlements] Flag rule sync failed:", err),
+    );
+
     await writeAuditEvent({
         request,
         teamId: auth.team.teamId,
@@ -153,6 +159,10 @@ export async function PUT(
         data: { metadata: updatedMeta },
     });
 
+    syncEntitlementsToFlagRules(auth.team.teamId, plan.id, existing as PlanEntitlement[]).catch(
+        (err) => console.error("[Entitlements] Flag rule sync failed:", err),
+    );
+
     return NextResponse.json({ entitlements: existing });
 }
 
@@ -194,6 +204,10 @@ export async function DELETE(
         where: { id: plan.id },
         data: { metadata: updatedMeta },
     });
+
+    syncEntitlementsToFlagRules(auth.team.teamId, plan.id, filtered as PlanEntitlement[]).catch(
+        (err) => console.error("[Entitlements] Flag rule sync failed:", err),
+    );
 
     await writeAuditEvent({
         request,
