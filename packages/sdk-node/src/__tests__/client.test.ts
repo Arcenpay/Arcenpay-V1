@@ -1,0 +1,88 @@
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { ArcenClient } from '../client';
+
+const BASE_URL = 'http://localhost';
+const API_KEY = 'api_testkey123';
+
+const mockFetch = vi.fn();
+vi.stubGlobal('fetch', mockFetch);
+
+function mockResponse(body: unknown, status = 200) {
+  return Promise.resolve({
+    ok: status < 400,
+    status,
+    json: async () => body,
+  } as Response);
+}
+
+describe('ArcenClient', () => {
+  let client: ArcenClient;
+
+  beforeEach(() => {
+    mockFetch.mockClear();
+    client = new ArcenClient({ apiKey: API_KEY, baseUrl: BASE_URL });
+  });
+
+  describe('identify()', () => {
+    it('calls /api/v1/access-tokens and returns IdentifyResult', async () => {
+      mockFetch.mockResolvedValueOnce(mockResponse({
+        data: { token: 'tok_abc', company_id: 'co_1', user_id: 'u_1', expires_at: 9999999999 },
+      }));
+
+      const result = await client.identify({ company: { id: 'co_1' } });
+
+      expect(result.token).toBe('tok_abc');
+      expect(result.companyId).toBe('co_1');
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/v1/access-tokens'),
+        expect.objectContaining({ method: 'POST' }),
+      );
+    });
+
+    it('stores session token internally after identify()', async () => {
+      mockFetch
+        .mockResolvedValueOnce(mockResponse({
+          data: { token: 'tok_abc', company_id: 'co_1', expires_at: 9999999999 },
+        }))
+        .mockResolvedValueOnce(mockResponse({
+          key: 'feature', enabled: true, reason: 'rule:plan_pro',
+        }));
+
+      await client.identify({ company: { id: 'co_1' } });
+      await client.checkFlag('feature');
+
+      // Second call should use Bearer tok_abc (not the API key)
+      const secondCallHeaders = (mockFetch.mock.calls[1][1] as RequestInit).headers as Record<string, string>;
+      expect(secondCallHeaders['Authorization']).toBe('Bearer tok_abc');
+    });
+  });
+
+  describe('checkFlag()', () => {
+    it('uses /api/v1/check endpoint and returns FlagResult', async () => {
+      mockFetch.mockResolvedValueOnce(mockResponse({ key: 'feature', enabled: true, reason: 'default' }));
+
+      const result = await client.checkFlag('feature');
+
+      expect(result.enabled).toBe(true);
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/v1/check?key=feature'),
+        expect.anything(),
+      );
+    });
+  });
+
+  describe('checkEntitlement()', () => {
+    it('returns EntitlementResult with allocation/usage/exceeded', async () => {
+      mockFetch.mockResolvedValueOnce(mockResponse({
+        key: 'api_calls', enabled: true, reason: 'rule:plan_pro',
+        allocation: 1000, usage: 247, exceeded: false,
+      }));
+
+      const result = await client.checkEntitlement('api_calls');
+
+      expect(result.allocation).toBe(1000);
+      expect(result.usage).toBe(247);
+      expect(result.exceeded).toBe(false);
+    });
+  });
+});
