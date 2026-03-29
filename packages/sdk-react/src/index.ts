@@ -3,8 +3,8 @@
 // ============================================================
 
 // Provider
-export { MEAPProvider, useMEAP, ArcenPayProvider, useArcenPay } from './providers/MEAPProvider';
-export type { MEAPContextValue, MEAPProviderProps, ArcenPayContextValue, ArcenPayProviderProps } from './providers/MEAPProvider';
+export { MEAPProvider, useMEAP, ArcenPayProvider, useArcenPay, useArcenSession } from './providers/MEAPProvider';
+export type { MEAPContextValue, MEAPProviderProps, ArcenPayContextValue, ArcenPayProviderProps, ArcenSessionContextValue } from './providers/MEAPProvider';
 
 // Components
 export { PricingTable } from './components/PricingTable';
@@ -40,6 +40,9 @@ export {
   EntitlementError,
 } from './hooks/useEntitlement';
 export type { EntitlementErrorCode } from './hooks/useEntitlement';
+
+export { useEntitlementCheck } from './hooks/useEntitlementCheck';
+export type { UseEntitlementCheckReturn, UseEntitlementCheckOptions } from './hooks/useEntitlementCheck';
 
 // Utilities
 export { deploySmartAccount } from './lib/zerodev';
