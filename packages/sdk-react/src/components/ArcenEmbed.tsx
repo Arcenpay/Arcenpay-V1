@@ -44,6 +44,8 @@ export interface ArcenEmbedProps {
   initialView?: PortalView;
   /** Called whenever the embed navigates to a new view */
   onViewChange?: (view: PortalView) => void;
+  /** Called whenever the user successfully switches to a new plan */
+  onPlanChange?: (planId: string) => void;
 }
 
 type PortalView = "portal" | "checkout" | "payment" | "unsubscribe" | "success";
@@ -3033,6 +3035,7 @@ export function ArcenEmbed({
   mockData,
   initialView,
   onViewChange,
+  onPlanChange,
 }: ArcenEmbedProps) {
   const resolvedId = componentId ?? id ?? "";
 
@@ -3136,6 +3139,7 @@ export function ArcenEmbed({
           ...(txHash ? { txHash } : {}),
         });
         await fetchData();
+        onPlanChange?.(planId);
         dispatch({ type: "GOTO_SUCCESS", successMsg: "Plan activated!", txHash });
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : "Failed to switch plan";
@@ -3145,7 +3149,7 @@ export function ArcenEmbed({
         });
       }
     },
-    [callApi, fetchData, state.billingPeriod],
+    [callApi, fetchData, onPlanChange, state.billingPeriod],
   );
 
   const handleUnsubscribe = useCallback(async () => {
