@@ -13,6 +13,97 @@
 import { db } from "@/lib/db";
 import { aggregateUsage } from "@/lib/event-aggregator";
 import { getCachedFlag, setCachedFlag } from "@/lib/flag-cache";
+import { createPublicClient, http } from "viem";
+import { sepolia, baseSepolia, base } from "viem/chains";
+import { getContractAddresses } from "@arcenpay/sdk";
+
+const CHAIN_ID = Number(process.env.CHAIN_ID ?? 11155111);
+const RPC_URL = process.env.RPC_URL ?? "";
+
+// Lazy-initialized viem client for on-chain reads
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let _viemClient: any = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function getViemClient(): any {
+  if (!RPC_URL) return null;
+  if (_viemClient) return _viemClient;
+  const chain = CHAIN_ID === 8453 ? base : CHAIN_ID === 84532 ? baseSepolia : sepolia;
+  _viemClient = createPublicClient({ chain, transport: http(RPC_URL) });
+  return _viemClient;
+}
+
+// Minimal ABI subset for on-chain subscription lookup
+const SUBSCRIPTION_REGISTRY_ABI = [
+  {
+    name: "getWalletSubscription",
+    type: "function",
+    stateMutability: "view",
+    inputs: [{ name: "wallet", type: "address" }],
+    outputs: [{ name: "tokenId", type: "uint256" }],
+  },
+  {
+    name: "getPlanFeatures",
+    type: "function",
+    stateMutability: "view",
+    inputs: [{ name: "tokenId", type: "uint256" }],
+    outputs: [
+      { name: "onChainPlanId", type: "uint256" },
+      { name: "planTier", type: "string" },
+    ],
+  },
+] as const;
+
+/**
+ * Tries to read the on-chain subscription for a wallet and update the DB.
+ * Returns the resolved activePlanId if found, null otherwise.
+ * Called only when company.activePlanId is null and a wallet is available.
+ */
+async function resolveOnChainPlan(
+  teamId: string,
+  companyId: string,
+  wallet: string,
+): Promise<string | null> {
+  const client = getViemClient();
+  if (!client) return null;
+
+  try {
+    const contracts = getContractAddresses(CHAIN_ID);
+    if (!contracts.subscriptionRegistry) return null;
+
+    const tokenId = await client.readContract({
+      address: contracts.subscriptionRegistry as `0x${string}`,
+      abi: SUBSCRIPTION_REGISTRY_ABI,
+      functionName: "getWalletSubscription",
+      args: [wallet as `0x${string}`],
+    });
+
+    if (!tokenId || tokenId === 0n) return null;
+
+    const [onChainPlanId] = await client.readContract({
+      address: contracts.subscriptionRegistry as `0x${string}`,
+      abi: SUBSCRIPTION_REGISTRY_ABI,
+      functionName: "getPlanFeatures",
+      args: [tokenId],
+    });
+
+    const plan = await db.catalogPlan.findFirst({
+      where: { onChainPlanId: String(onChainPlanId), teamId },
+      select: { id: true },
+    });
+
+    if (!plan) return null;
+
+    // Fire-and-forget DB repair — future checks use the fast path
+    db.arcenCompany
+      .update({ where: { id: companyId }, data: { activePlanId: plan.id } })
+      .catch(() => {});
+
+    return plan.id;
+  } catch {
+    // On-chain read failed — not a hard error, just skip
+    return null;
+  }
+}
 
 export interface CompanyKeys {
   id?: string;        // caller's internal company ID (externalId)
@@ -64,10 +155,18 @@ export async function resolveCompany(
     .update({ where: { id: company.id }, data: { lastSeenAt: new Date() } })
     .catch(() => {});
 
+  let activePlanId = company.activePlanId;
+
+  // On-chain fallback: if activePlanId is null but we have a wallet, try to resolve from chain
+  if (!activePlanId && keys.wallet) {
+    const onChainPlanId = await resolveOnChainPlan(teamId, company.id, keys.wallet.toLowerCase());
+    if (onChainPlanId) activePlanId = onChainPlanId;
+  }
+
   return {
     id: company.id,
     traits: (company.traits as Record<string, unknown>) ?? {},
-    activePlanId: company.activePlanId,
+    activePlanId,
     activeAddOnIds: Array.isArray(company.activeAddOnIds) ? (company.activeAddOnIds as string[]) : [],
   };
 }
