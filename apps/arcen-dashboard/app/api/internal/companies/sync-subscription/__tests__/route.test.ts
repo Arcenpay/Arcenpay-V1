@@ -91,6 +91,28 @@ describe("PATCH /api/internal/companies/sync-subscription", () => {
     );
   });
 
+  it("sets activePlanId on renewed event", async () => {
+    (db.arcenCompany.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: "co_1",
+      teamId: "team_1",
+    });
+    (db.catalogPlan.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: "plan_1",
+    });
+    (db.arcenCompany.update as ReturnType<typeof vi.fn>).mockResolvedValue({});
+
+    const res = await PATCH(
+      makeRequest({ wallet: "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd", onChainPlanId: "42", event: "renewed" }),
+    );
+
+    expect(res.status).toBe(200);
+    expect(db.arcenCompany.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: { activePlanId: "plan_1" },
+      }),
+    );
+  });
+
   it("returns 404 if company not found", async () => {
     (db.arcenCompany.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(
       null,
