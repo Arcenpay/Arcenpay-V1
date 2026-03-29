@@ -55,6 +55,9 @@ export type {
   SchematicUserKeys,
   SchematicCompany,
   SchematicUser,
+  FlagResult,
+  EntitlementResult,
+  IdentifyResult,
 } from './types';
 
 // Chain configs

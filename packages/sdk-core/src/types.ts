@@ -509,3 +509,45 @@ export type SchematicUserKeys = ArcenUserKeys;
 export type SchematicCompany = ArcenCompany;
 /** @deprecated Use ArcenUser instead */
 export type SchematicUser = ArcenUser;
+
+// ─── Schematic-style SDK types ────────────────────────────────────────────────
+
+/**
+ * Result of checkFlag() — boolean feature gating.
+ * Use for "should this feature be visible/enabled?"
+ */
+export interface FlagResult {
+  key: string;
+  /** Whether the feature is enabled for this company/user */
+  enabled: boolean;
+  /** Machine-readable reason: 'override', 'rule:<ruleId>', 'default' */
+  reason: string;
+}
+
+/**
+ * Result of checkEntitlement() — quota-aware feature gating.
+ * Use for "can this action still be performed under the customer's plan limits?"
+ */
+export interface EntitlementResult {
+  key: string;
+  /** Whether the feature is enabled (regardless of quota) */
+  enabled: boolean;
+  /** Machine-readable reason */
+  reason: string;
+  /** Maximum allowed usage. null = unlimited */
+  allocation: number | null;
+  /** Current usage count in the active billing period */
+  usage: number;
+  /** true when usage >= allocation (and allocation is not null) */
+  exceeded: boolean;
+}
+
+/**
+ * Result of identify() — creates/updates company+user and returns a session token.
+ */
+export interface IdentifyResult {
+  token: string;
+  companyId: string;
+  userId?: string;
+  expiresAt: number; // unix timestamp
+}
