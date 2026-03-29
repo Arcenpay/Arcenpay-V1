@@ -15,6 +15,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { FlagCheckResult, ArcenCompanyKeys, ArcenUserKeys } from '@arcenpay/sdk';
+import { useArcenSession } from '../providers/MEAPProvider';
 
 export interface UseFlagOptions {
   /** Base URL for the ArcenPay dashboard API (defaults to '') */
@@ -53,6 +54,7 @@ export function useFlag(
   options: UseFlagOptions = {},
 ): UseFlagResult {
   const { baseUrl = '', apiKey, cacheMs = 30_000, skip = false } = options;
+  const session = useArcenSession();
 
   const [result, setResult] = useState<FlagCheckResult | null>(null);
   const [loading, setLoading] = useState(!skip);
@@ -85,40 +87,55 @@ export function useFlag(
     abortRef.current = ctrl;
     setLoading(true);
 
-    const headers: Record<string, string> = {};
-    if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
+    // Session token takes precedence over explicitly passed apiKey
+    const effectiveToken = session.token ?? undefined;
 
-    // Encode company keys as header
-    const companyKeyParts: string[] = [];
-    if (companyKeys.id) companyKeyParts.push(`id=${companyKeys.id}`);
-    if (companyKeys.wallet) companyKeyParts.push(`wallet=${companyKeys.wallet}`);
-    if (companyKeys.email) companyKeyParts.push(`email=${companyKeys.email}`);
-    if (companyKeyParts.length > 0) {
-      headers['X-Arcen-Company-Keys'] = companyKeyParts.join(',');
+    const headers: Record<string, string> = {};
+    if (effectiveToken) {
+      headers['Authorization'] = `Bearer ${effectiveToken}`;
+    } else if (apiKey) {
+      headers['Authorization'] = `Bearer ${apiKey}`;
     }
 
-    if (userKeys) {
-      const userKeyParts: string[] = [];
-      if (userKeys.id) userKeyParts.push(`id=${userKeys.id}`);
-      if (userKeys.clerkUserId) userKeyParts.push(`clerk_user_id=${userKeys.clerkUserId}`);
-      if (userKeys.wallet) userKeyParts.push(`wallet=${userKeys.wallet}`);
-      if (userKeyParts.length > 0) {
-        headers['X-Arcen-User-Keys'] = userKeyParts.join(',');
+    // Only send company/user key headers when not using a token
+    if (!effectiveToken) {
+      const companyKeyParts: string[] = [];
+      if (companyKeys.id) companyKeyParts.push(`id=${companyKeys.id}`);
+      if (companyKeys.wallet) companyKeyParts.push(`wallet=${companyKeys.wallet}`);
+      if (companyKeys.email) companyKeyParts.push(`email=${companyKeys.email}`);
+      if (companyKeyParts.length > 0) {
+        headers['X-Arcen-Company-Keys'] = companyKeyParts.join(',');
+      }
+
+      if (userKeys) {
+        const userKeyParts: string[] = [];
+        if (userKeys.id) userKeyParts.push(`id=${userKeys.id}`);
+        if (userKeys.clerkUserId) userKeyParts.push(`clerk_user_id=${userKeys.clerkUserId}`);
+        if (userKeys.wallet) userKeyParts.push(`wallet=${userKeys.wallet}`);
+        if (userKeyParts.length > 0) {
+          headers['X-Arcen-User-Keys'] = userKeyParts.join(',');
+        }
       }
     }
 
-    fetch(`${baseUrl}/api/v1/flags/check?key=${encodeURIComponent(featureKey)}`, {
+    fetch(`${baseUrl}/api/v1/check?key=${encodeURIComponent(featureKey)}`, {
       headers,
       signal: ctrl.signal,
     })
       .then((res) => res.json())
-      .then((data: { data?: FlagCheckResult; error?: string }) => {
-        if (data.data) {
-          flagCache.set(cacheKey, { result: data.data, expiresAt: Date.now() + cacheMs });
-          setResult(data.data);
+      .then((json: { key?: string; enabled?: boolean; reason?: string; error?: string }) => {
+        if (json.enabled !== undefined || json.key !== undefined) {
+          // New endpoint returns { key, enabled, reason } directly
+          const mapped: FlagCheckResult = {
+            flag: json.key ?? featureKey,
+            value: json.enabled ?? false,
+            reason: json.reason ?? '',
+          };
+          flagCache.set(cacheKey, { result: mapped, expiresAt: Date.now() + cacheMs });
+          setResult(mapped);
           setError(null);
         } else {
-          setError(data.error ?? 'Flag check failed');
+          setError(json.error ?? 'Flag check failed');
         }
       })
       .catch((err: unknown) => {
@@ -132,7 +149,7 @@ export function useFlag(
 
     return () => ctrl.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [featureKey, JSON.stringify(companyKeys), JSON.stringify(userKeys), skip, tick]);
+  }, [featureKey, JSON.stringify(companyKeys), JSON.stringify(userKeys), skip, tick, session.token]);
 
   return {
     value: result?.value ?? null,
