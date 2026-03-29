@@ -1307,6 +1307,16 @@ eventListener.on("minted", async (event) => {
   if (event.tokenId != null && event.subscriber) {
     tokenIdToSubscriber.set(event.tokenId.toString(), event.subscriber);
   }
+  // Sync subscription to dashboard DB so flag evaluation uses the correct plan
+  if (event.subscriber) {
+    postToDashboard("/api/internal/companies/sync-subscription", {
+      wallet: event.subscriber,
+      onChainPlanId: event.planId?.toString() ?? null,
+      event: "minted",
+    }).catch((err) =>
+      console.error("[Facilitator] sync-subscription (minted) failed:", err),
+    );
+  }
   let snapshotForEmail: Awaited<
     ReturnType<typeof getSubscriptionSnapshot>
   > | null = null;
@@ -1404,6 +1414,16 @@ eventListener.on("renewed", async (event) => {
     true,
     event.timestamp ? Number(event.timestamp) * 1000 : undefined,
   );
+  // Sync subscription to dashboard DB so flag evaluation uses the correct plan
+  if (renewedSubscriberWallet) {
+    postToDashboard("/api/internal/companies/sync-subscription", {
+      wallet: renewedSubscriberWallet,
+      onChainPlanId: null,
+      event: "renewed",
+    }).catch((err) =>
+      console.error("[Facilitator] sync-subscription (renewed) failed:", err),
+    );
+  }
   if (tablelandService) {
     if (tablelandReady) {
       await tablelandReady;
@@ -1521,6 +1541,16 @@ eventListener.on("cancelled", async (event) => {
     }
     // Remove from cache — subscription is over
     tokenIdToSubscriber.delete(event.tokenId.toString());
+  }
+  // Sync subscription to dashboard DB so flag evaluation uses the correct plan
+  if (cancelledSubscriberWallet) {
+    postToDashboard("/api/internal/companies/sync-subscription", {
+      wallet: cancelledSubscriberWallet,
+      onChainPlanId: null,
+      event: "cancelled",
+    }).catch((err) =>
+      console.error("[Facilitator] sync-subscription (cancelled) failed:", err),
+    );
   }
 });
 
