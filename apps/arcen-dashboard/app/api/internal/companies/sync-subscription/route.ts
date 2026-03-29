@@ -24,6 +24,7 @@ const bodySchema = z.object({
 
 export async function PATCH(req: NextRequest) {
   const facilitatorSecret = process.env.FACILITATOR_SECRET ?? "";
+  const dashboardTeamId = process.env.DASHBOARD_TEAM_ID ?? "";
   const auth = req.headers.get("authorization") ?? "";
   if (!facilitatorSecret || auth !== `Bearer ${facilitatorSecret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -41,7 +42,10 @@ export async function PATCH(req: NextRequest) {
   const { wallet, onChainPlanId, event } = parsed.data;
 
   const company = await db.arcenCompany.findFirst({
-    where: { walletAddress: wallet.toLowerCase() },
+    where: {
+      walletAddress: wallet.toLowerCase(),
+      ...(dashboardTeamId ? { teamId: dashboardTeamId } : {}),
+    },
     select: { id: true, teamId: true },
   });
 
