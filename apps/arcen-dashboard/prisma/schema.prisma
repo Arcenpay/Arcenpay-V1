@@ -830,10 +830,16 @@ model FlagRule {
   priority Int     // evaluation order — lower number = evaluated first
   value    Boolean // True or False to serve when this rule matches
 
+  // 'manual' (default) | 'plan' — tracks auto-generated rules
+  source   String? @default("manual")
+  // For source='plan': the CatalogPlan.id that generated this rule
+  sourceId String?
+
   conditions FlagRuleCondition[]
   flag       CatalogFeatureFlag @relation(fields: [flagId], references: [id], onDelete: Cascade)
 
   @@index([flagId, priority])
+  @@index([flagId, source, sourceId])
 }
 
 model FlagRuleCondition {
