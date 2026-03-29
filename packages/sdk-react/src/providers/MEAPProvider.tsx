@@ -3,6 +3,7 @@
 import React, {
   createContext,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -35,11 +36,35 @@ export type ArcenPayContextValue = MEAPContextValue;
 
 const MEAPContext = createContext<MEAPContextValue | null>(null);
 
+// ─── Session Context ──────────────────────────────────────────────────────────
+
+export interface ArcenSessionContextValue {
+  token: string | null;
+  companyId: string | null;
+  userId: string | null;
+  isReady: boolean;
+}
+
+const ArcenSessionContext = createContext<ArcenSessionContextValue>({
+  token: null,
+  companyId: null,
+  userId: null,
+  isReady: false,
+});
+
+export function useArcenSession(): ArcenSessionContextValue {
+  return useContext(ArcenSessionContext);
+}
+
 export interface MEAPProviderProps {
   children: ReactNode;
   config?: Partial<MEAPConfig>;
   chainId?: number;
   walletConnectProjectId?: string;
+  apiKey?: string;
+  token?: string;
+  company?: { id?: string; wallet?: string; email?: string; name?: string; traits?: Record<string, unknown> };
+  user?: { id?: string; clerkUserId?: string; wallet?: string; email?: string; name?: string };
 }
 
 /** @alias MEAPProviderProps */
@@ -49,12 +74,13 @@ export type ArcenPayProviderProps = MEAPProviderProps;
  * MEAPProvider — Root provider for MEAP protocol integration.
  * Sets up Wagmi wallet connection, React Query, and protocol context.
  */
-export function MEAPProvider({
-  children,
-  config: userConfig,
-  chainId = DEFAULT_CHAIN_ID,
-  walletConnectProjectId,
-}: MEAPProviderProps) {
+export function MEAPProvider(props: MEAPProviderProps) {
+  const {
+    children,
+    config: userConfig,
+    chainId = DEFAULT_CHAIN_ID,
+    walletConnectProjectId,
+  } = props;
   const wagmiConfig = useMemo(() => {
     const projectId =
       walletConnectProjectId ||
@@ -100,6 +126,51 @@ export function MEAPProvider({
         },
       }),
   );
+
+  const [sessionCtx, setSessionCtx] = useState<ArcenSessionContextValue>({
+    token: props.token ?? null,
+    companyId: null,
+    userId: null,
+    isReady: !!props.token,
+  });
+
+  const { apiKey, token: tokenProp, company, user } = props;
+
+  useEffect(() => {
+    if (tokenProp) {
+      setSessionCtx({ token: tokenProp, companyId: null, userId: null, isReady: true });
+    }
+  }, [tokenProp]);
+
+  useEffect(() => {
+    if (tokenProp || !apiKey || (!company && !user)) return;
+
+    const baseUrl =
+      (typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_ARCEN_BASE_URL : undefined) ??
+      'https://dashboard.arcenpay.xyz';
+
+    fetch(`${baseUrl}/api/v1/access-tokens`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({ company, user, expires_in: 3600 }),
+    })
+      .then((r) => r.json())
+      .then((json: { data?: { token: string; company_id: string; user_id?: string } }) => {
+        if (json.data?.token) {
+          setSessionCtx({
+            token: json.data.token,
+            companyId: json.data.company_id,
+            userId: json.data.user_id ?? null,
+            isReady: true,
+          });
+        }
+      })
+      .catch((err) => console.error('[ArcenPayProvider] identify failed:', err));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [apiKey]);
 
   const contextValue = useMemo<MEAPContextValue>(() => {
     if (typeof process !== "undefined" && process.env.NODE_ENV === "production") {
@@ -150,7 +221,9 @@ export function MEAPProvider({
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
         <MEAPContext.Provider value={contextValue}>
-          {children}
+          <ArcenSessionContext.Provider value={sessionCtx}>
+            {children}
+          </ArcenSessionContext.Provider>
         </MEAPContext.Provider>
       </QueryClientProvider>
     </WagmiProvider>
