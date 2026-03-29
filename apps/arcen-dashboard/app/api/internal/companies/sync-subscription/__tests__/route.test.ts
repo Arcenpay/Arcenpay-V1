@@ -42,7 +42,7 @@ describe("PATCH /api/internal/companies/sync-subscription", () => {
         method: "PATCH",
         headers: { Authorization: "Bearer wrong" },
         body: JSON.stringify({
-          wallet: "0xabc",
+          wallet: "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd",
           onChainPlanId: "1",
           event: "minted",
         }),
@@ -62,7 +62,7 @@ describe("PATCH /api/internal/companies/sync-subscription", () => {
     (db.arcenCompany.update as ReturnType<typeof vi.fn>).mockResolvedValue({});
 
     const res = await PATCH(
-      makeRequest({ wallet: "0xabc", onChainPlanId: "42", event: "minted" }),
+      makeRequest({ wallet: "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd", onChainPlanId: "42", event: "minted" }),
     );
 
     expect(res.status).toBe(200);
@@ -80,7 +80,7 @@ describe("PATCH /api/internal/companies/sync-subscription", () => {
     (db.arcenCompany.update as ReturnType<typeof vi.fn>).mockResolvedValue({});
 
     const res = await PATCH(
-      makeRequest({ wallet: "0xabc", onChainPlanId: null, event: "cancelled" }),
+      makeRequest({ wallet: "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd", onChainPlanId: null, event: "cancelled" }),
     );
 
     expect(res.status).toBe(200);
@@ -97,7 +97,7 @@ describe("PATCH /api/internal/companies/sync-subscription", () => {
     );
 
     const res = await PATCH(
-      makeRequest({ wallet: "0xabc", onChainPlanId: "1", event: "minted" }),
+      makeRequest({ wallet: "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd", onChainPlanId: "1", event: "minted" }),
     );
     expect(res.status).toBe(404);
   });

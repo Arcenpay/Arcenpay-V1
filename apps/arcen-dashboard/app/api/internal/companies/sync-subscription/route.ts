@@ -17,7 +17,7 @@ import { db } from "@/lib/db";
 import { z } from "zod";
 
 const bodySchema = z.object({
-  wallet: z.string().regex(/^0x[0-9a-fA-F]+$/i),
+  wallet: z.string().regex(/^0x[0-9a-fA-F]{40}$/i),
   onChainPlanId: z.string().nullable(),
   event: z.enum(["minted", "renewed", "cancelled"]),
 });
