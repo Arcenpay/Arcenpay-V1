@@ -1414,11 +1414,24 @@ eventListener.on("renewed", async (event) => {
     true,
     event.timestamp ? Number(event.timestamp) * 1000 : undefined,
   );
+  // Resolve the on-chain planId for this token so sync-subscription can set activePlanId
+  let renewedPlanId: bigint | null = null;
+  try {
+    const planFeatures = (await chainClient.readContract({
+      address: CONTRACTS.subscriptionRegistry as `0x${string}`,
+      abi: SubscriptionRegistryABI,
+      functionName: "getPlanFeatures",
+      args: [event.tokenId],
+    })) as [bigint, string];
+    renewedPlanId = planFeatures[0] ?? null;
+  } catch (err) {
+    console.error("[Facilitator] Failed to resolve planId for renewed event:", err);
+  }
   // Sync subscription to dashboard DB so flag evaluation uses the correct plan
   if (renewedSubscriberWallet) {
     postToDashboard("/api/internal/companies/sync-subscription", {
       wallet: renewedSubscriberWallet,
-      onChainPlanId: null,
+      onChainPlanId: renewedPlanId?.toString() ?? null,
       event: "renewed",
     }).catch((err) =>
       console.error("[Facilitator] sync-subscription (renewed) failed:", err),
