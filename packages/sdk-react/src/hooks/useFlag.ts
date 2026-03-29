@@ -173,6 +173,7 @@ export function useFlags(
   const [loading, setLoading] = useState(true);
 
   const { baseUrl = '', apiKey, skip = false } = options;
+  const session = useArcenSession();
 
   useEffect(() => {
     if (skip || featureKeys.length === 0) {
@@ -180,20 +181,40 @@ export function useFlags(
       return;
     }
 
-    const headers: Record<string, string> = {};
-    if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
+    // Session token takes precedence over explicitly passed apiKey
+    const effectiveToken = session.token ?? undefined;
 
-    const companyKeyParts: string[] = [];
-    if (companyKeys.id) companyKeyParts.push(`id=${companyKeys.id}`);
-    if (companyKeys.wallet) companyKeyParts.push(`wallet=${companyKeys.wallet}`);
-    if (companyKeys.email) companyKeyParts.push(`email=${companyKeys.email}`);
-    if (companyKeyParts.length > 0) headers['X-Arcen-Company-Keys'] = companyKeyParts.join(',');
+    const headers: Record<string, string> = {};
+    if (effectiveToken) {
+      headers['Authorization'] = `Bearer ${effectiveToken}`;
+    } else if (apiKey) {
+      headers['Authorization'] = `Bearer ${apiKey}`;
+    }
+
+    // Only send company/user key headers when not using a token
+    if (!effectiveToken) {
+      const companyKeyParts: string[] = [];
+      if (companyKeys.id) companyKeyParts.push(`id=${companyKeys.id}`);
+      if (companyKeys.wallet) companyKeyParts.push(`wallet=${companyKeys.wallet}`);
+      if (companyKeys.email) companyKeyParts.push(`email=${companyKeys.email}`);
+      if (companyKeyParts.length > 0) headers['X-Arcen-Company-Keys'] = companyKeyParts.join(',');
+
+      if (userKeys) {
+        const userKeyParts: string[] = [];
+        if (userKeys.id) userKeyParts.push(`id=${userKeys.id}`);
+        if (userKeys.clerkUserId) userKeyParts.push(`clerk_user_id=${userKeys.clerkUserId}`);
+        if (userKeys.wallet) userKeyParts.push(`wallet=${userKeys.wallet}`);
+        if (userKeyParts.length > 0) {
+          headers['X-Arcen-User-Keys'] = userKeyParts.join(',');
+        }
+      }
+    }
 
     Promise.all(
       featureKeys.map((key) =>
-        fetch(`${baseUrl}/api/v1/flags/check?key=${encodeURIComponent(key)}`, { headers })
-          .then((r) => r.json() as Promise<{ data?: FlagCheckResult }>)
-          .then((d) => [key, d.data?.value ?? null] as [string, boolean | null])
+        fetch(`${baseUrl}/api/v1/check?key=${encodeURIComponent(key)}`, { headers })
+          .then((r) => r.json() as Promise<{ key?: string; enabled?: boolean; reason?: string; error?: string }>)
+          .then((json) => [key, json.enabled ?? null] as [string, boolean | null])
           .catch(() => [key, null] as [string, null]),
       ),
     )
@@ -202,7 +223,7 @@ export function useFlags(
       })
       .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [featureKeys.join(','), JSON.stringify(companyKeys), skip]);
+  }, [featureKeys.join(','), JSON.stringify(companyKeys), JSON.stringify(userKeys), skip, session.token]);
 
   return { flags, loading };
 }
