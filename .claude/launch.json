@@ -1,0 +1,41 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "arcen-dashboard",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "apps/arcen-dashboard", "run", "dev"],
+      "port": 3000
+    },
+    {
+      "name": "arcen-demo",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "apps/arcen-demo", "run", "dev"],
+      "port": 3001
+    },
+    {
+      "name": "docs",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "apps/docs", "run", "dev"],
+      "port": 3003
+    },
+    {
+      "name": "facilitator",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "apps/facilitator", "run", "dev"],
+      "port": 3402
+    },
+    {
+      "name": "pitch-deck",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["serve", "-l", "4000", "/Users/aditya/arcenpay-pitch-deck"],
+      "port": 4000
+    },
+    {
+      "name": "all (turbo)",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 3000
+    }
+  ]
+}

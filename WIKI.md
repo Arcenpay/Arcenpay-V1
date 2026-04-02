@@ -1,1906 +1,842 @@
-# ArcenPay — Complete Codebase Wiki
-
-> **Crypto-first, stablecoin-only (USDC) Web3 subscription billing platform**
-> Built on the MEAP + ZKVUB Protocol
-
----
-
-## Table of Contents
-
-1. [Project Overview](#1-project-overview)
-2. [Monorepo Structure](#2-monorepo-structure)
-3. [Architecture Overview](#3-architecture-overview)
-4. [Smart Contracts](#4-smart-contracts)
-   - [PlanFactory](#41-planfactorysol)
-   - [SubscriptionRegistry](#42-subscriptionregistrysol)
-   - [ERC7579AutopayModule](#43-erc7579autopaymoulesol)
-   - [FeeCollector](#44-feecollectorsol)
-   - [SessionVault](#45-sessionvaultsol)
-   - [ZKUsageVerifier](#46-zkusageverifiersol)
-   - [MirrorRegistry](#47-mirrorregistrysol)
-   - [Finance Contracts](#48-finance-contracts)
-   - [Identity Contracts](#49-identity-contracts)
-5. [Money Flow](#5-money-flow)
-6. [Database Schema](#6-database-schema)
-7. [API Routes](#7-api-routes)
-8. [SDK Packages](#8-sdk-packages)
-   - [sdk-core](#81-sdk-core-meapcore)
-   - [sdk-react](#82-sdk-react-meapreact)
-   - [sdk-node](#83-sdk-node-meapnode)
-   - [sdk-agent](#84-sdk-agent-meapagent)
-9. [Apps](#9-apps)
-   - [arcen-dashboard](#91-arcen-dashboard)
-   - [facilitator](#92-facilitator)
-   - [arcen-landing](#93-arcen-landing)
-10. [Authentication & Authorization](#10-authentication--authorization)
-11. [Chain & Wallet Configuration](#11-chain--wallet-configuration)
-12. [Feature Flags & Entitlements](#12-feature-flags--entitlements)
-13. [Billing & Invoicing](#13-billing--invoicing)
-14. [ZK Proof System](#14-zk-proof-system)
-15. [Cross-Chain Architecture](#15-cross-chain-architecture)
-16. [zkTLS & Identity](#16-zktls--identity)
-17. [Deployment Guide](#17-deployment-guide)
-18. [Environment Variables](#18-environment-variables)
-19. [Testing](#19-testing)
-20. [Security Model](#20-security-model)
-21. [Glossary](#21-glossary)
-
----
-
-## 1. Project Overview
-
-ArcenPay is a **Web3 subscription billing platform** that allows SaaS builders to charge their users in USDC — with the billing logic living entirely on-chain. It replaces Stripe for crypto-native products.
-
-### What It Does
-
-| Capability | Description |
-|------------|-------------|
-| **Flat Subscriptions** | Monthly / Quarterly / Annual plans billed in USDC |
-| **Usage-Based Billing** | Metered API calls or events, settled via ZK proofs |
-| **Credit Packs** | Buy N credits, burn as you use |
-| **Feature Flags** | Boolean, event-based, trait-based entitlements per plan |
-| **Add-Ons** | One-time or recurring bolt-ons |
-| **Free Plans** | Off-chain, no contract interaction |
-| **Embeddable UI** | React SDK for customer-facing billing UI |
-
-### Tech Stack at a Glance
+# ArcenPay Product Wiki
 
-```
-Frontend:    Next.js 16 + React 19 + TailwindCSS v4 + Radix UI
-Smart Contracts: Solidity ^0.8.24, Hardhat + Foundry
-Database:    PostgreSQL + Prisma 7
-Auth:        SIWE + Clerk
-Wallet:      AppKit (Reown) + wagmi + viem
-Blockchain:  Ethereum Sepolia, Base Sepolia, Base Mainnet
-Stablecoin:  USDC (native on Base, bridged on Sepolia)
-Cross-Chain: Axelar GMP + Chainlink CCIP
-ZK:          Groth16 (snarkjs + circom)
-Email:       Resend
-Webhooks:    Svix
-Build:       Turbo monorepo
-```
-
----
-
-## 2. Monorepo Structure
-
-```
-arcenpay/
-├── turbo.json                    # Build orchestration
-├── package.json                  # Root workspaces: apps/* packages/*
-├── tsconfig.base.json            # Shared TypeScript config
-├── docker-compose.yml            # Local dev services (Postgres, Redis)
-├── circuits/                     # Circom ZK circuits
-│   └── UsageBilling.circom       # Usage proof circuit
-│
-├── apps/
-│   ├── arcen-dashboard/          # Main provider dashboard (Next.js)
-│   ├── facilitator/              # Backend payment service (Express)
-│   ├── arcen-landing/            # Marketing website (Next.js)
-│   └── docs/                     # Protocol documentation (Next.js)
-│
-├── packages/
-│   ├── contracts/                # Smart contracts (Solidity)
-│   ├── sdk-core/                 # Shared types, ABIs, chain config
-│   ├── sdk-react/                # React component library
-│   ├── sdk-node/                 # Node.js middleware + services
-│   └── sdk-agent/                # AI agent SDK (minimal)
-│
-└── subgraph/                     # The Graph subgraph indexer
-```
-
-### Build System (Turbo)
-
-The repo uses **Turborepo** for incremental builds and task caching.
-
-```bash
-# Build all packages and apps
-turbo build
-
-# Run dev servers for all apps
-turbo dev
-
-# Run all tests
-turbo test
-
-# Type check everything
-turbo typecheck
-```
-
-Task pipeline (from `turbo.json`):
-- `build` → depends on `^build` (dependencies built first)
-- `test` → depends on `^build`
-- Cached outputs: `dist/**`, `.next/**`, `artifacts/**`, `typechain-types/**`
-
----
-
-## 3. Architecture Overview
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                         ArcenPay Platform                        │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                   │
-│  ┌──────────────┐    ┌──────────────┐    ┌──────────────────┐   │
-│  │   Provider    │    │  Your App    │    │  Your Customers  │   │
-│  │  Dashboard   │    │  (any stack) │    │  (wallets)       │   │
-│  │  (Next.js)   │    │              │    │                  │   │
-│  └──────┬───────┘    └──────┬───────┘    └────────┬─────────┘   │
-│         │                   │                     │              │
-│  ┌──────▼───────────────────▼─────────────────────▼──────────┐  │
-│  │                   ArcenPay API Layer                        │  │
-│  │  /api/catalog  /api/invoices  /api/platform  /api/proofs   │  │
-│  └────────────────────────────┬────────────────────────────────┘  │
-│                               │                                   │
-│  ┌────────────────────────────▼────────────────────────────────┐  │
-│  │                   Facilitator Service                        │  │
-│  │     x402 payment validation · settlement · GMP dispatch      │  │
-│  └──────────────────────┬─────────────────────────────────────┘  │
-│                         │                                         │
-│  ┌──────────────────────▼───────────────────────────────────┐   │
-│  │              Smart Contract Layer (EVM)                   │   │
-│  │                                                            │   │
-│  │  PlanFactory  SubscriptionRegistry  ERC7579AutopayModule  │   │
-│  │  FeeCollector  SessionVault  ZKUsageVerifier               │   │
-│  │  MirrorRegistry  ZKCredentialGate  DIDRegistry             │   │
-│  └──────────────────────────────────────────────────────────┘   │
-│                                                                   │
-│  Chains:  Ethereum Sepolia · Base Sepolia · Base Mainnet          │
-│  Bridge:  Axelar GMP (primary) · Chainlink CCIP (fallback)        │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-### Data Flow for a Subscription Payment
-
-```
-1. Provider creates a plan in Dashboard
-        ↓
-2. Plan registered on PlanFactory.sol (on-chain)
-        ↓
-3. Customer visits your app, sees PricingTable (sdk-react)
-        ↓
-4. Customer connects wallet → CheckoutModal deploys SmartAccount
-        ↓
-5. Customer signs → ERC7579AutopayModule installed on their SmartAccount
-        ↓
-6. Every billing interval → Module pulls USDC from SmartAccount
-        ↓
-7. USDC → Provider treasury (99.5%) + FeeCollector (0.5%)
-        ↓
-8. SubscriptionRegistry mints/renews ERC-721 NFT to customer
-        ↓
-9. BillingEvent recorded → Invoice generated → Email sent
-```
-
----
-
-## 4. Smart Contracts
-
-**Location**: `packages/contracts/contracts/`
-
-**Compiler**: Solidity ^0.8.24
-**Test Framework**: Forge (Foundry) + Hardhat
-**Networks**: Sepolia, Base Sepolia, Base Mainnet
-
----
-
-### 4.1 PlanFactory.sol
-
-**Path**: `packages/contracts/contracts/core/PlanFactory.sol`
-
-The plan configuration registry. Providers register their billing plans here. Each plan is stored on-chain with a unique ID.
-
-#### Key Data Structure
-
-```solidity
-struct Plan {
-    uint256 id;
-    address provider;          // Who receives payment (your treasury wallet)
-    string name;               // Plan display name
-    string tier;               // Slug-style tier identifier
-    uint256 price;             // Price in token base units (USDC = 6 decimals)
-    uint32 billingInterval;    // Seconds between payments (min 30 days = 2,592,000)
-    address acceptedToken;     // Token address (USDC)
-    bool active;               // Plan is live
-    string metadataURI;        // IPFS/HTTPS metadata link
-}
-```
-
-#### Key Functions
-
-| Function | Access | Description |
-|----------|--------|-------------|
-| `createPlan(...)` | Provider | Register a new billing plan |
-| `createPlanFor(...)` | Owner (EIP-712) | Gasless plan creation via meta-tx |
-| `updatePlan(planId, ...)` | Provider | Update price/interval/metadata |
-| `deactivatePlan(planId)` | Provider | Archive a plan |
-| `getPlan(planId)` | Anyone | Read plan details |
-| `getProviderPlans(addr)` | Anyone | List provider's plans |
-| `approveToken(addr, bool)` | Owner | Whitelist/blacklist payment tokens |
-| `addProvider(addr)` | Owner | Whitelist a provider |
-
-#### Constraints
-
-- `price > 0` — **free plans cannot be registered on-chain** (use `NOT_APPLICABLE` in DB)
-- `billingInterval >= 2,592,000` — minimum 30 days
-- `acceptedToken` must be in `approvedTokens` whitelist
-- `msg.sender` must be in `_providers` whitelist
-
-#### EIP-712 Meta-Transaction
-
-Providers can sign a typed data payload allowing the ArcenPay operator to submit `createPlanFor()` on their behalf, paying gas. This is what the dashboard uses when you click "Register On-Chain."
-
-```typescript
-// EIP-712 domain
-{
-  name: "PlanFactory",
-  version: "1",
-  chainId: <chain>,
-  verifyingContract: <PlanFactory address>
-}
-
-// Typed data
-{
-  CreatePlan: [
-    { name: "provider", type: "address" },
-    { name: "name", type: "string" },
-    { name: "tier", type: "string" },
-    { name: "price", type: "uint256" },
-    { name: "billingInterval", type: "uint32" },
-    { name: "acceptedToken", type: "address" },
-    { name: "metadataURI", type: "string" },
-    { name: "nonce", type: "uint256" }
-  ]
-}
-```
-
----
-
-### 4.2 SubscriptionRegistry.sol
-
-**Path**: `packages/contracts/contracts/core/SubscriptionRegistry.sol`
-
-An **ERC-721 NFT contract** where each token = one active subscription. Implements **ERC-5643** (subscription expiry standard).
-
-#### Key Concepts
-
-- One subscription NFT per wallet
-- NFT has an `expiration` timestamp
-- `renew(tokenId, duration)` extends expiry
-- `expire(tokenId)` marks it inactive after expiry
-- Authorized billing contracts (AutopayModule, ZKUsageVerifier) can mint/renew
-
-#### Key Functions
-
-| Function | Access | Description |
-|----------|--------|-------------|
-| `mint(to, planId, duration)` | Authorized biller | Create new subscription NFT |
-| `renew(tokenId, duration)` | Authorized biller | Extend subscription |
-| `cancel(tokenId)` | Subscriber or provider | Cancel subscription |
-| `expire(tokenId)` | Anyone | Mark expired subscription inactive |
-| `isActive(tokenId)` | Anyone | Check if subscription is valid |
-| `getSubscription(wallet)` | Anyone | Get subscription details for wallet |
-| `authorizeBiller(addr)` | Owner | Allow contract to mint/renew |
-
-#### Cross-Chain Mirroring
-
-When a subscription is created on Sepolia (primary chain), the SubscriptionRegistry emits a `SubscriptionUpdate` event. The Facilitator picks this up and dispatches a **GMP message via Axelar** (or CCIP fallback) to `MirrorRegistry.sol` on other chains.
-
----
-
-### 4.3 ERC7579AutopayModule.sol
-
-**Path**: `packages/contracts/contracts/core/ERC7579AutopayModule.sol`
-
-An **ERC-7579 executor module** installed on customer's smart accounts (ERC-4337). It enables the merchant to pull USDC automatically at billing intervals.
-
-#### How It Works
-
-1. Customer deploys a **ZeroDev smart account**
-2. Customer installs the AutopayModule via `installModule(2, moduleAddress, initData)`
-3. `initData` encodes: `merchant`, `maxAmount`, `token`, `interval`
-4. Merchant (or Facilitator) calls `execute(account, amount)` at billing time
-5. Module calls `token.safeTransferFrom(account, merchant, amount)` — pulls from smart account
-
-#### AutopayConfig
-
-```solidity
-struct AutopayConfig {
-    address merchant;        // Your treasury wallet
-    uint256 maxAmount;       // Max pull per transaction (safety cap)
-    address token;           // USDC address
-    uint32 interval;         // Minimum seconds between pulls
-    bool active;             // Paused/active state
-}
-```
-
-#### Safety Mechanisms
-
-- `maxAmount` cap — operator cannot pull more than agreed
-- `interval` enforcement — cannot pull faster than billing cycle
-- Per-account pause/resume
-- Lifetime total pull tracking
-- Velocity limits
-
-#### Key Functions
-
-| Function | Access | Description |
-|----------|--------|-------------|
-| `onInstall(data)` | SmartAccount | Called when module is installed |
-| `onUninstall(data)` | SmartAccount | Called when module is removed |
-| `execute(account, amount)` | Merchant | Pull payment from account |
-| `pause(account)` | Merchant | Stop billing for account |
-| `resume(account)` | Merchant | Resume billing for account |
-| `getConfig(account)` | Anyone | Read account's billing config |
-| `getTotalPulled(account)` | Anyone | Lifetime pull amount |
-
----
-
-### 4.4 FeeCollector.sol
-
-**Path**: `packages/contracts/contracts/core/FeeCollector.sol`
-
-Collects ArcenPay's protocol fee from each payment. Fees accumulate in the contract and are periodically withdrawn to the ArcenPay treasury.
-
-#### Fee Structure
-
-| Type | Default Rate | Configurable? |
-|------|-------------|---------------|
-| Subscription fee | 50 bps (0.5%) | Per-provider override |
-| Settlement fee (ZK billing) | 30 bps (0.3%) | Per-provider override |
-
-#### Platform Tier Overrides
-
-| Tier | Subscription Fee | Settlement Fee |
-|------|-----------------|----------------|
-| FREE | 200 bps (2%) | 100 bps (1%) |
-| PLUS | 100 bps (1%) | 50 bps (0.5%) |
-| PRO | 50 bps (0.5%) | 30 bps (0.3%) |
-
-#### Key Functions
-
-| Function | Access | Description |
-|----------|--------|-------------|
-| `collectSubscriptionFeeFor(amount, provider)` | Authorized | Calculate + record fee |
-| `collectSettlementFeeFor(amount, provider)` | Authorized | Calculate ZK settlement fee |
-| `receiveFee(token, amount)` | Authorized | Receive fee transfer |
-| `withdrawFees(token)` | Owner | Send accumulated fees to treasury |
-| `setProviderFeeRates(provider, subBps, settleBps)` | Owner | Custom rates |
-| `setTreasury(addr)` | Owner | Update treasury address |
-
----
-
-### 4.5 SessionVault.sol
-
-**Path**: `packages/contracts/contracts/core/SessionVault.sol`
-
-An **escrow vault** for usage-based billing. Agents (AI bots, API clients) pre-fund sessions, then ZKUsageVerifier settles from the vault as usage is proven.
-
-#### Session Lifecycle
-
-```
-1. Agent calls fundSession(amount, token) → USDC locked in vault
-2. Agent uses provider API (tracked off-chain)
-3. ZK proof generated off-chain
-4. ZKUsageVerifier calls settle(sessionId, amount, provider)
-5. USDC released from vault → provider's wallet
-6. Agent can withdrawRemainder() any unused balance
-```
-
-#### Key Functions
-
-| Function | Access | Description |
-|----------|--------|-------------|
-| `fundSession(amount, token)` | Agent | Lock USDC, get session ID |
-| `topUp(sessionId, amount)` | Agent | Add more balance to session |
-| `settle(sessionId, amount, provider)` | Settler (ZKVerifier) | Release payment to provider |
-| `withdrawRemainder(sessionId)` | Agent | Reclaim unused balance |
-| `getSession(sessionId)` | Anyone | Read session state |
-| `authorizeSettler(addr)` | Owner | Allow contract to settle |
-
----
-
-### 4.6 ZKUsageVerifier.sol
-
-**Path**: `packages/contracts/contracts/core/ZKUsageVerifier.sol`
-
-Verifies **Groth16 ZK proofs** of usage and settles payment from SessionVault.
-
-#### Proof Flow
-
-```
-Off-chain:
-  1. Collect usage data (API call count, window start/end)
-  2. Generate Groth16 proof with circom circuit
-  3. Compute nullifier = hash(sessionId, windowStart)
-
-On-chain:
-  4. Call verifyAndSettle(proof, publicInputs)
-  5. Contract verifies Groth16 proof
-  6. Checks nullifier has not been used (prevents double-spend)
-  7. Calculates settlement = callCount × rate[planId]
-  8. Calls SessionVault.settle(sessionId, amount, provider)
-  9. Emits UsageSettled event
-```
-
-#### Public Inputs (passed to on-chain verifier)
-
-```solidity
-struct PublicInputs {
-    bytes32 sessionId;
-    address agent;
-    uint256 callCount;
-    uint64 windowStart;
-    uint64 windowEnd;
-    uint256 planId;
-}
-```
-
-#### Key Functions
-
-| Function | Access | Description |
-|----------|--------|-------------|
-| `verifyAndSettle(proof, inputs)` | Anyone | Verify ZK proof + settle |
-| `setRateSchedule(planId, ratePerCall)` | Owner | Set price per API call |
-| `setVerifier(addr)` | Owner | Update Groth16 verifier contract |
-
----
-
-### 4.7 MirrorRegistry.sol
-
-**Path**: `packages/contracts/contracts/core/MirrorRegistry.sol`
-
-Receives **cross-chain GMP messages** from the primary chain (Sepolia) and mirrors subscription state on secondary chains (Base Sepolia, Base Mainnet).
-
-#### Message Sources
-
-- **Axelar GMP** (primary): `_execute(sourceChain, sourceAddress, payload)`
-- **Chainlink CCIP** (fallback): `ccipReceive(Any2EVMMessage message)`
-
-#### What Gets Mirrored
-
-When a subscription is created/renewed/cancelled on the primary chain, a GMP message is sent containing `(wallet, planId, expiresAt, action)`. MirrorRegistry updates its local state so apps on that chain can check subscription status without cross-chain calls.
-
----
-
-### 4.8 Finance Contracts
-
-**Path**: `packages/contracts/contracts/finance/`
-
-| Contract | Description |
-|----------|-------------|
-| `SubscriptionCollateralModule.sol` | Smart account collateral backing for subscriptions |
-| `SubscriptionTransferPolicy.sol` | Controls whether subscription NFTs can be traded |
-| `YieldSessionVault.sol` | SessionVault variant that generates yield on idle funds |
-
----
-
-### 4.9 Identity Contracts
-
-**Path**: `packages/contracts/contracts/identity/`
-
-| Contract | Description |
-|----------|-------------|
-| `DIDRegistry.sol` | Decentralized identity (DID) registration per wallet |
-| `MultisigVerifier.sol` | Multi-signature threshold verification |
-| `ZKCredentialGate.sol` | Reclaim Protocol zkTLS integration — gate access based on verified Web2 claims |
-
----
-
-## 5. Money Flow
-
-### Flat Subscription Payment
-
-```
-Customer SmartAccount (USDC)
-       │
-       │  safeTransferFrom
-       ▼
-ERC7579AutopayModule.execute()
-       │
-       ├──── 99.5% ──────────────────────────────► Provider Treasury Wallet
-       │                                            (instant, non-custodial)
-       │
-       └──── 0.5% (default) ────────────────────► FeeCollector Contract
-                                                    │
-                                                    └─ (accumulates until
-                                                        owner withdraws
-                                                        to ArcenPay treasury)
-```
-
-**Key point**: Money goes **directly** to the provider's wallet in the same transaction. ArcenPay never custodies funds.
-
-### Usage-Based (ZK) Payment
-
-```
-Agent pre-funds SessionVault (USDC locked in escrow)
-       │
-       │  Agent uses API → usage tracked off-chain
-       │
-       ▼
-ZK proof generated (circom + snarkjs)
-       │
-       ▼
-ZKUsageVerifier.verifyAndSettle()
-       │
-       ├──── provider share ────────────────────► Provider Treasury
-       └──── settlement fee (0.3%) ─────────────► FeeCollector
-```
-
-### Credit Pack Purchase
-
-Same flow as flat subscription (direct transfer, non-custodial).
-
-### Fee Comparison
-
-| Platform | Fee | Payout Timing |
-|----------|-----|--------------|
-| Stripe | 2.9% + $0.30 | 2–7 business days |
-| Coinbase Commerce | 1% | 1-2 days |
-| **ArcenPay (default)** | **0.5%** | **Instant (same tx)** |
-| **ArcenPay (PRO tier)** | **0.5%** | **Instant** |
-| **ArcenPay (FREE tier)** | **2%** | **Instant** |
-
----
-
-## 6. Database Schema
-
-**Location**: `apps/arcen-dashboard/prisma/schema.prisma`
-**Database**: PostgreSQL
-**ORM**: Prisma 7
-
-### Model Reference
-
-#### Identity & Auth
-
-```
-User
-  id, email, walletAddress, clerkUserId
-  → TeamMember[] (role-based membership)
-  → MagicToken[] (passwordless login)
-
-MagicToken
-  token (hashed), expiresAt, usedAt
-  → User
-
-Team (= Workspace)
-  id, name, slug, platformTier (FREE/PLUS/PRO/ENTERPRISE)
-  environmentMode (TESTNET/MAINNET)
-  → TeamMember[]
-  → CatalogPlan[], CatalogAddOn[], CatalogCreditType[]
-  → ArcenCompany[], ArcenUser[]
-  → CatalogFeatureFlag[]
-
-TeamMember
-  role: OWNER | ADMIN | FINANCE | DEVELOPER | SUPPORT | MEMBER
-  → Team, User
-
-ProviderProfile
-  teamId, webhookUrl, webhookSecret, notificationEmail
-  hasApiKey (bool)
-```
-
-#### Catalog (Product Catalog)
-
-```
-CatalogPlan
-  id, teamId, name, tier (slug), description
-  planType: FREE | PAID
-  price (Decimal), billingInterval (days), tokenSymbol
-  chainId, tokenAddress
-  chainSyncStatus: PENDING | SYNCED | FAILED | NOT_APPLICABLE
-  onChainPlanId (uint256 from contract)
-  status: DRAFT | ACTIVE | ARCHIVED
-
-CatalogAddOn
-  id, teamId, name, code, description
-  addonType: ONE_TIME | RECURRING
-  price, billingInterval, tokenSymbol
-  chainSyncStatus, status
-
-CatalogCreditType
-  id, teamId, name, description
-  singularUnitName, pluralUnitName
-  unitsPerPack, pricePerPack
-  tokenSymbol, chainId
-  chainSyncStatus, status
-
-CatalogFeatureFlag
-  id, teamId, name, key (unique slug), description
-  flagType: BOOLEAN | NUMERICAL_LIMIT | TRAIT_BASED | EVENT_BASED
-  defaultValue
-  → FlagRule[]
-  → CompanyOverride[]
-
-FlagRule
-  id, flagId, priority, valueTrue/valueFalse, valueLimit
-  → FlagRuleCondition[]
-
-FlagRuleCondition
-  id, ruleId
-  conditionType: BASE_PLAN | ADD_ON | USAGE_LIMIT | COMPANY_TRAIT |
-                 USER_TRAIT | ZKTLS_CLAIM
-  operator: eq | gte | lte | in | contains
-  resourceId (plan/addon id), traitKey, traitValue, zkClaimType
-
-CompanyOverride
-  companyId, flagId, overrideValue, expiresAt
-```
-
-#### ArcenPay Layer (Customer Registry)
-
-```
-ArcenCompany
-  id, teamId, name, externalId
-  walletAddress, traits (JSON)
-  activePlanId, activeAddOnIds[]
-  createdAt, lastSeenAt
-
-ArcenUser
-  id, companyId, teamId
-  name, email, walletAddress
-  traits (JSON), externalId
-
-ArcenEvent
-  id, teamId, companyId, userId
-  eventType: TRACK | IDENTIFY | FLAG_CHECK
-  eventName, properties (JSON)
-  createdAt
-```
-
-#### Billing & Invoicing
-
-```
-Invoice
-  id, teamId, companyId
-  status: DRAFT | ISSUED | PAID | VOID | OVERDUE
-  subtotal, tax, total (Decimal)
-  currency, dueDate, issuedAt, paidAt
-  → InvoiceLine[]
-  → InvoiceDelivery[]
-  → CreditNote[]
-
-InvoiceLine
-  invoiceId, description, quantity, unitPrice, tax
-
-InvoiceDelivery
-  invoiceId, email, resendId, deliveredAt, status
-
-CreditNote
-  invoiceId, amount, reason, issuedAt
-
-TaxProfile
-  teamId, legalName, address (JSON), taxId, gstin
-
-InvoiceSequence
-  teamId, year, nextNumber (auto-increment)
-```
-
-#### Platform & Gas Tracking
-
-```
-PlatformTierConfig
-  tier (unique)
-  maxWorkspaces, maxPlans, maxSubscribers
-  maxTeamMembers, maxFeatureFlags, maxChains
-  gasBudgetUsdPerDay
-
-GasSpend
-  teamId, chainId, walletAddress, date
-  amountWei, amountUsd
-
-TierUpgradeHistory
-  teamId, fromTier, toTier, upgradedAt, txHash
-```
-
-#### Audit & Events
-
-```
-AuditEvent
-  id, teamId, actorType: USER | API | SYSTEM
-  actorId, action, resourceType, resourceId
-  before (JSON), after (JSON), createdAt
-
-BillingEvent
-  id, teamId
-  eventType: SUBSCRIPTION_MINTED | RENEWED | CANCELLED |
-             PAYMENT_FAILED | CREDIT_ISSUED | USAGE_SETTLED
-  idempotencyKey (unique), processed (bool)
-  payload (JSON), processedAt
-
-WebhookDelivery
-  id, teamId, url, event, payload
-  status: PENDING | DELIVERED | FAILED
-  attempts, lastError, deliveredAt
-
-AuthNonce
-  nonce (unique), walletAddress, expiresAt, used (bool)
-```
-
-#### Embed & API Keys
-
-```
-EmbedComponent
-  id, teamId, name
-  componentType: planManager | meteredFeatures | plansTable | usageDashboard
-  config (JSON), isPublished
-
-EmbedAccessToken
-  token (hashed), teamId, companyId
-  expiresAt, lastUsedAt
-
-ArcenApiKey
-  id, teamId, name
-  keyHash (argon2), prefix (first 8 chars shown)
-  lastUsedAt, expiresAt
-
-ZkTlsProof
-  id, teamId, companyId
-  proofType (github_stars, coinbase_kyc, etc.)
-  claimData (JSON), verifiedAt, expiresAt
-```
-
----
-
-## 7. API Routes
-
-**Base**: `apps/arcen-dashboard/app/api/`
-**Auth**: All routes require authenticated session (SIWE JWT or Clerk)
-
-### Auth Routes
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/api/auth/nonce` | Generate SIWE nonce (rate-limited: 20/min/IP) |
-| `POST` | `/api/auth/link-wallet` | Link wallet address to authenticated account |
-
-### Catalog Routes
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/api/catalog/plans` | List all plans for team |
-| `POST` | `/api/catalog/plans` | Create new plan |
-| `PUT` | `/api/catalog/plans/[id]` | Update plan |
-| `DELETE` | `/api/catalog/plans/[id]` | Delete/archive plan |
-| `POST` | `/api/catalog/plans/[id]/register-on-chain` | Submit EIP-712 signature → facilitator → on-chain |
-| `GET` | `/api/catalog/plans/[id]/chain-confirm` | Poll on-chain confirmation status |
-| `GET` | `/api/catalog/plans/[id]/sign-nonce` | Get nonce for EIP-712 signing |
-| `GET` | `/api/catalog/plans/[id]/entitlements` | List feature flags attached to plan |
-| `GET/POST` | `/api/catalog/add-ons` | List/create add-ons |
-| `PUT/DELETE` | `/api/catalog/add-ons/[id]` | Update/delete add-on |
-| `GET/POST` | `/api/catalog/credits` | List/create credit types |
-| `PUT/DELETE` | `/api/catalog/credits/[id]` | Update/delete credit type |
-| `POST` | `/api/catalog/publish` | Publish catalog snapshot to chain |
-| `GET` | `/api/catalog/chain-sync` | Get chain sync status for all items |
-| `GET/PUT` | `/api/catalog/config` | Catalog UI configuration |
-
-#### Free Plan Logic (plans route)
-
-```typescript
-// POST /api/catalog/plans
-const isFree = parseFloat(price) === 0;
-chainSyncStatus = isFree ? "NOT_APPLICABLE" : "PENDING";
-
-// PUT /api/catalog/plans/[id]
-if (priceChanged && !alreadySynced) {
-  const newIsFree = parseFloat(newPrice) === 0;
-  chainSyncStatus = newIsFree ? "NOT_APPLICABLE" : "PENDING";
-}
-```
-
-### Invoice Routes
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/api/invoices` | List invoices (paginated) |
-| `POST` | `/api/invoices` | Create invoice |
-| `GET` | `/api/invoices/[id]` | Get invoice detail |
-| `PUT` | `/api/invoices/[id]` | Update invoice |
-| `POST` | `/api/invoices/[id]/resend` | Resend via Resend email |
-| `POST` | `/api/invoices/[id]/credit-notes` | Add credit memo |
-| `GET` | `/api/invoices/[id]/download` | Generate + download PDF (authenticated) |
-| `GET` | `/api/invoices/public/[id]/download` | Public PDF download (signed URL) |
-
-### Platform Routes
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/api/platform/overview` | Dashboard stats (MRR, subscribers, etc.) |
-| `GET` | `/api/platform/tier` | Current platform tier + usage |
-| `POST` | `/api/platform/tier` | Upgrade tier |
-| `GET` | `/api/platform/tier-history` | Tier change audit log |
-| `GET` | `/api/platform/gas-budget` | Daily gas budget remaining |
-| `GET` | `/api/platform/gas-spend` | Historical gas spend by chain |
-| `GET` | `/api/platform/sessions` | Active SessionVault sessions |
-| `POST` | `/api/platform/support` | Submit support ticket (Pro only) |
-
-### Proof Routes
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/api/proofs/active` | Active ZK proof sessions |
-| `GET` | `/api/proofs/history` | Past proof submissions |
-
-### Provider Routes
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET/POST` | `/api/provider/profile` | Read/update provider profile |
-| `GET/POST` | `/api/provider/api-keys` | List/create API keys |
-| `DELETE` | `/api/provider/api-keys/[id]` | Revoke API key |
-
----
-
-## 8. SDK Packages
-
-### 8.1 sdk-core (`@meap/core`)
-
-**Location**: `packages/sdk-core/`
-**Used by**: All other packages and apps
-
-The shared foundation — types, ABIs, chain configs, error classes.
-
-#### Exports
-
-```typescript
-// Types
-import type {
-  Plan, PlanTier, Subscription, SubscriptionEvent,
-  Entitlement, FeatureFlag, AutopayConfig,
-  SessionVaultInfo, UsageProof, PublicInputs,
-  BillingSettlement, X402Response, X402PaymentOption,
-  ContractAddresses, ChainEnvironmentManifest,
-  MEAPConfig, PaymentToken, EnvironmentMode
-} from "@meap/core";
-
-// ABIs
-import {
-  SubscriptionRegistryABI, PlanFactoryABI,
-  ERC7579AutopayModuleABI, SessionVaultABI,
-  ZKUsageVerifierABI, FeeCollectorABI,
-  MirrorRegistryABI, YieldSessionVaultABI
-} from "@meap/core";
-
-// Chain config
-import {
-  SUPPORTED_CHAINS, TOKENS, DEFAULT_CHAIN_ID,
-  getChain, getBlockExplorerUrl
-} from "@meap/core";
-
-// Contract addresses
-import {
-  getContractAddresses, setContractAddresses,
-  getChainEnvironment, validateChainEnvironment
-} from "@meap/core";
-
-// Error handling
-import {
-  MEAPError, ContractError, AuthError,
-  parseContractError, normalizeError
-} from "@meap/core";
-
-// Constants
-import {
-  SUBSCRIPTION_FEE_BPS,  // 50
-  SETTLEMENT_FEE_BPS,    // 30
-  BPS_DENOMINATOR,       // 10_000
-  MIN_BILLING_INTERVAL,  // 2_592_000 (30 days in seconds)
-  MONTHLY_INTERVAL,      // 2_592_000
-  YEARLY_INTERVAL        // 31_536_000
-} from "@meap/core";
-```
-
-#### Supported Chains
-
-| Chain | ID | Type | USDC |
-|-------|----|------|------|
-| Ethereum Sepolia | 11155111 | Testnet | MockUSDC or bridged |
-| Base Sepolia | 84532 | Testnet | MockUSDC or USDC.e |
-| Base Mainnet | 8453 | Production | Native USDC |
-
----
-
-### 8.2 sdk-react (`@meap/react`)
-
-**Location**: `packages/sdk-react/`
-**Peer deps**: React 18/19, wagmi, viem
-
-Your customers embed these components in their app to handle the entire subscription UX.
-
-#### Setup
-
-```tsx
-import { MEAPProvider } from "@meap/react";
-import { WagmiProvider } from "wagmi";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-
-function App() {
-  return (
-    <WagmiProvider config={wagmiConfig}>
-      <QueryClientProvider client={queryClient}>
-        <MEAPProvider
-          config={{
-            chainId: 8453,              // Base mainnet
-            apiUrl: "https://api.arcenpay.xyz",
-            providerAddress: "0x...",   // Your treasury wallet
-          }}
-        >
-          <YourApp />
-        </MEAPProvider>
-      </QueryClientProvider>
-    </WagmiProvider>
-  );
-}
-```
-
-#### Components
-
-```tsx
-// Show pricing tiers
-<PricingTable
-  onSelectPlan={(planId) => ...}
-  highlightTier="pro"
-/>
-
-// Full checkout flow (wallet connect → smart account → autopay setup)
-<CheckoutModal
-  planId={selectedPlanId}
-  onSuccess={(subscriptionId) => ...}
-  onCancel={() => ...}
-/>
-
-// Show current subscription status
-<SubscriptionStatus />
-
-// Conditionally render based on feature flag
-<FeatureFlagGuard flag="advanced_analytics">
-  <AdvancedAnalytics />
-</FeatureFlagGuard>
-
-// Usage meter display
-<UsageDashboard planId={planId} />
-
-// Invoice list for customer
-<BillingHistory />
-<InvoiceList />
-```
-
-#### Hooks
-
-```tsx
-// Check a feature flag
-const { enabled, loading } = useEntitlement("advanced_analytics");
-
-// Full MEAP context
-const { plan, subscription, flags, config } = useMEAP();
-```
-
-#### Smart Account Utilities
-
-```typescript
-import { deploySmartAccount, revokeAutopayModule } from "@meap/react";
-
-// Deploy ZeroDev smart account for customer
-const account = await deploySmartAccount({
-  signer,       // viem WalletClient
-  chainId: 8453
-});
-
-// Remove autopay module (cancel subscription)
-await revokeAutopayModule({
-  account,
-  chainId: 8453
-});
-```
-
----
-
-### 8.3 sdk-node (`@meap/node`)
-
-**Location**: `packages/sdk-node/`
-**Used by**: Facilitator service, provider backends
-
-#### x402 Middleware
-
-```typescript
-import { x402Middleware } from "@meap/node";
-import express from "express";
-
-const app = express();
-
-// Require payment for /api/premium/* routes
-app.use("/api/premium", x402Middleware({
-  facilitatorUrl: process.env.FACILITATOR_URL,
-  planId: 42,
-  acceptedTokens: ["USDC"],
-  chainId: 8453
-}));
-```
-
-#### Services
-
-```typescript
-import {
-  UsageService,
-  SettlementService,
-  SettlementWriterService,
-  EventListenerService,
-  WebhookService,
-  EmailService,
-  TablelandService,
-  ProofOrchestrator,
-  BillingKeeper,
-  AxelarTransport,
-  CCIPTransport,
-  RedisUsageStore
-} from "@meap/node";
-
-// Track usage event
-const usageService = new UsageService(redisStore, config);
-await usageService.track({
-  sessionId: "0x...",
-  agentAddress: "0x...",
-  planId: 42,
-  callCount: 1
-});
-
-// Orchestrate ZK proof generation + on-chain settlement
-const orchestrator = new ProofOrchestrator(usageService, settlementService);
-await orchestrator.settleWindow(sessionId, windowStart, windowEnd);
-```
-
----
-
-### 8.4 sdk-agent (`@meap/agent`)
-
-**Location**: `packages/sdk-agent/`
-
-Thin SDK for AI agents making x402 payments autonomously. Currently exposes type re-exports from `@meap/core`. Phase 2 roadmap includes full agent wallet management.
+Code-audited handoff wiki for the current repository state.
 
----
+- Audit date: 2026-03-30
+- Primary audience: a new engineering team taking over the product
+- Scope: architecture, component responsibilities, web2 plus web3 interaction, end-to-end flows, cryptography, and current implementation status
 
-## 9. Apps
-
-### 9.1 arcen-dashboard
-
-**Path**: `apps/arcen-dashboard/`
-**Framework**: Next.js 16 (App Router), React 19
-**Port**: 3000 (default)
-
-The main provider control panel. Everything a SaaS builder needs to manage their billing.
-
-#### Key Directories
-
-```
-apps/arcen-dashboard/
-├── app/
-│   ├── (auth)/                    # Auth pages (sign-in, sign-up)
-│   ├── (dashboard)/               # Protected dashboard pages
-│   │   ├── layout.tsx             # Sidebar + nav shell
-│   │   ├── page.tsx               # Dashboard home
-│   │   ├── catalog/               # Plans, Add-Ons, Credits, Flags, Components
-│   │   ├── billing/               # Invoices, Tax profile
-│   │   ├── customers/             # Companies, Users
-│   │   ├── events/                # Event log
-│   │   ├── settings/              # Team, API keys, Profile
-│   │   └── platform/              # Gas budget, tier management
-│   └── api/                       # API route handlers
-├── components/
-│   ├── dashboard/
-│   │   ├── sections/
-│   │   │   ├── catalog.tsx        # Plans / Add-Ons / Credits / Flags
-│   │   │   ├── plans.tsx          # On-chain direct plans section
-│   │   │   ├── customers.tsx      # Company & user management
-│   │   │   ├── events.tsx         # Event stream
-│   │   │   └── billing.tsx        # Invoices section
-│   │   └── component-editor.tsx   # Embed component builder
-│   ├── ui/                        # Radix-based UI primitives
-│   └── safe/                      # Safe multisig transaction stubs
-├── lib/
-│   ├── config.ts                  # Env var resolution, chain config
-│   ├── contracts.ts               # ABI re-exports + useContractAddresses()
-│   ├── auth.ts / auth.server.ts   # SIWE JWT auth
-│   ├── chain-reader.ts            # Multi-chain viem clients
-│   ├── rbac.ts                    # Role-based access control
-│   ├── audit.ts                   # Audit event logging
-│   ├── gas-policy.ts              # Gas budget tracking
-│   ├── invoices.ts                # Invoice business logic
-│   ├── invoice-documents.ts       # PDF generation
-│   ├── invoice-tax.ts             # Tax calculation
-│   ├── graphql.ts                 # Apollo client + helpers
-│   └── facilitator-auth.ts        # Auth with facilitator
-├── prisma/
-│   ├── schema.prisma              # Full DB schema
-│   └── migrations/                # SQL migration history
-└── public/                        # Static assets
-```
+This wiki is intentionally explicit about the difference between:
+
+- `Implemented`: there is real code for it in this repo
+- `Operational if configured`: the code path exists, but it depends on env, deployment, or external services
+- `Partial / risky`: the design exists, but the current end-to-end wiring has gaps or mismatches
+
+The longer deep-dive appendix still lives in `docs/technical/arcenpay-arcenagent-technical-dossier.md`. This wiki is the practical onboarding map.
+
+## 1. Read This First
+
+ArcenPay is not "just a smart-contract billing app" and it is not "just a SaaS dashboard" either. It is a hybrid system with two product lanes:
+
+1. `Recurring subscription billing for human users`
+2. `Usage-based billing for agents and paid APIs`
+
+Those two lanes share the same repo, but they have different centers of gravity:
+
+- Recurring subscriptions center on `PlanFactory`, `SubscriptionRegistry`, and `ERC7579AutopayModule`
+- Agent billing centers on `SessionVault`, `x402`, `UsageService`, `ProofOrchestrator`, and `ZKUsageVerifier`
+
+The practical mental model is:
+
+- `Dashboard` is the web2 control plane
+- `Facilitator` is the bridge/runtime plane
+- `Contracts` are the settlement and entitlement plane
+- `Subgraph` and `Tableland` are read-side helpers, not primary truth
+
+There is also legacy naming in the repo:
+
+- `MEAP` is the older platform name still used in many package exports and comments
+- `ZKVUB` refers to the zero-knowledge usage-billing subsystem
+- `ArcenAgent` or `sdk-agent` refers to the agent-side x402 client flow
+
+## 2. Product In One Page
+
+### What the product is trying to do
+
+ArcenPay gives crypto-native products a way to:
+
+- define paid plans
+- collect recurring stablecoin payments
+- represent active subscriptions on-chain
+- gate product features in web2 and web3 apps
+- support machine-to-machine paid API calls
+- settle aggregated usage with a zk-backed proof flow
+
+### Where each concern lives
+
+| Concern | Primary owner | Secondary systems |
+| --- | --- | --- |
+| Plan catalog drafts, teams, invoices, feature rules, API keys | Dashboard + Postgres | PlanFactory for paid on-chain plans |
+| On-chain plan registry | PlanFactory | Dashboard relayer flow |
+| Subscription validity | SubscriptionRegistry | Dashboard mirror of `activePlanId`, optional Tableland projection |
+| Recurring payment execution | ERC7579AutopayModule | FeeCollector, SubscriptionRegistry |
+| Agent pre-funded balances | SessionVault | Facilitator, sdk-agent |
+| Agent request payment verification | x402 middleware in sdk-node / facilitator | SessionVault |
+| zk usage settlement | UsageService + ProofOrchestrator + ZKUsageVerifier | FeeCollector, SessionVault |
+| Feature flag evaluation | Dashboard DB-first flag engine | optional Tableland, on-chain fallback |
+| Analytics and history | Subgraph | direct chain reads for correctness-critical status |
+| Cross-chain entitlement mirroring | SubscriptionRegistry + MirrorRegistry | Axelar/CCIP transports in facilitator |
+
+## 3. Monorepo Map
+
+| Path | Role |
+| --- | --- |
+| `packages/contracts` | Solidity contracts and Foundry tests |
+| `packages/sdk-core` | ABIs, chain config, address registry, shared types |
+| `packages/sdk-react` | customer-facing React hooks and checkout UI |
+| `packages/sdk-node` | x402 middleware, proof services, transports, Tableland, keeper helpers |
+| `packages/sdk-agent` | agent SDK for funding sessions and handling x402 negotiation |
+| `apps/arcen-dashboard` | provider dashboard, catalog APIs, DB-backed control plane |
+| `apps/facilitator` | bridge service: chain listeners, x402 endpoints, proof runtime, sync, transports |
+| `subgraph` | Graph indexer for analytics/history reads |
+| `circuits` | Circom circuit and proving scripts for usage settlement |
+
+### 3.1 Best entry points in code
+
+If a new team only reads a handful of files first, these are the right ones:
+
+| File or area | Why it matters |
+| --- | --- |
+| `packages/contracts/contracts/core/PlanFactory.sol` | on-chain paid-plan registry and EIP-712 meta-plan creation |
+| `packages/contracts/contracts/core/SubscriptionRegistry.sol` | subscription NFT lifecycle and biller/bridge permissions |
+| `packages/contracts/contracts/core/ERC7579AutopayModule.sol` | intended recurring renewal engine |
+| `packages/contracts/contracts/core/SessionVault.sol` | agent pre-funded balance model |
+| `packages/contracts/contracts/core/ZKUsageVerifier.sol` | final on-chain usage settlement |
+| `apps/arcen-dashboard/app/api/catalog/plans/[id]/register-on-chain/route.ts` | real paid-plan registration flow |
+| `apps/arcen-dashboard/lib/flag-engine.ts` | DB-first entitlement and targeting logic |
+| `apps/facilitator/src/server.ts` | runtime bridge, chain watchers, sync, entitlement API, cross-chain hooks |
+| `packages/sdk-node/src/middleware/x402.ts` | request-level payment verification rules |
+| `packages/sdk-node/src/services/usage.ts` | proof runtime behavior, including strict vs dev mode |
+
+## 4. Architecture Overview
+
+```mermaid
+flowchart LR
+  subgraph Clients
+    Provider["Provider team"]
+    Customer["Customer app / wallet"]
+    Agent["AI agent / API client"]
+  end
+
+  subgraph Web2
+    Dashboard["Dashboard\ncatalog + control plane"]
+    Postgres[("Postgres / Prisma")]
+    Facilitator["Facilitator\nx402 + relays + proof runtime"]
+    Subgraph["Subgraph\nanalytics indexer"]
+    Tableland["Tableland\noptional entitlement mirror"]
+    Webhooks["Webhook targets / email"]
+    Reclaim["Reclaim zkTLS\noptional"]
+  end
+
+  subgraph Web3
+    PF["PlanFactory"]
+    SR["SubscriptionRegistry"]
+    AM["ERC7579AutopayModule"]
+    FC["FeeCollector"]
+    SV["SessionVault"]
+    ZK["ZKUsageVerifier"]
+    MR["MirrorRegistry"]
+  end
+
+  Provider --> Dashboard
+  Customer --> Dashboard
+  Customer --> PF
+  Customer --> SR
+  Customer --> AM
+  Agent --> Facilitator
 
-#### Key Components
-
-**`catalog.tsx`** — The main catalog management UI
-
-Sections within this file:
-- `CatalogPlansSection` — Plan list with create/edit dialogs
-- `CatalogAddOnsSection` — Add-on management
-- `CatalogCreditsSection` — Credit type management
-- `CatalogFlagsSection` — Feature flag management
-- `ConfigurationTab` — Billing config settings
-- `PlanDetailView` — Single plan detail (entitlements, companies, billing)
-- `CreatePlanDialog` / `EditPlanDialog` — Split-layout dialogs
-- `CreateAddOnDialog` / `EditAddOnDialog` — Add-on dialogs
-- `CreateCreditTypeDialog` / `EditCreditTypeDialog` — Credit dialogs
-
-**`component-editor.tsx`** — Visual embed component builder with drag-and-drop element palette.
-
-Contains `resolveElementIcon(el)` helper:
-```typescript
-function resolveElementIcon(el: ElementInstance): React.ComponentType {
-  // If icon is still a function (not JSON-serialized), use it directly
-  if (typeof el.icon === "function") return el.icon;
-  // Otherwise fall back to ELEMENT_LIBRARY lookup by element type
-  const found = ELEMENT_LIBRARY.find(e => e.type === el.type);
-  return found?.icon ?? DefaultIcon;
-}
-```
+  Dashboard <--> Postgres
+  Dashboard --> PF
+  Dashboard --> Webhooks
+  Dashboard --> Reclaim
 
-#### Chain Sync Flow (Dashboard → On-Chain)
+  Facilitator --> SR
+  Facilitator --> SV
+  Facilitator --> ZK
+  Facilitator --> MR
+  Facilitator --> Tableland
+  Facilitator --> Dashboard
+  Facilitator --> Webhooks
 
-```
-User clicks "Register On-Chain" for a plan
-         ↓
-Dashboard fetches sign-nonce from /api/catalog/plans/[id]/sign-nonce
-         ↓
-Dashboard calls useSignTypedData() with EIP-712 PlanFactory struct
-         ↓
-User signs in wallet (MetaMask, Coinbase, etc.)
-         ↓
-Dashboard POSTs signature to /api/catalog/plans/[id]/register-on-chain
-         ↓
-API route forwards to Facilitator service
-         ↓
-Facilitator submits createPlanFor() to PlanFactory.sol
-         ↓
-Dashboard polls /api/catalog/plans/[id]/chain-confirm
-         ↓
-On confirmation: chainSyncStatus = "SYNCED", onChainPlanId populated
-```
+  PF --> SR
+  AM --> FC
+  AM --> SR
+  ZK --> FC
+  ZK --> SV
 
-#### Free Plan Guard
-
-```typescript
-// In catalog.tsx registerOnChain()
-if (parseFloat(plan.price) === 0) {
-  toast.error("Free plans cannot be registered on-chain (price must be > 0)");
-  return;
-}
+  Subgraph --> Dashboard
 ```
-
-Free plans have `chainSyncStatus: "NOT_APPLICABLE"` and show "Off-chain" badge in the UI.
-
----
-
-### 9.2 Facilitator
-
-**Path**: `apps/facilitator/`
-**Framework**: Express.js 5 + TypeScript
-**Port**: 4000 (default)
 
-Backend service responsible for:
-1. Receiving signed EIP-712 payloads from the dashboard
-2. Submitting transactions to smart contracts
-3. Listening to on-chain events and dispatching GMP messages
-4. Running periodic billing settlement cron jobs
-5. x402 payment header validation
+### Control plane vs data plane
 
-#### Key Files
+| Plane | What lives there |
+| --- | --- |
+| Control plane | plans in draft/published form, team settings, API keys, feature rules, invoices, webhook config, ops endpoints |
+| Settlement plane | actual USDC movement, subscription NFT lifecycle, session balances, zk settlement, mirror state |
+| Read/index plane | subgraph analytics, Tableland feature projection, dashboard mirrors of on-chain state |
 
-```
-apps/facilitator/src/
-├── server.ts              # Main Express server (all routes)
-├── queue.ts               # BullMQ job queue for async settlement
-└── replay-protection.ts   # Nonce-based replay attack prevention
-```
+## 5. Web2 Architecture
 
-#### Key Endpoints (Facilitator)
+### 5.1 Dashboard
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/v1/plans/create` | Submit plan creation tx |
-| `POST` | `/v1/subscriptions/execute` | Trigger autopay pull |
-| `POST` | `/v1/proofs/settle` | Submit ZK proof + settle |
-| `GET` | `/v1/health` | Health check + chain connectivity |
-| `GET` | `/metrics` | Prometheus metrics |
+The dashboard is the main business application. It owns:
 
----
+- teams, members, provider profile, wallet linkage
+- `CatalogPlan` drafts and publishing state
+- feature flags and targeting rules
+- company and user identity records
+- invoices, billing events, webhook delivery logs
+- embed access tokens and API keys
+- zkTLS proof records
 
-### 9.3 arcen-landing
+Important detail: the dashboard is not just an admin UI. It is the relayer and translation layer between product configuration and on-chain registration.
 
-**Path**: `apps/arcen-landing/`
+### 5.2 Facilitator
 
-Static marketing website. No billing logic. Built with Next.js.
+The facilitator is the runtime bridge. It owns:
 
----
+- x402-protected paid endpoints
+- session funding and balance-related runtime flows
+- usage aggregation and proof orchestration
+- on-chain event watching
+- sync from chain events back into dashboard DB
+- optional Tableland updates
+- optional webhook/email delivery
+- optional Axelar and CCIP dispatch
+
+If the dashboard is "where providers configure the product", the facilitator is "what keeps live runtime flows moving".
+
+### 5.3 Postgres and Prisma
 
-## 10. Authentication & Authorization
+Postgres is the canonical web2 state store. It is especially important for:
 
-### Two Auth Strategies
+- draft plans and free plans
+- company and user identity
+- DB-first feature flags
+- billing event durability
+- webhook delivery logs
+- internal reconciliation and operational reporting
 
-#### 1. Clerk (OAuth / Email)
+### 5.4 Subgraph
+
+The subgraph is used for:
+
+- analytics
+- billing event history
+- plan and subscriber history
+- session and proof submission dashboards
+
+It is explicitly not the source of truth for anything correctness-critical. The repo code says live subscription status and balances should use direct chain reads instead.
+
+### 5.5 Tableland
+
+Tableland is optional. In this architecture it is a distribution and lookup layer for entitlement flags, not the primary business source of truth.
+
+Without Tableland:
+
+- the platform can still function
+- the facilitator falls back to in-memory provider-tier flags plus on-chain subscription reads
+- `useEntitlement` can still resolve subscription status using chain reads and provider fallback mappings
+
+### 5.6 Webhooks and email
+
+There are two webhook patterns in the repo:
+
+- `dashboard-side outbound webhooks` per provider/team
+- `facilitator-side global webhook service` when facilitator env is configured
+
+The dashboard also keeps durable webhook delivery records in Postgres.
+
+## 6. Web3 Architecture
 
-Used for provider sign-in (dashboard users).
+### 6.1 Contract inventory
+
+| Contract | Responsibility | Why it matters |
+| --- | --- | --- |
+| `PlanFactory` | provider registry and on-chain paid-plan registry | canonical plan IDs for paid plans |
+| `SubscriptionRegistry` | subscription NFT lifecycle and validity | canonical on-chain entitlement state |
+| `ERC7579AutopayModule` | recurring pull logic for smart accounts | intended renewal engine |
+| `FeeCollector` | protocol fee calculation and fee custody | separates merchant amount from protocol fee |
+| `SessionVault` | prepaid balances for agents | lets APIs verify spend capacity before service |
+| `ZKUsageVerifier` | verifies proof and settles usage billing | final on-chain usage settlement path |
+| `MirrorRegistry` | mirrored entitlement state on destination chains | cross-chain read model for entitlements |
+
+### 6.2 Core contract interactions
+
+```mermaid
+flowchart LR
+  PF["PlanFactory"] --> SR["SubscriptionRegistry"]
+  AM["ERC7579AutopayModule"] --> FC["FeeCollector"]
+  AM --> SR
+  ZK["ZKUsageVerifier"] --> FC
+  ZK --> SV["SessionVault"]
+  SR --> MR["MirrorRegistry"]
+```
+
+### 6.3 Current deployed truth
+
+The repo only has concrete non-zero addresses for `Sepolia` at audit time.
+
+| Contract | Sepolia address |
+| --- | --- |
+| PlanFactory | `0x4F97E0c2Ac053b735640fEb164a08Cb45ba83db1` |
+| FeeCollector | `0xa8A0D3007e5680D387A50C1a1E2Eb0AD092ca396` |
+| SubscriptionRegistry | `0xE206C519076535A9d24c852093860CFD780908C1` |
+| SessionVault | `0xd68b9C0a34d61CC3b3F982A5EC6Cc5a5739e46D9` |
+| ZKUsageVerifier | `0x1f75d66692416cE880d51Baf6CdcBeE98E5837c0` |
+| ERC7579AutopayModule | `0xc82417e378b23AD9Ae73229EF08a4BA7896a4351` |
+| MirrorRegistry | `0xC187CD32d569ec0E84B9b378f8E63f3a74afac74` |
+
+`Base Sepolia` and `Base Mainnet` are still zero-address placeholders in `packages/sdk-core/src/addresses.ts`, so multi-chain production should not be assumed from package exports alone.
+
+## 7. State Ownership: What Is Canonical?
+
+| Data | Canonical source | Notes |
+| --- | --- | --- |
+| paid plan definitions | `PlanFactory` | free plans never go on-chain |
+| plan drafts, copy, metadata editing status | dashboard DB | draft/publish workflow is web2-first |
+| active subscription validity | `SubscriptionRegistry` | dashboard mirrors `activePlanId` for app logic |
+| feature rules | dashboard DB | Tableland is optional projection, not source of truth |
+| agent available balance | `SessionVault` | checked by x402 middleware |
+| usage proof settlement | `ZKUsageVerifier` + `SessionVault` | proof runtime is off-chain, final settlement is on-chain |
+| analytics/history | subgraph | eventual consistency accepted |
+| cross-chain mirror validity | `MirrorRegistry` on destination chain | only matters if cross-chain is actually deployed and wired |
+
+## 8. End-to-End Flows
+
+### 8.1 Plan creation and on-chain registration
+
+This is the first major thing a new team should understand:
+
+- there is no single "create plan" SDK call that fully handles the product workflow
+- the real flow is mixed web2 plus web3
+- free plans stay off-chain
+- paid plans are drafted in DB, then registered on-chain via signed EIP-712 payload plus relayer submission
 
-```typescript
-// Middleware (middleware.ts)
-import { clerkMiddleware } from "@clerk/nextjs/server";
-export default clerkMiddleware();
+```mermaid
+sequenceDiagram
+  participant Provider
+  participant DashboardUI as Dashboard UI
+  participant DashboardDB as Dashboard API + DB
+  participant Wallet
+  participant PlanFactory
 
-// Server component
-import { auth } from "@clerk/nextjs/server";
-const { userId, orgId } = await auth();
-```
+  Provider->>DashboardUI: create/edit CatalogPlan draft
+  DashboardUI->>DashboardDB: save draft in Postgres
+  Provider->>DashboardUI: click register on-chain
+  DashboardUI->>DashboardDB: GET sign-nonce
+  DashboardDB->>PlanFactory: read provider nonce
+  DashboardDB-->>DashboardUI: nonce + EIP-712 domain
+  DashboardUI->>Wallet: sign create-plan payload
+  DashboardUI->>DashboardDB: POST signature + deadline
+  DashboardDB->>PlanFactory: createPlanFor(...)
+  PlanFactory-->>DashboardDB: emit PlanCreated(planId)
+  DashboardDB->>DashboardDB: store onChainPlanId + tx hash
+```
+
+What this means in practice:
+
+- `CatalogPlan` is the authoring surface
+- `PlanFactory` is the paid-plan registry
+- the dashboard relayer is part of the core architecture, not a convenience layer
+
+Important constraints:
+
+- free plans cannot be registered on-chain because `PlanFactory` requires `price > 0`
+- billing interval must be at least 30 days
+- provider must already be registered in `PlanFactory`
+
+### 8.2 Customer checkout and initial subscription mint
+
+```mermaid
+sequenceDiagram
+  participant User
+  participant App as Customer app using sdk-react
+  participant Wallet
+  participant SmartAccount
+  participant Autopay as ERC7579AutopayModule
+  participant USDC
+  participant Registry as SubscriptionRegistry
+
+  User->>App: open pricing and checkout
+  App->>Registry: read plan / registry state
+  App->>Wallet: connect wallet
+  App->>SmartAccount: deploy or resolve smart account
+  App->>Autopay: onInstall(config)
+  App->>USDC: approve(registry, 13 months)
+  App->>Registry: mint(paymentAccount, planId, interval)
+  Registry-->>App: SubscriptionMinted / tokenId
+```
+
+What the code is trying to do:
+
+- fetch plan data from `PlanFactory`
+- optionally deploy a ZeroDev smart account
+- install the autopay module
+- approve USDC
+- mint the initial subscription
+
+Important reality check:
+
+- `SubscriptionRegistry.mint` is guarded by `onlyBiller`
+- the checkout UI currently calls `mint(...)` directly from the customer-side flow
+- unless the caller account is already an authorized biller, this direct mint path will fail on a real deployment
+
+There is another important assumption:
+
+- the checkout UI calls `ERC7579AutopayModule.onInstall(...)` directly on the module address
+- the contract comments say production should call through the smart-account execution framework
+- so the current UI flow assumes a specific smart-account integration model that may not hold universally
+
+Conclusion: the checkout flow is implemented, but the current end-to-end mint/install behavior should be treated as `implementation-risk`, not as fully proven production flow.
+
+### 8.3 Intended recurring renewal flow
+
+The intended recurring-payment design is contract-driven:
+
+```mermaid
+sequenceDiagram
+  participant Merchant as Provider / authorized merchant
+  participant Module as ERC7579AutopayModule
+  participant USDC
+  participant FeeCollector
+  participant Registry as SubscriptionRegistry
+
+  Merchant->>Module: execute(account, amount)
+  Module->>FeeCollector: collectSubscriptionFeeFor(amount, provider)
+  Module->>USDC: transfer merchant amount
+  Module->>USDC: transfer protocol fee
+  Module->>Registry: mint or renew subscription
+  Module-->>Merchant: PaymentExecuted
+```
+
+This is the architecture the contracts are designed for.
+
+However, a new team should verify who runs `execute(account, amount)` in production:
+
+- the merchant/provider is the allowed caller
+- there is no obvious separate production merchant billing daemon in this repo that definitively owns this renewal loop
+- the contract path is real, but the operational owner of renewals needs to be made explicit
+
+### 8.4 Entitlement and feature-flag resolution
+
+```mermaid
+sequenceDiagram
+  participant App
+  participant Hook as useEntitlement
+  participant Facilitator
+  participant Tableland
+  participant Registry as SubscriptionRegistry
+  participant DashboardDB as Dashboard DB
+
+  App->>Hook: check wallet entitlement
+  Hook->>Registry: getWalletSubscription + isValid + expiresAt + getPlanFeatures
+  Hook->>Facilitator: GET /api/entitlements/:wallet/flags
+  Facilitator->>Tableland: getFeatureFlags(wallet)
+  alt Tableland has data
+    Tableland-->>Facilitator: flags
+    Facilitator-->>Hook: source=tableland
+  else fallback
+    Facilitator->>Registry: read active subscription
+    Facilitator-->>Hook: source=onchain + default tier flags
+  end
+  DashboardDB->>DashboardDB: DB-first rules evaluate app-side feature access
+```
+
+The important distinction is:
 
-Supports: Email, Google, GitHub, and other OAuth providers.
+- `subscription validity` is chain truth
+- `feature rule targeting` is DB truth
+- `Tableland` is optional distribution/cache
 
-#### 2. SIWE (Sign-In With Ethereum)
+### 8.5 Agent money flow with x402
 
-Used for wallet-based sign-in.
+```mermaid
+sequenceDiagram
+  participant Agent as sdk-agent
+  participant SessionVault
+  participant API as Paid API / facilitator
+  participant x402 as x402 middleware
 
-```
-1. Frontend: GET /api/auth/nonce → { nonce }
-2. Frontend: wallet.signMessage(`...${nonce}...`) → signature
-3. Frontend: POST /api/auth/verify → { siweMessage, signature }
-4. Backend: Verify SIWE message + signature
-5. Backend: Issue JWT (signed with SIWE_JWT_SECRET)
-6. Frontend: Store JWT in HTTP-only cookie
+  Agent->>SessionVault: approve USDC + fundSession(amount)
+  Agent->>API: request protected resource
+  API-->>Agent: 402 challenge with payment terms
+  Agent->>Agent: sign EIP-712 payment payload
+  Agent->>API: retry with X-PAYMENT header
+  API->>x402: validate header, signature, nonce, timestamp, resource
+  x402->>SessionVault: verify agent balance
+  x402-->>API: verified payment context
+  API-->>Agent: paid response
 ```
 
-Nonces are single-use, expire in 5 minutes, stored in `AuthNonce` table.
-
-### RBAC
-
-```typescript
-// Roles
-type Role = "OWNER" | "ADMIN" | "FINANCE" | "DEVELOPER" | "SUPPORT" | "MEMBER";
-
-// Capabilities by role
-OWNER:     full access
-ADMIN:     all except billing/tier management
-FINANCE:   invoices, tax profile, read-only elsewhere
-DEVELOPER: API keys, catalog read/write, no billing
-SUPPORT:   customers, events, read-only elsewhere
-MEMBER:    read-only dashboard
-```
+What is good about this design:
 
-### API Key Auth
+- the API can fail closed if balance checks fail
+- anti-replay exists via timestamp window and nonce store
+- the agent only advances its local nonce when it receives a successful paid response
 
-For server-to-server API calls (SDK integration):
+### 8.6 zk usage settlement flow
 
-```typescript
-// Key format: arcen_live_<32 random bytes hex>
-// Stored: argon2 hash in ArcenApiKey table
-// Header: Authorization: Bearer arcen_live_xxx
+```mermaid
+sequenceDiagram
+  participant API as Facilitator / app server
+  participant Usage as UsageService
+  participant Proof as ProofOrchestrator
+  participant Circuits as Circom + snarkjs runtime
+  participant Verifier as ZKUsageVerifier
+  participant FeeCollector
+  participant Vault as SessionVault
+
+  API->>Usage: log usage entries
+  Usage->>Proof: aggregate session window
+  Proof->>Circuits: generate Groth16 proof
+  Proof->>Verifier: submitProof(proof, publicInputs)
+  Verifier->>FeeCollector: collect settlement fee
+  Verifier->>Vault: settle from session balance
+  Verifier-->>Proof: settlement tx hash
 ```
 
----
+This subsystem has two runtime modes:
+
+- `strict`: real proof tooling and artifacts must be present
+- `dev`: proof generation can fall back to a deterministic zero-proof envelope for development
+
+That makes local development easier, but it also means "tests passed" does not automatically mean "strict proving is fully operational".
+
+### 8.7 Dashboard sync, webhooks, and external system integration
 
-## 11. Chain & Wallet Configuration
+```mermaid
+sequenceDiagram
+  participant Chain
+  participant Facilitator
+  participant Dashboard
+  participant Postgres
+  participant ProviderWebhook as Provider webhook target
+
+  Chain-->>Facilitator: subscription event
+  Facilitator->>Dashboard: sync-subscription internal route
+  Dashboard->>Postgres: update company.activePlanId
+  Dashboard->>ProviderWebhook: signed webhook POST
+  Dashboard->>Postgres: log webhook delivery result
+```
 
-### Wallet Connection
+This is the main "web2 plus web3 together" bridge for provider-facing systems:
+
+- on-chain events update web2 customer state
+- web2 notifications and webhooks are triggered from that mirrored state
 
-**Library**: AppKit (Reown) v1.8.19 + wagmi adapter
+### 8.8 Cross-chain mirror flow
 
-```typescript
-// lib/config.ts (simplified)
-import { createAppKit } from "@reown/appkit";
-import { WagmiAdapter } from "@reown/appkit-adapter-wagmi";
+Intended design:
 
-const chains = [sepolia, baseSepolia, base]; // all 3 supported
+```mermaid
+sequenceDiagram
+  participant Registry as SubscriptionRegistry
+  participant Transport as Axelar / CCIP transport
+  participant Mirror as MirrorRegistry
 
-const wagmiAdapter = new WagmiAdapter({
-  projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID,
-  networks: chains
-});
+  Registry->>Transport: dispatch mirror payload
+  Transport->>Mirror: route message to destination chain
+  Mirror->>Mirror: verify source chain + source address + message id
+  Mirror->>Mirror: update mirrored subscription
 ```
 
-### Supported Wallets
-
-Any WalletConnect v2 compatible wallet:
-- MetaMask
-- Coinbase Wallet
-- Rainbow
-- WalletConnect (300+ wallets)
-
-### USDC Token Addresses
-
-```typescript
-// From getUsdcTokenOptions()
-const USDC_CHAIN_OPTIONS = [
-  {
-    chainId: 11155111,
-    name: "Sepolia",
-    symbol: "USDC",
-    address: process.env.NEXT_PUBLIC_USDC_ADDRESS_SEPOLIA ?? "0x...",
-    tag: "testnet"
-  },
-  {
-    chainId: 84532,
-    name: "Base Sepolia",
-    symbol: "USDC",
-    address: process.env.NEXT_PUBLIC_USDC_ADDRESS_BASE_SEPOLIA ?? "0x...",
-    tag: "testnet"
-  },
-  {
-    chainId: 8453,
-    name: "Base",
-    symbol: "USDC",
-    address: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", // Native USDC on Base
-    tag: "mainnet"
-  }
-];
-```
-
-### Billing Integration Dropdown (UI)
-
-When creating a plan, the chain dropdown enforces:
-- The currently connected wallet's chain is **enabled** (default selected)
-- Other chains are **disabled** with "Switch wallet to select" hint
+The contract-side idea is sound:
 
----
+- source registry dispatches mirror payload
+- destination `MirrorRegistry` verifies trusted source and deduplicates message IDs
 
-## 12. Feature Flags & Entitlements
+But the currently wired off-chain relay path has meaningful gaps, described in Section 11.
 
-ArcenPay has a **ArcenPay-inspired** feature flag and entitlement system built in.
+## 9. Data Model You Need To Understand
 
-### Flag Types
+### 9.1 Key dashboard tables
 
-| Type | Description | Example |
-|------|-------------|---------|
-| `BOOLEAN` | On/off toggle | `has_advanced_export` |
-| `NUMERICAL_LIMIT` | Value cap per period | `api_calls_per_month: 1000` |
-| `EVENT_BASED` | Tied to tracked event count | `scans_used: track("scan")` |
-| `TRAIT_BASED` | Company/user attribute check | `is_enterprise_customer: true` |
+The most important Prisma models for handoff are:
 
-### Rule Evaluation Order
+- `Team`, `TeamMember`, `ProviderProfile`
+- `CatalogPlan`
+- `ArcenCompany`, `ArcenUser`
+- `CatalogFeatureFlag`, `FlagRule`, `FlagRuleCondition`, `CompanyOverride`
+- `BillingEvent`, `WebhookDelivery`
+- `ArcenApiKey`, `EmbedAccessToken`
+- `ZkTlsProof`
 
-```
-1. Check CompanyOverride (manual override has highest priority)
-2. Evaluate FlagRules by priority (ascending)
-   - Check each FlagRuleCondition:
-     - BASE_PLAN: is company on matching plan?
-     - ADD_ON: has company purchased matching add-on?
-     - USAGE_LIMIT: has company exceeded usage threshold?
-     - COMPANY_TRAIT: does traits[key] match?
-     - USER_TRAIT: does user.traits[key] match?
-     - ZKTLS_CLAIM: does verified zkTLS claim match?
-3. If no rule matches → return flag.defaultValue
-```
-
-### SDK Usage (Customer App)
-
-```tsx
-// React component
-import { FeatureFlagGuard, useEntitlement } from "@meap/react";
-
-function MyComponent() {
-  const { enabled } = useEntitlement("advanced_analytics");
-
-  return (
-    <FeatureFlagGuard flag="advanced_analytics">
-      <AnalyticsDashboard />
-    </FeatureFlagGuard>
-  );
-}
-
-// Or check via API
-const res = await fetch("/api/flags/check", {
-  headers: { "Authorization": `Bearer ${apiKey}` },
-  body: JSON.stringify({ flag: "advanced_analytics", company: { id: "acme" } })
-});
-```
+### 9.2 Why these matter
 
----
+| Model | What it does |
+| --- | --- |
+| `CatalogPlan` | authoring state for plans before and after on-chain registration |
+| `ArcenCompany` | maps customer identity into dashboard business state |
+| `activePlanId` on `ArcenCompany` | DB-side mirror of which plan a company currently has |
+| `CatalogFeatureFlag` + rules | app entitlement logic independent of chain-specific boolean checks |
+| `BillingEvent` | durable record of billing-related events and reconciliation |
+| `WebhookDelivery` | evidence of external integration success/failure |
+| `ZkTlsProof` | verified external-claim storage used by the flag engine |
 
-## 13. Billing & Invoicing
+## 10. Cryptography Inventory
 
-### Invoice Lifecycle
+| Mechanism | Where used | Purpose | Current state |
+| --- | --- | --- | --- |
+| EIP-712 signed plan creation | `PlanFactory.createPlanFor` | gasless relayed paid-plan registration | implemented and used by dashboard |
+| EIP-712 x402 payment signing | agent SDK + x402 middleware | request-level payment authorization | implemented and tested |
+| HMAC-SHA256 | dashboard access tokens and webhook signing | integrity/authentication for web2 integrations | implemented |
+| Groth16 proofs | circuits + `UsageService` + `ZKUsageVerifier` | usage settlement with proof-backed aggregate claims | implemented, but strict runtime depends on artifacts/tooling |
+| Nullifiers | `ZKUsageVerifier` and proof orchestration | prevent double settlement | implemented |
+| zkTLS via Reclaim | dashboard zkTLS route + proof storage | prove web2 claims without exposing raw credentials | optional and not fully active in this workspace |
 
-```
-DRAFT → ISSUED → PAID
-                ↓
-              OVERDUE (if past due date)
-              ↓
-            VOID (manually cancelled)
-```
+## 11. What Is Actually Working Right Now
 
-### Invoice Generation
+This section is the most important handoff section.
 
-Invoices are generated automatically when:
-1. `BillingEvent` of type `SUBSCRIPTION_MINTED` is processed
-2. `BillingEvent` of type `RENEWED` is processed
-3. Manually created via dashboard or API
+### 11.1 Confirmed working from code plus local audit
 
-### PDF Generation
+| Subsystem | Status | Notes |
+| --- | --- | --- |
+| Core contract suite | implemented | contract tests passed in audit session |
+| `sdk-core` | implemented | address/ABI/type layer works |
+| `sdk-react` basic read paths | implemented | plan reads and entitlement reads are real |
+| `sdk-node` x402 and usage services | implemented | tests passed |
+| `sdk-agent` | implemented | funding and x402 negotiation path exists |
+| Dashboard APIs | implemented | tests passed |
+| Facilitator server | implemented | test/typecheck passed |
+| Subgraph build | implemented | builds successfully for Sepolia indexer |
 
-**Library**: `@react-pdf/renderer` or similar
-**File**: `lib/invoice-documents.ts`
+### 11.2 Works if configured
 
-PDF includes:
-- Provider logo + branding
-- Invoice number (year-based sequence, e.g. INV-2025-0042)
-- Line items with tax
-- USDC amount + equivalent USD
-- QR code linking to payment verification
+| Subsystem | Status | What it needs |
+| --- | --- | --- |
+| Tableland entitlement projection | optional | `TABLELAND_TABLE_NAME` and write-capable Tableland config |
+| Webhooks | optional | provider webhook URL and secret, or facilitator webhook env |
+| Email | optional | Resend API key |
+| zkTLS | optional | Reclaim SDK package plus app credentials |
+| strict zk proving | conditional | compiled artifacts, verification key, proving script, snarkjs runtime |
+| cross-chain transport adapters | conditional | real destination deployments and bridge/router configuration |
 
-### Tax Calculation
+### 11.3 Partial or risky today
 
-**File**: `lib/invoice-tax.ts`
+#### A. Checkout mint path likely mismatches contract permissions
 
-Supports:
-- GST (India) — GSTIN validation
-- VAT (EU) — standard rates by country
-- US Sales Tax — configurable by state
-- No tax (international)
+Why:
 
-### Email Delivery
+- `SubscriptionRegistry.mint` is `onlyBiller`
+- `CheckoutModal` directly calls `mint(...)`
 
-**Library**: Resend v6
-**Trigger**: Invoice `ISSUED` state change
-**Tracking**: `InvoiceDelivery` table with Resend message ID
+Implication:
 
----
+- the current customer checkout path should not be assumed to succeed on a locked-down production deployment without additional biller authorization or a relayed mint layer
 
-## 14. ZK Proof System
+#### B. Autopay install flow is UI-driven but contract comments expect smart-account execution framework
 
-### Overview
+Why:
 
-The **ZKVUB Protocol** (Zero-Knowledge Verifiable Usage Billing) enables metered billing without revealing raw usage data.
+- `CheckoutModal` calls `onInstall(...)` directly
+- the contract explicitly says production would call through the smart account's execution framework
 
-### Circuit
+Implication:
 
-**File**: `circuits/UsageBilling.circom`
+- the smart-account integration contract should be revalidated before claiming universal ERC-7579 compatibility
 
-```
-Inputs (private):
-  - raw usage events array
-  - timestamps
-  - session salt
-
-Outputs (public):
-  - sessionId
-  - agentAddress
-  - callCount (aggregated)
-  - windowStart, windowEnd
-  - planId
-
-Constraint: callCount == sum(valid events in window)
-```
+#### C. Cross-chain relay wiring has concrete mismatches
 
-### Proof Generation (Off-Chain)
+There are at least four issues:
 
-```typescript
-import { groth16 } from "snarkjs";
+1. `SubscriptionRegistry` emits route constants `1` for Axelar and `2` for CCIP, but the facilitator watcher treats `0` as Axelar and `1` as CCIP.
+2. The facilitator watcher builds a minimal payload containing only `tokenId`, while `MirrorRegistry` expects a fully decoded subscription payload.
+3. The transport adapters are initialized with `CONTRACTS.mirrorRegistry` from the current chain, which assumes the destination mirror lives at the same address.
+4. Base-network addresses are still zero placeholders in `sdk-core`.
 
-const { proof, publicSignals } = await groth16.fullProve(
-  privateInputs,
-  "circuits/UsageBilling.wasm",
-  "circuits/UsageBilling.zkey"
-);
-```
+Implication:
 
-### Proof Verification (On-Chain)
-
-```solidity
-// ZKUsageVerifier.sol
-function verifyAndSettle(
-  uint[2] calldata _pA,
-  uint[2][2] calldata _pB,
-  uint[2] calldata _pC,
-  uint[4] calldata _pubSignals  // [sessionId, agentAddr, callCount, planId]
-) external {
-  require(verifier.verifyProof(_pA, _pB, _pC, _pubSignals), "invalid proof");
-
-  bytes32 nullifier = keccak256(abi.encode(sessionId, windowStart));
-  require(!_nullifiers[nullifier], "already settled");
-  _nullifiers[nullifier] = true;
-
-  uint256 amount = callCount * _rateSchedule[planId];
-  sessionVault.settle(sessionId, amount, provider);
-}
-```
+- cross-chain is architected and partly unit-tested, but not handoff-safe as a production-ready end-to-end claim
 
-### Nullifier (Anti Double-Spend)
+#### D. zk proof runtime is only fully real in strict mode with artifacts present
 
-Each settlement has a nullifier = `keccak256(sessionId || windowStart)`. Once settled, that window cannot be re-submitted. This prevents double-billing.
+Why:
 
----
+- the facilitator enforces `strict` in production profile
+- local/dev mode can fall back to zero-proof envelopes
+- the `circuits` package currently lacks `snarkjs` in this workspace
 
-## 15. Cross-Chain Architecture
+Implication:
 
-### Why Cross-Chain?
+- the usage-billing architecture is real, but strict proof operations still need final runtime hardening and deployment discipline
 
-Your customers might subscribe on Sepolia (testnet) but your app runs on Base Mainnet. MirrorRegistry lets you check subscription status on any chain without cross-chain calls at query time.
+### 11.4 Not active in this workspace during audit
 
-### Message Flow
+| Subsystem | Audit conclusion |
+| --- | --- |
+| Tableland write path | not active |
+| zkTLS via Reclaim | not active |
+| strict proving toolchain in `circuits` | not active |
+| deployed Base/Base Sepolia contract stack | not active |
 
-```
-Customer subscribes on Sepolia (primary chain)
-         ↓
-SubscriptionRegistry emits SubscriptionUpdate event
-         ↓
-Facilitator picks up event (EventListenerService)
-         ↓
-AxelarTransport.dispatch(message, destinationChain)
-         ↓
-Axelar GMP delivers to MirrorRegistry on Base
-         ↓
-MirrorRegistry.updateSubscription(wallet, planId, expiresAt)
-         ↓
-Apps on Base can now call MirrorRegistry.isActive(wallet) → true
-```
+## 12. Direct Answers To Your Specific Questions
 
-### Fallback (CCIP)
+### Is Tableland currently working?
 
-If Axelar delivery fails after 3 retries, the Facilitator switches to CCIPTransport (Chainlink CCIP) as backup.
+`Not as an active configured service in this workspace.`
 
-### Message Deduplication
+What is true:
 
-MirrorRegistry tracks `bytes32 messageId` for each received GMP message. Duplicate deliveries (both Axelar + CCIP for same event) are silently ignored.
+- the Tableland service code is real
+- the facilitator only starts it when `TABLELAND_TABLE_NAME` is configured
+- the example env explicitly says it falls back to in-memory flags when that variable is unset
 
----
+So the platform can run without Tableland, but persistent Tableland-backed entitlement distribution is currently optional rather than foundational.
 
-## 16. zkTLS & Identity
+### Is the subgraph really used?
 
-**Contract**: `packages/contracts/contracts/identity/ZKCredentialGate.sol`
-**Protocol**: [Reclaim Protocol](https://reclaimprotocol.org/)
+`Yes, but for analytics and history, not for correctness-critical live state.`
 
-### What Is zkTLS?
+That is actually a healthy design choice:
 
-zkTLS allows users to prove facts about their Web2 accounts (GitHub, LinkedIn, Coinbase) **without sharing credentials or raw data**. A TLS session proof attests that a specific HTTPS response was received.
+- dashboard analytics and history use the subgraph
+- live subscription checks and balances are expected to use direct contract reads
 
-### Use Cases in ArcenPay
+Also:
 
-```typescript
-// Example FlagRuleCondition with zkTLS
-{
-  conditionType: "ZKTLS_CLAIM",
-  zkClaimType: "github_stars_gte_100",
-  // → Only users who prove they have a GitHub repo with ≥100 stars get this flag
-}
+- the subgraph config in this repo is Sepolia-only
+- the subgraph package builds successfully
+- the repo does not have real subgraph tests yet
 
-{
-  conditionType: "ZKTLS_CLAIM",
-  zkClaimType: "coinbase_kyc_verified",
-  // → Enterprise tier only for KYC-verified users
-}
-```
+### Is zkTLS really working?
 
-### Proof Storage
+`Designed and partially integrated, but not operational in this workspace today.`
 
-Verified zkTLS proofs are stored in `ZkTlsProof` table:
-```
-ZkTlsProof {
-  proofType: "github_stars",
-  claimData: { stars: 342, repo: "myrepo" },
-  verifiedAt: ...,
-  expiresAt: (30 days)
-}
-```
+What exists:
 
----
+- zkTLS proof route
+- DB model for storing verified proofs
+- flag-engine support for `zktls_claim` conditions
 
-## 17. Deployment Guide
+What is missing in this workspace:
 
-### Prerequisites
+- `@reclaimprotocol/js-sdk`
+- required Reclaim app credentials
 
-```bash
-node >= 20.0.0
-npm >= 10.2.4
-Docker (for Foundry tests)
-PostgreSQL database
-Redis instance
-```
+### Is cross-chain really working?
 
-### 1. Environment Setup
+`Not in a way I would hand off as production-ready today.`
 
-```bash
-# Copy env templates
-cp .env.example .env
-cp apps/arcen-dashboard/.env.example apps/arcen-dashboard/.env.local
+What is real:
 
-# Fill in required values (see §18 Environment Variables)
-```
+- contract support exists
+- transport adapters exist
+- mirror registry exists
 
-### 2. Install Dependencies
+What blocks a strong "yes":
 
-```bash
-npm install
-```
+- non-Sepolia deployments are placeholders
+- relay route interpretation is mismatched
+- relay payload encoding is mismatched
+- destination addressing assumptions are weak
 
-### 3. Database Setup
+### Is the money flow working?
 
-```bash
-cd apps/arcen-dashboard
+`Partly yes, but the answer depends on which lane you mean.`
 
-# Apply schema to DB
-npx prisma db push
+For `agent / x402 / SessionVault / usage billing`:
 
-# Generate Prisma client
-npx prisma generate
+- the architecture is coherent
+- the code paths are real
+- the main remaining concern is strict proving runtime readiness
 
-# Optional: Open Prisma Studio
-npx prisma studio
-```
+For `subscription checkout and recurring billing`:
 
-### 4. Deploy Smart Contracts
+- the contracts are real
+- the UI flow exists
+- but the current initial mint path likely needs a biller/relayer correction before it should be treated as production-safe
 
-```bash
-cd packages/contracts
+## 13. Deployment and Environment Strategy
 
-# Deploy to Sepolia testnet
-npm run deploy:sepolia
+### 13.1 Current network reality
 
-# Deploy to Base Sepolia
-npm run deploy:base-sepolia
+| Network | State |
+| --- | --- |
+| Sepolia | actual deployed contract set present in repo |
+| Base Sepolia | placeholders in address registry |
+| Base Mainnet | placeholders in address registry |
 
-# Deploy to Base mainnet
-npm run deploy:base-mainnet
+### 13.2 External dependencies by importance
 
-# Export deployment manifest (for SDK)
-npx hardhat run scripts/export-environment-manifest.ts --network sepolia
+#### Required for core recurring plus agent product
 
-# Run smoke tests
-npm run smoke:sepolia
-```
+- RPC endpoint
+- deployed Sepolia contracts
+- dashboard Postgres
+- facilitator secret alignment
 
-### 5. Post-Deployment Setup
+#### Required for strict production-grade usage proving
 
-```bash
-# Authorize facilitator as settler in SessionVault
-npx hardhat run scripts/authorize-facilitator-settler.ts --network sepolia
+- proving artifacts
+- verification key
+- proof signer key
+- `PROOF_MODE=strict`
 
-# Deploy and link Groth16 verifier
-npx hardhat run scripts/set-groth16-verifier.ts --network sepolia
+#### Optional integrations
 
-# Approve USDC token in PlanFactory
-npx hardhat run scripts/approve-token.ts --network sepolia
-```
+- Tableland
+- Reclaim zkTLS
+- Resend
+- Axelar
+- CCIP
 
-### 6. Run Dev Servers
+## 14. Test And Audit Evidence
 
-```bash
-# All apps in parallel
-turbo dev
+During this audit session, the following checks were already completed:
 
-# Dashboard only
-cd apps/arcen-dashboard && npm run dev
+| Check | Result |
+| --- | --- |
+| `npm --workspace packages/sdk-core test` | passed |
+| `npm --workspace packages/sdk-agent test` | passed |
+| `npm --workspace packages/sdk-node test` | passed |
+| `npm --workspace packages/sdk-react test` | passed |
+| `npm --workspace packages/contracts test` | passed |
+| `npm --workspace apps/arcen-dashboard test` | passed |
+| `npm --workspace apps/facilitator test` | passed |
+| `npm --prefix subgraph run build` | passed |
+| `npm --prefix circuits test` | failed because `snarkjs` was missing in the workspace |
 
-# Facilitator only
-cd apps/facilitator && npm run dev
-```
+Interpretation:
 
-### 7. Production Build
+- the repo is not broken overall
+- the core contract and app layers are in reasonably good shape
+- the proving toolchain still needs final operational readiness work
 
-```bash
-# Build all
-turbo build
+## 15. Recommended Handover Priorities
 
-# Dashboard only
-cd apps/arcen-dashboard && npm run build
-```
+If a new team takes over, this is the order I would use.
 
-### Contract Addresses
-
-After deployment, addresses are exported to a manifest file. The dashboard reads these via `getContractAddresses(chainId)` from `@meap/core`.
-
----
-
-## 18. Environment Variables
-
-### `apps/arcen-dashboard/.env.local`
-
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `DATABASE_URL` | ✅ | PostgreSQL connection string |
-| `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` | ✅ | WalletConnect project ID |
-| `NEXT_PUBLIC_CHAIN_ID` | ✅ | Default chain (11155111 / 84532 / 8453) |
-| `SIWE_JWT_SECRET` | ✅ | Secret for SIWE JWT signing |
-| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | ✅ | Clerk public key |
-| `CLERK_SECRET_KEY` | ✅ | Clerk secret key |
-| `CLERK_WEBHOOK_SECRET` | ✅ | Clerk webhook verification secret |
-| `NEXT_PUBLIC_APP_URL` | ✅ | Public URL (e.g. https://app.arcenpay.xyz) |
-| `RESEND_API_KEY` | ✅ | Resend email API key |
-| `EMAIL_FROM` | ✅ | Sender email (e.g. billing@arcenpay.xyz) |
-| `FACILITATOR_URL` | ✅ | Facilitator service URL |
-| `FACILITATOR_SECRET` | ✅ | Shared secret for facilitator auth |
-| `RPC_URL_SEPOLIA` | ✅ (testnet) | Sepolia RPC URL |
-| `RPC_URL_BASE_SEPOLIA` | ✅ (testnet) | Base Sepolia RPC URL |
-| `RPC_URL_BASE` | ✅ (mainnet) | Base mainnet RPC URL |
-| `NEXT_PUBLIC_GRAPH_URL_SEPOLIA` | ⬜ | The Graph subgraph URL (Sepolia) |
-| `NEXT_PUBLIC_GRAPH_URL_BASE` | ⬜ | The Graph subgraph URL (Base) |
-| `NEXT_PUBLIC_USDC_ADDRESS_SEPOLIA` | ⬜ | Override USDC address (Sepolia) |
-| `NEXT_PUBLIC_USDC_ADDRESS_BASE_SEPOLIA` | ⬜ | Override USDC address (Base Sepolia) |
-| `PLAN_FACTORY_OWNER_PRIVATE_KEY` | ⬜ | For server-side plan registration |
-| `SENTRY_DSN` | ⬜ | Sentry error tracking DSN |
-
-### `apps/facilitator/.env`
-
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `RPC_URL_SEPOLIA` | ✅ | Sepolia RPC |
-| `RPC_URL_BASE_SEPOLIA` | ✅ | Base Sepolia RPC |
-| `RPC_URL_BASE` | ✅ | Base mainnet RPC |
-| `PRIVATE_KEY` | ✅ | Facilitator wallet private key (pays gas) |
-| `FACILITATOR_SECRET` | ✅ | Shared secret (must match dashboard) |
-| `REDIS_URL` | ✅ | Redis connection string |
-| `AXELAR_API_URL` | ✅ | Axelar GMP API |
-| `TABLELAND_PRIVATE_KEY` | ⬜ | For Tableland usage logging |
-
-### `packages/contracts/.env`
-
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `DEPLOYER_PRIVATE_KEY` | ✅ | Deployer wallet (funded with ETH) |
-| `SEPOLIA_RPC_URL` | ✅ | Sepolia RPC |
-| `BASE_SEPOLIA_RPC_URL` | ✅ | Base Sepolia RPC |
-| `BASE_MAINNET_RPC_URL` | ✅ | Base mainnet RPC |
-| `ETHERSCAN_API_KEY` | ✅ | For contract verification |
-| `BASESCAN_API_KEY` | ⬜ | For Base contract verification |
-
----
-
-## 19. Testing
-
-### Smart Contracts
-
-```bash
-cd packages/contracts
-
-# Forge tests (recommended)
-npm run test                    # Auto-detect Docker/local
-npm run test:forge:docker       # Force Docker (Foundry container)
-
-# Hardhat tests
-npm run test:hardhat
-
-# Coverage report
-npm run forge:coverage:docker
-
-# Gas snapshots
-npm run forge:snapshot:docker
-```
+1. `Fix the subscription checkout permission model`
+   - decide whether initial mint is relayed, biller-authorized, or executed through the autopay path
 
-Test files location: `packages/contracts/test/`
+2. `Write down the true renewal operator`
+   - define exactly who calls `ERC7579AutopayModule.execute(...)`, when, and from what service
 
-### Dashboard (TypeScript)
+3. `Decide whether Tableland is strategic or optional`
+   - if strategic, fully configure and operate it
+   - if optional, keep it clearly documented as a cache/projection layer only
 
-```bash
-cd apps/arcen-dashboard
+4. `Finish strict zk proof runtime hardening`
+   - artifact packaging
+   - dependency installation
+   - environment validation
+   - deployment runbooks
 
-# Unit tests (Vitest)
-npm test
+5. `Treat cross-chain as a separate hardening project`
+   - deploy non-Sepolia chains
+   - fix route-value mismatch
+   - fix payload encoding mismatch
+   - document bridge trust and destination addresses
 
-# E2E tests (Playwright)
-npm run test:e2e
-```
+6. `Decide whether zkTLS is MVP-critical`
+   - if yes, install Reclaim, wire credentials, add operational tests
+   - if no, keep it documented as optional and avoid selling it as already live
 
-### SDK Packages
+## 16. Bottom-Line Summary
 
-```bash
-cd packages/sdk-core   # or sdk-react, sdk-node
-npm test               # Vitest
-```
+ArcenPay today is best understood as:
 
-### Running All Tests
+- `a real hybrid billing architecture`
+- `with strong Sepolia-first contract foundations`
+- `a real dashboard plus facilitator control/runtime split`
+- `a credible agent billing lane`
+- `a recurring billing lane that is architecturally good but still needs one important permission-flow correction`
+- `optional modules like Tableland and zkTLS that are present but not mandatory`
+- `a cross-chain story that exists in design and code, but still needs end-to-end hardening before it should be treated as live`
 
-```bash
-# From monorepo root
-turbo test
-```
+If a new team starts from this wiki, the safest assumption is:
 
----
-
-## 20. Security Model
-
-### Smart Contract Security
-
-| Risk | Mitigation |
-|------|-----------|
-| Price manipulation | `maxAmount` cap on AutopayModule; provider sets max pull |
-| Replay attacks | EIP-712 nonces in PlanFactory; nullifiers in ZKUsageVerifier |
-| Reentrancy | `nonReentrant` modifier on all fund-moving functions |
-| Access control | `onlyOwner`, `onlyAuthorized` modifiers on sensitive functions |
-| Token rug | Only whitelisted tokens (USDC) accepted |
-| Free plan on-chain | `price > 0` enforced at contract level |
-
-### API Security
-
-| Risk | Mitigation |
-|------|-----------|
-| SIWE replay | Nonces are single-use, stored in `AuthNonce`, expire in 5 min |
-| Rate limiting | 20 nonce requests/min/IP |
-| RBAC bypass | Team membership verified on every API call |
-| Webhook spoofing | HMAC signature verification (Svix) |
-| SQL injection | Prisma parameterized queries |
-| API key exposure | Keys stored as argon2 hash; only prefix shown in UI |
-
-### Wallet Security
-
-| Risk | Mitigation |
-|------|-----------|
-| Excessive approval | AutopayModule has `maxAmount` per-account cap |
-| Unauthorized pull | Only registered `merchant` address can call `execute()` |
-| Module removal | User can `uninstallModule()` at any time to stop billing |
-| Fund custody | ArcenPay never holds customer funds (non-custodial) |
-
----
-
-## 21. Glossary
-
-| Term | Definition |
-|------|-----------|
-| **MEAP** | Multi-chain Entitlement & Autopay Protocol — ArcenPay's underlying protocol |
-| **ZKVUB** | Zero-Knowledge Verifiable Usage Billing — the metered billing subsystem |
-| **PlanFactory** | Smart contract that stores plan configurations on-chain |
-| **SubscriptionRegistry** | ERC-721 contract where each NFT = one active subscription |
-| **AutopayModule** | ERC-7579 executor module installed on customer's smart account for auto-pull |
-| **ERC-7579** | Standard for smart account executor modules |
-| **ERC-5643** | Standard for subscription-based NFTs with expiry |
-| **ERC-4337** | Account abstraction standard (enables smart accounts) |
-| **SessionVault** | Escrow contract for usage-based billing (agent pre-funds) |
-| **ZKUsageVerifier** | On-chain Groth16 proof verifier for usage settlement |
-| **MirrorRegistry** | Cross-chain subscription state mirror via GMP |
-| **FeeCollector** | Accumulates ArcenPay protocol fees |
-| **GMP** | General Message Passing — cross-chain messaging (Axelar/CCIP) |
-| **SIWE** | Sign-In With Ethereum — wallet-based authentication |
-| **EIP-712** | Typed structured data signing standard (used for gasless plan creation) |
-| **Groth16** | ZK-SNARK proving system used for usage proofs |
-| **Circom** | Circuit description language for ZK proofs |
-| **Nullifier** | One-time hash preventing double-spend in ZK settlement |
-| **zkTLS** | TLS-based zkProof of Web2 data (via Reclaim Protocol) |
-| **ChainSyncStatus** | `PENDING \| SYNCED \| FAILED \| NOT_APPLICABLE` — plan's on-chain state |
-| **NOT_APPLICABLE** | ChainSyncStatus for free plans (price=0, never registered on-chain) |
-| **x402** | HTTP 402 Payment Required protocol — payment headers for API monetization |
-| **Tableland** | Decentralized SQL database for off-chain usage log storage |
-| **Facilitator** | ArcenPay's backend service that relays transactions and settles payments |
-| **Turbo** | Monorepo build tool (Turborepo) |
-| **RBAC** | Role-Based Access Control — team permission system |
-| **BPS** | Basis Points — fee unit where 100 bps = 1% |
-| **USDC** | USD Coin — stablecoin used for all ArcenPay payments |
-| **Smart Account** | ERC-4337 account abstraction wallet (ZeroDev) |
-| **Catalog** | The complete set of plans, add-ons, credit types, and feature flags |
-| **ArcenCompany** | Customer entity in the entitlement system (maps to wallet address) |
-| **Entitlement** | A feature or limit granted to a company based on their plan/add-ons |
-| **Feature Flag** | A boolean or value-based capability toggle controlled by billing rules |
-| **CreditType** | A named unit of value customers can purchase in packs and burn |
-| **Add-On** | Optional supplement to a base plan (one-time or recurring) |
-| **Invoice Sequence** | Year-based auto-increment counter for invoice numbers |
-| **Svix** | Webhook delivery service with retry and signing |
-| **Resend** | Email delivery API used for invoices and notifications |
-| **AppKit** | Reown's WalletConnect v2 modal + wagmi adapter |
-| **viem** | TypeScript Ethereum client library |
-| **wagmi** | React hooks for Ethereum (built on viem) |
-| **Prisma** | TypeScript ORM for PostgreSQL |
-
----
-
-*Wiki generated from ArcenPay monorepo — last updated 2026-03-25*
+- `Sepolia recurring + dashboard + x402 + SessionVault + analytics` are the current core
+- `strict proving, cross-chain, zkTLS, and Tableland-heavy operation` still need explicit activation and final hardening

@@ -1,10 +1,20 @@
 {
   "version": 1,
   "skills": {
+    "docx": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "computedHash": "6962db07127ee540a56e4677f65576d0727668a1d67f7da8bc978f10791c2bfe"
+    },
     "frontend-design": {
       "source": "anthropics/skills",
       "sourceType": "github",
       "computedHash": "063a0e6448123cd359ad0044cc46b0e490cc7964d45ef4bb9fd842bd2ffbca67"
+    },
+    "pitch-deck-visuals": {
+      "source": "inferen-sh/skills",
+      "sourceType": "github",
+      "computedHash": "b76edbbd1705c5c01729537572e0125fb20347478893b3cb371da1a1d9c747d2"
     }
   }
 }

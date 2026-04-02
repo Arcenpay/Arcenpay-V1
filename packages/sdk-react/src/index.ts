@@ -44,6 +44,15 @@ export type { EntitlementErrorCode } from './hooks/useEntitlement';
 export { useEntitlementCheck } from './hooks/useEntitlementCheck';
 export type { UseEntitlementCheckReturn, UseEntitlementCheckOptions } from './hooks/useEntitlementCheck';
 
+export { useFlag, useFlags } from './hooks/useFlag';
+export type { UseFlagOptions, UseFlagResult } from './hooks/useFlag';
+
+export { useCompanyEntitlements } from './hooks/useCompanyEntitlements';
+export type { UseCompanyEntitlementsOptions, UseCompanyEntitlementsReturn } from './hooks/useCompanyEntitlements';
+
+export { useTrack } from './hooks/useTrack';
+export type { TrackOptions, TrackEventInput, UseTrackResult } from './hooks/useTrack';
+
 // Utilities
 export { deploySmartAccount } from './lib/zerodev';
 export { revokeAutopayModule } from './lib/zerodev';
