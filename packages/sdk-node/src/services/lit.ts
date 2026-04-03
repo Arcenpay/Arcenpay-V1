@@ -20,8 +20,16 @@ export interface LitAccessCondition {
 }
 
 export interface LitConfig {
-  /** 'manzano' (legacy testnet alias) or 'habanero' (legacy mainnet alias) */
-  network: 'manzano' | 'habanero';
+  /**
+   * Supported Lit network aliases.
+   * Legacy names are kept for backwards compatibility with older env files.
+   */
+  network:
+    | 'manzano'
+    | 'habanero'
+    | 'datil-dev'
+    | 'datil-test'
+    | 'datil';
   /** SubscriptionRegistry contract address */
   registryAddress: string;
   /** Chain name used in ACC conditions (e.g., 'baseSepolia', 'base', 'sepolia') */
@@ -42,10 +50,19 @@ export class LitProtocolService {
   }
 
   async connect(): Promise<void> {
-    const litNetwork =
-      this.config.network === 'habanero'
-        ? LIT_NETWORK.Datil
-        : LIT_NETWORK.DatilTest;
+    const litNetwork = (() => {
+      switch (this.config.network) {
+        case 'habanero':
+        case 'datil':
+          return LIT_NETWORK.Datil;
+        case 'datil-test':
+        case 'manzano':
+          return LIT_NETWORK.DatilTest;
+        case 'datil-dev':
+        default:
+          return LIT_NETWORK.DatilDev;
+      }
+    })();
 
     this.litClient = new LitNodeClient({
       litNetwork,

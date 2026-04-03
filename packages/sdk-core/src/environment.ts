@@ -38,12 +38,19 @@ const DEFAULT_SERVICES: Record<number, ChainServiceEndpoints> = {
 
 type ServiceKey = keyof ChainServiceEndpoints;
 
+const LEGACY_RPC_ENV_KEYS: Record<number, string[]> = {
+  11155111: ["SEPOLIA_RPC_URL"],
+  84532: ["BASE_SEPOLIA_RPC_URL"],
+  8453: ["BASE_MAINNET_RPC_URL"],
+};
+
 const SERVICE_ENV_KEYS: Record<ServiceKey, (chainId: number) => string[]> = {
   rpcUrl: (chainId) => [
     `ARCENPAY_RPC_URL_${chainId}`,
     `MEAP_RPC_URL_${chainId}`,
     `RPC_URL_${chainId}`,
     `NEXT_PUBLIC_RPC_URL_${chainId}`,
+    ...(LEGACY_RPC_ENV_KEYS[chainId] || []),
     "ARCENPAY_RPC_URL",
     "MEAP_RPC_URL",
     "RPC_URL",
@@ -176,4 +183,3 @@ export function validateChainEnvironment(
 
   return { ok: true };
 }
-

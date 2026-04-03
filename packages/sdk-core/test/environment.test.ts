@@ -19,6 +19,7 @@ afterEach(() => {
     "MEAP_RPC_URL_11155111",
     "MEAP_RPC_URL_84532",
     "MEAP_CONTRACT_84532_planFactory",
+    "SEPOLIA_RPC_URL",
   );
 });
 
@@ -54,6 +55,12 @@ describe("environment", () => {
         requiredServices: ["rpcUrl"],
       }),
     ).toThrow(/invalid services/i);
+  });
+
+  it("accepts legacy chain alias rpc env names", () => {
+    process.env.SEPOLIA_RPC_URL = "https://ethereum-sepolia.example.org";
+    const env = getChainEnvironment(11155111);
+    expect(env.services.rpcUrl).toBe("https://ethereum-sepolia.example.org");
   });
 
   it("detects zero addresses correctly", () => {

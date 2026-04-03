@@ -6,6 +6,23 @@
 
 // ── Sentry must be initialized FIRST, before all other imports ──
 import * as Sentry from "@sentry/node";
+import dotenv from "dotenv";
+import fs from "fs";
+import path from "path";
+
+const FACILITATOR_ENV_PATHS = [
+  path.resolve(process.cwd(), ".env.local"),
+  path.resolve(process.cwd(), ".env"),
+  path.resolve(process.cwd(), "apps/facilitator/.env.local"),
+  path.resolve(process.cwd(), "apps/facilitator/.env"),
+];
+
+for (const envPath of FACILITATOR_ENV_PATHS) {
+  if (fs.existsSync(envPath)) {
+    dotenv.config({ path: envPath, override: false });
+  }
+}
+
 if (process.env.SENTRY_DSN) {
   Sentry.init({
     dsn: process.env.SENTRY_DSN,
@@ -16,8 +33,6 @@ if (process.env.SENTRY_DSN) {
 
 import express from "express";
 import cors from "cors";
-import fs from "fs";
-import path from "path";
 import {
   collectDefaultMetrics,
   Counter,
@@ -1035,8 +1050,16 @@ async function getTokenOwner(tokenId: bigint): Promise<string | null> {
 let litService: LitProtocolService | null = null;
 let litReady: Promise<void> | null = null;
 if (process.env.LIT_NETWORK) {
+  const litNetwork = (
+    process.env.LIT_NETWORK === "habanero" ||
+    process.env.LIT_NETWORK === "datil" ||
+    process.env.LIT_NETWORK === "datil-test" ||
+    process.env.LIT_NETWORK === "datil-dev"
+      ? process.env.LIT_NETWORK
+      : "manzano"
+  ) as ConstructorParameters<typeof LitProtocolService>[0]["network"];
   litService = new LitProtocolService({
-    network: process.env.LIT_NETWORK === "habanero" ? "habanero" : "manzano",
+    network: litNetwork,
     registryAddress: CONTRACTS.subscriptionRegistry,
     chain:
       CHAIN_ID === 8453
@@ -1624,85 +1647,125 @@ eventListener.on("cancelled", async (event) => {
 
 // Watch for cross-chain dispatch requests and relay via Axelar/CCIP (PRD §7.2)
 if (axelarTransport || ccipTransport) {
-  chainClient.watchContractEvent({
-    address: CONTRACTS.subscriptionRegistry as `0x${string}`,
-    abi: SubscriptionRegistryABI,
-    eventName: "CrossChainDispatchRequested",
-    onLogs: async (logs) => {
-      for (const log of logs) {
-        const { tokenId, destinationChainId, route } = log.args as {
-          tokenId: bigint;
-          destinationChainId: bigint;
-          route: number;
-          messageId: `0x${string}`;
-        };
-        const destChainId = Number(destinationChainId);
-        const destinationMirrorRegistry =
-          resolveDestinationMirrorRegistryAddress(destChainId);
+  let lastCrossChainDispatchBlock: bigint | null = null;
+  const handleCrossChainDispatchLogs = async (
+    logs: Array<{
+      args: unknown;
+      blockNumber: bigint;
+    }>,
+  ) => {
+    for (const log of logs) {
+      const { tokenId, destinationChainId, route } = log.args as {
+        tokenId: bigint;
+        destinationChainId: bigint;
+        route: number;
+        messageId: `0x${string}`;
+      };
+      const destChainId = Number(destinationChainId);
+      const destinationMirrorRegistry =
+        resolveDestinationMirrorRegistryAddress(destChainId);
 
-        if (!destinationMirrorRegistry) {
-          console.warn(
-            `[Facilitator] GMP dispatch for tokenId=${tokenId} destination=${destChainId} skipped — destination MirrorRegistry not configured`,
-          );
-          continue;
-        }
-
-        let payload: `0x${string}`;
-        try {
-          const block = await chainClient.getBlock({ blockNumber: log.blockNumber });
-          payload = await buildMirrorPayload(tokenId, BigInt(block.timestamp));
-        } catch (err) {
-          console.error(
-            `[Facilitator] Failed to build mirror payload for tokenId=${tokenId}:`,
-            err,
-          );
-          continue;
-        }
-
-        const refundAddress = (CONTRACTS.sessionVault ||
-          "0x0000000000000000000000000000000000000000") as `0x${string}`;
-
-        let transport: AxelarTransport | CCIPTransport | null = null;
-        let routeLabel = "unknown";
-        if (route === 1) {
-          transport = axelarTransport;
-          routeLabel = "Axelar";
-        } else if (route === 2) {
-          transport = ccipTransport;
-          routeLabel = "CCIP";
-        }
-
-        if (!transport) {
-          console.warn(
-            `[Facilitator] GMP dispatch for tokenId=${tokenId} route=${route} (${routeLabel}) — transport not configured`,
-          );
-          continue;
-        }
-        try {
-          const result = await transport.dispatch(
-            destChainId,
-            payload,
-            refundAddress,
-            destinationMirrorRegistry,
-          );
-          console.log(
-            `[Facilitator] GMP dispatched tokenId=${tokenId} → chain ${destChainId} via ${routeLabel} txHash=${result.transactionHash}`,
-          );
-        } catch (err) {
-          console.error(
-            `[Facilitator] GMP dispatch failed for tokenId=${tokenId}:`,
-            err,
-          );
-        }
+      if (!destinationMirrorRegistry) {
+        console.warn(
+          `[Facilitator] GMP dispatch for tokenId=${tokenId} destination=${destChainId} skipped — destination MirrorRegistry not configured`,
+        );
+        continue;
       }
-    },
-    onError: (err) => {
+
+      let payload: `0x${string}`;
+      try {
+        const block = await chainClient.getBlock({ blockNumber: log.blockNumber });
+        payload = await buildMirrorPayload(tokenId, BigInt(block.timestamp));
+      } catch (err) {
+        console.error(
+          `[Facilitator] Failed to build mirror payload for tokenId=${tokenId}:`,
+          err,
+        );
+        continue;
+      }
+
+      const refundAddress = (CONTRACTS.sessionVault ||
+        "0x0000000000000000000000000000000000000000") as `0x${string}`;
+
+      let transport: AxelarTransport | CCIPTransport | null = null;
+      let routeLabel = "unknown";
+      if (route === 1) {
+        transport = axelarTransport;
+        routeLabel = "Axelar";
+      } else if (route === 2) {
+        transport = ccipTransport;
+        routeLabel = "CCIP";
+      }
+
+      if (!transport) {
+        console.warn(
+          `[Facilitator] GMP dispatch for tokenId=${tokenId} route=${route} (${routeLabel}) — transport not configured`,
+        );
+        continue;
+      }
+      try {
+        const result = await transport.dispatch(
+          destChainId,
+          payload,
+          refundAddress,
+          destinationMirrorRegistry,
+        );
+        console.log(
+          `[Facilitator] GMP dispatched tokenId=${tokenId} → chain ${destChainId} via ${routeLabel} txHash=${result.transactionHash}`,
+        );
+      } catch (err) {
+        console.error(
+          `[Facilitator] GMP dispatch failed for tokenId=${tokenId}:`,
+          err,
+        );
+      }
+    }
+  };
+
+  void (async () => {
+    try {
+      lastCrossChainDispatchBlock = await chainClient.getBlockNumber();
+    } catch (err) {
       console.error(
-        "[Facilitator] CrossChainDispatchRequested watcher error:",
+        "[Facilitator] Cross-chain dispatch watcher failed to read initial block:",
         err,
       );
-    },
-  });
+      lastCrossChainDispatchBlock = 0n;
+    }
+
+    setInterval(async () => {
+      try {
+        const currentBlock = await chainClient.getBlockNumber();
+        const fromBlock =
+          lastCrossChainDispatchBlock == null
+            ? currentBlock
+            : lastCrossChainDispatchBlock + 1n;
+
+        if (currentBlock < fromBlock) return;
+
+        const logs = await chainClient.getContractEvents({
+          address: CONTRACTS.subscriptionRegistry as `0x${string}`,
+          abi: SubscriptionRegistryABI,
+          eventName: "CrossChainDispatchRequested",
+          fromBlock,
+          toBlock: currentBlock,
+        });
+
+        if (logs.length > 0) {
+          await handleCrossChainDispatchLogs(
+            logs as Array<{ args: unknown; blockNumber: bigint }>,
+          );
+        }
+
+        lastCrossChainDispatchBlock = currentBlock;
+      } catch (err) {
+        console.error(
+          "[Facilitator] CrossChainDispatchRequested watcher error:",
+          err,
+        );
+      }
+    }, 12000);
+  })();
   console.log("[Facilitator] Cross-chain dispatch watcher active");
 }
 
