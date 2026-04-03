@@ -140,6 +140,7 @@ export class AxelarTransport {
     destinationChainId: number,
     payload: `0x${string}`,
     refundAddress: `0x${string}`,
+    destinationAddressOverride?: `0x${string}`,
   ): Promise<DispatchResult> {
     const destChainName = AXELAR_CHAIN_NAMES[destinationChainId];
     if (!destChainName) {
@@ -148,7 +149,8 @@ export class AxelarTransport {
       );
     }
 
-    const destAddress = this.config.mirrorRegistryAddress;
+    const destAddress =
+      destinationAddressOverride || this.config.mirrorRegistryAddress;
 
     // Step 1: Estimate gas
     let gasEstimate = 0n;
@@ -215,16 +217,19 @@ export class AxelarTransport {
   async estimateGas(
     destinationChainId: number,
     payload: `0x${string}`,
+    destinationAddressOverride?: `0x${string}`,
   ): Promise<bigint> {
     const destChainName = AXELAR_CHAIN_NAMES[destinationChainId];
     if (!destChainName) return 0n;
+    const destAddress =
+      destinationAddressOverride || this.config.mirrorRegistryAddress;
 
     try {
       return (await this.publicClient.readContract({
         address: this.config.gasServiceAddress,
         abi: AXELAR_GAS_SERVICE_ABI,
         functionName: "estimateGasFee",
-        args: [destChainName, this.config.mirrorRegistryAddress, payload],
+        args: [destChainName, destAddress, payload],
       })) as bigint;
     } catch {
       return 2_000_000_000_000_000n; // 0.002 ETH fallback

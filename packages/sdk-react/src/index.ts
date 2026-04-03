@@ -56,8 +56,10 @@ export type { TrackOptions, TrackEventInput, UseTrackResult } from './hooks/useT
 // Utilities
 export { deploySmartAccount } from './lib/zerodev';
 export { revokeAutopayModule } from './lib/zerodev';
+export { sendSmartAccountTransaction } from './lib/zerodev';
 export type {
   DeploySmartAccountConfig,
   SmartAccountResult,
   RevokeAutopayConfig,
+  SmartAccountTransactionConfig,
 } from './lib/zerodev';

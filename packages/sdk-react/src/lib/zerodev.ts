@@ -63,6 +63,76 @@ export interface RevokeAutopayConfig {
     paymasterUrl?: string;
 }
 
+export interface SmartAccountTransactionConfig {
+    projectId: string;
+    chainId: number;
+    walletClient: WalletClient;
+    to: `0x${string}`;
+    data: `0x${string}`;
+    value?: bigint;
+    smartAccountAddress?: `0x${string}`;
+    bundlerUrl?: string;
+    paymasterUrl?: string;
+}
+
+async function createKernelExecutionContext(config: {
+    projectId: string;
+    chainId: number;
+    walletClient: WalletClient;
+    bundlerUrl?: string;
+    paymasterUrl?: string;
+}) {
+    const chain = CHAIN_MAP[config.chainId] || baseSepolia;
+    const bundlerUrl =
+        config.bundlerUrl ||
+        `https://rpc.zerodev.app/api/v2/bundler/${config.projectId}`;
+    const paymasterUrl =
+        config.paymasterUrl ||
+        `https://rpc.zerodev.app/api/v2/paymaster/${config.projectId}`;
+
+    const publicClient = createPublicClient({
+        chain,
+        transport: http(),
+    }) as PublicClient;
+
+    const ecdsaValidator = await signerToEcdsaValidator(publicClient, {
+        signer: config.walletClient as any,
+        entryPoint: ENTRY_POINT_ADDRESS as any,
+        kernelVersion: "0.3.1",
+    });
+
+    const kernelAccount = await createKernelAccount(publicClient, {
+        plugins: { sudo: ecdsaValidator },
+        entryPoint: ENTRY_POINT_ADDRESS as any,
+    } as any);
+
+    const paymasterClient = createZeroDevPaymasterClient({
+        chain,
+        transport: http(paymasterUrl),
+        entryPoint: ENTRY_POINT_ADDRESS as any,
+    } as any);
+
+    const kernelClient = createKernelAccountClient({
+        account: kernelAccount,
+        chain,
+        bundlerTransport: http(bundlerUrl),
+        middleware: {
+            sponsorUserOperation: async ({ userOperation }: { userOperation: any }) => {
+                return (paymasterClient as any).sponsorUserOperation({
+                    userOperation,
+                    entryPoint: ENTRY_POINT_ADDRESS,
+                });
+            },
+        },
+    } as any);
+
+    return {
+        publicClient,
+        kernelAccount,
+        kernelClient,
+    };
+}
+
 /**
  * Deploy a ZeroDev Kernel smart account and install the ERC-7579 AutopayModule.
  *
@@ -252,36 +322,22 @@ export async function revokeAutopayModule(
         return { alreadyRevoked: true };
     }
 
-    const ecdsaValidator = await signerToEcdsaValidator(publicClient, {
-        signer: config.walletClient as any,
-        entryPoint: ENTRY_POINT_ADDRESS as any,
-        kernelVersion: "0.3.1",
+    const { kernelAccount, kernelClient } = await createKernelExecutionContext({
+        projectId: config.projectId,
+        chainId: config.chainId,
+        walletClient: config.walletClient,
+        bundlerUrl,
+        paymasterUrl,
     });
 
-    const kernelAccount = await createKernelAccount(publicClient, {
-        plugins: { sudo: ecdsaValidator },
-        entryPoint: ENTRY_POINT_ADDRESS as any,
-    } as any);
-
-    const paymasterClient = createZeroDevPaymasterClient({
-        chain,
-        transport: http(paymasterUrl),
-        entryPoint: ENTRY_POINT_ADDRESS as any,
-    } as any);
-
-    const kernelClient = createKernelAccountClient({
-        account: kernelAccount,
-        chain,
-        bundlerTransport: http(bundlerUrl),
-        middleware: {
-            sponsorUserOperation: async ({ userOperation }: { userOperation: any }) => {
-                return (paymasterClient as any).sponsorUserOperation({
-                    userOperation,
-                    entryPoint: ENTRY_POINT_ADDRESS,
-                });
-            },
-        },
-    } as any);
+    if (
+        kernelAccount.address.toLowerCase() !==
+        config.smartAccountAddress.toLowerCase()
+    ) {
+        throw new Error(
+            `Kernel account mismatch. Expected ${config.smartAccountAddress}, got ${kernelAccount.address}.`,
+        );
+    }
 
     const revokeData = encodeFunctionData({
         abi: ERC7579AutopayModuleABI,
@@ -296,4 +352,51 @@ export async function revokeAutopayModule(
     });
 
     return { txHash, alreadyRevoked: false };
+}
+
+/**
+ * Sends a transaction through the caller's ZeroDev Kernel smart account and waits
+ * for the resulting on-chain receipt. This keeps follow-up checkout actions
+ * originating from the smart account rather than the owner EOA.
+ */
+export async function sendSmartAccountTransaction(
+    config: SmartAccountTransactionConfig,
+): Promise<{
+    smartAccountAddress: `0x${string}`;
+    txHash: `0x${string}`;
+}> {
+    const {
+        publicClient,
+        kernelAccount,
+        kernelClient,
+    } = await createKernelExecutionContext({
+        projectId: config.projectId,
+        chainId: config.chainId,
+        walletClient: config.walletClient,
+        bundlerUrl: config.bundlerUrl,
+        paymasterUrl: config.paymasterUrl,
+    });
+
+    if (
+        config.smartAccountAddress &&
+        kernelAccount.address.toLowerCase() !==
+            config.smartAccountAddress.toLowerCase()
+    ) {
+        throw new Error(
+            `Kernel account mismatch. Expected ${config.smartAccountAddress}, got ${kernelAccount.address}.`,
+        );
+    }
+
+    const txHash = await (kernelClient as any).sendTransaction({
+        to: config.to,
+        data: config.data,
+        value: config.value ?? 0n,
+    });
+
+    await publicClient.waitForTransactionReceipt({ hash: txHash });
+
+    return {
+        smartAccountAddress: kernelAccount.address,
+        txHash,
+    };
 }

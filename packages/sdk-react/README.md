@@ -49,11 +49,29 @@ export function PricingPage() {
       {selectedPlan && (
         <CheckoutModal
           planId={selectedPlan}
-          onSuccess={(result) => {
-            console.log("Subscribed!", result.subscriptionId);
+          requestSubscription={async ({ planId, paymentAccount, subscriberEmail }) => {
+            const response = await fetch("/api/request-subscription", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                planId: planId.toString(),
+                paymentAccount,
+                subscriberEmail,
+              }),
+            });
+
+            const result = await response.json();
+            if (!response.ok) {
+              throw new Error(result.error ?? "Activation failed");
+            }
+
+            return result;
+          }}
+          onSuccess={(tokenId) => {
+            console.log("Subscribed!", tokenId.toString());
             setSelectedPlan(null);
           }}
-          onCancel={() => setSelectedPlan(null)}
+          onClose={() => setSelectedPlan(null)}
         />
       )}
     </>
@@ -126,19 +144,37 @@ Fetches plans from PlanFactory contract and displays them.
 
 ### `<CheckoutModal />`
 
-Full subscription checkout flow: connect wallet → deploy smart account → install autopay → subscribe.
+Full subscription checkout flow: connect wallet → deploy smart account → install autopay → request backend activation.
 
 ```tsx
 <CheckoutModal
   planId={1n}
-  onSuccess={(result) => {
-    // result.subscriptionId — ERC-721 token ID
-    // result.txHash — transaction hash
-    // result.smartAccount — deployed smart account address
+  requestSubscription={async ({ planId, paymentAccount, subscriberEmail }) => {
+    const response = await fetch("/api/request-subscription", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        planId: planId.toString(),
+        paymentAccount,
+        subscriberEmail,
+      }),
+    });
+
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error ?? "Activation failed");
+    return result;
   }}
-  onCancel={() => {}}
+  onSuccess={(tokenId) => {
+    // tokenId — ERC-721 subscription token ID
+  }}
+  onClose={() => {}}
 />
 ```
+
+Your `requestSubscription` endpoint must run on your backend with an authorized
+merchant signer. Direct customer-side calls to `SubscriptionRegistry.mint()` are
+intentionally blocked because the contract only allows biller-controlled
+activation.
 
 ### `<SubscriptionStatus />`
 

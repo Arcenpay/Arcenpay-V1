@@ -85,4 +85,45 @@ describe('ArcenClient', () => {
       expect(result.exceeded).toBe(false);
     });
   });
+
+  describe('activateSubscription()', () => {
+    it('calls the activation endpoint with API-key auth and returns the backend result', async () => {
+      mockFetch.mockResolvedValueOnce(
+        mockResponse({
+          data: {
+            tokenId: '42',
+            txHash: '0xabc',
+            companyId: 'co_1',
+            planId: 'plan_internal_1',
+            paymentAccount: '0x1234567890123456789012345678901234567890',
+          },
+        }),
+      );
+
+      const result = await client.activateSubscription({
+        planId: 7n,
+        paymentAccount: '0x1234567890123456789012345678901234567890',
+        subscriberEmail: 'test@example.com',
+        company: { id: 'customer-123' },
+      });
+
+      expect(result.tokenId).toBe('42');
+      expect(result.txHash).toBe('0xabc');
+
+      const [url, request] = mockFetch.mock.calls[0] as [string, RequestInit];
+      expect(url).toContain('/api/v1/subscriptions/activate');
+      expect(request.method).toBe('POST');
+      expect((request.headers as Record<string, string>).Authorization).toBe(
+        `Bearer ${API_KEY}`,
+      );
+      expect(request.body).toBe(
+        JSON.stringify({
+          planId: '7',
+          paymentAccount: '0x1234567890123456789012345678901234567890',
+          company: { id: 'customer-123' },
+          subscriberEmail: 'test@example.com',
+        }),
+      );
+    });
+  });
 });

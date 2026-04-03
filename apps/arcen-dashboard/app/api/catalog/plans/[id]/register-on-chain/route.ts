@@ -21,9 +21,9 @@ export const maxDuration = 60;
 
 // Request schema for EIP-712 signed plan registration
 const RegisterOnChainSchema = z.object({
-  signature: z.string().regex(/^0x[0-9a-fA-F]+$/),
-  deadline: z.number().int().positive(),
-  userAddress: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
+  signature: z.string().regex(/^0x[0-9a-fA-F]+$/).optional(),
+  deadline: z.number().int().positive().optional(),
+  userAddress: z.string().regex(/^0x[0-9a-fA-F]{40}$/).optional(),
 });
 
 // EIP-712 domain and types matching the PlanFactory contract
@@ -127,6 +127,13 @@ function normalizeAddress(raw: string | undefined): `0x${string}` | null {
   return isAddress(trimmed) ? (trimmed as `0x${string}`) : null;
 }
 
+function getManagedProviderPrivateKey(): `0x${string}` | null {
+  return normalizePrivateKey(
+    process.env.ONCHAIN_PROVIDER_PRIVATE_KEY ||
+      process.env.SUBSCRIPTION_BILLER_PRIVATE_KEY,
+  );
+}
+
 export async function POST(
   request: NextRequest,
   context: { params: Promise<Params> },
@@ -153,22 +160,43 @@ export async function POST(
   }
 
   const { signature, deadline, userAddress } = parsed.data;
+  const managedProviderKey = getManagedProviderPrivateKey();
+  const managedProviderAccount = managedProviderKey
+    ? privateKeyToAccount(managedProviderKey)
+    : null;
+  const providerAddress = managedProviderAccount?.address ?? userAddress ?? null;
+  const requiresUserSignature = !managedProviderAccount;
 
-  // Verify the user address matches the authenticated user's wallet
-  if (!auth.team.walletAddress) {
-    return NextResponse.json(
-      {
-        error:
-          "No wallet linked to this account. Please link your wallet first.",
-      },
-      { status: 400 },
-    );
+  if (requiresUserSignature) {
+    if (!auth.team.walletAddress) {
+      return NextResponse.json(
+        {
+          error:
+            "No wallet linked to this account. Please link your wallet first.",
+        },
+        { status: 400 },
+      );
+    }
+
+    if (!userAddress || !signature || !deadline) {
+      return NextResponse.json(
+        { error: "signature, deadline, and userAddress are required." },
+        { status: 400 },
+      );
+    }
+
+    if (auth.team.walletAddress.toLowerCase() !== userAddress.toLowerCase()) {
+      return NextResponse.json(
+        { error: "Signature must be from your authenticated wallet" },
+        { status: 403 },
+      );
+    }
   }
 
-  if (auth.team.walletAddress.toLowerCase() !== userAddress.toLowerCase()) {
+  if (!providerAddress) {
     return NextResponse.json(
-      { error: "Signature must be from your authenticated wallet" },
-      { status: 403 },
+      { error: "No provider address is available for on-chain registration." },
+      { status: 400 },
     );
   }
 
@@ -190,19 +218,6 @@ export async function POST(
     return NextResponse.json(
       { error: "Free plans cannot be registered on-chain. The PlanFactory contract requires price > 0. Free plan access is managed off-chain." },
       { status: 400 },
-    );
-  }
-
-  const relayerPrivateKey = normalizePrivateKey(
-    process.env.DEPLOYER_PRIVATE_KEY,
-  );
-  if (!relayerPrivateKey) {
-    return NextResponse.json(
-      {
-        error:
-          "Server relayer not configured (DEPLOYER_PRIVATE_KEY missing or invalid).",
-      },
-      { status: 503 },
     );
   }
 
@@ -231,13 +246,7 @@ export async function POST(
     });
   }
 
-  const relayerAccount = privateKeyToAccount(relayerPrivateKey);
   const publicClient = createPublicClient({ chain, transport: http(rpcUrl) });
-  const walletClient = createWalletClient({
-    account: relayerAccount,
-    chain,
-    transport: http(rpcUrl),
-  });
 
   const priceInUsdc = BigInt(
     Math.round(parseFloat(plan.price.toString()) * 1_000_000),
@@ -250,40 +259,41 @@ export async function POST(
       : (TOKENS[chainId as keyof typeof TOKENS]?.USDC ?? storedToken)
   ) as `0x${string}`;
 
-  // Get user's nonce from the contract
-  const nonce = await publicClient.readContract({
-    address: planFactoryAddress,
-    abi: CREATE_PLAN_FOR_ABI,
-    functionName: "nonces",
-    args: [userAddress as `0x${string}`],
-  });
+  let nonce: bigint | null = null;
+  if (requiresUserSignature) {
+    nonce = await publicClient.readContract({
+      address: planFactoryAddress,
+      abi: CREATE_PLAN_FOR_ABI,
+      functionName: "nonces",
+      args: [providerAddress as `0x${string}`],
+    });
 
-  // Verify the signature server-side before submitting
-  const isValidSig = await verifyTypedData({
-    address: userAddress as `0x${string}`,
-    domain: {
-      ...PLAN_FACTORY_DOMAIN,
-      chainId: BigInt(chainId),
-      verifyingContract: planFactoryAddress,
-    },
-    types: CREATE_PLAN_TYPES,
-    primaryType: "CreatePlan",
-    message: {
-      provider: userAddress as `0x${string}`,
-      name: plan.name,
-      tier: plan.tier,
-      price: priceInUsdc,
-      billingInterval: billingIntervalSeconds,
-      acceptedToken: usdcAddress,
-      metadataURI: "",
-      nonce,
-      deadline: BigInt(deadline),
-    },
-    signature: signature as `0x${string}`,
-  });
+    const isValidSig = await verifyTypedData({
+      address: providerAddress as `0x${string}`,
+      domain: {
+        ...PLAN_FACTORY_DOMAIN,
+        chainId: BigInt(chainId),
+        verifyingContract: planFactoryAddress,
+      },
+      types: CREATE_PLAN_TYPES,
+      primaryType: "CreatePlan",
+      message: {
+        provider: providerAddress as `0x${string}`,
+        name: plan.name,
+        tier: plan.tier,
+        price: priceInUsdc,
+        billingInterval: billingIntervalSeconds,
+        acceptedToken: usdcAddress,
+        metadataURI: "",
+        nonce,
+        deadline: BigInt(deadline as number),
+      },
+      signature: signature as `0x${string}`,
+    });
 
-  if (!isValidSig) {
-    return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+    if (!isValidSig) {
+      return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+    }
   }
 
   // Mark as pending before submission so UI reflects in-progress state
@@ -292,18 +302,18 @@ export async function POST(
     data: { chainSyncStatus: "PENDING", chainSyncError: null },
   });
 
-  // Check if the USER is registered as a provider (not the relayer)
-  const isUserRegistered = await publicClient
+  // Check if the selected on-chain provider is registered
+  const isProviderRegistered = await publicClient
     .readContract({
       address: planFactoryAddress,
       abi: PROVIDER_REGISTRY_ABI,
       functionName: "isProvider",
-      args: [userAddress as `0x${string}`],
+      args: [providerAddress as `0x${string}`],
     })
     .catch(() => false as boolean);
 
-  if (!isUserRegistered) {
-    // Try to register the user as a provider if we have the owner key
+  if (!isProviderRegistered) {
+    // Try to register the provider if we have the owner key
     const ownerKey = normalizePrivateKey(
       process.env.PLAN_FACTORY_OWNER_PRIVATE_KEY,
     );
@@ -323,28 +333,28 @@ export async function POST(
       const registerProviderCalldata = encodeFunctionData({
         abi: PROVIDER_REGISTRY_ABI,
         functionName: "registerProvider",
-        args: [userAddress as `0x${string}`],
+        args: [providerAddress as `0x${string}`],
       });
       await db.catalogPlan.update({
         where: { id: planId },
         data: {
           chainSyncStatus: "FAILED",
-          chainSyncError: `Your wallet is not registered as a provider.${ownerHint} Owner action required: execute registerProvider(${userAddress}) from owner/multisig.`,
+          chainSyncError: `Configured provider wallet is not registered.${ownerHint} Owner action required: execute registerProvider(${providerAddress}) from owner/multisig.`,
         },
       });
       return NextResponse.json(
         {
-          error: `Your wallet is not a registered provider.${ownerHint} Contact the platform admin or execute owner registration via Safe/multisig.`,
-          userAddress,
+          error: `Configured provider wallet is not a registered provider.${ownerHint} Contact the platform admin or execute owner registration via Safe/multisig.`,
+          userAddress: providerAddress,
           planFactoryOwner,
           ownerActionRequired: {
             description:
-              "Execute registerProvider(userAddress) on PlanFactory from owner wallet/multisig.",
+              "Execute registerProvider(providerAddress) on PlanFactory from owner wallet/multisig.",
             target: planFactoryAddress,
             value: "0",
             data: registerProviderCalldata,
             functionSignature: "registerProvider(address)",
-            args: [userAddress],
+            args: [providerAddress],
             safeTransaction: {
               to: planFactoryAddress,
               value: "0",
@@ -388,7 +398,7 @@ export async function POST(
         address: planFactoryAddress,
         abi: PROVIDER_REGISTRY_ABI,
         functionName: "registerProvider",
-        args: [userAddress as `0x${string}`],
+        args: [providerAddress as `0x${string}`],
       });
       await publicClient.waitForTransactionReceipt({
         hash: regTxHash,
@@ -405,25 +415,65 @@ export async function POST(
     }
   }
 
-  // Call createPlanFor - relayer pays gas, user is the owner
+  // Create the plan using either the managed provider signer or user-signed relayer flow.
   let txHash: `0x${string}`;
   try {
-    txHash = await walletClient.writeContract({
-      address: planFactoryAddress,
-      abi: CREATE_PLAN_FOR_ABI,
-      functionName: "createPlanFor",
-      args: [
-        userAddress as `0x${string}`,
-        plan.name,
-        plan.tier,
-        priceInUsdc,
-        billingIntervalSeconds,
-        usdcAddress,
-        "",
-        BigInt(deadline),
-        signature as `0x${string}`,
-      ],
-    });
+    if (managedProviderAccount) {
+      const providerWalletClient = createWalletClient({
+        account: managedProviderAccount,
+        chain,
+        transport: http(rpcUrl),
+      });
+      txHash = await providerWalletClient.writeContract({
+        address: planFactoryAddress,
+        abi: PlanFactoryABI,
+        functionName: "createPlan",
+        args: [
+          plan.name,
+          plan.tier,
+          priceInUsdc,
+          billingIntervalSeconds,
+          usdcAddress,
+          "",
+        ],
+      });
+    } else {
+      const relayerPrivateKey = normalizePrivateKey(
+        process.env.DEPLOYER_PRIVATE_KEY,
+      );
+      if (!relayerPrivateKey) {
+        return NextResponse.json(
+          {
+            error:
+              "Server relayer not configured (DEPLOYER_PRIVATE_KEY missing or invalid).",
+          },
+          { status: 503 },
+        );
+      }
+      const relayerAccount = privateKeyToAccount(relayerPrivateKey);
+      const walletClient = createWalletClient({
+        account: relayerAccount,
+        chain,
+        transport: http(rpcUrl),
+      });
+
+      txHash = await walletClient.writeContract({
+        address: planFactoryAddress,
+        abi: CREATE_PLAN_FOR_ABI,
+        functionName: "createPlanFor",
+        args: [
+          providerAddress as `0x${string}`,
+          plan.name,
+          plan.tier,
+          priceInUsdc,
+          billingIntervalSeconds,
+          usdcAddress,
+          "",
+          BigInt(deadline as number),
+          signature as `0x${string}`,
+        ],
+      });
+    }
   } catch (err: unknown) {
     const message =
       err instanceof Error ? err.message : "Transaction submission failed";
@@ -479,8 +529,9 @@ export async function POST(
     resourceId: planId,
     metadata: {
       txHash,
-      relayer: relayerAccount.address,
-      planOwner: userAddress,
+      relayer: managedProviderAccount?.address ?? "meta-tx relayer",
+      planOwner: providerAddress,
+      registrationMode: managedProviderAccount ? "managed_provider" : "signed_meta_tx",
     },
   });
 
@@ -488,6 +539,7 @@ export async function POST(
     ok: true,
     txHash,
     plan: updatedPlan,
-    planOwner: userAddress,
+    planOwner: providerAddress,
+    signingRequired: !managedProviderAccount,
   });
 }

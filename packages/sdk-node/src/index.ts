@@ -4,7 +4,13 @@
 
 // HTTP Client — main SDK entry point for most integrations
 export { ArcenClient, ArcenApiError } from "./client";
-export type { ArcenClientConfig, TrackEventInput, IdentifyInput } from "./client";
+export type {
+  ArcenClientConfig,
+  TrackEventInput,
+  IdentifyInput,
+  ActivateSubscriptionInput,
+  ActivateSubscriptionResult,
+} from "./client";
 
 // Middleware
 export { x402Middleware } from "./middleware/x402";

@@ -10,10 +10,13 @@ import {
   usePublicClient,
   useWalletClient,
 } from "wagmi";
-import { decodeEventLog, encodeAbiParameters, parseAbiParameters } from "viem";
+import {
+  encodeAbiParameters,
+  encodeFunctionData,
+  parseAbiParameters,
+} from "viem";
 import {
   PlanFactoryABI,
-  SubscriptionRegistryABI,
   ERC7579AutopayModuleABI,
   getContractAddresses,
   getBlockExplorerUrl,
@@ -21,6 +24,7 @@ import {
   createSmartAccount,
 } from "@arcenpay/sdk";
 import { useMEAP } from "../providers/MEAPProvider";
+import { sendSmartAccountTransaction } from "../lib/zerodev";
 
 // ============================================================
 //  CheckoutModal — Wallet connect + Smart Account + Autopay
@@ -48,6 +52,7 @@ export const CHECKOUT_ERROR_CODES = {
   AUTOPAY_REVOKE_FAILED: "AUTOPAY_REVOKE_FAILED",
   TOKEN_APPROVAL_FAILED: "TOKEN_APPROVAL_FAILED",
   SUBSCRIPTION_MINT_FAILED: "SUBSCRIPTION_MINT_FAILED",
+  SUBSCRIPTION_EXECUTION_UNSUPPORTED: "SUBSCRIPTION_EXECUTION_UNSUPPORTED",
   CHECKOUT_STATE_INVALID: "CHECKOUT_STATE_INVALID",
   UNKNOWN: "UNKNOWN",
 } as const;
@@ -73,6 +78,19 @@ function normalizeErrorMessage(error: unknown): string {
   return "An unexpected checkout error occurred.";
 }
 
+function normalizeTokenId(
+  value: bigint | string | number | undefined,
+): bigint {
+  if (typeof value === "bigint") return value;
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return BigInt(Math.trunc(value));
+  }
+  if (typeof value === "string" && value.trim()) {
+    return BigInt(value.trim());
+  }
+  return 0n;
+}
+
 export interface CheckoutResult {
   tokenId: bigint;
   paymentAccount: `0x${string}`;
@@ -93,6 +111,18 @@ export interface SmartAccountDeploymentInput {
   zeroDevProjectId?: string;
 }
 
+export interface SubscriptionRequestInput {
+  paymentAccount: `0x${string}`;
+  planId: bigint;
+  planInterval: bigint;
+  subscriberEmail?: string;
+}
+
+export interface SubscriptionRequestResult {
+  tokenId?: bigint | string | number;
+  txHash?: `0x${string}`;
+}
+
 export interface CheckoutModalProps {
   planId: bigint;
   isOpen: boolean;
@@ -104,6 +134,9 @@ export interface CheckoutModalProps {
   deploySmartAccount?: (
     input: SmartAccountDeploymentInput,
   ) => Promise<SmartAccountDeploymentResult>;
+  requestSubscription?: (
+    input: SubscriptionRequestInput,
+  ) => Promise<SubscriptionRequestResult>;
   /** Endpoint for capturing subscriber email. If omitted, email capture is skipped. */
   subscriberEmailEndpoint?: string;
   className?: string;
@@ -127,9 +160,9 @@ export function getCheckoutStepOrder(): CheckoutStep[] {
  * Flow:
  * 1. Connect wallet (if not connected)
  * 2. Smart account check/deploy (ZeroDev via injected deployer callback or API)
- * 3. Approve USDC spending for SubscriptionRegistry
- * 4. Mint subscription NFT
- * 5. Success!
+ * 3. Configure autopay from the subscriber payment account
+ * 4. Approve USDC spending for AutopayModule
+ * 5. Request the initial biller-side activation
  */
 export function CheckoutModal({
   planId,
@@ -140,6 +173,7 @@ export function CheckoutModal({
   onError,
   onErrorCode,
   deploySmartAccount,
+  requestSubscription,
   subscriberEmailEndpoint,
   className = "",
 }: CheckoutModalProps) {
@@ -164,13 +198,16 @@ export function CheckoutModal({
   const [autopayInstallTxHash, setAutopayInstallTxHash] = useState<
     `0x${string}` | undefined
   >();
+  const [subscriptionTxHash, setSubscriptionTxHash] = useState<
+    `0x${string}` | undefined
+  >();
   const [autopayInstalledLocally, setAutopayInstalledLocally] = useState(false);
   const [mintedTokenId, setMintedTokenId] = useState<bigint>(0n);
 
   const USDC_ADDRESS = TOKENS[network.chainId as keyof typeof TOKENS]
     ?.USDC as `0x${string}`;
-  const registryAddress = contracts.subscriptionRegistry as `0x${string}`;
   const autopayAddress = contracts.autopayModule as `0x${string}`;
+  const zeroDevProjectId = process.env.NEXT_PUBLIC_ZERODEV_PROJECT_ID;
 
   // Auto-advance past connect step to email collection step
   useEffect(() => {
@@ -249,20 +286,6 @@ export function CheckoutModal({
     },
   );
 
-  // Write: Subscription mint
-  const {
-    writeContract: writeMint,
-    data: mintHash,
-    isPending: isMinting,
-    error: mintError,
-    reset: resetMint,
-  } = useWriteContract();
-
-  const { isSuccess: mintConfirmed, data: mintReceipt } =
-    useWaitForTransactionReceipt({
-      hash: mintHash,
-    });
-
   const emitCheckoutError = useCallback(
     (code: CheckoutErrorCode, err: unknown) => {
       const message = normalizeErrorMessage(err);
@@ -304,82 +327,6 @@ export function CheckoutModal({
     }
   }, [approveConfirmed, step]);
 
-  // Auto-advance after mint confirmation
-  useEffect(() => {
-    if (mintConfirmed && step === "subscribe") {
-      let cancelled = false;
-
-      const resolveTokenAndFinalize = async () => {
-        let parsedTokenId = 0n;
-        for (const log of mintReceipt?.logs || []) {
-          try {
-            const decoded = decodeEventLog({
-              abi: SubscriptionRegistryABI,
-              data: log.data,
-              topics: log.topics,
-            });
-            if (decoded.eventName === "SubscriptionMinted") {
-              parsedTokenId = decoded.args.tokenId as bigint;
-              break;
-            }
-          } catch {
-            // Ignore non-matching logs
-          }
-        }
-
-        // Fallback for nodes that prune/decode logs inconsistently.
-        if (parsedTokenId === 0n && publicClient && paymentAccount) {
-          try {
-            const onChainTokenId = await publicClient.readContract({
-              address: registryAddress,
-              abi: SubscriptionRegistryABI,
-              functionName: "getWalletSubscription",
-              args: [paymentAccount],
-            });
-            parsedTokenId = onChainTokenId as bigint;
-          } catch {
-            // Keep best-effort parsedTokenId (possibly 0n).
-          }
-        }
-
-        if (cancelled) return;
-
-        setMintedTokenId(parsedTokenId);
-        setStep("success");
-        setLoading(false);
-        onSuccess?.(parsedTokenId);
-        onCheckoutComplete?.({
-          tokenId: parsedTokenId,
-          paymentAccount: paymentAccount!,
-          autopayInstalled:
-            autopayInstalledLocally || isAutopayInitialized === true,
-          autopayInstallTxHash,
-          subscriptionTxHash: mintHash,
-          smartAccountDeployTxHash,
-        });
-      };
-
-      void resolveTokenAndFinalize();
-      return () => {
-        cancelled = true;
-      };
-    }
-  }, [
-    mintConfirmed,
-    step,
-    mintReceipt?.logs,
-    publicClient,
-    registryAddress,
-    onSuccess,
-    onCheckoutComplete,
-    paymentAccount,
-    autopayInstalledLocally,
-    isAutopayInitialized,
-    autopayInstallTxHash,
-    mintHash,
-    smartAccountDeployTxHash,
-  ]);
-
   useEffect(() => {
     if (autopayUninstallConfirmed) {
       setAutopayInstalledLocally(false);
@@ -396,15 +343,6 @@ export function CheckoutModal({
       );
     }
   }, [approveError, emitCheckoutError]);
-
-  useEffect(() => {
-    if (mintError) {
-      emitCheckoutError(
-        CHECKOUT_ERROR_CODES.SUBSCRIPTION_MINT_FAILED,
-        mintError,
-      );
-    }
-  }, [mintError, emitCheckoutError]);
 
   useEffect(() => {
     if (autopayInstallError) {
@@ -598,7 +536,7 @@ export function CheckoutModal({
 
     const configData = encodeAbiParameters(
       parseAbiParameters(
-        "(address merchant,uint256 maxAmount,address token,uint32 interval,uint64 startTime,uint256 planId)",
+        "(address merchant,uint256 maxAmount,address token,uint32 interval,uint64 startTime,uint256 planId,uint256 maxTotalAmount)",
       ),
       [
         {
@@ -608,9 +546,51 @@ export function CheckoutModal({
           interval: planInterval,
           startTime: BigInt(Math.floor(Date.now() / 1000) + 60),
           planId,
+          maxTotalAmount: 0n,
         },
       ],
     );
+
+    if (smartAccountAddress) {
+      if (!walletClient || !zeroDevProjectId) {
+        emitCheckoutError(
+          CHECKOUT_ERROR_CODES.WALLET_CLIENT_UNAVAILABLE,
+          new Error(
+            "Wallet client or ZeroDev project ID missing. Smart-account autopay configuration cannot continue.",
+          ),
+        );
+        return;
+      }
+
+      const installCallData = encodeFunctionData({
+        abi: ERC7579AutopayModuleABI,
+        functionName: "onInstall",
+        args: [configData],
+      });
+
+      void sendSmartAccountTransaction({
+        projectId: zeroDevProjectId,
+        chainId: network.chainId,
+        walletClient: walletClient as any,
+        smartAccountAddress,
+        to: autopayAddress,
+        data: installCallData,
+      })
+        .then(({ txHash }) => {
+          setAutopayInstallTxHash(txHash);
+          setAutopayInstalledLocally(true);
+          void refetchAutopayState();
+          setStep("approve");
+          setLoading(false);
+        })
+        .catch((err) => {
+          emitCheckoutError(
+            CHECKOUT_ERROR_CODES.AUTOPAY_INSTALL_FAILED,
+            err,
+          );
+        });
+      return;
+    }
 
     writeAutopayInstall({
       address: autopayAddress,
@@ -629,12 +609,56 @@ export function CheckoutModal({
     writeAutopayInstall,
     autopayAddress,
     network.chainId,
+    smartAccountAddress,
+    walletClient,
+    zeroDevProjectId,
+    refetchAutopayState,
     emitCheckoutError,
   ]);
 
   const handleRevokeAutopay = useCallback(() => {
     setLoading(true);
     setError(null);
+
+    if (smartAccountAddress) {
+      if (!walletClient || !zeroDevProjectId) {
+        emitCheckoutError(
+          CHECKOUT_ERROR_CODES.WALLET_CLIENT_UNAVAILABLE,
+          new Error(
+            "Wallet client or ZeroDev project ID missing. Smart-account autopay revocation cannot continue.",
+          ),
+        );
+        return;
+      }
+
+      const revokeCallData = encodeFunctionData({
+        abi: ERC7579AutopayModuleABI,
+        functionName: "onUninstall",
+        args: ["0x"],
+      });
+
+      void sendSmartAccountTransaction({
+        projectId: zeroDevProjectId,
+        chainId: network.chainId,
+        walletClient: walletClient as any,
+        smartAccountAddress,
+        to: autopayAddress,
+        data: revokeCallData,
+      })
+        .then(() => {
+          setAutopayInstalledLocally(false);
+          void refetchAutopayState();
+          setLoading(false);
+        })
+        .catch((err) => {
+          emitCheckoutError(
+            CHECKOUT_ERROR_CODES.AUTOPAY_REVOKE_FAILED,
+            err,
+          );
+        });
+      return;
+    }
+
     writeAutopayUninstall({
       address: autopayAddress,
       abi: ERC7579AutopayModuleABI,
@@ -642,7 +666,16 @@ export function CheckoutModal({
       args: ["0x"],
       chainId: network.chainId,
     });
-  }, [writeAutopayUninstall, autopayAddress, network.chainId]);
+  }, [
+    writeAutopayUninstall,
+    autopayAddress,
+    network.chainId,
+    smartAccountAddress,
+    walletClient,
+    zeroDevProjectId,
+    refetchAutopayState,
+    emitCheckoutError,
+  ]);
 
   const handleApprove = useCallback(() => {
     if (!planPrice || !USDC_ADDRESS) return;
@@ -651,46 +684,135 @@ export function CheckoutModal({
 
     // Approve 13 months worth (current + 12 renewals)
     const approveAmount = planPrice * 13n;
+    const approveAbi = [
+      {
+        type: "function",
+        name: "approve",
+        inputs: [
+          { name: "spender", type: "address" },
+          { name: "amount", type: "uint256" },
+        ],
+        outputs: [{ name: "", type: "bool" }],
+        stateMutability: "nonpayable",
+      },
+    ] as const;
+
+    if (smartAccountAddress) {
+      if (!walletClient || !zeroDevProjectId) {
+        emitCheckoutError(
+          CHECKOUT_ERROR_CODES.WALLET_CLIENT_UNAVAILABLE,
+          new Error(
+            "Wallet client or ZeroDev project ID missing. Smart-account approval cannot continue.",
+          ),
+        );
+        return;
+      }
+
+      const approveCallData = encodeFunctionData({
+        abi: approveAbi,
+        functionName: "approve",
+        args: [autopayAddress, approveAmount],
+      });
+
+      void sendSmartAccountTransaction({
+        projectId: zeroDevProjectId,
+        chainId: network.chainId,
+        walletClient: walletClient as any,
+        smartAccountAddress,
+        to: USDC_ADDRESS,
+        data: approveCallData,
+      })
+        .then(() => {
+          setStep("subscribe");
+          setLoading(false);
+        })
+        .catch((err) => {
+          emitCheckoutError(
+            CHECKOUT_ERROR_CODES.TOKEN_APPROVAL_FAILED,
+            err,
+          );
+        });
+      return;
+    }
 
     writeApprove({
       address: USDC_ADDRESS,
-      abi: [
-        {
-          type: "function",
-          name: "approve",
-          inputs: [
-            { name: "spender", type: "address" },
-            { name: "amount", type: "uint256" },
-          ],
-          outputs: [{ name: "", type: "bool" }],
-          stateMutability: "nonpayable",
-        },
-      ] as const,
+      abi: approveAbi,
       functionName: "approve",
-      args: [registryAddress, approveAmount],
+      args: [autopayAddress, approveAmount],
       chainId: network.chainId,
     });
-  }, [planPrice, USDC_ADDRESS, registryAddress, network.chainId, writeApprove]);
+  }, [
+    planPrice,
+    USDC_ADDRESS,
+    autopayAddress,
+    network.chainId,
+    writeApprove,
+    smartAccountAddress,
+    walletClient,
+    zeroDevProjectId,
+    emitCheckoutError,
+  ]);
 
-  const handleSubscribe = useCallback(() => {
+  const handleSubscribe = useCallback(async () => {
     if (!paymentAccount || !planInterval) return;
     setLoading(true);
     setError(null);
 
-    writeMint({
-      address: registryAddress,
-      abi: SubscriptionRegistryABI,
-      functionName: "mint",
-      args: [paymentAccount, planId, BigInt(planInterval)],
-      chainId: network.chainId,
-    });
+    if (!requestSubscription) {
+      emitCheckoutError(
+        CHECKOUT_ERROR_CODES.SUBSCRIPTION_EXECUTION_UNSUPPORTED,
+        new Error(
+          "Direct customer-side subscription minting is disabled. Initial activation must be executed by an authorized biller or a backend callback via requestSubscription.",
+        ),
+      );
+      return;
+    }
+
+    try {
+      const result = await requestSubscription({
+        paymentAccount,
+        planId,
+        planInterval: BigInt(planInterval),
+        ...(subscriberEmail.trim()
+          ? { subscriberEmail: subscriberEmail.trim() }
+          : {}),
+      });
+      const tokenId = normalizeTokenId(result.tokenId);
+
+      setMintedTokenId(tokenId);
+      setSubscriptionTxHash(result.txHash);
+      setStep("success");
+      setLoading(false);
+      onSuccess?.(tokenId);
+      onCheckoutComplete?.({
+        tokenId,
+        paymentAccount,
+        autopayInstalled:
+          autopayInstalledLocally || isAutopayInitialized === true,
+        autopayInstallTxHash,
+        subscriptionTxHash: result.txHash,
+        smartAccountDeployTxHash,
+      });
+    } catch (err) {
+      emitCheckoutError(
+        CHECKOUT_ERROR_CODES.SUBSCRIPTION_MINT_FAILED,
+        err,
+      );
+    }
   }, [
     paymentAccount,
     planId,
     planInterval,
-    registryAddress,
-    network.chainId,
-    writeMint,
+    requestSubscription,
+    subscriberEmail,
+    onSuccess,
+    onCheckoutComplete,
+    autopayInstalledLocally,
+    isAutopayInitialized,
+    autopayInstallTxHash,
+    smartAccountDeployTxHash,
+    emitCheckoutError,
   ]);
 
   if (!isOpen) return null;
@@ -744,23 +866,27 @@ export function CheckoutModal({
     approve: {
       title: "Approve USDC",
       description: planPrice
-        ? `Authorize ${formatPrice(planPrice * 13n)} USDC for the subscription billing contract. This covers your current cycle plus renewals.`
-        : "Authorize USDC spending for the billing contract.",
+        ? `Authorize ${formatPrice(planPrice * 13n)} USDC for the autopay module. This covers your current cycle plus renewals.`
+        : "Authorize USDC spending for the autopay module.",
       action: handleApprove,
       actionLabel: isApproving ? "Confirm in Wallet…" : "Approve USDC",
     },
     subscribe: {
       title: `Subscribe — ${planName || "Plan"}`,
-      description: planPrice
-        ? `Mint your subscription NFT. ${formatPrice(planPrice)} USDC will be charged from your wallet now.`
-        : "Mint your subscription NFT to activate your plan.",
+      description: requestSubscription
+        ? planPrice
+          ? `Request the initial biller-side activation. ${formatPrice(planPrice)} USDC will be charged when the authorized biller executes the first cycle.`
+          : "Request the initial biller-side activation for this subscription."
+        : "This checkout now requires a provider-side requestSubscription callback. Direct customer-side minting is intentionally blocked because SubscriptionRegistry.mint is biller-only.",
       action: handleSubscribe,
-      actionLabel: isMinting ? "Confirm in Wallet…" : "Subscribe Now",
+      actionLabel: requestSubscription ? "Activate Subscription" : "Setup Required",
     },
     success: {
-      title: "Subscription Active",
+      title: mintedTokenId > 0n ? "Subscription Active" : "Activation Requested",
       description:
-        "Your subscription NFT has been minted on-chain. You now have full access to all plan features.",
+        mintedTokenId > 0n
+          ? "Your subscription NFT has been minted on-chain. You now have full access to all plan features."
+          : "Your autopay setup is complete and the initial activation request has been sent to the authorized biller.",
     },
     error: {
       title: "Transaction Failed",
@@ -781,7 +907,10 @@ export function CheckoutModal({
   ];
   const stepNumber = progressSteps.indexOf(step) + 1;
   const latestTxHash =
-    mintHash || approveHash || autopayInstallHash || smartAccountDeployTxHash;
+    subscriptionTxHash ||
+    approveHash ||
+    autopayInstallHash ||
+    smartAccountDeployTxHash;
 
   const stepLabels: Partial<Record<CheckoutStep, string>> = {
     connect: "Wallet",
@@ -950,7 +1079,6 @@ export function CheckoutModal({
               disabled={
                 loading ||
                 isApproving ||
-                isMinting ||
                 isInstallingAutopay ||
                 isRevokingAutopay
               }
@@ -1005,11 +1133,11 @@ export function CheckoutModal({
               className="arcenpay-checkout-btn secondary"
               onClick={() => {
                 resetApprove();
-                resetMint();
                 resetAutopayInstall();
                 resetAutopayUninstall();
                 setError(null);
                 setErrorCode(null);
+                setSubscriptionTxHash(undefined);
                 setStep(isConnected ? "account" : "connect");
               }}
             >

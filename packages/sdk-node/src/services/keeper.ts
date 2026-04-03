@@ -285,12 +285,36 @@ export class BillingKeeper {
                 return;
             }
 
+            const config = (await this.publicClient.readContract({
+                address: this.autopayModuleAddress,
+                abi: ERC7579AutopayModuleABI,
+                functionName: "getConfig",
+                args: [subscriber],
+            })) as any;
+
+            const merchant = String(config?.merchant ?? config?.[0] ?? "").toLowerCase();
+            const amount = BigInt(config?.maxAmount ?? config?.[1] ?? 0);
+
+            if (amount <= 0n) {
+                console.log(
+                    `[BillingKeeper] Skipping tokenId=${tokenId} — autopay maxAmount is not configured`,
+                );
+                return;
+            }
+
+            if (merchant !== this.signerAddress.toLowerCase()) {
+                throw new Error(
+                    `Keeper signer ${this.signerAddress} does not match autopay merchant ${merchant || "unknown"}. ` +
+                    "Renewals must be executed by the configured merchant wallet.",
+                );
+            }
+
             // Execute the renewal payment
             const txHash = (await this.walletClient.writeContract({
                 address: this.autopayModuleAddress,
                 abi: ERC7579AutopayModuleABI,
                 functionName: "execute",
-                args: [subscriber],
+                args: [subscriber, amount],
             })) as `0x${string}`;
 
             await this.publicClient.waitForTransactionReceipt({ hash: txHash });
@@ -333,7 +357,7 @@ export class BillingKeeper {
             const config = (await this.publicClient.readContract({
                 address: this.autopayModuleAddress,
                 abi: ERC7579AutopayModuleABI,
-                functionName: "getAutopayConfig",
+                functionName: "getConfig",
                 args: [subscriber],
             })) as any;
 

@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createPublicClient, http } from "viem";
+import { privateKeyToAccount } from "viem/accounts";
 import { requirePermission, isErrorResponse } from "@/lib/api-auth";
 import { getContractAddresses } from "@arcenpay/sdk";
 import { getRpcUrl } from "@/lib/config";
 import { sepolia, baseSepolia, base } from "viem/chains";
-import type { Chain } from "viem";
+import { isAddress, type Chain } from "viem";
 
 const CHAIN_MAP: Record<number, Chain> = {
   11155111: sepolia,
@@ -24,6 +25,16 @@ const NONCES_ABI = [
 
 type Params = { id: string };
 
+function normalizePrivateKey(raw: string | undefined): `0x${string}` | null {
+  if (!raw) return null;
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  const withPrefix = trimmed.startsWith("0x") ? trimmed : `0x${trimmed}`;
+  return /^0x[a-fA-F0-9]{64}$/.test(withPrefix)
+    ? (withPrefix as `0x${string}`)
+    : null;
+}
+
 export async function GET(
   request: NextRequest,
   context: { params: Promise<Params> },
@@ -31,12 +42,22 @@ export async function GET(
   const auth = await requirePermission("catalog:read");
   if (isErrorResponse(auth)) return auth;
 
+  const managedProviderKey = normalizePrivateKey(
+    process.env.ONCHAIN_PROVIDER_PRIVATE_KEY ||
+      process.env.SUBSCRIPTION_BILLER_PRIVATE_KEY,
+  );
+  const managedProviderAddress = managedProviderKey
+    ? privateKeyToAccount(managedProviderKey).address
+    : null;
+
   const userAddress = auth.team.walletAddress;
-  if (!userAddress) {
+  const providerAddress = managedProviderAddress ?? userAddress ?? null;
+
+  if (!providerAddress || !isAddress(providerAddress)) {
     return NextResponse.json(
       {
         error:
-          "No wallet linked to this account. Please link your wallet first.",
+          "No provider address is configured. Link a wallet or configure ONCHAIN_PROVIDER_PRIVATE_KEY / SUBSCRIPTION_BILLER_PRIVATE_KEY.",
       },
       { status: 400 },
     );
@@ -65,7 +86,7 @@ export async function GET(
       address: planFactoryAddress,
       abi: NONCES_ABI,
       functionName: "nonces",
-      args: [userAddress as `0x${string}`],
+      args: [providerAddress as `0x${string}`],
     });
 
     return NextResponse.json({
@@ -73,6 +94,8 @@ export async function GET(
       chainId,
       planFactoryAddress,
       userAddress,
+      providerAddress,
+      signingRequired: !managedProviderAddress,
       // EIP-712 domain info for frontend signing
       domain: {
         name: "ArcenPay PlanFactory",

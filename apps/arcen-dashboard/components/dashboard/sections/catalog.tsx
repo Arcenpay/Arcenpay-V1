@@ -155,6 +155,8 @@ interface RegisterOnChainResponse {
   relayerAddress?: string;
   planFactoryOwner?: string | null;
   ownerActionRequired?: OwnerActionRequiredPayload;
+  providerAddress?: string;
+  signingRequired?: boolean;
 }
 
 // ─── Token Options ────────────────────────────────────────────────────────────
@@ -1878,26 +1880,6 @@ function PlansTable({
       return;
     }
 
-    // Verify the connected wallet matches the stored provider wallet
-    try {
-      const walletRes = await fetch("/api/auth/wallet-status");
-      if (walletRes.ok) {
-        const { storedWallet } = await walletRes.json();
-        if (
-          storedWallet &&
-          address.toLowerCase() !== storedWallet.toLowerCase()
-        ) {
-          toast.error(
-            `Wrong wallet connected. Switch to ${storedWallet.slice(0, 6)}…${storedWallet.slice(-4)} to register on-chain.`,
-            { duration: 6000 },
-          );
-          return;
-        }
-      }
-    } catch {
-      // Non-blocking — proceed if wallet-status check fails
-    }
-
     // Free plans (price = 0) cannot be registered — PlanFactory requires price > 0
     if (parseFloat(plan.price) === 0) {
       toast.error("Free plans don't need on-chain registration.", { duration: 4000 });
@@ -1912,7 +1894,46 @@ function PlansTable({
         const nonceErr = await nonceRes.json().catch(() => ({}));
         throw new Error(nonceErr.error || "Failed to get signing nonce");
       }
-      const { nonce, planFactoryAddress, domain } = await nonceRes.json();
+      const {
+        nonce,
+        planFactoryAddress,
+        domain,
+        signingRequired,
+        providerAddress,
+      } = (await nonceRes.json()) as {
+        nonce: string;
+        planFactoryAddress: string;
+        domain: {
+          name: string;
+          version: string;
+          chainId: number;
+          verifyingContract: string;
+        };
+        signingRequired: boolean;
+        providerAddress?: string;
+      };
+
+      if (signingRequired) {
+        // Verify the connected wallet matches the stored provider wallet
+        try {
+          const walletRes = await fetch("/api/auth/wallet-status");
+          if (walletRes.ok) {
+            const { storedWallet } = await walletRes.json();
+            if (
+              storedWallet &&
+              address.toLowerCase() !== storedWallet.toLowerCase()
+            ) {
+              toast.error(
+                `Wrong wallet connected. Switch to ${storedWallet.slice(0, 6)}…${storedWallet.slice(-4)} to register on-chain.`,
+                { duration: 6000 },
+              );
+              return;
+            }
+          }
+        } catch {
+          // Non-blocking — proceed if wallet-status check fails
+        }
+      }
 
       // 2. Prepare plan parameters for signing
       const deadline = Math.floor(Date.now() / 1000) + 3600; // 1 hour from now
@@ -1921,40 +1942,42 @@ function PlansTable({
       );
       const billingIntervalSeconds = plan.billingInterval * 86400;
 
-      // 3. Sign EIP-712 typed data
-      const signature = await signTypedDataAsync({
-        domain: {
-          name: domain.name,
-          version: domain.version,
-          chainId: BigInt(domain.chainId),
-          verifyingContract: planFactoryAddress as `0x${string}`,
-        },
-        types: {
-          CreatePlan: [
-            { name: "provider", type: "address" },
-            { name: "name", type: "string" },
-            { name: "tier", type: "string" },
-            { name: "price", type: "uint256" },
-            { name: "billingInterval", type: "uint32" },
-            { name: "acceptedToken", type: "address" },
-            { name: "metadataURI", type: "string" },
-            { name: "nonce", type: "uint256" },
-            { name: "deadline", type: "uint256" },
-          ],
-        },
-        primaryType: "CreatePlan",
-        message: {
-          provider: address,
-          name: plan.name,
-          tier: plan.tier,
-          price: priceInUsdc,
-          billingInterval: billingIntervalSeconds,
-          acceptedToken: plan.acceptedToken as `0x${string}`,
-          metadataURI: "",
-          nonce: BigInt(nonce),
-          deadline: BigInt(deadline),
-        },
-      });
+      // 3. Sign EIP-712 typed data when the provider is the connected wallet
+      const signature = signingRequired
+        ? await signTypedDataAsync({
+            domain: {
+              name: domain.name,
+              version: domain.version,
+              chainId: BigInt(domain.chainId),
+              verifyingContract: planFactoryAddress as `0x${string}`,
+            },
+            types: {
+              CreatePlan: [
+                { name: "provider", type: "address" },
+                { name: "name", type: "string" },
+                { name: "tier", type: "string" },
+                { name: "price", type: "uint256" },
+                { name: "billingInterval", type: "uint32" },
+                { name: "acceptedToken", type: "address" },
+                { name: "metadataURI", type: "string" },
+                { name: "nonce", type: "uint256" },
+                { name: "deadline", type: "uint256" },
+              ],
+            },
+            primaryType: "CreatePlan",
+            message: {
+              provider: (providerAddress ?? address) as `0x${string}`,
+              name: plan.name,
+              tier: plan.tier,
+              price: priceInUsdc,
+              billingInterval: billingIntervalSeconds,
+              acceptedToken: plan.acceptedToken as `0x${string}`,
+              metadataURI: "",
+              nonce: BigInt(nonce),
+              deadline: BigInt(deadline),
+            },
+          })
+        : undefined;
 
       // 4. Submit to API with signature
       const res = await fetch(
@@ -1963,9 +1986,8 @@ function PlansTable({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            signature,
-            deadline,
-            userAddress: address,
+            ...(signature ? { signature } : {}),
+            ...(signingRequired ? { deadline, userAddress: address } : {}),
           }),
         },
       );

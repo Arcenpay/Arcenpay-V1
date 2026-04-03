@@ -35,6 +35,21 @@ export interface IdentifyInput {
   expiresIn?: number;
 }
 
+export interface ActivateSubscriptionInput {
+  planId: string | number | bigint;
+  paymentAccount: string;
+  company: ArcenCompanyKeys & { name?: string; traits?: Record<string, unknown> };
+  subscriberEmail?: string;
+}
+
+export interface ActivateSubscriptionResult {
+  tokenId: string;
+  txHash: string;
+  companyId: string;
+  planId: string;
+  paymentAccount: string;
+}
+
 // Shape of the raw API response from /api/v1/access-tokens
 interface AccessTokenApiResponse {
   token: string;
@@ -241,6 +256,31 @@ export class ArcenClient {
       useApiKey: true,
       body: { featureKey, value, reason },
     });
+  }
+
+  async activateSubscription(
+    input: ActivateSubscriptionInput,
+  ): Promise<ActivateSubscriptionResult> {
+    const res = await this.request<{ data: ActivateSubscriptionResult }>(
+      'POST',
+      '/api/v1/subscriptions/activate',
+      {
+        useApiKey: true,
+        body: {
+          planId:
+            typeof input.planId === 'bigint'
+              ? input.planId.toString()
+              : String(input.planId),
+          paymentAccount: input.paymentAccount,
+          company: input.company,
+          ...(input.subscriberEmail
+            ? { subscriberEmail: input.subscriberEmail }
+            : {}),
+        },
+      },
+    );
+
+    return res.data;
   }
 
   /** @deprecated Use identify() instead */

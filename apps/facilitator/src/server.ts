@@ -51,6 +51,7 @@ import {
   PlanFactoryABI,
   SessionVaultABI,
   SubscriptionRegistryABI,
+  getContractAddresses,
   getChainEnvironment,
   validateChainEnvironment,
   type PlanTier,
@@ -58,8 +59,10 @@ import {
 } from "@arcenpay/sdk";
 import {
   createPublicClient,
+  encodeAbiParameters,
   encodePacked,
   http,
+  parseAbiParameters,
   verifyMessage,
   type Hex,
 } from "viem";
@@ -1092,6 +1095,7 @@ function toSafeNumber(value: bigint, field: string): number {
 }
 
 async function getSubscriptionSnapshot(tokenId: bigint): Promise<{
+  planId: bigint;
   planTier: PlanTier;
   expiresAt: bigint;
   billingInterval: number;
@@ -1118,10 +1122,61 @@ async function getSubscriptionSnapshot(tokenId: bigint): Promise<{
   })) as { billingInterval: number | bigint };
 
   return {
+    planId: planFeatures[0],
     planTier: planFeatures[1],
     expiresAt,
     billingInterval: Number(plan.billingInterval),
   };
+}
+
+function isConfiguredAddress(
+  value: string | undefined | null,
+): value is `0x${string}` {
+  const candidate = value ?? "";
+  if (!isHexAddress(candidate)) {
+    return false;
+  }
+  return (
+    candidate.toLowerCase() !== "0x0000000000000000000000000000000000000000"
+  );
+}
+
+function resolveDestinationMirrorRegistryAddress(
+  destinationChainId: number,
+): `0x${string}` | null {
+  try {
+    const addresses = getContractAddresses(destinationChainId);
+    return isConfiguredAddress(addresses.mirrorRegistry)
+      ? (addresses.mirrorRegistry as `0x${string}`)
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+async function buildMirrorPayload(
+  tokenId: bigint,
+  sourceUpdatedAt: bigint,
+): Promise<`0x${string}`> {
+  const subscriber = await getTokenOwner(tokenId);
+  if (!subscriber) {
+    throw new Error(`Unable to resolve owner for token ${tokenId}`);
+  }
+
+  const snapshot = await getSubscriptionSnapshot(tokenId);
+  return encodeAbiParameters(
+    parseAbiParameters(
+      "address subscriber,uint256 sourceTokenId,uint256 planId,string planTier,uint64 expiration,uint64 sourceUpdatedAt",
+    ),
+    [
+      subscriber as `0x${string}`,
+      tokenId,
+      snapshot.planId,
+      snapshot.planTier,
+      BigInt(snapshot.expiresAt),
+      sourceUpdatedAt,
+    ],
+  );
 }
 
 function isValidAddress(value: string): boolean {
@@ -1582,17 +1637,44 @@ if (axelarTransport || ccipTransport) {
           messageId: `0x${string}`;
         };
         const destChainId = Number(destinationChainId);
-        // Build minimal payload: ABI-encode tokenId for MirrorRegistry
-        const payload =
-          `0x${tokenId.toString(16).padStart(64, "0")}` as `0x${string}`;
+        const destinationMirrorRegistry =
+          resolveDestinationMirrorRegistryAddress(destChainId);
+
+        if (!destinationMirrorRegistry) {
+          console.warn(
+            `[Facilitator] GMP dispatch for tokenId=${tokenId} destination=${destChainId} skipped — destination MirrorRegistry not configured`,
+          );
+          continue;
+        }
+
+        let payload: `0x${string}`;
+        try {
+          const block = await chainClient.getBlock({ blockNumber: log.blockNumber });
+          payload = await buildMirrorPayload(tokenId, BigInt(block.timestamp));
+        } catch (err) {
+          console.error(
+            `[Facilitator] Failed to build mirror payload for tokenId=${tokenId}:`,
+            err,
+          );
+          continue;
+        }
+
         const refundAddress = (CONTRACTS.sessionVault ||
           "0x0000000000000000000000000000000000000000") as `0x${string}`;
-        // route 0 = Axelar (primary), route 1 = CCIP (fallback)
-        const useAxelar = route === 0 && axelarTransport !== null;
-        const transport = useAxelar ? axelarTransport : ccipTransport;
+
+        let transport: AxelarTransport | CCIPTransport | null = null;
+        let routeLabel = "unknown";
+        if (route === 1) {
+          transport = axelarTransport;
+          routeLabel = "Axelar";
+        } else if (route === 2) {
+          transport = ccipTransport;
+          routeLabel = "CCIP";
+        }
+
         if (!transport) {
           console.warn(
-            `[Facilitator] GMP dispatch for tokenId=${tokenId} route=${route} — transport not configured`,
+            `[Facilitator] GMP dispatch for tokenId=${tokenId} route=${route} (${routeLabel}) — transport not configured`,
           );
           continue;
         }
@@ -1601,9 +1683,10 @@ if (axelarTransport || ccipTransport) {
             destChainId,
             payload,
             refundAddress,
+            destinationMirrorRegistry,
           );
           console.log(
-            `[Facilitator] GMP dispatched tokenId=${tokenId} → chain ${destChainId} via ${useAxelar ? "Axelar" : "CCIP"} txHash=${result.transactionHash}`,
+            `[Facilitator] GMP dispatched tokenId=${tokenId} → chain ${destChainId} via ${routeLabel} txHash=${result.transactionHash}`,
           );
         } catch (err) {
           console.error(

@@ -153,6 +153,7 @@ export class CCIPTransport {
     destinationChainId: number,
     payload: `0x${string}`,
     refundAddress: `0x${string}`,
+    destinationAddressOverride?: `0x${string}`,
   ): Promise<CCIPDispatchResult> {
     const destSelector = CCIP_CHAIN_SELECTORS[destinationChainId];
     if (!destSelector) {
@@ -161,7 +162,7 @@ export class CCIPTransport {
       );
     }
 
-    const message = this.buildMessage(payload);
+    const message = this.buildMessage(payload, destinationAddressOverride);
 
     // Step 1: Estimate fee
     let fee = 0n;
@@ -209,7 +210,10 @@ export class CCIPTransport {
   /**
    * Build a CCIP EVM2AnyMessage
    */
-  private buildMessage(payload: `0x${string}`): {
+  private buildMessage(
+    payload: `0x${string}`,
+    destinationAddressOverride?: `0x${string}`,
+  ): {
     receiver: `0x${string}`;
     data: `0x${string}`;
     tokenAmounts: readonly [];
@@ -221,7 +225,7 @@ export class CCIPTransport {
       `0x97a657c9${this.gasLimit.toString(16).padStart(64, "0")}` as `0x${string}`;
 
     return {
-      receiver: this.config.mirrorRegistryAddress,
+      receiver: destinationAddressOverride || this.config.mirrorRegistryAddress,
       data: payload,
       tokenAmounts: [] as const,
       feeToken: "0x0000000000000000000000000000000000000000" as `0x${string}`, // Native gas
@@ -235,6 +239,7 @@ export class CCIPTransport {
   async estimateFee(
     destinationChainId: number,
     payload: `0x${string}`,
+    destinationAddressOverride?: `0x${string}`,
   ): Promise<bigint> {
     const destSelector = CCIP_CHAIN_SELECTORS[destinationChainId];
     if (!destSelector) return 0n;
@@ -244,7 +249,7 @@ export class CCIPTransport {
         address: this.config.routerAddress,
         abi: CCIP_ROUTER_ABI,
         functionName: "getFee",
-        args: [destSelector, this.buildMessage(payload)],
+        args: [destSelector, this.buildMessage(payload, destinationAddressOverride)],
       })) as bigint;
     } catch {
       return 5_000_000_000_000_000n; // 0.005 ETH fallback
