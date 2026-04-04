@@ -4,6 +4,7 @@ pragma solidity ^0.8.24;
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 /// @title DIDRegistry
+/// @notice Experimental/frozen contract. Preserved for future work and not part of the current launch runtime.
 /// @notice Decentralized identity registry with agent reputation scoring
 /// @dev Maps wallet addresses to DID documents and tracks on-chain reputation
 ///   based on protocol participation (subscriptions, settlements, proof submissions).

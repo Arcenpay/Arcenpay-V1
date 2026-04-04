@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /// @title SubscriptionCollateralModule
+/// @notice Experimental/frozen contract. Preserved for future work and not part of the current launch runtime.
 /// @notice Allows subscribers to borrow against active subscription NFTs
 /// @dev Subscribers can lock their subscription NFT as collateral to borrow
 ///   stablecoins for subscription renewals or other purposes. The loan is

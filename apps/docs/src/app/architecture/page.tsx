@@ -49,7 +49,11 @@ export default function ArchitecturePage() {
         </table>
 
         <h2 id="contract-map">Contract map</h2>
-        <p>Seven contracts form the protocol core. All are deployed on Sepolia ETH (chainId 11155111).</p>
+        <p>
+          Seven contracts form the protocol core. All are deployed on Sepolia ETH (chainId 11155111).
+          Additional contracts in the repo are currently kept as experimental frozen modules and are
+          not part of the launch runtime.
+        </p>
         <div className="docs-lifecycle" style={{ marginBottom: 32 }}>
           {[
             { name: 'PlanFactory', desc: 'Creates and manages on-chain subscription plans. One plan per tier. Immutable after creation. Registers providers.', color: '#6366f1' },
@@ -143,6 +147,10 @@ export default function ArchitecturePage() {
         <p>
           The <code>SubscriptionRegistry</code> on the source chain calls <code>dispatchCrossChainUpdate()</code> after each renewal.
           The <code>MirrorRegistry</code> on the destination chain receives the ABI-encoded payload via <code>onAxelarMessage()</code> or <code>onCCIPMessage()</code>.
+        </p>
+        <p>
+          If cross-chain routing is not configured, the recurring billing and entitlement flow still works normally on the source chain.
+          <code>MirrorRegistry</code> is an optional extension, not a requirement for the launch path.
         </p>
 
         <h2 id="account-abstraction">Account abstraction</h2>

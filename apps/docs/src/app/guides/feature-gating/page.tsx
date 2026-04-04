@@ -73,8 +73,9 @@ if (!flags.beta_editor) {
 
         <h2 id="updates">Dynamic Updates</h2>
         <p>
-          When you update flags in the dashboard, the changes are written to the <code>FeatureFlagRegistry</code> 
-          contract. All subscribers immediately receive the updated configuration without a code deploy.
+          When you update flags in the dashboard, the changes are written to the dashboard&apos;s
+          flag rules and entitlement records. The current launch path uses a DB-backed flag
+          engine, with optional on-chain subscription reads as a fallback for plan resolution.
         </p>
 
         <div className="docs-callout tip">

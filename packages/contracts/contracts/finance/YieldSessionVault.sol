@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 /// @title YieldSessionVault
+/// @notice Optional experimental extension. Not part of the default deployed core runtime.
 /// @notice ERC4626-compatible yield-bearing session vault
 /// @dev Wraps the base SessionVault pattern with ERC4626 vault shares.
 ///   Idle session deposits earn yield from a configurable strategy

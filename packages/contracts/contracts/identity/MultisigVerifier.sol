@@ -4,6 +4,7 @@ pragma solidity ^0.8.24;
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 /// @title MultisigVerifier
+/// @notice Experimental/frozen contract. Preserved for future work and not part of the current launch runtime.
 /// @notice EIP-1271 compatible signature verifier for Safe/Gnosis multisig wallets
 /// @dev Allows the SubscriptionRegistry and CheckoutModal to accept signatures
 ///   from smart contract wallets (Safe, Argent, etc.) in addition to EOAs.

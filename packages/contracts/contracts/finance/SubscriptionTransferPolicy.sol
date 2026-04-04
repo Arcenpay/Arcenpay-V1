@@ -4,6 +4,7 @@ pragma solidity ^0.8.24;
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 /// @title SubscriptionTransferPolicy
+/// @notice Experimental/frozen contract. Preserved for future work and not part of the current launch runtime.
 /// @notice Controls subscription NFT transfer rules for secondary-market trading
 /// @dev Enforced by SubscriptionRegistry._update() hook. Supports:
 ///   - Provider-level transfer toggle (allow/deny all transfers)

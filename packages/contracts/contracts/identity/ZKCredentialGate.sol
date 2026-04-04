@@ -4,6 +4,7 @@ pragma solidity ^0.8.24;
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 /// @title ZKCredentialGate
+/// @notice Experimental/frozen contract. Preserved for future work and not part of the current launch runtime.
 /// @notice Zero-knowledge credential compliance gate with Reclaim Protocol zkTLS support.
 /// @dev Providers can require subscribers to present valid ZK credentials
 ///   (e.g., KYC proofs, jurisdiction proofs, accreditation proofs) before

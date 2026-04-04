@@ -4,6 +4,7 @@ pragma solidity ^0.8.24;
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 /// @title FlagRegistry
+/// @notice Experimental/frozen contract. Preserved for future work and not part of the current launch runtime.
 /// @notice On-chain registry of feature flag default values for trustless third-party verification.
 /// @dev Operators can register/update flags. Default values are stored per teamId (bytes32 hash).
 ///   Emits events for subgraph indexing. Flags are identified by (teamId, featureKey).
