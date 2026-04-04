@@ -91,6 +91,8 @@ const FEATURE_TYPE_META: Record<
   },
 };
 
+const DEFAULT_FEATURE_TYPE_META = FEATURE_TYPE_META.boolean;
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function toFeatureKey(name: string): string {
@@ -98,6 +100,10 @@ function toFeatureKey(name: string): string {
     .toLowerCase()
     .replace(/\s+/g, "_")
     .replace(/[^a-z0-9_]/g, "");
+}
+
+function getFeatureTypeMeta(featureType: string | null | undefined) {
+  return FEATURE_TYPE_META[featureType as FeatureType] ?? DEFAULT_FEATURE_TYPE_META;
 }
 
 // ─── Feature Detail View ─────────────────────────────────────────────────────
@@ -111,7 +117,7 @@ function FeatureDetailView({
   onBack: () => void;
   onDelete: (id: string) => void;
 }) {
-  const meta = FEATURE_TYPE_META[feature.featureType];
+  const meta = getFeatureTypeMeta(feature.featureType);
   const Icon = meta.icon;
   const [copied, setCopied] = useState(false);
 
@@ -407,7 +413,7 @@ function CreateFeatureSheet({
     }
   };
 
-  const meta = FEATURE_TYPE_META[form.featureType];
+  const meta = getFeatureTypeMeta(form.featureType);
   const Icon = meta.icon;
 
   return (
@@ -764,7 +770,7 @@ export function FeaturesSection() {
 
               {!loading &&
                 filtered.map((feature, index) => {
-                  const meta = FEATURE_TYPE_META[feature.featureType];
+                  const meta = getFeatureTypeMeta(feature.featureType);
                   const Icon = meta.icon;
                   return (
                     <tr

@@ -82,24 +82,36 @@ export function PricingPage() {
 ### 3. Gate features
 
 ```tsx
-import { FeatureFlagGuard, useEntitlement } from "@arcenpay/react";
+import {
+  useEntitlementCheck,
+  useEntitlement,
+  useConsumeEntitlement,
+} from "@arcenpay/react";
+import { useAccount } from "wagmi";
 
-// Component-level gating
-function AdvancedFeature() {
-  return (
-    <FeatureFlagGuard flag="advanced_analytics">
-      <AnalyticsDashboard />
-    </FeatureFlagGuard>
-  );
-}
-
-// Hook-level check
 function MyComponent() {
-  const { enabled, loading } = useEntitlement("advanced_analytics");
+  const { address } = useAccount();
+  const { enabled, loading } = useEntitlementCheck("advanced_analytics");
+  const { consume } = useConsumeEntitlement();
+  const { planTier, isSubscribed } = useEntitlement(address);
+
+  async function handleScan() {
+    const result = await consume("scan");
+    if (!result.consumed) {
+      alert(result.reason);
+      return;
+    }
+  }
 
   if (loading) return <Spinner />;
   if (!enabled) return <UpgradePrompt />;
-  return <AdvancedFeature />;
+  return (
+    <AnalyticsDashboard
+      planTier={planTier}
+      subscribed={isSubscribed}
+      onScan={handleScan}
+    />
+  );
 }
 ```
 
@@ -116,7 +128,7 @@ Root provider. Must wrap your entire app.
   config={{
     // Optional: override defaults
     tablelandConfig: {
-      featureFlagsEndpoint: "https://api.yourapp.com/flags/{wallet}",
+      featureFlagsEndpoint: "https://api.yourapp.com/api/entitlements/{wallet}/flags",
     },
     tierFeatureFallback: {
       starter: { api_calls: 1000, webhooks: false },
@@ -149,21 +161,7 @@ Full subscription checkout flow: connect wallet → deploy smart account → ins
 ```tsx
 <CheckoutModal
   planId={1n}
-  requestSubscription={async ({ planId, paymentAccount, subscriberEmail }) => {
-    const response = await fetch("/api/request-subscription", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        planId: planId.toString(),
-        paymentAccount,
-        subscriberEmail,
-      }),
-    });
-
-    const result = await response.json();
-    if (!response.ok) throw new Error(result.error ?? "Activation failed");
-    return result;
-  }}
+  activationEndpoint="https://dashboard.yourapp.com/api/v1/subscriptions/activate"
   onSuccess={(tokenId) => {
     // tokenId — ERC-721 subscription token ID
   }}
@@ -171,10 +169,10 @@ Full subscription checkout flow: connect wallet → deploy smart account → ins
 />
 ```
 
-Your `requestSubscription` endpoint must run on your backend with an authorized
-merchant signer. Direct customer-side calls to `SubscriptionRegistry.mint()` are
-intentionally blocked because the contract only allows biller-controlled
-activation.
+If you already have a provider backend, you can keep using `requestSubscription`.
+If not, `CheckoutModal` can call the ArcenPay dashboard activation endpoint
+directly when `activationEndpoint` or `NEXT_PUBLIC_ARCEN_BASE_URL` /
+`NEXT_PUBLIC_ARCENPAY_BASE_URL` is configured.
 
 ### `<SubscriptionStatus />`
 
@@ -182,19 +180,6 @@ Shows current plan, expiry date, and USDC badge.
 
 ```tsx
 <SubscriptionStatus />
-```
-
-### `<FeatureFlagGuard />`
-
-Conditionally renders children based on feature flag.
-
-```tsx
-<FeatureFlagGuard
-  flag="advanced_export"
-  fallback={<UpgradePrompt />}    // Optional fallback
->
-  <ExportButton />
-</FeatureFlagGuard>
 ```
 
 ### `<UsageDashboard />`
@@ -235,20 +220,68 @@ Access the full protocol context.
 const { config, contracts, network, isTestnet } = useArcenPay();
 ```
 
-### `useEntitlement(flag)`
+### `useEntitlement(walletAddress, featureKey?)`
 
-Check a feature flag for the connected wallet.
+Read the live on-chain subscription state for a wallet and resolve feature values
+with this precedence:
+1. dashboard company entitlements when an Arcen session token is available
+2. wallet/provider compatibility endpoint
+3. `tierFeatureFallback`
 
 ```tsx
+const { address } = useAccount();
+
 const {
-  enabled,       // boolean
-  loading,       // boolean
-  value,         // boolean | string | number
   planTier,      // "starter" | "pro" | "enterprise"
   expiresAt,     // bigint (unix timestamp)
   isSubscribed,  // boolean
+  features,      // resolved feature map
+  isLoading,     // boolean
   error,         // Error | null
-} = useEntitlement("advanced_analytics");
+} = useEntitlement(address, "advanced_analytics");
+```
+
+### `useEntitlementCheck(featureKey)`
+
+Check a single company-aware entitlement through the dashboard API.
+
+```tsx
+const {
+  enabled,
+  allocation,
+  usage,
+  exceeded,
+  loading,
+  error,
+} = useEntitlementCheck("api_calls");
+```
+
+### `useTrack()`
+
+Send analytics events to the dashboard. When an Arcen session token is present,
+the session is used automatically.
+
+```tsx
+const { track } = useTrack();
+
+await track("export_triggered", { format: "csv" });
+```
+
+### `useConsumeEntitlement()`
+
+Atomically enforce and consume a metered entitlement on the server.
+
+```tsx
+const { consume, loading } = useConsumeEntitlement();
+
+const result = await consume({
+  featureKey: "scan",
+  idempotencyKey: crypto.randomUUID(),
+});
+
+if (!result.consumed) {
+  console.log(result.reason);
+}
 ```
 
 ## Utilities
@@ -310,6 +343,7 @@ function MyCustomPricingTable() {
 ```bash
 NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your-project-id
 NEXT_PUBLIC_RPC_URL_84532=https://sepolia.base.org
+NEXT_PUBLIC_ARCEN_BASE_URL=https://dashboard.yourapp.com
 NEXT_PUBLIC_FACILITATOR_URL=https://facilitator.yourapp.com
 ```
 

@@ -121,6 +121,12 @@ const TIER_CONFIG = {
   },
 };
 
+const DEFAULT_TIER_CONFIG = TIER_CONFIG.FREE;
+
+function getTierConfig(tier: string | null | undefined) {
+  return TIER_CONFIG[tier as keyof typeof TIER_CONFIG] ?? DEFAULT_TIER_CONFIG;
+}
+
 const FEATURE_LABELS: {
   key: keyof TierFeatures;
   label: string;
@@ -245,14 +251,12 @@ export function BillingSection() {
           <CardTitle className="flex items-center gap-2">
             {currentTier &&
               (() => {
-                const config =
-                  TIER_CONFIG[currentTier.tier as keyof typeof TIER_CONFIG];
+                const config = getTierConfig(currentTier.tier);
                 const Icon = config.icon;
                 return <Icon className={`w-5 h-5 ${config.color}`} />;
               })()}
             Current Plan:{" "}
-            {TIER_CONFIG[currentTier?.tier as keyof typeof TIER_CONFIG]
-              ?.label ?? "Free"}
+            {getTierConfig(currentTier?.tier).label}
           </CardTitle>
           <CardDescription>
             {currentTier?.expiresAt
@@ -412,8 +416,7 @@ export function BillingSection() {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {allTiers.map((tierInfo) => {
-            const config =
-              TIER_CONFIG[tierInfo.tier as keyof typeof TIER_CONFIG];
+            const config = getTierConfig(tierInfo.tier);
             const Icon = config.icon;
             const tierIndex = tierOrder.indexOf(tierInfo.tier);
             const isCurrent = tierInfo.tier === currentTier?.tier;
@@ -577,7 +580,7 @@ export function BillingSection() {
                 : "Downgrade"}{" "}
               to{" "}
               {selectedTier
-                ? TIER_CONFIG[selectedTier as keyof typeof TIER_CONFIG]?.label
+                ? getTierConfig(selectedTier).label
                 : ""}
             </DialogTitle>
             <DialogDescription>

@@ -12,42 +12,82 @@ interface FlagResult {
 
 interface CompanyData {
   companyKeys: { wallet: string; id?: string };
+  usage: {
+    scan: {
+      allocation: number | null;
+      usage: number;
+      exceeded: boolean;
+    } | null;
+  };
   flags: {
-    scan: FlagResult | null;
-    "export-pdf": FlagResult | null;
-    "api-access": FlagResult | null;
+    scan: (FlagResult & { allocation?: number | null; usage?: number; exceeded?: boolean }) | null;
+    "export-pdf": (FlagResult & { allocation?: number | null; usage?: number; exceeded?: boolean }) | null;
+    "api-access": (FlagResult & { allocation?: number | null; usage?: number; exceeded?: boolean }) | null;
   };
 }
 
 export default function DashboardPage() {
   const [company, setCompany] = useState<CompanyData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [scanCount, setScanCount] = useState(0);
+  const [sessionScanCount, setSessionScanCount] = useState(0);
   const [tracking, setTracking] = useState(false);
   const [trackStatus, setTrackStatus] = useState<string | null>(null);
 
+  async function loadCompany() {
+    setLoading(true);
+    try {
+      const response = await fetch("/api/company", { cache: "no-store" });
+      const data = (await response.json()) as CompanyData;
+      setCompany(data);
+    } catch {
+      // ignore demo fetch failures
+    } finally {
+      setLoading(false);
+    }
+  }
+
   useEffect(() => {
-    fetch("/api/company")
-      .then((r) => r.json())
-      .then((data: CompanyData) => setCompany(data))
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    void loadCompany();
   }, []);
 
   async function handleScan() {
+    if (company?.flags.scan?.value === false) {
+      setTrackStatus("Scan limit reached. Upgrade or wait for the next usage window.");
+      return;
+    }
+
     setTracking(true);
     setTrackStatus(null);
     try {
-      const res = await fetch("/api/track", {
+      const idempotencyKey =
+        typeof crypto !== "undefined" && "randomUUID" in crypto
+          ? crypto.randomUUID()
+          : `scan-${Date.now()}`;
+
+      const res = await fetch("/api/consume", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: "scan", traits: { source: "demo" } }),
+        body: JSON.stringify({
+          featureKey: "scan",
+          traits: { source: "demo" },
+          idempotencyKey,
+        }),
       });
+      const result = (await res.json()) as {
+        consumed?: boolean;
+        reason?: string;
+        error?: string;
+      };
       if (res.ok) {
-        setScanCount((c) => c + 1);
-        setTrackStatus("Tracked via ArcenClient.track()");
+        if (result.consumed) {
+          setSessionScanCount((c) => c + 1);
+          setTrackStatus("Scan consumed and synced to usage");
+        } else {
+          setTrackStatus(result.reason ?? "Scan denied");
+        }
+        await loadCompany();
       } else {
-        setTrackStatus("Error: Could not track event");
+        setTrackStatus(result.error ?? "Error: Could not consume scan");
       }
     } catch {
       setTrackStatus("Error: Network request failed");
@@ -59,6 +99,7 @@ export default function DashboardPage() {
 
   const wallet = company?.companyKeys?.wallet;
   const walletShort = wallet ? `${wallet.slice(0, 10)}…${wallet.slice(-6)}` : "—";
+  const scanUsage = company?.usage.scan;
 
   return (
     <div className={styles.root}>
@@ -104,8 +145,24 @@ export default function DashboardPage() {
             <div className={styles.statLabel}>Scans this session</div>
             <span className={styles.statIcon}>◈</span>
           </div>
-          <div className={`${styles.statValue} ${styles.accent}`}>{scanCount}</div>
-          <div className={styles.statNote}>Click &ldquo;Run Scan&rdquo; below to track</div>
+          <div className={`${styles.statValue} ${styles.accent}`}>{sessionScanCount}</div>
+          <div className={styles.statNote}>Local actions in this browser tab</div>
+        </div>
+        <div className={styles.statCard}>
+          <div className={styles.statHeader}>
+            <div className={styles.statLabel}>Scans this month</div>
+            <span className={styles.statIcon}>◎</span>
+          </div>
+          <div className={`${styles.statValue} ${styles.accent}`}>
+            {loading ? "—" : scanUsage?.usage ?? 0}
+          </div>
+          <div className={styles.statNote}>
+            {loading
+              ? "Loading usage…"
+              : scanUsage?.allocation !== null && scanUsage?.allocation !== undefined
+                ? `${scanUsage.usage} / ${scanUsage.allocation} used`
+                : "Unlimited or not configured"}
+          </div>
         </div>
         <div className={styles.statCard}>
           <div className={styles.statHeader}>
@@ -116,28 +173,9 @@ export default function DashboardPage() {
             {loading ? "—" : company?.flags?.scan?.value ? "Enabled" : "Disabled"}
           </div>
           <div className={styles.statNote}>
-            {company?.flags?.scan?.reason ?? "Via ArcenPay flag evaluation"}
+            {company?.flags?.scan?.reason ?? "Via ArcenPay entitlement evaluation"}
+            {scanUsage?.exceeded ? " · limit reached" : ""}
           </div>
-        </div>
-        <div className={styles.statCard}>
-          <div className={styles.statHeader}>
-            <div className={styles.statLabel}>PDF Export</div>
-            <span className={styles.statIcon}>📄</span>
-          </div>
-          <div className={`${styles.statValue} ${company?.flags?.["export-pdf"]?.value ? styles.green : styles.muted}`}>
-            {loading ? "—" : company?.flags?.["export-pdf"]?.value ? "Enabled" : "Disabled"}
-          </div>
-          <div className={styles.statNote}>Plan entitlement</div>
-        </div>
-        <div className={styles.statCard}>
-          <div className={styles.statHeader}>
-            <div className={styles.statLabel}>API Access</div>
-            <span className={styles.statIcon}>⚡</span>
-          </div>
-          <div className={`${styles.statValue} ${company?.flags?.["api-access"]?.value ? styles.green : styles.muted}`}>
-            {loading ? "—" : company?.flags?.["api-access"]?.value ? "Enabled" : "Disabled"}
-          </div>
-          <div className={styles.statNote}>Pro+ feature</div>
         </div>
       </div>
 
@@ -145,11 +183,15 @@ export default function DashboardPage() {
       <div className={styles.section}>
         <h2 className={styles.sectionTitle}>Try it live</h2>
         <p className={styles.sectionDesc}>
-          Calls <code>/api/track</code> → <code>ArcenClient.track({"{ name: \"scan\" }"})</code> on your ArcenPay dashboard.
+          Calls <code>/api/consume</code> → <code>ArcenClient.consumeEntitlement({"scan"})</code> on your ArcenPay dashboard.
           Open the Events stream to see it appear in real time.
         </p>
         <div className={styles.demoArea}>
-          <button onClick={handleScan} disabled={tracking} className={styles.btnScan}>
+          <button
+            onClick={handleScan}
+            disabled={tracking || company?.flags.scan?.value === false}
+            className={styles.btnScan}
+          >
             {tracking ? "⏳ Scanning…" : "◈ Run Scan"}
           </button>
           {trackStatus && (
@@ -205,8 +247,8 @@ const client = new ArcenClient({
   apiKey: process.env.ARCENPAY_API_KEY!,
 });
 
-await client.track({
-  name: "scan",
+await client.consumeEntitlement({
+  featureKey: "scan",
   company: { wallet: "0x..." },
 });`}
         />

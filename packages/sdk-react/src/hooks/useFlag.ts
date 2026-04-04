@@ -16,6 +16,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { FlagCheckResult, ArcenCompanyKeys, ArcenUserKeys } from '@arcenpay/sdk';
 import { useArcenSession } from '../providers/MEAPProvider';
+import { resolveDashboardBaseUrl } from '../lib/api';
 
 export interface UseFlagOptions {
   /** Base URL for the ArcenPay dashboard API (defaults to '') */
@@ -53,8 +54,9 @@ export function useFlag(
   userKeys?: ArcenUserKeys,
   options: UseFlagOptions = {},
 ): UseFlagResult {
-  const { baseUrl = '', apiKey, cacheMs = 30_000, skip = false } = options;
+  const { apiKey, cacheMs = 30_000, skip = false } = options;
   const session = useArcenSession();
+  const baseUrl = resolveDashboardBaseUrl(options.baseUrl);
 
   const [result, setResult] = useState<FlagCheckResult | null>(null);
   const [loading, setLoading] = useState(!skip);
@@ -172,8 +174,9 @@ export function useFlags(
   const [flags, setFlags] = useState<Record<string, boolean | null>>({});
   const [loading, setLoading] = useState(true);
 
-  const { baseUrl = '', apiKey, skip = false } = options;
+  const { apiKey, skip = false } = options;
   const session = useArcenSession();
+  const baseUrl = resolveDashboardBaseUrl(options.baseUrl);
 
   useEffect(() => {
     if (skip || featureKeys.length === 0) {

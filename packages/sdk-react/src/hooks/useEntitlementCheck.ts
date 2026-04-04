@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useArcenSession } from "../providers/MEAPProvider";
 import type { EntitlementResult } from "@arcenpay/sdk";
+import { resolveDashboardBaseUrl } from "../lib/api";
 
 export interface UseEntitlementCheckOptions {
   baseUrl?: string;
@@ -28,10 +29,7 @@ export function useEntitlementCheck(
   const session = useArcenSession();
   const cacheTtlMs = options.cacheTtlMs ?? 30_000;
 
-  const baseUrl =
-    options.baseUrl ??
-    (typeof process !== "undefined" ? process.env.NEXT_PUBLIC_ARCEN_BASE_URL : undefined) ??
-    "https://dashboard.arcenpay.xyz";
+  const baseUrl = resolveDashboardBaseUrl(options.baseUrl);
 
   const [result, setResult] = useState<EntitlementResult | null>(null);
   const [loading, setLoading] = useState(true);
@@ -68,6 +66,7 @@ export function useEntitlementCheck(
           Authorization: `Bearer ${session.token}`,
           "Content-Type": "application/json",
         },
+        cache: "no-store",
         signal: controller.signal,
       });
 

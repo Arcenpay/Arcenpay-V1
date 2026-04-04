@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getArcenClient, getDemoCompanyKeys } from "@/lib/arcen-client";
+import {
+  getArcenClient,
+  getDemoCompanyKeys,
+  getDemoUserIdentity,
+} from "@/lib/arcen-client";
 
 /**
  * POST /api/track
@@ -9,18 +13,28 @@ import { getArcenClient, getDemoCompanyKeys } from "@/lib/arcen-client";
  */
 export async function POST(req: NextRequest) {
   try {
-    const body = (await req.json()) as { name?: string; traits?: Record<string, unknown> };
+    const body = (await req.json()) as {
+      name?: string;
+      traits?: Record<string, unknown>;
+      idempotencyKey?: string;
+    };
     if (!body.name) {
       return NextResponse.json({ error: "Missing event name" }, { status: 400 });
     }
 
     const client = getArcenClient();
     const companyKeys = getDemoCompanyKeys();
+    const user = getDemoUserIdentity();
 
     await client.track({
       name: body.name,
       company: companyKeys,
+      user: {
+        id: user.id,
+        wallet: user.wallet,
+      },
       traits: body.traits,
+      idempotencyKey: body.idempotencyKey,
     });
 
     return NextResponse.json({ ok: true });

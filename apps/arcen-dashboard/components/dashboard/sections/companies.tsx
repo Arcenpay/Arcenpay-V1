@@ -31,7 +31,14 @@ interface Company {
 interface CompanyDetail extends Company {
   users: { id: string; name: string | null; email: string | null; walletAddress: string | null; lastSeenAt: string }[];
   overrides: { id: string; featureKey: string; value: boolean; reason: string | null }[];
-  entitlements: { featureKey: string; value: boolean; reason: string }[];
+  entitlements: {
+    featureKey: string;
+    value: boolean;
+    reason: string;
+    allocation?: number | null;
+    usage?: number;
+    exceeded?: boolean;
+  }[];
   activePlan: { id: string; name: string; tier: string; price: string } | null;
 }
 
@@ -117,7 +124,15 @@ function CompanyDetailContent({ company, onClose }: { company: CompanyDetail; on
             <div className="space-y-1.5">
               {enabled.map((e) => (
                 <div key={e.featureKey} className="flex items-center justify-between px-3 py-2 rounded-lg bg-emerald-500/5 border border-emerald-500/20">
-                  <span className="font-mono text-xs">{e.featureKey}</span>
+                  <div>
+                    <span className="font-mono text-xs">{e.featureKey}</span>
+                    {(e.allocation !== null && e.allocation !== undefined) && (
+                      <div className="text-[11px] text-muted-foreground mt-0.5">
+                        {e.usage ?? 0} / {e.allocation} used
+                        {e.exceeded ? " · limit reached" : ""}
+                      </div>
+                    )}
+                  </div>
                   <div className="flex items-center gap-2">
                     <Badge className="bg-emerald-500/15 text-emerald-600 border-emerald-500/30 text-xs dark:text-emerald-400">✓ True</Badge>
                     <span className="text-xs text-muted-foreground/70">{e.reason}</span>
@@ -126,7 +141,15 @@ function CompanyDetailContent({ company, onClose }: { company: CompanyDetail; on
               ))}
               {disabled.map((e) => (
                 <div key={e.featureKey} className="flex items-center justify-between px-3 py-2 rounded-lg bg-muted/30 border border-border/40">
-                  <span className="font-mono text-xs text-muted-foreground">{e.featureKey}</span>
+                  <div>
+                    <span className="font-mono text-xs text-muted-foreground">{e.featureKey}</span>
+                    {(e.allocation !== null && e.allocation !== undefined) && (
+                      <div className="text-[11px] text-muted-foreground mt-0.5">
+                        {e.usage ?? 0} / {e.allocation} used
+                        {e.exceeded ? " · limit reached" : ""}
+                      </div>
+                    )}
+                  </div>
                   <Badge variant="outline" className="text-xs text-muted-foreground">✗ False</Badge>
                 </div>
               ))}
@@ -316,7 +339,7 @@ export function CompaniesSection() {
     try {
       const params = new URLSearchParams();
       if (search) params.set("search", search);
-      const res = await fetch(`/api/v1/companies?${params}`);
+      const res = await fetch(`/api/v1/companies?${params}`, { cache: "no-store" });
       if (res.ok) {
         const data = await res.json() as { data: Company[] };
         setCompanies(data.data);
@@ -333,7 +356,7 @@ export function CompaniesSection() {
     setDetailCompany(null);
     setDetailOpen(true);
     try {
-      const res = await fetch(`/api/v1/companies/${company.id}`);
+      const res = await fetch(`/api/v1/companies/${company.id}`, { cache: "no-store" });
       if (res.ok) {
         const data = await res.json() as { data: CompanyDetail };
         setDetailCompany(data.data);

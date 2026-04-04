@@ -5,12 +5,14 @@
  * Events are batched and debounced by default to avoid flooding the API.
  *
  * @example
- * const { track } = useTrack({ baseUrl: '', apiKey: 'api_xxx' });
- * await track({ name: 'scan', company: { wallet: '0x...' } });
+ * const { track } = useTrack({ apiKey: 'api_xxx' });
+ * await track('scan', { source: 'dashboard' });
  */
 
 import { useCallback, useRef } from 'react';
 import type { ArcenCompanyKeys, ArcenUserKeys } from '@arcenpay/sdk';
+import { useArcenSession } from '../providers/MEAPProvider';
+import { resolveDashboardBaseUrl } from '../lib/api';
 
 export interface TrackOptions {
   baseUrl?: string;
@@ -19,45 +21,69 @@ export interface TrackOptions {
 
 export interface TrackEventInput {
   name: string;
-  company: ArcenCompanyKeys;
+  company?: ArcenCompanyKeys;
   user?: ArcenUserKeys;
   traits?: Record<string, unknown>;
+  idempotencyKey?: string;
 }
 
 export interface UseTrackResult {
-  track: (event: TrackEventInput) => Promise<void>;
+  track: (event: string | TrackEventInput, traits?: Record<string, unknown>) => Promise<void>;
 }
 
 export function useTrack(options: TrackOptions = {}): UseTrackResult {
-  const { baseUrl = '', apiKey } = options;
+  const { apiKey } = options;
+  const session = useArcenSession();
+  const baseUrl = resolveDashboardBaseUrl(options.baseUrl);
 
   const pendingRef = useRef<Promise<void> | null>(null);
 
   const track = useCallback(
-    async (event: TrackEventInput): Promise<void> => {
+    async (
+      event: string | TrackEventInput,
+      traits?: Record<string, unknown>,
+    ): Promise<void> => {
+      const normalized: TrackEventInput =
+        typeof event === 'string'
+          ? { name: event, traits }
+          : event;
+
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
-      if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
+      if (session.token) {
+        headers['Authorization'] = `Bearer ${session.token}`;
+      } else if (apiKey) {
+        headers['Authorization'] = `Bearer ${apiKey}`;
+      } else if (!normalized.company) {
+        throw new Error('track() requires a session token or explicit company keys');
+      }
 
       const body = JSON.stringify({
         event_type: 'track',
-        name: event.name,
-        company: {
-          id: event.company.id,
-          wallet: event.company.wallet,
-          email: event.company.email,
-        },
-        ...(event.user
+        name: normalized.name,
+        ...(normalized.company
           ? {
-              user: {
-                id: event.user.id,
-                clerk_user_id: event.user.clerkUserId,
-                wallet: event.user.wallet,
+              company: {
+                id: normalized.company.id,
+                wallet: normalized.company.wallet,
+                email: normalized.company.email,
               },
             }
           : {}),
-        traits: event.traits,
+        ...(normalized.user
+          ? {
+              user: {
+                id: normalized.user.id,
+                clerk_user_id: normalized.user.clerkUserId,
+                wallet: normalized.user.wallet,
+              },
+            }
+          : {}),
+        traits: normalized.traits,
+        ...(normalized.idempotencyKey
+          ? { idempotencyKey: normalized.idempotencyKey }
+          : {}),
       });
 
       const req = fetch(`${baseUrl}/api/v1/events`, {
@@ -67,7 +93,10 @@ export function useTrack(options: TrackOptions = {}): UseTrackResult {
       }).then((res) => {
         if (!res.ok) {
           return res.json().then((d: { error?: string }) => {
-            console.warn(`[useTrack] Failed to track event "${event.name}":`, d.error);
+            console.warn(
+              `[useTrack] Failed to track event "${normalized.name}":`,
+              d.error,
+            );
           });
         }
       });
@@ -75,7 +104,7 @@ export function useTrack(options: TrackOptions = {}): UseTrackResult {
       pendingRef.current = req;
       await req;
     },
-    [baseUrl, apiKey],
+    [baseUrl, apiKey, session.token],
   );
 
   return { track };

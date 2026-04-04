@@ -71,6 +71,30 @@ describe('ArcenClient', () => {
     });
   });
 
+  describe('track()', () => {
+    it('uses the session token after identify() when no company keys are provided', async () => {
+      mockFetch
+        .mockResolvedValueOnce(mockResponse({
+          data: { token: 'tok_abc', company_id: 'co_internal_1', expires_at: 9999999999 },
+        }))
+        .mockResolvedValueOnce(mockResponse({ ok: true }));
+
+      await client.identify({ company: { id: 'customer-123' } });
+      await client.track('scan');
+
+      const secondCall = mockFetch.mock.calls[1] as [string, RequestInit];
+      const headers = secondCall[1].headers as Record<string, string>;
+
+      expect(headers.Authorization).toBe('Bearer tok_abc');
+      expect(secondCall[1].body).toBe(
+        JSON.stringify({
+          event_type: 'track',
+          name: 'scan',
+        }),
+      );
+    });
+  });
+
   describe('checkEntitlement()', () => {
     it('returns EntitlementResult with allocation/usage/exceeded', async () => {
       mockFetch.mockResolvedValueOnce(mockResponse({
@@ -83,6 +107,56 @@ describe('ArcenClient', () => {
       expect(result.allocation).toBe(1000);
       expect(result.usage).toBe(247);
       expect(result.exceeded).toBe(false);
+    });
+  });
+
+  describe('consumeEntitlement()', () => {
+    it('uses the session token after identify() and returns canonical metered state', async () => {
+      mockFetch
+        .mockResolvedValueOnce(
+          mockResponse({
+            data: {
+              token: 'tok_abc',
+              company_id: 'co_internal_1',
+              user_id: 'user_1',
+              expires_at: 9999999999,
+            },
+          }),
+        )
+        .mockResolvedValueOnce(
+          mockResponse({
+            key: 'scan',
+            enabled: false,
+            reason: 'Rule 101 matched · limit reached',
+            allocation: 15,
+            usage: 15,
+            exceeded: true,
+            consumed: true,
+          }),
+        );
+
+      await client.identify({ company: { id: 'customer-123' } });
+      const result = await client.consumeEntitlement({
+        featureKey: 'scan',
+        traits: { source: 'demo' },
+        idempotencyKey: 'scan-1',
+      });
+
+      expect(result.consumed).toBe(true);
+      expect(result.exceeded).toBe(true);
+
+      const secondCall = mockFetch.mock.calls[1] as [string, RequestInit];
+      expect(secondCall[0]).toContain('/api/v1/usage/consume');
+      expect((secondCall[1].headers as Record<string, string>).Authorization).toBe(
+        'Bearer tok_abc',
+      );
+      expect(secondCall[1].body).toBe(
+        JSON.stringify({
+          featureKey: 'scan',
+          traits: { source: 'demo' },
+          idempotencyKey: 'scan-1',
+        }),
+      );
     });
   });
 

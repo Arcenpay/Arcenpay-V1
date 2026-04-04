@@ -13,22 +13,10 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import crypto from "crypto";
-import { db } from "@/lib/db";
-import { evaluateFlag, resolveCompany, type CompanyKeys, type UserKeys } from "@/lib/flag-engine";
-import { aggregateUsage } from "@/lib/event-aggregator";
+import { type CompanyKeys, type UserKeys } from "@/lib/flag-engine";
 import { requireApiKey, isApiKeyError } from "@/lib/api-key-auth";
-
-// ─── Access Token Resolution ─────────────────────────────────────────────────
-
-async function resolveAccessToken(token: string): Promise<{ teamId: string; companyId: string | null; userId: string | null } | null> {
-  const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
-  const record = await db.embedAccessToken.findFirst({
-    where: { tokenHash, expiresAt: { gt: new Date() } },
-    select: { teamId: true, companyId: true, userId: true },
-  });
-  return record ?? null;
-}
+import { resolveEmbedAccessToken } from "@/lib/embed-access-token";
+import { resolveEntitlementResult } from "@/lib/entitlements";
 
 // ─── Header parsing ────────────────────────────────────────────────────────────
 
@@ -43,33 +31,6 @@ function parseKeyHeader(header: string | null): Record<string, string> {
     if (key && val) result[key] = val;
   }
   return result;
-}
-
-// ─── Entitlement allocation from plan metadata ────────────────────────────────
-
-interface EntitlementEntry {
-  featureKey: string;
-  type: "BOOLEAN" | "NUMERIC" | "UNLIMITED";
-  value: boolean | number | null;
-  enabled: boolean;
-}
-
-async function getAllocationFromPlan(
-  teamId: string,
-  activePlanId: string,
-  featureKey: string,
-): Promise<{ allocation: number | null }> {
-  const plan = await db.catalogPlan.findFirst({
-    where: { id: activePlanId, teamId },
-    select: { metadata: true },
-  });
-  if (!plan?.metadata) return { allocation: null };
-  const meta = plan.metadata as { entitlements?: EntitlementEntry[] };
-  const entitlement = meta.entitlements?.find((e) => e.featureKey === featureKey);
-  if (!entitlement) return { allocation: null };
-  if (entitlement.type === "UNLIMITED") return { allocation: null };
-  if (entitlement.type === "NUMERIC") return { allocation: Number(entitlement.value) };
-  return { allocation: null };
 }
 
 // ─── Main Handler ─────────────────────────────────────────────────────────────
@@ -112,14 +73,14 @@ export async function GET(req: NextRequest) {
 
     userKeys =
       rawUserKeys["id"] || rawUserKeys["clerk_user_id"] || rawUserKeys["wallet"]
-        ? {
-            id: rawUserKeys["id"],
-            clerkUserId: rawUserKeys["clerk_user_id"],
-            wallet: rawUserKeys["wallet"],
-          }
-        : undefined;
+      ? {
+          id: rawUserKeys["id"],
+          clerkUserId: rawUserKeys["clerk_user_id"],
+          wallet: rawUserKeys["wallet"],
+        }
+      : undefined;
   } else if (bearerToken) {
-    const tokenCtx = await resolveAccessToken(bearerToken);
+    const tokenCtx = await resolveEmbedAccessToken(bearerToken);
     if (!tokenCtx) {
       return NextResponse.json({ error: "Invalid or expired token" }, { status: 401 });
     }
@@ -131,54 +92,18 @@ export async function GET(req: NextRequest) {
   }
 
   // Evaluate the flag
-  const effectiveCompanyKeys: CompanyKeys = companyKeys ?? { id: companyId ?? undefined };
-  const effectiveUserKeys: UserKeys | undefined = userKeys ?? (userId ? { id: userId } : undefined);
-
-  const result = await evaluateFlag(teamId, featureKey, effectiveCompanyKeys, effectiveUserKeys);
-
-  const resolvedCompanyId = result.companyId ?? companyId ?? undefined;
-
-  // Determine feature type
-  const flagDef = await db.catalogFeatureFlag.findUnique({
-    where: { teamId_featureKey: { teamId, featureKey } },
-    select: { featureType: true, eventKey: true },
+  const effectiveCompanyKeys: CompanyKeys = companyKeys ?? {
+    internalId: companyId ?? undefined,
+  };
+  const effectiveUserKeys: UserKeys | undefined = userKeys ?? (userId
+    ? { internalId: userId }
+    : undefined);
+  const result = await resolveEntitlementResult({
+    teamId,
+    companyKeys: effectiveCompanyKeys,
+    userKeys: effectiveUserKeys,
+    featureKey,
   });
 
-  const isMetered = flagDef?.featureType === "event_based";
-
-  if (!isMetered) {
-    return NextResponse.json({
-      key: featureKey,
-      enabled: result.value,
-      reason: result.reason,
-    });
-  }
-
-  // Metered — fetch allocation + usage
-  const company = resolvedCompanyId
-    ? await db.arcenCompany.findFirst({
-        where: { id: resolvedCompanyId },
-        select: { activePlanId: true },
-      })
-    : null;
-
-  const { allocation } = company?.activePlanId
-    ? await getAllocationFromPlan(teamId, company.activePlanId, featureKey)
-    : { allocation: null };
-
-  const metricKey = flagDef?.eventKey ?? featureKey;
-  const usage = resolvedCompanyId
-    ? await aggregateUsage(teamId, resolvedCompanyId, metricKey, "monthly")
-    : 0;
-
-  const exceeded = allocation !== null && usage >= allocation;
-
-  return NextResponse.json({
-    key: featureKey,
-    enabled: result.value,
-    reason: result.reason,
-    allocation,
-    usage,
-    exceeded,
-  });
+  return NextResponse.json(result);
 }

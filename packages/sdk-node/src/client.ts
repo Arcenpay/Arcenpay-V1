@@ -13,6 +13,7 @@ import type {
   EmbedAccessTokenResponse,
   FlagResult,
   EntitlementResult,
+  ConsumeEntitlementResult,
   IdentifyResult,
 } from '@arcenpay/sdk';
 
@@ -27,6 +28,7 @@ export interface TrackEventInput {
   company?: ArcenCompanyKeys;
   user?: ArcenUserKeys;
   traits?: Record<string, unknown>;
+  idempotencyKey?: string;
 }
 
 export interface IdentifyInput {
@@ -48,6 +50,14 @@ export interface ActivateSubscriptionResult {
   companyId: string;
   planId: string;
   paymentAccount: string;
+}
+
+export interface ConsumeEntitlementInput {
+  featureKey: string;
+  company?: ArcenCompanyKeys;
+  user?: ArcenUserKeys;
+  traits?: Record<string, unknown>;
+  idempotencyKey?: string;
 }
 
 // Shape of the raw API response from /api/v1/access-tokens
@@ -181,14 +191,42 @@ export class ArcenClient {
   async track(event: string | TrackEventInput): Promise<void> {
     const input: TrackEventInput = typeof event === 'string' ? { name: event } : event;
     await this.request('POST', '/api/v1/events', {
-      useApiKey: true,
+      useApiKey: this.session === null,
       body: {
         event_type: 'track',
         name: input.name,
-        company: input.company ?? (this.session ? { id: this.session.companyId } : undefined),
+        ...(input.company ? { company: input.company } : {}),
+        ...(input.user ? { user: input.user } : {}),
         traits: input.traits,
+        ...(input.idempotencyKey
+          ? { idempotencyKey: input.idempotencyKey }
+          : {}),
       },
     });
+  }
+
+  async consumeEntitlement(
+    input: string | ConsumeEntitlementInput,
+  ): Promise<ConsumeEntitlementResult> {
+    const normalized: ConsumeEntitlementInput =
+      typeof input === 'string' ? { featureKey: input } : input;
+
+    return this.request<ConsumeEntitlementResult>(
+      'POST',
+      '/api/v1/usage/consume',
+      {
+        useApiKey: this.session === null,
+        companyKeys: normalized.company,
+        userKeys: normalized.user,
+        body: {
+          featureKey: normalized.featureKey,
+          traits: normalized.traits,
+          ...(normalized.idempotencyKey
+            ? { idempotencyKey: normalized.idempotencyKey }
+            : {}),
+        },
+      },
+    );
   }
 
   async checkFlag(key: string, companyKeys?: ArcenCompanyKeys, userKeys?: ArcenUserKeys): Promise<FlagResult> {

@@ -1175,9 +1175,14 @@ export function Header() {
             desc: "Conditionally renders children based on a feature flag value for the connected wallet.",
             props: [
               {
-                name: "flag",
+                name: "featureKey",
                 type: "string",
-                description: "Feature flag key to evaluate.",
+                description: "Feature key to evaluate.",
+              },
+              {
+                name: "walletAddress",
+                type: "string",
+                description: "Subscriber wallet address to resolve on-chain state for.",
               },
               {
                 name: "fallback?",
@@ -1196,7 +1201,8 @@ export function Header() {
 export function AnalyticsDashboard() {
   return (
     <FeatureFlagGuard
-      flag="advanced_analytics"
+      featureKey="advanced_analytics"
+      walletAddress="0xYourSubscriberWallet"
       fallback={<UpgradePrompt />}
     >
       <Analytics />
@@ -1296,50 +1302,81 @@ export function AnalyticsDashboard() {
               "Returns all contract addresses for the wallet's connected chain. Falls back to Sepolia if not connected.",
           },
           {
-            name: "useEntitlement(key)",
+            name: "useEntitlement(walletAddress, featureKey?)",
             type: "hook",
             description:
-              "Returns { value, loading, error } for a named entitlement on the connected wallet. Reads from Tableland cache.",
+              "Returns on-chain subscription state plus resolved features. Dashboard entitlements win when an embed session token is present.",
           },
           {
-            name: "useFlag(key)",
+            name: "useEntitlementCheck(key)",
             type: "hook",
             description:
-              "Shorthand boolean hook: returns true/false for a feature flag. Re-renders on flag change.",
+              "Checks a single company-aware entitlement through the dashboard API and returns enabled/allocation/usage state.",
+          },
+          {
+            name: "useFlag(key, companyKeys, userKeys?)",
+            type: "hook",
+            description:
+              "Compatibility hook for API-key or provider-style flag checks with explicit company/user keys.",
           },
           {
             name: "useTrack()",
             type: "hook",
             description:
-              "Returns a track(event, props) function to send analytics events to the events stream.",
+              "Returns a session-aware track(...) helper for analytics events.",
+          },
+          {
+            name: "useConsumeEntitlement()",
+            type: "hook",
+            description:
+              "Atomically enforces and consumes a metered entitlement on the server.",
           },
         ]}
       />
       <CodeBlock
         lang="tsx"
-        code={`import { useEntitlement, useFlag, useTrack } from "@arcenpay/react";
+        code={`import {
+  useEntitlement,
+  useEntitlementCheck,
+  useTrack,
+  useConsumeEntitlement,
+} from "@arcenpay/react";
+import { useAccount } from "wagmi";
 
 export function Dashboard() {
-  // Entitlement with quantity
-  const { value: apiLimit, loading } = useEntitlement("api_calls_per_month");
+  const { address } = useAccount();
 
-  // Simple boolean flag
-  const canExport = useFlag("csv_export");
+  // On-chain subscription state + resolved feature map
+  const { features, isLoading: entitlementLoading } = useEntitlement(
+    address,
+    "api_calls_per_month",
+  );
+
+  // Company-aware dashboard entitlement
+  const { enabled: canExport, loading } = useEntitlementCheck("csv_export");
 
   // Event tracking
   const track = useTrack();
+  const { consume } = useConsumeEntitlement();
 
   const handleExport = () => {
     track("export_triggered", { format: "csv" });
     // ...
   };
 
-  if (loading) return <Spinner />;
+  const handleScan = async () => {
+    const result = await consume("scan");
+    if (!result.consumed) return;
+    // run the metered action
+  };
+
+  if (loading || entitlementLoading) return <Spinner />;
 
   return (
     <div>
-      <p>API calls remaining: {apiLimit ?? "unlimited"}</p>
+      <p>API calls included: {features.api_calls_per_month ?? "unlimited"}</p>
       {canExport && <button onClick={handleExport}>Export CSV</button>}
+      <button onClick={handleScan}>Run scan</button>
     </div>
   );
 }`}
@@ -1481,22 +1518,21 @@ import { useState } from "react";
 import { PricingTable, CheckoutModal } from "@arcenpay/react";
 
 export function PricingPage() {
-  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+  const [selectedPlan, setSelectedPlan] = useState<bigint | null>(null);
 
   return (
     <>
       <PricingTable
-        columns={3}
-        design={{ primaryColor: "#6366f1" }}
-        onSelect={(planId) => setSelectedPlan(planId)}
+        onSelectPlan={(planId) => setSelectedPlan(planId)}
       />
       {selectedPlan && (
         <CheckoutModal
           planId={selectedPlan}
-          open={!!selectedPlan}
+          isOpen={!!selectedPlan}
           onClose={() => setSelectedPlan(null)}
-          onSuccess={({ txHash }) => {
-            console.log("Subscription minted:", txHash);
+          activationEndpoint="https://dashboard.yourapp.com/api/v1/subscriptions/activate"
+          onSuccess={(tokenId) => {
+            console.log("Subscription minted:", tokenId.toString());
             setSelectedPlan(null);
           }}
         />
@@ -1512,19 +1548,27 @@ export function PricingPage() {
       <CodeBlock
         lang="tsx"
         code={`import { FeatureFlagGuard, useEntitlement } from "@arcenpay/react";
+import { useAccount } from "wagmi";
 
 export function AppShell() {
-  const { value: seats } = useEntitlement("team_seats");
+  const { address } = useAccount();
+  const { features } = useEntitlement(address, "team_seats");
+
+  if (!address) return <ConnectWalletPrompt />;
 
   return (
     <div>
       {/* Gate entire sections */}
-      <FeatureFlagGuard flag="analytics" fallback={<UpgradePrompt />}>
+      <FeatureFlagGuard
+        featureKey="analytics"
+        walletAddress={address}
+        fallback={<UpgradePrompt />}
+      >
         <AnalyticsDashboard />
       </FeatureFlagGuard>
 
       {/* Use entitlement values */}
-      <TeamInviteButton maxSeats={seats ?? 1} />
+      <TeamInviteButton maxSeats={Number(features.team_seats ?? 1)} />
     </div>
   );
 }`}

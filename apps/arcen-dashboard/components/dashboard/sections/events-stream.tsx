@@ -13,7 +13,54 @@ interface EventRecord {
   userId: string | null;
   traits: Record<string, unknown>;
   sentAt: string;
-  company?: { name: string; walletAddress: string | null } | null;
+  company?: {
+    name: string | null;
+    walletAddress: string | null;
+    email?: string | null;
+    externalId?: string | null;
+  } | null;
+  user?: {
+    id: string;
+    name: string | null;
+    email: string | null;
+    walletAddress: string | null;
+    externalId: string | null;
+  } | null;
+}
+
+function trimTo(value: string, length: number): string {
+  return value.length > length ? `${value.slice(0, length)}...` : value;
+}
+
+function firstNonEmpty(...values: Array<string | null | undefined>): string | null {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim().length > 0) {
+      return value.trim();
+    }
+  }
+  return null;
+}
+
+function getCompanyLabel(event: EventRecord): string | null {
+  const label = firstNonEmpty(
+    event.company?.name,
+    event.company?.email,
+    event.company?.walletAddress,
+    event.company?.externalId,
+    event.companyId,
+  );
+  return label ? trimTo(label, 28) : null;
+}
+
+function getUserLabel(event: EventRecord): string | null {
+  const label = firstNonEmpty(
+    event.user?.name,
+    event.user?.email,
+    event.user?.walletAddress,
+    event.user?.externalId,
+    event.userId,
+  );
+  return label ? trimTo(label, 24) : null;
 }
 
 function EventTypeBadge({ type, name }: { type: string; name?: string | null }) {
@@ -55,10 +102,10 @@ function EventRow({ event }: { event: EventRecord }) {
           <EventTypeBadge type={event.eventType} name={event.name} />
         </td>
         <td className="px-4 py-3 text-sm">
-          {event.company?.name ?? event.companyId ?? <span className="text-muted-foreground">—</span>}
+          {getCompanyLabel(event) ?? <span className="text-muted-foreground">—</span>}
         </td>
         <td className="px-4 py-3 text-xs text-muted-foreground">
-          {event.userId ? event.userId.slice(0, 16) + "..." : "—"}
+          {getUserLabel(event) ?? "—"}
         </td>
         <td className="px-4 py-3 text-xs text-muted-foreground">
           {new Date(event.sentAt).toLocaleString()}
@@ -93,7 +140,7 @@ export function EventsStreamSection() {
     try {
       const params = new URLSearchParams({ limit: "50" });
       if (filterType !== "all") params.set("eventType", filterType);
-      const res = await fetch(`/api/v1/events?${params}`);
+      const res = await fetch(`/api/v1/events?${params}`, { cache: "no-store" });
       if (res.ok) {
         const data = await res.json() as { data: EventRecord[] };
         setEvents(data.data);
@@ -199,8 +246,7 @@ export function EventsStreamSection() {
 Authorization: Bearer api_xxx
 {
   "event_type": "track",
-  "name": "scan",
-  "company": { "wallet": "0x..." }
+  "name": "scan"
 }`}
         </pre>
       </div>

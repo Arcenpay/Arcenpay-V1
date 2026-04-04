@@ -18,6 +18,7 @@ import {
   DEFAULT_CHAIN_ID,
   validateChainEnvironment,
 } from "@arcenpay/sdk";
+import { resolveDashboardBaseUrl } from "../lib/api";
 
 // ============================================================
 //  MEAPProvider / ArcenPayProvider — Root Context Provider
@@ -43,6 +44,31 @@ export interface ArcenSessionContextValue {
   companyId: string | null;
   userId: string | null;
   isReady: boolean;
+  identify: (input: ArcenIdentifyInput) => Promise<ArcenIdentifyResult>;
+}
+
+export interface ArcenIdentifyInput {
+  company?: {
+    id?: string;
+    wallet?: string;
+    email?: string;
+    name?: string;
+    traits?: Record<string, unknown>;
+  };
+  user?: {
+    id?: string;
+    clerkUserId?: string;
+    wallet?: string;
+    email?: string;
+    name?: string;
+  };
+  expiresIn?: number;
+}
+
+export interface ArcenIdentifyResult {
+  token: string;
+  companyId: string;
+  userId: string | null;
 }
 
 const ArcenSessionContext = createContext<ArcenSessionContextValue>({
@@ -50,10 +76,17 @@ const ArcenSessionContext = createContext<ArcenSessionContextValue>({
   companyId: null,
   userId: null,
   isReady: false,
+  identify: async () => {
+    throw new Error("Arcen session provider is not ready");
+  },
 });
 
 export function useArcenSession(): ArcenSessionContextValue {
   return useContext(ArcenSessionContext);
+}
+
+export function useArcenIdentify(): ArcenSessionContextValue["identify"] {
+  return useArcenSession().identify;
 }
 
 export interface MEAPProviderProps {
@@ -132,45 +165,102 @@ export function MEAPProvider(props: MEAPProviderProps) {
     companyId: null,
     userId: null,
     isReady: !!props.token,
+    identify: async () => {
+      throw new Error("Arcen session provider is not ready");
+    },
   });
 
   const { apiKey, token: tokenProp, company, user } = props;
+  const companyFingerprint = JSON.stringify(company ?? null);
+  const userFingerprint = JSON.stringify(user ?? null);
+
+  const identify = React.useCallback(
+    async (input: ArcenIdentifyInput): Promise<ArcenIdentifyResult> => {
+      if (!apiKey) {
+        throw new Error("apiKey is required to create an Arcen session");
+      }
+
+      const baseUrl = resolveDashboardBaseUrl();
+      const response = await fetch(`${baseUrl}/api/v1/access-tokens`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          company: input.company,
+          user: input.user
+            ? {
+                id: input.user.id,
+                clerk_user_id: input.user.clerkUserId,
+                wallet: input.user.wallet,
+                email: input.user.email,
+                name: input.user.name,
+              }
+            : undefined,
+          expires_in: input.expiresIn ?? 3600,
+        }),
+      });
+
+      const json = (await response.json()) as {
+        error?: string;
+        data?: { token: string; company_id: string; user_id?: string };
+      };
+
+      if (!response.ok || !json.data?.token) {
+        throw new Error(json.error ?? "Failed to identify session");
+      }
+
+      const nextSession = {
+        token: json.data.token,
+        companyId: json.data.company_id,
+        userId: json.data.user_id ?? null,
+        isReady: true,
+      };
+
+      setSessionCtx((current) => ({
+        ...current,
+        ...nextSession,
+        identify: current.identify,
+      }));
+
+      return {
+        token: nextSession.token,
+        companyId: nextSession.companyId,
+        userId: nextSession.userId,
+      };
+    },
+    [apiKey],
+  );
 
   useEffect(() => {
     if (tokenProp) {
-      setSessionCtx({ token: tokenProp, companyId: null, userId: null, isReady: true });
+      setSessionCtx((current) => ({
+        ...current,
+        token: tokenProp,
+        companyId: null,
+        userId: null,
+        isReady: true,
+      }));
     }
   }, [tokenProp]);
 
   useEffect(() => {
     if (tokenProp || !apiKey || (!company && !user)) return;
 
-    const baseUrl =
-      (typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_ARCEN_BASE_URL : undefined) ??
-      'https://dashboard.arcenpay.xyz';
+    void identify({
+      company,
+      user,
+      expiresIn: 3600,
+    }).catch((err) => console.error("[ArcenPayProvider] identify failed:", err));
+  }, [apiKey, tokenProp, companyFingerprint, userFingerprint, identify]);
 
-    fetch(`${baseUrl}/api/v1/access-tokens`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({ company, user, expires_in: 3600 }),
-    })
-      .then((r) => r.json())
-      .then((json: { data?: { token: string; company_id: string; user_id?: string } }) => {
-        if (json.data?.token) {
-          setSessionCtx({
-            token: json.data.token,
-            companyId: json.data.company_id,
-            userId: json.data.user_id ?? null,
-            isReady: true,
-          });
-        }
-      })
-      .catch((err) => console.error('[ArcenPayProvider] identify failed:', err));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [apiKey]);
+  useEffect(() => {
+    setSessionCtx((current) => ({
+      ...current,
+      identify,
+    }));
+  }, [identify]);
 
   const contextValue = useMemo<MEAPContextValue>(() => {
     if (typeof process !== "undefined" && process.env.NODE_ENV === "production") {

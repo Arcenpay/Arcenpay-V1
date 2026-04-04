@@ -8,6 +8,37 @@ import { getSession } from "@/lib/auth.server";
 import { resolveTeamContext } from "@/lib/team-session";
 import { db } from "@/lib/db";
 
+function toUiFeatureType(
+  featureType: string | null | undefined,
+): "boolean" | "event" | "trait" {
+  switch (featureType) {
+    case "event":
+    case "event_based":
+      return "event";
+    case "trait":
+    case "trait_based":
+    case "zktls":
+      return "trait";
+    default:
+      return "boolean";
+  }
+}
+
+function toStoredFeatureType(
+  featureType: string,
+): "boolean" | "event_based" | "trait_based" {
+  switch (featureType) {
+    case "event":
+    case "event_based":
+      return "event_based";
+    case "trait":
+    case "trait_based":
+      return "trait_based";
+    default:
+      return "boolean";
+  }
+}
+
 async function requireTeamId(request: NextRequest): Promise<string | NextResponse> {
   void request; // unused but kept for future middleware use
   const session = await getSession();
@@ -46,7 +77,7 @@ export async function GET(request: NextRequest) {
     id: f.id,
     name: f.name,
     featureKey: f.featureKey,
-    featureType: f.featureType,
+    featureType: toUiFeatureType(f.featureType),
     eventKey: f.eventKey ?? null,
     traitKey: null, // not stored in schema; reserved for future use
     description: f.description ?? null,
@@ -93,7 +124,7 @@ export async function POST(request: NextRequest) {
   }
 
   const featureType = body.featureType ?? "boolean";
-  const validTypes = ["boolean", "event", "trait"];
+  const validTypes = ["boolean", "event", "trait", "event_based", "trait_based"];
   if (!validTypes.includes(featureType)) {
     return NextResponse.json({ error: "Invalid featureType" }, { status: 400 });
   }
@@ -114,7 +145,7 @@ export async function POST(request: NextRequest) {
       teamId,
       name: body.name.trim(),
       featureKey: body.featureKey.trim(),
-      featureType,
+      featureType: toStoredFeatureType(featureType),
       eventKey: body.eventKey ?? null,
       description: body.description ?? null,
       defaultValue: false,
@@ -125,7 +156,7 @@ export async function POST(request: NextRequest) {
     id: flag.id,
     name: flag.name,
     featureKey: flag.featureKey,
-    featureType: flag.featureType,
+    featureType: toUiFeatureType(flag.featureType),
     eventKey: flag.eventKey ?? null,
     traitKey: null,
     description: flag.description ?? null,

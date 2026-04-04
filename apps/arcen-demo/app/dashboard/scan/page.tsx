@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import styles from "./page.module.css";
 
@@ -10,33 +10,98 @@ Amount:   $2,450.00
 Vendor:   Acme Corp
 Status:   Due`;
 
+interface CompanyData {
+  usage: {
+    scan: {
+      allocation: number | null;
+      usage: number;
+      exceeded: boolean;
+    } | null;
+  };
+  flags: {
+    scan:
+      | {
+          value: boolean;
+          reason: string;
+        }
+      | null;
+  };
+}
+
 export default function ScanPage() {
   const [step, setStep] = useState<"idle" | "scanning" | "done">("idle");
   const [result, setResult] = useState<string | null>(null);
   const [trackMsg, setTrackMsg] = useState<string | null>(null);
+  const [company, setCompany] = useState<CompanyData | null>(null);
+
+  async function loadCompany() {
+    try {
+      const response = await fetch("/api/company", { cache: "no-store" });
+      const data = (await response.json()) as CompanyData;
+      setCompany(data);
+    } catch {
+      // ignore demo fetch failures
+    }
+  }
+
+  useEffect(() => {
+    void loadCompany();
+  }, []);
 
   async function handleScan() {
+    if (company?.flags.scan?.value === false) {
+      setTrackMsg(company.flags.scan.reason ?? "Scan limit reached");
+      return;
+    }
+
     setStep("scanning");
     setResult(null);
 
-    await new Promise((r) => setTimeout(r, 1600));
-
     try {
-      const res = await fetch("/api/track", {
+      const idempotencyKey =
+        typeof crypto !== "undefined" && "randomUUID" in crypto
+          ? crypto.randomUUID()
+          : `scan-${Date.now()}`;
+
+      const res = await fetch("/api/consume", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: "scan",
+          featureKey: "scan",
           traits: { source: "scan-page", format: "pdf" },
+          idempotencyKey,
         }),
       });
-      if (res.ok) setTrackMsg("Usage tracked via ArcenClient.track()");
+      const consumeResult = (await res.json()) as {
+        consumed?: boolean;
+        reason?: string;
+        error?: string;
+      };
+
+      if (!res.ok || !consumeResult.consumed) {
+        setStep("idle");
+        setTrackMsg(
+          consumeResult.error ??
+            consumeResult.reason ??
+            "Could not consume scan entitlement",
+        );
+        setTimeout(() => setTrackMsg(null), 4500);
+        await loadCompany();
+        return;
+      }
     } catch {
+      setStep("idle");
       setTrackMsg("Could not track event");
+      setTimeout(() => setTrackMsg(null), 4500);
+      return;
     }
+
+    await new Promise((r) => setTimeout(r, 1600));
 
     setResult(MOCK_RESULT);
     setStep("done");
+    setTrackMsg("Usage consumed via ArcenClient.consumeEntitlement()");
+    await loadCompany();
     setTimeout(() => setTrackMsg(null), 4500);
   }
 
@@ -61,12 +126,17 @@ export default function ScanPage() {
             <div className={styles.dropTitle}>Drop your document here</div>
             <p className={styles.dropDesc}>Supports PDF, PNG, JPG, TIFF · up to 50 MB</p>
             <div className={styles.dropOr}>or</div>
-            <button onClick={handleScan} className={styles.btnPrimary}>
+            <button
+              onClick={handleScan}
+              className={styles.btnPrimary}
+              disabled={company?.flags.scan?.value === false}
+            >
               Simulate Scan
             </button>
             <p className={styles.dropNote}>
-              Demo mode: simulates a scan and tracks usage via ArcenPay
+              Demo mode: simulates a scan and consumes usage via ArcenPay
             </p>
+            {trackMsg && <p className={styles.dropNote}>{trackMsg}</p>}
           </div>
         )}
 
@@ -108,10 +178,10 @@ export default function ScanPage() {
       <div className={styles.infoBox}>
         <div className={styles.infoTitle}>How usage tracking works</div>
         <p className={styles.infoDesc}>
-          Every scan calls <code>/api/track</code> on your backend, which calls{" "}
-          <code>ArcenClient.track({"{ name: \"scan\" }"})</code>. ArcenPay increments the usage
-          counter and evaluates your plan&apos;s limits. When you hit your limit, the{" "}
-          <code>scan</code> feature flag automatically returns <code>false</code>.
+          Every scan calls <code>/api/consume</code> on your backend, which calls{" "}
+          <code>ArcenClient.consumeEntitlement({"scan"})</code>. ArcenPay denies the
+          request when the plan limit is exhausted, so the scan never runs past
+          the server-side quota.
         </p>
       </div>
     </div>

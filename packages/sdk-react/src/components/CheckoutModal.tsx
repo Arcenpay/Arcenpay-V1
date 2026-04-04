@@ -23,8 +23,12 @@ import {
   TOKENS,
   createSmartAccount,
 } from "@arcenpay/sdk";
-import { useMEAP } from "../providers/MEAPProvider";
+import { useArcenSession, useMEAP } from "../providers/MEAPProvider";
 import { sendSmartAccountTransaction } from "../lib/zerodev";
+import {
+  mergeActivationHeaders,
+  resolveActivationEndpoint,
+} from "../lib/api";
 
 // ============================================================
 //  CheckoutModal — Wallet connect + Smart Account + Autopay
@@ -123,6 +127,15 @@ export interface SubscriptionRequestResult {
   txHash?: `0x${string}`;
 }
 
+export function resolveSubscriptionExecutor(
+  requestSubscription: CheckoutModalProps["requestSubscription"],
+  activationEndpoint: string | null,
+): "callback" | "built_in" | "none" {
+  if (requestSubscription) return "callback";
+  if (activationEndpoint) return "built_in";
+  return "none";
+}
+
 export interface CheckoutModalProps {
   planId: bigint;
   isOpen: boolean;
@@ -137,6 +150,8 @@ export interface CheckoutModalProps {
   requestSubscription?: (
     input: SubscriptionRequestInput,
   ) => Promise<SubscriptionRequestResult>;
+  activationEndpoint?: string;
+  activationHeaders?: Record<string, string>;
   /** Endpoint for capturing subscriber email. If omitted, email capture is skipped. */
   subscriberEmailEndpoint?: string;
   className?: string;
@@ -174,10 +189,13 @@ export function CheckoutModal({
   onErrorCode,
   deploySmartAccount,
   requestSubscription,
+  activationEndpoint,
+  activationHeaders,
   subscriberEmailEndpoint,
   className = "",
 }: CheckoutModalProps) {
   const { network, isTestnet } = useMEAP();
+  const session = useArcenSession();
   const contracts = getContractAddresses(network.chainId);
   const { address, isConnected } = useAccount();
   const { connect, connectors } = useConnect();
@@ -208,6 +226,7 @@ export function CheckoutModal({
     ?.USDC as `0x${string}`;
   const autopayAddress = contracts.autopayModule as `0x${string}`;
   const zeroDevProjectId = process.env.NEXT_PUBLIC_ZERODEV_PROJECT_ID;
+  const builtInActivationEndpoint = resolveActivationEndpoint(activationEndpoint);
 
   // Auto-advance past connect step to email collection step
   useEffect(() => {
@@ -759,18 +778,57 @@ export function CheckoutModal({
     setLoading(true);
     setError(null);
 
-    if (!requestSubscription) {
+    const executeRequestSubscription =
+      requestSubscription ??
+      (builtInActivationEndpoint
+        ? async (input: SubscriptionRequestInput): Promise<SubscriptionRequestResult> => {
+            const response = await fetch(builtInActivationEndpoint, {
+              method: "POST",
+              headers: mergeActivationHeaders(activationHeaders, session.token),
+              credentials: "include",
+              body: JSON.stringify({
+                planId: input.planId.toString(),
+                paymentAccount: input.paymentAccount,
+                subscriberEmail: input.subscriberEmail,
+                company: {
+                  wallet: address,
+                  ...(input.subscriberEmail
+                    ? { email: input.subscriberEmail }
+                    : {}),
+                },
+              }),
+            });
+
+            const json = (await response.json().catch(() => ({}))) as {
+              error?: string;
+              data?: {
+                tokenId?: bigint | string | number;
+                txHash?: `0x${string}`;
+              };
+              tokenId?: bigint | string | number;
+              txHash?: `0x${string}`;
+            };
+
+            if (!response.ok) {
+              throw new Error(json.error ?? "Activation failed");
+            }
+
+            return json.data ?? json;
+          }
+        : undefined);
+
+    if (!executeRequestSubscription) {
       emitCheckoutError(
         CHECKOUT_ERROR_CODES.SUBSCRIPTION_EXECUTION_UNSUPPORTED,
         new Error(
-          "Direct customer-side subscription minting is disabled. Initial activation must be executed by an authorized biller or a backend callback via requestSubscription.",
+          "Direct customer-side subscription minting is disabled. Initial activation must be executed by an authorized biller, the built-in dashboard activation endpoint, or a backend callback via requestSubscription.",
         ),
       );
       return;
     }
 
     try {
-      const result = await requestSubscription({
+      const result = await executeRequestSubscription({
         paymentAccount,
         planId,
         planInterval: BigInt(planInterval),
@@ -805,7 +863,11 @@ export function CheckoutModal({
     planId,
     planInterval,
     requestSubscription,
+    builtInActivationEndpoint,
+    activationHeaders,
+    session.token,
     subscriberEmail,
+    address,
     onSuccess,
     onCheckoutComplete,
     autopayInstalledLocally,

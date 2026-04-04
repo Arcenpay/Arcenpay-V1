@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
-import { getArcenClient, getDemoCompanyKeys } from "@/lib/arcen-client";
+import {
+  getArcenClient,
+  getDemoCompanyIdentity,
+  getDemoUserIdentity,
+} from "@/lib/arcen-client";
 
 /**
  * POST /api/access-token
@@ -10,9 +14,12 @@ import { getArcenClient, getDemoCompanyKeys } from "@/lib/arcen-client";
 export async function POST() {
   try {
     const client = getArcenClient();
-    const companyKeys = getDemoCompanyKeys();
-    const token = await client.createAccessToken(companyKeys, undefined, 3600);
-    return NextResponse.json({ token });
+    const session = await client.identify({
+      company: getDemoCompanyIdentity(),
+      user: getDemoUserIdentity(),
+      expiresIn: 3600,
+    });
+    return NextResponse.json({ token: session });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed to create access token";
     return NextResponse.json({ error: message }, { status: 500 });

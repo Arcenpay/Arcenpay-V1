@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
-import { getArcenClient, getDemoCompanyKeys } from "@/lib/arcen-client";
+import {
+  ensureDemoIdentity,
+  getArcenClient,
+  getDemoCompanyKeys,
+} from "@/lib/arcen-client";
 
 /**
  * GET /api/company
@@ -10,20 +14,56 @@ export async function GET() {
   try {
     const client = getArcenClient();
     const companyKeys = getDemoCompanyKeys();
+    await ensureDemoIdentity();
 
-    // Check a few demo flags in parallel
     const [scanFlag, exportFlag, apiFlag] = await Promise.allSettled([
-      client.checkFlag("scan", companyKeys),
-      client.checkFlag("export-pdf", companyKeys),
-      client.checkFlag("api-access", companyKeys),
+      client.checkEntitlement("scan", companyKeys),
+      client.checkEntitlement("export-pdf", companyKeys),
+      client.checkEntitlement("api-access", companyKeys),
     ]);
+
+    const toDemoFlag = <
+      T extends {
+        key: string;
+        enabled: boolean;
+        reason: string;
+        allocation: number | null;
+        usage: number;
+        exceeded: boolean;
+      },
+    >(
+      result: PromiseSettledResult<T>,
+    ) =>
+      result.status === "fulfilled"
+        ? {
+            flag: result.value.key,
+            value: result.value.enabled,
+            reason: result.value.reason,
+            allocation: result.value.allocation,
+            usage: result.value.usage,
+            exceeded: result.value.exceeded,
+          }
+        : null;
+
+    const scan = toDemoFlag(scanFlag);
+    const exportPdf = toDemoFlag(exportFlag);
+    const apiAccess = toDemoFlag(apiFlag);
 
     return NextResponse.json({
       companyKeys,
+      usage: {
+        scan: scan
+          ? {
+              allocation: scan.allocation ?? null,
+              usage: scan.usage ?? 0,
+              exceeded: scan.exceeded ?? false,
+            }
+          : null,
+      },
       flags: {
-        scan: scanFlag.status === "fulfilled" ? scanFlag.value : null,
-        "export-pdf": exportFlag.status === "fulfilled" ? exportFlag.value : null,
-        "api-access": apiFlag.status === "fulfilled" ? apiFlag.value : null,
+        scan,
+        "export-pdf": exportPdf,
+        "api-access": apiAccess,
       },
     });
   } catch (err) {

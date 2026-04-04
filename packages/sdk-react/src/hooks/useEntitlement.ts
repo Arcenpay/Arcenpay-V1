@@ -8,6 +8,8 @@ import {
   getContractAddresses,
 } from '@arcenpay/sdk';
 import { useMEAP } from '../providers/MEAPProvider';
+import { useCompanyEntitlements } from './useCompanyEntitlements';
+import { entitlementsToFeatures } from '../lib/api';
 
 // ============================================================
 //  useEntitlement — Hook for entitlement state
@@ -31,6 +33,7 @@ export const ENTITLEMENT_ERROR_CODES = {
   INVALID_WALLET_ADDRESS: "INVALID_WALLET_ADDRESS",
   ONCHAIN_READ_FAILED: "ONCHAIN_READ_FAILED",
   TABLELAND_FETCH_FAILED: "TABLELAND_FETCH_FAILED",
+  DASHBOARD_FETCH_FAILED: "DASHBOARD_FETCH_FAILED",
   UNKNOWN: "UNKNOWN",
 } as const;
 
@@ -58,9 +61,13 @@ export class EntitlementError extends Error {
  * 3. expiresAt(tokenId)
  * 4. getPlanFeatures(tokenId) → { planId, planTier }
  *
- * Feature flags are resolved from Tableland (if configured) with on-chain tier
- * as fallback. When featureKey is provided, the resolved features map is filtered
- * to that single key — useful for lightweight gating checks.
+ * Feature values are resolved with this precedence:
+ * 1. dashboard company entitlements when an Arcen session token is available
+ * 2. wallet/provider compatibility endpoint
+ * 3. on-chain tierFeatureFallback
+ *
+ * When featureKey is provided, the resolved features map is filtered to that
+ * single key — useful for lightweight gating checks.
  *
  * @param walletAddress - The wallet address to check
  * @param featureKey - Optional: restrict resolved features to this single key
@@ -80,6 +87,15 @@ export function useEntitlement(
   const contracts = getContractAddresses(network.chainId);
   const registryAddress = contracts.subscriptionRegistry as `0x${string}`;
   const lastBlockRefetchAt = useRef(0);
+  const {
+    entitlements: dashboardEntitlements,
+    updatedAt: dashboardUpdatedAt,
+    loading: dashboardLoading,
+    error: dashboardError,
+    refetch: refetchDashboardEntitlements,
+  } = useCompanyEntitlements({
+    skip: false,
+  });
   const [tablelandFeatures, setTablelandFeatures] = useState<
     Record<string, boolean | string | number>
   >({});
@@ -231,16 +247,23 @@ export function useEntitlement(
     return {};
   }, [planTier, config.tierFeatureFallback]);
 
+  const dashboardFeatures = useMemo<Record<string, boolean | string | number>>(
+    () => entitlementsToFeatures(dashboardEntitlements),
+    [dashboardEntitlements],
+  );
+
   const features = useMemo<Record<string, boolean | string | number>>(() => {
-    const allFeatures = Object.keys(tablelandFeatures).length > 0
-      ? tablelandFeatures
-      : onChainTierFeatures;
+    const allFeatures = {
+      ...onChainTierFeatures,
+      ...tablelandFeatures,
+      ...dashboardFeatures,
+    };
     if (featureKey) {
       const value = allFeatures[featureKey];
       return value !== undefined ? { [featureKey]: value } : {};
     }
     return allFeatures;
-  }, [tablelandFeatures, onChainTierFeatures, featureKey]);
+  }, [dashboardFeatures, tablelandFeatures, onChainTierFeatures, featureKey]);
 
   // Watch for real-time contract events to auto-refetch
   useWatchContractEvent({
@@ -254,6 +277,7 @@ export function useEntitlement(
       refetchTokenId();
       refetchSub();
       void refetchTableland();
+      void refetchDashboardEntitlements();
     },
     enabled: !!walletAddress,
   });
@@ -266,6 +290,7 @@ export function useEntitlement(
     onLogs: () => {
       refetchSub();
       void refetchTableland();
+      void refetchDashboardEntitlements();
     },
     enabled: hasToken,
   });
@@ -279,6 +304,7 @@ export function useEntitlement(
       refetchTokenId();
       refetchSub();
       void refetchTableland();
+      void refetchDashboardEntitlements();
     },
     enabled: hasToken,
   });
@@ -295,6 +321,7 @@ export function useEntitlement(
       refetchTokenId();
       refetchSub();
       void refetchTableland();
+      void refetchDashboardEntitlements();
     },
     enabled: !!walletAddress,
   });
@@ -310,6 +337,7 @@ export function useEntitlement(
       refetchTokenId();
       refetchSub();
       void refetchTableland();
+      void refetchDashboardEntitlements();
     },
     enabled: !!walletAddress,
   });
@@ -325,6 +353,7 @@ export function useEntitlement(
       refetchTokenId();
       if (hasToken) refetchSub();
       void refetchTableland();
+      void refetchDashboardEntitlements();
     },
   });
 
@@ -332,10 +361,14 @@ export function useEntitlement(
     refetchTokenId();
     if (hasToken) refetchSub();
     void refetchTableland();
-  }, [refetchTokenId, refetchSub, hasToken, refetchTableland]);
+    void refetchDashboardEntitlements();
+  }, [refetchTokenId, refetchSub, hasToken, refetchTableland, refetchDashboardEntitlements]);
 
   const isLoading =
-    tokenIdLoading || (hasToken && subLoading) || (Boolean(tablelandFeatureFlagsUrl) && tablelandLoading);
+    tokenIdLoading ||
+    (hasToken && subLoading) ||
+    dashboardLoading ||
+    (Boolean(tablelandFeatureFlagsUrl) && tablelandLoading);
 
   const tokenError = (tokenIdResult?.[0] as { error?: unknown } | undefined)?.error;
   const subscriptionError = (subscriptionData as Array<{ error?: unknown }> | undefined)
@@ -358,6 +391,12 @@ export function useEntitlement(
             tablelandError.message,
             tablelandError,
           )
+        : dashboardError
+          ? new EntitlementError(
+              ENTITLEMENT_ERROR_CODES.DASHBOARD_FETCH_FAILED,
+              dashboardError,
+              dashboardError,
+            )
         : walletInvalid
           ? new EntitlementError(
               ENTITLEMENT_ERROR_CODES.INVALID_WALLET_ADDRESS,
@@ -376,8 +415,9 @@ export function useEntitlement(
       lastUpdatedAt: onChainLastUpdatedAt,
     },
     tableland: {
-      enabled: Boolean(tablelandFeatureFlagsUrl),
-      lastUpdatedAt: tablelandUpdatedAt,
+      enabled: Boolean(tablelandFeatureFlagsUrl) || Object.keys(dashboardEntitlements).length > 0,
+      lastUpdatedAt:
+        Math.max(tablelandUpdatedAt || 0, dashboardUpdatedAt || 0) || null,
     },
     lit: {
       enabled: Boolean(config.litNetwork),
@@ -386,7 +426,12 @@ export function useEntitlement(
   };
 
   const freshness: EntitlementFreshness = {
-    resolvedAt: Math.max(onChainLastUpdatedAt || 0, tablelandUpdatedAt || 0) || null,
+    resolvedAt:
+      Math.max(
+        onChainLastUpdatedAt || 0,
+        tablelandUpdatedAt || 0,
+        dashboardUpdatedAt || 0,
+      ) || null,
     staleAfterMs: ONCHAIN_STALE_AFTER_MS,
   };
 

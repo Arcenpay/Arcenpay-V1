@@ -9,7 +9,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAnyAuth, isAnyAuthError } from "@/lib/require-any-auth";
 import { db } from "@/lib/db";
-import { evaluateFlags } from "@/lib/flag-engine";
+import { resolveEntitlementResults } from "@/lib/entitlements";
 import type { Prisma } from "@/src/generated/prisma/client";
 
 export async function GET(
@@ -67,31 +67,23 @@ export async function GET(
     });
   }
 
-  // Get all feature flags for this team and evaluate them for this company
-  const flags = await db.catalogFeatureFlag.findMany({
-    where: { teamId },
-    select: { featureKey: true, name: true },
-  });
-
   const companyKeys = {
     id: company.externalId ?? undefined,
     wallet: company.walletAddress ?? undefined,
     email: company.email ?? undefined,
   };
+  const entitlementResults = await resolveEntitlementResults({
+    teamId,
+    companyKeys,
+  });
 
-  const flagResults =
-    flags.length > 0
-      ? await evaluateFlags(
-          teamId,
-          flags.map((f) => f.featureKey),
-          companyKeys,
-        )
-      : [];
-
-  const entitlements = flagResults.map((r) => ({
-    featureKey: r.flag,
-    value: r.value,
-    reason: r.reason,
+  const entitlements = entitlementResults.entitlements.map((result) => ({
+    featureKey: result.key,
+    value: result.enabled,
+    reason: result.reason,
+    allocation: result.allocation,
+    usage: result.usage,
+    exceeded: result.exceeded,
   }));
 
   return NextResponse.json({

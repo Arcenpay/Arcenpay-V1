@@ -107,12 +107,14 @@ async function resolveOnChainPlan(
 
 export interface CompanyKeys {
   id?: string;        // caller's internal company ID (externalId)
+  internalId?: string; // ArcenCompany.id
   wallet?: string;    // wallet address (checksummed or lowercase)
   email?: string;
 }
 
 export interface UserKeys {
   id?: string;        // caller's internal user ID (externalId)
+  internalId?: string; // ArcenUser.id
   clerkUserId?: string;
   wallet?: string;
 }
@@ -131,9 +133,10 @@ export async function resolveCompany(
   teamId: string,
   keys: CompanyKeys,
 ): Promise<{ id: string; traits: Record<string, unknown>; activePlanId: string | null; activeAddOnIds: string[] } | null> {
-  if (!keys.id && !keys.wallet && !keys.email) return null;
+  if (!keys.id && !keys.internalId && !keys.wallet && !keys.email) return null;
 
   const where: Record<string, unknown>[] = [];
+  if (keys.internalId) where.push({ id: keys.internalId, teamId });
   if (keys.id) where.push({ teamId, externalId: keys.id });
   if (keys.wallet) where.push({ teamId, walletAddress: keys.wallet.toLowerCase() });
   if (keys.email) where.push({ teamId, email: keys.email });
@@ -175,9 +178,10 @@ export async function resolveUser(
   teamId: string,
   keys: UserKeys,
 ): Promise<{ id: string; traits: Record<string, unknown> } | null> {
-  if (!keys.id && !keys.clerkUserId && !keys.wallet) return null;
+  if (!keys.id && !keys.internalId && !keys.clerkUserId && !keys.wallet) return null;
 
   const where: Record<string, unknown>[] = [];
+  if (keys.internalId) where.push({ id: keys.internalId, teamId });
   if (keys.id) where.push({ teamId, externalId: keys.id });
   if (keys.clerkUserId) where.push({ teamId, clerkUserId: keys.clerkUserId });
   if (keys.wallet) where.push({ teamId, walletAddress: keys.wallet.toLowerCase() });

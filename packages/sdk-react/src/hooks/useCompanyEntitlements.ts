@@ -18,6 +18,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useArcenSession } from "../providers/MEAPProvider";
 import type { EntitlementResult } from "@arcenpay/sdk";
+import { resolveDashboardBaseUrl } from "../lib/api";
 
 export interface UseCompanyEntitlementsOptions {
   /** Base URL for the ArcenPay dashboard API (defaults to production) */
@@ -31,6 +32,8 @@ export interface UseCompanyEntitlementsOptions {
 export interface UseCompanyEntitlementsReturn {
   /** All entitlements keyed by feature flag key */
   entitlements: Record<string, EntitlementResult>;
+  /** Timestamp of the last successful entitlement resolution */
+  updatedAt: number | null;
   /** True while the initial fetch is in progress */
   loading: boolean;
   /** Error message if the fetch failed */
@@ -40,7 +43,14 @@ export interface UseCompanyEntitlementsReturn {
 }
 
 // Module-level cache: accessToken → { entitlements, expiresAt }
-const cache = new Map<string, { entitlements: Record<string, EntitlementResult>; expiresAt: number }>();
+const cache = new Map<
+  string,
+  {
+    entitlements: Record<string, EntitlementResult>;
+    expiresAt: number;
+    updatedAt: number;
+  }
+>();
 
 export function useCompanyEntitlements(
   options: UseCompanyEntitlementsOptions = {},
@@ -48,12 +58,10 @@ export function useCompanyEntitlements(
   const session = useArcenSession();
   const cacheTtlMs = options.cacheTtlMs ?? 30_000;
 
-  const baseUrl =
-    options.baseUrl ??
-    (typeof process !== "undefined" ? process.env.NEXT_PUBLIC_ARCEN_BASE_URL : undefined) ??
-    "https://dashboard.arcenpay.xyz";
+  const baseUrl = resolveDashboardBaseUrl(options.baseUrl);
 
   const [entitlements, setEntitlements] = useState<Record<string, EntitlementResult>>({});
+  const [updatedAt, setUpdatedAt] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -61,6 +69,7 @@ export function useCompanyEntitlements(
   const fetchEntitlements = useCallback(
     async (bustCache = false) => {
       if (options.skip || !session.token) {
+        setUpdatedAt(null);
         setLoading(false);
         return;
       }
@@ -71,6 +80,7 @@ export function useCompanyEntitlements(
         const cached = cache.get(cacheKey);
         if (cached && Date.now() < cached.expiresAt) {
           setEntitlements(cached.entitlements);
+          setUpdatedAt(cached.updatedAt);
           setLoading(false);
           return;
         }
@@ -89,6 +99,7 @@ export function useCompanyEntitlements(
             Authorization: `Bearer ${session.token}`,
             "Content-Type": "application/json",
           },
+          cache: "no-store",
           signal: controller.signal,
         });
 
@@ -106,8 +117,14 @@ export function useCompanyEntitlements(
           if (item.key) map[item.key] = item;
         }
 
-        cache.set(cacheKey, { entitlements: map, expiresAt: Date.now() + cacheTtlMs });
+        const fetchedAt = Date.now();
+        cache.set(cacheKey, {
+          entitlements: map,
+          expiresAt: fetchedAt + cacheTtlMs,
+          updatedAt: fetchedAt,
+        });
         setEntitlements(map);
+        setUpdatedAt(fetchedAt);
       } catch (err) {
         if ((err as Error).name === "AbortError") return;
         setError(err instanceof Error ? err.message : "Unknown error");
@@ -125,6 +142,7 @@ export function useCompanyEntitlements(
 
   return {
     entitlements,
+    updatedAt,
     loading,
     error,
     refetch: () => fetchEntitlements(true),

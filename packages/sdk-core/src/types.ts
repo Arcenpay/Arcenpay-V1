@@ -530,7 +530,7 @@ export interface FlagResult {
  */
 export interface EntitlementResult {
   key: string;
-  /** Whether the feature is enabled (regardless of quota) */
+  /** Whether the feature/action is currently allowed */
   enabled: boolean;
   /** Machine-readable reason */
   reason: string;
@@ -540,6 +540,14 @@ export interface EntitlementResult {
   usage: number;
   /** true when usage >= allocation (and allocation is not null) */
   exceeded: boolean;
+}
+
+/**
+ * Result of consumeEntitlement() — quota-aware metered action enforcement.
+ * `consumed` is true only when a usage unit was actually recorded.
+ */
+export interface ConsumeEntitlementResult extends EntitlementResult {
+  consumed: boolean;
 }
 
 /**

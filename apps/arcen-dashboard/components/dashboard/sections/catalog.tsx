@@ -134,6 +134,17 @@ interface CatalogCreditType {
   updatedAt: string;
 }
 
+interface PlanCompany {
+  id: string;
+  name: string;
+  email?: string | null;
+  walletAddress?: string | null;
+  externalId?: string | null;
+  activePlanId?: string | null;
+  createdAt: string;
+  lastSeenAt: string;
+}
+
 interface OwnerActionRequiredPayload {
   description?: string;
   target?: string;
@@ -4998,6 +5009,8 @@ function PlanDetailView({
   const [creditGrants, setCreditGrants] = useState<any[]>([]);
   const [cgLoading, setCgLoading] = useState(false);
   const [cgRefresh, setCgRefresh] = useState(0);
+  const [subscribedCompanies, setSubscribedCompanies] = useState<PlanCompany[]>([]);
+  const [companiesLoading, setCompaniesLoading] = useState(false);
 
   const loadEntitlements = useCallback(async () => {
     setEntLoading(true);
@@ -5025,10 +5038,31 @@ function PlanDetailView({
     }
   }, [plan.id]);
 
+  const loadCompanies = useCallback(async () => {
+    setCompaniesLoading(true);
+    try {
+      const res = await fetch(`/api/catalog/plans/${plan.id}/companies`, {
+        cache: "no-store",
+      });
+      if (res.ok) {
+        const data = (await res.json()) as { data?: PlanCompany[] };
+        setSubscribedCompanies(data.data ?? []);
+      }
+    } finally {
+      setCompaniesLoading(false);
+    }
+  }, [plan.id]);
+
   useEffect(() => {
     loadEntitlements();
     loadCreditGrants();
   }, [loadEntitlements, loadCreditGrants, entRefresh, cgRefresh]);
+
+  useEffect(() => {
+    if (detailTab === "companies") {
+      loadCompanies();
+    }
+  }, [detailTab, loadCompanies]);
 
   async function deleteEntitlement(featureKey: string) {
     setDeletingKey(featureKey);
@@ -5532,16 +5566,97 @@ function PlanDetailView({
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-base font-semibold">Subscribed Companies</h3>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={loadCompanies}
+              disabled={companiesLoading}
+            >
+              <RefreshCw className={cn("w-4 h-4 mr-2", companiesLoading && "animate-spin")} />
+              Refresh
+            </Button>
           </div>
-          <div className="border border-dashed border-border rounded-xl py-16 flex flex-col items-center justify-center gap-2">
-            <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center mb-2">
-              <Package className="w-6 h-6 text-muted-foreground/50" />
+          {companiesLoading ? (
+            <div className="border border-border rounded-xl overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Company</TableHead>
+                    <TableHead>Identity</TableHead>
+                    <TableHead>Created</TableHead>
+                    <TableHead>Last Seen</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {Array.from({ length: 3 }).map((_, index) => (
+                    <TableRow key={index}>
+                      <TableCell><div className="h-4 w-32 rounded bg-muted animate-pulse" /></TableCell>
+                      <TableCell><div className="h-4 w-40 rounded bg-muted animate-pulse" /></TableCell>
+                      <TableCell><div className="h-4 w-24 rounded bg-muted animate-pulse" /></TableCell>
+                      <TableCell><div className="h-4 w-24 rounded bg-muted animate-pulse" /></TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
-            <p className="text-sm font-medium text-foreground">No companies on this plan</p>
-            <p className="text-xs text-muted-foreground max-w-xs text-center">
-              Companies that subscribe to this plan will appear here. Use the SDK to associate companies with plans.
-            </p>
-          </div>
+          ) : subscribedCompanies.length > 0 ? (
+            <div className="border border-border rounded-xl overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Company</TableHead>
+                    <TableHead>Identity</TableHead>
+                    <TableHead>Created</TableHead>
+                    <TableHead>Last Seen</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {subscribedCompanies.map((company) => (
+                    <TableRow key={company.id}>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <p className="font-medium text-foreground">{company.name}</p>
+                          {company.email ? (
+                            <p className="text-xs text-muted-foreground">{company.email}</p>
+                          ) : null}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1 text-xs text-muted-foreground">
+                          {company.walletAddress ? (
+                            <p className="font-mono">
+                              {company.walletAddress.slice(0, 8)}…
+                              {company.walletAddress.slice(-6)}
+                            </p>
+                          ) : null}
+                          {company.externalId ? <p>ID: {company.externalId}</p> : null}
+                          {!company.walletAddress && !company.externalId && !company.email ? (
+                            <p>Internal record</p>
+                          ) : null}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {new Date(company.createdAt).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {new Date(company.lastSeenAt).toLocaleString()}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <div className="border border-dashed border-border rounded-xl py-16 flex flex-col items-center justify-center gap-2">
+              <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center mb-2">
+                <Package className="w-6 h-6 text-muted-foreground/50" />
+              </div>
+              <p className="text-sm font-medium text-foreground">No companies on this plan</p>
+              <p className="text-xs text-muted-foreground max-w-xs text-center">
+                Companies with <code className="bg-secondary px-1 rounded">activePlanId = {plan.id}</code> will appear here.
+              </p>
+            </div>
+          )}
         </div>
       )}
 

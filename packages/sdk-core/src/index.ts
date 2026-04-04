@@ -57,6 +57,7 @@ export type {
   SchematicUser,
   FlagResult,
   EntitlementResult,
+  ConsumeEntitlementResult,
   IdentifyResult,
 } from './types';
 

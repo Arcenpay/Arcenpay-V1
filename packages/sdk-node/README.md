@@ -38,27 +38,30 @@ app.get("/api/premium/data", (req, res) => {
 ### Track usage events
 
 ```typescript
-import { UsageService, RedisUsageStore } from "@arcenpay/node";
-import { createClient } from "redis";
+import { ArcenClient } from "@arcenpay/node";
 
-const redis = createClient({ url: process.env.REDIS_URL });
-await redis.connect();
-
-const store = new RedisUsageStore(redis);
-const usage = new UsageService(store, {
-  chainId: 84532,
-  rpcUrl: process.env.RPC_URL!,
-  circuitsRootDir: "./circuits/build",
-  mode: "strict",    // "strict" (real ZK proofs) | "dev" (mock proofs)
+const client = new ArcenClient({
+  apiKey: process.env.ARCENPAY_API_KEY!,
+  baseUrl: process.env.ARCENPAY_BASE_URL!,
 });
 
-// Track an API call for a session
-await usage.track({
-  sessionId: "0x...",
-  agentAddress: "0xCustomerWallet",
-  planId: 1,
-  callCount: 1,
+await client.identify({
+  company: { id: "company_123" },
+  user: { id: "user_456" },
 });
+
+// Analytics event
+await client.track("export_triggered");
+
+// Metered entitlement enforcement
+const result = await client.consumeEntitlement({
+  featureKey: "scan",
+  idempotencyKey: "scan-req-1",
+});
+
+if (!result.consumed) {
+  throw new Error(result.reason);
+}
 ```
 
 ### Automate billing with BillingKeeper

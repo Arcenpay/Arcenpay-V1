@@ -43,6 +43,7 @@ import {
   type CompanyKeys,
 } from "@/lib/flag-engine";
 import { deliverWebhook } from "@/lib/deliver-webhook";
+import { resolveEmbedAccessToken } from "@/lib/embed-access-token";
 
 const CHAIN_MAP: Record<number, Chain> = {
   11155111: sepolia,
@@ -139,9 +140,25 @@ export async function OPTIONS() {
 }
 
 export async function POST(req: NextRequest) {
-  const auth = await requireAnyAuth(req);
-  if (isAnyAuthError(auth)) {
-    return auth;
+  const authHeader = req.headers.get("authorization") ?? "";
+  const bearerToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
+
+  let teamId: string;
+  if (bearerToken && !bearerToken.startsWith("api_")) {
+    const accessToken = await resolveEmbedAccessToken(bearerToken);
+    if (!accessToken) {
+      return NextResponse.json(
+        { error: "Invalid or expired token" },
+        { status: 401, headers: corsHeaders() },
+      );
+    }
+    teamId = accessToken.teamId;
+  } else {
+    const auth = await requireAnyAuth(req);
+    if (isAnyAuthError(auth)) {
+      return auth;
+    }
+    teamId = auth.teamId;
   }
 
   let body: unknown;
@@ -165,7 +182,6 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const teamId = auth.teamId;
   const onChainPlanId = BigInt(parsed.data.planId);
   const paymentAccount = parsed.data.paymentAccount.toLowerCase() as `0x${string}`;
   const subscriberEmail = parsed.data.subscriberEmail;

@@ -15,6 +15,8 @@ import { requirePermission, isErrorResponse } from "@/lib/api-auth";
 import { db } from "@/lib/db";
 import { invalidateUsageCache } from "@/lib/event-aggregator";
 import { invalidateFlagCache } from "@/lib/flag-cache";
+import { resolveEmbedAccessToken } from "@/lib/embed-access-token";
+import { touchEntityActivity } from "@/lib/activity";
 import { Prisma } from "@/src/generated/prisma/client";
 
 // ─── GET: list events for dashboard UI (Clerk session auth) ──────────────────
@@ -39,12 +41,33 @@ export async function GET(req: NextRequest) {
     take: limit,
     include: {
       company: {
-        select: { name: true, walletAddress: true },
+        select: { name: true, walletAddress: true, email: true, externalId: true },
       },
     },
   });
 
-  return NextResponse.json({ data: events });
+  const userIds = [...new Set(events.map((event) => event.userId).filter((id): id is string => !!id))];
+  const users = userIds.length
+    ? await db.arcenUser.findMany({
+        where: { id: { in: userIds }, teamId: team.teamId },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          walletAddress: true,
+          externalId: true,
+        },
+      })
+    : [];
+
+  const userById = new Map(users.map((user) => [user.id, user]));
+
+  return NextResponse.json({
+    data: events.map((event) => ({
+      ...event,
+      user: event.userId ? userById.get(event.userId) ?? null : null,
+    })),
+  });
 }
 
 interface CompanyInput {
@@ -62,9 +85,10 @@ interface UserInput {
 interface TrackEventBody {
   event_type: "track";
   name: string;
-  company: CompanyInput;
+  company?: CompanyInput;
   user?: UserInput;
   traits?: Record<string, unknown>;
+  idempotencyKey?: string;
 }
 
 interface IdentifyEventBody {
@@ -181,8 +205,33 @@ async function upsertUser(
 // ─── Route handler ────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
-  const ctx = await requireAnyAuth(req);
-  if (isAnyAuthError(ctx)) return ctx;
+  const authHeader = req.headers.get("authorization") ?? "";
+  const bearerToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
+
+  let ctx:
+    | {
+        teamId: string;
+        source: "api_key" | "session" | "access_token";
+        companyId?: string | null;
+        userId?: string | null;
+      }
+    | NextResponse;
+
+  if (bearerToken && !bearerToken.startsWith("api_")) {
+    const accessToken = await resolveEmbedAccessToken(bearerToken);
+    if (!accessToken) {
+      return NextResponse.json({ error: "Invalid or expired token" }, { status: 401 });
+    }
+    ctx = {
+      teamId: accessToken.teamId,
+      source: "access_token",
+      companyId: accessToken.companyId,
+      userId: accessToken.userId,
+    };
+  } else {
+    ctx = await requireAnyAuth(req);
+    if (isAnyAuthError(ctx)) return ctx;
+  }
 
   let body: EventBody;
   try {
@@ -220,6 +269,15 @@ export async function POST(req: NextRequest) {
     }
     if (tb.traits !== undefined && (typeof tb.traits !== "object" || tb.traits === null || Array.isArray(tb.traits))) {
       return NextResponse.json({ error: "traits must be a plain object" }, { status: 400 });
+    }
+    if (
+      tb.idempotencyKey !== undefined &&
+      (typeof tb.idempotencyKey !== "string" || tb.idempotencyKey.length > 128)
+    ) {
+      return NextResponse.json(
+        { error: "idempotencyKey must be a string up to 128 characters" },
+        { status: 400 },
+      );
     }
   }
 
@@ -298,10 +356,22 @@ export async function POST(req: NextRequest) {
   }
 
   const companyResult = b.company ? await upsertCompany(teamId, b.company) : null;
-  const companyId = companyResult?.id ?? null;
+  const companyId = companyResult?.id ?? ctx.companyId ?? null;
   const userResult =
     b.user && companyId ? await upsertUser(teamId, companyId, b.user) : null;
-  const userId = userResult?.id ?? null;
+  const userId = userResult?.id ?? ctx.userId ?? null;
+
+  const traits = {
+    ...(b.traits ?? {}),
+    ...(b.idempotencyKey
+      ? {
+          __arcen: {
+            idempotencyKey: b.idempotencyKey,
+            source: "track",
+          },
+        }
+      : {}),
+  };
 
   await db.arcenEvent.create({
     data: {
@@ -310,9 +380,11 @@ export async function POST(req: NextRequest) {
       name: b.name,
       companyId,
       userId,
-      traits: (b.traits ?? {}) as unknown as Prisma.InputJsonValue,
+      traits: traits as unknown as Prisma.InputJsonValue,
     },
   });
+
+  await touchEntityActivity(companyId, userId);
 
   // Invalidate usage cache so flag checks reflect the new event
   if (companyId) {
