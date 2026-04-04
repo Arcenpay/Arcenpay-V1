@@ -3,6 +3,8 @@ import { db } from "@/lib/db";
 import { requirePermission, isErrorResponse } from "@/lib/api-auth";
 import { writeAuditEvent } from "@/lib/audit";
 import { getRpcUrl } from "@/lib/config";
+import fs from "node:fs";
+import path from "node:path";
 import {
   createWalletClient,
   createPublicClient,
@@ -110,6 +112,12 @@ const CHAIN_MAP: Record<number, Chain> = {
 
 type Params = { id: string };
 
+function resolveDefaultChainId(
+  environmentMode: "DEVELOPMENT" | "PRODUCTION",
+): number {
+  return environmentMode === "PRODUCTION" ? 8453 : 11155111;
+}
+
 function normalizePrivateKey(raw: string | undefined): `0x${string}` | null {
   if (!raw) return null;
   const trimmed = raw.trim();
@@ -132,6 +140,87 @@ function getManagedProviderPrivateKey(): `0x${string}` | null {
     process.env.ONCHAIN_PROVIDER_PRIVATE_KEY ||
       process.env.SUBSCRIPTION_BILLER_PRIVATE_KEY,
   );
+}
+
+function loadEnvValueFromFile(
+  filePath: string,
+  key: string,
+): string | undefined {
+  try {
+    if (!fs.existsSync(filePath)) return undefined;
+    const lines = fs.readFileSync(filePath, "utf8").split(/\r?\n/);
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith("#")) continue;
+      const idx = trimmed.indexOf("=");
+      if (idx === -1) continue;
+      const k = trimmed.slice(0, idx).trim();
+      if (k !== key) continue;
+      let value = trimmed.slice(idx + 1).trim();
+      if (
+        (value.startsWith("\"") && value.endsWith("\"")) ||
+        (value.startsWith("'") && value.endsWith("'"))
+      ) {
+        value = value.slice(1, -1);
+      }
+      return value;
+    }
+  } catch {
+    // Ignore file parse issues and continue with other sources.
+  }
+  return undefined;
+}
+
+function loadEnvValueFromLocalFallbacks(key: string): string | undefined {
+  // Development convenience: support keys placed in common local env files.
+  // This prevents confusion when the dashboard route is launched from a
+  // different working directory than where the key was edited.
+  const cwd = process.cwd();
+  const candidatePaths = [
+    path.join(cwd, "apps/arcen-dashboard/.env.local"),
+    path.join(cwd, "apps/arcen-dashboard/.env"),
+    path.join(cwd, "apps/facilitator/.env.local"),
+    path.join(cwd, "apps/facilitator/.env"),
+    path.join(cwd, ".env.local"),
+    path.join(cwd, ".env"),
+    path.join(cwd, "../.env"),
+    path.join(cwd, "../../.env"),
+    path.join(cwd, "../facilitator/.env"),
+  ];
+
+  for (const file of candidatePaths) {
+    const value = loadEnvValueFromFile(file, key);
+    if (value && value.trim().length > 0) return value;
+  }
+  return undefined;
+}
+
+function getPlanFactoryOwnerPrivateKey(): `0x${string}` | null {
+  const configuredOwnerAddress = normalizeAddress(
+    process.env.PLAN_FACTORY_OWNER_ADDRESS,
+  );
+
+  const preferredOwnerKey = normalizePrivateKey(
+    process.env.PLAN_FACTORY_OWNER_PRIVATE_KEY ||
+      process.env.OWNER_PRIVATE_KEY ||
+      loadEnvValueFromLocalFallbacks("PLAN_FACTORY_OWNER_PRIVATE_KEY") ||
+      loadEnvValueFromLocalFallbacks("OWNER_PRIVATE_KEY"),
+  );
+  if (preferredOwnerKey) return preferredOwnerKey;
+
+  // Optional fallback: allow DEPLOYER_PRIVATE_KEY only if it matches the
+  // configured owner address (or owner address is not specified).
+  const deployerKey = normalizePrivateKey(
+    process.env.DEPLOYER_PRIVATE_KEY ||
+      loadEnvValueFromLocalFallbacks("DEPLOYER_PRIVATE_KEY"),
+  );
+  if (!deployerKey) return null;
+  if (!configuredOwnerAddress) return deployerKey;
+
+  const deployerAddress = privateKeyToAccount(deployerKey).address;
+  return deployerAddress.toLowerCase() === configuredOwnerAddress.toLowerCase()
+    ? deployerKey
+    : null;
 }
 
 export async function POST(
@@ -221,7 +310,7 @@ export async function POST(
     );
   }
 
-  const chainId = parseInt(process.env.NEXT_PUBLIC_CHAIN_ID ?? "11155111");
+  const chainId = resolveDefaultChainId(plan.environmentMode);
   const rpcUrl = getRpcUrl(chainId);
   const chain = CHAIN_MAP[chainId] ?? sepolia;
 
@@ -314,9 +403,7 @@ export async function POST(
 
   if (!isProviderRegistered) {
     // Try to register the provider if we have the owner key
-    const ownerKey = normalizePrivateKey(
-      process.env.PLAN_FACTORY_OWNER_PRIVATE_KEY,
-    );
+    const ownerKey = getPlanFactoryOwnerPrivateKey();
 
     const planFactoryOwner = await publicClient
       .readContract({
@@ -345,7 +432,8 @@ export async function POST(
       return NextResponse.json(
         {
           error: `Configured provider wallet is not a registered provider.${ownerHint} Contact the platform admin or execute owner registration via Safe/multisig.`,
-          userAddress: providerAddress,
+          relayerAddress: providerAddress,
+          providerAddress,
           planFactoryOwner,
           ownerActionRequired: {
             description:
@@ -374,16 +462,39 @@ export async function POST(
         planFactoryOwner &&
         ownerAccount.address.toLowerCase() !== planFactoryOwner.toLowerCase()
       ) {
+        const registerProviderCalldata = encodeFunctionData({
+          abi: PROVIDER_REGISTRY_ABI,
+          functionName: "registerProvider",
+          args: [providerAddress as `0x${string}`],
+        });
         await db.catalogPlan.update({
           where: { id: planId },
           data: {
             chainSyncStatus: "FAILED",
-            chainSyncError: `PLAN_FACTORY_OWNER_PRIVATE_KEY does not match on-chain owner (${planFactoryOwner}).`,
+            chainSyncError: `PLAN_FACTORY_OWNER_PRIVATE_KEY resolves to ${ownerAccount.address} but on-chain owner is ${planFactoryOwner}. Owner action required: execute registerProvider(${providerAddress}) from owner/multisig.`,
           },
         });
         return NextResponse.json(
           {
-            error: `Owner key mismatch with on-chain owner (${planFactoryOwner}).`,
+            error: `Owner key mismatch: configured owner key resolves to ${ownerAccount.address}, but on-chain owner is ${planFactoryOwner}. Execute registerProvider(${providerAddress}) from the owner wallet/multisig, then retry.`,
+            relayerAddress: providerAddress,
+            providerAddress,
+            planFactoryOwner,
+            ownerActionRequired: {
+              description:
+                "Execute registerProvider(providerAddress) on PlanFactory from owner wallet/multisig.",
+              target: planFactoryAddress,
+              value: "0",
+              data: registerProviderCalldata,
+              functionSignature: "registerProvider(address)",
+              args: [providerAddress],
+              safeTransaction: {
+                to: planFactoryAddress,
+                value: "0",
+                data: registerProviderCalldata,
+                operation: 0,
+              },
+            },
           },
           { status: 409 },
         );

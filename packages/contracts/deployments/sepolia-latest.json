@@ -1,19 +1,19 @@
 {
   "network": "sepolia",
   "chainId": 11155111,
-  "deployer": "0x38f62CCfD6F771eF9E48e3bb86a3E0413aE5319B",
+  "deployer": "0x684f947aA928D62641E8B46E126D537FFc719114",
   "contracts": {
-    "PlanFactory": "0x4F97E0c2Ac053b735640fEb164a08Cb45ba83db1",
-    "FeeCollector": "0xa8A0D3007e5680D387A50C1a1E2Eb0AD092ca396",
-    "SubscriptionRegistry": "0xE206C519076535A9d24c852093860CFD780908C1",
-    "SessionVault": "0xd68b9C0a34d61CC3b3F982A5EC6Cc5a5739e46D9",
-    "ZKUsageVerifier": "0x1f75d66692416cE880d51Baf6CdcBeE98E5837c0",
-    "ERC7579AutopayModule": "0xc82417e378b23AD9Ae73229EF08a4BA7896a4351",
-    "MirrorRegistry": "0xC187CD32d569ec0E84B9b378f8E63f3a74afac74"
+    "PlanFactory": "0xcc421b4524b3B54AF5f3A4cd74C2Ab413eDcEEF9",
+    "FeeCollector": "0x3F91d3bC66F01c0bf19cd8830C5C554878d56B16",
+    "SubscriptionRegistry": "0x408AFd0a6D361f2641B10689Bdf1b5a6B618110b",
+    "SessionVault": "0xdb0E8beD83e2A0131E7d1FA90AFf6505A9af62c0",
+    "ZKUsageVerifier": "0x643e5c91fbC73ab4e81d788786cd9d4aCb36dD8A",
+    "ERC7579AutopayModule": "0x47bD0c50B9F667F75d7B721E12728E9DCA52656E",
+    "MirrorRegistry": "0xea80D978dbc8DBB08B45C2754214de7f96755f33"
   },
   "config": {
     "USDC": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
-    "treasury": "0x38f62CCfD6F771eF9E48e3bb86a3E0413aE5319B"
+    "treasury": "0x684f947aA928D62641E8B46E126D537FFc719114"
   },
-  "deployedAt": "2026-03-19T14:47:01.668Z"
+  "deployedAt": "2026-04-04T08:16:01.732Z"
 }

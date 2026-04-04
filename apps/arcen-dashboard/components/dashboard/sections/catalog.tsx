@@ -1900,6 +1900,7 @@ function PlansTable({
         domain,
         signingRequired,
         providerAddress,
+        userAddress,
       } = (await nonceRes.json()) as {
         nonce: string;
         planFactoryAddress: string;
@@ -1911,27 +1912,24 @@ function PlansTable({
         };
         signingRequired: boolean;
         providerAddress?: string;
+        userAddress?: string | null;
       };
 
       if (signingRequired) {
-        // Verify the connected wallet matches the stored provider wallet
-        try {
-          const walletRes = await fetch("/api/auth/wallet-status");
-          if (walletRes.ok) {
-            const { storedWallet } = await walletRes.json();
-            if (
-              storedWallet &&
-              address.toLowerCase() !== storedWallet.toLowerCase()
-            ) {
-              toast.error(
-                `Wrong wallet connected. Switch to ${storedWallet.slice(0, 6)}…${storedWallet.slice(-4)} to register on-chain.`,
-                { duration: 6000 },
-              );
-              return;
-            }
-          }
-        } catch {
-          // Non-blocking — proceed if wallet-status check fails
+        // Validate against the authenticated wallet returned by sign-nonce.
+        if (userAddress && address.toLowerCase() !== userAddress.toLowerCase()) {
+          toast.error(
+            `Wrong wallet connected. Switch to ${userAddress.slice(0, 6)}…${userAddress.slice(-4)} to register on-chain.`,
+            { duration: 6000 },
+          );
+          return;
+        }
+        if (chainId !== domain.chainId) {
+          toast.error(
+            `Wrong network connected. Switch wallet to chain ${domain.chainId} and retry.`,
+            { duration: 6000 },
+          );
+          return;
         }
       }
 
@@ -1948,7 +1946,7 @@ function PlansTable({
             domain: {
               name: domain.name,
               version: domain.version,
-              chainId: BigInt(domain.chainId),
+              chainId: domain.chainId,
               verifyingContract: planFactoryAddress as `0x${string}`,
             },
             types: {
@@ -1996,8 +1994,15 @@ function PlansTable({
         .catch(() => ({}))) as RegisterOnChainResponse;
       if (!res.ok) {
         if (res.status === 409 && isOwnerActionRequired(data)) {
-          toast.error(formatOwnerActionMessage(data));
+          toast.message(formatOwnerActionMessage(data));
           void copyOwnerActionPayload(data);
+          setSafeDialogData({
+            payload: data.ownerActionRequired as OwnerActionRequiredPayload,
+            planFactoryOwner: data.planFactoryOwner ?? null,
+            relayerAddress:
+              data.relayerAddress ?? data.providerAddress ?? null,
+          });
+          setSafeDialogOpen(true);
           if (
             data.ownerActionRequired?.target &&
             data.ownerActionRequired?.data
@@ -2301,6 +2306,20 @@ function PlansTable({
           onAdded={() => {
             load();
             setEntTarget(null);
+          }}
+        />
+      )}
+      {safeDialogData && (
+        <SafeTransactionDialog
+          open={safeDialogOpen}
+          onOpenChange={setSafeDialogOpen}
+          payload={safeDialogData.payload}
+          planFactoryOwner={safeDialogData.planFactoryOwner}
+          relayerAddress={safeDialogData.relayerAddress}
+          connectedWallet={address ?? null}
+          onExecuted={() => {
+            toast.message("Owner transaction submitted. Retry Register On-Chain after confirmation.");
+            load();
           }}
         />
       )}

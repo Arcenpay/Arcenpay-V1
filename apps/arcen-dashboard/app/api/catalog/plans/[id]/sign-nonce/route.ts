@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createPublicClient, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { requirePermission, isErrorResponse } from "@/lib/api-auth";
+import { db } from "@/lib/db";
 import { getContractAddresses } from "@arcenpay/sdk";
 import { getRpcUrl } from "@/lib/config";
 import { sepolia, baseSepolia, base } from "viem/chains";
@@ -25,6 +26,12 @@ const NONCES_ABI = [
 
 type Params = { id: string };
 
+function resolveDefaultChainId(
+  environmentMode: "DEVELOPMENT" | "PRODUCTION",
+): number {
+  return environmentMode === "PRODUCTION" ? 8453 : 11155111;
+}
+
 function normalizePrivateKey(raw: string | undefined): `0x${string}` | null {
   if (!raw) return null;
   const trimmed = raw.trim();
@@ -41,6 +48,15 @@ export async function GET(
 ) {
   const auth = await requirePermission("catalog:read");
   if (isErrorResponse(auth)) return auth;
+  const { id: planId } = await context.params;
+
+  const plan = await db.catalogPlan.findFirst({
+    where: { id: planId, teamId: auth.team.teamId },
+    select: { environmentMode: true },
+  });
+  if (!plan) {
+    return NextResponse.json({ error: "Plan not found" }, { status: 404 });
+  }
 
   const managedProviderKey = normalizePrivateKey(
     process.env.ONCHAIN_PROVIDER_PRIVATE_KEY ||
@@ -63,7 +79,7 @@ export async function GET(
     );
   }
 
-  const chainId = parseInt(process.env.NEXT_PUBLIC_CHAIN_ID ?? "11155111");
+  const chainId = resolveDefaultChainId(plan.environmentMode);
   const rpcUrl = getRpcUrl(chainId);
   const chain = CHAIN_MAP[chainId] ?? sepolia;
   const contracts = getContractAddresses(chainId);
