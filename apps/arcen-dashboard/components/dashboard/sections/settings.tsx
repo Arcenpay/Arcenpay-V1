@@ -55,51 +55,13 @@ import { parseEther, isAddress } from "viem";
 import { toast } from "sonner";
 import { useContractAddresses } from "@/lib/contracts";
 import { getBlockExplorerUrl } from "@/lib/format";
+import { CANONICAL_WEBHOOK_EVENTS } from "@/lib/webhook-events";
 
-const NOTIFICATION_DEFAULTS = [
-  {
-    id: "new_subscriber",
-    label: "New Subscriber",
-    description: "When a new subscriber mints an NFT to your plan",
-    email: false,
-    webhook: false,
-  },
-  {
-    id: "renewal",
-    label: "Subscription Renewal",
-    description: "When a subscription is successfully renewed",
-    email: false,
-    webhook: false,
-  },
-  {
-    id: "cancellation",
-    label: "Subscription Cancellation",
-    description: "When a subscriber cancels their subscription",
-    email: false,
-    webhook: false,
-  },
-  {
-    id: "payment_failed",
-    label: "Payment Failed",
-    description: "When an autopay billing attempt fails",
-    email: false,
-    webhook: false,
-  },
-  {
-    id: "billing_settled",
-    label: "Billing Settled",
-    description: "When a zk proof is verified and usage is settled on-chain",
-    email: false,
-    webhook: false,
-  },
-  {
-    id: "low_balance",
-    label: "Low Session Balance",
-    description: "When an agent's session vault drops below 20%",
-    email: false,
-    webhook: false,
-  },
-];
+const NOTIFICATION_DEFAULTS = CANONICAL_WEBHOOK_EVENTS.map((event) => ({
+  ...event,
+  email: false,
+  webhook: false,
+}));
 
 // Minimal ABI for SubscriptionRegistry public transport getters and setCrossChainTransports
 const REGISTRY_GMP_ABI = [

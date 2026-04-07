@@ -323,6 +323,8 @@ export interface ComponentEntitlement {
   value: boolean | string | number;
   featureType?: "boolean" | "event_based" | "trait_based" | "credit";
   limit?: number;
+  usage?: number;
+  exceeded?: boolean;
   unitSingular?: string;
   unitPlural?: string;
 }
@@ -346,6 +348,25 @@ export interface ComponentPlanSummary {
   acceptedToken?: string;
   acceptedChainId?: number;
   description?: string;
+}
+
+export interface ComponentInvoiceSummary {
+  id: string;
+  number: string | null;
+  total: string;
+  currency: string;
+  status: string;
+  issuedAt: string | null;
+  dueAt?: string | null;
+  paidAt?: string | null;
+  customerEmail?: string | null;
+  customerWallet?: string | null;
+}
+
+export interface ComponentPaymentMethod {
+  walletAddress: string | null;
+  token: string | null;
+  chainId: number | null;
 }
 
 export interface ComponentElement {
@@ -388,6 +409,9 @@ export interface ComponentRenderData {
   company?: Record<string, unknown> | null;
   userId?: string | null;
   providerWallet?: string | null;
+  nextBillingAt?: string | null;
+  paymentMethod?: ComponentPaymentMethod | null;
+  recentInvoices?: ComponentInvoiceSummary[];
 }
 
 // --- SDK Config ---

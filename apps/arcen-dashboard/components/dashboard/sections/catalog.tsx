@@ -4076,6 +4076,14 @@ function AddEntitlementDialog({
   async function handleSave() {
     const e: Record<string, string> = {};
     if (!form.featureKey.trim()) e.featureKey = "Feature is required";
+    if (
+      (currentEntitlements ?? []).some(
+        (ent) =>
+          ent.featureKey.toLowerCase() === form.featureKey.trim().toLowerCase(),
+      )
+    ) {
+      e.featureKey = "This feature already exists on this plan";
+    }
     if (form.type === "NUMERIC") {
       const n = Number(form.value);
       if (form.value === "" || isNaN(n) || n < 0) e.value = "Enter a valid limit";
@@ -5473,10 +5481,10 @@ function PlanDetailView({
                     variant="outline"
                     size="sm"
                     className="gap-1.5"
-                    onClick={() => toast.info("Duplicate from plan — coming soon")}
+                    disabled
                   >
                     <Copy className="w-3.5 h-3.5" />
-                    Duplicate from plan
+                    Duplicate from plan unavailable
                   </Button>
                 </div>
               </>

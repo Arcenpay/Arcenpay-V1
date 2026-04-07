@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { requirePermission, isErrorResponse } from "@/lib/api-auth";
 import { ensureInvoicePdfForTeam } from "@/lib/invoice-documents";
 import { writeAuditEvent } from "@/lib/audit";
+import { deliverWebhook } from "@/lib/deliver-webhook";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -97,6 +98,18 @@ export async function PATCH(request: NextRequest, context: Params) {
     beforeData: { status: invoice.status },
     afterData: { status: updated.status, note: parsed.data.note },
   });
+
+  if (parsed.data.status === "PAID") {
+    deliverWebhook(auth.team.teamId, "invoice.paid", {
+      invoiceId: updated.id,
+      invoiceNumber: updated.number,
+      customerEmail: updated.customerEmail,
+      customerWallet: updated.customerWallet,
+      total: String(updated.total),
+      currency: updated.currency,
+      paidAt: updated.paidAt?.toISOString() ?? null,
+    }).catch(() => {});
+  }
 
   return NextResponse.json({ invoice: updated });
 }

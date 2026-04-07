@@ -8,6 +8,7 @@ import { toPrismaNullableJson } from "@/lib/prisma-json";
 import { ensureInvoicePdfForTeam } from "@/lib/invoice-documents";
 import { sendInvoiceEmail } from "@/lib/email";
 import { billingAddressSchema } from "@/lib/invoice-tax";
+import { deliverWebhook } from "@/lib/deliver-webhook";
 
 const listSchema = z.object({
   status: z.enum(["DRAFT", "ISSUED", "PAID", "VOID", "OVERDUE"]).optional(),
@@ -179,6 +180,17 @@ export async function POST(request: NextRequest) {
     invoice.id,
   );
 
+  deliverWebhook(auth.team.teamId, "invoice.issued", {
+    invoiceId: invoice.id,
+    invoiceNumber: invoice.number,
+    customerEmail: invoice.customerEmail,
+    customerWallet: invoice.customerWallet,
+    total: String(invoice.total),
+    currency: invoice.currency,
+    status: invoice.status,
+    planId: invoice.planId,
+  }).catch(() => {});
+
   // Dispatch initial invoice email if we have a recipient address.
   // Update the PENDING delivery record that was created inline with the invoice.
   const pendingDelivery = invoice.deliveries[0];
@@ -205,6 +217,13 @@ export async function POST(request: NextRequest) {
           errorMessage: err?.message || "send failed",
         },
       });
+      deliverWebhook(auth.team.teamId, "invoice.delivery_failed", {
+        invoiceId: invoice.id,
+        invoiceNumber: invoice.number,
+        customerEmail: invoice.customerEmail,
+        customerWallet: invoice.customerWallet,
+        error: err?.message || "send failed",
+      }).catch(() => {});
     }
   }
 

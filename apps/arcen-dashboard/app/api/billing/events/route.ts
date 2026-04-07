@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { allocateInvoiceNumber, toSix } from "@/lib/invoices";
-import { toPrismaJson } from "@/lib/prisma-json";
-import { ensureInvoicePdfForTeam } from "@/lib/invoice-documents";
-import { sendInvoiceEmail } from "@/lib/email";
 import { requireFacilitatorAuth } from "@/lib/facilitator-auth";
 import { writeAuditEvent } from "@/lib/audit";
+import {
+  ingestBillingEvent,
+  resolveCanonicalBillingEventName,
+} from "@/lib/billing-events";
 
 const eventSchema = z.object({
   teamId: z.string().min(1),
@@ -100,184 +100,44 @@ export async function POST(request: NextRequest) {
 
   const data = parsed.data;
 
-  const canonicalEventName =
-    data.eventName ||
-    ({
-      SUBSCRIPTION_MINTED: "subscription.minted",
-      SUBSCRIPTION_RENEWED: "subscription.renewed",
-      SUBSCRIPTION_CANCELLED: "subscription.cancelled",
-      PAYMENT_FAILED: "invoice.delivery_failed",
-      CREDIT_ISSUED: "invoice.issued",
-    } as const)[data.eventType];
+  const canonicalEventName = resolveCanonicalBillingEventName(
+    data.eventType,
+    data.eventName,
+  );
 
-  // Idempotency: return the existing event if already processed
-  const existing = await db.billingEvent.findUnique({
-    where: { idempotencyKey: data.idempotencyKey },
-  });
-  if (existing) {
-    return NextResponse.json({ ok: true, event: existing, deduped: true });
-  }
-
-  const event = await db.billingEvent.create({
-    data: {
-      teamId: data.teamId,
-      eventType: data.eventType,
-      idempotencyKey: data.idempotencyKey,
-      payload: toPrismaJson({
-        ...data.payload,
-        _event: {
-          name: canonicalEventName,
-          schemaVersion: data.schemaVersion || "legacy",
-          occurredAt: (data.occurredAt || new Date()).toISOString(),
-        },
-      }),
-      source: data.source,
-      processed: false,
-    },
+  const result = await ingestBillingEvent({
+    teamId: data.teamId,
+    eventType: data.eventType,
+    eventName: canonicalEventName,
+    idempotencyKey: data.idempotencyKey,
+    payload: data.payload,
+    source: data.source,
+    occurredAt: data.occurredAt,
+    triggerInvoice: data.triggerInvoice,
   });
 
   await writeAuditEvent({
     request,
     teamId: data.teamId,
-    action: "billing.event.ingest",
+    action: result.deduped ? "billing.event.ingest.deduped" : "billing.event.ingest",
     resourceType: "BillingEvent",
-    resourceId: event.id,
+    resourceId: result.event.id,
     afterData: {
-      id: event.id,
-      eventType: event.eventType,
-      idempotencyKey: event.idempotencyKey,
-      source: event.source,
-      processed: event.processed,
+      id: result.event.id,
+      eventType: result.event.eventType,
+      idempotencyKey: result.event.idempotencyKey,
+      source: result.event.source,
+      processed: result.event.processed,
+      canonicalEventName,
     },
   });
 
-  let invoiceId: string | null = null;
-
-  if (data.triggerInvoice) {
-    const team = await db.team.findUnique({
-      where: { id: data.teamId },
-      select: { slug: true, invoicePrefix: true, environmentMode: true },
-    });
-
-    const amount = Number(data.payload.amount || 0);
-    const email =
-      typeof data.payload.email === "string" ? data.payload.email : null;
-
-    if (!team) {
-      return NextResponse.json({ error: "Team not found" }, { status: 404 });
-    }
-
-    if (amount <= 0 || !email) {
-      // triggerInvoice requested but payload is missing required fields — skip
-      // silently and still mark processed so facilitator doesn't retry endlessly.
-      await db.billingEvent.update({
-        where: { id: event.id },
-        data: { processed: true, processedAt: new Date() },
-      });
-      return NextResponse.json({
-        ok: true,
-        eventId: event.id,
-        invoiceId: null,
-        skipped: true,
-        reason: !email ? "missing_email" : "zero_amount",
-      });
-    }
-
-    try {
-      const prefix = team.invoicePrefix || `INV-${team.slug.toUpperCase()}`;
-      const number = await allocateInvoiceNumber(data.teamId, prefix);
-
-      const invoice = await db.invoice.create({
-        data: {
-          teamId: data.teamId,
-          environmentMode: team.environmentMode,
-          status: "ISSUED",
-          number,
-          currency: "USDC",
-          customerEmail: email,
-          subtotal: toSix(amount),
-          taxTotal: toSix(0),
-          total: toSix(amount),
-          issuedAt: new Date(),
-          lineItems: {
-            create: {
-              description: String(data.payload.description || data.eventType),
-              quantity: 1,
-              unitAmount: toSix(amount),
-              taxRate: "0.0000",
-              lineSubtotal: toSix(amount),
-              lineTax: toSix(0),
-              lineTotal: toSix(amount),
-            },
-          },
-          deliveries: {
-            create: {
-              provider: "resend",
-              method: "email",
-              status: "PENDING",
-            },
-          },
-        },
-        include: { deliveries: true },
-      });
-
-      invoiceId = invoice.id;
-
-      const { downloadUrl } = await ensureInvoicePdfForTeam(
-        data.teamId,
-        invoice.id,
-      );
-
-      // Dispatch invoice email and update delivery record
-      const pendingDelivery = invoice.deliveries[0];
-      if (pendingDelivery) {
-        try {
-          await sendInvoiceEmail({
-            to: email,
-            invoiceNumber: invoice.number || invoice.id,
-            total: String(invoice.total),
-            currency: invoice.currency,
-            dueDate: invoice.dueAt ? invoice.dueAt.toISOString() : undefined,
-            downloadUrl,
-          });
-          await db.invoiceDelivery.update({
-            where: { id: pendingDelivery.id },
-            data: { status: "SENT", sentAt: new Date(), attempts: 1 },
-          });
-        } catch (emailErr: any) {
-          await db.invoiceDelivery.update({
-            where: { id: pendingDelivery.id },
-            data: {
-              status: "FAILED",
-              attempts: 1,
-              errorMessage: emailErr?.message || "send failed",
-            },
-          });
-          // Email failure is non-fatal — invoice was created, provider can resend manually
-        }
-      }
-    } catch (err: any) {
-      // Invoice creation failed — leave event as processed: false so it can be retried
-      return NextResponse.json(
-        { error: "Invoice creation failed", detail: err?.message },
-        { status: 500 },
-      );
-    }
-  }
-
-  await db.billingEvent.update({
-    where: { id: event.id },
-    data: { processed: true, processedAt: new Date() },
+  return NextResponse.json({
+    ok: true,
+    eventId: result.event.id,
+    invoiceId: result.invoiceId,
+    deduped: result.deduped,
+    skipped: result.skipped,
+    reason: result.reason,
   });
-
-  await writeAuditEvent({
-    request,
-    teamId: data.teamId,
-    action: "billing.event.processed",
-    resourceType: "BillingEvent",
-    resourceId: event.id,
-    metadata: { triggerInvoice: data.triggerInvoice, invoiceId },
-  });
-
-  return NextResponse.json({ ok: true, eventId: event.id, invoiceId });
 }

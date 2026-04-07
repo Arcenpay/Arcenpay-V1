@@ -9,9 +9,14 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createHash } from "crypto";
+import { createPublicClient, http } from "viem";
+import {
+  getContractAddresses,
+  SubscriptionRegistryABI,
+} from "@arcenpay/sdk";
 import { db } from "@/lib/db";
-import { evaluateFlags } from "@/lib/flag-engine";
-import { aggregateUsage } from "@/lib/event-aggregator";
+import { resolveEntitlementResults } from "@/lib/entitlements";
+import { getRpcUrl } from "@/lib/config";
 
 // Verify and decode an embed access token
 function verifyAccessToken(token: string, secret: string): {
@@ -134,6 +139,9 @@ export async function GET(
   }
 
   const { teamId, companyId, userId } = decoded;
+  if (!teamId) {
+    return NextResponse.json({ error: "Invalid access token context" }, { status: 401 });
+  }
 
   // Load the component
   const component = await db.embedComponent.findFirst({
@@ -149,73 +157,207 @@ export async function GET(
   let activePlan: Record<string, unknown> | null = null;
   let usageData: Record<string, unknown>[] = [];
   let entitlements: Record<string, unknown>[] = [];
+  let nextBillingAt: string | null = null;
+  let paymentMethod: Record<string, unknown> | null = null;
+  let recentInvoices: Record<string, unknown>[] = [];
 
   if (companyId) {
-    const company = await db.arcenCompany.findFirst({
-      where: { id: companyId, teamId },
-      select: {
-        id: true,
-        name: true,
-        walletAddress: true,
-        email: true,
-        activePlanId: true,
-        activeAddOnIds: true,
-        traits: true,
-      },
-    });
+    const [company, user] = await Promise.all([
+      db.arcenCompany.findFirst({
+        where: { id: companyId, teamId },
+        select: {
+          id: true,
+          name: true,
+          walletAddress: true,
+          email: true,
+          activePlanId: true,
+        },
+      }),
+      userId
+        ? db.arcenUser.findFirst({
+            where: { id: userId, teamId },
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              walletAddress: true,
+            },
+          })
+        : Promise.resolve(null),
+    ]);
 
     if (company) {
       companyData = {
         id: company.id,
         name: company.name,
         walletAddress: company.walletAddress,
+        email: company.email,
       };
 
       if (company.activePlanId) {
         activePlan = (await db.catalogPlan.findUnique({
           where: { id: company.activePlanId },
-          select: { id: true, name: true, tier: true, price: true, annualPrice: true, billingInterval: true, description: true },
+          select: {
+            id: true,
+            name: true,
+            tier: true,
+            price: true,
+            annualPrice: true,
+            billingInterval: true,
+            description: true,
+            acceptedToken: true,
+          },
         })) as Record<string, unknown> | null;
       }
 
-      // Load all feature flags and evaluate them for this company
-      const flags = await db.catalogFeatureFlag.findMany({
-        where: { teamId },
-        select: { featureKey: true, name: true, featureType: true, unitSingular: true, unitPlural: true, eventKey: true },
-      });
-
       const companyKeys = {
-        id: undefined,
+        internalId: company.id,
         wallet: company.walletAddress ?? undefined,
         email: company.email ?? undefined,
       };
+      const userKeys = user
+        ? { internalId: user.id }
+        : undefined;
 
-      if (flags.length > 0) {
-        const flagResults = await evaluateFlags(
-          teamId ?? "",
-          flags.map((f) => f.featureKey),
+      const [flags, entitlementResults] = await Promise.all([
+        db.catalogFeatureFlag.findMany({
+          where: { teamId },
+          select: {
+            featureKey: true,
+            name: true,
+            featureType: true,
+            unitSingular: true,
+            unitPlural: true,
+          },
+        }),
+        resolveEntitlementResults({
+          teamId,
           companyKeys,
-        );
+          userKeys,
+        }),
+      ]);
 
-        entitlements = flagResults.map((r, i) => ({
-          featureKey: r.flag,
-          name: flags[i]?.name,
-          value: r.value,
-          featureType: flags[i]?.featureType ?? "boolean",
+      const flagMap = new Map(flags.map((flag) => [flag.featureKey, flag]));
+
+      entitlements = entitlementResults.entitlements.map((entitlement) => {
+        const flag = flagMap.get(entitlement.key);
+        const featureType =
+          flag?.featureType ??
+          (entitlement.allocation !== null ? "event_based" : "boolean");
+
+        return {
+          featureKey: entitlement.key,
+          name: flag?.name ?? entitlement.key,
+          value:
+            featureType === "event_based"
+              ? entitlement.allocation ?? entitlement.usage
+              : entitlement.enabled,
+          featureType,
+          limit: entitlement.allocation ?? undefined,
+          usage: entitlement.usage,
+          exceeded: entitlement.exceeded,
+          unitSingular: flag?.unitSingular ?? null,
+          unitPlural: flag?.unitPlural ?? flag?.unitSingular ?? null,
+        };
+      });
+
+      usageData = entitlements
+        .filter((entitlement) => entitlement.featureType === "event_based")
+        .map((entitlement) => ({
+          featureKey: entitlement.featureKey,
+          name: entitlement.name,
+          used: entitlement.usage ?? 0,
+          limit: entitlement.limit ?? undefined,
+          unitSingular: entitlement.unitSingular ?? null,
+          unitPlural: entitlement.unitPlural ?? null,
         }));
 
-        // For event-based features, add usage data
-        for (const flag of flags) {
-          if (flag.featureType === "event_based" && flag.eventKey) {
-            const count = await aggregateUsage(teamId ?? "", companyId ?? "", flag.eventKey, "monthly");
-            usageData.push({
-              featureKey: flag.featureKey,
-              name: flag.name,
-              unitSingular: flag.unitSingular,
-              unitPlural: flag.unitPlural,
-              used: count,
-            });
+      const invoiceFilters = [
+        company.walletAddress
+          ? { customerWallet: company.walletAddress.toLowerCase() }
+          : null,
+        company.email ? { customerEmail: company.email } : null,
+        user?.email ? { customerEmail: user.email } : null,
+      ].filter(Boolean);
+
+      if (invoiceFilters.length > 0) {
+        const invoices = await db.invoice.findMany({
+          where: {
+            teamId,
+            OR: invoiceFilters as never,
+          },
+          orderBy: { issuedAt: "desc" },
+          take: 10,
+          select: {
+            id: true,
+            number: true,
+            total: true,
+            currency: true,
+            status: true,
+            issuedAt: true,
+            dueAt: true,
+            paidAt: true,
+            customerEmail: true,
+            customerWallet: true,
+          },
+        });
+
+        recentInvoices = invoices.map((invoice) => ({
+          id: invoice.id,
+          number: invoice.number,
+          total: String(invoice.total),
+          currency: invoice.currency,
+          status: invoice.status,
+          issuedAt: invoice.issuedAt?.toISOString() ?? null,
+          dueAt: invoice.dueAt?.toISOString() ?? null,
+          paidAt: invoice.paidAt?.toISOString() ?? null,
+          customerEmail: invoice.customerEmail,
+          customerWallet: invoice.customerWallet,
+        }));
+      }
+
+      const configuredChainId = Number(
+        process.env.MEAP_DEFAULT_CHAIN_ID ||
+          process.env.CHAIN_ID ||
+          process.env.NEXT_PUBLIC_CHAIN_ID ||
+          "11155111",
+      );
+
+      paymentMethod = {
+        walletAddress: company.walletAddress ?? user?.walletAddress ?? null,
+        token:
+          typeof activePlan?.acceptedToken === "string"
+            ? activePlan.acceptedToken
+            : "USDC",
+        chainId: configuredChainId,
+      };
+
+      if (company.walletAddress) {
+        try {
+          const client = createPublicClient({
+            transport: http(getRpcUrl(configuredChainId)),
+          });
+          const contracts = getContractAddresses(configuredChainId);
+          const tokenId = (await client.readContract({
+            address: contracts.subscriptionRegistry as `0x${string}`,
+            abi: SubscriptionRegistryABI,
+            functionName: "getWalletSubscription",
+            args: [company.walletAddress.toLowerCase() as `0x${string}`],
+          })) as bigint;
+
+          if (tokenId > 0n) {
+            const expiration = (await client.readContract({
+              address: contracts.subscriptionRegistry as `0x${string}`,
+              abi: SubscriptionRegistryABI,
+              functionName: "expiresAt",
+              args: [tokenId],
+            })) as bigint;
+            if (expiration > 0n) {
+              nextBillingAt = new Date(Number(expiration) * 1000).toISOString();
+            }
           }
+        } catch {
+          nextBillingAt = null;
         }
       }
     }
@@ -256,6 +398,9 @@ export async function GET(
       usage: usageData,
       userId,
       providerWallet,
+      nextBillingAt,
+      paymentMethod,
+      recentInvoices,
     },
   });
 }

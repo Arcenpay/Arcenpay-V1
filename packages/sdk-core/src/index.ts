@@ -45,6 +45,8 @@ export type {
   ComponentEntitlement,
   ComponentUsageItem,
   ComponentPlanSummary,
+  ComponentInvoiceSummary,
+  ComponentPaymentMethod,
   ArcenCompanyKeys,
   ArcenUserKeys,
   ArcenCompany,

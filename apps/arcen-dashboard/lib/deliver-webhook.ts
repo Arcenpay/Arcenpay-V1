@@ -10,13 +10,30 @@
 
 import { createHmac, randomBytes } from "crypto";
 import { db } from "@/lib/db";
+import { toPrismaJson } from "@/lib/prisma-json";
 
-export async function deliverWebhook(
+export interface SendWebhookDeliveryInput {
+  teamId: string;
+  eventName: string;
+  data: Record<string, unknown>;
+  webhookUrl?: string | null;
+  signingSecret?: string | null;
+  force?: boolean;
+}
+
+export interface SendWebhookDeliveryResult {
+  deliveryId: string;
+  payload: Record<string, unknown>;
+  success: boolean;
+  statusCode: number | null;
+  error: string | null;
+  url: string;
+}
+
+async function resolveWebhookTarget(
   teamId: string,
-  eventName: string,
-  data: Record<string, unknown>,
-): Promise<void> {
-  // Load provider profile
+  input: Pick<SendWebhookDeliveryInput, "webhookUrl" | "signingSecret" | "eventName" | "force">,
+) {
   const profile = await db.providerProfile.findUnique({
     where: { teamId },
     select: {
@@ -27,36 +44,50 @@ export async function deliverWebhook(
     },
   });
 
-  if (!profile?.notifyWebhook || !profile.webhookUrl) return;
+  const webhookUrl = input.webhookUrl?.trim() || profile?.webhookUrl || null;
+  const signingSecret = input.signingSecret?.trim() || profile?.webhookSigningSecret || null;
 
-  // Check if this specific event type is enabled in subscriptions
-  const prefs = Array.isArray(profile.notificationPreferences)
+  if (!webhookUrl) return null;
+  if (!input.force && !profile?.notifyWebhook) return null;
+
+  const prefs = Array.isArray(profile?.notificationPreferences)
     ? (profile.notificationPreferences as Array<{ id: string; webhook?: boolean }>)
     : [];
 
-  // If the team has subscriptions configured, only send if this event is enabled.
-  // If no subscriptions are configured (empty array), send all events.
-  if (prefs.length > 0) {
-    const sub = prefs.find((p) => p.id === eventName);
-    if (sub && sub.webhook === false) return;
+  if (!input.force && prefs.length > 0) {
+    const sub = prefs.find((p) => p.id === input.eventName);
+    if (sub && sub.webhook === false) return null;
   }
 
+  return {
+    webhookUrl,
+    signingSecret,
+  };
+}
+
+export async function sendWebhookDelivery(
+  input: SendWebhookDeliveryInput,
+): Promise<SendWebhookDeliveryResult | null> {
+  const target = await resolveWebhookTarget(input.teamId, input);
+  if (!target) return null;
+
   const timestamp = Math.floor(Date.now() / 1000);
-  const payload = JSON.stringify({
-    event: eventName,
+  const payloadObject = {
+    event: input.eventName,
     created: new Date().toISOString(),
-    data,
-  });
+    data: input.data,
+  };
+  const payload = JSON.stringify(payloadObject);
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     "User-Agent": "ArcenPay-Webhook/1.0",
-    "X-MEAP-Event": eventName,
+    "X-MEAP-Event": input.eventName,
     "X-MEAP-Timestamp": String(timestamp),
   };
 
-  if (profile.webhookSigningSecret) {
-    const sig = createHmac("sha256", profile.webhookSigningSecret)
+  if (target.signingSecret) {
+    const sig = createHmac("sha256", target.signingSecret)
       .update(payload)
       .digest("hex");
     headers["X-MEAP-Signature"] = `sha256=${sig}`;
@@ -68,7 +99,7 @@ export async function deliverWebhook(
   let error: string | undefined;
 
   try {
-    const res = await fetch(profile.webhookUrl, {
+    const res = await fetch(target.webhookUrl, {
       method: "POST",
       headers,
       body: payload,
@@ -85,17 +116,38 @@ export async function deliverWebhook(
   db.webhookDelivery
     .create({
       data: {
-        teamId,
+        teamId: input.teamId,
         deliveryId,
-        event: eventName,
-        url: profile.webhookUrl,
+        event: input.eventName,
+        url: target.webhookUrl,
         statusCode: statusCode ?? null,
         attemptNumber: 1,
         deliveredAt: new Date(),
         success,
         error: error ?? null,
-        payload: JSON.parse(payload),
+        payload: toPrismaJson(payloadObject),
       },
     })
     .catch(() => {});
+
+  return {
+    deliveryId,
+    payload: payloadObject,
+    success,
+    statusCode: statusCode ?? null,
+    error: error ?? null,
+    url: target.webhookUrl,
+  };
+}
+
+export async function deliverWebhook(
+  teamId: string,
+  eventName: string,
+  data: Record<string, unknown>,
+): Promise<void> {
+  await sendWebhookDelivery({
+    teamId,
+    eventName,
+    data,
+  });
 }

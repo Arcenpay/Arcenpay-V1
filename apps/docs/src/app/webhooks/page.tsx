@@ -25,7 +25,7 @@ export default function WebhooksPage() {
 
         <p className="docs-lead" id="webhooks">
           Webhooks allow you to receive real-time notifications for events on the ArcenPay network,
-          such as new subscriptions, renewals, and cancellations.
+          such as company identity updates, subscription lifecycle changes, and invoice events.
         </p>
 
         <h2 id="overview">How webhooks work</h2>
@@ -63,28 +63,32 @@ export default function WebhooksPage() {
         <table className="docs-table">
           <thead><tr><th>Event Type</th><th>Description</th></tr></thead>
           <tbody>
-            <tr><td><code>subscription.created</code></td><td>New NFT minted for a wallet.</td></tr>
-            <tr><td><code>subscription.renewed</code></td><td>Existing NFT expiry extended.</td></tr>
-            <tr><td><code>subscription.cancelled</code></td><td>Subscriber or provider revoked access.</td></tr>
-            <tr><td><code>session.funded</code></td><td>ZKVUB session balance increased.</td></tr>
-            <tr><td><code>billing.settled</code></td><td>Usage-based payment completed via ZK proof.</td></tr>
+            <tr><td><code>company.created</code></td><td>A company record was auto-created or identified.</td></tr>
+            <tr><td><code>user.created</code></td><td>A user record was created or identified for a company.</td></tr>
+            <tr><td><code>company.plan.changed</code></td><td>A company moved to a different plan.</td></tr>
+            <tr><td><code>company.plan.cancelled</code></td><td>A company plan was cancelled or removed.</td></tr>
+            <tr><td><code>subscription.minted</code></td><td>A new on-chain subscription was minted.</td></tr>
+            <tr><td><code>subscription.renewed</code></td><td>An on-chain subscription renewed successfully.</td></tr>
+            <tr><td><code>subscription.auto_renewed</code></td><td>The automated renewal keeper completed a renewal.</td></tr>
+            <tr><td><code>subscription.renewal_failed</code></td><td>An automatic renewal attempt failed.</td></tr>
+            <tr><td><code>invoice.issued</code></td><td>An invoice was created for a subscription charge.</td></tr>
+            <tr><td><code>invoice.delivery_failed</code></td><td>An invoice email could not be delivered.</td></tr>
+            <tr><td><code>invoice.paid</code></td><td>An invoice was marked paid.</td></tr>
           </tbody>
         </table>
 
         <h2 id="payload">Payload example</h2>
         <CodeBlock lang="json" code={`{
   "id": "evt_123456789",
-  "type": "subscription.renewed",
-  "created": 1710850021,
+  "event": "subscription.renewed",
+  "created": "2026-04-04T10:30:00.000Z",
   "data": {
-    "subscriber": "0x40d5...2b91",
-    "tokenId": 42,
-    "planId": 1,
-    "newExpiration": 1713442021,
-    "amount": "10000000",
-    "token": "0xA0b8...eb48"
-  },
-  "signature": "sha256=..."
+    "companyId": "cmp_123",
+    "wallet": "0x40d5...2b91",
+    "tokenId": "42",
+    "planId": "starter",
+    "txHash": "0xabc123..."
+  }
 }`} />
 
         <h2 id="security">Verifying signatures</h2>
@@ -94,7 +98,9 @@ export default function WebhooksPage() {
 const client = new ArcenPayClient();
 
 // In your route handler
-const signature = req.headers['x-arcenpay-signature'];
+const signature = req.headers['x-meap-signature'];
+const event = req.headers['x-meap-event'];
+const timestamp = req.headers['x-meap-timestamp'];
 const payload = JSON.stringify(req.body);
 
 try {

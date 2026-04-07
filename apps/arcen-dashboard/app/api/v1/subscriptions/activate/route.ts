@@ -44,6 +44,12 @@ import {
 } from "@/lib/flag-engine";
 import { deliverWebhook } from "@/lib/deliver-webhook";
 import { resolveEmbedAccessToken } from "@/lib/embed-access-token";
+import { getSession } from "@/lib/auth.server";
+import { resolveDashboardSessionIdentityDefaults } from "@/lib/dashboard-session-identity";
+import {
+  ingestBillingEvent,
+  resolveBillingRecipientEmail,
+} from "@/lib/billing-events";
 
 const CHAIN_MAP: Record<number, Chain> = {
   11155111: sepolia,
@@ -144,21 +150,36 @@ export async function POST(req: NextRequest) {
   const bearerToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
 
   let teamId: string;
+  let embedTokenContext:
+    | Awaited<ReturnType<typeof resolveEmbedAccessToken>>
+    | null = null;
+  let sessionDefaults:
+    | Awaited<ReturnType<typeof resolveDashboardSessionIdentityDefaults>>
+    | null = null;
   if (bearerToken && !bearerToken.startsWith("api_")) {
-    const accessToken = await resolveEmbedAccessToken(bearerToken);
-    if (!accessToken) {
+    embedTokenContext = await resolveEmbedAccessToken(bearerToken);
+    if (!embedTokenContext) {
       return NextResponse.json(
         { error: "Invalid or expired token" },
         { status: 401, headers: corsHeaders() },
       );
     }
-    teamId = accessToken.teamId;
+    teamId = embedTokenContext.teamId;
   } else {
     const auth = await requireAnyAuth(req);
     if (isAnyAuthError(auth)) {
       return auth;
     }
     teamId = auth.teamId;
+    if (auth.source === "session") {
+      const session = await getSession();
+      if (session) {
+        sessionDefaults = await resolveDashboardSessionIdentityDefaults(
+          teamId,
+          session.clerkUserId,
+        );
+      }
+    }
   }
 
   let body: unknown;
@@ -184,9 +205,16 @@ export async function POST(req: NextRequest) {
 
   const onChainPlanId = BigInt(parsed.data.planId);
   const paymentAccount = parsed.data.paymentAccount.toLowerCase() as `0x${string}`;
-  const subscriberEmail = parsed.data.subscriberEmail;
+  const activationCompanyInput = {
+    ...parsed.data.company,
+    ...(sessionDefaults && {
+      name: parsed.data.company.name ?? sessionDefaults.companyName ?? undefined,
+      email: parsed.data.company.email ?? sessionDefaults.companyEmail ?? undefined,
+      wallet: parsed.data.company.wallet ?? sessionDefaults.walletAddress ?? undefined,
+    }),
+  };
 
-  const company = await upsertCompanyForActivation(teamId, parsed.data.company);
+  const company = await upsertCompanyForActivation(teamId, activationCompanyInput);
 
   const catalogPlan = await db.catalogPlan.findFirst({
     where: {
@@ -441,6 +469,18 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    const subscriberEmail = await resolveBillingRecipientEmail({
+      teamId,
+      explicitEmail:
+        parsed.data.subscriberEmail ??
+        sessionDefaults?.userEmail ??
+        null,
+      accessTokenUserId: embedTokenContext?.userId ?? null,
+      accessTokenCompanyId: embedTokenContext?.companyId ?? null,
+      companyId: company.id,
+      walletAddress: paymentAccount,
+    });
+
     if (subscriberEmail) {
       await db.subscriberEmail.upsert({
         where: { walletAddress: paymentAccount },
@@ -454,6 +494,36 @@ export async function POST(req: NextRequest) {
           planId: catalogPlan.id,
         },
       });
+    }
+
+    try {
+      await ingestBillingEvent({
+        teamId,
+        eventType: "SUBSCRIPTION_MINTED",
+        eventName: "subscription.minted",
+        idempotencyKey: `subscription.minted:${txHash}`,
+        source: "subscription.activate",
+        occurredAt: new Date(),
+        triggerInvoice: true,
+        payload: {
+          tokenId: tokenId.toString(),
+          planId: catalogPlan.id,
+          onChainPlanId: onChainPlanId.toString(),
+          companyId: company.id,
+          userId: embedTokenContext?.userId ?? null,
+          customerWallet: paymentAccount,
+          subscriber: paymentAccount,
+          amount: Number(chargeAmount) / 1e6,
+          txHash,
+          description: `Subscription activation — ${catalogPlan.name}`,
+          ...(subscriberEmail ? { email: subscriberEmail } : {}),
+        },
+      });
+    } catch (billingError) {
+      console.error(
+        "[subscriptions/activate] Billing event ingestion failed:",
+        billingError,
+      );
     }
 
     deliverWebhook(teamId, "company.plan.changed", {

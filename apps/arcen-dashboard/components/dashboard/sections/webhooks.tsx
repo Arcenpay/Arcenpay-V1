@@ -38,6 +38,7 @@ import {
   RotateCw,
 } from "lucide-react";
 import { toast } from "sonner";
+import { CANONICAL_WEBHOOK_EVENTS } from "@/lib/webhook-events";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -76,56 +77,10 @@ interface TestResult {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const DEFAULT_EVENTS: EventSub[] = [
-  {
-    id: "new_subscriber",
-    label: "New Subscriber",
-    description: "When a new subscriber mints an NFT to your plan",
-    enabled: false,
-  },
-  {
-    id: "renewal",
-    label: "Subscription Renewal",
-    description: "When a subscription is successfully renewed",
-    enabled: false,
-  },
-  {
-    id: "cancellation",
-    label: "Subscription Cancellation",
-    description: "When a subscriber cancels their subscription",
-    enabled: false,
-  },
-  {
-    id: "payment_failed",
-    label: "Payment Failed",
-    description: "When an autopay billing attempt fails",
-    enabled: false,
-  },
-  {
-    id: "billing_settled",
-    label: "Billing Settled",
-    description: "When a ZK proof is verified and usage is settled on-chain",
-    enabled: false,
-  },
-  {
-    id: "low_balance",
-    label: "Low Session Balance",
-    description: "When an agent session vault drops below 20%",
-    enabled: false,
-  },
-  {
-    id: "flag_check",
-    label: "Flag Evaluation",
-    description: "When a feature flag is evaluated for a company",
-    enabled: false,
-  },
-  {
-    id: "track",
-    label: "Usage Event",
-    description: "When a track() usage event is recorded",
-    enabled: false,
-  },
-];
+const DEFAULT_EVENTS: EventSub[] = CANONICAL_WEBHOOK_EVENTS.map((event) => ({
+  ...event,
+  enabled: false,
+}));
 
 // ─── Delivery Log Row ─────────────────────────────────────────────────────────
 

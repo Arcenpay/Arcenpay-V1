@@ -27,6 +27,8 @@ import { db } from "@/lib/db";
 import { resolveCompany, resolveUser, type CompanyKeys, type UserKeys } from "@/lib/flag-engine";
 import { deliverWebhook } from "@/lib/deliver-webhook";
 import { Prisma } from "@/src/generated/prisma/client";
+import { resolveDashboardSessionIdentityDefaults } from "@/lib/dashboard-session-identity";
+import { getSession } from "@/lib/auth.server";
 
 // ─── Simple JWT-like token (HMAC-SHA256, no external dep) ─────────────────────
 
@@ -125,11 +127,64 @@ export async function POST(req: NextRequest) {
   const expiresIn = rawExpiresIn;
   const expiresAt = new Date(Date.now() + expiresIn * 1000);
 
+  const session = ctx.source === "session" ? await getSession() : null;
+  const sessionDefaults =
+    ctx.source === "session" && session
+      ? await resolveDashboardSessionIdentityDefaults(teamId, session.clerkUserId)
+      : null;
+
+  const normalizedCompany = body.company ??
+    (sessionDefaults
+      ? {
+          id: sessionDefaults.companyId,
+          wallet: sessionDefaults.walletAddress ?? undefined,
+          email: sessionDefaults.companyEmail ?? undefined,
+          name: sessionDefaults.companyName ?? undefined,
+        }
+      : undefined);
+
+  const normalizedUser = body.user ??
+    (sessionDefaults
+      ? {
+          id: sessionDefaults.userId,
+          clerk_user_id: sessionDefaults.clerkUserId,
+          wallet: sessionDefaults.walletAddress ?? undefined,
+          name: sessionDefaults.userName ?? undefined,
+          email: sessionDefaults.userEmail ?? undefined,
+        }
+      : undefined);
+
+  const companyInput = normalizedCompany
+    ? {
+        ...normalizedCompany,
+        ...(sessionDefaults && {
+          name: normalizedCompany.name ?? sessionDefaults.companyName ?? undefined,
+          email: normalizedCompany.email ?? sessionDefaults.companyEmail ?? undefined,
+          wallet: normalizedCompany.wallet ?? sessionDefaults.walletAddress ?? undefined,
+        }),
+      }
+    : undefined;
+
+  const userInput = normalizedUser
+    ? {
+        ...normalizedUser,
+        ...(sessionDefaults && {
+          id: normalizedUser.id ?? sessionDefaults.userId,
+          clerk_user_id:
+            (normalizedUser as Record<string, unknown>).clerk_user_id ??
+            sessionDefaults.clerkUserId,
+          wallet: normalizedUser.wallet ?? sessionDefaults.walletAddress ?? undefined,
+          name: normalizedUser.name ?? sessionDefaults.userName ?? undefined,
+          email: normalizedUser.email ?? sessionDefaults.userEmail ?? undefined,
+        }),
+      }
+    : undefined;
+
   // ── Company: upsert (create if not exists) ───────────────────────────────
   let companyId: string | null = null;
 
-  if (body.company && (body.company.id || body.company.wallet || body.company.email)) {
-    const companyResult = await upsertCompanyForToken(teamId, body.company);
+  if (companyInput && (companyInput.id || companyInput.wallet || companyInput.email)) {
+    const companyResult = await upsertCompanyForToken(teamId, companyInput);
     companyId = companyResult.id;
 
     // Auto-assign free plan if no active plan
@@ -153,7 +208,7 @@ export async function POST(req: NextRequest) {
     if (companyResult.created) {
       deliverWebhook(teamId, "company.created", {
         companyId,
-        externalId: body.company.id ?? null,
+        externalId: companyInput.id ?? null,
         source: "access_token",
       }).catch(() => {});
     }
@@ -162,8 +217,8 @@ export async function POST(req: NextRequest) {
   // ── User: upsert (create if not exists) ─────────────────────────────────
   let userId: string | null = null;
 
-  if (body.user && companyId && (body.user.id || (body.user as Record<string, unknown>).clerk_user_id || body.user.wallet)) {
-    const userResult = await upsertUserForToken(teamId, companyId, body.user);
+  if (userInput && companyId && (userInput.id || (userInput as Record<string, unknown>).clerk_user_id || userInput.wallet)) {
+    const userResult = await upsertUserForToken(teamId, companyId, userInput);
     userId = userResult.id;
 
     if (userResult.created) {

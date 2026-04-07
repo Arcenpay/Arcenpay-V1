@@ -5,6 +5,7 @@ import { sendInvoiceEmail } from "@/lib/email";
 import { writeAuditEvent } from "@/lib/audit";
 import { ensureInvoicePdfForTeam } from "@/lib/invoice-documents";
 import { rateLimit, applyRateLimitHeaders } from "@/lib/rate-limit";
+import { deliverWebhook } from "@/lib/deliver-webhook";
 
 // 3 resends per invoice per hour — prevents accidental email flooding
 const RESEND_LIMIT = 3;
@@ -108,6 +109,14 @@ export async function POST(request: NextRequest, context: Params) {
         error: err?.message || "send failed",
       },
     });
+
+    deliverWebhook(auth.team.teamId, "invoice.delivery_failed", {
+      invoiceId: invoice.id,
+      invoiceNumber: invoice.number,
+      customerEmail: invoice.customerEmail,
+      customerWallet: invoice.customerWallet,
+      error: err?.message || "send failed",
+    }).catch(() => {});
 
     return NextResponse.json(
       { error: err?.message || "Failed to send invoice" },

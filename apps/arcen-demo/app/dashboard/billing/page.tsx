@@ -162,11 +162,10 @@ export default function BillingPage() {
           <div className={styles.step}>
             <div className={styles.stepNum}>2</div>
             <div className={styles.stepContent}>
-              <div className={styles.stepTitle}>Generate an access token</div>
+              <div className={styles.stepTitle}>Identify the customer session</div>
               <p className={styles.stepDesc}>
-                Your backend calls <code>ArcenClient.createAccessToken()</code>{" "}
-                with the company wallet/ID. This creates a short-lived, scoped
-                token.
+                Your backend identifies the current company and user, then
+                mints a short-lived embed token for the billing portal.
               </p>
             </div>
           </div>
@@ -198,14 +197,18 @@ export default function BillingPage() {
   );
 }
 
-const INTEGRATION_CODE = `// 1. Backend: generate access token (API route)
+const INTEGRATION_CODE = `// 1. Backend: identify the current company + user
 const client = new ArcenClient({ apiKey: process.env.ARCENPAY_API_KEY });
-const token = await client.createAccessToken({ wallet: "0x..." });
+await client.identify({
+  company: { id: "acme", name: "Acme", wallet: "0x..." },
+  user: { id: "user_123", email: "owner@acme.com", wallet: "0x..." },
+});
 
-// 2. Frontend: fetch the token, render the embed
+// 2. Backend route: issue a short-lived embed token
 const { token } = await fetch("/api/access-token", { method: "POST" })
   .then(r => r.json());
 
+// 3. Frontend: render the real billing portal
 <ArcenEmbed
   accessToken={token.token}
   componentId={process.env.NEXT_PUBLIC_ARCENPAY_COMPONENT_ID}

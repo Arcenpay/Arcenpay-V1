@@ -28,6 +28,8 @@ import type {
   ComponentEntitlement,
   ComponentPlanSummary,
   ComponentDesign,
+  ComponentInvoiceSummary,
+  ComponentPaymentMethod,
 } from "@arcenpay/sdk";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -256,6 +258,54 @@ function fmtPrice(price: string | number, billingInterval?: number): string {
   const interval =
     billingInterval !== undefined ? intervalLabel(billingInterval) : "";
   return `$${p.toFixed(2)}${interval}`;
+}
+
+function formatDateLabel(value?: string | null): string | null {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function formatRelativeDate(value?: string | null): string | null {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  const diffDays = Math.round((date.getTime() - Date.now()) / 86_400_000);
+  if (diffDays === 0) return "today";
+  if (diffDays === 1) return "tomorrow";
+  if (diffDays > 1) return `in ${diffDays} days`;
+  if (diffDays === -1) return "yesterday";
+  return `${Math.abs(diffDays)} days ago`;
+}
+
+function truncateWallet(wallet?: string | null): string | null {
+  if (!wallet) return null;
+  if (wallet.length <= 12) return wallet;
+  return `${wallet.slice(0, 6)}…${wallet.slice(-4)}`;
+}
+
+function formatMoney(amount: string | number, currency = "USD"): string {
+  const value = Number(amount);
+  if (Number.isNaN(value)) return String(amount);
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+}
+
+function formatChainLabel(chainId?: number | null): string | null {
+  if (!chainId) return null;
+  if (chainId === 11155111) return "Sepolia";
+  if (chainId === 84532) return "Base Sepolia";
+  if (chainId === 8453) return "Base";
+  return `Chain ${chainId}`;
 }
 
 // ─── Shared UI primitives ─────────────────────────────────────────────────────
@@ -1160,6 +1210,8 @@ export function renderElement(
     case "nextBillDue": {
       const plan = data.activePlan;
       const priceVal = plan ? parseFloat(String(plan.price)) : 0;
+      const nextBillingLabel = formatDateLabel(data.nextBillingAt);
+      const nextBillingRelative = formatRelativeDate(data.nextBillingAt);
       return (
         <Card key={index} tokens={tokens} style={{ marginBottom: 12 }}>
           <div
@@ -1177,6 +1229,12 @@ export function renderElement(
               style={{ color: tokens.mutedColor, fontSize: tokens.size - 1 }}
             >
               {plan ? `${plan.name} — no charges` : "No active plan."}
+            </div>
+          ) : !nextBillingLabel ? (
+            <div
+              style={{ color: tokens.mutedColor, fontSize: tokens.size - 1 }}
+            >
+              Next billing date will appear after the subscription is active.
             </div>
           ) : (
             <div>
@@ -1204,7 +1262,7 @@ export function renderElement(
                     paddingBottom: 2,
                   }}
                 >
-                  in 12 days
+                  {nextBillingRelative ?? nextBillingLabel}
                 </div>
               </div>
               <div
@@ -1214,26 +1272,7 @@ export function renderElement(
                   marginBottom: 10,
                 }}
               >
-                Estimated bill ·{" "}
-                {new Date().toLocaleString("default", { month: "short" })} 1–
-                {new Date(
-                  new Date().getFullYear(),
-                  new Date().getMonth() + 1,
-                  0,
-                ).getDate()}
-              </div>
-              <div
-                style={{ height: 6, background: "#f3f4f6", borderRadius: 999 }}
-              >
-                <div
-                  style={{
-                    height: 6,
-                    width: "60%",
-                    background: tokens.primary,
-                    borderRadius: 999,
-                    opacity: 0.7,
-                  }}
-                />
+                Scheduled billing date · {nextBillingLabel}
               </div>
             </div>
           )}
@@ -1244,6 +1283,9 @@ export function renderElement(
     case "paymentMethod": {
       const plan = data.activePlan;
       const isPaidPlan = plan && parseFloat(String(plan.price)) > 0;
+      const method = data.paymentMethod as ComponentPaymentMethod | null | undefined;
+      const walletLabel = truncateWallet(method?.walletAddress);
+      const chainLabel = formatChainLabel(method?.chainId);
       return (
         <Card key={index} tokens={tokens} style={{ marginBottom: 12 }}>
           <div
@@ -1256,7 +1298,7 @@ export function renderElement(
           >
             Payment Method
           </div>
-          {isPaidPlan ? (
+          {isPaidPlan && method?.walletAddress ? (
             <div
               style={{
                 display: "flex",
@@ -1296,7 +1338,7 @@ export function renderElement(
                     whiteSpace: "nowrap",
                   }}
                 >
-                  0x4a2f…8c3d
+                  {walletLabel}
                 </div>
                 <div
                   style={{
@@ -1305,26 +1347,17 @@ export function renderElement(
                     marginTop: 1,
                   }}
                 >
-                  Base · USDC
+                  {[chainLabel, method?.token].filter(Boolean).join(" · ")}
                 </div>
               </div>
-              <span
-                style={{
-                  fontSize: tokens.size - 2,
-                  fontWeight: 600,
-                  color: tokens.primary,
-                  cursor: "pointer",
-                  flexShrink: 0,
-                }}
-              >
-                Edit
-              </span>
             </div>
           ) : (
             <div
               style={{ color: tokens.mutedColor, fontSize: tokens.size - 1 }}
             >
-              Free plan — no payment method required.
+              {isPaidPlan
+                ? "No payment method is on file yet."
+                : "Free plan — no payment method required."}
             </div>
           )}
         </Card>
@@ -1334,6 +1367,7 @@ export function renderElement(
     case "invoices": {
       const plan = data.activePlan;
       const isPaidPlan = plan && parseFloat(String(plan.price)) > 0;
+      const invoices = data.recentInvoices as ComponentInvoiceSummary[] | undefined;
       return (
         <Card key={index} tokens={tokens} style={{ marginBottom: 12 }}>
           <div
@@ -1346,7 +1380,56 @@ export function renderElement(
           >
             Invoices
           </div>
-          {isPaidPlan ? (
+          {isPaidPlan && invoices && invoices.length > 0 ? (
+            <div style={{ display: "grid", gap: 10 }}>
+              {invoices.slice(0, 3).map((invoice) => (
+                <div
+                  key={invoice.id}
+                  style={{
+                    border: "1px solid #f0f0f0",
+                    borderRadius: tokens.radius / 1.5,
+                    padding: "12px 14px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 12,
+                  }}
+                >
+                  <div style={{ minWidth: 0 }}>
+                    <div
+                      style={{
+                        fontSize: tokens.size - 1,
+                        fontWeight: 600,
+                        color: tokens.textColor,
+                      }}
+                    >
+                      {invoice.number ?? "Invoice"}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: tokens.size - 3,
+                        color: tokens.mutedColor,
+                        marginTop: 2,
+                      }}
+                    >
+                      {formatDateLabel(invoice.issuedAt) ?? "Pending issue date"} ·{" "}
+                      {invoice.status}
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      fontSize: tokens.size - 1,
+                      fontWeight: 700,
+                      color: tokens.textColor,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {formatMoney(invoice.total, invoice.currency)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : isPaidPlan ? (
             <div
               style={{
                 color: tokens.mutedColor,
@@ -1355,7 +1438,7 @@ export function renderElement(
                 padding: "8px 0",
               }}
             >
-              Invoice history appears after the first charge.
+              No invoices yet. They will appear after the first successful charge.
             </div>
           ) : (
             <div
@@ -1398,6 +1481,7 @@ export function renderElement(
     case "billing-history": {
       const plan = data.activePlan;
       const isPaidPlan = plan && parseFloat(String(plan.price)) > 0;
+      const invoices = data.recentInvoices as ComponentInvoiceSummary[] | undefined;
       return (
         <Card key={index} tokens={tokens} style={{ marginBottom: 12 }}>
           <div
@@ -1410,7 +1494,57 @@ export function renderElement(
           >
             Billing History
           </div>
-          {isPaidPlan ? (
+          {isPaidPlan && invoices && invoices.length > 0 ? (
+            <div style={{ display: "grid", gap: 10 }}>
+              {invoices.slice(0, 5).map((invoice) => {
+                const statusDate = invoice.paidAt ?? invoice.dueAt ?? invoice.issuedAt;
+                return (
+                  <div
+                    key={invoice.id}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      gap: 12,
+                      padding: "10px 0",
+                      borderBottom: "1px solid #f5f5f5",
+                    }}
+                  >
+                    <div style={{ minWidth: 0 }}>
+                      <div
+                        style={{
+                          fontSize: tokens.size - 1,
+                          fontWeight: 600,
+                          color: tokens.textColor,
+                        }}
+                      >
+                        {invoice.number ?? "Invoice"}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: tokens.size - 3,
+                          color: tokens.mutedColor,
+                          marginTop: 2,
+                        }}
+                      >
+                        {invoice.status} · {formatDateLabel(statusDate) ?? "Pending"}
+                      </div>
+                    </div>
+                    <div
+                      style={{
+                        fontSize: tokens.size - 1,
+                        fontWeight: 700,
+                        color: tokens.textColor,
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {formatMoney(invoice.total, invoice.currency)}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : isPaidPlan ? (
             <div
               style={{
                 color: tokens.mutedColor,
@@ -1419,7 +1553,7 @@ export function renderElement(
                 padding: "8px 0",
               }}
             >
-              Billing history appears after the first charge.
+              No billing history yet.
             </div>
           ) : (
             <div
@@ -2211,13 +2345,9 @@ function CheckoutContent({
     ? selectedDisplayPrice * (1 - couponApplied.discount / 100)
     : selectedDisplayPrice;
 
-  // Next billing date (28th of next month)
-  const nextBill = (() => {
-    const d = new Date();
-    d.setMonth(d.getMonth() + 1);
-    d.setDate(28);
-    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-  })();
+  const nextBill =
+    formatDateLabel(data.nextBillingAt) ??
+    (selectedPlan && discountedPrice > 0 ? "After activation" : null);
 
   async function applyCoupon() {
     if (!coupon.trim()) return;
@@ -2507,17 +2637,19 @@ function CheckoutContent({
             {/* Billing fine print */}
             {selectedPlan && !isCurrentPlanSelected && discountedPrice > 0 && (
               <div style={{ fontSize: 11, color: tokens.mutedColor, marginTop: 10, lineHeight: 1.5 }}>
-                You will be billed ${discountedPrice.toFixed(2)}/{billingPeriod === "annual" ? "yr" : "mo"} every {billingPeriod === "annual" ? "year" : "month"} on the 28th unless you unsubscribe.
+                You will be billed ${discountedPrice.toFixed(2)}/{billingPeriod === "annual" ? "yr" : "mo"} every {billingPeriod === "annual" ? "year" : "month"} while the subscription remains active.
               </div>
             )}
           </div>
 
           {/* Next bill info */}
-          <div style={{ padding: "10px 20px", borderTop: "1px solid #f0f0f0", background: "#fafafa" }}>
-            <div style={{ fontSize: 11, color: tokens.mutedColor }}>
-              Next bill due <strong style={{ color: tokens.textColor }}>{nextBill}</strong>
+          {nextBill ? (
+            <div style={{ padding: "10px 20px", borderTop: "1px solid #f0f0f0", background: "#fafafa" }}>
+              <div style={{ fontSize: 11, color: tokens.mutedColor }}>
+                Next bill due <strong style={{ color: tokens.textColor }}>{nextBill}</strong>
+              </div>
             </div>
-          </div>
+          ) : null}
         </div>
       </div>
     </div>
