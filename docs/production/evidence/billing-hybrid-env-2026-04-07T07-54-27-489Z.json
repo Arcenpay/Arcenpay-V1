@@ -1,0 +1,72 @@
+{
+  "mode": "env",
+  "label": "2026-04-07T07-54-27-489Z",
+  "startedAt": "2026-04-07T07:54:27.491Z",
+  "environmentFiles": {
+    "root": "/Users/aditya/Coding/arcenpay/.claude/worktrees/fervent-buck/.env",
+    "dashboard": "/Users/aditya/Coding/arcenpay/.claude/worktrees/fervent-buck/apps/arcen-dashboard/.env",
+    "facilitator": "/Users/aditya/Coding/arcenpay/.claude/worktrees/fervent-buck/apps/facilitator/.env",
+    "demo": "/Users/aditya/Coding/arcenpay/.claude/worktrees/fervent-buck/apps/arcen-demo/.env.local"
+  },
+  "envAlignment": {
+    "ok": true,
+    "checks": [
+      {
+        "name": "chain_id_alignment",
+        "ok": true,
+        "actual": "11155111",
+        "expected": "11155111"
+      },
+      {
+        "name": "dashboard_url_demo_alignment",
+        "ok": true,
+        "actual": "http://localhost:3000",
+        "expected": "http://localhost:3000"
+      },
+      {
+        "name": "dashboard_url_facilitator_alignment",
+        "ok": true,
+        "actual": "http://localhost:3000",
+        "expected": "http://localhost:3000"
+      },
+      {
+        "name": "facilitator_secret_alignment",
+        "ok": true,
+        "actual": "configured",
+        "expected": "configured + matching"
+      },
+      {
+        "name": "invoice_storage_configured",
+        "ok": true,
+        "actual": "/tmp/arcenpay/invoices (dev fallback)",
+        "expected": "filesystem path",
+        "note": "Using dashboard development fallback."
+      },
+      {
+        "name": "invoice_signing_secret_configured",
+        "ok": true,
+        "actual": "development fallback via SIWE_JWT_SECRET",
+        "expected": "signing secret"
+      },
+      {
+        "name": "demo_api_key_present",
+        "ok": true,
+        "actual": "configured",
+        "expected": "configured"
+      },
+      {
+        "name": "demo_component_id_present",
+        "ok": true,
+        "actual": "cmna8ozni000j93v0goitab4m",
+        "expected": "component id"
+      },
+      {
+        "name": "service_url_defaults",
+        "ok": true,
+        "actual": "{\"dashboardUrl\":\"http://localhost:3000\",\"facilitatorUrl\":\"http://localhost:3402\",\"demoUrl\":\"http://localhost:3001\"}",
+        "expected": "non-empty URLs"
+      }
+    ]
+  },
+  "completedAt": "2026-04-07T07:54:27.491Z"
+}

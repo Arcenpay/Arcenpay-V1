@@ -8,6 +8,7 @@ import {
   createPublicClient,
   encodeFunctionData,
   http,
+  parseEventLogs,
   verifyTypedData,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
@@ -21,9 +22,15 @@ export const maxDuration = 60;
 
 // Request schema for EIP-712 signed plan registration
 const RegisterOnChainSchema = z.object({
-  signature: z.string().regex(/^0x[0-9a-fA-F]+$/).optional(),
+  signature: z
+    .string()
+    .regex(/^0x[0-9a-fA-F]+$/)
+    .optional(),
   deadline: z.number().int().positive().optional(),
-  userAddress: z.string().regex(/^0x[0-9a-fA-F]{40}$/).optional(),
+  userAddress: z
+    .string()
+    .regex(/^0x[0-9a-fA-F]{40}$/)
+    .optional(),
 });
 
 // EIP-712 domain and types matching the PlanFactory contract
@@ -164,7 +171,8 @@ export async function POST(
   const managedProviderAccount = managedProviderKey
     ? privateKeyToAccount(managedProviderKey)
     : null;
-  const providerAddress = managedProviderAccount?.address ?? userAddress ?? null;
+  const providerAddress =
+    managedProviderAccount?.address ?? userAddress ?? null;
   const requiresUserSignature = !managedProviderAccount;
 
   if (requiresUserSignature) {
@@ -216,7 +224,10 @@ export async function POST(
       data: { chainSyncStatus: "NOT_APPLICABLE" },
     });
     return NextResponse.json(
-      { error: "Free plans cannot be registered on-chain. The PlanFactory contract requires price > 0. Free plan access is managed off-chain." },
+      {
+        error:
+          "Free plans cannot be registered on-chain. The PlanFactory contract requires price > 0. Free plan access is managed off-chain.",
+      },
       { status: 400 },
     );
   }
@@ -485,6 +496,8 @@ export async function POST(
   }
 
   // Wait for on-chain confirmation (up to 45 s)
+  let confirmedOnChain = false;
+  let decodedOnChainPlanId: string | null = null;
   try {
     const receipt = await publicClient.waitForTransactionReceipt({
       hash: txHash,
@@ -505,17 +518,57 @@ export async function POST(
         { status: 500 },
       );
     }
+    confirmedOnChain = true;
+
+    const planCreatedLogs = parseEventLogs({
+      abi: PlanFactoryABI,
+      logs: receipt.logs,
+      eventName: "PlanCreated",
+      strict: false,
+    });
+
+    const latestPlanCreatedLog = [...planCreatedLogs].reverse().find((log) => {
+      const provider = (log as { args?: { provider?: string } }).args?.provider;
+      return (
+        typeof provider === "string" &&
+        provider.toLowerCase() === providerAddress.toLowerCase()
+      );
+    });
+
+    const parsedPlanId = (
+      latestPlanCreatedLog as { args?: { planId?: bigint } } | undefined
+    )?.args?.planId;
+
+    if (typeof parsedPlanId === "bigint") {
+      decodedOnChainPlanId = parsedPlanId.toString();
+    }
+
+    if (!decodedOnChainPlanId) {
+      const providerPlans = (await publicClient.readContract({
+        address: planFactoryAddress,
+        abi: PlanFactoryABI,
+        functionName: "getProviderPlans",
+        args: [providerAddress as `0x${string}`],
+      })) as bigint[];
+      const latestProviderPlan = providerPlans.at(-1);
+      if (typeof latestProviderPlan === "bigint") {
+        decodedOnChainPlanId = latestProviderPlan.toString();
+      }
+    }
   } catch {
-    // Confirmation timed out — tx was submitted, mark SYNCED optimistically
+    // Confirmation timed out or receipt fetch failed — tx was submitted.
   }
 
   const updatedPlan = await db.catalogPlan.update({
     where: { id: planId },
     data: {
-      chainSyncStatus: "SYNCED",
+      chainSyncStatus:
+        confirmedOnChain && decodedOnChainPlanId ? "SYNCED" : "PENDING",
       chainTxHash: txHash,
       chainSyncError: null,
-      chainSyncedAt: new Date(),
+      chainSyncedAt:
+        confirmedOnChain && decodedOnChainPlanId ? new Date() : null,
+      ...(decodedOnChainPlanId ? { onChainPlanId: decodedOnChainPlanId } : {}),
     },
   });
 
@@ -524,20 +577,26 @@ export async function POST(
     teamId: auth.team.teamId,
     userId: auth.team.userId,
     walletAddress: auth.team.walletAddress,
-    action: "catalog.plan.chain_synced",
+    action: decodedOnChainPlanId
+      ? "catalog.plan.chain_synced"
+      : "catalog.plan.chain_sync_pending",
     resourceType: "CatalogPlan",
     resourceId: planId,
     metadata: {
       txHash,
+      onChainPlanId: decodedOnChainPlanId,
       relayer: managedProviderAccount?.address ?? "meta-tx relayer",
       planOwner: providerAddress,
-      registrationMode: managedProviderAccount ? "managed_provider" : "signed_meta_tx",
+      registrationMode: managedProviderAccount
+        ? "managed_provider"
+        : "signed_meta_tx",
     },
   });
 
   return NextResponse.json({
     ok: true,
     txHash,
+    onChainPlanId: decodedOnChainPlanId,
     plan: updatedPlan,
     planOwner: providerAddress,
     signingRequired: !managedProviderAccount,

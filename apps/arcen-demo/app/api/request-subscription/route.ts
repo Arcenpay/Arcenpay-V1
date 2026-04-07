@@ -63,13 +63,18 @@ export async function POST(req: NextRequest) {
     };
 
     if (!response.ok) {
-      throw new Error(result.error ?? "Activation request failed");
+      return NextResponse.json(
+        { error: result.error ?? "Activation request failed" },
+        { status: response.status },
+      );
     }
 
     return NextResponse.json(result.data ?? result);
   } catch (error) {
     const message =
-      error instanceof Error ? error.message : "Failed to request subscription activation";
+      error instanceof Error
+        ? error.message
+        : "Failed to request subscription activation";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

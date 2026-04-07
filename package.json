@@ -16,7 +16,11 @@
     "lint": "turbo run lint",
     "clean": "turbo run clean",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
-    "tableland:create": "npx tsx scripts/create-tableland-table.ts"
+    "tableland:create": "npx tsx scripts/create-tableland-table.ts",
+    "verify:billing:baseline": "npx tsx scripts/verify-billing-hybrid.ts baseline",
+    "verify:billing:env": "npx tsx scripts/verify-billing-hybrid.ts env",
+    "verify:billing:live": "npx tsx scripts/verify-billing-hybrid.ts live",
+    "verify:billing:all": "npx tsx scripts/verify-billing-hybrid.ts all"
   },
   "devDependencies": {
     "turbo": "^2.4.0",

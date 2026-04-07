@@ -43,13 +43,19 @@ type DemoConsumeInput = {
 
 export interface DemoArcenClient {
   identify(input: DemoIdentifyInput): Promise<IdentifyResult>;
-  checkEntitlement(featureKey: string, company: DemoCompanyKeys): Promise<EntitlementResult>;
+  checkEntitlement(
+    featureKey: string,
+    company: DemoCompanyKeys,
+  ): Promise<EntitlementResult>;
   checkFlag(featureKey: string, company: DemoCompanyKeys): Promise<FlagResult>;
   track(input: DemoTrackInput): Promise<void>;
-  consumeEntitlement(input: DemoConsumeInput): Promise<ConsumeEntitlementResult>;
+  consumeEntitlement(
+    input: DemoConsumeInput,
+  ): Promise<ConsumeEntitlementResult>;
 }
 
 let _client: DemoArcenClient | null = null;
+const DEFAULT_DEMO_COMPANY_ID = "arcen-demo-company";
 
 export function getArcenClient(): DemoArcenClient {
   if (_client) return _client;
@@ -70,12 +76,17 @@ export function getArcenClient(): DemoArcenClient {
     identify: (input) => rawClient.identify(input as never),
     checkEntitlement: (featureKey, company) =>
       rawClient.checkEntitlement(featureKey, company as never),
-    checkFlag: (featureKey, company) => rawClient.checkFlag(featureKey, company as never),
+    checkFlag: (featureKey, company) =>
+      rawClient.checkFlag(featureKey, company as never),
     track: (input) => rawClient.track(input as never),
     consumeEntitlement: (input) =>
-      (rawClient as ArcenClient & {
-        consumeEntitlement(payload: DemoConsumeInput): Promise<ConsumeEntitlementResult>;
-      }).consumeEntitlement(input),
+      (
+        rawClient as ArcenClient & {
+          consumeEntitlement(
+            payload: DemoConsumeInput,
+          ): Promise<ConsumeEntitlementResult>;
+        }
+      ).consumeEntitlement(input),
   };
   _client = client;
 
@@ -85,8 +96,10 @@ export function getArcenClient(): DemoArcenClient {
 /** The company wallet used by this demo — simulates a logged-in customer */
 export function getDemoCompanyKeys() {
   return {
-    wallet: process.env.DEMO_COMPANY_WALLET ?? "0x0000000000000000000000000000000000000001",
-    id: process.env.DEMO_COMPANY_ID ?? undefined,
+    wallet:
+      process.env.DEMO_COMPANY_WALLET ??
+      "0x0000000000000000000000000000000000000001",
+    id: process.env.DEMO_COMPANY_ID ?? DEFAULT_DEMO_COMPANY_ID,
   };
 }
 
@@ -95,19 +108,13 @@ export function getDemoCompanyIdentity() {
 
   return {
     ...companyKeys,
-    name:
-      process.env.DEMO_COMPANY_NAME ??
-      process.env.DEMO_COMPANY_ID ??
-      "Demo Company",
+    name: process.env.DEMO_COMPANY_NAME ?? companyKeys.id ?? "Demo Company",
   };
 }
 
 export function getDemoUserIdentity() {
   const companyKeys = getDemoCompanyKeys();
-  const userId =
-    process.env.DEMO_USER_ID ??
-    process.env.DEMO_COMPANY_ID ??
-    "demo-user";
+  const userId = process.env.DEMO_USER_ID ?? companyKeys.id ?? "demo-user";
 
   return {
     id: userId,
@@ -125,10 +132,9 @@ export async function ensureDemoIdentity(): Promise<void> {
     );
   }
 
-  const baseUrl = (process.env.ARCENPAY_BASE_URL ?? "https://dashboard.arcenpay.xyz").replace(
-    /\/$/,
-    "",
-  );
+  const baseUrl = (
+    process.env.ARCENPAY_BASE_URL ?? "https://dashboard.arcenpay.xyz"
+  ).replace(/\/$/, "");
 
   const response = await fetch(`${baseUrl}/api/v1/events`, {
     method: "POST",
@@ -144,7 +150,12 @@ export async function ensureDemoIdentity(): Promise<void> {
   });
 
   if (!response.ok) {
-    const body = (await response.json().catch(() => null)) as { error?: string } | null;
-    throw new Error(body?.error ?? `Failed to identify demo company/user (${response.status})`);
+    const body = (await response.json().catch(() => null)) as {
+      error?: string;
+    } | null;
+    throw new Error(
+      body?.error ??
+        `Failed to identify demo company/user (${response.status})`,
+    );
   }
 }

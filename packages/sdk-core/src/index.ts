@@ -44,6 +44,7 @@ export type {
   ComponentDesign,
   ComponentEntitlement,
   ComponentUsageItem,
+  ComponentPlanEntitlement,
   ComponentPlanSummary,
   ComponentInvoiceSummary,
   ComponentPaymentMethod,
@@ -61,7 +62,7 @@ export type {
   EntitlementResult,
   ConsumeEntitlementResult,
   IdentifyResult,
-} from './types';
+} from "./types";
 
 // Chain configs
 export {
@@ -71,11 +72,11 @@ export {
   SUPPORTED_CHAINS,
   TOKENS,
   DEFAULT_CHAIN_ID,
-} from './chains';
-export type { SupportedChainId } from './chains';
+} from "./chains";
+export type { SupportedChainId } from "./chains";
 
 // Contract addresses
-export { getContractAddresses, setContractAddresses } from './addresses';
+export { getContractAddresses, setContractAddresses } from "./addresses";
 export {
   ENVIRONMENT_MANIFEST_VERSION,
   ZERO_ADDRESS,
@@ -83,8 +84,8 @@ export {
   getEnvironmentManifest,
   validateChainEnvironment,
   isZeroAddress,
-} from './environment';
-export type { ValidateChainEnvironmentOptions } from './environment';
+} from "./environment";
+export type { ValidateChainEnvironmentOptions } from "./environment";
 
 // ABIs
 export {
@@ -96,7 +97,7 @@ export {
   FeeCollectorABI,
   MirrorRegistryABI,
   YieldSessionVaultABI,
-} from './abis';
+} from "./abis";
 
 // Constants
 export {
@@ -110,7 +111,7 @@ export {
   X402_VERSION,
   X402_SCHEME,
   INTERFACE_VERSIONS,
-} from './constants';
+} from "./constants";
 
 // Error mapping
 export {
@@ -121,12 +122,12 @@ export {
   ArcenPayError,
   ContractError,
   AuthError,
-} from './errors';
-export type { MEAPErrorCode, ArcenPayErrorCode } from './errors';
+} from "./errors";
+export type { MEAPErrorCode, ArcenPayErrorCode } from "./errors";
 
 // Smart Account helpers (ZeroDev ERC-7579)
-export { createSmartAccount } from './accounts';
-export type { SmartAccountInput, SmartAccountResult } from './accounts';
+export { createSmartAccount } from "./accounts";
+export type { SmartAccountInput, SmartAccountResult } from "./accounts";
 
 // Chain helpers
-export { getChain, getBlockExplorerUrl } from './chains';
+export { getChain, getBlockExplorerUrl } from "./chains";

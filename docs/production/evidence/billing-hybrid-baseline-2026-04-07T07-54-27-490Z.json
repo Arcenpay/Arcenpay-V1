@@ -1,0 +1,66 @@
+{
+  "mode": "baseline",
+  "label": "2026-04-07T07-54-27-490Z",
+  "startedAt": "2026-04-07T07:54:27.491Z",
+  "environmentFiles": {
+    "root": "/Users/aditya/Coding/arcenpay/.claude/worktrees/fervent-buck/.env",
+    "dashboard": "/Users/aditya/Coding/arcenpay/.claude/worktrees/fervent-buck/apps/arcen-dashboard/.env",
+    "facilitator": "/Users/aditya/Coding/arcenpay/.claude/worktrees/fervent-buck/apps/facilitator/.env",
+    "demo": "/Users/aditya/Coding/arcenpay/.claude/worktrees/fervent-buck/apps/arcen-demo/.env.local"
+  },
+  "baseline": {
+    "ok": true,
+    "results": [
+      {
+        "name": "arcen-dashboard",
+        "cwd": "/Users/aditya/Coding/arcenpay/.claude/worktrees/fervent-buck/apps/arcen-dashboard",
+        "command": [
+          "npm",
+          "test",
+          "--",
+          "invoice-documents.test.ts",
+          "security.test.ts",
+          "app/api/internal/companies/sync-subscription/__tests__/route.test.ts"
+        ],
+        "exitCode": 0,
+        "durationMs": 1012,
+        "stdout": "\n> @arcenpay/dashboard@0.1.0 test\n> vitest run invoice-documents.test.ts security.test.ts app/api/internal/companies/sync-subscription/__tests__/route.test.ts\n\n\n RUN  v4.0.18 /Users/aditya/Coding/arcenpay/.claude/worktrees/fervent-buck/apps/arcen-dashboard\n\n ✓ app/api/internal/companies/sync-subscription/__tests__/route.test.ts (5 tests) 9ms\n ✓ lib/security.test.ts (21 tests) 291ms\n ✓ lib/invoice-documents.test.ts (2 tests) 2ms\n\n Test Files  3 passed (3)\n      Tests  28 passed (28)\n   Start at  13:24:27\n   Duration  620ms (transform 307ms, setup 0ms, import 595ms, tests 302ms, environment 0ms)\n\n",
+        "stderr": "stderr | lib/invoice-documents.test.ts\n[config] NEXT_PUBLIC_GRAPH_URL is not set. Subgraph queries will fail.\n\n",
+        "ok": true
+      },
+      {
+        "name": "sdk-node",
+        "cwd": "/Users/aditya/Coding/arcenpay/.claude/worktrees/fervent-buck/packages/sdk-node",
+        "command": [
+          "npm",
+          "test",
+          "--",
+          "client.test.ts"
+        ],
+        "exitCode": 0,
+        "durationMs": 571,
+        "stdout": "\n> @arcenpay/node@0.0.1 test\n> vitest run client.test.ts\n\n\n RUN  v4.0.18 /Users/aditya/Coding/arcenpay/.claude/worktrees/fervent-buck/packages/sdk-node\n\n ✓ src/__tests__/client.test.ts (7 tests) 7ms\n\n Test Files  1 passed (1)\n      Tests  7 passed (7)\n   Start at  13:24:27\n   Duration  173ms (transform 42ms, setup 0ms, import 54ms, tests 7ms, environment 0ms)\n\n",
+        "stderr": "",
+        "ok": true
+      },
+      {
+        "name": "sdk-react",
+        "cwd": "/Users/aditya/Coding/arcenpay/.claude/worktrees/fervent-buck/packages/sdk-react",
+        "command": [
+          "npm",
+          "test",
+          "--",
+          "checkout-modal.test.ts",
+          "api-utils.test.ts",
+          "error-codes.test.ts"
+        ],
+        "exitCode": 0,
+        "durationMs": 1826,
+        "stdout": "\n> @arcenpay/react@0.0.1 test\n> vitest run checkout-modal.test.ts api-utils.test.ts error-codes.test.ts\n\n\n RUN  v4.0.18 /Users/aditya/Coding/arcenpay/.claude/worktrees/fervent-buck/packages/sdk-react\n\n ✓ test/checkout-modal.test.ts (2 tests) 1ms\n ✓ test/api-utils.test.ts (8 tests) 2ms\n ✓ test/error-codes.test.ts (3 tests) 2ms\n\n Test Files  3 passed (3)\n      Tests  13 passed (13)\n   Start at  13:24:27\n   Duration  1.42s (transform 307ms, setup 0ms, import 3.91s, tests 5ms, environment 0ms)\n\n",
+        "stderr": "",
+        "ok": true
+      }
+    ]
+  },
+  "completedAt": "2026-04-07T07:54:29.321Z"
+}

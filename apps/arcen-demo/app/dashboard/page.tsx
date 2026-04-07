@@ -20,11 +20,66 @@ interface CompanyData {
     } | null;
   };
   flags: {
-    scan: (FlagResult & { allocation?: number | null; usage?: number; exceeded?: boolean }) | null;
-    "export-pdf": (FlagResult & { allocation?: number | null; usage?: number; exceeded?: boolean }) | null;
-    "api-access": (FlagResult & { allocation?: number | null; usage?: number; exceeded?: boolean }) | null;
+    scan:
+      | (FlagResult & {
+          allocation?: number | null;
+          usage?: number;
+          exceeded?: boolean;
+        })
+      | null;
+    "export-pdf":
+      | (FlagResult & {
+          allocation?: number | null;
+          usage?: number;
+          exceeded?: boolean;
+        })
+      | null;
+    "api-access":
+      | (FlagResult & {
+          allocation?: number | null;
+          usage?: number;
+          exceeded?: boolean;
+        })
+      | null;
   };
 }
+
+type CompanyApiResponse =
+  | CompanyData
+  | {
+      error?: string;
+      companyKeys?: { wallet?: string; id?: string };
+      usage?: {
+        scan?: {
+          allocation?: number | null;
+          usage?: number;
+          exceeded?: boolean;
+        } | null;
+      };
+      flags?: {
+        scan?:
+          | (FlagResult & {
+              allocation?: number | null;
+              usage?: number;
+              exceeded?: boolean;
+            })
+          | null;
+        "export-pdf"?:
+          | (FlagResult & {
+              allocation?: number | null;
+              usage?: number;
+              exceeded?: boolean;
+            })
+          | null;
+        "api-access"?:
+          | (FlagResult & {
+              allocation?: number | null;
+              usage?: number;
+              exceeded?: boolean;
+            })
+          | null;
+      };
+    };
 
 export default function DashboardPage() {
   const [company, setCompany] = useState<CompanyData | null>(null);
@@ -37,10 +92,46 @@ export default function DashboardPage() {
     setLoading(true);
     try {
       const response = await fetch("/api/company", { cache: "no-store" });
-      const data = (await response.json()) as CompanyData;
-      setCompany(data);
+      const data = (await response.json()) as CompanyApiResponse;
+
+      if (!response.ok) {
+        setCompany(null);
+        return;
+      }
+
+      const wallet =
+        data && typeof data === "object" && "companyKeys" in data
+          ? data.companyKeys?.wallet
+          : undefined;
+
+      if (!wallet || typeof wallet !== "string") {
+        setCompany(null);
+        return;
+      }
+
+      setCompany({
+        companyKeys: {
+          wallet,
+          ...(data.companyKeys?.id ? { id: data.companyKeys.id } : {}),
+        },
+        usage: {
+          scan: data.usage?.scan
+            ? {
+                allocation: data.usage.scan.allocation ?? null,
+                usage: data.usage.scan.usage ?? 0,
+                exceeded: data.usage.scan.exceeded ?? false,
+              }
+            : null,
+        },
+        flags: {
+          scan: data.flags?.scan ?? null,
+          "export-pdf": data.flags?.["export-pdf"] ?? null,
+          "api-access": data.flags?.["api-access"] ?? null,
+        },
+      });
     } catch {
       // ignore demo fetch failures
+      setCompany(null);
     } finally {
       setLoading(false);
     }
@@ -51,8 +142,10 @@ export default function DashboardPage() {
   }, []);
 
   async function handleScan() {
-    if (company?.flags.scan?.value === false) {
-      setTrackStatus("Scan limit reached. Upgrade or wait for the next usage window.");
+    if (company?.flags?.scan?.value === false) {
+      setTrackStatus(
+        "Scan limit reached. Upgrade or wait for the next usage window.",
+      );
       return;
     }
 
@@ -98,8 +191,10 @@ export default function DashboardPage() {
   }
 
   const wallet = company?.companyKeys?.wallet;
-  const walletShort = wallet ? `${wallet.slice(0, 10)}…${wallet.slice(-6)}` : "—";
-  const scanUsage = company?.usage.scan;
+  const walletShort = wallet
+    ? `${wallet.slice(0, 10)}…${wallet.slice(-6)}`
+    : "—";
+  const scanUsage = company?.usage?.scan;
 
   return (
     <div className={styles.root}>
@@ -107,7 +202,9 @@ export default function DashboardPage() {
       <div className={styles.header}>
         <div>
           <h1 className={styles.title}>Overview</h1>
-          <p className={styles.subtitle}>Welcome back. Here&apos;s your ScanBot dashboard.</p>
+          <p className={styles.subtitle}>
+            Welcome back. Here&apos;s your ScanBot dashboard.
+          </p>
         </div>
         <Link href="/dashboard/billing" className={styles.btnPrimary}>
           Manage Plan
@@ -120,8 +217,8 @@ export default function DashboardPage() {
           <span className={styles.configIcon}>⚠</span>
           <div>
             <strong>Connect ArcenPay to see live data.</strong> Copy{" "}
-            <code>.env.local.example</code> → <code>.env.local</code> and set your{" "}
-            <code>ARCENPAY_API_KEY</code>.
+            <code>.env.local.example</code> → <code>.env.local</code> and set
+            your <code>ARCENPAY_API_KEY</code>.
           </div>
           <Link href="/dashboard/settings" className={styles.configLink}>
             Settings →
@@ -145,8 +242,12 @@ export default function DashboardPage() {
             <div className={styles.statLabel}>Scans this session</div>
             <span className={styles.statIcon}>◈</span>
           </div>
-          <div className={`${styles.statValue} ${styles.accent}`}>{sessionScanCount}</div>
-          <div className={styles.statNote}>Local actions in this browser tab</div>
+          <div className={`${styles.statValue} ${styles.accent}`}>
+            {sessionScanCount}
+          </div>
+          <div className={styles.statNote}>
+            Local actions in this browser tab
+          </div>
         </div>
         <div className={styles.statCard}>
           <div className={styles.statHeader}>
@@ -154,12 +255,13 @@ export default function DashboardPage() {
             <span className={styles.statIcon}>◎</span>
           </div>
           <div className={`${styles.statValue} ${styles.accent}`}>
-            {loading ? "—" : scanUsage?.usage ?? 0}
+            {loading ? "—" : (scanUsage?.usage ?? 0)}
           </div>
           <div className={styles.statNote}>
             {loading
               ? "Loading usage…"
-              : scanUsage?.allocation !== null && scanUsage?.allocation !== undefined
+              : scanUsage?.allocation !== null &&
+                  scanUsage?.allocation !== undefined
                 ? `${scanUsage.usage} / ${scanUsage.allocation} used`
                 : "Unlimited or not configured"}
           </div>
@@ -169,11 +271,18 @@ export default function DashboardPage() {
             <div className={styles.statLabel}>Scan feature</div>
             <span className={styles.statIcon}>🚩</span>
           </div>
-          <div className={`${styles.statValue} ${company?.flags?.scan?.value ? styles.green : styles.muted}`}>
-            {loading ? "—" : company?.flags?.scan?.value ? "Enabled" : "Disabled"}
+          <div
+            className={`${styles.statValue} ${company?.flags?.scan?.value ? styles.green : styles.muted}`}
+          >
+            {loading
+              ? "—"
+              : company?.flags?.scan?.value
+                ? "Enabled"
+                : "Disabled"}
           </div>
           <div className={styles.statNote}>
-            {company?.flags?.scan?.reason ?? "Via ArcenPay entitlement evaluation"}
+            {company?.flags?.scan?.reason ??
+              "Via ArcenPay entitlement evaluation"}
             {scanUsage?.exceeded ? " · limit reached" : ""}
           </div>
         </div>
@@ -183,13 +292,14 @@ export default function DashboardPage() {
       <div className={styles.section}>
         <h2 className={styles.sectionTitle}>Try it live</h2>
         <p className={styles.sectionDesc}>
-          Calls <code>/api/consume</code> → <code>ArcenClient.consumeEntitlement({"scan"})</code> on your ArcenPay dashboard.
-          Open the Events stream to see it appear in real time.
+          Calls <code>/api/consume</code> →{" "}
+          <code>ArcenClient.consumeEntitlement({"scan"})</code> on your ArcenPay
+          dashboard. Open the Events stream to see it appear in real time.
         </p>
         <div className={styles.demoArea}>
           <button
             onClick={handleScan}
-            disabled={tracking || company?.flags.scan?.value === false}
+            disabled={tracking || company?.flags?.scan?.value === false}
             className={styles.btnScan}
           >
             {tracking ? "⏳ Scanning…" : "◈ Run Scan"}
@@ -204,8 +314,8 @@ export default function DashboardPage() {
       <div className={styles.section}>
         <h2 className={styles.sectionTitle}>Feature gates</h2>
         <p className={styles.sectionDesc}>
-          Features below are gated by ArcenPay flag evaluation, checked server-side via{" "}
-          <code>ArcenClient.checkFlag()</code>.
+          Features below are gated by ArcenPay flag evaluation, checked
+          server-side via <code>ArcenClient.checkFlag()</code>.
         </p>
         <div className={styles.gateGrid}>
           <FeatureGateCard
@@ -236,8 +346,8 @@ export default function DashboardPage() {
       <div className={styles.section}>
         <h2 className={styles.sectionTitle}>Integration</h2>
         <p className={styles.sectionDesc}>
-          How ArcenPay is wired in this demo. See <code>lib/arcen-client.ts</code> and{" "}
-          <code>app/api/</code>.
+          How ArcenPay is wired in this demo. See{" "}
+          <code>lib/arcen-client.ts</code> and <code>app/api/</code>.
         </p>
         <CodeBlock
           title="app/api/track/route.ts — server-side event tracking"
@@ -280,7 +390,11 @@ const { token } = await fetch("/api/access-token", {
 }
 
 function FeatureGateCard({
-  name, flagKey, enabled, loading, description,
+  name,
+  flagKey,
+  enabled,
+  loading,
+  description,
 }: {
   name: string;
   flagKey: string;
@@ -289,14 +403,18 @@ function FeatureGateCard({
   description: string;
 }) {
   return (
-    <div className={`${styles.gateCard} ${enabled === false ? styles.gateDisabled : ""}`}>
+    <div
+      className={`${styles.gateCard} ${enabled === false ? styles.gateDisabled : ""}`}
+    >
       <div className={styles.gateHeader}>
         <div className={styles.gateName}>{name}</div>
         <div
           className={`${styles.gateBadge} ${
-            loading ? styles.gateBadgeLoading
-            : enabled ? styles.gateBadgeOn
-            : styles.gateBadgeOff
+            loading
+              ? styles.gateBadgeLoading
+              : enabled
+                ? styles.gateBadgeOn
+                : styles.gateBadgeOff
           }`}
         >
           {loading ? "…" : enabled ? "✓ Enabled" : "✗ Disabled"}
@@ -317,7 +435,9 @@ function CodeBlock({ title, code }: { title: string; code: string }) {
   return (
     <div className={styles.codeBlock}>
       <div className={styles.codeTitle}>{title}</div>
-      <pre className={styles.codePre}><code>{code}</code></pre>
+      <pre className={styles.codePre}>
+        <code>{code}</code>
+      </pre>
     </div>
   );
 }

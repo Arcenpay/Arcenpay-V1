@@ -1,0 +1,7 @@
+{
+  "ok": false,
+  "mode": "live",
+  "label": "local-blocker-check",
+  "failedAt": "2026-04-07T07:56:23.814Z",
+  "error": "Error: No active published paid plans with on-chain IDs were found for the API key team.\n    at runLiveVerification (/Users/aditya/Coding/arcenpay/.claude/worktrees/fervent-buck/scripts/verify-billing-hybrid.ts:500:13)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async main (/Users/aditya/Coding/arcenpay/.claude/worktrees/fervent-buck/scripts/verify-billing-hybrid.ts:1060:20)"
+}

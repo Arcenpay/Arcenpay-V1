@@ -9,6 +9,47 @@ import { NextRequest, NextResponse } from "next/server";
 import { createHash } from "crypto";
 import { db } from "@/lib/db";
 import { deliverWebhook } from "@/lib/deliver-webhook";
+import { resolveEntitlementResults } from "@/lib/entitlements";
+import { toPrismaJson } from "@/lib/prisma-json";
+
+type SubscriptionTransition = {
+  mode: "period_end_downgrade" | "cancel_at_period_end";
+  targetPlanId: string | null;
+  targetPlanName: string | null;
+  previousPlanId: string | null;
+  requestedAt: string;
+  effectiveAt: string | null;
+  source: "self_service";
+};
+
+function asRecord(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return value as Record<string, unknown>;
+}
+
+function readTargetNumericLimitsFromPlanMetadata(
+  metadata: unknown,
+): Map<string, number> {
+  const limits = new Map<string, number>();
+  const data = asRecord(metadata);
+  const rawEntitlements = data.entitlements;
+  if (!Array.isArray(rawEntitlements)) return limits;
+
+  for (const entry of rawEntitlements) {
+    const item = asRecord(entry);
+    if (item.enabled !== true) continue;
+    if (item.type !== "NUMERIC") continue;
+
+    const featureKey =
+      typeof item.featureKey === "string" ? item.featureKey : null;
+    const limit = Number(item.value);
+
+    if (!featureKey || !Number.isFinite(limit) || limit < 0) continue;
+    limits.set(featureKey, limit);
+  }
+
+  return limits;
+}
 
 function verifyAccessToken(token: string, secret: string) {
   try {
@@ -17,12 +58,20 @@ function verifyAccessToken(token: string, secret: string) {
     const [header, body, sig] = parts;
     const unsigned = `${header}.${body}`;
     const { createHmac } = require("crypto") as typeof import("crypto");
-    const expectedSig = createHmac("sha256", secret).update(unsigned).digest("base64url");
+    const expectedSig = createHmac("sha256", secret)
+      .update(unsigned)
+      .digest("base64url");
     if (sig !== expectedSig) return { valid: false };
     const payload = JSON.parse(Buffer.from(body, "base64url").toString());
     if (payload.exp < Math.floor(Date.now() / 1000)) return { valid: false };
-    return { valid: true, teamId: payload.teamId as string, companyId: payload.companyId as string | null };
-  } catch { return { valid: false }; }
+    return {
+      valid: true,
+      teamId: payload.teamId as string,
+      companyId: payload.companyId as string | null,
+    };
+  } catch {
+    return { valid: false };
+  }
 }
 
 function corsHeaders() {
@@ -39,45 +88,259 @@ export async function OPTIONS() {
 
 export async function POST(req: NextRequest) {
   const token = req.headers.get("authorization")?.slice(7);
-  if (!token) return NextResponse.json({ error: "Access token required" }, { status: 401, headers: corsHeaders() });
+  if (!token)
+    return NextResponse.json(
+      { error: "Access token required" },
+      { status: 401, headers: corsHeaders() },
+    );
 
   const secret = process.env.ACCESS_TOKEN_SECRET;
-  if (!secret) return NextResponse.json({ error: "Server configuration error" }, { status: 500, headers: corsHeaders() });
+  if (!secret)
+    return NextResponse.json(
+      { error: "Server configuration error" },
+      { status: 500, headers: corsHeaders() },
+    );
 
   const decoded = verifyAccessToken(token, secret);
-  if (!decoded.valid || !decoded.teamId) return NextResponse.json({ error: "Invalid or expired token" }, { status: 401, headers: corsHeaders() });
+  if (!decoded.valid || !decoded.teamId)
+    return NextResponse.json(
+      { error: "Invalid or expired token" },
+      { status: 401, headers: corsHeaders() },
+    );
 
   // Check revocation
   const tokenHash = createHash("sha256").update(token).digest("hex");
-  const stored = await db.embedAccessToken.findUnique({ where: { tokenHash }, select: { expiresAt: true } });
-  if (!stored || stored.expiresAt < new Date()) return NextResponse.json({ error: "Token expired" }, { status: 401, headers: corsHeaders() });
+  const stored = await db.embedAccessToken.findUnique({
+    where: { tokenHash },
+    select: { expiresAt: true },
+  });
+  if (!stored || stored.expiresAt < new Date())
+    return NextResponse.json(
+      { error: "Token expired" },
+      { status: 401, headers: corsHeaders() },
+    );
 
   const { teamId, companyId } = decoded;
-  if (!companyId) return NextResponse.json({ error: "No company associated with this token" }, { status: 400, headers: corsHeaders() });
+  if (!companyId)
+    return NextResponse.json(
+      { error: "No company associated with this token" },
+      { status: 400, headers: corsHeaders() },
+    );
 
-  let body: { planId?: string; billingPeriod?: string; txHash?: string };
-  try { body = await req.json(); } catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400, headers: corsHeaders() }); }
+  let body: {
+    planId?: string;
+    billingPeriod?: string;
+    txHash?: string;
+    scheduleAtPeriodEnd?: boolean;
+  };
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json(
+      { error: "Invalid JSON" },
+      { status: 400, headers: corsHeaders() },
+    );
+  }
 
-  const { planId, billingPeriod, txHash } = body;
-  if (!planId) return NextResponse.json({ error: "planId is required" }, { status: 400, headers: corsHeaders() });
+  const { planId, billingPeriod, txHash, scheduleAtPeriodEnd } = body;
+  if (!planId)
+    return NextResponse.json(
+      { error: "planId is required" },
+      { status: 400, headers: corsHeaders() },
+    );
 
   // Verify the plan belongs to this team and is published
   const plan = await db.catalogPlan.findFirst({
     where: { id: planId, teamId, status: "PUBLISHED", active: true },
-    select: { id: true, name: true, price: true, annualPrice: true },
+    select: {
+      id: true,
+      name: true,
+      price: true,
+      annualPrice: true,
+      metadata: true,
+    },
   });
-  if (!plan) return NextResponse.json({ error: "Plan not found or not published" }, { status: 404, headers: corsHeaders() });
+  if (!plan)
+    return NextResponse.json(
+      { error: "Plan not found or not published" },
+      { status: 404, headers: corsHeaders() },
+    );
 
-  // Fetch previous plan for webhook payload
-  const prevCompany = await db.arcenCompany.findUnique({
+  const company = await db.arcenCompany.findUnique({
     where: { id: companyId },
-    select: { activePlanId: true },
+    select: {
+      id: true,
+      activePlanId: true,
+      traits: true,
+      walletAddress: true,
+      email: true,
+    },
   });
+  if (!company) {
+    return NextResponse.json(
+      { error: "Company not found" },
+      { status: 404, headers: corsHeaders() },
+    );
+  }
+
+  const [currentPlan, catalogConfig] = await Promise.all([
+    company.activePlanId
+      ? db.catalogPlan.findFirst({
+          where: { id: company.activePlanId, teamId },
+          select: { id: true, name: true, price: true },
+        })
+      : Promise.resolve(null),
+    db.catalogConfig.findFirst({
+      where: { teamId },
+      orderBy: { updatedAt: "desc" },
+      select: {
+        downgradeImmediately: true,
+        preventDowngradeOverLimit: true,
+        disallowSelfServiceDowngrade: true,
+      },
+    }),
+  ]);
+
+  const previousPlanId = company.activePlanId;
+  if (previousPlanId === plan.id) {
+    return NextResponse.json(
+      {
+        data: {
+          success: true,
+          planId: plan.id,
+          planName: plan.name,
+          mode: "no_change",
+        },
+      },
+      { headers: corsHeaders() },
+    );
+  }
+
+  const currentPrice = Number(currentPlan?.price ?? 0);
+  const targetPrice = Number(plan.price);
+  const isDowngrade = !!currentPlan && targetPrice < currentPrice;
+  const shouldScheduleDowngrade =
+    isDowngrade &&
+    (scheduleAtPeriodEnd ?? !(catalogConfig?.downgradeImmediately ?? false));
+
+  if (isDowngrade && (catalogConfig?.disallowSelfServiceDowngrade ?? false)) {
+    return NextResponse.json(
+      {
+        error:
+          "Self-service downgrades are disabled for this billing catalog. Contact support.",
+      },
+      { status: 403, headers: corsHeaders() },
+    );
+  }
+
+  if (isDowngrade && (catalogConfig?.preventDowngradeOverLimit ?? true)) {
+    const targetNumericLimits = readTargetNumericLimitsFromPlanMetadata(
+      plan.metadata,
+    );
+
+    if (targetNumericLimits.size > 0) {
+      const entitlementResults = await resolveEntitlementResults({
+        teamId,
+        companyKeys: {
+          internalId: company.id,
+          wallet: company.walletAddress ?? undefined,
+          email: company.email ?? undefined,
+        },
+      });
+
+      const overages = entitlementResults.entitlements
+        .map((entitlement) => {
+          const limit = targetNumericLimits.get(entitlement.key);
+          if (typeof limit !== "number") return null;
+          const usage = entitlement.usage ?? 0;
+          if (usage <= limit) return null;
+
+          return {
+            featureKey: entitlement.key,
+            usage,
+            limit,
+          };
+        })
+        .filter(
+          (
+            item,
+          ): item is { featureKey: string; usage: number; limit: number } =>
+            !!item,
+        );
+
+      if (overages.length > 0) {
+        return NextResponse.json(
+          {
+            error:
+              "Downgrade blocked because current usage exceeds the selected plan limits.",
+            details: overages,
+          },
+          { status: 409, headers: corsHeaders() },
+        );
+      }
+    }
+  }
+
+  const currentTraits = asRecord(company.traits);
+
+  if (shouldScheduleDowngrade) {
+    const transition: SubscriptionTransition = {
+      mode: "period_end_downgrade",
+      targetPlanId: plan.id,
+      targetPlanName: plan.name,
+      previousPlanId: previousPlanId ?? null,
+      requestedAt: new Date().toISOString(),
+      effectiveAt: null,
+      source: "self_service",
+    };
+
+    await db.arcenCompany.update({
+      where: { id: companyId },
+      data: {
+        traits: toPrismaJson({
+          ...currentTraits,
+          subscriptionTransition: transition,
+        }),
+      },
+    });
+
+    deliverWebhook(teamId, "company.plan.changed", {
+      companyId,
+      planId,
+      planName: plan.name,
+      billingPeriod: billingPeriod ?? "monthly",
+      previousPlanId: previousPlanId ?? null,
+      mode: "period_end",
+      scheduled: true,
+      ...(txHash ? { txHash } : {}),
+    }).catch(() => {});
+
+    return NextResponse.json(
+      {
+        data: {
+          success: true,
+          scheduled: true,
+          mode: "period_end",
+          planId,
+          planName: plan.name,
+          previousPlanId: previousPlanId ?? null,
+          effectiveAt: null,
+        },
+      },
+      { headers: corsHeaders() },
+    );
+  }
+
+  const nextTraits = { ...currentTraits };
+  delete nextTraits.subscriptionTransition;
 
   // Update the company's active plan
   await db.arcenCompany.update({
     where: { id: companyId },
-    data: { activePlanId: planId },
+    data: {
+      activePlanId: planId,
+      traits: toPrismaJson(nextTraits),
+    },
   });
 
   // Fire outbound webhook (non-blocking)
@@ -86,9 +349,23 @@ export async function POST(req: NextRequest) {
     planId,
     planName: plan.name,
     billingPeriod: billingPeriod ?? "monthly",
-    previousPlanId: prevCompany?.activePlanId ?? null,
+    previousPlanId: previousPlanId ?? null,
+    mode: "immediate",
+    scheduled: false,
     ...(txHash ? { txHash } : {}),
   }).catch(() => {});
 
-  return NextResponse.json({ data: { success: true, planId, planName: plan.name } }, { headers: corsHeaders() });
+  return NextResponse.json(
+    {
+      data: {
+        success: true,
+        scheduled: false,
+        mode: "immediate",
+        planId,
+        planName: plan.name,
+        previousPlanId: previousPlanId ?? null,
+      },
+    },
+    { headers: corsHeaders() },
+  );
 }

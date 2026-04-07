@@ -17,11 +17,11 @@ export interface Plan {
   metadataURI: string;
 }
 
-export type PlanTier = 'starter' | 'pro' | 'enterprise' | string;
+export type PlanTier = "starter" | "pro" | "enterprise" | string;
 
 // --- Billing/Catalog Types ---
 
-export type EnvironmentMode = 'DEVELOPMENT' | 'PRODUCTION';
+export type EnvironmentMode = "DEVELOPMENT" | "PRODUCTION";
 
 export interface PaymentToken {
   symbol: string;
@@ -35,14 +35,14 @@ export interface BillingTemplate {
   name: string;
   slug: string;
   description?: string;
-  status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+  status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
   currentVersion: number;
 }
 
 export interface InvoiceSummary {
   id: string;
   number?: string | null;
-  status: 'DRAFT' | 'ISSUED' | 'PAID' | 'VOID' | 'OVERDUE';
+  status: "DRAFT" | "ISSUED" | "PAID" | "VOID" | "OVERDUE";
   currency: string;
   customerEmail?: string | null;
   customerWallet?: string | null;
@@ -57,7 +57,7 @@ export interface InvoiceSummary {
 export interface AuditEvent {
   id: string;
   createdAt: string;
-  actorType: 'USER' | 'API' | 'SYSTEM';
+  actorType: "USER" | "API" | "SYSTEM";
   actorUserId?: string | null;
   actorAddress?: string | null;
   action: string;
@@ -79,7 +79,7 @@ export interface Subscription {
 }
 
 export interface SubscriptionEvent {
-  type: 'minted' | 'renewed' | 'cancelled';
+  type: "minted" | "renewed" | "cancelled";
   tokenId: bigint;
   planId: bigint;
   timestamp: bigint;
@@ -180,7 +180,7 @@ export interface X402Response {
 }
 
 export interface X402PaymentOption {
-  scheme: 'exact' | 'streaming';
+  scheme: "exact" | "streaming";
   network: string;
   maxAmountRequired: string;
   resource: string;
@@ -198,20 +198,20 @@ export interface X402PaymentHeader {
 }
 
 export type X402RejectionReason =
-  | 'MISSING_PAYMENT_HEADER'
-  | 'INVALID_PAYMENT_HEADER_ENCODING'
-  | 'INVALID_PAYMENT_HEADER_FORMAT'
-  | 'MALFORMED_PAYMENT_PAYLOAD'
-  | 'RESOURCE_MISMATCH'
-  | 'PAYMENT_AMOUNT_TOO_LOW'
-  | 'PAYMENT_EXPIRED'
-  | 'NONCE_ALREADY_USED'
-  | 'INVALID_SIGNATURE'
-  | 'SIGNER_MISMATCH'
-  | 'INSUFFICIENT_SESSION_BALANCE'
-  | 'BALANCE_CHECK_FAILED'
-  | 'SETTLEMENT_FAILED'
-  | 'PAYMENT_PROCESSING_FAILED';
+  | "MISSING_PAYMENT_HEADER"
+  | "INVALID_PAYMENT_HEADER_ENCODING"
+  | "INVALID_PAYMENT_HEADER_FORMAT"
+  | "MALFORMED_PAYMENT_PAYLOAD"
+  | "RESOURCE_MISMATCH"
+  | "PAYMENT_AMOUNT_TOO_LOW"
+  | "PAYMENT_EXPIRED"
+  | "NONCE_ALREADY_USED"
+  | "INVALID_SIGNATURE"
+  | "SIGNER_MISMATCH"
+  | "INSUFFICIENT_SESSION_BALANCE"
+  | "BALANCE_CHECK_FAILED"
+  | "SETTLEMENT_FAILED"
+  | "PAYMENT_PROCESSING_FAILED";
 
 export interface X402VerifiedPaymentContext {
   verified: true;
@@ -338,6 +338,14 @@ export interface ComponentUsageItem {
   unitPlural?: string | null;
 }
 
+export interface ComponentPlanEntitlement {
+  featureName: string;
+  featureKey: string;
+  type: "BOOLEAN" | "NUMERIC" | "UNLIMITED";
+  value: boolean | number | null;
+  enabled: boolean;
+}
+
 export interface ComponentPlanSummary {
   id: string;
   name: string;
@@ -347,7 +355,12 @@ export interface ComponentPlanSummary {
   billingInterval: number;
   acceptedToken?: string;
   acceptedChainId?: number;
+  onChainPlanId?: string | null;
   description?: string;
+  metadata?: {
+    entitlements?: ComponentPlanEntitlement[];
+    [key: string]: unknown;
+  } | null;
 }
 
 export interface ComponentInvoiceSummary {
@@ -361,6 +374,7 @@ export interface ComponentInvoiceSummary {
   paidAt?: string | null;
   customerEmail?: string | null;
   customerWallet?: string | null;
+  downloadUrl?: string | null;
 }
 
 export interface ComponentPaymentMethod {
@@ -371,9 +385,16 @@ export interface ComponentPaymentMethod {
 
 export interface ComponentElement {
   type:
-    | 'planManager'    | 'meteredFeatures' | 'includedFeatures' | 'plansTable'
-    | 'nextBillDue'    | 'paymentMethod'   | 'invoices'         | 'unsubscribe'
-    | 'text'           | 'button'
+    | "planManager"
+    | "meteredFeatures"
+    | "includedFeatures"
+    | "plansTable"
+    | "nextBillDue"
+    | "paymentMethod"
+    | "invoices"
+    | "unsubscribe"
+    | "text"
+    | "button"
     | string;
   config?: Record<string, unknown>;
   // Flat props saved directly by the editor (heading, body, label, href, etc.)
@@ -386,9 +407,9 @@ export interface ComponentDesign {
   secondaryColor?: string;
   fontFamily?: string;
   fontSize?: string | number;
-  cardStyle?: 'minimal' | 'bordered' | 'elevated';
+  cardStyle?: "minimal" | "bordered" | "elevated";
   columns?: number;
-  sections?: 'merged' | 'separate';
+  sections?: "merged" | "separate";
   // Normalized / alias fields
   fontColor?: string;
   backgroundColor?: string;
@@ -418,7 +439,7 @@ export interface ComponentRenderData {
 
 export interface MEAPConfig {
   network: NetworkConfig;
-  litNetwork?: 'manzano' | 'habanero';
+  litNetwork?: "manzano" | "habanero";
   litConfig?: {
     /**
      * Optional Lit decryption endpoint used by FeatureFlagGuard when
@@ -449,7 +470,10 @@ export interface MEAPConfig {
    *   enterprise: { api_access: true, webhooks: true, sso: true },
    * }
    */
-  tierFeatureFallback?: Record<string, Record<string, boolean | string | number>>;
+  tierFeatureFallback?: Record<
+    string,
+    Record<string, boolean | string | number>
+  >;
 }
 
 /** @alias MEAPConfig — ArcenPay-branded alias */

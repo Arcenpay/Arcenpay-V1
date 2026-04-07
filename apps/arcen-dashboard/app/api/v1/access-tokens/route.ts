@@ -24,7 +24,12 @@ import { createHash, randomBytes } from "crypto";
 import { createHmac } from "crypto";
 import { requireAnyAuth, isAnyAuthError } from "@/lib/require-any-auth";
 import { db } from "@/lib/db";
-import { resolveCompany, resolveUser, type CompanyKeys, type UserKeys } from "@/lib/flag-engine";
+import {
+  resolveCompany,
+  resolveUser,
+  type CompanyKeys,
+  type UserKeys,
+} from "@/lib/flag-engine";
 import { deliverWebhook } from "@/lib/deliver-webhook";
 import { Prisma } from "@/src/generated/prisma/client";
 import { resolveDashboardSessionIdentityDefaults } from "@/lib/dashboard-session-identity";
@@ -33,11 +38,28 @@ import { getSession } from "@/lib/auth.server";
 // ─── Simple JWT-like token (HMAC-SHA256, no external dep) ─────────────────────
 
 function signToken(payload: Record<string, unknown>, secret: string): string {
-  const header = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url");
+  const header = Buffer.from(
+    JSON.stringify({ alg: "HS256", typ: "JWT" }),
+  ).toString("base64url");
   const body = Buffer.from(JSON.stringify(payload)).toString("base64url");
   const unsigned = `${header}.${body}`;
   const sig = createHmac("sha256", secret).update(unsigned).digest("base64url");
   return `${unsigned}.${sig}`;
+}
+
+function toNullableTrimmed(value: string | undefined): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function isPrismaUniqueError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code?: string }).code === "P2002"
+  );
 }
 
 // ─── Company upsert (create if not found) ─────────────────────────────────────
@@ -48,21 +70,52 @@ async function upsertCompanyForToken(
 ): Promise<{ id: string; activePlanId: string | null; created: boolean }> {
   // Try to find existing company first
   const existing = await resolveCompany(teamId, keys);
-  if (existing) return { id: existing.id, activePlanId: existing.activePlanId, created: false };
+  if (existing)
+    return {
+      id: existing.id,
+      activePlanId: existing.activePlanId,
+      created: false,
+    };
+
+  const externalId = toNullableTrimmed(keys.id);
+  const email = toNullableTrimmed(keys.email);
+  const wallet = toNullableTrimmed(keys.wallet)?.toLowerCase() ?? null;
+  const fallbackName =
+    toNullableTrimmed(keys.name) ?? email ?? externalId ?? wallet ?? "Unknown";
 
   // Not found — auto-create (Schematic-style)
-  const created = await db.arcenCompany.create({
-    data: {
-      teamId,
-      name: keys.name ?? keys.email ?? keys.id ?? "Unknown",
-      email: keys.email ?? null,
-      walletAddress: keys.wallet?.toLowerCase() ?? null,
-      externalId: keys.id ?? null,
-      traits: ((keys.traits ?? {}) as unknown) as Prisma.InputJsonValue,
-    },
-    select: { id: true },
-  });
-  return { id: created.id, activePlanId: null, created: true };
+  try {
+    const created = await db.arcenCompany.create({
+      data: {
+        teamId,
+        name: fallbackName,
+        email,
+        walletAddress: wallet,
+        externalId,
+        traits: (keys.traits ?? {}) as unknown as Prisma.InputJsonValue,
+      },
+      select: { id: true },
+    });
+    return { id: created.id, activePlanId: null, created: true };
+  } catch (error) {
+    // Concurrent token requests can race during auto-create. Resolve again and return existing row.
+    if (isPrismaUniqueError(error)) {
+      const resolved = await resolveCompany(teamId, {
+        ...keys,
+        ...(externalId ? { id: externalId } : {}),
+        ...(email ? { email } : {}),
+        ...(wallet ? { wallet } : {}),
+      });
+      if (resolved) {
+        return {
+          id: resolved.id,
+          activePlanId: resolved.activePlanId,
+          created: false,
+        };
+      }
+    }
+    throw error;
+  }
 }
 
 // ─── User upsert (create if not found) ────────────────────────────────────────
@@ -70,25 +123,50 @@ async function upsertCompanyForToken(
 async function upsertUserForToken(
   teamId: string,
   companyId: string,
-  keys: UserKeys & { name?: string; email?: string; traits?: Record<string, unknown> },
+  keys: UserKeys & {
+    name?: string;
+    email?: string;
+    traits?: Record<string, unknown>;
+  },
 ): Promise<{ id: string; created: boolean }> {
   const existing = await resolveUser(teamId, keys);
   if (existing) return { id: existing.id, created: false };
 
-  const created = await db.arcenUser.create({
-    data: {
-      teamId,
-      companyId,
-      walletAddress: keys.wallet?.toLowerCase() ?? null,
-      clerkUserId: (keys as Record<string, unknown>).clerk_user_id as string | null ?? null,
-      externalId: keys.id ?? null,
-      name: keys.name ?? null,
-      email: keys.email ?? null,
-      traits: ((keys.traits ?? {}) as unknown) as Prisma.InputJsonValue,
-    },
-    select: { id: true },
-  });
-  return { id: created.id, created: true };
+  const externalId = toNullableTrimmed(keys.id);
+  const email = toNullableTrimmed(keys.email);
+  const wallet = toNullableTrimmed(keys.wallet)?.toLowerCase() ?? null;
+  const clerkUserId =
+    toNullableTrimmed(
+      (keys as Record<string, unknown>).clerk_user_id as string | undefined,
+    ) ?? toNullableTrimmed(keys.clerkUserId);
+
+  try {
+    const created = await db.arcenUser.create({
+      data: {
+        teamId,
+        companyId,
+        walletAddress: wallet,
+        clerkUserId,
+        externalId,
+        name: toNullableTrimmed(keys.name),
+        email,
+        traits: (keys.traits ?? {}) as unknown as Prisma.InputJsonValue,
+      },
+      select: { id: true },
+    });
+    return { id: created.id, created: true };
+  } catch (error) {
+    if (isPrismaUniqueError(error)) {
+      const resolved = await resolveUser(teamId, {
+        ...keys,
+        ...(externalId ? { id: externalId } : {}),
+        ...(wallet ? { wallet } : {}),
+        ...(clerkUserId ? { clerkUserId } : {}),
+      });
+      if (resolved) return { id: resolved.id, created: false };
+    }
+    throw error;
+  }
 }
 
 // ─── Route handler ────────────────────────────────────────────────────────────
@@ -101,7 +179,11 @@ export async function POST(req: NextRequest) {
 
   let body: {
     company?: CompanyKeys & { name?: string; traits?: Record<string, unknown> };
-    user?: UserKeys & { name?: string; email?: string; traits?: Record<string, unknown> };
+    user?: UserKeys & {
+      name?: string;
+      email?: string;
+      traits?: Record<string, unknown>;
+    };
     expires_in?: number; // seconds, default 3600
   };
 
@@ -130,10 +212,14 @@ export async function POST(req: NextRequest) {
   const session = ctx.source === "session" ? await getSession() : null;
   const sessionDefaults =
     ctx.source === "session" && session
-      ? await resolveDashboardSessionIdentityDefaults(teamId, session.clerkUserId)
+      ? await resolveDashboardSessionIdentityDefaults(
+          teamId,
+          session.clerkUserId,
+        )
       : null;
 
-  const normalizedCompany = body.company ??
+  const normalizedCompany =
+    body.company ??
     (sessionDefaults
       ? {
           id: sessionDefaults.companyId,
@@ -143,7 +229,8 @@ export async function POST(req: NextRequest) {
         }
       : undefined);
 
-  const normalizedUser = body.user ??
+  const normalizedUser =
+    body.user ??
     (sessionDefaults
       ? {
           id: sessionDefaults.userId,
@@ -158,9 +245,16 @@ export async function POST(req: NextRequest) {
     ? {
         ...normalizedCompany,
         ...(sessionDefaults && {
-          name: normalizedCompany.name ?? sessionDefaults.companyName ?? undefined,
-          email: normalizedCompany.email ?? sessionDefaults.companyEmail ?? undefined,
-          wallet: normalizedCompany.wallet ?? sessionDefaults.walletAddress ?? undefined,
+          name:
+            normalizedCompany.name ?? sessionDefaults.companyName ?? undefined,
+          email:
+            normalizedCompany.email ??
+            sessionDefaults.companyEmail ??
+            undefined,
+          wallet:
+            normalizedCompany.wallet ??
+            sessionDefaults.walletAddress ??
+            undefined,
         }),
       }
     : undefined;
@@ -173,7 +267,8 @@ export async function POST(req: NextRequest) {
           clerk_user_id:
             (normalizedUser as Record<string, unknown>).clerk_user_id ??
             sessionDefaults.clerkUserId,
-          wallet: normalizedUser.wallet ?? sessionDefaults.walletAddress ?? undefined,
+          wallet:
+            normalizedUser.wallet ?? sessionDefaults.walletAddress ?? undefined,
           name: normalizedUser.name ?? sessionDefaults.userName ?? undefined,
           email: normalizedUser.email ?? sessionDefaults.userEmail ?? undefined,
         }),
@@ -183,7 +278,10 @@ export async function POST(req: NextRequest) {
   // ── Company: upsert (create if not exists) ───────────────────────────────
   let companyId: string | null = null;
 
-  if (companyInput && (companyInput.id || companyInput.wallet || companyInput.email)) {
+  if (
+    companyInput &&
+    (companyInput.id || companyInput.wallet || companyInput.email)
+  ) {
     const companyResult = await upsertCompanyForToken(teamId, companyInput);
     companyId = companyResult.id;
 
@@ -217,14 +315,22 @@ export async function POST(req: NextRequest) {
   // ── User: upsert (create if not exists) ─────────────────────────────────
   let userId: string | null = null;
 
-  if (userInput && companyId && (userInput.id || (userInput as Record<string, unknown>).clerk_user_id || userInput.wallet)) {
+  if (
+    userInput &&
+    companyId &&
+    (userInput.id ||
+      (userInput as Record<string, unknown>).clerk_user_id ||
+      userInput.wallet)
+  ) {
     const userResult = await upsertUserForToken(teamId, companyId, userInput);
     userId = userResult.id;
 
     if (userResult.created) {
-      deliverWebhook(teamId, "user.created", { userId, companyId, source: "access_token" }).catch(
-        () => {},
-      );
+      deliverWebhook(teamId, "user.created", {
+        userId,
+        companyId,
+        source: "access_token",
+      }).catch(() => {});
     }
   }
 
@@ -232,7 +338,10 @@ export async function POST(req: NextRequest) {
   const secret = process.env.ACCESS_TOKEN_SECRET;
   if (!secret) {
     console.error("[access-tokens] ACCESS_TOKEN_SECRET not set");
-    return NextResponse.json({ error: "Server configuration error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Server configuration error" },
+      { status: 500 },
+    );
   }
 
   const payload = {
