@@ -377,7 +377,17 @@ contract SubscriptionRegistry is
         uint256 tokenId,
         address auth
     ) internal override(ERC721, ERC721Enumerable) returns (address) {
-        return super._update(to, tokenId, auth);
+        address from = super._update(to, tokenId, auth);
+
+        if (from != address(0) && _walletTokens[from] == tokenId) {
+            delete _walletTokens[from];
+        }
+
+        if (to != address(0)) {
+            _walletTokens[to] = tokenId;
+        }
+
+        return from;
     }
 
     function _increaseBalance(

@@ -26,6 +26,12 @@ const bodySchema = z.object({
   wallet: z.string().regex(/^0x[0-9a-fA-F]{40}$/i),
   onChainPlanId: z.string().nullable(),
   event: z.enum(["minted", "renewed", "cancelled"]),
+  occurredAt: z.coerce.date().optional(),
+  sourceTxHash: z
+    .string()
+    .regex(/^0x[0-9a-fA-F]{64}$/i)
+    .optional(),
+  sourceTokenId: z.string().optional(),
 });
 
 export async function PATCH(req: NextRequest) {
@@ -34,6 +40,16 @@ export async function PATCH(req: NextRequest) {
   const auth = req.headers.get("authorization") ?? "";
   if (!facilitatorSecret || auth !== `Bearer ${facilitatorSecret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  if (!dashboardTeamId) {
+    return NextResponse.json(
+      {
+        error:
+          "DASHBOARD_TEAM_ID is not configured. sync-subscription requires explicit team scoping.",
+      },
+      { status: 503 },
+    );
   }
 
   const body = await req.json().catch(() => ({}));
@@ -45,12 +61,19 @@ export async function PATCH(req: NextRequest) {
     );
   }
 
-  const { wallet, onChainPlanId, event } = parsed.data;
+  const {
+    wallet,
+    onChainPlanId,
+    event,
+    occurredAt,
+    sourceTxHash,
+    sourceTokenId,
+  } = parsed.data;
 
   const company = await db.arcenCompany.findFirst({
     where: {
       walletAddress: wallet.toLowerCase(),
-      ...(dashboardTeamId ? { teamId: dashboardTeamId } : {}),
+      teamId: dashboardTeamId,
     },
     select: { id: true, teamId: true, traits: true, activePlanId: true },
   });
@@ -62,8 +85,51 @@ export async function PATCH(req: NextRequest) {
     );
   }
 
+  const traits = asRecord(company.traits);
+  const syncMeta = asRecord(traits.subscriptionSyncMeta);
+  const previousOccurredAtRaw =
+    typeof syncMeta.occurredAt === "string" ? syncMeta.occurredAt : null;
+  const previousOccurredAtMs = previousOccurredAtRaw
+    ? Date.parse(previousOccurredAtRaw)
+    : NaN;
+
+  if (
+    occurredAt &&
+    Number.isFinite(previousOccurredAtMs) &&
+    previousOccurredAtMs > occurredAt.getTime()
+  ) {
+    return NextResponse.json({
+      ok: true,
+      skipped: true,
+      reason: "stale_event",
+      activePlanId: company.activePlanId,
+    });
+  }
+
+  if (
+    sourceTxHash &&
+    typeof syncMeta.sourceTxHash === "string" &&
+    syncMeta.sourceTxHash.toLowerCase() === sourceTxHash.toLowerCase() &&
+    typeof syncMeta.event === "string" &&
+    syncMeta.event === event
+  ) {
+    return NextResponse.json({
+      ok: true,
+      skipped: true,
+      reason: "duplicate_event",
+      activePlanId: company.activePlanId,
+    });
+  }
+
+  const nextSyncMeta: Record<string, unknown> = {
+    event,
+    occurredAt: occurredAt?.toISOString() ?? new Date().toISOString(),
+    sourceTxHash: sourceTxHash ?? null,
+    sourceTokenId: sourceTokenId ?? null,
+    updatedAt: new Date().toISOString(),
+  };
+
   if (event === "cancelled") {
-    const traits = asRecord(company.traits);
     const transition = asRecord(traits.subscriptionTransition);
     const transitionTargetPlanId =
       typeof transition.targetPlanId === "string"
@@ -95,6 +161,7 @@ export async function PATCH(req: NextRequest) {
 
     const nextTraits = { ...traits };
     delete nextTraits.subscriptionTransition;
+    nextTraits.subscriptionSyncMeta = nextSyncMeta;
 
     await db.arcenCompany.update({
       where: { id: company.id },
@@ -126,9 +193,9 @@ export async function PATCH(req: NextRequest) {
     );
   }
 
-  const traits = asRecord(company.traits);
   const nextTraits = { ...traits };
   delete nextTraits.subscriptionTransition;
+  nextTraits.subscriptionSyncMeta = nextSyncMeta;
 
   await db.arcenCompany.update({
     where: { id: company.id },

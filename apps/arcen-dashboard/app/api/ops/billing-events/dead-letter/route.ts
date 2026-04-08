@@ -37,6 +37,10 @@ const listQuerySchema = z.object({
     .optional(),
 });
 
+function shouldTriggerInvoice(eventType: string): boolean {
+  return eventType === "SUBSCRIPTION_RENEWED" || eventType === "CREDIT_ISSUED";
+}
+
 /**
  * GET /api/ops/billing-events/dead-letter
  * Lists unprocessed billing events (those that failed all retries).
@@ -96,7 +100,11 @@ export async function POST(request: NextRequest) {
   });
 
   if (events.length === 0) {
-    return NextResponse.json({ ok: true, replayed: 0, message: "No unprocessed events." });
+    return NextResponse.json({
+      ok: true,
+      replayed: 0,
+      message: "No unprocessed events.",
+    });
   }
 
   const results = await Promise.allSettled(
@@ -105,12 +113,14 @@ export async function POST(request: NextRequest) {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(FACILITATOR_SECRET ? { Authorization: `Bearer ${FACILITATOR_SECRET}` } : {}),
+          ...(FACILITATOR_SECRET
+            ? { Authorization: `Bearer ${FACILITATOR_SECRET}` }
+            : {}),
         },
         body: JSON.stringify({
           teamId: event.teamId,
           eventType: event.eventType,
-          idempotencyKey: `retry:${event.idempotencyKey}:${Date.now()}`,
+          idempotencyKey: event.idempotencyKey,
           eventName:
             typeof (event.payload as any)?._event?.name === "string"
               ? (event.payload as any)._event.name
@@ -125,14 +135,16 @@ export async function POST(request: NextRequest) {
               : undefined,
           payload: event.payload,
           source: "ops-replay",
-          triggerInvoice: false,
+          triggerInvoice: shouldTriggerInvoice(event.eventType),
         }),
       });
       return { id: event.id, ok: res.ok, status: res.status };
     }),
   );
 
-  const succeeded = results.filter((r) => r.status === "fulfilled" && r.value.ok).length;
+  const succeeded = results.filter(
+    (r) => r.status === "fulfilled" && r.value.ok,
+  ).length;
   const failed = results.length - succeeded;
 
   await writeAuditEvent({

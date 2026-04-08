@@ -51,8 +51,8 @@ contract ERC7579AutopayModule is IERC7579AutopayModule, ReentrancyGuard, Pausabl
     /// @notice Account address => initialization status
     mapping(address => bool) private _initialized;
 
-    /// @notice Destination chain ID for cross-chain GMP mirror updates (0 = disabled)
-    uint256 private _mirrorDestinationChainId;
+    /// @notice Account address => destination chain ID for cross-chain mirror updates (0 = disabled)
+    mapping(address => uint256) private _mirrorDestinationChainIds;
 
     /// @notice Account address => total amount pulled over lifetime of this config
     mapping(address => uint256) private _totalPulled;
@@ -217,11 +217,12 @@ contract ERC7579AutopayModule is IERC7579AutopayModule, ReentrancyGuard, Pausabl
         emit PaymentExecuted(account, config.merchant, amount, block.timestamp);
 
         // Dispatch cross-chain GMP update to MirrorRegistry if destination is configured
-        if (_mirrorDestinationChainId != 0) {
+        uint256 mirrorDestinationChainId = _mirrorDestinationChainIds[account];
+        if (mirrorDestinationChainId != 0) {
             if (tokenId != 0) {
                 try subscriptionRegistry.dispatchCrossChainUpdate{value: 0}(
                     tokenId,
-                    _mirrorDestinationChainId,
+                    mirrorDestinationChainId,
                     config.merchant
                 ) {
                     // Success — clear any pending dispatch
@@ -230,11 +231,11 @@ contract ERC7579AutopayModule is IERC7579AutopayModule, ReentrancyGuard, Pausabl
                     // GMP dispatch failure should not revert the payment, but track for retry
                     _pendingDispatches[account] = PendingDispatch({
                         tokenId: tokenId,
-                        destinationChainId: _mirrorDestinationChainId,
+                        destinationChainId: mirrorDestinationChainId,
                         merchant: config.merchant,
                         timestamp: uint64(block.timestamp)
                     });
-                    emit CrossChainDispatchFailed(account, _mirrorDestinationChainId);
+                    emit CrossChainDispatchFailed(account, mirrorDestinationChainId);
                 }
             }
         }
@@ -244,7 +245,7 @@ contract ERC7579AutopayModule is IERC7579AutopayModule, ReentrancyGuard, Pausabl
     /// @param chainId The destination chain ID (0 to disable)
     function setMirrorDestination(uint256 chainId) external {
         require(_initialized[msg.sender], "AutopayModule: not initialized");
-        _mirrorDestinationChainId = chainId;
+        _mirrorDestinationChainIds[msg.sender] = chainId;
     }
 
     // ============================================================

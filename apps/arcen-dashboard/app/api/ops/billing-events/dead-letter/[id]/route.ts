@@ -12,6 +12,10 @@ import { FACILITATOR_URL, FACILITATOR_SECRET } from "@/lib/config";
 
 type Params = { params: Promise<{ id: string }> };
 
+function shouldTriggerInvoice(eventType: string): boolean {
+  return eventType === "SUBSCRIPTION_RENEWED" || eventType === "CREDIT_ISSUED";
+}
+
 async function requireAdmin(req: NextRequest) {
   const session = await getSession();
   if (!session) return null;
@@ -48,12 +52,14 @@ export async function POST(request: NextRequest, context: Params) {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      ...(FACILITATOR_SECRET ? { Authorization: `Bearer ${FACILITATOR_SECRET}` } : {}),
+      ...(FACILITATOR_SECRET
+        ? { Authorization: `Bearer ${FACILITATOR_SECRET}` }
+        : {}),
     },
     body: JSON.stringify({
       teamId: event.teamId,
       eventType: event.eventType,
-      idempotencyKey: `retry:${event.idempotencyKey}:${Date.now()}`,
+      idempotencyKey: event.idempotencyKey,
       eventName:
         typeof (event.payload as any)?._event?.name === "string"
           ? (event.payload as any)._event.name
@@ -68,7 +74,7 @@ export async function POST(request: NextRequest, context: Params) {
           : undefined,
       payload: event.payload,
       source: "ops-replay",
-      triggerInvoice: false,
+      triggerInvoice: shouldTriggerInvoice(event.eventType),
     }),
   });
 
@@ -80,12 +86,19 @@ export async function POST(request: NextRequest, context: Params) {
     action: "ops.billing_events.dead_letter_replay",
     resourceType: "BillingEvent",
     resourceId: event.id,
-    metadata: { eventType: event.eventType, ok: upstream.ok, status: upstream.status },
+    metadata: {
+      eventType: event.eventType,
+      ok: upstream.ok,
+      status: upstream.status,
+    },
   });
 
   if (!upstream.ok) {
     return NextResponse.json(
-      { error: "Facilitator rejected replay", facilitatorStatus: upstream.status },
+      {
+        error: "Facilitator rejected replay",
+        facilitatorStatus: upstream.status,
+      },
       { status: 502 },
     );
   }

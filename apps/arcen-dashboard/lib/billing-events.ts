@@ -119,7 +119,9 @@ export interface CreateChargeInvoiceInput {
   metadata?: Record<string, unknown>;
 }
 
-export async function createIssuedChargeInvoice(input: CreateChargeInvoiceInput) {
+export async function createIssuedChargeInvoice(
+  input: CreateChargeInvoiceInput,
+) {
   const team = await db.team.findUnique({
     where: { id: input.teamId },
     select: { slug: true, invoicePrefix: true, environmentMode: true },
@@ -173,7 +175,10 @@ export async function createIssuedChargeInvoice(input: CreateChargeInvoiceInput)
     include: { deliveries: true },
   });
 
-  const { downloadUrl } = await ensureInvoicePdfForTeam(input.teamId, invoice.id);
+  const { downloadUrl } = await ensureInvoicePdfForTeam(
+    input.teamId,
+    invoice.id,
+  );
 
   deliverWebhook(input.teamId, "invoice.issued", {
     invoiceId: invoice.id,
@@ -224,6 +229,80 @@ export async function createIssuedChargeInvoice(input: CreateChargeInvoiceInput)
   return { invoice, downloadUrl };
 }
 
+async function processStoredBillingEvent(
+  event: {
+    id: string;
+    teamId: string;
+    eventType: BillingEventType;
+    payload: unknown;
+  },
+  options: {
+    triggerInvoice: boolean;
+    canonicalEventName: string;
+    occurredAt?: Date;
+  },
+) {
+  const payload =
+    event.payload &&
+    typeof event.payload === "object" &&
+    !Array.isArray(event.payload)
+      ? (event.payload as Record<string, unknown>)
+      : {};
+
+  const occurredAtFromPayload =
+    payload._event &&
+    typeof payload._event === "object" &&
+    !Array.isArray(payload._event) &&
+    typeof (payload._event as Record<string, unknown>).occurredAt === "string"
+      ? new Date(String((payload._event as Record<string, unknown>).occurredAt))
+      : undefined;
+
+  let invoiceId: string | null = null;
+  let skipped = false;
+  let reason: string | null = null;
+
+  if (options.triggerInvoice) {
+    const amount = Number(payload.amount ?? 0);
+    if (amount <= 0) {
+      skipped = true;
+      reason = "zero_amount";
+    } else {
+      const invoice = await createIssuedChargeInvoice({
+        teamId: event.teamId,
+        amount,
+        description: String(payload.description || options.canonicalEventName),
+        customerEmail: typeof payload.email === "string" ? payload.email : null,
+        customerWallet:
+          typeof payload.customerWallet === "string"
+            ? payload.customerWallet
+            : typeof payload.subscriber === "string"
+              ? payload.subscriber
+              : null,
+        planId: typeof payload.planId === "string" ? payload.planId : null,
+        issuedAt: options.occurredAt ?? occurredAtFromPayload,
+        metadata: {
+          billingEventId: event.id,
+          billingEventType: event.eventType,
+          canonicalEventName: options.canonicalEventName,
+          ...payload,
+        },
+      });
+      invoiceId = invoice.invoice.id;
+    }
+  }
+
+  await db.billingEvent.update({
+    where: { id: event.id },
+    data: { processed: true, processedAt: new Date() },
+  });
+
+  return {
+    invoiceId,
+    skipped,
+    reason,
+  };
+}
+
 export async function ingestBillingEvent(input: PersistBillingEventInput) {
   const canonicalEventName = resolveCanonicalBillingEventName(
     input.eventType,
@@ -234,6 +313,21 @@ export async function ingestBillingEvent(input: PersistBillingEventInput) {
     where: { idempotencyKey: input.idempotencyKey },
   });
   if (existing) {
+    if (!existing.processed) {
+      const replayResult = await processStoredBillingEvent(existing, {
+        triggerInvoice: Boolean(input.triggerInvoice),
+        canonicalEventName,
+        occurredAt: input.occurredAt,
+      });
+      return {
+        event: existing,
+        invoiceId: replayResult.invoiceId,
+        deduped: true,
+        skipped: replayResult.skipped,
+        reason: replayResult.reason,
+      };
+    }
+
     return {
       event: existing,
       invoiceId: null,
@@ -260,53 +354,17 @@ export async function ingestBillingEvent(input: PersistBillingEventInput) {
       processed: false,
     },
   });
-
-  let invoiceId: string | null = null;
-  let skipped = false;
-  let reason: string | null = null;
-
-  if (input.triggerInvoice) {
-    const amount = Number(input.payload.amount ?? 0);
-    if (amount <= 0) {
-      skipped = true;
-      reason = "zero_amount";
-    } else {
-      const invoice = await createIssuedChargeInvoice({
-        teamId: input.teamId,
-        amount,
-        description: String(input.payload.description || canonicalEventName),
-        customerEmail:
-          typeof input.payload.email === "string" ? input.payload.email : null,
-        customerWallet:
-          typeof input.payload.customerWallet === "string"
-            ? input.payload.customerWallet
-            : typeof input.payload.subscriber === "string"
-              ? input.payload.subscriber
-              : null,
-        planId:
-          typeof input.payload.planId === "string" ? input.payload.planId : null,
-        issuedAt: input.occurredAt,
-        metadata: {
-          billingEventId: event.id,
-          billingEventType: input.eventType,
-          canonicalEventName,
-          ...input.payload,
-        },
-      });
-      invoiceId = invoice.invoice.id;
-    }
-  }
-
-  await db.billingEvent.update({
-    where: { id: event.id },
-    data: { processed: true, processedAt: new Date() },
+  const processed = await processStoredBillingEvent(event, {
+    triggerInvoice: Boolean(input.triggerInvoice),
+    canonicalEventName,
+    occurredAt: input.occurredAt,
   });
 
   return {
     event,
-    invoiceId,
+    invoiceId: processed.invoiceId,
     deduped: false,
-    skipped,
-    reason,
+    skipped: processed.skipped,
+    reason: processed.reason,
   };
 }

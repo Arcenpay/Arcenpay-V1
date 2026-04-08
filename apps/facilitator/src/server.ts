@@ -972,6 +972,36 @@ async function persistBillingEvent(
   );
 }
 
+async function enqueueSubscriptionSync(input: {
+  wallet: string;
+  onChainPlanId: string | null;
+  event: "minted" | "renewed" | "cancelled";
+  occurredAt?: string;
+  sourceTxHash?: string;
+  sourceTokenId?: string;
+}): Promise<void> {
+  if (!DASHBOARD_TEAM_ID) return;
+
+  const dedupeParts = [
+    input.event,
+    input.wallet.toLowerCase(),
+    input.sourceTxHash ??
+      input.sourceTokenId ??
+      input.occurredAt ??
+      String(Date.now()),
+  ];
+
+  await jobQueue.enqueue(
+    "billing",
+    "subscription_sync",
+    {
+      pathname: "/api/internal/companies/sync-subscription",
+      payload: input,
+    },
+    { idempotencyKey: `sync:${dedupeParts.join(":")}` },
+  );
+}
+
 /**
  * Look up a subscriber's email address.
  *
@@ -1387,10 +1417,15 @@ eventListener.on("minted", async (event) => {
   }
   // Sync subscription to dashboard DB so flag evaluation uses the correct plan
   if (event.subscriber) {
-    postToDashboard("/api/internal/companies/sync-subscription", {
+    enqueueSubscriptionSync({
       wallet: event.subscriber,
       onChainPlanId: event.planId?.toString() ?? null,
       event: "minted",
+      occurredAt: event.timestamp
+        ? new Date(Number(event.timestamp) * 1000).toISOString()
+        : undefined,
+      sourceTxHash: event.transactionHash,
+      sourceTokenId: event.tokenId.toString(),
     }).catch((err) =>
       console.error("[Facilitator] sync-subscription (minted) failed:", err),
     );
@@ -1503,14 +1538,22 @@ eventListener.on("renewed", async (event) => {
     })) as [bigint, string];
     renewedPlanId = planFeatures[0] ?? null;
   } catch (err) {
-    console.error("[Facilitator] Failed to resolve planId for renewed event:", err);
+    console.error(
+      "[Facilitator] Failed to resolve planId for renewed event:",
+      err,
+    );
   }
   // Sync subscription to dashboard DB so flag evaluation uses the correct plan
   if (renewedSubscriberWallet) {
-    postToDashboard("/api/internal/companies/sync-subscription", {
+    enqueueSubscriptionSync({
       wallet: renewedSubscriberWallet,
       onChainPlanId: renewedPlanId?.toString() ?? null,
       event: "renewed",
+      occurredAt: event.timestamp
+        ? new Date(Number(event.timestamp) * 1000).toISOString()
+        : undefined,
+      sourceTxHash: event.transactionHash,
+      sourceTokenId: event.tokenId.toString(),
     }).catch((err) =>
       console.error("[Facilitator] sync-subscription (renewed) failed:", err),
     );
@@ -1635,10 +1678,15 @@ eventListener.on("cancelled", async (event) => {
   }
   // Sync subscription to dashboard DB so flag evaluation uses the correct plan
   if (cancelledSubscriberWallet) {
-    postToDashboard("/api/internal/companies/sync-subscription", {
+    enqueueSubscriptionSync({
       wallet: cancelledSubscriberWallet,
       onChainPlanId: null,
       event: "cancelled",
+      occurredAt: event.timestamp
+        ? new Date(Number(event.timestamp) * 1000).toISOString()
+        : undefined,
+      sourceTxHash: event.transactionHash,
+      sourceTokenId: event.tokenId.toString(),
     }).catch((err) =>
       console.error("[Facilitator] sync-subscription (cancelled) failed:", err),
     );
@@ -1674,7 +1722,9 @@ if (axelarTransport || ccipTransport) {
 
       let payload: `0x${string}`;
       try {
-        const block = await chainClient.getBlock({ blockNumber: log.blockNumber });
+        const block = await chainClient.getBlock({
+          blockNumber: log.blockNumber,
+        });
         payload = await buildMirrorPayload(tokenId, BigInt(block.timestamp));
       } catch (err) {
         console.error(
@@ -3548,7 +3598,12 @@ app.post(
 // ============================================================
 
 function logStartupBanner() {
-  const statusLine = (label: string, active: boolean, activeLabel = "Active", inactiveLabel = "Off (set env var)") => {
+  const statusLine = (
+    label: string,
+    active: boolean,
+    activeLabel = "Active",
+    inactiveLabel = "Off (set env var)",
+  ) => {
     const status = active ? `✅  ${activeLabel}` : `⚠️  ${inactiveLabel}`;
     return `║   ${label}: ${status.padEnd(37 - label.length)}║`;
   };
