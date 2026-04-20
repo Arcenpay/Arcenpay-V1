@@ -53,8 +53,8 @@ jobs:
   # ============================================================
   #  SDK Build & Type Check
   # ============================================================
-  sdk:
-    name: SDK Build
+  launch:
+    name: Launch Surfaces
     runs-on: ubuntu-latest
 
     steps:
@@ -69,14 +69,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build all packages
-        run: npx turbo build --filter='./packages/*'
+      - name: Build launch surfaces
+        run: npm run build:launch
 
-      - name: Build dashboard
-        run: npx turbo build --filter='@meap/dashboard'
+      - name: Type check launch surfaces
+        run: npm run typecheck:launch
 
-      - name: Type check
-        run: npx turbo typecheck
+      - name: Test launch surfaces
+        run: npm run test:launch
 
   # ============================================================
   #  Lint
@@ -100,8 +100,8 @@ jobs:
       - name: Format check
         run: npx prettier --check "**/*.{ts,tsx,js,jsx,json,md}"
 
-      - name: Turbo lint
-        run: npm run lint
+      - name: Turbo lint (launch surfaces)
+        run: npm run lint:launch
 
   # ============================================================
   #  Static Analysis — Slither

@@ -3,29 +3,8 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Analytics } from "@vercel/analytics/next";
-import {
-  Instrument_Sans,
-  Instrument_Serif,
-  JetBrains_Mono,
-} from "next/font/google";
 import { Web3Provider } from "@/components/providers/web3-provider";
 import "./globals.css";
-
-const instrumentSans = Instrument_Sans({
-  subsets: ["latin"],
-  variable: "--font-instrument",
-});
-
-const instrumentSerif = Instrument_Serif({
-  subsets: ["latin"],
-  weight: "400",
-  variable: "--font-instrument-serif",
-});
-
-const jetbrainsMono = JetBrains_Mono({
-  subsets: ["latin"],
-  variable: "--font-jetbrains",
-});
 
 export const metadata: Metadata = {
   title: "ArcenPay Dashboard",
@@ -66,9 +45,7 @@ export default async function RootLayout({
       afterSignOutUrl="/sign-in"
     >
       <html lang="en">
-        <body
-          className={`${instrumentSans.variable} ${instrumentSerif.variable} ${jetbrainsMono.variable} font-sans antialiased`}
-        >
+        <body className="font-sans antialiased">
           <Web3Provider cookies={cookies}>{children}</Web3Provider>
           <Analytics />
         </body>

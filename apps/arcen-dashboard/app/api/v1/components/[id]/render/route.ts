@@ -8,7 +8,6 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { createHash } from "crypto";
 import { createPublicClient, http, parseEventLogs } from "viem";
 import {
   getContractAddresses,
@@ -18,45 +17,11 @@ import {
 import { db } from "@/lib/db";
 import { resolveEntitlementResults } from "@/lib/entitlements";
 import { getRpcUrl } from "@/lib/config";
+import {
+  extractEmbedAccessToken,
+  resolveEmbedAccessToken,
+} from "@/lib/embed-access-token";
 import { ensureInvoicePdfForTeam } from "@/lib/invoice-documents";
-
-// Verify and decode an embed access token
-function verifyAccessToken(
-  token: string,
-  secret: string,
-): {
-  valid: boolean;
-  teamId?: string;
-  companyId?: string;
-  userId?: string;
-} {
-  try {
-    const parts = token.split(".");
-    if (parts.length !== 3) return { valid: false };
-
-    const [header, body, sig] = parts;
-    const unsigned = `${header}.${body}`;
-    const { createHmac } = require("crypto") as typeof import("crypto");
-    const expectedSig = createHmac("sha256", secret)
-      .update(unsigned)
-      .digest("base64url");
-
-    if (sig !== expectedSig) return { valid: false };
-
-    const payload = JSON.parse(Buffer.from(body, "base64url").toString());
-
-    if (payload.exp < Math.floor(Date.now() / 1000)) return { valid: false };
-
-    return {
-      valid: true,
-      teamId: payload.teamId,
-      companyId: payload.companyId ?? undefined,
-      userId: payload.userId ?? undefined,
-    };
-  } catch {
-    return { valid: false };
-  }
-}
 
 // ─── Normalization helpers ────────────────────────────────────────────────────
 
@@ -128,10 +93,7 @@ export async function GET(
   const { id } = await params;
 
   // Extract token from Authorization header or query param
-  const authHeader = req.headers.get("authorization");
-  const token = authHeader?.startsWith("Bearer ")
-    ? authHeader.slice(7)
-    : req.nextUrl.searchParams.get("token");
+  const token = extractEmbedAccessToken(req, { allowQueryParam: true });
 
   if (!token) {
     return NextResponse.json(
@@ -140,31 +102,17 @@ export async function GET(
     );
   }
 
-  const secret = process.env.ACCESS_TOKEN_SECRET;
-  if (!secret) {
+  if (!process.env.ACCESS_TOKEN_SECRET) {
     return NextResponse.json(
       { error: "Server configuration error" },
       { status: 500, headers: corsHeaders() },
     );
   }
 
-  const decoded = verifyAccessToken(token, secret);
-  if (!decoded.valid) {
+  const decoded = await resolveEmbedAccessToken(token);
+  if (!decoded) {
     return NextResponse.json(
       { error: "Invalid or expired access token" },
-      { status: 401, headers: corsHeaders() },
-    );
-  }
-
-  // Check for revocation
-  const tokenHash = createHash("sha256").update(token).digest("hex");
-  const storedToken = await db.embedAccessToken.findUnique({
-    where: { tokenHash },
-    select: { id: true, expiresAt: true },
-  });
-  if (!storedToken || storedToken.expiresAt < new Date()) {
-    return NextResponse.json(
-      { error: "Token revoked or expired" },
       { status: 401, headers: corsHeaders() },
     );
   }

@@ -45,7 +45,7 @@ export interface ArcenSessionContextValue {
   userId: string | null;
   isReady: boolean;
   identify: (input: ArcenIdentifyInput) => Promise<ArcenIdentifyResult>;
-}
+} 
 
 export interface ArcenIdentifyInput {
   company?: {

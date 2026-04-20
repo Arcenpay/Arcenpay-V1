@@ -16,6 +16,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { z } from "zod";
 import { toPrismaJson } from "@/lib/prisma-json";
+import { requireFacilitatorAuth } from "@/lib/facilitator-auth";
 
 function asRecord(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
@@ -23,6 +24,7 @@ function asRecord(value: unknown): Record<string, unknown> {
 }
 
 const bodySchema = z.object({
+  teamId: z.string().min(1),
   wallet: z.string().regex(/^0x[0-9a-fA-F]{40}$/i),
   onChainPlanId: z.string().nullable(),
   event: z.enum(["minted", "renewed", "cancelled"]),
@@ -32,25 +34,19 @@ const bodySchema = z.object({
     .regex(/^0x[0-9a-fA-F]{64}$/i)
     .optional(),
   sourceTokenId: z.string().optional(),
+}).superRefine((value, ctx) => {
+  if (value.event !== "cancelled" && !value.onChainPlanId) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["onChainPlanId"],
+      message: "onChainPlanId is required for minted and renewed events.",
+    });
+  }
 });
 
 export async function PATCH(req: NextRequest) {
-  const facilitatorSecret = process.env.FACILITATOR_SECRET ?? "";
-  const dashboardTeamId = process.env.DASHBOARD_TEAM_ID ?? "";
-  const auth = req.headers.get("authorization") ?? "";
-  if (!facilitatorSecret || auth !== `Bearer ${facilitatorSecret}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  if (!dashboardTeamId) {
-    return NextResponse.json(
-      {
-        error:
-          "DASHBOARD_TEAM_ID is not configured. sync-subscription requires explicit team scoping.",
-      },
-      { status: 503 },
-    );
-  }
+  const authError = requireFacilitatorAuth(req);
+  if (authError) return authError;
 
   const body = await req.json().catch(() => ({}));
   const parsed = bodySchema.safeParse(body);
@@ -62,6 +58,7 @@ export async function PATCH(req: NextRequest) {
   }
 
   const {
+    teamId,
     wallet,
     onChainPlanId,
     event,
@@ -73,7 +70,7 @@ export async function PATCH(req: NextRequest) {
   const company = await db.arcenCompany.findFirst({
     where: {
       walletAddress: wallet.toLowerCase(),
-      teamId: dashboardTeamId,
+      teamId,
     },
     select: { id: true, teamId: true, traits: true, activePlanId: true },
   });

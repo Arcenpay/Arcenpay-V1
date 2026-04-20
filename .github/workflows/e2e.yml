@@ -47,14 +47,14 @@ jobs:
         run: npm ci
 
       - name: Generate Prisma client
-        run: npm run -w @meap/dashboard db:generate
+        run: npm run -w @arcenpay/dashboard db:generate
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium webkit
         working-directory: apps/arcen-dashboard
 
       - name: Build dashboard
-        run: npm run -w @meap/dashboard build
+        run: npm run -w @arcenpay/dashboard build
         env:
           SKIP_ENV_VALIDATION: 'true'
           DATABASE_URL: ${{ secrets.TEST_DATABASE_URL || 'postgresql://test:test@localhost:5432/test' }}
@@ -63,14 +63,14 @@ jobs:
       - name: Start dashboard server
         if: ${{ !github.event.inputs.base_url }}
         run: |
-          npm run -w @meap/dashboard start &
+          npm run -w @arcenpay/dashboard start &
           npx wait-on http://localhost:3000 --timeout 30000
         env:
           PORT: 3000
           DATABASE_URL: ${{ secrets.TEST_DATABASE_URL || 'postgresql://test:test@localhost:5432/test' }}
 
       - name: Run Playwright tests
-        run: npm run -w @meap/dashboard test:e2e
+        run: npm run -w @arcenpay/dashboard test:e2e
         env:
           CI: 'true'
 

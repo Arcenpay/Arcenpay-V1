@@ -17,6 +17,7 @@ vi.mock("@/lib/db", () => ({
 
 const FACILITATOR_SECRET = "test-secret";
 process.env.FACILITATOR_SECRET = FACILITATOR_SECRET;
+const TEAM_ID = "team_1";
 
 function makeRequest(body: unknown) {
   return new NextRequest(
@@ -33,7 +34,10 @@ function makeRequest(body: unknown) {
 }
 
 describe("PATCH /api/internal/companies/sync-subscription", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.resetAllMocks();
+    process.env.FACILITATOR_SECRET = FACILITATOR_SECRET;
+  });
 
   it("returns 401 without correct secret", async () => {
     const req = new NextRequest(
@@ -42,6 +46,7 @@ describe("PATCH /api/internal/companies/sync-subscription", () => {
         method: "PATCH",
         headers: { Authorization: "Bearer wrong" },
         body: JSON.stringify({
+          teamId: TEAM_ID,
           wallet: "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd",
           onChainPlanId: "1",
           event: "minted",
@@ -49,12 +54,15 @@ describe("PATCH /api/internal/companies/sync-subscription", () => {
       },
     );
     const res = await PATCH(req);
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(403);
   });
 
   it("sets activePlanId on minted event", async () => {
     (db.arcenCompany.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue({
       id: "co_1",
+      teamId: TEAM_ID,
+      traits: {},
+      activePlanId: null,
     });
     (db.catalogPlan.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue({
       id: "plan_1",
@@ -62,31 +70,54 @@ describe("PATCH /api/internal/companies/sync-subscription", () => {
     (db.arcenCompany.update as ReturnType<typeof vi.fn>).mockResolvedValue({});
 
     const res = await PATCH(
-      makeRequest({ wallet: "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd", onChainPlanId: "42", event: "minted" }),
+      makeRequest({
+        teamId: TEAM_ID,
+        wallet: "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd",
+        onChainPlanId: "42",
+        event: "minted",
+      }),
     );
 
     expect(res.status).toBe(200);
+    expect(db.arcenCompany.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          teamId: TEAM_ID,
+          walletAddress: "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd",
+        },
+      }),
+    );
     expect(db.arcenCompany.update).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: { activePlanId: "plan_1" },
+        data: expect.objectContaining({ activePlanId: "plan_1" }),
       }),
     );
   });
 
-  it("clears activePlanId on cancelled event", async () => {
+  it("falls back to the lowest-priced published plan on cancelled event", async () => {
     (db.arcenCompany.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue({
       id: "co_1",
+      teamId: TEAM_ID,
+      traits: {},
+      activePlanId: "plan_old",
     });
+    (db.catalogPlan.findFirst as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce({ id: "plan_fallback" });
     (db.arcenCompany.update as ReturnType<typeof vi.fn>).mockResolvedValue({});
 
     const res = await PATCH(
-      makeRequest({ wallet: "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd", onChainPlanId: null, event: "cancelled" }),
+      makeRequest({
+        teamId: TEAM_ID,
+        wallet: "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd",
+        onChainPlanId: null,
+        event: "cancelled",
+      }),
     );
 
     expect(res.status).toBe(200);
     expect(db.arcenCompany.update).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: { activePlanId: null },
+        data: expect.objectContaining({ activePlanId: "plan_fallback" }),
       }),
     );
   });
@@ -94,7 +125,9 @@ describe("PATCH /api/internal/companies/sync-subscription", () => {
   it("sets activePlanId on renewed event", async () => {
     (db.arcenCompany.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue({
       id: "co_1",
-      teamId: "team_1",
+      teamId: TEAM_ID,
+      traits: {},
+      activePlanId: null,
     });
     (db.catalogPlan.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue({
       id: "plan_1",
@@ -102,13 +135,18 @@ describe("PATCH /api/internal/companies/sync-subscription", () => {
     (db.arcenCompany.update as ReturnType<typeof vi.fn>).mockResolvedValue({});
 
     const res = await PATCH(
-      makeRequest({ wallet: "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd", onChainPlanId: "42", event: "renewed" }),
+      makeRequest({
+        teamId: TEAM_ID,
+        wallet: "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd",
+        onChainPlanId: "42",
+        event: "renewed",
+      }),
     );
 
     expect(res.status).toBe(200);
     expect(db.arcenCompany.update).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: { activePlanId: "plan_1" },
+        data: expect.objectContaining({ activePlanId: "plan_1" }),
       }),
     );
   });
@@ -119,8 +157,96 @@ describe("PATCH /api/internal/companies/sync-subscription", () => {
     );
 
     const res = await PATCH(
-      makeRequest({ wallet: "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd", onChainPlanId: "1", event: "minted" }),
+      makeRequest({
+        teamId: TEAM_ID,
+        wallet: "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd",
+        onChainPlanId: "1",
+        event: "minted",
+      }),
     );
     expect(res.status).toBe(404);
+  });
+
+  it("skips stale events for the same company", async () => {
+    (db.arcenCompany.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: "co_1",
+      teamId: TEAM_ID,
+      traits: {
+        subscriptionSyncMeta: {
+          occurredAt: "2026-04-20T12:00:00.000Z",
+          sourceTxHash:
+            "0x1111111111111111111111111111111111111111111111111111111111111111",
+          event: "minted",
+        },
+      },
+      activePlanId: "plan_current",
+    });
+
+    const res = await PATCH(
+      makeRequest({
+        teamId: TEAM_ID,
+        wallet: "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd",
+        onChainPlanId: "42",
+        event: "renewed",
+        occurredAt: "2026-04-20T11:59:59.000Z",
+      }),
+    );
+
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toMatchObject({
+      ok: true,
+      skipped: true,
+      reason: "stale_event",
+      activePlanId: "plan_current",
+    });
+    expect(db.arcenCompany.update).not.toHaveBeenCalled();
+  });
+
+  it("skips duplicate tx hashes for the same event", async () => {
+    const txHash =
+      "0x2222222222222222222222222222222222222222222222222222222222222222";
+    (db.arcenCompany.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: "co_1",
+      teamId: TEAM_ID,
+      traits: {
+        subscriptionSyncMeta: {
+          occurredAt: "2026-04-20T12:00:00.000Z",
+          sourceTxHash: txHash,
+          event: "renewed",
+        },
+      },
+      activePlanId: "plan_current",
+    });
+
+    const res = await PATCH(
+      makeRequest({
+        teamId: TEAM_ID,
+        wallet: "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd",
+        onChainPlanId: "42",
+        event: "renewed",
+        sourceTxHash: txHash,
+      }),
+    );
+
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toMatchObject({
+      ok: true,
+      skipped: true,
+      reason: "duplicate_event",
+      activePlanId: "plan_current",
+    });
+    expect(db.arcenCompany.update).not.toHaveBeenCalled();
+  });
+
+  it("requires explicit team scoping", async () => {
+    const res = await PATCH(
+      makeRequest({
+        wallet: "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd",
+        onChainPlanId: "42",
+        event: "minted",
+      }),
+    );
+
+    expect(res.status).toBe(400);
   });
 });

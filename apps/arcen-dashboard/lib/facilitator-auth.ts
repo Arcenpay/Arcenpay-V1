@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { FACILITATOR_SECRET } from "@/lib/config";
 
 const isProdRuntime =
   process.env.NODE_ENV === "production" &&
@@ -21,7 +20,9 @@ function getBearerToken(request: NextRequest): string {
 export function requireFacilitatorAuth(
   request: NextRequest,
 ): NextResponse | null {
-  if (!FACILITATOR_SECRET) {
+  const facilitatorSecret = (process.env.FACILITATOR_SECRET || "").trim();
+
+  if (!facilitatorSecret) {
     if (isProdRuntime) {
       return NextResponse.json(
         {
@@ -34,7 +35,7 @@ export function requireFacilitatorAuth(
     return null;
   }
 
-  if (getBearerToken(request) !== FACILITATOR_SECRET) {
+  if (getBearerToken(request) !== facilitatorSecret) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

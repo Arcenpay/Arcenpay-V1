@@ -124,9 +124,10 @@ const PROOF_ARTIFACT_MANIFEST_PATH =
   path.resolve(process.cwd(), "circuits", "artifact-manifest.json");
 const PROOF_SIGNER_PRIVATE_KEY =
   process.env.PROOF_SIGNER_PRIVATE_KEY || process.env.PRIVATE_KEY;
+const REDIS_PREFIX = process.env.REDIS_PREFIX || "meap";
 const FACILITATOR_SECRET = (process.env.FACILITATOR_SECRET || "").trim();
 const DASHBOARD_URL = (process.env.DASHBOARD_URL || "").replace(/\/$/, "");
-const DASHBOARD_TEAM_ID = (process.env.DASHBOARD_TEAM_ID || "").trim();
+const DASHBOARD_PLAN_RESOLVER_PATH = "/api/internal/catalog/resolve-plan";
 const DEFAULT_ERC4337_ENTRYPOINT_V07 =
   "0x0000000071727de22e5e9d8baf0edac6f37da032";
 const PAYMASTER_RPC_URL = (
@@ -650,8 +651,10 @@ if (process.env.REDIS_URL) {
 // queue provides in-memory retry / dead-letter semantics.
 
 const jobQueue = new DurableJobQueue({
-  keyPrefix: `${process.env.REDIS_PREFIX || "meap"}:queue`,
+  keyPrefix: `${REDIS_PREFIX}:queue`,
 });
+
+let queueRedisClient: QueueRedisClient | null = null;
 
 const queueRedisReady = (async (): Promise<void> => {
   if (!process.env.REDIS_URL) {
@@ -682,6 +685,7 @@ const queueRedisReady = (async (): Promise<void> => {
       maxRetriesPerRequest: 2,
     });
     await client.connect();
+    queueRedisClient = client as QueueRedisClient;
     jobQueue.setRedis(client);
     console.log(
       "[Facilitator] Queue Redis connected — enabling crash recovery",
@@ -702,14 +706,112 @@ const queueRedisReady = (async (): Promise<void> => {
   }
 })();
 
-// Workers process enqueued jobs with exponential backoff
-jobQueue.startWorker<{ pathname: string; payload: unknown }>(
+async function buildBillingEventRequest(
+  payload: BillingEventJobPayload,
+): Promise<Record<string, unknown>> {
+  const teamId = await resolveRoutingTeamId({
+    teamId: payload.teamId,
+    onChainPlanId: payload.onChainPlanId,
+    sourceTokenId: payload.sourceTokenId,
+  });
+
+  if (!teamId) {
+    throw new Error(
+      `Unable to resolve teamId for billing event ${payload.eventType} (${payload.idempotencyKey})`,
+    );
+  }
+
+  return {
+    teamId,
+    eventType: payload.eventType,
+    eventName: payload.eventName,
+    schemaVersion: payload.schemaVersion,
+    occurredAt: payload.occurredAt,
+    idempotencyKey: payload.idempotencyKey,
+    payload: payload.payload,
+    triggerInvoice: payload.triggerInvoice,
+    source: payload.source,
+  };
+}
+
+async function buildSubscriptionSyncRequest(
+  payload: SubscriptionSyncJobPayload,
+): Promise<Record<string, unknown>> {
+  const teamId = await resolveRoutingTeamId({
+    teamId: payload.teamId,
+    onChainPlanId: payload.onChainPlanId,
+    sourceTokenId: payload.sourceTokenId,
+  });
+
+  if (!teamId) {
+    throw new Error(
+      `Unable to resolve teamId for subscription ${payload.event} (${payload.sourceTokenId ?? payload.wallet})`,
+    );
+  }
+
+  const routeState = payload.sourceTokenId
+    ? await readSubscriptionRouteState(payload.sourceTokenId)
+    : null;
+  const resolvedWallet = routeState?.wallet ?? payload.wallet;
+  if (!resolvedWallet) {
+    throw new Error(
+      `Unable to resolve subscriber wallet for subscription ${payload.event} (${payload.sourceTokenId ?? "unknown-token"})`,
+    );
+  }
+  const wallet = resolvedWallet.toLowerCase();
+
+  return {
+    teamId,
+    wallet,
+    onChainPlanId: payload.onChainPlanId,
+    event: payload.event,
+    occurredAt: payload.occurredAt,
+    sourceTxHash: payload.sourceTxHash,
+    sourceTokenId: payload.sourceTokenId,
+  };
+}
+
+// Workers process enqueued jobs with exponential backoff.
+// Subscription/billing jobs resolve team scope at execution time so unresolved
+// events can retry and eventually dead-letter instead of being dropped.
+jobQueue.startWorker<
+  BillingEventJobPayload | SubscriptionSyncJobPayload
+>(
   "billing",
   async (job) => {
     if (!DASHBOARD_URL) return;
-    const { pathname, payload } = job.payload;
-    const ok = await postToDashboard(pathname, payload);
-    if (!ok) throw new Error(`Dashboard POST ${pathname} returned non-2xx`);
+    if (job.type === "billing_event") {
+      const requestPayload = await buildBillingEventRequest(
+        job.payload as BillingEventJobPayload,
+      );
+      const ok = await postToDashboard("/api/billing/events", requestPayload);
+      if (!ok) {
+        throw new Error("Dashboard POST /api/billing/events returned non-2xx");
+      }
+      return;
+    }
+
+    if (job.type === "subscription_sync") {
+      const requestPayload = await buildSubscriptionSyncRequest(
+        job.payload as SubscriptionSyncJobPayload,
+      );
+      const ok = await postToDashboard(
+        "/api/internal/companies/sync-subscription",
+        requestPayload,
+      );
+      if (!ok) {
+        throw new Error(
+          "Dashboard POST /api/internal/companies/sync-subscription returned non-2xx",
+        );
+      }
+      const syncPayload = job.payload as SubscriptionSyncJobPayload;
+      if (syncPayload.sourceTokenId && syncPayload.event === "cancelled") {
+        await deleteSubscriptionRouteState(syncPayload.sourceTokenId);
+      }
+      return;
+    }
+
+    throw new Error(`Unsupported billing job type: ${job.type}`);
   },
 );
 
@@ -857,9 +959,47 @@ const subscriberEmailsByWallet = new Map<
   { email: string; planId?: string; updatedAt: number }
 >();
 
-// Cache tokenId → subscriber wallet, populated from minted events.
-// Used by renewed/cancelled handlers which don't emit subscriber address.
-const tokenIdToSubscriber = new Map<string, string>();
+type SubscriptionRouteState = {
+  wallet: string | null;
+  teamId: string | null;
+  onChainPlanId: string | null;
+  updatedAt: string;
+};
+
+type QueueRedisClient = import("./queue.js").IRedisQueue & {
+  connect(): Promise<void>;
+  get?(key: string): Promise<string | null>;
+  set?(key: string, value: string): Promise<unknown>;
+};
+
+type BillingEventJobPayload = {
+  teamId?: string | null;
+  eventType: string;
+  eventName?: string;
+  schemaVersion?: string;
+  occurredAt: string;
+  idempotencyKey: string;
+  payload: Record<string, unknown>;
+  triggerInvoice: boolean;
+  source: string;
+  onChainPlanId?: string | null;
+  sourceTokenId?: string;
+  wallet?: string | null;
+};
+
+type SubscriptionSyncJobPayload = {
+  teamId?: string | null;
+  wallet: string | null;
+  onChainPlanId: string | null;
+  event: "minted" | "renewed" | "cancelled";
+  occurredAt?: string;
+  sourceTxHash?: string;
+  sourceTokenId?: string;
+};
+
+const subscriptionRouteStateByTokenId = new Map<string, SubscriptionRouteState>();
+const SUBSCRIPTION_ROUTE_STATE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+
 const billingBridgeStats: {
   sent: number;
   failed: number;
@@ -910,18 +1050,156 @@ async function postToDashboard(
   }
 }
 
+function getSubscriptionRouteStateKey(tokenId: string): string {
+  return `${REDIS_PREFIX}:subscription-route:${tokenId}`;
+}
+
+async function readSubscriptionRouteState(
+  tokenId: string,
+): Promise<SubscriptionRouteState | null> {
+  const cached = subscriptionRouteStateByTokenId.get(tokenId);
+  if (cached) {
+    const updatedAtMs = Date.parse(cached.updatedAt);
+    if (
+      Number.isFinite(updatedAtMs) &&
+      Date.now() - updatedAtMs <= SUBSCRIPTION_ROUTE_STATE_MAX_AGE_MS
+    ) {
+      return cached;
+    }
+    subscriptionRouteStateByTokenId.delete(tokenId);
+  }
+
+  if (!queueRedisClient?.get) return null;
+
+  try {
+    const raw = await queueRedisClient.get(getSubscriptionRouteStateKey(tokenId));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as SubscriptionRouteState;
+    subscriptionRouteStateByTokenId.set(tokenId, parsed);
+    return parsed;
+  } catch (err) {
+    console.warn(
+      `[Facilitator] Failed reading subscription routing state for token ${tokenId}:`,
+      err,
+    );
+    return null;
+  }
+}
+
+async function writeSubscriptionRouteState(
+  tokenId: string,
+  nextState: SubscriptionRouteState,
+): Promise<void> {
+  subscriptionRouteStateByTokenId.set(tokenId, nextState);
+
+  if (!queueRedisClient?.set) return;
+
+  try {
+    await queueRedisClient.set(
+      getSubscriptionRouteStateKey(tokenId),
+      JSON.stringify(nextState),
+    );
+  } catch (err) {
+    console.warn(
+      `[Facilitator] Failed persisting subscription routing state for token ${tokenId}:`,
+      err,
+    );
+  }
+}
+
+async function deleteSubscriptionRouteState(tokenId: string): Promise<void> {
+  subscriptionRouteStateByTokenId.delete(tokenId);
+
+  if (!queueRedisClient) return;
+
+  try {
+    await queueRedisClient.del(getSubscriptionRouteStateKey(tokenId));
+  } catch (err) {
+    console.warn(
+      `[Facilitator] Failed deleting subscription routing state for token ${tokenId}:`,
+      err,
+    );
+  }
+}
+
+async function resolvePlanScopeFromDashboard(
+  onChainPlanId: string,
+): Promise<{ teamId: string; planId: string | null } | null> {
+  if (!DASHBOARD_URL) return null;
+
+  const url = new URL(`${DASHBOARD_URL}${DASHBOARD_PLAN_RESOLVER_PATH}`);
+  url.searchParams.set("onChainPlanId", onChainPlanId);
+
+  const headers: Record<string, string> = {};
+  if (FACILITATOR_SECRET) {
+    headers.Authorization = `Bearer ${FACILITATOR_SECRET}`;
+  }
+
+  const response = await fetch(url, { headers });
+  if (response.status === 404) return null;
+  if (!response.ok) {
+    throw new Error(
+      `Plan resolver returned HTTP ${response.status} for onChainPlanId=${onChainPlanId}`,
+    );
+  }
+
+  const data = (await response.json()) as {
+    teamId?: string;
+    planId?: string | null;
+  };
+
+  if (!data.teamId) {
+    throw new Error(
+      `Plan resolver returned no teamId for onChainPlanId=${onChainPlanId}`,
+    );
+  }
+
+  return {
+    teamId: data.teamId,
+    planId: data.planId ?? null,
+  };
+}
+
+async function resolveRoutingTeamId(input: {
+  teamId?: string | null;
+  onChainPlanId?: string | null;
+  sourceTokenId?: string;
+}): Promise<string | null> {
+  if (input.teamId?.trim()) {
+    return input.teamId.trim();
+  }
+
+  if (input.sourceTokenId) {
+    const state = await readSubscriptionRouteState(input.sourceTokenId);
+    if (state?.teamId) return state.teamId;
+  }
+
+  if (!input.onChainPlanId) return null;
+
+  const planScope = await resolvePlanScopeFromDashboard(input.onChainPlanId);
+  return planScope?.teamId ?? null;
+}
+
 async function persistWebhookDelivery(
   entry: WebhookDeliveryLog,
   payload: WebhookPayload,
 ): Promise<void> {
-  if (!DASHBOARD_TEAM_ID) return;
+  const payloadData =
+    payload.data && typeof payload.data === "object"
+      ? (payload.data as Record<string, unknown>)
+      : {};
+  const teamId =
+    typeof payloadData.teamId === "string" ? payloadData.teamId.trim() : "";
+
+  if (!teamId) return;
+
   await jobQueue.enqueue(
     "webhooks",
     "webhook_delivery",
     {
       pathname: "/api/webhooks/delivery",
       payload: {
-        teamId: DASHBOARD_TEAM_ID,
+        teamId,
         deliveryId: entry.id,
         event: entry.event,
         url: entry.url,
@@ -943,8 +1221,13 @@ async function persistBillingEvent(
   payload: Record<string, unknown>,
   triggerInvoice = false,
   occurredAt?: string | number | Date,
+  routing?: {
+    teamId?: string | null;
+    onChainPlanId?: string | null;
+    sourceTokenId?: string;
+    wallet?: string | null;
+  },
 ): Promise<void> {
-  if (!DASHBOARD_TEAM_ID) return;
   const eventEnvelope = createProtocolEvent(eventName, payload, {
     source: "facilitator",
     idempotencyKey,
@@ -955,36 +1238,35 @@ async function persistBillingEvent(
     "billing",
     "billing_event",
     {
-      pathname: "/api/billing/events",
-      payload: {
-        teamId: DASHBOARD_TEAM_ID,
-        eventType: mapProtocolEventToBillingType(eventName),
-        eventName: eventEnvelope.name,
-        schemaVersion: eventEnvelope.schemaVersion,
-        occurredAt: eventEnvelope.occurredAt,
-        idempotencyKey: eventEnvelope.idempotencyKey,
-        payload: eventEnvelope.payload,
-        triggerInvoice,
-        source: eventEnvelope.source,
-      },
-    },
+      teamId: routing?.teamId ?? null,
+      eventType: mapProtocolEventToBillingType(eventName),
+      eventName: eventEnvelope.name,
+      schemaVersion: eventEnvelope.schemaVersion,
+      occurredAt: eventEnvelope.occurredAt,
+      idempotencyKey: eventEnvelope.idempotencyKey,
+      payload: eventEnvelope.payload,
+      triggerInvoice,
+      source: eventEnvelope.source,
+      onChainPlanId: routing?.onChainPlanId ?? null,
+      sourceTokenId: routing?.sourceTokenId,
+      wallet: routing?.wallet ?? null,
+    } satisfies BillingEventJobPayload,
     { idempotencyKey: `billing:${eventEnvelope.idempotencyKey}` },
   );
 }
 
 async function enqueueSubscriptionSync(input: {
-  wallet: string;
+  teamId?: string | null;
+  wallet: string | null;
   onChainPlanId: string | null;
   event: "minted" | "renewed" | "cancelled";
   occurredAt?: string;
   sourceTxHash?: string;
   sourceTokenId?: string;
 }): Promise<void> {
-  if (!DASHBOARD_TEAM_ID) return;
-
   const dedupeParts = [
     input.event,
-    input.wallet.toLowerCase(),
+    input.wallet?.toLowerCase() ?? input.sourceTokenId ?? "unknown",
     input.sourceTxHash ??
       input.sourceTokenId ??
       input.occurredAt ??
@@ -994,10 +1276,7 @@ async function enqueueSubscriptionSync(input: {
   await jobQueue.enqueue(
     "billing",
     "subscription_sync",
-    {
-      pathname: "/api/internal/companies/sync-subscription",
-      payload: input,
-    },
+    input satisfies SubscriptionSyncJobPayload,
     { idempotencyKey: `sync:${dedupeParts.join(":")}` },
   );
 }
@@ -1396,36 +1675,61 @@ eventListener.on("minted", async (event) => {
   console.log(
     `[Facilitator] 🎉 New subscriber: ${event.subscriber} (Plan ${event.planId})`,
   );
+  const tokenId = event.tokenId.toString();
+  const onChainPlanId = event.planId?.toString() ?? null;
+  const occurredAt = event.timestamp
+    ? new Date(Number(event.timestamp) * 1000).toISOString()
+    : undefined;
+  const mintedPlanScope = onChainPlanId
+    ? await resolvePlanScopeFromDashboard(onChainPlanId).catch((err) => {
+        console.error(
+          "[Facilitator] Failed to resolve team for minted subscription:",
+          err,
+        );
+        return null;
+      })
+    : null;
+
+  if (event.subscriber) {
+    await writeSubscriptionRouteState(tokenId, {
+      wallet: event.subscriber.toLowerCase(),
+      teamId: mintedPlanScope?.teamId ?? null,
+      onChainPlanId,
+      updatedAt: occurredAt ?? new Date().toISOString(),
+    });
+  }
+
   await persistBillingEvent(
     "subscription.minted",
     buildEventIdempotencyKey("subscription.minted", [
-      event.transactionHash || event.tokenId.toString(),
+      event.transactionHash || tokenId,
     ]),
     {
-      tokenId: event.tokenId.toString(),
-      planId: event.planId?.toString(),
+      tokenId,
+      planId: onChainPlanId,
       subscriber: event.subscriber,
       txHash: event.transactionHash,
       timestamp: event.timestamp?.toString(),
     },
     false,
     event.timestamp ? Number(event.timestamp) * 1000 : undefined,
+    {
+      teamId: mintedPlanScope?.teamId ?? null,
+      onChainPlanId,
+      sourceTokenId: tokenId,
+      wallet: event.subscriber ?? null,
+    },
   );
-  // Cache tokenId → subscriber for use in renewed/cancelled handlers
-  if (event.tokenId != null && event.subscriber) {
-    tokenIdToSubscriber.set(event.tokenId.toString(), event.subscriber);
-  }
   // Sync subscription to dashboard DB so flag evaluation uses the correct plan
   if (event.subscriber) {
     enqueueSubscriptionSync({
+      teamId: mintedPlanScope?.teamId ?? null,
       wallet: event.subscriber,
-      onChainPlanId: event.planId?.toString() ?? null,
+      onChainPlanId,
       event: "minted",
-      occurredAt: event.timestamp
-        ? new Date(Number(event.timestamp) * 1000).toISOString()
-        : undefined,
+      occurredAt,
       sourceTxHash: event.transactionHash,
-      sourceTokenId: event.tokenId.toString(),
+      sourceTokenId: tokenId,
     }).catch((err) =>
       console.error("[Facilitator] sync-subscription (minted) failed:", err),
     );
@@ -1501,32 +1805,15 @@ eventListener.on("renewed", async (event) => {
   console.log(
     `[Facilitator] 🔄 Renewed: tokenId=${event.tokenId} until ${event.expiration}`,
   );
+  const tokenId = event.tokenId.toString();
+  const existingRouteState = await readSubscriptionRouteState(tokenId);
   // Look up subscriber email so invoice generation can proceed
   const renewedSubscriberWallet =
-    tokenIdToSubscriber.get(event.tokenId.toString()) ||
+    existingRouteState?.wallet ||
     (await getTokenOwner(event.tokenId));
   const renewedSubscriberEmail = renewedSubscriberWallet
     ? await lookupSubscriberEmail(renewedSubscriberWallet)
     : null;
-  await persistBillingEvent(
-    "subscription.renewed",
-    buildEventIdempotencyKey("subscription.renewed", [
-      event.transactionHash || event.tokenId.toString(),
-      event.expiration?.toString() || "",
-    ]),
-    {
-      tokenId: event.tokenId.toString(),
-      expiration: event.expiration?.toString(),
-      amount: event.amountPaid ? String(Number(event.amountPaid) / 1e6) : "0",
-      txHash: event.transactionHash,
-      timestamp: event.timestamp?.toString(),
-      // Include email so /api/billing/events can generate an invoice
-      ...(renewedSubscriberEmail && { email: renewedSubscriberEmail }),
-      description: "Subscription renewal",
-    },
-    true,
-    event.timestamp ? Number(event.timestamp) * 1000 : undefined,
-  );
   // Resolve the on-chain planId for this token so sync-subscription can set activePlanId
   let renewedPlanId: bigint | null = null;
   try {
@@ -1543,21 +1830,70 @@ eventListener.on("renewed", async (event) => {
       err,
     );
   }
-  // Sync subscription to dashboard DB so flag evaluation uses the correct plan
+  const renewedOnChainPlanId =
+    renewedPlanId?.toString() ?? existingRouteState?.onChainPlanId ?? null;
+  const renewedPlanScope = renewedOnChainPlanId
+    ? await resolvePlanScopeFromDashboard(renewedOnChainPlanId).catch((err) => {
+        console.error(
+          "[Facilitator] Failed to resolve team for renewed subscription:",
+          err,
+        );
+        return null;
+      })
+    : null;
+  const renewedTeamId =
+    existingRouteState?.teamId || renewedPlanScope?.teamId || null;
+
   if (renewedSubscriberWallet) {
-    enqueueSubscriptionSync({
-      wallet: renewedSubscriberWallet,
-      onChainPlanId: renewedPlanId?.toString() ?? null,
-      event: "renewed",
-      occurredAt: event.timestamp
+    await writeSubscriptionRouteState(tokenId, {
+      wallet: renewedSubscriberWallet.toLowerCase(),
+      teamId: renewedTeamId ?? null,
+      onChainPlanId: renewedOnChainPlanId,
+      updatedAt: event.timestamp
         ? new Date(Number(event.timestamp) * 1000).toISOString()
-        : undefined,
-      sourceTxHash: event.transactionHash,
-      sourceTokenId: event.tokenId.toString(),
-    }).catch((err) =>
-      console.error("[Facilitator] sync-subscription (renewed) failed:", err),
-    );
+        : new Date().toISOString(),
+    });
   }
+
+  await persistBillingEvent(
+    "subscription.renewed",
+    buildEventIdempotencyKey("subscription.renewed", [
+      event.transactionHash || tokenId,
+      event.expiration?.toString() || "",
+    ]),
+    {
+      tokenId,
+      expiration: event.expiration?.toString(),
+      amount: event.amountPaid ? String(Number(event.amountPaid) / 1e6) : "0",
+      txHash: event.transactionHash,
+      timestamp: event.timestamp?.toString(),
+      ...(renewedSubscriberEmail && { email: renewedSubscriberEmail }),
+      description: "Subscription renewal",
+    },
+    true,
+    event.timestamp ? Number(event.timestamp) * 1000 : undefined,
+    {
+      teamId: renewedTeamId ?? null,
+      onChainPlanId: renewedOnChainPlanId,
+      sourceTokenId: tokenId,
+      wallet: renewedSubscriberWallet ?? null,
+    },
+  );
+
+  // Sync subscription to dashboard DB so flag evaluation uses the correct plan
+  enqueueSubscriptionSync({
+    teamId: renewedTeamId ?? null,
+    wallet: renewedSubscriberWallet,
+    onChainPlanId: renewedOnChainPlanId,
+    event: "renewed",
+    occurredAt: event.timestamp
+      ? new Date(Number(event.timestamp) * 1000).toISOString()
+      : undefined,
+    sourceTxHash: event.transactionHash,
+    sourceTokenId: tokenId,
+  }).catch((err) =>
+    console.error("[Facilitator] sync-subscription (renewed) failed:", err),
+  );
   if (tablelandService) {
     if (tablelandReady) {
       await tablelandReady;
@@ -1582,9 +1918,7 @@ eventListener.on("renewed", async (event) => {
   }
   // Send renewal receipt email
   if (emailService) {
-    const subscriberWallet =
-      tokenIdToSubscriber.get(event.tokenId.toString()) ||
-      (await getTokenOwner(event.tokenId));
+    const subscriberWallet = renewedSubscriberWallet;
     if (subscriberWallet) {
       const subscriberEmail = await lookupSubscriberEmail(subscriberWallet);
       if (subscriberEmail) {
@@ -1614,23 +1948,31 @@ eventListener.on("renewed", async (event) => {
 
 eventListener.on("cancelled", async (event) => {
   console.log(`[Facilitator] ❌ Cancelled: tokenId=${event.tokenId}`);
+  const tokenId = event.tokenId.toString();
+  const existingRouteState = await readSubscriptionRouteState(tokenId);
+  const cancelledSubscriberWallet =
+    existingRouteState?.wallet || (await getTokenOwner(event.tokenId));
+  const cancelledTeamId = existingRouteState?.teamId ?? null;
+
   await persistBillingEvent(
     "subscription.cancelled",
     buildEventIdempotencyKey("subscription.cancelled", [
-      event.transactionHash || event.tokenId.toString(),
+      event.transactionHash || tokenId,
     ]),
     {
-      tokenId: event.tokenId.toString(),
+      tokenId,
       txHash: event.transactionHash,
       timestamp: event.timestamp?.toString(),
     },
     false,
     event.timestamp ? Number(event.timestamp) * 1000 : undefined,
+    {
+      teamId: cancelledTeamId,
+      onChainPlanId: existingRouteState?.onChainPlanId ?? null,
+      sourceTokenId: tokenId,
+      wallet: cancelledSubscriberWallet ?? null,
+    },
   );
-  // Resolve subscriber before Tableland/Lit so we can email even if NFT is burned
-  const cancelledSubscriberWallet =
-    tokenIdToSubscriber.get(event.tokenId.toString()) ||
-    (await getTokenOwner(event.tokenId));
 
   if (tablelandService) {
     if (tablelandReady) {
@@ -1673,12 +2015,10 @@ eventListener.on("cancelled", async (event) => {
         console.error("[Facilitator] Access revoked email failed:", err);
       }
     }
-    // Remove from cache — subscription is over
-    tokenIdToSubscriber.delete(event.tokenId.toString());
   }
   // Sync subscription to dashboard DB so flag evaluation uses the correct plan
-  if (cancelledSubscriberWallet) {
-    enqueueSubscriptionSync({
+  enqueueSubscriptionSync({
+      teamId: cancelledTeamId,
       wallet: cancelledSubscriberWallet,
       onChainPlanId: null,
       event: "cancelled",
@@ -1686,11 +2026,10 @@ eventListener.on("cancelled", async (event) => {
         ? new Date(Number(event.timestamp) * 1000).toISOString()
         : undefined,
       sourceTxHash: event.transactionHash,
-      sourceTokenId: event.tokenId.toString(),
+      sourceTokenId: tokenId,
     }).catch((err) =>
       console.error("[Facilitator] sync-subscription (cancelled) failed:", err),
     );
-  }
 });
 
 // Watch for cross-chain dispatch requests and relay via Axelar/CCIP (PRD §7.2)
@@ -3000,7 +3339,7 @@ app.post(
         : {};
     const source = String(req.body?.source || "ops-replay");
     const triggerInvoice = Boolean(req.body?.triggerInvoice);
-    const teamId = String(req.body?.teamId || DASHBOARD_TEAM_ID || "").trim();
+    const teamId = String(req.body?.teamId || "").trim();
     const eventName =
       typeof req.body?.eventName === "string" ? req.body.eventName : undefined;
     const schemaVersion =
@@ -3023,7 +3362,7 @@ app.post(
     if (!teamId) {
       return res.status(400).json({
         ok: false,
-        error: "teamId is required when DASHBOARD_TEAM_ID is not configured.",
+        error: "teamId is required.",
       });
     }
     if (!allowedEventTypes.has(eventType)) {
@@ -3166,7 +3505,7 @@ app.get("/api/email/templates", (_req, res) => {
 
 app.get("/api/invoices/status", (_req, res) => {
   res.json({
-    dashboardBridgeConfigured: Boolean(DASHBOARD_URL && DASHBOARD_TEAM_ID),
+    dashboardBridgeConfigured: Boolean(DASHBOARD_URL),
     bridgeStats: billingBridgeStats,
     queueStats: {
       billing: jobQueue.getStats("billing"),

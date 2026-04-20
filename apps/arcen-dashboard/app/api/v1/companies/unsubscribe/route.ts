@@ -5,9 +5,12 @@
  * Auth: Bearer <embed_access_token>
  */
 import { NextRequest, NextResponse } from "next/server";
-import { createHash } from "crypto";
 import { db } from "@/lib/db";
 import { deliverWebhook } from "@/lib/deliver-webhook";
+import {
+  extractEmbedAccessToken,
+  resolveEmbedAccessToken,
+} from "@/lib/embed-access-token";
 import { toPrismaJson } from "@/lib/prisma-json";
 
 type SubscriptionTransition = {
@@ -25,29 +28,6 @@ function asRecord(value: unknown): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
-function verifyAccessToken(token: string, secret: string) {
-  try {
-    const parts = token.split(".");
-    if (parts.length !== 3) return { valid: false };
-    const [header, body, sig] = parts;
-    const unsigned = `${header}.${body}`;
-    const { createHmac } = require("crypto") as typeof import("crypto");
-    const expectedSig = createHmac("sha256", secret)
-      .update(unsigned)
-      .digest("base64url");
-    if (sig !== expectedSig) return { valid: false };
-    const payload = JSON.parse(Buffer.from(body, "base64url").toString());
-    if (payload.exp < Math.floor(Date.now() / 1000)) return { valid: false };
-    return {
-      valid: true,
-      teamId: payload.teamId as string,
-      companyId: payload.companyId as string | null,
-    };
-  } catch {
-    return { valid: false };
-  }
-}
-
 function corsHeaders() {
   return {
     "Access-Control-Allow-Origin": "*",
@@ -61,35 +41,23 @@ export async function OPTIONS() {
 }
 
 export async function POST(req: NextRequest) {
-  const token = req.headers.get("authorization")?.slice(7);
+  const token = extractEmbedAccessToken(req);
   if (!token)
     return NextResponse.json(
       { error: "Access token required" },
       { status: 401, headers: corsHeaders() },
     );
 
-  const secret = process.env.ACCESS_TOKEN_SECRET;
-  if (!secret)
+  if (!process.env.ACCESS_TOKEN_SECRET)
     return NextResponse.json(
       { error: "Server configuration error" },
       { status: 500, headers: corsHeaders() },
     );
 
-  const decoded = verifyAccessToken(token, secret);
-  if (!decoded.valid || !decoded.teamId)
+  const decoded = await resolveEmbedAccessToken(token);
+  if (!decoded?.teamId)
     return NextResponse.json(
       { error: "Invalid token" },
-      { status: 401, headers: corsHeaders() },
-    );
-
-  const tokenHash = createHash("sha256").update(token).digest("hex");
-  const stored = await db.embedAccessToken.findUnique({
-    where: { tokenHash },
-    select: { expiresAt: true },
-  });
-  if (!stored || stored.expiresAt < new Date())
-    return NextResponse.json(
-      { error: "Token expired" },
       { status: 401, headers: corsHeaders() },
     );
 
