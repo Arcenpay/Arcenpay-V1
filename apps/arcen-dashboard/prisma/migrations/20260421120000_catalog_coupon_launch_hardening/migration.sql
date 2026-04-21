@@ -1,4 +1,4 @@
-CREATE TABLE "CatalogCoupon" (
+CREATE TABLE IF NOT EXISTS "CatalogCoupon" (
     "teamId" TEXT NOT NULL,
     "code" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -19,5 +19,5 @@ CREATE TABLE "CatalogCoupon" (
     CONSTRAINT "CatalogCoupon_redemptionCount_check" CHECK ("redemptionCount" >= 0)
 );
 
-CREATE INDEX "CatalogCoupon_teamId_active_idx" ON "CatalogCoupon"("teamId", "active");
-CREATE INDEX "CatalogCoupon_teamId_applicablePlanId_idx" ON "CatalogCoupon"("teamId", "applicablePlanId");
+CREATE INDEX IF NOT EXISTS "CatalogCoupon_teamId_active_idx" ON "CatalogCoupon"("teamId", "active");
+CREATE INDEX IF NOT EXISTS "CatalogCoupon_teamId_applicablePlanId_idx" ON "CatalogCoupon"("teamId", "applicablePlanId");

@@ -75,7 +75,6 @@ import { useEnvironment } from "@/contexts/environment-context";
 import { useAccount, useSignTypedData, useChainId } from "wagmi";
 import { getUsdcAddress, getUsdcTokenOptions } from "@/lib/contracts";
 import { toast } from "sonner";
-import { SafeTransactionDialog } from "@/components/safe/safe-transaction-dialog";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

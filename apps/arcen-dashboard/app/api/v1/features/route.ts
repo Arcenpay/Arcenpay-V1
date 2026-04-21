@@ -39,8 +39,7 @@ function toStoredFeatureType(
   }
 }
 
-async function requireTeamId(request: NextRequest): Promise<string | NextResponse> {
-  void request; // unused but kept for future middleware use
+async function requireTeamId(): Promise<string | NextResponse> {
   const session = await getSession();
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -55,7 +54,7 @@ async function requireTeamId(request: NextRequest): Promise<string | NextRespons
 // ── GET — list features ───────────────────────────────────────────────────────
 
 export async function GET(request: NextRequest) {
-  const result = await requireTeamId(request);
+  const result = await requireTeamId();
   if (result instanceof NextResponse) return result;
   const teamId = result;
 
@@ -91,7 +90,7 @@ export async function GET(request: NextRequest) {
 // ── POST — create feature ─────────────────────────────────────────────────────
 
 export async function POST(request: NextRequest) {
-  const result = await requireTeamId(request);
+  const result = await requireTeamId();
   if (result instanceof NextResponse) return result;
   const teamId = result;
 

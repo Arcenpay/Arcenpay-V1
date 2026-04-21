@@ -5,7 +5,7 @@
 //    USE SUBGRAPH for: analytics, aggregates, paginated history,
 //      billing events, plan/subscriber lists.  Eventual consistency
 //      (1-2 block lag) is acceptable for these.
-//    USE chain-reader.ts for: live subscription status, session
+//    USE direct chain reads for: live subscription status, session
 //      balances, cross-chain entitlement — anywhere correctness
 //      matters more than speed.
 // ============================================================
@@ -134,13 +134,12 @@ export const GET_PROTOCOL_STATS = gql`
   }
 `;
 
-// ── Subscription history (analytics only — use chain-reader for live status) ──
+// ── Subscription history (analytics only — use direct chain reads for live status) ──
 
 /**
  * Returns on-chain subscription history for a token ID from the subgraph.
  * NOTE: This may lag 1-2 blocks behind chain tip.
- * For gate-keeping and live entitlement checks use getSubscriptionStatus()
- * from lib/chain-reader.ts which reads directly from the contract.
+ * For gate-keeping and live entitlement checks prefer direct contract reads.
  */
 export const GET_SUBSCRIPTION_HISTORY = gql`
   query GetSubscriptionHistory($tokenId: String!) {
