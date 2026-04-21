@@ -132,7 +132,13 @@ export function MEAPProvider(props: MEAPProviderProps) {
         typeof process !== "undefined"
           ? process.env.NEXT_PUBLIC_RPC_URL
           : undefined;
-      const manifestRpc = getChainEnvironment(id).services.rpcUrl;
+      const manifestRpc = (() => {
+        try {
+          return getChainEnvironment(id).services.rpcUrl;
+        } catch {
+          return "";
+        }
+      })();
       const url = specific ?? global_ ?? manifestRpc;
       return url ? http(url) : http();
     };

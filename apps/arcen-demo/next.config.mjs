@@ -5,7 +5,15 @@ const nextConfig = {
   transpilePackages: ["@arcenpay/react", "@arcenpay/sdk"],
 
   // Keep server-only packages external (required at runtime, not bundled).
-  serverExternalPackages: ["@arcenpay/node"],
+  serverExternalPackages: [
+    "@arcenpay/node",
+    "pino",
+    "pino-pretty",
+    "thread-stream",
+    "lokijs",
+    "encoding",
+    "@reclaimprotocol/js-sdk",
+  ],
 
   webpack(config) {
     // MetaMask SDK pulls in React Native async-storage as an optional dep.
@@ -13,6 +21,9 @@ const nextConfig = {
     config.resolve.alias = {
       ...(config.resolve.alias || {}),
       "@react-native-async-storage/async-storage": false,
+      "pino-pretty": false,
+      "encoding": false,
+      "@reclaimprotocol/js-sdk": false,
     };
     config.resolve.fallback = {
       ...(config.resolve.fallback || {}),
@@ -20,6 +31,7 @@ const nextConfig = {
       net: false,
       tls: false,
     };
+    config.externals.push("pino-pretty", "lokijs", "encoding", "@reclaimprotocol/js-sdk");
     return config;
   },
 };

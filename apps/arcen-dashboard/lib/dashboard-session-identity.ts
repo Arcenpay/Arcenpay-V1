@@ -2,10 +2,10 @@ import { currentUser } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
 
 export interface DashboardSessionIdentityDefaults {
-  companyId: string;
+  companyId: string | null;
   companyName: string | null;
   companyEmail: string | null;
-  userId: string;
+  userId: string | null;
   clerkUserId: string;
   userName: string | null;
   userEmail: string | null;
@@ -31,7 +31,7 @@ export async function resolveDashboardSessionIdentityDefaults(
   teamId: string,
   clerkUserId: string,
 ): Promise<DashboardSessionIdentityDefaults | null> {
-  const [team, dbUser, clerkUser] = await Promise.all([
+  const [team, dbUser, arcenUser, clerkUser] = await Promise.all([
     db.team.findUnique({
       where: { id: teamId },
       select: { id: true, name: true },
@@ -43,6 +43,10 @@ export async function resolveDashboardSessionIdentityDefaults(
         walletAddress: true,
         email: true,
       },
+    }),
+    db.arcenUser.findFirst({
+      where: { teamId, clerkUserId },
+      select: { id: true },
     }),
     currentUser(),
   ]);
@@ -59,10 +63,10 @@ export async function resolveDashboardSessionIdentityDefaults(
   });
 
   return {
-    companyId: team.id,
+    companyId: null,
     companyName: team.name ?? null,
     companyEmail: primaryEmail,
-    userId: clerkUserId,
+    userId: arcenUser?.id ?? null,
     clerkUserId,
     userName,
     userEmail: primaryEmail,

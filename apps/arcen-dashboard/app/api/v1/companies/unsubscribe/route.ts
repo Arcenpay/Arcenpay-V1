@@ -12,6 +12,7 @@ import {
   resolveEmbedAccessToken,
 } from "@/lib/embed-access-token";
 import { toPrismaJson } from "@/lib/prisma-json";
+import { resolvePublishedFreePlan } from "@/lib/catalog-billing";
 
 type SubscriptionTransition = {
   mode: "period_end_downgrade" | "cancel_at_period_end";
@@ -73,11 +74,7 @@ export async function POST(req: NextRequest) {
       where: { id: companyId },
       select: { id: true, activePlanId: true, traits: true },
     }),
-    db.catalogPlan.findFirst({
-      where: { teamId, status: "PUBLISHED", active: true },
-      orderBy: [{ price: "asc" }],
-      select: { id: true, name: true },
-    }),
+    resolvePublishedFreePlan(teamId),
   ]);
 
   if (!company) {

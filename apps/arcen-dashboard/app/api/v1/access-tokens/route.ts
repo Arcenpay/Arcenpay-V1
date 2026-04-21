@@ -34,6 +34,7 @@ import { deliverWebhook } from "@/lib/deliver-webhook";
 import { Prisma } from "@/src/generated/prisma/client";
 import { resolveDashboardSessionIdentityDefaults } from "@/lib/dashboard-session-identity";
 import { getSession } from "@/lib/auth.server";
+import { resolvePublishedFreePlan } from "@/lib/catalog-billing";
 
 // ─── Simple JWT-like token (HMAC-SHA256, no external dep) ─────────────────────
 
@@ -222,7 +223,9 @@ export async function POST(req: NextRequest) {
     body.company ??
     (sessionDefaults
       ? {
-          id: sessionDefaults.companyId,
+          ...(sessionDefaults.companyId
+            ? { id: sessionDefaults.companyId }
+            : {}),
           wallet: sessionDefaults.walletAddress ?? undefined,
           email: sessionDefaults.companyEmail ?? undefined,
           name: sessionDefaults.companyName ?? undefined,
@@ -233,7 +236,7 @@ export async function POST(req: NextRequest) {
     body.user ??
     (sessionDefaults
       ? {
-          id: sessionDefaults.userId,
+          ...(sessionDefaults.userId ? { id: sessionDefaults.userId } : {}),
           clerk_user_id: sessionDefaults.clerkUserId,
           wallet: sessionDefaults.walletAddress ?? undefined,
           name: sessionDefaults.userName ?? undefined,
@@ -263,7 +266,7 @@ export async function POST(req: NextRequest) {
     ? {
         ...normalizedUser,
         ...(sessionDefaults && {
-          id: normalizedUser.id ?? sessionDefaults.userId,
+          id: normalizedUser.id ?? sessionDefaults.userId ?? undefined,
           clerk_user_id:
             (normalizedUser as Record<string, unknown>).clerk_user_id ??
             sessionDefaults.clerkUserId,
@@ -288,17 +291,21 @@ export async function POST(req: NextRequest) {
     // Auto-assign free plan if no active plan
     let activePlanId = companyResult.activePlanId;
     if (!activePlanId) {
-      const freePlan = await db.catalogPlan.findFirst({
-        where: { teamId, status: "PUBLISHED", active: true },
-        orderBy: [{ price: "asc" }],
-        select: { id: true },
-      });
+      const freePlan = await resolvePublishedFreePlan(teamId);
       if (freePlan) {
         await db.arcenCompany.update({
           where: { id: companyId },
           data: { activePlanId: freePlan.id },
         });
         activePlanId = freePlan.id;
+      } else {
+        return NextResponse.json(
+          {
+            error:
+              "No published free plan is configured for this workspace. Publish or configure a free plan before issuing new access tokens.",
+          },
+          { status: 409 },
+        );
       }
     }
 

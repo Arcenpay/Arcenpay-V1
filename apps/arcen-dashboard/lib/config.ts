@@ -229,13 +229,7 @@ export const INVOICE_DOWNLOAD_URL_TTL_SECONDS: number = (() => {
  * Required in production to prevent unauthenticated facilitator access.
  */
 export const FACILITATOR_SECRET: string = (() => {
-  const val = process.env.FACILITATOR_SECRET;
-  if (!val && isProd) {
-    console.warn(
-      "[config] FACILITATOR_SECRET is not set in production — facilitator endpoints are unauthenticated.",
-    );
-  }
-  return val ?? "";
+  return requireInProd("FACILITATOR_SECRET", process.env.FACILITATOR_SECRET);
 })();
 
 // ── RPC URLs ──────────────────────────────────────────────────────────────────

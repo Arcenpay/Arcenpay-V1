@@ -406,6 +406,26 @@ model CatalogConfig {
   @@index([teamId, environmentMode])
 }
 
+model CatalogCoupon {
+  teamId          String
+  code            String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  description     String?
+  discountPercent Int
+  active          Boolean  @default(true)
+  startsAt        DateTime?
+  expiresAt       DateTime?
+  applicablePlanId String?
+  billingPeriod   String?
+  maxRedemptions  Int?
+  redemptionCount Int      @default(0)
+
+  @@id([teamId, code])
+  @@index([teamId, active])
+  @@index([teamId, applicablePlanId])
+}
+
 // ─── Template Library ─────────────────────────────────────────────────────────
 
 model BillingTemplate {

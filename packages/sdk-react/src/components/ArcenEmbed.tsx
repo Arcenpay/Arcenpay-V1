@@ -52,6 +52,16 @@ export interface ArcenEmbedProps {
 
 type PortalView = "portal" | "checkout" | "payment" | "unsubscribe" | "success";
 
+type AppliedCouponQuote = {
+  code: string;
+  description: string | null;
+  discount: number;
+  planId: string;
+  billingPeriod: "monthly" | "annual";
+  baseAmountMicros: number;
+  discountedAmountMicros: number;
+};
+
 interface PortalState {
   data: ComponentRenderData | null;
   loading: boolean;
@@ -2562,10 +2572,14 @@ function CheckoutContent({
   data,
   selectedPlanId,
   billingPeriod,
+  apiBaseUrl,
+  accessToken,
+  couponQuote,
   processing,
   tokens,
   onSelectPlan,
   onBillingPeriodChange,
+  onCouponQuoteChange,
   onSubscribeClose,
   onNextPayment,
   onBack,
@@ -2574,10 +2588,14 @@ function CheckoutContent({
   data: ComponentRenderData;
   selectedPlanId: string | null;
   billingPeriod: "monthly" | "annual";
+  apiBaseUrl: string;
+  accessToken: string;
+  couponQuote: AppliedCouponQuote | null;
   processing: boolean;
   tokens: Tokens;
   onSelectPlan: (id: string) => void;
   onBillingPeriodChange: (p: "monthly" | "annual") => void;
+  onCouponQuoteChange: (quote: AppliedCouponQuote | null) => void;
   onSubscribeClose: () => void;
   onNextPayment: () => void;
   onBack: () => void;
@@ -2590,6 +2608,7 @@ function CheckoutContent({
   } | null>(null);
   const [couponError, setCouponError] = useState("");
   const [couponLoading, setCouponLoading] = useState(false);
+  const didInitializeCouponScope = useRef(false);
 
   // Show toggle whenever ANY plan has annual pricing configured; also always render it
   // so users can switch even if only some plans have annual prices.
@@ -2622,33 +2641,89 @@ function CheckoutContent({
   };
 
   const selectedDisplayPrice = selectedPlan ? getDisplayPrice(selectedPlan) : 0;
-  const discountedPrice = couponApplied
-    ? selectedDisplayPrice * (1 - couponApplied.discount / 100)
+  const activeCouponQuote =
+    couponQuote &&
+    couponQuote.planId === selectedPlanId &&
+    couponQuote.billingPeriod === billingPeriod
+      ? couponQuote
+      : null;
+  const discountedPrice = activeCouponQuote
+    ? activeCouponQuote.discountedAmountMicros / 1_000_000
     : selectedDisplayPrice;
+
+  useEffect(() => {
+    setCouponApplied(
+      activeCouponQuote
+        ? {
+            code: activeCouponQuote.code,
+            discount: activeCouponQuote.discount,
+          }
+        : null,
+    );
+    if (!activeCouponQuote) {
+      setCouponError("");
+    }
+  }, [activeCouponQuote]);
+
+  useEffect(() => {
+    if (!didInitializeCouponScope.current) {
+      didInitializeCouponScope.current = true;
+      return;
+    }
+    onCouponQuoteChange(null);
+    setCouponApplied(null);
+    setCouponError("");
+  }, [billingPeriod, onCouponQuoteChange, selectedPlanId]);
 
   const nextBill =
     formatDateLabel(data.nextBillingAt) ??
     (selectedPlan && discountedPrice > 0 ? "After activation" : null);
 
   async function applyCoupon() {
-    if (!coupon.trim()) return;
+    if (!coupon.trim() || !selectedPlanId) return;
     setCouponLoading(true);
     setCouponError("");
     try {
       const res = await fetch(
-        `/api/v1/coupons/validate?code=${encodeURIComponent(coupon.trim())}`,
+        `${apiBaseUrl}/api/v1/coupons/validate?code=${encodeURIComponent(coupon.trim())}&planId=${encodeURIComponent(selectedPlanId)}&billingPeriod=${encodeURIComponent(billingPeriod)}`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        },
       );
       if (res.ok) {
         const d = await res.json();
+        const nextQuote: AppliedCouponQuote = {
+          code: String(d.code ?? coupon.trim().toUpperCase()),
+          description:
+            typeof d.description === "string" ? d.description : null,
+          discount: Number(d.discount ?? 0),
+          planId: String(d.planId ?? selectedPlanId),
+          billingPeriod:
+            d.billingPeriod === "annual" ? "annual" : "monthly",
+          baseAmountMicros: Number(d.baseAmountMicros ?? 0),
+          discountedAmountMicros: Number(d.discountedAmountMicros ?? 0),
+        };
         setCouponApplied({
-          code: coupon.trim().toUpperCase(),
-          discount: d.discount,
+          code: nextQuote.code,
+          discount: nextQuote.discount,
         });
+        onCouponQuoteChange(nextQuote);
       } else {
-        setCouponError("Invalid or expired coupon");
+        const errorData = await res.json().catch(() => ({}));
+        onCouponQuoteChange(null);
+        setCouponApplied(null);
+        setCouponError(
+          typeof (errorData as { error?: unknown }).error === "string"
+            ? (errorData as { error: string }).error
+            : "Invalid or expired coupon",
+        );
       }
     } catch {
       // offline fallback — treat as invalid
+      onCouponQuoteChange(null);
+      setCouponApplied(null);
       setCouponError("Could not validate coupon");
     } finally {
       setCouponLoading(false);
@@ -3300,6 +3375,7 @@ function PaymentContent({
   data,
   selectedPlanId,
   billingPeriod,
+  couponQuote,
   processing,
   tokens,
   onConfirm,
@@ -3309,6 +3385,7 @@ function PaymentContent({
   data: ComponentRenderData;
   selectedPlanId: string | null;
   billingPeriod: "monthly" | "annual";
+  couponQuote: AppliedCouponQuote | null;
   processing: boolean;
   tokens: Tokens;
   onConfirm: (txHash?: string) => void;
@@ -3333,8 +3410,17 @@ function PaymentContent({
   const annualPrice = selectedPlan?.annualPrice
     ? parseFloat(String(selectedPlan.annualPrice))
     : 0;
-  const price =
+  const basePrice =
     billingPeriod === "annual" && annualPrice > 0 ? annualPrice : monthlyPrice;
+  const activeCouponQuote =
+    couponQuote &&
+    couponQuote.planId === selectedPlanId &&
+    couponQuote.billingPeriod === billingPeriod
+      ? couponQuote
+      : null;
+  const price = activeCouponQuote
+    ? activeCouponQuote.discountedAmountMicros / 1_000_000
+    : basePrice;
   const usdcContract = selectedPlan?.acceptedToken as `0x${string}` | undefined;
   const providerWallet = data.providerWallet as
     | `0x${string}`
@@ -3575,40 +3661,20 @@ function PaymentContent({
                       </div>
                     </div>
                   )}
-                  {/* Off-chain fallback option */}
                   <div
                     style={{
                       marginTop: 16,
                       paddingTop: 16,
                       borderTop: "1px solid #f0f0f0",
                       textAlign: "center",
+                      fontSize: 11,
+                      color: tokens.mutedColor,
+                      lineHeight: 1.6,
                     }}
                   >
-                    <div
-                      style={{
-                        fontSize: 11,
-                        color: tokens.mutedColor,
-                        marginBottom: 8,
-                      }}
-                    >
-                      No wallet? Activate without on-chain payment:
-                    </div>
-                    <button
-                      onClick={() => onConfirm(undefined)}
-                      disabled={processing}
-                      style={{
-                        background: "none",
-                        border: `1px solid #e5e7eb`,
-                        borderRadius: 6,
-                        padding: "7px 16px",
-                        cursor: "pointer",
-                        fontSize: tokens.size - 1,
-                        color: tokens.mutedColor,
-                        fontWeight: 500,
-                      }}
-                    >
-                      {processing ? "Activating…" : "Activate without payment"}
-                    </button>
+                    A connected wallet is required to complete this on-chain
+                    payment. If you need an invoice or manual billing flow,
+                    contact the provider directly.
                   </div>
                 </div>
               ) : (
@@ -3769,7 +3835,7 @@ function PaymentContent({
                   <div style={{ fontSize: 11, color: tokens.mutedColor }}>
                     {price === 0
                       ? "Free plan · no payment required"
-                      : "Billed externally"}
+                      : "Payment setup required"}
                   </div>
                 </div>
               </div>
@@ -3792,7 +3858,7 @@ function PaymentContent({
                 >
                   {price === 0
                     ? "This is a free plan. Click below to activate it — no payment needed."
-                    : "Your subscription will be activated and billing handled separately by the provider."}
+                    : "This plan cannot be self-activated until the provider finishes wallet and payment setup."}
                 </div>
               </div>
 
@@ -3815,14 +3881,14 @@ function PaymentContent({
               <PrimaryButton
                 tokens={tokens}
                 fullWidth
-                disabled={processing}
+                disabled={processing || price > 0}
                 onClick={() => onConfirm(undefined)}
               >
                 {processing
                   ? "Activating…"
                   : price === 0
                     ? "Activate free plan"
-                    : "Confirm subscription"}
+                    : "Payment setup required"}
               </PrimaryButton>
             </Card>
           )}
@@ -3924,6 +3990,49 @@ function PaymentContent({
                     {price === 0 ? "Free" : `$${price.toFixed(2)}`}
                   </span>
                 </div>
+
+                {activeCouponQuote && (
+                  <>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        marginBottom: 6,
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: tokens.size - 1,
+                          color: tokens.mutedColor,
+                        }}
+                      >
+                        Coupon ({activeCouponQuote.code})
+                      </span>
+                      <span
+                        style={{
+                          fontSize: tokens.size - 1,
+                          fontWeight: 600,
+                          color: "#16a34a",
+                        }}
+                      >
+                        -$
+                        {(
+                          (activeCouponQuote.baseAmountMicros -
+                            activeCouponQuote.discountedAmountMicros) /
+                          1_000_000
+                        ).toFixed(2)}
+                      </span>
+                    </div>
+
+                    <div
+                      style={{
+                        height: 1,
+                        background: "#e5e7eb",
+                        margin: "10px 0",
+                      }}
+                    />
+                  </>
+                )}
 
                 <div
                   style={{ height: 1, background: "#e5e7eb", margin: "10px 0" }}
@@ -4420,6 +4529,9 @@ export function ArcenEmbed({
     initialView ?? "portal",
     (v) => ({ ...initialState, view: v as PortalView }),
   );
+  const [couponQuote, setCouponQuote] = useState<AppliedCouponQuote | null>(
+    null,
+  );
   const tokenRef = useRef(accessToken);
   const baseRef = useRef(baseUrl);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -4480,6 +4592,16 @@ export function ArcenEmbed({
     fetchData();
   }, [fetchData, mockData, initialView]);
 
+  useEffect(() => {
+    setCouponQuote((current) => {
+      if (!current) return null;
+      if (!state.selectedPlanId) return null;
+      if (current.planId !== state.selectedPlanId) return null;
+      if (current.billingPeriod !== state.billingPeriod) return null;
+      return current;
+    });
+  }, [state.billingPeriod, state.selectedPlanId]);
+
   const callApi = useCallback(
     async (path: string, body?: Record<string, unknown>) => {
       const res = await fetch(`${baseRef.current}${path}`, {
@@ -4511,9 +4633,14 @@ export function ArcenEmbed({
         await callApi("/api/v1/companies/plan", {
           planId,
           billingPeriod: state.billingPeriod,
+          ...(couponQuote?.planId === planId &&
+          couponQuote.billingPeriod === state.billingPeriod
+            ? { couponCode: couponQuote.code }
+            : {}),
           ...(txHash ? { txHash } : {}),
         });
         await fetchData();
+        setCouponQuote(null);
         onPlanChange?.(planId);
         dispatch({
           type: "GOTO_SUCCESS",
@@ -4528,7 +4655,7 @@ export function ArcenEmbed({
         });
       }
     },
-    [callApi, fetchData, onPlanChange, state.billingPeriod],
+    [callApi, couponQuote, fetchData, onPlanChange, state.billingPeriod],
   );
 
   const handleUnsubscribe = useCallback(async () => {
@@ -4786,6 +4913,9 @@ export function ArcenEmbed({
           data={data}
           selectedPlanId={selectedPlanId}
           billingPeriod={billingPeriod}
+          apiBaseUrl={baseRef.current}
+          accessToken={tokenRef.current}
+          couponQuote={couponQuote}
           processing={processing}
           tokens={tokens}
           containerWidth={containerWidth}
@@ -4793,6 +4923,7 @@ export function ArcenEmbed({
           onBillingPeriodChange={(p) =>
             dispatch({ type: "SET_BILLING_PERIOD", period: p })
           }
+          onCouponQuoteChange={setCouponQuote}
           onSubscribeClose={() => {
             const targetId = selectedPlanId ?? data.activePlan?.id ?? "";
             if (targetId && targetId !== data.activePlan?.id) {
@@ -4810,6 +4941,7 @@ export function ArcenEmbed({
           data={data}
           selectedPlanId={selectedPlanId}
           billingPeriod={billingPeriod}
+          couponQuote={couponQuote}
           processing={processing}
           tokens={tokens}
           containerWidth={containerWidth}

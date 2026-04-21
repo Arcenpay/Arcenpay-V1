@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { PATCH } from "../route";
 import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
+import { resolvePublishedFreePlan } from "@/lib/catalog-billing";
 
 vi.mock("@/lib/db", () => ({
   db: {
@@ -13,6 +14,10 @@ vi.mock("@/lib/db", () => ({
       findFirst: vi.fn(),
     },
   },
+}));
+
+vi.mock("@/lib/catalog-billing", () => ({
+  resolvePublishedFreePlan: vi.fn(),
 }));
 
 const FACILITATOR_SECRET = "test-secret";
@@ -94,15 +99,16 @@ describe("PATCH /api/internal/companies/sync-subscription", () => {
     );
   });
 
-  it("falls back to the lowest-priced published plan on cancelled event", async () => {
+  it("falls back to the configured free plan on cancelled event", async () => {
     (db.arcenCompany.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue({
       id: "co_1",
       teamId: TEAM_ID,
       traits: {},
       activePlanId: "plan_old",
     });
-    (db.catalogPlan.findFirst as ReturnType<typeof vi.fn>)
-      .mockResolvedValueOnce({ id: "plan_fallback" });
+    (resolvePublishedFreePlan as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: "plan_fallback",
+    });
     (db.arcenCompany.update as ReturnType<typeof vi.fn>).mockResolvedValue({});
 
     const res = await PATCH(
@@ -120,6 +126,30 @@ describe("PATCH /api/internal/companies/sync-subscription", () => {
         data: expect.objectContaining({ activePlanId: "plan_fallback" }),
       }),
     );
+  });
+
+  it("returns 409 when a cancelled event has no configured free plan", async () => {
+    (db.arcenCompany.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: "co_1",
+      teamId: TEAM_ID,
+      traits: {},
+      activePlanId: "plan_old",
+    });
+    (resolvePublishedFreePlan as ReturnType<typeof vi.fn>).mockResolvedValue(
+      null,
+    );
+
+    const res = await PATCH(
+      makeRequest({
+        teamId: TEAM_ID,
+        wallet: "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd",
+        onChainPlanId: null,
+        event: "cancelled",
+      }),
+    );
+
+    expect(res.status).toBe(409);
+    expect(db.arcenCompany.update).not.toHaveBeenCalled();
   });
 
   it("sets activePlanId on renewed event", async () => {

@@ -83,6 +83,10 @@ import {
 } from "viem";
 import { DurableJobQueue } from "./queue.js";
 import { X402ReplayProtection } from "./replay-protection.js";
+import {
+  createSubscriptionRouteStore,
+  resolveRoutingTeamId as resolveSubscriptionRoutingTeamId,
+} from "./subscription-routing.js";
 
 const app = express();
 const PORT = process.env.PORT || 3402;
@@ -655,6 +659,14 @@ const jobQueue = new DurableJobQueue({
 });
 
 let queueRedisClient: QueueRedisClient | null = null;
+const subscriptionRouteStore = createSubscriptionRouteStore({
+  keyPrefix: REDIS_PREFIX,
+  maxAgeMs: 30 * 24 * 60 * 60 * 1000,
+  getStorage: () => queueRedisClient,
+  onWarn: (message, error) => {
+    console.warn(`[Facilitator] ${message}:`, error);
+  },
+});
 
 const queueRedisReady = (async (): Promise<void> => {
   if (!process.env.REDIS_URL) {
@@ -709,11 +721,18 @@ const queueRedisReady = (async (): Promise<void> => {
 async function buildBillingEventRequest(
   payload: BillingEventJobPayload,
 ): Promise<Record<string, unknown>> {
-  const teamId = await resolveRoutingTeamId({
-    teamId: payload.teamId,
-    onChainPlanId: payload.onChainPlanId,
-    sourceTokenId: payload.sourceTokenId,
-  });
+  const teamId = await resolveSubscriptionRoutingTeamId(
+    {
+      teamId: payload.teamId,
+      onChainPlanId: payload.onChainPlanId,
+      sourceTokenId: payload.sourceTokenId,
+    },
+    {
+      readSubscriptionRouteState: (tokenId) =>
+        subscriptionRouteStore.read(tokenId),
+      resolvePlanScope: resolvePlanScopeFromDashboard,
+    },
+  );
 
   if (!teamId) {
     throw new Error(
@@ -737,11 +756,18 @@ async function buildBillingEventRequest(
 async function buildSubscriptionSyncRequest(
   payload: SubscriptionSyncJobPayload,
 ): Promise<Record<string, unknown>> {
-  const teamId = await resolveRoutingTeamId({
-    teamId: payload.teamId,
-    onChainPlanId: payload.onChainPlanId,
-    sourceTokenId: payload.sourceTokenId,
-  });
+  const teamId = await resolveSubscriptionRoutingTeamId(
+    {
+      teamId: payload.teamId,
+      onChainPlanId: payload.onChainPlanId,
+      sourceTokenId: payload.sourceTokenId,
+    },
+    {
+      readSubscriptionRouteState: (tokenId) =>
+        subscriptionRouteStore.read(tokenId),
+      resolvePlanScope: resolvePlanScopeFromDashboard,
+    },
+  );
 
   if (!teamId) {
     throw new Error(
@@ -750,7 +776,7 @@ async function buildSubscriptionSyncRequest(
   }
 
   const routeState = payload.sourceTokenId
-    ? await readSubscriptionRouteState(payload.sourceTokenId)
+    ? await subscriptionRouteStore.read(payload.sourceTokenId)
     : null;
   const resolvedWallet = routeState?.wallet ?? payload.wallet;
   if (!resolvedWallet) {
@@ -806,7 +832,7 @@ jobQueue.startWorker<
       }
       const syncPayload = job.payload as SubscriptionSyncJobPayload;
       if (syncPayload.sourceTokenId && syncPayload.event === "cancelled") {
-        await deleteSubscriptionRouteState(syncPayload.sourceTokenId);
+        await subscriptionRouteStore.remove(syncPayload.sourceTokenId);
       }
       return;
     }
@@ -959,13 +985,6 @@ const subscriberEmailsByWallet = new Map<
   { email: string; planId?: string; updatedAt: number }
 >();
 
-type SubscriptionRouteState = {
-  wallet: string | null;
-  teamId: string | null;
-  onChainPlanId: string | null;
-  updatedAt: string;
-};
-
 type QueueRedisClient = import("./queue.js").IRedisQueue & {
   connect(): Promise<void>;
   get?(key: string): Promise<string | null>;
@@ -996,9 +1015,6 @@ type SubscriptionSyncJobPayload = {
   sourceTxHash?: string;
   sourceTokenId?: string;
 };
-
-const subscriptionRouteStateByTokenId = new Map<string, SubscriptionRouteState>();
-const SUBSCRIPTION_ROUTE_STATE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 
 const billingBridgeStats: {
   sent: number;
@@ -1050,78 +1066,6 @@ async function postToDashboard(
   }
 }
 
-function getSubscriptionRouteStateKey(tokenId: string): string {
-  return `${REDIS_PREFIX}:subscription-route:${tokenId}`;
-}
-
-async function readSubscriptionRouteState(
-  tokenId: string,
-): Promise<SubscriptionRouteState | null> {
-  const cached = subscriptionRouteStateByTokenId.get(tokenId);
-  if (cached) {
-    const updatedAtMs = Date.parse(cached.updatedAt);
-    if (
-      Number.isFinite(updatedAtMs) &&
-      Date.now() - updatedAtMs <= SUBSCRIPTION_ROUTE_STATE_MAX_AGE_MS
-    ) {
-      return cached;
-    }
-    subscriptionRouteStateByTokenId.delete(tokenId);
-  }
-
-  if (!queueRedisClient?.get) return null;
-
-  try {
-    const raw = await queueRedisClient.get(getSubscriptionRouteStateKey(tokenId));
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as SubscriptionRouteState;
-    subscriptionRouteStateByTokenId.set(tokenId, parsed);
-    return parsed;
-  } catch (err) {
-    console.warn(
-      `[Facilitator] Failed reading subscription routing state for token ${tokenId}:`,
-      err,
-    );
-    return null;
-  }
-}
-
-async function writeSubscriptionRouteState(
-  tokenId: string,
-  nextState: SubscriptionRouteState,
-): Promise<void> {
-  subscriptionRouteStateByTokenId.set(tokenId, nextState);
-
-  if (!queueRedisClient?.set) return;
-
-  try {
-    await queueRedisClient.set(
-      getSubscriptionRouteStateKey(tokenId),
-      JSON.stringify(nextState),
-    );
-  } catch (err) {
-    console.warn(
-      `[Facilitator] Failed persisting subscription routing state for token ${tokenId}:`,
-      err,
-    );
-  }
-}
-
-async function deleteSubscriptionRouteState(tokenId: string): Promise<void> {
-  subscriptionRouteStateByTokenId.delete(tokenId);
-
-  if (!queueRedisClient) return;
-
-  try {
-    await queueRedisClient.del(getSubscriptionRouteStateKey(tokenId));
-  } catch (err) {
-    console.warn(
-      `[Facilitator] Failed deleting subscription routing state for token ${tokenId}:`,
-      err,
-    );
-  }
-}
-
 async function resolvePlanScopeFromDashboard(
   onChainPlanId: string,
 ): Promise<{ teamId: string; planId: string | null } | null> {
@@ -1158,26 +1102,6 @@ async function resolvePlanScopeFromDashboard(
     teamId: data.teamId,
     planId: data.planId ?? null,
   };
-}
-
-async function resolveRoutingTeamId(input: {
-  teamId?: string | null;
-  onChainPlanId?: string | null;
-  sourceTokenId?: string;
-}): Promise<string | null> {
-  if (input.teamId?.trim()) {
-    return input.teamId.trim();
-  }
-
-  if (input.sourceTokenId) {
-    const state = await readSubscriptionRouteState(input.sourceTokenId);
-    if (state?.teamId) return state.teamId;
-  }
-
-  if (!input.onChainPlanId) return null;
-
-  const planScope = await resolvePlanScopeFromDashboard(input.onChainPlanId);
-  return planScope?.teamId ?? null;
 }
 
 async function persistWebhookDelivery(
@@ -1691,7 +1615,7 @@ eventListener.on("minted", async (event) => {
     : null;
 
   if (event.subscriber) {
-    await writeSubscriptionRouteState(tokenId, {
+    await subscriptionRouteStore.write(tokenId, {
       wallet: event.subscriber.toLowerCase(),
       teamId: mintedPlanScope?.teamId ?? null,
       onChainPlanId,
@@ -1806,7 +1730,7 @@ eventListener.on("renewed", async (event) => {
     `[Facilitator] 🔄 Renewed: tokenId=${event.tokenId} until ${event.expiration}`,
   );
   const tokenId = event.tokenId.toString();
-  const existingRouteState = await readSubscriptionRouteState(tokenId);
+  const existingRouteState = await subscriptionRouteStore.read(tokenId);
   // Look up subscriber email so invoice generation can proceed
   const renewedSubscriberWallet =
     existingRouteState?.wallet ||
@@ -1845,7 +1769,7 @@ eventListener.on("renewed", async (event) => {
     existingRouteState?.teamId || renewedPlanScope?.teamId || null;
 
   if (renewedSubscriberWallet) {
-    await writeSubscriptionRouteState(tokenId, {
+    await subscriptionRouteStore.write(tokenId, {
       wallet: renewedSubscriberWallet.toLowerCase(),
       teamId: renewedTeamId ?? null,
       onChainPlanId: renewedOnChainPlanId,
@@ -1949,7 +1873,7 @@ eventListener.on("renewed", async (event) => {
 eventListener.on("cancelled", async (event) => {
   console.log(`[Facilitator] ❌ Cancelled: tokenId=${event.tokenId}`);
   const tokenId = event.tokenId.toString();
-  const existingRouteState = await readSubscriptionRouteState(tokenId);
+  const existingRouteState = await subscriptionRouteStore.read(tokenId);
   const cancelledSubscriberWallet =
     existingRouteState?.wallet || (await getTokenOwner(event.tokenId));
   const cancelledTeamId = existingRouteState?.teamId ?? null;

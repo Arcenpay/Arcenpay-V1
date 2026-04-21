@@ -6,6 +6,13 @@
  * Body: { planId: string }
  */
 import { NextRequest, NextResponse } from "next/server";
+import {
+  createPublicClient,
+  decodeFunctionData,
+  http,
+  type Chain,
+} from "viem";
+import { base, baseSepolia, sepolia } from "viem/chains";
 import { db } from "@/lib/db";
 import { deliverWebhook } from "@/lib/deliver-webhook";
 import { resolveEntitlementResults } from "@/lib/entitlements";
@@ -14,6 +21,13 @@ import {
   resolveEmbedAccessToken,
 } from "@/lib/embed-access-token";
 import { toPrismaJson } from "@/lib/prisma-json";
+import {
+  incrementCouponRedemption,
+  normalizeBillingPeriod,
+  normalizeCouponCode,
+  resolveCouponQuote,
+} from "@/lib/catalog-billing";
+import { getRpcUrl } from "@/lib/config";
 
 type SubscriptionTransition = {
   mode: "period_end_downgrade" | "cancel_at_period_end";
@@ -24,6 +38,25 @@ type SubscriptionTransition = {
   effectiveAt: string | null;
   source: "self_service";
 };
+
+const CHAIN_MAP: Record<number, Chain> = {
+  11155111: sepolia,
+  84532: baseSepolia,
+  8453: base,
+};
+
+const ERC20_TRANSFER_ABI = [
+  {
+    name: "transfer",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "to", type: "address" },
+      { name: "amount", type: "uint256" },
+    ],
+    outputs: [{ name: "", type: "bool" }],
+  },
+] as const;
 
 function asRecord(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
@@ -60,6 +93,112 @@ function corsHeaders() {
     "Access-Control-Allow-Methods": "POST,OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type,Authorization",
   };
+}
+
+function normalizeTxHash(value?: string | null): `0x${string}` | null {
+  const trimmed = value?.trim();
+  if (!trimmed || !/^0x[0-9a-fA-F]{64}$/.test(trimmed)) return null;
+  return trimmed as `0x${string}`;
+}
+
+async function verifySelfServePlanPayment(params: {
+  teamId: string;
+  acceptedToken: string;
+  txHash: `0x${string}`;
+  expectedAmountMicros: number;
+}): Promise<{ ok: true } | { ok: false; status: number; error: string }> {
+  const owner = await db.teamMember.findFirst({
+    where: { teamId: params.teamId, role: "OWNER" },
+    select: { user: { select: { walletAddress: true } } },
+  });
+  const providerWallet = owner?.user?.walletAddress?.toLowerCase();
+
+  if (!providerWallet) {
+    return {
+      ok: false,
+      status: 409,
+      error:
+        "Provider wallet is not configured for this workspace. Link the owner wallet before accepting self-serve payments.",
+    };
+  }
+
+  const chainId = Number(
+    process.env.MEAP_DEFAULT_CHAIN_ID ||
+      process.env.CHAIN_ID ||
+      process.env.NEXT_PUBLIC_CHAIN_ID ||
+      "11155111",
+  );
+  const publicClient = createPublicClient({
+    chain: CHAIN_MAP[chainId] ?? sepolia,
+    transport: http(getRpcUrl(chainId)),
+  });
+
+  try {
+    const [transaction, receipt] = await Promise.all([
+      publicClient.getTransaction({ hash: params.txHash }),
+      publicClient.getTransactionReceipt({ hash: params.txHash }),
+    ]);
+
+    if (receipt.status !== "success") {
+      return {
+        ok: false,
+        status: 409,
+        error: "Payment transaction did not complete successfully.",
+      };
+    }
+
+    if (
+      !transaction.to ||
+      transaction.to.toLowerCase() !== params.acceptedToken.toLowerCase()
+    ) {
+      return {
+        ok: false,
+        status: 409,
+        error: "Payment transaction was sent to the wrong token contract.",
+      };
+    }
+
+    const decoded = decodeFunctionData({
+      abi: ERC20_TRANSFER_ABI,
+      data: transaction.input,
+    });
+
+    if (decoded.functionName !== "transfer") {
+      return {
+        ok: false,
+        status: 409,
+        error: "Payment transaction must be a direct ERC-20 transfer.",
+      };
+    }
+
+    const [recipient, amount] = decoded.args as [`0x${string}`, bigint];
+    if (recipient.toLowerCase() !== providerWallet) {
+      return {
+        ok: false,
+        status: 409,
+        error: "Payment transaction was sent to the wrong recipient wallet.",
+      };
+    }
+
+    if (amount !== BigInt(params.expectedAmountMicros)) {
+      return {
+        ok: false,
+        status: 409,
+        error: "Payment transaction amount does not match the approved quote.",
+      };
+    }
+
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      status: 502,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Could not verify payment transaction.",
+    };
+  }
 }
 
 export async function OPTIONS() {
@@ -99,6 +238,7 @@ export async function POST(req: NextRequest) {
     billingPeriod?: string;
     txHash?: string;
     scheduleAtPeriodEnd?: boolean;
+    couponCode?: string;
   };
   try {
     body = await req.json();
@@ -109,7 +249,13 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { planId, billingPeriod, txHash, scheduleAtPeriodEnd } = body;
+  const {
+    planId,
+    billingPeriod,
+    txHash,
+    scheduleAtPeriodEnd,
+    couponCode,
+  } = body;
   if (!planId)
     return NextResponse.json(
       { error: "planId is required" },
@@ -124,6 +270,7 @@ export async function POST(req: NextRequest) {
       name: true,
       price: true,
       annualPrice: true,
+      acceptedToken: true,
       metadata: true,
     },
   });
@@ -186,9 +333,25 @@ export async function POST(req: NextRequest) {
   const currentPrice = Number(currentPlan?.price ?? 0);
   const targetPrice = Number(plan.price);
   const isDowngrade = !!currentPlan && targetPrice < currentPrice;
+  const normalizedBillingPeriod = normalizeBillingPeriod(billingPeriod);
   const shouldScheduleDowngrade =
     isDowngrade &&
     (scheduleAtPeriodEnd ?? !(catalogConfig?.downgradeImmediately ?? false));
+
+  const quoteResult = await resolveCouponQuote({
+    teamId,
+    planId: plan.id,
+    billingPeriod: normalizedBillingPeriod,
+    couponCode,
+  });
+  if (!quoteResult.ok) {
+    return NextResponse.json(
+      { error: quoteResult.error },
+      { status: quoteResult.status, headers: corsHeaders() },
+    );
+  }
+  const normalizedCouponCode = normalizeCouponCode(couponCode);
+  const quotedAmountMicros = quoteResult.quote.finalAmountMicros;
 
   if (isDowngrade && (catalogConfig?.disallowSelfServiceDowngrade ?? false)) {
     return NextResponse.json(
@@ -250,6 +413,32 @@ export async function POST(req: NextRequest) {
 
   const currentTraits = asRecord(company.traits);
 
+  if (!shouldScheduleDowngrade && quotedAmountMicros > 0) {
+    const normalizedTxHash = normalizeTxHash(txHash);
+    if (!normalizedTxHash) {
+      return NextResponse.json(
+        {
+          error:
+            "Paid plan changes require a confirmed payment transaction hash.",
+        },
+        { status: 400, headers: corsHeaders() },
+      );
+    }
+
+    const paymentCheck = await verifySelfServePlanPayment({
+      teamId,
+      acceptedToken: plan.acceptedToken,
+      txHash: normalizedTxHash,
+      expectedAmountMicros: quotedAmountMicros,
+    });
+    if (!paymentCheck.ok) {
+      return NextResponse.json(
+        { error: paymentCheck.error },
+        { status: paymentCheck.status, headers: corsHeaders() },
+      );
+    }
+  }
+
   if (shouldScheduleDowngrade) {
     const transition: SubscriptionTransition = {
       mode: "period_end_downgrade",
@@ -275,11 +464,11 @@ export async function POST(req: NextRequest) {
       companyId,
       planId,
       planName: plan.name,
-      billingPeriod: billingPeriod ?? "monthly",
+      billingPeriod: normalizedBillingPeriod,
       previousPlanId: previousPlanId ?? null,
       mode: "period_end",
       scheduled: true,
-      ...(txHash ? { txHash } : {}),
+      ...(normalizedCouponCode ? { couponCode: normalizedCouponCode } : {}),
     }).catch(() => {});
 
     return NextResponse.json(
@@ -310,16 +499,22 @@ export async function POST(req: NextRequest) {
     },
   });
 
+  if (normalizedCouponCode) {
+    await incrementCouponRedemption(teamId, normalizedCouponCode);
+  }
+
   // Fire outbound webhook (non-blocking)
   deliverWebhook(teamId, "company.plan.changed", {
     companyId,
     planId,
     planName: plan.name,
-    billingPeriod: billingPeriod ?? "monthly",
+    billingPeriod: normalizedBillingPeriod,
     previousPlanId: previousPlanId ?? null,
     mode: "immediate",
     scheduled: false,
+    chargedAmount: quoteResult.quote.finalAmount,
     ...(txHash ? { txHash } : {}),
+    ...(normalizedCouponCode ? { couponCode: normalizedCouponCode } : {}),
   }).catch(() => {});
 
   return NextResponse.json(

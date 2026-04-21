@@ -1,47 +1,113 @@
 /**
- * GET /api/v1/coupons/validate?code=XXX
+ * GET /api/v1/coupons/validate?code=XXX&planId=YYY&billingPeriod=monthly|annual
  *
- * Validates a coupon/promo code and returns the discount percentage.
- * Called by the ArcenEmbed checkout widget.
+ * Validates a coupon for a specific published plan and returns the canonical
+ * quote that the embed should display and charge.
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { requireAnyAuth, isAnyAuthError } from "@/lib/require-any-auth";
+import { resolveEmbedAccessToken } from "@/lib/embed-access-token";
+import { resolveCouponQuote } from "@/lib/catalog-billing";
 
-// CORS for embed
+const querySchema = z.object({
+  code: z.string().trim().min(1),
+  planId: z.string().trim().min(1),
+  billingPeriod: z.enum(["monthly", "annual"]).optional(),
+});
+
+function corsHeaders() {
+  return {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET,OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type,Authorization",
+  };
+}
+
+async function resolveRequestTeamId(
+  req: NextRequest,
+): Promise<string | null | NextResponse> {
+  const authHeader = req.headers.get("authorization") ?? "";
+  const bearerToken = authHeader.startsWith("Bearer ")
+    ? authHeader.slice(7)
+    : "";
+
+  if (bearerToken && !bearerToken.startsWith("api_")) {
+    const embedToken = await resolveEmbedAccessToken(bearerToken);
+    if (!embedToken?.teamId) {
+      return NextResponse.json(
+        { error: "Invalid or expired token" },
+        { status: 401, headers: corsHeaders() },
+      );
+    }
+    return embedToken.teamId;
+  }
+
+  const auth = await requireAnyAuth(req);
+  if (isAnyAuthError(auth)) return auth;
+  return auth.teamId;
+}
+
 export async function OPTIONS() {
   return new NextResponse(null, {
     status: 204,
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET,OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type,Authorization",
-    },
+    headers: corsHeaders(),
   });
 }
 
 export async function GET(req: NextRequest) {
-  const code = req.nextUrl.searchParams.get("code")?.trim().toUpperCase();
+  const parsed = querySchema.safeParse({
+    code: req.nextUrl.searchParams.get("code"),
+    planId: req.nextUrl.searchParams.get("planId"),
+    billingPeriod: req.nextUrl.searchParams.get("billingPeriod") ?? undefined,
+  });
 
-  if (!code) {
-    return NextResponse.json({ error: "code is required" }, { status: 400 });
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Invalid request", details: parsed.error.flatten().fieldErrors },
+      { status: 400, headers: corsHeaders() },
+    );
   }
 
-  // TODO: Replace with DB lookup against a CatalogCoupon table when ready.
-  // For now, a small set of well-known codes for demo/testing.
-  const KNOWN: Record<string, { discount: number; description: string }> = {
-    LAUNCH20:  { discount: 20, description: "20% off launch promo" },
-    EARLY10:   { discount: 10, description: "10% early adopter discount" },
-    SAVE15:    { discount: 15, description: "15% off" },
-    ARCENPAY:  { discount: 25, description: "25% ArcenPay partner discount" },
-  };
+  const teamIdOrError = await resolveRequestTeamId(req);
+  if (teamIdOrError instanceof NextResponse) {
+    return teamIdOrError;
+  }
+  if (!teamIdOrError) {
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 401, headers: corsHeaders() },
+    );
+  }
 
-  const coupon = KNOWN[code];
-  if (!coupon) {
-    return NextResponse.json({ error: "Invalid or expired coupon" }, { status: 404, headers: { "Access-Control-Allow-Origin": "*" } });
+  const quoteResult = await resolveCouponQuote({
+    teamId: teamIdOrError,
+    planId: parsed.data.planId,
+    billingPeriod: parsed.data.billingPeriod,
+    couponCode: parsed.data.code,
+  });
+
+  if (!quoteResult.ok) {
+    return NextResponse.json(
+      { error: quoteResult.error },
+      { status: quoteResult.status, headers: corsHeaders() },
+    );
   }
 
   return NextResponse.json(
-    { code, discount: coupon.discount, description: coupon.description },
-    { headers: { "Access-Control-Allow-Origin": "*" } },
+    {
+      code: quoteResult.quote.coupon?.code ?? parsed.data.code.trim().toUpperCase(),
+      discount: quoteResult.quote.coupon?.discountPercent ?? 0,
+      description: quoteResult.quote.coupon?.description ?? null,
+      planId: quoteResult.quote.planId,
+      billingPeriod: quoteResult.quote.billingPeriod,
+      baseAmount: quoteResult.quote.baseAmount,
+      discountedAmount: quoteResult.quote.finalAmount,
+      baseAmountMicros: quoteResult.quote.baseAmountMicros,
+      discountedAmountMicros: quoteResult.quote.finalAmountMicros,
+      currency: quoteResult.quote.currency,
+    },
+    { headers: corsHeaders() },
   );
 }

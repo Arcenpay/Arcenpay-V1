@@ -17,6 +17,7 @@ import { db } from "@/lib/db";
 import { z } from "zod";
 import { toPrismaJson } from "@/lib/prisma-json";
 import { requireFacilitatorAuth } from "@/lib/facilitator-auth";
+import { resolvePublishedFreePlan } from "@/lib/catalog-billing";
 
 function asRecord(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
@@ -148,12 +149,19 @@ export async function PATCH(req: NextRequest) {
     }
 
     if (!resolvedPlanId) {
-      const fallbackPlan = await db.catalogPlan.findFirst({
-        where: { teamId: company.teamId, status: "PUBLISHED", active: true },
-        orderBy: [{ price: "asc" }],
-        select: { id: true },
-      });
+      const fallbackPlan = await resolvePublishedFreePlan(company.teamId);
       resolvedPlanId = fallbackPlan?.id ?? null;
+    }
+
+    if (!resolvedPlanId) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            "No published free plan is configured for cancellation fallback.",
+        },
+        { status: 409 },
+      );
     }
 
     const nextTraits = { ...traits };

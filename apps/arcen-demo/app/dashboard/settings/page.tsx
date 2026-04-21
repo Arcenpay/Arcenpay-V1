@@ -13,6 +13,7 @@ interface Config {
 export default function SettingsPage() {
   const [config, setConfig] = useState<Config | null>(null);
   const [copied, setCopied] = useState(false);
+  const dashboardUrl = config?.baseUrl ?? "http://localhost:3000";
 
   useEffect(() => {
     fetch("/api/config")
@@ -121,7 +122,7 @@ export default function SettingsPage() {
               <p className={styles.stepDesc}>
                 Open your{" "}
                 <a
-                  href="http://localhost:3000"
+                  href={dashboardUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className={styles.link}
@@ -139,7 +140,7 @@ export default function SettingsPage() {
               <p className={styles.stepDesc}>
                 Copy the webhook URL above and paste it into{" "}
                 <a
-                  href="http://localhost:3000"
+                  href={dashboardUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className={styles.link}
@@ -156,7 +157,7 @@ export default function SettingsPage() {
               <div className={styles.stepTitle}>Create a component (optional)</div>
               <p className={styles.stepDesc}>
                 Go to{" "}
-                <a href="http://localhost:3000" target="_blank" rel="noopener noreferrer" className={styles.link}>
+                <a href={dashboardUrl} target="_blank" rel="noopener noreferrer" className={styles.link}>
                   Connections → Components
                 </a>{" "}
                 in the dashboard. Create a new component and copy its ID into{" "}
@@ -168,7 +169,7 @@ export default function SettingsPage() {
             <div className={styles.stepNum}>5</div>
             <div className={styles.stepContent}>
               <div className={styles.stepTitle}>Restart the dev server</div>
-              <div className={styles.codeInline}>npm run dev --filter=arcen-demo</div>
+              <div className={styles.codeInline}>npm --workspace apps/arcen-demo run dev</div>
             </div>
           </div>
         </div>
