@@ -1,7 +1,6 @@
 import React from "react";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
-import { ClerkProvider } from "@clerk/nextjs";
 import { Analytics } from "@vercel/analytics/next";
 import { Web3Provider } from "@/components/providers/web3-provider";
 import "./globals.css";
@@ -39,17 +38,11 @@ export default async function RootLayout({
   const cookies = headersObj.get("cookie");
 
   return (
-    <ClerkProvider
-      signInUrl="/sign-in"
-      signUpUrl="/sign-up"
-      afterSignOutUrl="/sign-in"
-    >
-      <html lang="en">
-        <body className="font-sans antialiased">
-          <Web3Provider cookies={cookies}>{children}</Web3Provider>
-          <Analytics />
-        </body>
-      </html>
-    </ClerkProvider>
+    <html lang="en">
+      <body className="font-sans antialiased">
+        <Web3Provider cookies={cookies}>{children}</Web3Provider>
+        <Analytics />
+      </body>
+    </html>
   );
 }

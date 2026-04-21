@@ -29,9 +29,7 @@ test("health check endpoint returns 200", async ({ request }) => {
   expect(body).toHaveProperty("status");
 });
 
-test("nonce endpoint is reachable", async ({ request }) => {
+test("nonce endpoint requires authentication", async ({ request }) => {
   const res = await request.get("/api/auth/nonce");
-  expect(res.status()).toBe(200);
-  const body = await res.json().catch(() => ({}));
-  expect(typeof body.nonce).toBe("string");
+  expect(res.status()).toBe(401);
 });

@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import type { Section } from "@/app/(dashboard)/page";
-import { useOrganization } from "@clerk/nextjs";
 import { useAccount } from "wagmi";
 import {
   LayoutDashboard,
@@ -29,6 +28,7 @@ import {
   BookOpen,
 } from "lucide-react";
 import { useEnvironment } from "@/contexts/environment-context";
+import { useDashboardSession } from "@/hooks/use-dashboard-session";
 
 interface SidebarProps {
   activeSection: Section;
@@ -97,16 +97,15 @@ export function Sidebar({
   onCollapsedChange,
 }: SidebarProps) {
   const { address, isConnected } = useAccount();
-  const { organization } = useOrganization();
   const { envMode } = useEnvironment();
+  const { data: sessionData } = useDashboardSession();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Show org name from Clerk directly — always in sync when workspace switches
-  const teamName = organization?.name ?? null;
+  const teamName = sessionData?.currentTeam?.name ?? null;
 
   const shortAddress = address
     ? `${address.slice(0, 6)}…${address.slice(-4)}`

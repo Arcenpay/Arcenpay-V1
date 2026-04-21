@@ -13,10 +13,9 @@ test.describe("Login page", () => {
     await expect(page).toHaveURL(/\/login/);
   });
 
-  test("shows connect wallet button on login page", async ({ page }) => {
+  test("shows wallet-first auth flow on login page", async ({ page }) => {
     await page.goto("/login");
-    await expect(page.getByRole("heading", { name: /sign in/i })).toBeVisible();
-    // RainbowKit ConnectButton renders as a button
+    await expect(page.getByRole("heading", { name: /connect your wallet/i })).toBeVisible();
     await expect(page.getByRole("button", { name: /connect wallet/i })).toBeVisible();
   });
 

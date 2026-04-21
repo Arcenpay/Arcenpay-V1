@@ -10,17 +10,52 @@ import { RESEND_API_KEY, EMAIL_FROM, APP_URL } from "@/lib/config";
 const resend = new Resend(RESEND_API_KEY);
 const FROM = EMAIL_FROM;
 
-/** Sends a magic link email for passwordless login */
-export async function sendMagicLinkEmail(
-  email: string,
-  token: string,
-): Promise<void> {
-  const url = `${APP_URL}/api/auth/magic/verify?token=${token}`;
+export function isEmailDeliveryConfigured(): boolean {
+  return Boolean(RESEND_API_KEY?.trim() && FROM?.trim());
+}
 
-  await resend.emails.send({
+function requireEmailConfig() {
+  if (!RESEND_API_KEY?.trim()) {
+    throw new Error("RESEND_API_KEY is not configured");
+  }
+  if (!FROM?.trim()) {
+    throw new Error("EMAIL_FROM is not configured");
+  }
+}
+
+async function sendWithResend(input: {
+  to: string;
+  subject: string;
+  html: string;
+}) {
+  requireEmailConfig();
+
+  const result = await resend.emails.send({
     from: FROM,
+    to: input.to,
+    subject: input.subject,
+    html: input.html,
+  });
+
+  if (result.error) {
+    throw new Error(
+      typeof result.error.message === "string"
+        ? result.error.message
+        : "Resend rejected the email request",
+    );
+  }
+
+  return result;
+}
+
+/** Sends a 6-digit email auth code for the dashboard login flow */
+export async function sendEmailAuthCode(
+  email: string,
+  code: string,
+): Promise<void> {
+  await sendWithResend({
     to: email,
-    subject: "Sign in to ArcenPay",
+    subject: "Your ArcenPay sign-in code",
     html: `
 <!DOCTYPE html>
 <html lang="en">
@@ -39,37 +74,33 @@ export async function sendMagicLinkEmail(
           <p style="margin:0 0 32px;font-size:22px;font-weight:700;color:#ffffff;">ArcenPay</p>
 
           <h1 style="margin:0 0 12px;font-size:20px;font-weight:600;color:#ffffff;">
-            Your sign-in link
+            Your verification code
           </h1>
           <p style="margin:0 0 28px;font-size:14px;color:#888;">
-            Click the button below to sign in to your ArcenPay Provider Dashboard.
-            This link expires in <strong style="color:#ccc">15 minutes</strong> and can only be used once.
+            Enter this 6-digit code in the ArcenPay dashboard to continue.
+            It expires in <strong style="color:#ccc">10 minutes</strong>.
           </p>
 
-          <!-- CTA button -->
-          <a href="${url}"
-             style="display:inline-block;padding:12px 28px;background:#6366f1;color:#fff;
-                    text-decoration:none;border-radius:8px;font-size:14px;font-weight:600;">
-            Sign in to ArcenPay
-          </a>
+          <div style="display:inline-block;padding:16px 24px;background:#161824;border:1px solid #2d325b;border-radius:12px;">
+            <span style="display:block;font-size:32px;letter-spacing:0.35em;font-weight:700;color:#ffffff;font-family:ui-monospace, SFMono-Regular, Menlo, monospace;">
+              ${code}
+            </span>
+          </div>
 
-          <!-- Fallback URL -->
           <p style="margin:28px 0 0;font-size:12px;color:#555;">
-            Or copy and paste this URL into your browser:<br />
-            <a href="${url}" style="color:#6366f1;word-break:break-all;">${url}</a>
+            If you did not request this code, you can safely ignore this email.
           </p>
 
           <hr style="margin:32px 0;border:none;border-top:1px solid #222225;" />
           <p style="margin:0;font-size:12px;color:#444;">
-            If you didn't request this, you can safely ignore this email.
-            Your account is not at risk.
+            ArcenPay will never ask you to share this code over chat or email.
           </p>
         </td></tr>
       </table>
     </td></tr>
   </table>
 </body>
-</html>`,
+ </html>`,
   });
 }
 
@@ -80,13 +111,12 @@ export async function sendTeamInviteEmail(
   teamName: string,
   inviterEmail: string | null,
 ): Promise<void> {
-  const url = `${APP_URL}/api/auth/magic/verify?token=${token}`;
+  const url = `${APP_URL}/login?invite=${encodeURIComponent(token)}`;
   const inviterText = inviterEmail
     ? `<strong style="color:#ccc">${inviterEmail}</strong>`
     : "A team admin";
 
-  await resend.emails.send({
-    from: FROM,
+  await sendWithResend({
     to: email,
     subject: `You've been invited to ${teamName} on ArcenPay`,
     html: `
@@ -110,8 +140,8 @@ export async function sendTeamInviteEmail(
           </h1>
           <p style="margin:0 0 28px;font-size:14px;color:#888;">
             ${inviterText} has added you to the <strong style="color:#ccc">${teamName}</strong>
-            workspace on ArcenPay. Click the button below to accept and sign in.
-            This link expires in <strong style="color:#ccc">15 minutes</strong>.
+            workspace on ArcenPay. Click the button below, verify your email, and we'll add you automatically.
+            This invite expires in <strong style="color:#ccc">7 days</strong>.
           </p>
 
           <a href="${url}"
@@ -134,7 +164,7 @@ export async function sendTeamInviteEmail(
     </td></tr>
   </table>
 </body>
-</html>`,
+ </html>`,
   });
 }
 
@@ -158,8 +188,7 @@ type CreditNoteEmailInput = {
 
 /** Sends a credit note notification email to a subscriber/customer */
 export async function sendCreditNoteEmail(input: CreditNoteEmailInput): Promise<void> {
-  await resend.emails.send({
-    from: FROM,
+  await sendWithResend({
     to: input.to,
     subject: `Credit Note ${input.noteNumber} issued for Invoice ${input.invoiceNumber}`,
     html: `
@@ -195,7 +224,7 @@ export async function sendCreditNoteEmail(input: CreditNoteEmailInput): Promise<
     </td></tr>
   </table>
 </body>
-</html>`,
+ </html>`,
   });
 }
 
@@ -208,8 +237,7 @@ export async function sendInvoiceEmail(input: InvoiceEmailInput): Promise<void> 
     input.downloadUrl ||
     `${APP_URL}/invoices/${encodeURIComponent(input.invoiceNumber)}`;
 
-  await resend.emails.send({
-    from: FROM,
+  await sendWithResend({
     to: input.to,
     subject: `Invoice ${input.invoiceNumber} from ArcenPay`,
     html: `
@@ -259,8 +287,7 @@ export async function sendWelcomeEmail(
   const greeting = firstName ? `Welcome, ${firstName}!` : "Welcome to ArcenPay!";
   const dashboardUrl = APP_URL ?? "https://app.arcenpay.xyz";
 
-  await resend.emails.send({
-    from: FROM,
+  await sendWithResend({
     to: email,
     subject: "Welcome to ArcenPay — your billing infrastructure is ready",
     html: `
@@ -307,6 +334,6 @@ export async function sendWelcomeEmail(
     </td></tr>
   </table>
 </body>
-</html>`,
+ </html>`,
   });
 }

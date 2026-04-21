@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useOrganization } from "@clerk/nextjs";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { Header } from "@/components/dashboard/header";
 import { OverviewSection } from "@/components/dashboard/sections/overview";
@@ -54,7 +53,6 @@ export type Section =
 export default function Dashboard() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { organization } = useOrganization();
   const [activeSection, setActiveSection] = useState<Section>("overview");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
@@ -197,12 +195,8 @@ export default function Dashboard() {
     }
   };
 
-  // Use org ID as key so the entire dashboard remounts when workspace switches,
-  // forcing all data fetches to re-run against the new org context.
-  const orgKey = organization?.id ?? "personal";
-
   return (
-    <EnvironmentProvider key={orgKey}>
+    <EnvironmentProvider>
       <div className="flex min-h-screen bg-background">
         <Sidebar
           activeSection={activeSection}

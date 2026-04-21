@@ -1,4 +1,3 @@
-import { currentUser } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
 
 export interface DashboardSessionIdentityDefaults {
@@ -12,32 +11,23 @@ export interface DashboardSessionIdentityDefaults {
   walletAddress: string | null;
 }
 
-function buildDisplayName(input: {
-  fullName?: string | null;
-  firstName?: string | null;
-  lastName?: string | null;
-  fallback?: string | null;
-}): string | null {
-  if (input.fullName?.trim()) return input.fullName.trim();
-  const joined = [input.firstName, input.lastName]
-    .map((part) => part?.trim())
-    .filter(Boolean)
-    .join(" ");
-  if (joined) return joined;
-  return input.fallback?.trim() || null;
+function buildDisplayName(email: string | null): string | null {
+  if (!email) return null;
+  const local = email.split("@")[0]?.trim();
+  return local || email;
 }
 
 export async function resolveDashboardSessionIdentityDefaults(
   teamId: string,
-  clerkUserId: string,
+  sessionUserId: string,
 ): Promise<DashboardSessionIdentityDefaults | null> {
-  const [team, dbUser, arcenUser, clerkUser] = await Promise.all([
+  const [team, dbUser, arcenUser] = await Promise.all([
     db.team.findUnique({
       where: { id: teamId },
       select: { id: true, name: true },
     }),
     db.user.findUnique({
-      where: { clerkUserId },
+      where: { id: sessionUserId },
       select: {
         id: true,
         walletAddress: true,
@@ -45,31 +35,27 @@ export async function resolveDashboardSessionIdentityDefaults(
       },
     }),
     db.arcenUser.findFirst({
-      where: { teamId, clerkUserId },
+      where: {
+        teamId,
+        OR: [{ id: sessionUserId }, { clerkUserId: sessionUserId }],
+      },
       select: { id: true },
     }),
-    currentUser(),
   ]);
 
-  if (!team) return null;
+  if (!team || !dbUser) return null;
 
-  const primaryEmail =
-    clerkUser?.emailAddresses?.[0]?.emailAddress ?? dbUser?.email ?? null;
-  const userName = buildDisplayName({
-    fullName: clerkUser?.fullName,
-    firstName: clerkUser?.firstName,
-    lastName: clerkUser?.lastName,
-    fallback: primaryEmail ?? null,
-  });
+  const primaryEmail = dbUser.email ?? null;
+  const userName = buildDisplayName(primaryEmail);
 
   return {
     companyId: null,
     companyName: team.name ?? null,
     companyEmail: primaryEmail,
     userId: arcenUser?.id ?? null,
-    clerkUserId,
+    clerkUserId: sessionUserId,
     userName,
     userEmail: primaryEmail,
-    walletAddress: dbUser?.walletAddress ?? null,
+    walletAddress: dbUser.walletAddress ?? null,
   };
 }

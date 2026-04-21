@@ -1,23 +1,18 @@
 // ============================================================
 //  Dashboard API — Invite Member by Email
 //  POST /api/team/invite
-//
-//  Sends a Clerk Organization invitation. The webhook
-//  (organizationMembership.created) will create the DB TeamMember
-//  when the invitee accepts.
 // ============================================================
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { clerkClient } from "@clerk/nextjs/server";
 import { getSession } from "@/lib/auth.server";
 import { resolveTeamContext } from "@/lib/team-session";
 import { db } from "@/lib/db";
 import { writeAuditEvent } from "@/lib/audit";
 import { rateLimit, applyRateLimitHeaders } from "@/lib/rate-limit";
 import { assertCanInviteMember } from "@/lib/tier-guard";
+import { createTeamInvitation, normalizeEmail } from "@/lib/auth-flow";
 
-// 5 invites per team per hour — prevents invite spam
 const INVITE_LIMIT = 5;
 const INVITE_WINDOW_MS = 60 * 60 * 1000;
 
@@ -44,7 +39,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // ── Tier limit enforcement ──────────────────────────────────────────────
     const tierCheck = await assertCanInviteMember(team.teamId);
     if (!tierCheck.allowed) {
       return NextResponse.json(
@@ -81,25 +75,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { email, role } = parsed.data;
+    const email = normalizeEmail(parsed.data.email);
 
-    // Get team record to find Clerk org ID
-    const dbTeam = await db.team.findUnique({
-      where: { id: team.teamId },
-      select: { name: true, clerkOrgId: true },
-    });
-
-    if (!dbTeam?.clerkOrgId) {
-      return NextResponse.json(
-        {
-          error:
-            "Team is not linked to a Clerk organization. Please contact support.",
-        },
-        { status: 400 },
-      );
-    }
-
-    // Check if user is already a member
     const existingUser = await db.user.findFirst({
       where: { email },
       select: { id: true },
@@ -116,16 +93,29 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Send Clerk org invitation — Clerk sends the invite email automatically.
-    // The `dbRole` on publicMetadata is read by the webhook handler to set
-    // the correct fine-grained role when the invite is accepted.
-    const client = await clerkClient();
-    await client.organizations.createOrganizationInvitation({
-      organizationId: dbTeam.clerkOrgId,
-      emailAddress: email,
-      role: "org:member",
-      inviterUserId: session.clerkUserId,
-      publicMetadata: { dbRole: role },
+    const pendingInvite = await db.teamInvitation.findFirst({
+      where: {
+        teamId: team.teamId,
+        email,
+        acceptedAt: null,
+        revokedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+      select: { id: true },
+    });
+    if (pendingInvite) {
+      return NextResponse.json(
+        { error: "An active invitation already exists for this email" },
+        { status: 409 },
+      );
+    }
+
+    await createTeamInvitation({
+      teamId: team.teamId,
+      email,
+      role: parsed.data.role,
+      invitedByUserId: team.userId,
+      inviterEmail: session.email,
     });
 
     await writeAuditEvent({
@@ -135,10 +125,10 @@ export async function POST(req: NextRequest) {
       walletAddress: team.walletAddress,
       action: "team.invite",
       resourceType: "TeamMember",
-      metadata: { email, role },
+      metadata: { email, role: parsed.data.role },
     });
 
-    return NextResponse.json({ ok: true, email, role });
+    return NextResponse.json({ ok: true, email, role: parsed.data.role });
   } catch (err) {
     console.error("[api/team/invite POST]", err);
     return NextResponse.json(

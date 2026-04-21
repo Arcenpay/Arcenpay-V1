@@ -2,7 +2,7 @@ CREATE TABLE IF NOT EXISTS "CatalogCoupon" (
     "teamId" TEXT NOT NULL,
     "code" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
     "description" TEXT,
     "discountPercent" INTEGER NOT NULL,
     "active" BOOLEAN NOT NULL DEFAULT true,

@@ -9,40 +9,16 @@ export type TeamContext = {
   walletAddress?: string;
 };
 
-/** Resolves the current team and role from a Clerk session. */
+/** Resolves the current team and role from a dashboard session. */
 export async function resolveTeamContext(
   session: ClerkSession,
 ): Promise<TeamContext | null> {
-  // Look up the DB User for this Clerk identity
   const user = await db.user.findUnique({
-    where: { clerkUserId: session.clerkUserId },
+    where: { id: session.userId },
     select: { id: true, walletAddress: true, currentTeamId: true },
   });
   if (!user) return null;
 
-  // If Clerk reports an active org, find team by clerkOrgId first
-  if (session.orgId) {
-    const team = await db.team.findUnique({
-      where: { clerkOrgId: session.orgId },
-      select: { id: true },
-    });
-    if (team) {
-      const member = await db.teamMember.findUnique({
-        where: { userId_teamId: { userId: user.id, teamId: team.id } },
-        select: { role: true },
-      });
-      if (member) {
-        return {
-          teamId: team.id,
-          teamRole: member.role as TeamRole,
-          userId: user.id,
-          walletAddress: user.walletAddress ?? undefined,
-        };
-      }
-    }
-  }
-
-  // Fallback: use currentTeamId or first membership
   const targetTeamId = user.currentTeamId ?? undefined;
   const membership = await db.teamMember.findFirst({
     where: {

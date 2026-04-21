@@ -41,7 +41,6 @@ import {
   Wallet,
 } from "lucide-react";
 import { ProtocolKeysPanel } from "@/components/dashboard/sections/api-keys";
-import { useUser } from "@clerk/nextjs";
 import {
   useAccount,
   useChainId,
@@ -56,6 +55,7 @@ import { toast } from "sonner";
 import { useContractAddresses } from "@/lib/contracts";
 import { getBlockExplorerUrl } from "@/lib/format";
 import { CANONICAL_WEBHOOK_EVENTS } from "@/lib/webhook-events";
+import { useDashboardSession } from "@/hooks/use-dashboard-session";
 
 const NOTIFICATION_DEFAULTS = CANONICAL_WEBHOOK_EVENTS.map((event) => ({
   ...event,
@@ -95,9 +95,9 @@ const REGISTRY_GMP_ABI = [
 
 export function SettingsSection() {
   const { isConnected, address: connectedAddress } = useAccount();
-  const { user: clerkUser } = useUser();
+  const { data: sessionData } = useDashboardSession();
   const chainId = useChainId();
-  const linkedWallet = clerkUser?.publicMetadata?.walletAddress as string | undefined;
+  const linkedWallet = sessionData?.user.walletAddress ?? undefined;
   const contractAddresses = useContractAddresses();
 
   const [activeTab, setActiveTab] = useState("profile");

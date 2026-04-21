@@ -1,12 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateNonce } from "@/lib/nonce.server";
 import { rateLimit, applyRateLimitHeaders } from "@/lib/rate-limit";
+import { getSession } from "@/lib/auth.server";
 
 // 20 nonce requests per IP per minute — prevents brute-force SIWE replay farming
 const NONCE_LIMIT = 20;
 const NONCE_WINDOW_MS = 60_000;
 
 export async function GET(request: NextRequest) {
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const ip =
     request.headers.get("x-forwarded-for")?.split(",")[0].trim() ||
     request.headers.get("x-real-ip") ||

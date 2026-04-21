@@ -2,11 +2,7 @@
  * Auth setup — runs before all tests that require a logged-in user.
  *
  * This file saves browser storage state (cookies/localStorage) to
- * tests/e2e/.auth/user.json after completing the SIWE login flow.
- *
- * Because the dashboard uses SIWE (Sign-In with Ethereum), real wallet
- * interaction is needed. In CI, inject a test wallet via environment:
- *   PLAYWRIGHT_TEST_WALLET_PK  — 0x-prefixed private key of a funded test wallet
+ * tests/e2e/.auth/user.json after a successful dashboard auth session.
  *
  * For local dev, you can skip auth setup entirely and run tests against
  * a server with auth disabled (SKIP_AUTH=true in .env.local).
@@ -22,7 +18,7 @@ setup("authenticate", async ({ page }) => {
   if (sessionCookie) {
     await page.context().addCookies([
       {
-        name: "meap-session",
+        name: "arcen_session",
         value: sessionCookie,
         domain: new URL(process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000").hostname,
         path: "/",
@@ -44,17 +40,15 @@ setup("authenticate", async ({ page }) => {
     return;
   }
 
-  // Navigate to login page and attempt SIWE auth
+  // Navigate to login page. A fully automated email-code flow is not wired
+  // into Playwright yet, so CI should inject PLAYWRIGHT_SESSION_COOKIE.
   await page.goto("/login");
   await expect(page).toHaveURL(/\/login/);
 
-  // NOTE: Full SIWE flow requires a browser wallet extension.
-  // For automated CI testing, use PLAYWRIGHT_SESSION_COOKIE instead.
-  // This block is provided as a manual test aid.
   console.warn(
     "[auth.setup] No PLAYWRIGHT_SESSION_COOKIE provided. " +
       "Auth setup will be skipped — authenticated tests will fail. " +
-      "Set PLAYWRIGHT_SESSION_COOKIE to a valid session JWT or SKIP_AUTH=true.",
+      "Set PLAYWRIGHT_SESSION_COOKIE to a valid arcen_session cookie or SKIP_AUTH=true.",
   );
 
   // Save empty state so downstream tests can run (they will fail if they need auth)

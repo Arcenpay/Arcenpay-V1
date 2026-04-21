@@ -50,10 +50,7 @@ export function Web3Provider({
   children: ReactNode;
   cookies: string | null;
 }) {
-  const initialState = cookieToInitialState(
-    wagmiAdapter.wagmiConfig as Config,
-    cookies,
-  );
+  const initialState = resolveInitialState(cookies);
 
   return (
     <WagmiProvider
@@ -68,4 +65,49 @@ export function Web3Provider({
       </QueryClientProvider>
     </WagmiProvider>
   );
+}
+
+function decodeCookieValues(cookieHeader: string): string {
+  return cookieHeader
+    .split(";")
+    .map((segment) => {
+      const trimmed = segment.trim();
+      if (!trimmed) return trimmed;
+
+      const eqIndex = trimmed.indexOf("=");
+      if (eqIndex === -1) return trimmed;
+
+      const name = trimmed.slice(0, eqIndex);
+      const value = trimmed.slice(eqIndex + 1);
+
+      try {
+        return `${name}=${decodeURIComponent(value)}`;
+      } catch {
+        return `${name}=${value}`;
+      }
+    })
+    .filter(Boolean)
+    .join("; ");
+}
+
+function resolveInitialState(cookies: string | null) {
+  if (!cookies) return undefined;
+
+  try {
+    return cookieToInitialState(wagmiAdapter.wagmiConfig as Config, cookies);
+  } catch (error) {
+    const decodedCookies = decodeCookieValues(cookies);
+    if (decodedCookies !== cookies) {
+      try {
+        return cookieToInitialState(
+          wagmiAdapter.wagmiConfig as Config,
+          decodedCookies,
+        );
+      } catch {
+        // Fall through to undefined below.
+      }
+    }
+    console.warn("[web3-provider] Falling back to empty wagmi initial state:", error);
+    return undefined;
+  }
 }

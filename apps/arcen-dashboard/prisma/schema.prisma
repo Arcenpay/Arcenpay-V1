@@ -117,34 +117,52 @@ model User {
   email         String? @unique
   emailVerified Boolean @default(false)
   walletAddress String? @unique
-  clerkUserId   String? @unique
 
   currentTeamId String?
 
-  magicTokens MagicToken[]
-  teams       TeamMember[]
+  authSessions    AuthSession[]
+  emailAuthCodes  EmailAuthCode[]
+  invitedTeams    TeamInvitation[] @relation("TeamInvitationInvitedBy")
+  teams           TeamMember[]
 
   @@index([email])
   @@index([walletAddress])
-  @@index([clerkUserId])
 }
 
-// ─── Passwordless email login ─────────────────────────────────────────────────
+// ─── Dashboard auth ───────────────────────────────────────────────────────────
 
-model MagicToken {
+model AuthSession {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  userId    String
+
+  tokenHash String   @unique
+  expiresAt DateTime
+  lastSeenAt DateTime @default(now())
+  revokedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model EmailAuthCode {
   id        String   @id @default(cuid())
   createdAt DateTime @default(now())
 
-  token     String   @unique
   email     String
+  purpose   String
+  codeHash  String
   expiresAt DateTime
   usedAt    DateTime?
+  attemptCount Int   @default(0)
 
   userId String?
-  user   User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([token])
   @@index([email])
+  @@index([expiresAt])
 }
 
 // ─── Teams / Workspaces ───────────────────────────────────────────────────────
@@ -157,7 +175,6 @@ model Team {
   slug            String          @unique
   environmentMode EnvironmentMode @default(DEVELOPMENT)
   invoicePrefix   String?
-  clerkOrgId      String?         @unique
 
   // Platform tier (ArcenPay's own billing tier for this workspace)
   platformTier       PlatformTier @default(FREE)
@@ -166,6 +183,7 @@ model Team {
 
   members         TeamMember[]
   providerProfile ProviderProfile?
+  invitations     TeamInvitation[]
 
   catalogPlans       CatalogPlan[]
   catalogAddOns      CatalogAddOn[]
@@ -194,7 +212,6 @@ model Team {
   embedComponents     EmbedComponent[]
 
   @@index([slug])
-  @@index([clerkOrgId])
   @@index([platformTier])
 }
 
@@ -212,6 +229,26 @@ model TeamMember {
   @@unique([userId, teamId])
   @@index([userId])
   @@index([teamId])
+}
+
+model TeamInvitation {
+  id              String   @id @default(cuid())
+  createdAt       DateTime @default(now())
+  teamId          String
+  email           String
+  role            TeamRole @default(MEMBER)
+  tokenHash       String   @unique
+  expiresAt       DateTime
+  acceptedAt      DateTime?
+  revokedAt       DateTime?
+  invitedByUserId String?
+
+  team          Team  @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  invitedByUser User? @relation("TeamInvitationInvitedBy", fields: [invitedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([teamId])
+  @@index([email])
+  @@index([expiresAt])
 }
 
 model ProviderProfile {
