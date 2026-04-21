@@ -8,6 +8,7 @@ export const PROTOCOL_EVENT_SCHEMA_VERSION = "2026-03-09.1";
 export type ProtocolEventName =
   | "subscription.minted"
   | "subscription.renewed"
+  | "subscription.renewal_failed"
   | "subscription.cancelled"
   | "proof.generated"
   | "proof.submitted"
@@ -77,12 +78,18 @@ export function createProtocolEvent<TPayload>(
 
 export function mapProtocolEventToBillingType(
   name: ProtocolEventName,
-): "SUBSCRIPTION_MINTED" | "SUBSCRIPTION_RENEWED" | "SUBSCRIPTION_CANCELLED" {
+):
+  | "SUBSCRIPTION_MINTED"
+  | "SUBSCRIPTION_RENEWED"
+  | "SUBSCRIPTION_CANCELLED"
+  | "PAYMENT_FAILED" {
   switch (name) {
     case "subscription.minted":
       return "SUBSCRIPTION_MINTED";
     case "subscription.renewed":
       return "SUBSCRIPTION_RENEWED";
+    case "subscription.renewal_failed":
+      return "PAYMENT_FAILED";
     case "subscription.cancelled":
       return "SUBSCRIPTION_CANCELLED";
     default:
@@ -91,4 +98,3 @@ export function mapProtocolEventToBillingType(
       );
   }
 }
-

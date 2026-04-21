@@ -63,6 +63,7 @@ import {
   type ProtocolEventName,
 } from "@arcenpay/node";
 import {
+  ERC7579AutopayModuleABI,
   PlanFactoryABI,
   SessionVaultABI,
   SubscriptionRegistryABI,
@@ -87,6 +88,10 @@ import {
   createSubscriptionRouteStore,
   resolveRoutingTeamId as resolveSubscriptionRoutingTeamId,
 } from "./subscription-routing.js";
+import {
+  microsToDecimalString,
+  resolveRenewalAmountMicros,
+} from "./renewal-amount.js";
 
 const app = express();
 const PORT = process.env.PORT || 3402;
@@ -1279,6 +1284,50 @@ async function getTokenOwner(tokenId: bigint): Promise<string | null> {
   }
 }
 
+async function resolveAutopayConfigForSubscriber(subscriberWallet: string) {
+  try {
+    const config = (await chainClient.readContract({
+      address: CONTRACTS.autopayModule as `0x${string}`,
+      abi: ERC7579AutopayModuleABI,
+      functionName: "getConfig",
+      args: [subscriberWallet as `0x${string}`],
+    })) as {
+      merchant?: string;
+      maxAmount?: bigint;
+      startTime?: bigint;
+      planId?: bigint;
+    };
+    return config;
+  } catch (err) {
+    console.error(
+      "[Facilitator] Failed to resolve autopay config for subscriber:",
+      subscriberWallet,
+      err,
+    );
+    return null;
+  }
+}
+
+async function resolveRenewalAmountForEvent(input: {
+  tokenId: bigint;
+  subscriberWallet: string | null;
+  eventAmountPaid?: bigint | null;
+}): Promise<bigint> {
+  if (input.eventAmountPaid && input.eventAmountPaid > 0n) {
+    return input.eventAmountPaid;
+  }
+
+  if (!input.subscriberWallet) {
+    return 0n;
+  }
+
+  const config = await resolveAutopayConfigForSubscriber(input.subscriberWallet);
+  return resolveRenewalAmountMicros({
+    eventAmountPaid: input.eventAmountPaid,
+    configuredMaxAmount: config?.maxAmount ?? null,
+  });
+}
+
 // Optional: Lit Protocol service
 let litService: LitProtocolService | null = null;
 let litReady: Promise<void> | null = null;
@@ -1738,6 +1787,17 @@ eventListener.on("renewed", async (event) => {
   const renewedSubscriberEmail = renewedSubscriberWallet
     ? await lookupSubscriberEmail(renewedSubscriberWallet)
     : null;
+  const renewalAmountMicros = await resolveRenewalAmountForEvent({
+    tokenId: event.tokenId,
+    subscriberWallet: renewedSubscriberWallet,
+    eventAmountPaid: event.amountPaid ?? null,
+  });
+  const renewalAmount = microsToDecimalString(renewalAmountMicros);
+  if (renewalAmountMicros <= 0n) {
+    console.warn(
+      `[Facilitator] Unable to resolve non-zero renewal amount for tokenId=${tokenId}`,
+    );
+  }
   // Resolve the on-chain planId for this token so sync-subscription can set activePlanId
   let renewedPlanId: bigint | null = null;
   try {
@@ -1788,7 +1848,7 @@ eventListener.on("renewed", async (event) => {
     {
       tokenId,
       expiration: event.expiration?.toString(),
-      amount: event.amountPaid ? String(Number(event.amountPaid) / 1e6) : "0",
+      amount: renewalAmount,
       txHash: event.transactionHash,
       timestamp: event.timestamp?.toString(),
       ...(renewedSubscriberEmail && { email: renewedSubscriberEmail }),
@@ -1857,9 +1917,7 @@ eventListener.on("renewed", async (event) => {
               walletAddress: subscriberWallet,
               tokenId: event.tokenId?.toString() || "",
               expiresAt: expiresAt ?? "",
-              amount: event.amountPaid
-                ? String(Number(event.amountPaid) / 1e6)
-                : "",
+              amount: renewalAmountMicros > 0n ? renewalAmount : "",
             },
           );
         } catch (err) {
@@ -2130,6 +2188,43 @@ if (process.env.ENABLE_BILLING_KEEPER === "true" && process.env.PRIVATE_KEY) {
           },
           1,
         );
+      }
+
+      if (!result.success) {
+        void (async () => {
+          const tokenId = result.tokenId.toString();
+          const routeState = await subscriptionRouteStore.read(tokenId);
+          const subscriberEmail = await lookupSubscriberEmail(result.subscriber);
+          await persistBillingEvent(
+            "subscription.renewal_failed",
+            buildEventIdempotencyKey("subscription.renewal_failed", [
+              result.tokenId,
+              result.txHash || result.error || Date.now(),
+            ]),
+            {
+              tokenId,
+              subscriber: result.subscriber,
+              customerWallet: result.subscriber,
+              ...(subscriberEmail && { email: subscriberEmail }),
+              txHash: result.txHash,
+              error: result.error ?? "renewal failed",
+              description: "Subscription renewal failed",
+            },
+            false,
+            new Date(),
+            {
+              teamId: routeState?.teamId ?? null,
+              onChainPlanId: routeState?.onChainPlanId ?? null,
+              sourceTokenId: tokenId,
+              wallet: routeState?.wallet ?? result.subscriber,
+            },
+          );
+        })().catch((err) => {
+          console.error(
+            "[Facilitator] Failed to persist renewal failure billing event:",
+            err,
+          );
+        });
       }
     });
 

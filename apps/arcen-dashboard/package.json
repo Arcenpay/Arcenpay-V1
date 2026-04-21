@@ -14,6 +14,9 @@
     "db:migrate:deploy": "prisma migrate deploy",
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
+    "billing:backfill-ledger": "tsx scripts/backfill-billing-ledger.ts",
+    "billing:run-maintenance": "tsx scripts/run-billing-maintenance.ts",
+    "billing:run-maintenance:all": "tsx scripts/run-billing-maintenance-all.ts",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:report": "playwright show-report"

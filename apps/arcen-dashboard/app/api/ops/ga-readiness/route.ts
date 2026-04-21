@@ -24,6 +24,7 @@ import {
   INVOICE_DOWNLOAD_SIGNING_SECRET,
 } from "@/lib/config";
 import { checkSubgraphHealth } from "@/lib/graphql";
+import { getBillingReconciliationSummary } from "@/lib/billing-reconciliation";
 
 interface Gate {
   id: string;
@@ -168,7 +169,25 @@ export async function GET(request: NextRequest) {
       : undefined,
   });
 
-  // ── Gate 7: Email provider configured (production only) ──────
+  // ── Gate 7: Ledger reconciliation clean ─────────────────────
+  const reconciliation = await getBillingReconciliationSummary({
+    teamId: auth.team.teamId,
+  });
+  const reconciliationIssues = Object.values(reconciliation.counts).reduce(
+    (sum, value) => sum + value,
+    0,
+  );
+  gates.push({
+    id: "billing_reconciliation",
+    description: "Billing ledger has no known invoice/subscription/payment mismatches",
+    passed: reconciliationIssues === 0,
+    detail:
+      reconciliationIssues > 0
+        ? JSON.stringify(reconciliation.counts)
+        : undefined,
+  });
+
+  // ── Gate 8: Email provider configured (production only) ──────
   gates.push({
     id: "email_provider",
     description: "Email provider (Resend) is configured",
@@ -176,7 +195,7 @@ export async function GET(request: NextRequest) {
     detail: !RESEND_API_KEY ? "RESEND_API_KEY is not set — transactional emails will silently fail." : undefined,
   });
 
-  // ── Gate 8: Team has at least one published plan ──────────────
+  // ── Gate 9: Team has at least one published plan ──────────────
   const publishedPlans = await db.catalogPlan.count({
     where: {
       teamId: auth.team.teamId,

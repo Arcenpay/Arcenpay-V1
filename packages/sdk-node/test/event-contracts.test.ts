@@ -41,9 +41,11 @@ describe("event contracts", () => {
     expect(mapProtocolEventToBillingType("subscription.renewed")).toBe(
       "SUBSCRIPTION_RENEWED",
     );
+    expect(mapProtocolEventToBillingType("subscription.renewal_failed")).toBe(
+      "PAYMENT_FAILED",
+    );
     expect(mapProtocolEventToBillingType("subscription.cancelled")).toBe(
       "SUBSCRIPTION_CANCELLED",
     );
   });
 });
-

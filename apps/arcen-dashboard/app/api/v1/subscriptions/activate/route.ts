@@ -50,6 +50,10 @@ import {
   ingestBillingEvent,
   resolveBillingRecipientEmail,
 } from "@/lib/billing-events";
+import {
+  recordSuccessfulPayment,
+  upsertSubscriptionLedgerState,
+} from "@/lib/billing-ledger";
 
 const CHAIN_MAP: Record<number, Chain> = {
   11155111: sepolia,
@@ -223,7 +227,7 @@ export async function POST(req: NextRequest) {
       status: "PUBLISHED",
       onChainPlanId: onChainPlanId.toString(),
     },
-    select: { id: true, name: true },
+    select: { id: true, name: true, acceptedToken: true },
   });
 
   if (!catalogPlan) {
@@ -412,6 +416,29 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const existingTokenId = (await publicClient.readContract({
+    address: subscriptionRegistryAddress,
+    abi: SubscriptionRegistryABI,
+    functionName: "getWalletSubscription",
+    args: [paymentAccount],
+  })) as bigint;
+
+  if (existingTokenId > 0n) {
+    return NextResponse.json(
+      {
+        error:
+          "This payment account already has an on-chain subscription token. Refusing to execute activation again to avoid a duplicate charge.",
+        data: {
+          tokenId: existingTokenId.toString(),
+          companyId: company.id,
+          planId: catalogPlan.id,
+          paymentAccount,
+        },
+      },
+      { status: 409, headers: corsHeaders() },
+    );
+  }
+
   const walletConflict = await db.arcenCompany.findFirst({
     where: {
       teamId,
@@ -468,6 +495,52 @@ export async function POST(req: NextRequest) {
         activePlanId: catalogPlan.id,
       },
     });
+
+    try {
+      const ledgerOccurredAt = new Date();
+      const subscriptionState = await upsertSubscriptionLedgerState({
+        teamId,
+        companyId: company.id,
+        walletAddress: paymentAccount,
+        status: "ACTIVE",
+        catalogPlanId: catalogPlan.id,
+        onChainPlanId: onChainPlanId.toString(),
+        onChainTokenId: tokenId.toString(),
+        lastEvent: "subscription.minted",
+        lastEventAt: ledgerOccurredAt,
+        lastSourceTxHash: txHash,
+        metadata: {
+          source: "subscription.activate",
+        },
+      });
+
+      await recordSuccessfulPayment({
+        idempotencyKey: `payment:subscription.activate:${txHash}`,
+        teamId,
+        companyId: company.id,
+        walletAddress: paymentAccount,
+        subscriptionStateId: subscriptionState?.id,
+        kind: "SUBSCRIPTION_ACTIVATION",
+        amount: Number(chargeAmount) / 1e6,
+        currency: "USDC",
+        payerWallet: paymentAccount,
+        recipientWallet: merchantAddress,
+        acceptedToken: catalogPlan.acceptedToken ?? null,
+        txHash,
+        occurredAt: ledgerOccurredAt,
+        settledAt: ledgerOccurredAt,
+        metadata: {
+          tokenId: tokenId.toString(),
+          onChainPlanId: onChainPlanId.toString(),
+          source: "subscription.activate",
+        },
+      });
+    } catch (ledgerError) {
+      console.error(
+        "[subscriptions/activate] Ledger write failed after successful charge:",
+        ledgerError,
+      );
+    }
 
     const subscriberEmail = await resolveBillingRecipientEmail({
       teamId,

@@ -146,7 +146,7 @@ export async function GET(request: NextRequest) {
         where: {
           teamId: auth.team.teamId,
           environmentMode,
-          status: { in: ["ISSUED", "PAID", "OVERDUE"] },
+          status: "PAID",
           issuedAt: {
             gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
           },
@@ -157,7 +157,7 @@ export async function GET(request: NextRequest) {
         where: {
           teamId: auth.team.teamId,
           environmentMode,
-          status: { in: ["ISSUED", "PAID", "OVERDUE"] },
+          status: "PAID",
         },
         select: { customerWallet: true, customerEmail: true },
       }),

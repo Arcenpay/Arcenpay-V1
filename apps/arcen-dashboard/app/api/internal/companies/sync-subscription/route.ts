@@ -18,6 +18,7 @@ import { z } from "zod";
 import { toPrismaJson } from "@/lib/prisma-json";
 import { requireFacilitatorAuth } from "@/lib/facilitator-auth";
 import { resolvePublishedFreePlan } from "@/lib/catalog-billing";
+import { upsertSubscriptionLedgerState } from "@/lib/billing-ledger";
 
 function asRecord(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
@@ -175,6 +176,25 @@ export async function PATCH(req: NextRequest) {
         traits: toPrismaJson(nextTraits),
       },
     });
+
+    await upsertSubscriptionLedgerState({
+      teamId: company.teamId,
+      companyId: company.id,
+      walletAddress: wallet,
+      status: "CANCELLED",
+      catalogPlanId: resolvedPlanId,
+      onChainPlanId: null,
+      onChainTokenId: sourceTokenId ?? null,
+      cancelAtPeriodEnd: false,
+      cancelledAt: occurredAt ?? new Date(),
+      lastEvent: "subscription.cancelled",
+      lastEventAt: occurredAt ?? new Date(),
+      lastSourceTxHash: sourceTxHash ?? null,
+      metadata: {
+        source: "sync-subscription",
+      },
+    });
+
     return NextResponse.json({
       ok: true,
       activePlanId: resolvedPlanId,
@@ -207,6 +227,26 @@ export async function PATCH(req: NextRequest) {
     data: {
       activePlanId: plan.id,
       traits: toPrismaJson(nextTraits),
+    },
+  });
+
+  await upsertSubscriptionLedgerState({
+    teamId: company.teamId,
+    companyId: company.id,
+    walletAddress: wallet,
+    status: "ACTIVE",
+    catalogPlanId: plan.id,
+    onChainPlanId,
+    onChainTokenId: sourceTokenId ?? null,
+    cancelAtPeriodEnd: false,
+    cancelledAt: null,
+    pastDueAt: null,
+    graceEndsAt: null,
+    lastEvent: event === "minted" ? "subscription.minted" : "subscription.renewed",
+    lastEventAt: occurredAt ?? new Date(),
+    lastSourceTxHash: sourceTxHash ?? null,
+    metadata: {
+      source: "sync-subscription",
     },
   });
 

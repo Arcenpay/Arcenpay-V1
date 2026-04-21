@@ -14,16 +14,6 @@ import {
 import { toPrismaJson } from "@/lib/prisma-json";
 import { resolvePublishedFreePlan } from "@/lib/catalog-billing";
 
-type SubscriptionTransition = {
-  mode: "period_end_downgrade" | "cancel_at_period_end";
-  targetPlanId: string | null;
-  targetPlanName: string | null;
-  previousPlanId: string | null;
-  requestedAt: string;
-  effectiveAt: string | null;
-  source: "self_service";
-};
-
 function asRecord(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
   return value as Record<string, unknown>;
@@ -96,6 +86,16 @@ export async function POST(req: NextRequest) {
 
   const currentTraits = asRecord(company.traits);
 
+  if (company.activePlanId && company.activePlanId !== freePlan.id) {
+    return NextResponse.json(
+      {
+        error:
+          "Self-service cancellation is blocked because this endpoint does not stop the on-chain subscription. Cancel the subscription on-chain first, then sync the dashboard state.",
+      },
+      { status: 409, headers: corsHeaders() },
+    );
+  }
+
   if (!company.activePlanId || company.activePlanId === freePlan.id) {
     const nextTraits = { ...currentTraits };
     delete nextTraits.subscriptionTransition;
@@ -121,44 +121,11 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const transition: SubscriptionTransition = {
-    mode: "cancel_at_period_end",
-    targetPlanId: freePlan.id,
-    targetPlanName: freePlan.name,
-    previousPlanId: company.activePlanId,
-    requestedAt: new Date().toISOString(),
-    effectiveAt: null,
-    source: "self_service",
-  };
-
-  await db.arcenCompany.update({
-    where: { id: companyId },
-    data: {
-      traits: toPrismaJson({
-        ...currentTraits,
-        subscriptionTransition: transition,
-      }),
-    },
-  });
-
-  // Fire outbound webhook (non-blocking)
-  deliverWebhook(teamId, "company.plan.cancelled", {
-    companyId,
-    freePlanId: freePlan.id,
-    scheduled: true,
-    mode: "period_end",
-  }).catch(() => {});
-
   return NextResponse.json(
     {
-      data: {
-        success: true,
-        scheduled: true,
-        mode: "period_end",
-        planId: freePlan.id,
-        effectiveAt: null,
-      },
+      error:
+        "Cancellation state is inconsistent. Sync the on-chain subscription before retrying.",
     },
-    { headers: corsHeaders() },
+    { status: 409, headers: corsHeaders() },
   );
 }

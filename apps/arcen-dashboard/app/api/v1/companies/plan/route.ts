@@ -6,13 +6,6 @@
  * Body: { planId: string }
  */
 import { NextRequest, NextResponse } from "next/server";
-import {
-  createPublicClient,
-  decodeFunctionData,
-  http,
-  type Chain,
-} from "viem";
-import { base, baseSepolia, sepolia } from "viem/chains";
 import { db } from "@/lib/db";
 import { deliverWebhook } from "@/lib/deliver-webhook";
 import { resolveEntitlementResults } from "@/lib/entitlements";
@@ -27,7 +20,10 @@ import {
   normalizeCouponCode,
   resolveCouponQuote,
 } from "@/lib/catalog-billing";
-import { getRpcUrl } from "@/lib/config";
+import {
+  normalizeTxHash,
+  verifyDirectErc20Transfer,
+} from "@/lib/onchain-payment-verification";
 
 type SubscriptionTransition = {
   mode: "period_end_downgrade" | "cancel_at_period_end";
@@ -39,28 +35,20 @@ type SubscriptionTransition = {
   source: "self_service";
 };
 
-const CHAIN_MAP: Record<number, Chain> = {
-  11155111: sepolia,
-  84532: baseSepolia,
-  8453: base,
-};
-
-const ERC20_TRANSFER_ABI = [
-  {
-    name: "transfer",
-    type: "function",
-    stateMutability: "nonpayable",
-    inputs: [
-      { name: "to", type: "address" },
-      { name: "amount", type: "uint256" },
-    ],
-    outputs: [{ name: "", type: "bool" }],
-  },
-] as const;
-
 function asRecord(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
   return value as Record<string, unknown>;
+}
+
+function readConsumedPaymentTxHashes(
+  traits: Record<string, unknown>,
+): string[] {
+  const txHashes = traits.billingVerifiedTxHashes;
+  if (!Array.isArray(txHashes)) return [];
+  return txHashes.filter(
+    (value): value is string =>
+      typeof value === "string" && /^0x[0-9a-fA-F]{64}$/.test(value),
+  );
 }
 
 function readTargetNumericLimitsFromPlanMetadata(
@@ -95,14 +83,9 @@ function corsHeaders() {
   };
 }
 
-function normalizeTxHash(value?: string | null): `0x${string}` | null {
-  const trimmed = value?.trim();
-  if (!trimmed || !/^0x[0-9a-fA-F]{64}$/.test(trimmed)) return null;
-  return trimmed as `0x${string}`;
-}
-
 async function verifySelfServePlanPayment(params: {
   teamId: string;
+  senderWallet: string;
   acceptedToken: string;
   txHash: `0x${string}`;
   expectedAmountMicros: number;
@@ -122,83 +105,16 @@ async function verifySelfServePlanPayment(params: {
     };
   }
 
-  const chainId = Number(
-    process.env.MEAP_DEFAULT_CHAIN_ID ||
-      process.env.CHAIN_ID ||
-      process.env.NEXT_PUBLIC_CHAIN_ID ||
-      "11155111",
-  );
-  const publicClient = createPublicClient({
-    chain: CHAIN_MAP[chainId] ?? sepolia,
-    transport: http(getRpcUrl(chainId)),
+  const verification = await verifyDirectErc20Transfer({
+    acceptedToken: params.acceptedToken,
+    txHash: params.txHash,
+    expectedAmountAtomic: BigInt(params.expectedAmountMicros),
+    recipientWallet: providerWallet,
+    senderWallet: params.senderWallet,
   });
 
-  try {
-    const [transaction, receipt] = await Promise.all([
-      publicClient.getTransaction({ hash: params.txHash }),
-      publicClient.getTransactionReceipt({ hash: params.txHash }),
-    ]);
-
-    if (receipt.status !== "success") {
-      return {
-        ok: false,
-        status: 409,
-        error: "Payment transaction did not complete successfully.",
-      };
-    }
-
-    if (
-      !transaction.to ||
-      transaction.to.toLowerCase() !== params.acceptedToken.toLowerCase()
-    ) {
-      return {
-        ok: false,
-        status: 409,
-        error: "Payment transaction was sent to the wrong token contract.",
-      };
-    }
-
-    const decoded = decodeFunctionData({
-      abi: ERC20_TRANSFER_ABI,
-      data: transaction.input,
-    });
-
-    if (decoded.functionName !== "transfer") {
-      return {
-        ok: false,
-        status: 409,
-        error: "Payment transaction must be a direct ERC-20 transfer.",
-      };
-    }
-
-    const [recipient, amount] = decoded.args as [`0x${string}`, bigint];
-    if (recipient.toLowerCase() !== providerWallet) {
-      return {
-        ok: false,
-        status: 409,
-        error: "Payment transaction was sent to the wrong recipient wallet.",
-      };
-    }
-
-    if (amount !== BigInt(params.expectedAmountMicros)) {
-      return {
-        ok: false,
-        status: 409,
-        error: "Payment transaction amount does not match the approved quote.",
-      };
-    }
-
-    return { ok: true };
-  } catch (error) {
-    return {
-      ok: false,
-      status: 502,
-      error:
-        error instanceof Error
-          ? error.message
-          : "Could not verify payment transaction.",
-    };
-  }
+  if (!verification.ok) return verification;
+  return { ok: true };
 }
 
 export async function OPTIONS() {
@@ -332,6 +248,16 @@ export async function POST(req: NextRequest) {
 
   const currentPrice = Number(currentPlan?.price ?? 0);
   const targetPrice = Number(plan.price);
+  if (currentPrice > 0 || targetPrice > 0) {
+    return NextResponse.json(
+      {
+        error:
+          "Self-service paid plan changes are temporarily blocked because this endpoint does not update the authoritative on-chain subscription. Use the on-chain subscription flow and then sync the dashboard state.",
+      },
+      { status: 409, headers: corsHeaders() },
+    );
+  }
+
   const isDowngrade = !!currentPlan && targetPrice < currentPrice;
   const normalizedBillingPeriod = normalizeBillingPeriod(billingPeriod);
   const shouldScheduleDowngrade =
@@ -412,8 +338,19 @@ export async function POST(req: NextRequest) {
   }
 
   const currentTraits = asRecord(company.traits);
+  const consumedPaymentTxHashes = readConsumedPaymentTxHashes(currentTraits);
 
   if (!shouldScheduleDowngrade && quotedAmountMicros > 0) {
+    if (!company.walletAddress) {
+      return NextResponse.json(
+        {
+          error:
+            "The company must have a linked wallet before a self-serve paid plan change can be verified.",
+        },
+        { status: 409, headers: corsHeaders() },
+      );
+    }
+
     const normalizedTxHash = normalizeTxHash(txHash);
     if (!normalizedTxHash) {
       return NextResponse.json(
@@ -425,8 +362,19 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (consumedPaymentTxHashes.includes(normalizedTxHash)) {
+      return NextResponse.json(
+        {
+          error:
+            "This payment transaction hash has already been used for a previous plan change.",
+        },
+        { status: 409, headers: corsHeaders() },
+      );
+    }
+
     const paymentCheck = await verifySelfServePlanPayment({
       teamId,
+      senderWallet: company.walletAddress,
       acceptedToken: plan.acceptedToken,
       txHash: normalizedTxHash,
       expectedAmountMicros: quotedAmountMicros,
@@ -489,6 +437,15 @@ export async function POST(req: NextRequest) {
 
   const nextTraits = { ...currentTraits };
   delete nextTraits.subscriptionTransition;
+  if (txHash) {
+    const normalizedAppliedTxHash = normalizeTxHash(txHash);
+    if (normalizedAppliedTxHash) {
+      nextTraits.billingVerifiedTxHashes = [
+        ...consumedPaymentTxHashes,
+        normalizedAppliedTxHash,
+      ].slice(-20);
+    }
+  }
 
   // Update the company's active plan
   await db.arcenCompany.update({

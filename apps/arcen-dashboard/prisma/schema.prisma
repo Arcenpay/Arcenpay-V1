@@ -80,6 +80,31 @@ enum BillingEventType {
   CREDIT_ISSUED
 }
 
+enum PaymentKind {
+  SUBSCRIPTION_ACTIVATION
+  SUBSCRIPTION_RENEWAL
+  MANUAL_INVOICE_PAYMENT
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+}
+
+enum PaymentAttemptStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+}
+
 enum AuditActorType {
   USER
   API
@@ -195,6 +220,8 @@ model Team {
   templateInstalls TemplateInstall[]
 
   invoices         Invoice[]
+  payments         Payment[]
+  subscriptionStates SubscriptionState[]
   taxProfile       TaxProfile?
   invoiceSequences InvoiceSequence[]
 
@@ -577,6 +604,7 @@ model Invoice {
   lineItems  InvoiceLine[]
   deliveries InvoiceDelivery[]
   creditNotes CreditNote[]
+  payments   Payment[]
 
   @@index([teamId, status, issuedAt])
   @@index([teamId, environmentMode])
@@ -675,6 +703,90 @@ model BillingEvent {
 
   @@index([teamId, createdAt])
   @@index([teamId, processed])
+}
+
+model SubscriptionState {
+  id                String             @id @default(cuid())
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  teamId            String
+  companyId         String             @unique
+  walletAddress     String?
+  status            SubscriptionStatus @default(ACTIVE)
+  catalogPlanId     String?
+  onChainPlanId     String?
+  onChainTokenId    String?
+  currentPeriodStart DateTime?
+  currentPeriodEnd   DateTime?
+  lastEvent         String?
+  lastEventAt       DateTime?
+  lastSourceTxHash  String?
+  cancelAtPeriodEnd Boolean            @default(false)
+  cancelledAt       DateTime?
+  pastDueAt         DateTime?
+  graceEndsAt       DateTime?
+  metadata          Json?
+
+  team    Team         @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  company ArcenCompany @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  payments Payment[]
+
+  @@index([teamId, status])
+  @@index([teamId, walletAddress])
+}
+
+model Payment {
+  id                  String        @id @default(cuid())
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  teamId              String
+  companyId           String?
+  invoiceId           String?
+  subscriptionStateId String?
+  idempotencyKey      String        @unique
+  kind                PaymentKind
+  status              PaymentStatus @default(PENDING)
+  currency            String        @default("USDC")
+  amount              Decimal       @db.Decimal(20, 6)
+  payerWallet         String?
+  recipientWallet     String?
+  acceptedToken       String?
+  txHash              String?       @unique
+  externalRef         String?
+  occurredAt          DateTime?
+  settledAt           DateTime?
+  failedAt            DateTime?
+  metadata            Json?
+
+  team              Team              @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  company           ArcenCompany?     @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  invoice           Invoice?          @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  subscriptionState SubscriptionState? @relation(fields: [subscriptionStateId], references: [id], onDelete: SetNull)
+  attempts          PaymentAttempt[]
+
+  @@index([teamId, status, occurredAt])
+  @@index([companyId, createdAt])
+  @@index([invoiceId])
+  @@index([subscriptionStateId])
+}
+
+model PaymentAttempt {
+  id           String               @id @default(cuid())
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+  paymentId    String
+  status       PaymentAttemptStatus
+  txHash       String?
+  errorCode    String?
+  errorMessage String?
+  attemptedAt  DateTime             @default(now())
+  resolvedAt   DateTime?
+  metadata     Json?
+
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@index([paymentId, attemptedAt])
+  @@index([txHash])
 }
 
 model WebhookDelivery {
@@ -802,6 +914,8 @@ model ArcenCompany {
   overrides CompanyOverride[]
   events    ArcenEvent[]
   zkProofs  ZkTlsProof[]
+  subscriptionState SubscriptionState?
+  payments  Payment[]
 
   @@unique([teamId, walletAddress])
   @@unique([teamId, externalId])

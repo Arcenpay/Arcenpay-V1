@@ -22,6 +22,7 @@ const eventSchema = z.object({
       "subscription.minted",
       "subscription.renewed",
       "subscription.cancelled",
+      "subscription.renewal_failed",
       "proof.generated",
       "proof.submitted",
       "proof.settled",

@@ -4,6 +4,11 @@ import { toPrismaJson } from "@/lib/prisma-json";
 import { ensureInvoicePdfForTeam } from "@/lib/invoice-documents";
 import { sendInvoiceEmail } from "@/lib/email";
 import { deliverWebhook } from "@/lib/deliver-webhook";
+import {
+  recordFailedPayment,
+  recordSuccessfulPayment,
+  upsertSubscriptionLedgerState,
+} from "@/lib/billing-ledger";
 
 export type BillingEventType =
   | "SUBSCRIPTION_MINTED"
@@ -37,7 +42,7 @@ const CANONICAL_EVENT_NAMES: Record<BillingEventType, string> = {
   SUBSCRIPTION_MINTED: "subscription.minted",
   SUBSCRIPTION_RENEWED: "subscription.renewed",
   SUBSCRIPTION_CANCELLED: "subscription.cancelled",
-  PAYMENT_FAILED: "invoice.delivery_failed",
+  PAYMENT_FAILED: "subscription.renewal_failed",
   CREDIT_ISSUED: "invoice.issued",
 };
 
@@ -234,6 +239,7 @@ async function processStoredBillingEvent(
     id: string;
     teamId: string;
     eventType: BillingEventType;
+    idempotencyKey: string;
     payload: unknown;
   },
   options: {
@@ -289,6 +295,116 @@ async function processStoredBillingEvent(
       });
       invoiceId = invoice.invoice.id;
     }
+  }
+
+  const customerWallet =
+    typeof payload.customerWallet === "string"
+      ? payload.customerWallet
+      : typeof payload.subscriber === "string"
+        ? payload.subscriber
+        : null;
+  const companyId =
+    typeof payload.companyId === "string" ? payload.companyId : null;
+  const catalogPlanId =
+    typeof payload.planId === "string" ? payload.planId : null;
+  const onChainPlanId =
+    typeof payload.onChainPlanId === "string" ? payload.onChainPlanId : null;
+  const onChainTokenId =
+    typeof payload.tokenId === "string" ? payload.tokenId : null;
+  const amount = Number(payload.amount ?? 0);
+  const occurredAt = options.occurredAt ?? occurredAtFromPayload ?? new Date();
+
+  if (
+    event.eventType === "SUBSCRIPTION_RENEWED" &&
+    Number.isFinite(amount) &&
+    amount > 0
+  ) {
+    const subscriptionState = await upsertSubscriptionLedgerState({
+      teamId: event.teamId,
+      companyId,
+      walletAddress: customerWallet,
+      status: "ACTIVE",
+      catalogPlanId,
+      onChainPlanId,
+      onChainTokenId,
+      cancelAtPeriodEnd: false,
+      cancelledAt: null,
+      pastDueAt: null,
+      graceEndsAt: null,
+      lastEvent: options.canonicalEventName,
+      lastEventAt: occurredAt,
+      lastSourceTxHash: typeof payload.txHash === "string" ? payload.txHash : null,
+      metadata: {
+        source: "billing-event",
+        billingEventId: event.id,
+      },
+    });
+
+    await recordSuccessfulPayment({
+      idempotencyKey: `payment:${event.idempotencyKey}`,
+      teamId: event.teamId,
+      companyId,
+      walletAddress: customerWallet,
+      invoiceId,
+      subscriptionStateId: subscriptionState?.id,
+      kind: "SUBSCRIPTION_RENEWAL",
+      amount,
+      currency: "USDC",
+      payerWallet: customerWallet,
+      txHash: typeof payload.txHash === "string" ? payload.txHash : null,
+      occurredAt,
+      settledAt: occurredAt,
+      metadata: {
+        source: "billing-event",
+        billingEventId: event.id,
+        canonicalEventName: options.canonicalEventName,
+        ...payload,
+      },
+    });
+  }
+
+  if (event.eventType === "PAYMENT_FAILED") {
+    const subscriptionState = await upsertSubscriptionLedgerState({
+      teamId: event.teamId,
+      companyId,
+      walletAddress: customerWallet,
+      status: "PAST_DUE",
+      catalogPlanId,
+      onChainPlanId,
+      onChainTokenId,
+      pastDueAt: occurredAt,
+      graceEndsAt: new Date(occurredAt.getTime() + 7 * 24 * 60 * 60 * 1000),
+      lastEvent: options.canonicalEventName,
+      lastEventAt: occurredAt,
+      lastSourceTxHash: typeof payload.txHash === "string" ? payload.txHash : null,
+      metadata: {
+        source: "billing-event",
+        billingEventId: event.id,
+      },
+    });
+
+    await recordFailedPayment({
+      idempotencyKey: `payment:${event.idempotencyKey}`,
+      teamId: event.teamId,
+      companyId,
+      walletAddress: customerWallet,
+      subscriptionStateId: subscriptionState?.id,
+      kind: "SUBSCRIPTION_RENEWAL",
+      amount: Number.isFinite(amount) ? amount : 0,
+      currency: "USDC",
+      txHash: typeof payload.txHash === "string" ? payload.txHash : null,
+      occurredAt,
+      errorMessage:
+        typeof payload.error === "string"
+          ? payload.error
+          : "Subscription renewal failed",
+      metadata: {
+        source: "billing-event",
+        billingEventId: event.id,
+        canonicalEventName: options.canonicalEventName,
+        ...payload,
+      },
+    });
   }
 
   await db.billingEvent.update({

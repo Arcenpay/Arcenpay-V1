@@ -1,0 +1,332 @@
+import { db } from "@/lib/db";
+import { toPrismaJson } from "@/lib/prisma-json";
+import { toSix } from "@/lib/invoices";
+
+function normalizeWallet(value?: string | null): string | null {
+  return value?.trim() ? value.trim().toLowerCase() : null;
+}
+
+async function resolveCompany(input: {
+  teamId: string;
+  companyId?: string | null;
+  walletAddress?: string | null;
+}) {
+  if (input.companyId) {
+    return db.arcenCompany.findFirst({
+      where: { id: input.companyId, teamId: input.teamId },
+      select: { id: true, teamId: true, walletAddress: true, activePlanId: true },
+    });
+  }
+
+  const walletAddress = normalizeWallet(input.walletAddress);
+  if (!walletAddress) return null;
+
+  return db.arcenCompany.findFirst({
+    where: { teamId: input.teamId, walletAddress },
+    select: { id: true, teamId: true, walletAddress: true, activePlanId: true },
+  });
+}
+
+export async function upsertSubscriptionLedgerState(input: {
+  teamId: string;
+  companyId?: string | null;
+  walletAddress?: string | null;
+  status: "ACTIVE" | "PAST_DUE" | "CANCELLED";
+  catalogPlanId?: string | null;
+  onChainPlanId?: string | null;
+  onChainTokenId?: string | null;
+  currentPeriodStart?: Date | null;
+  currentPeriodEnd?: Date | null;
+  cancelAtPeriodEnd?: boolean;
+  cancelledAt?: Date | null;
+  pastDueAt?: Date | null;
+  graceEndsAt?: Date | null;
+  lastEvent?: string | null;
+  lastEventAt?: Date | null;
+  lastSourceTxHash?: string | null;
+  metadata?: Record<string, unknown>;
+}) {
+  const company = await resolveCompany(input);
+  if (!company) return null;
+
+  return db.subscriptionState.upsert({
+    where: { companyId: company.id },
+    update: {
+      walletAddress: normalizeWallet(input.walletAddress) ?? company.walletAddress ?? null,
+      status: input.status,
+      ...(input.catalogPlanId !== undefined ? { catalogPlanId: input.catalogPlanId } : {}),
+      ...(input.onChainPlanId !== undefined ? { onChainPlanId: input.onChainPlanId } : {}),
+      ...(input.onChainTokenId !== undefined ? { onChainTokenId: input.onChainTokenId } : {}),
+      ...(input.currentPeriodStart !== undefined
+        ? { currentPeriodStart: input.currentPeriodStart }
+        : {}),
+      ...(input.currentPeriodEnd !== undefined
+        ? { currentPeriodEnd: input.currentPeriodEnd }
+        : {}),
+      ...(input.cancelAtPeriodEnd !== undefined
+        ? { cancelAtPeriodEnd: input.cancelAtPeriodEnd }
+        : {}),
+      ...(input.cancelledAt !== undefined ? { cancelledAt: input.cancelledAt } : {}),
+      ...(input.pastDueAt !== undefined ? { pastDueAt: input.pastDueAt } : {}),
+      ...(input.graceEndsAt !== undefined ? { graceEndsAt: input.graceEndsAt } : {}),
+      ...(input.lastEvent !== undefined ? { lastEvent: input.lastEvent } : {}),
+      ...(input.lastEventAt !== undefined ? { lastEventAt: input.lastEventAt } : {}),
+      ...(input.lastSourceTxHash !== undefined
+        ? { lastSourceTxHash: input.lastSourceTxHash }
+        : {}),
+      ...(input.metadata ? { metadata: toPrismaJson(input.metadata) } : {}),
+    },
+    create: {
+      teamId: input.teamId,
+      companyId: company.id,
+      walletAddress: normalizeWallet(input.walletAddress) ?? company.walletAddress ?? null,
+      status: input.status,
+      catalogPlanId: input.catalogPlanId ?? company.activePlanId ?? null,
+      onChainPlanId: input.onChainPlanId ?? null,
+      onChainTokenId: input.onChainTokenId ?? null,
+      currentPeriodStart: input.currentPeriodStart ?? null,
+      currentPeriodEnd: input.currentPeriodEnd ?? null,
+      cancelAtPeriodEnd: input.cancelAtPeriodEnd ?? false,
+      cancelledAt: input.cancelledAt ?? null,
+      pastDueAt: input.pastDueAt ?? null,
+      graceEndsAt: input.graceEndsAt ?? null,
+      lastEvent: input.lastEvent ?? null,
+      lastEventAt: input.lastEventAt ?? null,
+      lastSourceTxHash: input.lastSourceTxHash ?? null,
+      ...(input.metadata ? { metadata: toPrismaJson(input.metadata) } : {}),
+    },
+  });
+}
+
+async function resolvePaymentRecord(input: {
+  idempotencyKey: string;
+  txHash?: string | null;
+}) {
+  if (input.txHash) {
+    const existingByTxHash = await db.payment.findUnique({
+      where: { txHash: input.txHash },
+    });
+    if (existingByTxHash) return existingByTxHash;
+  }
+
+  return db.payment.findUnique({
+    where: { idempotencyKey: input.idempotencyKey },
+  });
+}
+
+export async function recordSuccessfulPayment(input: {
+  idempotencyKey: string;
+  teamId: string;
+  companyId?: string | null;
+  walletAddress?: string | null;
+  invoiceId?: string | null;
+  subscriptionStateId?: string | null;
+  kind: "SUBSCRIPTION_ACTIVATION" | "SUBSCRIPTION_RENEWAL" | "MANUAL_INVOICE_PAYMENT";
+  amount: number;
+  currency?: string;
+  payerWallet?: string | null;
+  recipientWallet?: string | null;
+  acceptedToken?: string | null;
+  txHash?: string | null;
+  externalRef?: string | null;
+  occurredAt?: Date | null;
+  settledAt?: Date | null;
+  metadata?: Record<string, unknown>;
+}) {
+  const company = await resolveCompany(input);
+  const subscriptionState =
+    input.subscriptionStateId
+      ? await db.subscriptionState.findUnique({
+          where: { id: input.subscriptionStateId },
+          select: { id: true },
+        })
+      : company
+        ? await db.subscriptionState.findUnique({
+            where: { companyId: company.id },
+            select: { id: true },
+          })
+        : null;
+
+  const existing = await resolvePaymentRecord({
+    idempotencyKey: input.idempotencyKey,
+    txHash: input.txHash,
+  });
+
+  const payment = existing
+    ? await db.payment.update({
+        where: { id: existing.id },
+        data: {
+          status: "SUCCEEDED",
+          amount: toSix(input.amount),
+          currency: input.currency ?? "USDC",
+          teamId: input.teamId,
+          companyId: company?.id ?? null,
+          invoiceId: input.invoiceId ?? null,
+          subscriptionStateId: subscriptionState?.id ?? null,
+          payerWallet: normalizeWallet(input.payerWallet),
+          recipientWallet: normalizeWallet(input.recipientWallet),
+          acceptedToken: normalizeWallet(input.acceptedToken),
+          txHash: input.txHash ?? existing.txHash,
+          externalRef: input.externalRef ?? null,
+          occurredAt: input.occurredAt ?? null,
+          settledAt: input.settledAt ?? input.occurredAt ?? new Date(),
+          failedAt: null,
+          ...(input.metadata ? { metadata: toPrismaJson(input.metadata) } : {}),
+        },
+      })
+    : await db.payment.create({
+        data: {
+          idempotencyKey: input.idempotencyKey,
+          teamId: input.teamId,
+          companyId: company?.id ?? null,
+          invoiceId: input.invoiceId ?? null,
+          subscriptionStateId: subscriptionState?.id ?? null,
+          kind: input.kind,
+          status: "SUCCEEDED",
+          amount: toSix(input.amount),
+          currency: input.currency ?? "USDC",
+          payerWallet: normalizeWallet(input.payerWallet),
+          recipientWallet: normalizeWallet(input.recipientWallet),
+          acceptedToken: normalizeWallet(input.acceptedToken),
+          txHash: input.txHash ?? null,
+          externalRef: input.externalRef ?? null,
+          occurredAt: input.occurredAt ?? null,
+          settledAt: input.settledAt ?? input.occurredAt ?? new Date(),
+          ...(input.metadata ? { metadata: toPrismaJson(input.metadata) } : {}),
+        },
+      });
+
+  const existingAttempt = await db.paymentAttempt.findFirst({
+    where: {
+      paymentId: payment.id,
+      status: "SUCCEEDED",
+      txHash: input.txHash ?? null,
+    },
+    select: { id: true },
+  });
+
+  if (!existingAttempt) {
+    await db.paymentAttempt.create({
+      data: {
+        paymentId: payment.id,
+        status: "SUCCEEDED",
+        txHash: input.txHash ?? null,
+        attemptedAt: input.occurredAt ?? new Date(),
+        resolvedAt: input.settledAt ?? input.occurredAt ?? new Date(),
+        ...(input.metadata ? { metadata: toPrismaJson(input.metadata) } : {}),
+      },
+    });
+  }
+
+  if (subscriptionState?.id) {
+    await db.subscriptionState.update({
+      where: { id: subscriptionState.id },
+      data: {
+        status: "ACTIVE",
+        cancelAtPeriodEnd: false,
+        cancelledAt: null,
+        pastDueAt: null,
+        graceEndsAt: null,
+      },
+    });
+  }
+
+  return payment;
+}
+
+export async function recordFailedPayment(input: {
+  idempotencyKey: string;
+  teamId: string;
+  companyId?: string | null;
+  walletAddress?: string | null;
+  subscriptionStateId?: string | null;
+  kind: "SUBSCRIPTION_ACTIVATION" | "SUBSCRIPTION_RENEWAL" | "MANUAL_INVOICE_PAYMENT";
+  amount?: number;
+  currency?: string;
+  txHash?: string | null;
+  occurredAt?: Date | null;
+  errorMessage: string;
+  errorCode?: string | null;
+  metadata?: Record<string, unknown>;
+}) {
+  const company = await resolveCompany(input);
+  const subscriptionState =
+    input.subscriptionStateId
+      ? await db.subscriptionState.findUnique({
+          where: { id: input.subscriptionStateId },
+          select: { id: true },
+        })
+      : company
+        ? await db.subscriptionState.findUnique({
+            where: { companyId: company.id },
+            select: { id: true },
+          })
+        : null;
+
+  const occurredAt = input.occurredAt ?? new Date();
+  const graceEndsAt = new Date(occurredAt.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+  const existing = await resolvePaymentRecord({
+    idempotencyKey: input.idempotencyKey,
+    txHash: input.txHash,
+  });
+
+  const payment = existing
+    ? await db.payment.update({
+        where: { id: existing.id },
+        data: {
+          status: "FAILED",
+          teamId: input.teamId,
+          companyId: company?.id ?? null,
+          subscriptionStateId: subscriptionState?.id ?? null,
+          amount: toSix(input.amount ?? 0),
+          currency: input.currency ?? "USDC",
+          txHash: input.txHash ?? existing.txHash,
+          occurredAt,
+          failedAt: occurredAt,
+          ...(input.metadata ? { metadata: toPrismaJson(input.metadata) } : {}),
+        },
+      })
+    : await db.payment.create({
+        data: {
+          idempotencyKey: input.idempotencyKey,
+          teamId: input.teamId,
+          companyId: company?.id ?? null,
+          subscriptionStateId: subscriptionState?.id ?? null,
+          kind: input.kind,
+          status: "FAILED",
+          amount: toSix(input.amount ?? 0),
+          currency: input.currency ?? "USDC",
+          txHash: input.txHash ?? null,
+          occurredAt,
+          failedAt: occurredAt,
+          ...(input.metadata ? { metadata: toPrismaJson(input.metadata) } : {}),
+        },
+      });
+
+  await db.paymentAttempt.create({
+    data: {
+      paymentId: payment.id,
+      status: "FAILED",
+      txHash: input.txHash ?? null,
+      errorCode: input.errorCode ?? null,
+      errorMessage: input.errorMessage,
+      attemptedAt: occurredAt,
+      resolvedAt: occurredAt,
+      ...(input.metadata ? { metadata: toPrismaJson(input.metadata) } : {}),
+    },
+  });
+
+  if (subscriptionState?.id) {
+    await db.subscriptionState.update({
+      where: { id: subscriptionState.id },
+      data: {
+        status: "PAST_DUE",
+        pastDueAt: occurredAt,
+        graceEndsAt,
+      },
+    });
+  }
+
+  return payment;
+}
