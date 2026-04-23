@@ -51,8 +51,10 @@ import { resolveDashboardSessionIdentityDefaults } from "@/lib/dashboard-session
 import { resolveBillingRecipientEmail } from "@/lib/billing-events";
 import {
   enqueueSubscriptionActivationRecovery,
+  finalizeSubscriptionActivation,
   processBillingRecoveryTask,
 } from "@/lib/billing-recovery";
+import { upsertSubscriptionLedgerState } from "@/lib/billing-ledger";
 
 const CHAIN_MAP: Record<number, Chain> = {
   84532: baseSepolia,
@@ -622,15 +624,83 @@ export async function POST(req: NextRequest) {
   });
 
   if (existingTokenId > 0n) {
+    const [existingExpiration, existingPlanFeatures] = await Promise.all([
+      publicClient.readContract({
+        address: subscriptionRegistryAddress,
+        abi: SubscriptionRegistryABI,
+        functionName: "expiresAt",
+        args: [existingTokenId],
+      }) as Promise<bigint>,
+      publicClient.readContract({
+        address: subscriptionRegistryAddress,
+        abi: SubscriptionRegistryABI,
+        functionName: "getPlanFeatures",
+        args: [existingTokenId],
+      }) as Promise<[bigint, string]>,
+    ]);
+
+    const existingOnChainPlanId = existingPlanFeatures[0].toString();
+    const existingCatalogPlan =
+      (await db.catalogPlan.findFirst({
+        where: {
+          teamId,
+          onChainPlanId: existingOnChainPlanId,
+        },
+        select: { id: true, name: true },
+      })) ?? null;
+
+    await upsertSubscriptionLedgerState({
+      teamId,
+      companyId: company.id,
+      walletAddress: paymentAccount,
+      status: "ACTIVE",
+      catalogPlanId: existingCatalogPlan?.id ?? catalogPlan.id,
+      onChainPlanId: existingOnChainPlanId,
+      onChainTokenId: existingTokenId.toString(),
+      currentPeriodEnd:
+        existingExpiration > 0n
+          ? new Date(Number(existingExpiration) * 1000)
+          : null,
+      cancelAtPeriodEnd: false,
+      cancelledAt: null,
+      pastDueAt: null,
+      graceEndsAt: null,
+      lastEvent: "subscription.reconciled",
+      lastEventAt: new Date(),
+      metadata: {
+        source: "subscription.activate",
+        activationMode: "existing_token_reconciliation",
+      },
+    });
+
+    if (existingOnChainPlanId === onChainPlanId.toString()) {
+      return NextResponse.json(
+        {
+          data: {
+            tokenId: existingTokenId.toString(),
+            companyId: company.id,
+            planId: existingCatalogPlan?.id ?? catalogPlan.id,
+            paymentAccount,
+            alreadyActive: true,
+            reconciled: true,
+          },
+        },
+        { status: 200, headers: corsHeaders() },
+      );
+    }
+
     return NextResponse.json(
       {
         error:
-          "This payment account already has an on-chain subscription token. Refusing to execute activation again to avoid a duplicate charge.",
+          `This payment account already has an active subscription for on-chain plan ${existingOnChainPlanId}. ` +
+          "Use a plan change flow instead of activation.",
         data: {
           tokenId: existingTokenId.toString(),
           companyId: company.id,
-          planId: catalogPlan.id,
+          currentPlanId: existingCatalogPlan?.id ?? null,
+          requestedPlanId: catalogPlan.id,
           paymentAccount,
+          reconciled: true,
         },
       },
       { status: 409, headers: corsHeaders() },
@@ -640,8 +710,17 @@ export async function POST(req: NextRequest) {
   const walletConflict = await db.arcenCompany.findFirst({
     where: {
       teamId,
-      walletAddress: paymentAccount,
-      NOT: { id: company.id },
+      id: { not: company.id },
+      OR: [
+        { walletAddress: paymentAccount },
+        {
+          subscriptionState: {
+            is: {
+              walletAddress: paymentAccount,
+            },
+          },
+        },
+      ],
     },
     select: { id: true },
   });
@@ -781,6 +860,29 @@ export async function POST(req: NextRequest) {
     const currentPeriodEnd =
       expiresAt > 0n ? new Date(Number(expiresAt) * 1000) : null;
 
+    await upsertSubscriptionLedgerState({
+      teamId,
+      companyId: company.id,
+      walletAddress: paymentAccount,
+      status: "ACTIVE",
+      catalogPlanId: catalogPlan.id,
+      onChainPlanId: onChainPlanId.toString(),
+      onChainTokenId: tokenId.toString(),
+      currentPeriodStart: receipt.blockNumber ? new Date() : new Date(),
+      currentPeriodEnd,
+      cancelAtPeriodEnd: false,
+      cancelledAt: null,
+      pastDueAt: null,
+      graceEndsAt: null,
+      lastEvent: "subscription.minted",
+      lastEventAt: new Date(),
+      lastSourceTxHash: txHash,
+      metadata: {
+        source: "subscription.activate",
+        activationMode: "immediate_sync",
+      },
+    });
+
     const subscriberEmail = await resolveBillingRecipientEmail({
       teamId,
       explicitEmail:
@@ -808,8 +910,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const recoveryTask = await enqueueSubscriptionActivationRecovery({
-      teamId,
+    const finalizationPayload = {
       companyId: company.id,
       walletAddress: paymentAccount,
       catalogPlanId: catalogPlan.id,
@@ -823,14 +924,37 @@ export async function POST(req: NextRequest) {
       merchantAddress,
       acceptedToken: catalogPlan.acceptedToken ?? null,
       subscriberEmail,
-      occurredAt: new Date(),
+      occurredAt: new Date().toISOString(),
       previousPlanId: previousCompany?.activePlanId ?? null,
-    });
+    };
 
-    const recoveryResult = await processBillingRecoveryTask({
-      taskId: recoveryTask.id,
-    });
-    const recoveryPending = !recoveryResult.ok;
+    let recoveryTaskId: string | null = null;
+    let recoveryPending = false;
+
+    try {
+      await finalizeSubscriptionActivation({
+        teamId,
+        payload: finalizationPayload,
+        source: "subscription.activate",
+      });
+    } catch (finalizationError) {
+      console.error(
+        "[subscriptions/activate] Immediate billing finalization failed; queuing recovery task.",
+        finalizationError,
+      );
+
+      const recoveryTask = await enqueueSubscriptionActivationRecovery({
+        teamId,
+        ...finalizationPayload,
+        occurredAt: new Date(finalizationPayload.occurredAt),
+      });
+      recoveryTaskId = recoveryTask.id;
+
+      const recoveryResult = await processBillingRecoveryTask({
+        taskId: recoveryTask.id,
+      });
+      recoveryPending = !recoveryResult.ok;
+    }
 
     return NextResponse.json(
       {
@@ -840,7 +964,7 @@ export async function POST(req: NextRequest) {
           companyId: company.id,
           planId: catalogPlan.id,
           paymentAccount,
-          recoveryTaskId: recoveryTask.id,
+          recoveryTaskId,
           recoveryPending,
         },
       },

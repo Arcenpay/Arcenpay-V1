@@ -74,6 +74,13 @@ interface SubscriptionActivationRecoveryPayload {
   previousPlanId?: string | null;
 }
 
+export interface FinalizeSubscriptionActivationInput {
+  teamId: string;
+  payload: SubscriptionActivationRecoveryPayload;
+  taskId?: string | null;
+  source?: string;
+}
+
 function parseSubscriptionActivationPayload(
   payload: unknown,
 ): SubscriptionActivationRecoveryPayload {
@@ -170,16 +177,20 @@ async function processSubscriptionActivationTask(input: {
   teamId: string;
   payload: SubscriptionActivationRecoveryPayload;
 }) {
+  await finalizeSubscriptionActivation({
+    teamId: input.teamId,
+    taskId: input.taskId,
+    payload: input.payload,
+    source: "billing-recovery",
+  });
+}
+
+export async function finalizeSubscriptionActivation(
+  input: FinalizeSubscriptionActivationInput,
+) {
   const occurredAt = parseDate(input.payload.occurredAt) ?? new Date();
   const currentPeriodEnd = parseDate(input.payload.expiration);
-
-  await db.arcenCompany.update({
-    where: { id: input.payload.companyId },
-    data: {
-      walletAddress: normalizeWallet(input.payload.walletAddress),
-      activePlanId: input.payload.catalogPlanId,
-    },
-  });
+  const source = input.source?.trim() || "billing-recovery";
 
   if (input.payload.subscriberEmail) {
     await db.subscriberEmail.upsert({
@@ -214,8 +225,8 @@ async function processSubscriptionActivationTask(input: {
     lastEventAt: occurredAt,
     lastSourceTxHash: input.payload.txHash,
     metadata: {
-      source: "billing-recovery",
-      recoveryTaskId: input.taskId,
+      source,
+      ...(input.taskId ? { recoveryTaskId: input.taskId } : {}),
     },
   });
 
@@ -235,20 +246,20 @@ async function processSubscriptionActivationTask(input: {
     occurredAt,
     settledAt: occurredAt,
     metadata: {
-      source: "billing-recovery",
-      recoveryTaskId: input.taskId,
+      source,
+      ...(input.taskId ? { recoveryTaskId: input.taskId } : {}),
       tokenId: input.payload.onChainTokenId,
       onChainPlanId: input.payload.onChainPlanId,
       expiration: input.payload.expiration,
     },
   });
 
-  await ingestBillingEvent({
+  const billingEvent = await ingestBillingEvent({
     teamId: input.teamId,
     eventType: "SUBSCRIPTION_MINTED",
     eventName: "subscription.minted",
     idempotencyKey: `subscription.minted:${input.payload.txHash}`,
-    source: "billing-recovery",
+    source,
     occurredAt,
     triggerInvoice: true,
     payload: {
@@ -268,14 +279,23 @@ async function processSubscriptionActivationTask(input: {
     },
   });
 
-  deliverWebhook(input.teamId, "company.plan.changed", {
-    companyId: input.payload.companyId,
-    planId: input.payload.catalogPlanId,
-    planName: input.payload.catalogPlanName,
-    previousPlanId: input.payload.previousPlanId ?? null,
-    txHash: input.payload.txHash,
-    source: "subscription.activate",
-  }).catch(() => {});
+  if (billingEvent.processedNow) {
+    deliverWebhook(input.teamId, "company.plan.changed", {
+      companyId: input.payload.companyId,
+      planId: input.payload.catalogPlanId,
+      planName: input.payload.catalogPlanName,
+      previousPlanId: input.payload.previousPlanId ?? null,
+      txHash: input.payload.txHash,
+      source,
+      invoiceId: billingEvent.invoiceId,
+    }).catch(() => {});
+  }
+
+  return {
+    subscriptionState,
+    invoiceId: billingEvent.invoiceId,
+    eventDeduped: billingEvent.deduped,
+  };
 }
 
 export async function processBillingRecoveryTask(input: {

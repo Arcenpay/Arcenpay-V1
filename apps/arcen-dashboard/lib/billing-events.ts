@@ -443,6 +443,38 @@ async function processStoredBillingEvent(
     data: { processed: true, processedAt: new Date() },
   });
 
+  if (
+    event.eventType === "SUBSCRIPTION_MINTED" ||
+    event.eventType === "SUBSCRIPTION_RENEWED" ||
+    event.eventType === "SUBSCRIPTION_CANCELLED" ||
+    event.eventType === "PAYMENT_FAILED"
+  ) {
+    deliverWebhook(event.teamId, options.canonicalEventName, {
+      billingEventId: event.id,
+      eventType: event.eventType,
+      companyId,
+      planId: catalogPlanId,
+      onChainPlanId,
+      tokenId: onChainTokenId,
+      customerWallet: customerWallet?.toLowerCase() ?? null,
+      amount: Number.isFinite(amount) ? amount : null,
+      currency:
+        typeof payload.currency === "string" && payload.currency.trim()
+          ? payload.currency.trim()
+          : "USDC",
+      expiration: payload.expiration ?? null,
+      txHash: typeof payload.txHash === "string" ? payload.txHash : null,
+      invoiceId,
+      occurredAt: occurredAt.toISOString(),
+      ...(typeof payload.email === "string" && payload.email.trim()
+        ? { email: payload.email.trim() }
+        : {}),
+      ...(typeof payload.error === "string" && payload.error.trim()
+        ? { error: payload.error.trim() }
+        : {}),
+    }).catch(() => {});
+  }
+
   return {
     invoiceId,
     skipped,
@@ -470,6 +502,7 @@ export async function ingestBillingEvent(input: PersistBillingEventInput) {
         event: existing,
         invoiceId: replayResult.invoiceId,
         deduped: true,
+        processedNow: true,
         skipped: replayResult.skipped,
         reason: replayResult.reason,
       };
@@ -479,6 +512,7 @@ export async function ingestBillingEvent(input: PersistBillingEventInput) {
       event: existing,
       invoiceId: null,
       deduped: true,
+      processedNow: false,
       skipped: false,
       reason: null,
     };
@@ -511,6 +545,7 @@ export async function ingestBillingEvent(input: PersistBillingEventInput) {
     event,
     invoiceId: processed.invoiceId,
     deduped: false,
+    processedNow: true,
     skipped: processed.skipped,
     reason: processed.reason,
   };

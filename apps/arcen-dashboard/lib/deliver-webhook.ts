@@ -48,11 +48,22 @@ async function resolveWebhookTarget(
   const signingSecret = input.signingSecret?.trim() || profile?.webhookSigningSecret || null;
 
   if (!webhookUrl) return null;
-  if (!input.force && !profile?.notifyWebhook) return null;
 
   const prefs = Array.isArray(profile?.notificationPreferences)
     ? (profile.notificationPreferences as Array<{ id: string; webhook?: boolean }>)
     : [];
+  const hasExplicitWebhookPrefs = prefs.some(
+    (pref) => typeof pref?.webhook === "boolean",
+  );
+
+  if (
+    !input.force &&
+    profile &&
+    !profile.notifyWebhook &&
+    hasExplicitWebhookPrefs
+  ) {
+    return null;
+  }
 
   if (!input.force && prefs.length > 0) {
     const sub = prefs.find((p) => p.id === input.eventName);

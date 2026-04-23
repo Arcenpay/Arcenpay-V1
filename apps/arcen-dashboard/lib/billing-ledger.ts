@@ -22,10 +22,29 @@ async function resolveCompany(input: {
   const walletAddress = normalizeWallet(input.walletAddress);
   if (!walletAddress) return null;
 
-  return db.arcenCompany.findFirst({
+  const companyByIdentityWallet = await db.arcenCompany.findFirst({
     where: { teamId: input.teamId, walletAddress },
     select: { id: true, teamId: true, walletAddress: true, activePlanId: true },
   });
+  if (companyByIdentityWallet) {
+    return companyByIdentityWallet;
+  }
+
+  const subscriptionMatch = await db.subscriptionState.findFirst({
+    where: { teamId: input.teamId, walletAddress },
+    select: {
+      company: {
+        select: {
+          id: true,
+          teamId: true,
+          walletAddress: true,
+          activePlanId: true,
+        },
+      },
+    },
+  });
+
+  return subscriptionMatch?.company ?? null;
 }
 
 export async function upsertSubscriptionLedgerState(input: {
@@ -110,9 +129,6 @@ export async function upsertSubscriptionLedgerState(input: {
       where: { id: company.id },
       data: {
         ...(nextCatalogPlanId !== undefined ? { activePlanId: nextCatalogPlanId } : {}),
-        ...(input.walletAddress
-          ? { walletAddress: normalizeWallet(input.walletAddress) }
-          : {}),
       },
     });
   }
@@ -245,30 +261,16 @@ export async function recordSuccessfulPayment(input: {
   }
 
   if (subscriptionState?.id) {
-    await db.$transaction([
-      db.subscriptionState.update({
-        where: { id: subscriptionState.id },
-        data: {
-          status: "ACTIVE",
-          cancelAtPeriodEnd: false,
-          cancelledAt: null,
-          pastDueAt: null,
-          graceEndsAt: null,
-        },
-      }),
-      ...(company?.id && subscriptionState
-        ? [
-            db.arcenCompany.update({
-              where: { id: company.id },
-              data: {
-                ...(input.walletAddress
-                  ? { walletAddress: normalizeWallet(input.walletAddress) }
-                  : {}),
-              },
-            }),
-          ]
-        : []),
-    ]);
+    await db.subscriptionState.update({
+      where: { id: subscriptionState.id },
+      data: {
+        status: "ACTIVE",
+        cancelAtPeriodEnd: false,
+        cancelledAt: null,
+        pastDueAt: null,
+        graceEndsAt: null,
+      },
+    });
   }
 
   if (input.invoiceId) {

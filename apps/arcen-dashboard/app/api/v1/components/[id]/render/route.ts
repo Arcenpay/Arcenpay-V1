@@ -24,6 +24,7 @@ import {
   resolveEmbedAccessToken,
 } from "@/lib/embed-access-token";
 import { ensureInvoicePdfForTeam } from "@/lib/invoice-documents";
+import { upsertSubscriptionLedgerState } from "@/lib/billing-ledger";
 
 // ─── Normalization helpers ────────────────────────────────────────────────────
 
@@ -134,6 +135,10 @@ export async function GET(
   let paymentMethod: Record<string, unknown> | null = null;
   let recentInvoices: Record<string, unknown>[] = [];
   let subscriptionTransition: Record<string, unknown> | null = null;
+  let billingPaymentAccount: string | null = null;
+  let liveOnChainPlanId: string | null = null;
+  let liveOnChainTokenId: string | null = null;
+  let liveCurrentPeriodEnd: string | null = null;
 
   if (companyId) {
     const [company, user] = await Promise.all([
@@ -148,6 +153,8 @@ export async function GET(
           traits: true,
           subscriptionState: {
             select: {
+              status: true,
+              catalogPlanId: true,
               walletAddress: true,
               currentPeriodEnd: true,
             },
@@ -168,11 +175,25 @@ export async function GET(
     ]);
 
     if (company) {
+      const subscriberEmailRecord =
+        company.subscriptionState?.walletAddress || company.walletAddress
+          ? await db.subscriberEmail.findUnique({
+              where: {
+                walletAddress:
+                  (
+                    company.subscriptionState?.walletAddress ??
+                    company.walletAddress
+                  )!.toLowerCase(),
+              },
+              select: { email: true },
+            })
+          : null;
+
       companyData = {
         id: company.id,
         name: company.name,
         walletAddress: company.walletAddress,
-        email: company.email,
+        email: company.email ?? subscriberEmailRecord?.email ?? null,
       };
 
       const traits = asRecord(company.traits);
@@ -181,9 +202,15 @@ export async function GET(
         subscriptionTransition = transition;
       }
 
-      if (company.activePlanId) {
+      const effectiveActivePlanId =
+        company.subscriptionState?.status === "ACTIVE" ||
+        company.subscriptionState?.status === "PAST_DUE"
+          ? company.subscriptionState.catalogPlanId ?? company.activePlanId
+          : company.activePlanId;
+
+      if (effectiveActivePlanId) {
         activePlan = (await db.catalogPlan.findUnique({
-          where: { id: company.activePlanId },
+          where: { id: effectiveActivePlanId },
           select: {
             id: true,
             name: true,
@@ -267,6 +294,9 @@ export async function GET(
           ? { customerWallet: company.subscriptionState.walletAddress.toLowerCase() }
           : null,
         company.email ? { customerEmail: company.email } : null,
+        subscriberEmailRecord?.email
+          ? { customerEmail: subscriberEmailRecord.email }
+          : null,
         user?.email ? { customerEmail: user.email } : null,
       ].filter(Boolean);
 
@@ -323,8 +353,7 @@ export async function GET(
       }
 
       const configuredChainId = DEFAULT_CHAIN_ID;
-      const billingPaymentAccount =
-        company.subscriptionState?.walletAddress ?? null;
+      billingPaymentAccount = company.subscriptionState?.walletAddress ?? null;
 
       paymentMethod = {
         walletAddress: billingPaymentAccount,
@@ -337,7 +366,9 @@ export async function GET(
 
       if (company.subscriptionState?.currentPeriodEnd) {
         nextBillingAt = company.subscriptionState.currentPeriodEnd.toISOString();
-      } else if (billingPaymentAccount) {
+      }
+
+      if (billingPaymentAccount) {
         try {
           const client = createPublicClient({
             transport: http(getRpcUrl(configuredChainId)),
@@ -357,18 +388,35 @@ export async function GET(
           })) as boolean;
 
           if (hasActiveSubscription && tokenId > 0n) {
-            const expiration = (await client.readContract({
-              address: contracts.subscriptionRegistry as `0x${string}`,
-              abi: SubscriptionRegistryABI,
-              functionName: "expiresAt",
-              args: [tokenId],
-            })) as bigint;
+            const [expiration, planFeatures] = await Promise.all([
+              client.readContract({
+                address: contracts.subscriptionRegistry as `0x${string}`,
+                abi: SubscriptionRegistryABI,
+                functionName: "expiresAt",
+                args: [tokenId],
+              }) as Promise<bigint>,
+              client.readContract({
+                address: contracts.subscriptionRegistry as `0x${string}`,
+                abi: SubscriptionRegistryABI,
+                functionName: "getPlanFeatures",
+                args: [tokenId],
+              }) as Promise<[bigint, string]>,
+            ]);
+            liveOnChainTokenId = tokenId.toString();
+            liveOnChainPlanId = planFeatures[0].toString();
             if (expiration > 0n) {
-              nextBillingAt = new Date(Number(expiration) * 1000).toISOString();
+              liveCurrentPeriodEnd = new Date(
+                Number(expiration) * 1000,
+              ).toISOString();
+              if (!nextBillingAt) {
+                nextBillingAt = liveCurrentPeriodEnd;
+              }
             }
           }
         } catch {
-          nextBillingAt = null;
+          if (!company.subscriptionState?.currentPeriodEnd) {
+            nextBillingAt = null;
+          }
         }
       }
     }
@@ -470,6 +518,55 @@ export async function GET(
       }
     } catch {
       // Ignore auto-recovery errors and continue with current catalog state.
+    }
+  }
+
+  const liveMatchedPlan = liveOnChainPlanId
+    ? hydratedPlans.find((plan) => plan.onChainPlanId === liveOnChainPlanId) ?? null
+    : null;
+
+  if (
+    liveMatchedPlan &&
+    (!activePlan ||
+      String((activePlan as { onChainPlanId?: unknown }).onChainPlanId ?? "") !==
+        liveOnChainPlanId)
+  ) {
+    activePlan = {
+      id: liveMatchedPlan.id,
+      name: liveMatchedPlan.name,
+      tier: liveMatchedPlan.tier,
+      price: liveMatchedPlan.price,
+      annualPrice: liveMatchedPlan.annualPrice,
+      billingInterval: liveMatchedPlan.billingInterval,
+      description: liveMatchedPlan.description,
+      acceptedToken: liveMatchedPlan.acceptedToken,
+      onChainPlanId: liveMatchedPlan.onChainPlanId,
+      metadata: liveMatchedPlan.metadata,
+    };
+
+    if (companyId && billingPaymentAccount) {
+      await upsertSubscriptionLedgerState({
+        teamId,
+        companyId,
+        walletAddress: billingPaymentAccount,
+        status: "ACTIVE",
+        catalogPlanId: liveMatchedPlan.id,
+        onChainPlanId: liveOnChainPlanId,
+        onChainTokenId: liveOnChainTokenId,
+        currentPeriodEnd: liveCurrentPeriodEnd
+          ? new Date(liveCurrentPeriodEnd)
+          : undefined,
+        cancelAtPeriodEnd: false,
+        cancelledAt: null,
+        pastDueAt: null,
+        graceEndsAt: null,
+        lastEvent: "subscription.render_reconciled",
+        lastEventAt: new Date(),
+        metadata: {
+          source: "component.render",
+          reconciliation: "live_onchain_subscription",
+        },
+      });
     }
   }
 

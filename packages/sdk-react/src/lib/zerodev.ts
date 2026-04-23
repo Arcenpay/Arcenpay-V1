@@ -406,7 +406,14 @@ export async function deploySmartAccount(
                     paymasterUrl,
                     hasConfiguredUrls,
                 });
-                console.error("[ZeroDev] Module installation failed:", normalizedError.message);
+                if (isRecoverableSmartAccountFundingError(normalizedError)) {
+                    console.warn(
+                        "[ZeroDev] Module installation needs prefund or sponsorship; callers may fall back to the connected wallet:",
+                        normalizedError.message,
+                    );
+                } else {
+                    console.error("[ZeroDev] Module installation failed:", normalizedError.message);
+                }
                 throw normalizedError;
             }
         }

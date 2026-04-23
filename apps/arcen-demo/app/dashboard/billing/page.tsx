@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArcenEmbed, CheckoutModal } from "@arcenpay/react";
 import type {
   ComponentInvoiceSummary,
@@ -180,7 +180,6 @@ const billing = await fetch(
   accessToken={token.token}
   componentId={process.env.NEXT_PUBLIC_ARCENPAY_COMPONENT_ID}
   baseUrl={process.env.ARCENPAY_BASE_URL}
-  mockData={billing.data}
 />`;
 
 export default function BillingPage() {
@@ -193,6 +192,9 @@ export default function BillingPage() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<DemoPlan | null>(null);
+  const activationOutcomeRef = useRef<"activated" | "reconciled">(
+    "activated",
+  );
 
   const loadBillingState = useCallback(
     async (mode: "initial" | "refresh" = "initial") => {
@@ -744,7 +746,6 @@ export default function BillingPage() {
               accessToken={accessToken}
               componentId={config.componentId}
               baseUrl={config.baseUrl}
-              mockData={billingData}
               className={styles.embed}
             />
           ) : (
@@ -844,10 +845,18 @@ export default function BillingPage() {
               tokenId?: string | number;
               txHash?: `0x${string}`;
               error?: string;
+              alreadyActive?: boolean;
+              reconciled?: boolean;
             };
 
             if (!response.ok) {
               throw new Error(result.error ?? "Activation failed");
+            }
+
+            if (result.alreadyActive) {
+              activationOutcomeRef.current = "reconciled";
+            } else {
+              activationOutcomeRef.current = "activated";
             }
 
             return result;
@@ -855,7 +864,9 @@ export default function BillingPage() {
           onSuccess={(tokenId) => {
             setSelectedPlan(null);
             setNotice(
-              `Subscription activated successfully. Token #${tokenId.toString()} is now active.`,
+              activationOutcomeRef.current === "reconciled"
+                ? `This subscription was already active on-chain. Token #${tokenId.toString()} has been reconciled and the billing state is now refreshed.`
+                : `Subscription activated successfully. Token #${tokenId.toString()} is now active.`,
             );
             void loadBillingState("refresh");
           }}
