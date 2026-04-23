@@ -49,7 +49,7 @@ export default function OverviewPage() {
           </span>
           <div>
             <strong>Testnet Live:</strong> All 7 contracts are deployed on
-            Sepolia ETH (chainId 11155111). See{" "}
+            Ethereum Sepolia and Base Sepolia. See{" "}
             <a href="/contract-addresses" style={{ color: "var(--accent)" }}>
               Contract Addresses
             </a>{" "}
@@ -131,7 +131,7 @@ export default function OverviewPage() {
           <div className="docs-kpi">
             <div className="docs-kpi-value">7</div>
             <div className="docs-kpi-label">
-              Core contracts deployed on Sepolia
+              Core contracts deployed per active testnet
             </div>
           </div>
           <div className="docs-kpi">
@@ -175,22 +175,15 @@ npm install @arcenpay/agent`}</code>
             <span className="docs-codeblock-lang">TypeScript</span>
           </div>
           <pre>
-            <code>{`import { ArcenPayProvider, PricingTable, CheckoutModal } from '@arcenpay/react';
+            <code>{`import { ArcenPayProvider, PricingTable } from '@arcenpay/react';
 
 function App() {
   return (
     <ArcenPayProvider
-      planRegistryAddress="0x18707519A062AbCC3E73fBd4150C3B30B241f536"
-      chainId={11155111}
+      chainId={84532}
+      token="short-lived-access-token-from-your-backend"
     >
-      <PricingTable
-        planIds={[1, 2, 3]}
-        onSelectPlan={(planId) => console.log('Selected:', planId)}
-      />
-      <CheckoutModal
-        planId={1}
-        onSuccess={(tx) => console.log('Subscribed!', tx)}
-      />
+      <PricingTable providerAddress="0xYourTreasuryWallet" />
     </ArcenPayProvider>
   );
 }`}</code>
@@ -224,7 +217,7 @@ function App() {
           <tbody>
             <tr>
               <td>Chain</td>
-              <td>Sepolia ETH (testnet) → Base (production)</td>
+              <td>Ethereum Sepolia and Base Sepolia (active testnets)</td>
             </tr>
             <tr>
               <td>Smart Contracts</td>

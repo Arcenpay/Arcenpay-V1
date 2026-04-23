@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { getTestnetContractValue } from '@/lib/testnet-deployments';
 
 function CodeBlock({ lang, code }: { lang: string; code: string }) {
   const [copied, setCopied] = useState(false);
@@ -32,7 +33,8 @@ export default function ZKUsageVerifierPage() {
         <table className="docs-table">
           <thead><tr><th>Network</th><th>Address</th><th>Chain ID</th></tr></thead>
           <tbody>
-            <tr><td>Sepolia ETH</td><td><code>0x6B175474E89094C44Da98b954EedeAC495271d0F</code></td><td>11155111</td></tr>
+            <tr><td>Ethereum Sepolia</td><td><code>{getTestnetContractValue('zkUsageVerifier', 11155111)}</code></td><td>11155111</td></tr>
+            <tr><td>Base Sepolia</td><td><code>{getTestnetContractValue('zkUsageVerifier', 84532)}</code></td><td>84532</td></tr>
           </tbody>
         </table>
 

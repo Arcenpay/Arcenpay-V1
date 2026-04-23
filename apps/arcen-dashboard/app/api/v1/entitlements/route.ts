@@ -14,6 +14,30 @@ import { requireApiKey, isApiKeyError } from "@/lib/api-key-auth";
 import { resolveEmbedAccessToken } from "@/lib/embed-access-token";
 import { resolveEntitlementResults } from "@/lib/entitlements";
 
+function corsHeaders() {
+  return {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET,OPTIONS",
+    "Access-Control-Allow-Headers":
+      "Content-Type,Authorization,X-Arcen-Company-Keys,X-Arcen-User-Keys",
+  };
+}
+
+function jsonWithCors(body: unknown, init?: ResponseInit) {
+  const headers = new Headers(init?.headers);
+  for (const [key, value] of Object.entries(corsHeaders())) {
+    headers.set(key, value);
+  }
+  return NextResponse.json(body, { ...init, headers });
+}
+
+function withCors(response: NextResponse) {
+  for (const [key, value] of Object.entries(corsHeaders())) {
+    response.headers.set(key, value);
+  }
+  return response;
+}
+
 function parseKeyHeader(header: string | null): Record<string, string> {
   if (!header) return {};
   const result: Record<string, string> = {};
@@ -25,6 +49,10 @@ function parseKeyHeader(header: string | null): Record<string, string> {
     if (key && val) result[key] = val;
   }
   return result;
+}
+
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 204, headers: corsHeaders() });
 }
 
 export async function GET(req: NextRequest) {
@@ -41,7 +69,7 @@ export async function GET(req: NextRequest) {
     const ctx = await requireApiKey(req, {
       rateLimit: { limit: 500, windowMs: 60_000 },
     });
-    if (isApiKeyError(ctx)) return ctx;
+    if (isApiKeyError(ctx)) return withCors(ctx);
 
     teamId = ctx.teamId;
 
@@ -55,7 +83,7 @@ export async function GET(req: NextRequest) {
     };
 
     if (!companyKeys.id && !companyKeys.wallet && !companyKeys.email) {
-      return NextResponse.json(
+      return jsonWithCors(
         { error: "At least one company key (id, wallet, or email) is required" },
         { status: 400 },
       );
@@ -72,14 +100,14 @@ export async function GET(req: NextRequest) {
   } else if (bearerToken) {
     const tokenCtx = await resolveEmbedAccessToken(bearerToken);
     if (!tokenCtx) {
-      return NextResponse.json({ error: "Invalid or expired token" }, { status: 401 });
+      return jsonWithCors({ error: "Invalid or expired token" }, { status: 401 });
     }
 
     teamId = tokenCtx.teamId;
     companyId = tokenCtx.companyId;
     userId = tokenCtx.userId;
   } else {
-    return NextResponse.json({ error: "Authorization required" }, { status: 401 });
+    return jsonWithCors({ error: "Authorization required" }, { status: 401 });
   }
 
   const effectiveCompanyKeys: CompanyKeys = companyKeys ?? {
@@ -95,5 +123,5 @@ export async function GET(req: NextRequest) {
     userKeys: effectiveUserKeys,
   });
 
-  return NextResponse.json({ entitlements: result.entitlements });
+  return jsonWithCors({ entitlements: result.entitlements });
 }

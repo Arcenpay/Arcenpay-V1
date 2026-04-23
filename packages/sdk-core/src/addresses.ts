@@ -15,7 +15,7 @@ import type { ContractAddresses } from './types';
 
 // --- Contract Addresses per Chain ---
 const ADDRESSES: Record<number, ContractAddresses> = {
-  // Sepolia Testnet (Primary Dev Network) — Deployed 2026-03-19
+  // Ethereum Sepolia (Testnet) — Deployed 2026-03-19
   11155111: {
     subscriptionRegistry: '0xE206C519076535A9d24c852093860CFD780908C1',
     autopayModule: '0xc82417e378b23AD9Ae73229EF08a4BA7896a4351',
@@ -25,15 +25,15 @@ const ADDRESSES: Record<number, ContractAddresses> = {
     zkUsageVerifier: '0x1f75d66692416cE880d51Baf6CdcBeE98E5837c0',
     mirrorRegistry: '0xC187CD32d569ec0E84B9b378f8E63f3a74afac74',
   },
-  // Base Sepolia (Testnet) — set ARCENPAY_CONTRACT_84532_* env vars after deployment
+  // Base Sepolia (Testnet) — Deployed 2026-04-23
   84532: {
-    subscriptionRegistry: '0x0000000000000000000000000000000000000000',
-    autopayModule: '0x0000000000000000000000000000000000000000',
-    planFactory: '0x0000000000000000000000000000000000000000',
-    feeCollector: '0x0000000000000000000000000000000000000000',
-    sessionVault: '0x0000000000000000000000000000000000000000',
-    zkUsageVerifier: '0x0000000000000000000000000000000000000000',
-    mirrorRegistry: '0x0000000000000000000000000000000000000000',
+    subscriptionRegistry: '0xF9610c064FFD64255A1d509d17b2Af8733084e50',
+    autopayModule: '0x69Ac04bFdC045A99A2D31bb141A74da354a94c19',
+    planFactory: '0x66775Af13C63781AAd28203CC5d3E9eE5d5eB83d',
+    feeCollector: '0x5F32fBfF19385A78c3F721007758E9924FAD4133',
+    sessionVault: '0x96BcE2d49e3e4EddBBF3aa07354E66615BC2623c',
+    zkUsageVerifier: '0x03290b6988F87925A4939d974895bC30981aA90D',
+    mirrorRegistry: '0xe7E0dFfa82596ee6Ba1755bc25c29376a07236dE',
   },
   // Base Mainnet — set ARCENPAY_CONTRACT_8453_* env vars after audit + deployment
   8453: {

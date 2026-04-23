@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { getContractAddresses, TOKENS } from "@arcenpay/sdk";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -103,6 +104,9 @@ const TOC: Record<DocSection, { id: string; label: string }[]> = {
     { id: "block-explorers", label: "Block explorers" },
   ],
 };
+
+const sepoliaContracts = getContractAddresses(11155111);
+const baseSepoliaContracts = getContractAddresses(84532);
 
 // ── Small primitives ──────────────────────────────────────────────────────────
 
@@ -427,9 +431,9 @@ function OverviewDoc() {
       </div>
 
       <InfoBox>
-        All contracts are deployed on Sepolia testnet. Base Sepolia and Base
-        Mainnet deployments inherit the same ABI — swap the chain and address
-        only.
+        Contracts are live on Ethereum Sepolia and Base Sepolia testnet. Base
+        Mainnet still uses the same ABI, but its addresses should be treated as
+        pending until production deployment is published.
       </InfoBox>
     </div>
   );
@@ -1600,42 +1604,42 @@ function ContractsDoc() {
           {
             contract: "PlanFactory",
             network: "Sepolia",
-            address: "0xc736f5d91aC0039b97A4Fc3540B8f3d59E7FdBa6",
+            address: sepoliaContracts.planFactory,
           },
           {
             contract: "SubscriptionRegistry",
             network: "Sepolia",
-            address: "0xf45A9E5280F72260a713c50b0Ca4e4FB1e22Cc8A",
+            address: sepoliaContracts.subscriptionRegistry,
           },
           {
             contract: "FeeCollector",
             network: "Sepolia",
-            address: "0x513fab5218045790364b33A38D95FE8E17403BAe",
+            address: sepoliaContracts.feeCollector,
           },
           {
             contract: "SessionVault",
             network: "Sepolia",
-            address: "0x2dccEaad8551a620E4Fc736bb4d0fbb8D1A17D7C",
+            address: sepoliaContracts.sessionVault,
           },
           {
             contract: "ZKUsageVerifier",
             network: "Sepolia",
-            address: "0x265E0dC80b00044d183AFa83237F5976bB4d585c",
+            address: sepoliaContracts.zkUsageVerifier,
           },
           {
             contract: "ERC7579AutopayModule",
             network: "Sepolia",
-            address: "0x3f3734fb45D1511c23384D18Eb1927492E5e3764",
+            address: sepoliaContracts.autopayModule,
           },
           {
             contract: "MirrorRegistry",
             network: "Sepolia",
-            address: "0x05BdaB1b4A87a4a5DF3Af1Ebb9Da853A0d31592E",
+            address: sepoliaContracts.mirrorRegistry ?? "—",
           },
           {
             contract: "USDC",
             network: "Sepolia",
-            address: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+            address: TOKENS[11155111].USDC,
           },
         ]}
       />
@@ -1644,9 +1648,44 @@ function ContractsDoc() {
       <AddressTable
         rows={[
           {
+            contract: "PlanFactory",
+            network: "Base Sepolia",
+            address: baseSepoliaContracts.planFactory,
+          },
+          {
+            contract: "SubscriptionRegistry",
+            network: "Base Sepolia",
+            address: baseSepoliaContracts.subscriptionRegistry,
+          },
+          {
+            contract: "FeeCollector",
+            network: "Base Sepolia",
+            address: baseSepoliaContracts.feeCollector,
+          },
+          {
+            contract: "SessionVault",
+            network: "Base Sepolia",
+            address: baseSepoliaContracts.sessionVault,
+          },
+          {
+            contract: "ZKUsageVerifier",
+            network: "Base Sepolia",
+            address: baseSepoliaContracts.zkUsageVerifier,
+          },
+          {
+            contract: "ERC7579AutopayModule",
+            network: "Base Sepolia",
+            address: baseSepoliaContracts.autopayModule,
+          },
+          {
+            contract: "MirrorRegistry",
+            network: "Base Sepolia",
+            address: baseSepoliaContracts.mirrorRegistry ?? "—",
+          },
+          {
             contract: "USDC",
             network: "Base Sepolia",
-            address: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+            address: TOKENS[84532].USDC,
           },
         ]}
       />
@@ -1657,7 +1696,7 @@ function ContractsDoc() {
           {
             contract: "USDC",
             network: "Base Mainnet",
-            address: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+            address: TOKENS[8453].USDC,
           },
         ]}
       />

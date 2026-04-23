@@ -5,7 +5,7 @@
 
 import { type Chain, defineChain } from 'viem';
 
-// --- Sepolia (Primary Dev Testnet) ---
+// --- Ethereum Sepolia (Additional Testnet) ---
 export const sepolia: Chain = defineChain({
   id: 11155111,
   name: 'Sepolia',
@@ -57,7 +57,7 @@ export type SupportedChainId = 11155111 | 84532 | 8453;
 
 // --- Well-Known Token Addresses ---
 export const TOKENS = {
-  // Sepolia (Primary Dev)
+  // Ethereum Sepolia
   11155111: {
     USDC: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238' as const,
   },
@@ -72,7 +72,7 @@ export const TOKENS = {
 } as const;
 
 // --- Default Chain ---
-export const DEFAULT_CHAIN_ID: SupportedChainId = 84532; // Base Sepolia for launch/testnet
+export const DEFAULT_CHAIN_ID: SupportedChainId = 84532; // Base Sepolia is the current deployed testnet default
 
 /**
  * Returns the block explorer transaction URL for a given chainId and tx hash.

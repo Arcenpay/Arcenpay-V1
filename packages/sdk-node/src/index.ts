@@ -1,6 +1,7 @@
 // ============================================================
 //  @arcenpay/node — Main Entry Point
 // ============================================================
+import "./types/express";
 
 // HTTP Client — main SDK entry point for most integrations
 export { ArcenClient, ArcenApiError } from "./client";

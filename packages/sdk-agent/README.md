@@ -17,8 +17,8 @@ import { ArcenPayAgent } from "@arcenpay/agent";
 
 const agent = new ArcenPayAgent({
   privateKey: process.env.AGENT_PRIVATE_KEY!,   // Agent's wallet private key
-  rpcUrl: process.env.RPC_URL!,                  // e.g. https://mainnet.base.org
-  chainId: 8453,                                 // Base Mainnet
+  rpcUrl: process.env.RPC_URL!,                  // e.g. https://sepolia.base.org
+  chainId: 84532,                                // Base Sepolia
   maxAutoApprove: "1.00",                        // Max USDC per request (default: "0.01")
 });
 
@@ -59,7 +59,7 @@ const data = await response.json();
 const agent = new ArcenPayAgent({
   privateKey: "0x...",      // Required — agent wallet private key
   rpcUrl: "https://...",    // Required — JSON-RPC URL
-  chainId: 8453,            // Required — chain ID
+  chainId: 84532,           // Required — chain ID
   maxAutoApprove: "0.10",   // Optional — max USDC per auto-approve (default: "0.01")
   sessionVaultAddress: "0x...",  // Optional — override SessionVault address
 });
@@ -130,7 +130,7 @@ import { tool } from "@langchain/core/tools";
 const agent = new ArcenPayAgent({
   privateKey: process.env.AGENT_PRIVATE_KEY!,
   rpcUrl: process.env.RPC_URL!,
-  chainId: 8453,
+  chainId: 84532,
   maxAutoApprove: "0.05",
 });
 
@@ -150,7 +150,7 @@ const premiumSearchTool = tool(async ({ query }) => {
 const agent = new ArcenPayAgent({
   privateKey: process.env.AGENT_PRIVATE_KEY!,
   rpcUrl: process.env.RPC_URL!,
-  chainId: 8453,
+  chainId: 84532,
 });
 
 // Use agent.fetch as drop-in replacement in tool calls
@@ -167,7 +167,7 @@ async function callPremiumAPI(endpoint: string, body: object) {
 
 ```bash
 AGENT_PRIVATE_KEY=0x...         # Agent wallet private key
-RPC_URL=https://mainnet.base.org  # Base mainnet RPC
+RPC_URL=https://sepolia.base.org
 # OR for testnet:
 RPC_URL=https://sepolia.base.org
 ```

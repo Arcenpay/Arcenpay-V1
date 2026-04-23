@@ -55,7 +55,7 @@ export default function ContractsIndexPage() {
         <div className="docs-page-title-row"><h1>Contract Reference</h1></div>
 
         <p className="docs-lead" id="contracts">
-          ArcenPay is composed of 7 auditable Solidity contracts deployed on Sepolia ETH.<br />
+          ArcenPay is composed of 7 auditable Solidity contracts deployed on Ethereum Sepolia and Base Sepolia.<br />
           All contracts use Solidity 0.8.24 with OpenZeppelin 5.x base contracts.
         </p>
 

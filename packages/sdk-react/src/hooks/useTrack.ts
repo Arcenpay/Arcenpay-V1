@@ -2,10 +2,10 @@
  * useTrack — React hook for sending usage events.
  *
  * Returns a `track` function that POSTs to /api/v1/events.
- * Events are batched and debounced by default to avoid flooding the API.
+ * Calls are sent immediately; provide your own batching if needed.
  *
  * @example
- * const { track } = useTrack({ apiKey: 'api_xxx' });
+ * const { track } = useTrack();
  * await track('scan', { source: 'dashboard' });
  */
 

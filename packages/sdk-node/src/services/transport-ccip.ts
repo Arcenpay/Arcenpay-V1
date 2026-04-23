@@ -7,6 +7,7 @@
 import { createPublicClient, createWalletClient, http, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { sepolia, baseSepolia, base } from "viem/chains";
+import { DEFAULT_CHAIN_ID } from "@arcenpay/sdk";
 
 const CHAIN_MAP: Record<number, any> = {
   11155111: sepolia,
@@ -127,10 +128,10 @@ export class CCIPTransport {
 
   constructor(config: CCIPTransportConfig) {
     this.config = config;
-    this.chainId = config.chainId || 11155111;
+    this.chainId = config.chainId ?? DEFAULT_CHAIN_ID;
     this.gasLimit = config.gasLimit || 200_000n;
 
-    const chain = CHAIN_MAP[this.chainId] || sepolia;
+    const chain = CHAIN_MAP[this.chainId] || baseSepolia;
     const account = privateKeyToAccount(config.privateKey);
     this.signerAddress = account.address;
 

@@ -22,15 +22,14 @@ const app = express();
 
 // Any request to /api/premium must have a valid x402 payment header
 app.use("/api/premium", x402Middleware({
-  facilitatorUrl: process.env.ARCENPAY_FACILITATOR_URL!,
-  planId: 1,                    // The plan ID from PlanFactory
+  planId: "1",                  // The plan ID from PlanFactory
+  ratePerCall: "0.001",         // Human-readable USDC amount per request
   chainId: 84532,               // Base Sepolia
-  acceptedTokens: ["USDC"],
 }));
 
 app.get("/api/premium/data", (req, res) => {
-  // req.arcenpay.verified — payment is verified
-  // req.arcenpay.signer  — customer's wallet address
+  // req.meapPayment.verified — payment is verified
+  // req.meapPayment.signer  — customer's wallet address
   res.json({ data: "premium content" });
 });
 ```
@@ -207,7 +206,7 @@ import { TablelandService } from "@arcenpay/node/tableland";
 
 ## x402 Request Context
 
-After the middleware runs successfully, the payment context is available on `req.arcenpay`:
+After the middleware runs successfully, the payment context is available on `req.meapPayment`:
 
 ```typescript
 app.get("/api/premium", (req, res) => {
@@ -219,7 +218,7 @@ app.get("/api/premium", (req, res) => {
     sessionId,          // "0x..."
     settlementTxHash,   // "0x..." or null
     timestamp,          // Unix timestamp
-  } = req.arcenpay;
+  } = req.meapPayment;
 
   res.json({ ok: true });
 });
@@ -228,8 +227,7 @@ app.get("/api/premium", (req, res) => {
 ## Environment Variables
 
 ```bash
-ARCENPAY_FACILITATOR_URL=https://facilitator.arcenpay.xyz
-RPC_URL=https://sepolia.base.org
+RPC_URL=https://ethereum-sepolia-rpc.publicnode.com
 REDIS_URL=redis://localhost:6379
 RESEND_API_KEY=re_...
 TABLELAND_PRIVATE_KEY=0x...

@@ -6,6 +6,7 @@
 import {
   createPublicClient,
   createWalletClient,
+  decodeEventLog,
   http,
   parseUnits,
   type PublicClient,
@@ -17,7 +18,7 @@ import { sepolia, baseSepolia, base } from 'viem/chains';
 import type { X402Response, X402PaymentHeader } from '@arcenpay/sdk';
 import { X402_VERSION, X402_SCHEME, SessionVaultABI, getContractAddresses, TOKENS } from '@arcenpay/sdk';
 
-interface AgentConfig {
+export interface AgentConfig {
   /** Agent's wallet private key (for signing payments) */
   privateKey: string;
   /** RPC URL for the target chain */
@@ -30,9 +31,9 @@ interface AgentConfig {
   sessionVaultAddress?: string;
 }
 
-interface FetchOptions extends RequestInit {
-  /** Maximum price willing to pay (in USDC atomic units) */
-  maxPrice?: string;
+export interface FetchOptions extends RequestInit {
+  /** Maximum price willing to pay (decimal USDC string like "0.01", or atomic units as bigint / integer string) */
+  maxPrice?: string | bigint;
   /** Whether to auto-approve payment if within maxAutoApprove */
   autoApprove?: boolean;
 }
@@ -69,6 +70,42 @@ const ERC20_APPROVE_ABI = [{
   stateMutability: 'nonpayable',
 }] as const;
 
+function parseHumanUsdcAmount(value: string, field: string): bigint {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    throw new Error(`[MEAPAgent] ${field} must be a non-empty USDC amount`);
+  }
+
+  try {
+    return parseUnits(trimmed, 6);
+  } catch {
+    throw new Error(
+      `[MEAPAgent] ${field} must be a valid USDC amount like "0.01"`,
+    );
+  }
+}
+
+function parsePriceLimit(value: string | bigint, field: string): bigint {
+  if (typeof value === 'bigint') return value;
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    throw new Error(`[MEAPAgent] ${field} must be a non-empty price limit`);
+  }
+
+  if (trimmed.includes('.')) {
+    return parseHumanUsdcAmount(trimmed, field);
+  }
+
+  try {
+    return BigInt(trimmed);
+  } catch {
+    throw new Error(
+      `[MEAPAgent] ${field} must be a decimal USDC string like "0.01" or an atomic-unit bigint/integer string`,
+    );
+  }
+}
+
 /**
  * MEAPAgent — AI Agent SDK for autonomous x402 payments
  *
@@ -81,8 +118,8 @@ const ERC20_APPROVE_ABI = [{
  *
  * const agent = new MEAPAgent({
  *   privateKey: process.env.AGENT_PRIVATE_KEY!,
- *   rpcUrl: 'https://ethereum-sepolia-rpc.publicnode.com',
- *   chainId: 11155111,
+ *   rpcUrl: 'https://sepolia.base.org',
+ *   chainId: 84532,
  *   maxAutoApprove: '0.01',
  * });
  *
@@ -113,7 +150,13 @@ export class MEAPAgent {
 
     this.chain = CHAIN_MAP[config.chainId] || sepolia;
     this.account = privateKeyToAccount(config.privateKey as `0x${string}`);
-    this.contracts = getContractAddresses(config.chainId);
+    const resolvedContracts = getContractAddresses(config.chainId);
+    this.contracts = config.sessionVaultAddress
+      ? {
+          ...resolvedContracts,
+          sessionVault: config.sessionVaultAddress,
+        }
+      : resolvedContracts;
 
     this.publicClient = createPublicClient({
       chain: this.chain,
@@ -146,7 +189,7 @@ export class MEAPAgent {
    * @returns Session ID (bytes32 hex)
    */
   async fundSession(amount: string): Promise<string> {
-    const amountAtomic = parseUnits(amount, 6);
+    const amountAtomic = parseHumanUsdcAmount(amount, 'amount');
     const usdcAddress = TOKENS[this.config.chainId as keyof typeof TOKENS]?.USDC as `0x${string}`;
     const vaultAddress = this.contracts.sessionVault as `0x${string}`;
 
@@ -180,10 +223,30 @@ export class MEAPAgent {
     console.log(`[MEAPAgent] Fund session tx: ${fundHash}`);
     const receipt = await this.publicClient.waitForTransactionReceipt({ hash: fundHash });
 
-    // Try to extract sessionId from logs
-    // SessionFunded(address indexed agent, bytes32 indexed sessionId, uint256 amount, address token)
-    const sessionLog = receipt.logs.find((log: { topics: readonly string[] }) => log.topics.length >= 3);
-    this.sessionId = sessionLog?.topics[2] ?? `0x${Date.now().toString(16).padStart(64, '0')}`;
+    let sessionId: string | null = null;
+    for (const log of receipt.logs) {
+      try {
+        const decoded = decodeEventLog({
+          abi: SessionVaultABI,
+          data: log.data,
+          topics: log.topics,
+        });
+        if (decoded.eventName === 'SessionFunded') {
+          sessionId = decoded.args.sessionId;
+          break;
+        }
+      } catch {
+        // Ignore unrelated logs.
+      }
+    }
+
+    if (!sessionId) {
+      throw new Error(
+        '[MEAPAgent] fundSession() succeeded on-chain but SessionFunded event could not be decoded',
+      );
+    }
+
+    this.sessionId = sessionId;
 
     console.log(`[MEAPAgent] Session funded: ${amount} USDC → ${this.sessionId}`);
     return this.sessionId;
@@ -214,8 +277,9 @@ export class MEAPAgent {
     }
 
     const requiredAmount = BigInt(paymentOption.maxAmountRequired);
-    const maxAutoApproveAmount = BigInt(
-      Math.floor(parseFloat(this.config.maxAutoApprove || '0') * 1_000_000),
+    const maxAutoApproveAmount = parseHumanUsdcAmount(
+      this.config.maxAutoApprove || '0',
+      'maxAutoApprove',
     );
 
     // Step 5: Auto-approve check
@@ -225,14 +289,16 @@ export class MEAPAgent {
       );
     }
 
-    if (maxPrice && requiredAmount > BigInt(maxPrice)) {
+    if (maxPrice !== undefined && requiredAmount > parsePriceLimit(maxPrice, 'maxPrice')) {
       throw new Error(
         `Payment amount ${requiredAmount} exceeds max price ${maxPrice}`,
       );
     }
 
     // Step 6: Construct and sign payment with EIP-712
+    const paymentNonce = this.nonce;
     const paymentHeader = await this.constructPayment(paymentOption);
+    this.nonce += 1n;
 
     // Step 7: Check balance before attempting payment
     const balance = await this.getBalance();
@@ -252,15 +318,16 @@ export class MEAPAgent {
       },
     });
 
-    // Only advance nonce and record spend on a successful settlement response
+    // Nonces are single-use. Once we attempt a paid request, the next attempt must use a fresh nonce.
     if (paidResponse.ok) {
       this.totalSpent += requiredAmount;
-      this.nonce += 1n;
-      console.log(`[MEAPAgent] Payment settled. Total spent: ${this.totalSpent}, nonce: ${this.nonce}`);
+      console.log(
+        `[MEAPAgent] Payment settled with nonce ${paymentNonce}. Total spent: ${this.totalSpent}, next nonce: ${this.nonce}`,
+      );
     } else {
       console.warn(
         `[MEAPAgent] Paid request returned non-2xx (${paidResponse.status}). ` +
-        `Nonce NOT advanced to allow retry.`,
+        `A fresh nonce will be used on the next attempt.`,
       );
     }
 

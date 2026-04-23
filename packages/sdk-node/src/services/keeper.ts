@@ -9,6 +9,7 @@ import { createPublicClient, createWalletClient, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { sepolia, baseSepolia, base } from "viem/chains";
 import {
+    DEFAULT_CHAIN_ID,
     SubscriptionRegistryABI,
     ERC7579AutopayModuleABI,
     PlanFactoryABI,
@@ -75,8 +76,8 @@ export class BillingKeeper {
     private callbacks: Array<(result: RenewalResult) => void> = [];
 
     constructor(config: BillingKeeperConfig) {
-        this.chainId = config.chainId || 11155111;
-        const chain = CHAIN_MAP[this.chainId] || sepolia;
+        this.chainId = config.chainId ?? DEFAULT_CHAIN_ID;
+        const chain = CHAIN_MAP[this.chainId] || baseSepolia;
         const contracts = getContractAddresses(this.chainId);
 
         this.registryAddress = contracts.subscriptionRegistry as `0x${string}`;

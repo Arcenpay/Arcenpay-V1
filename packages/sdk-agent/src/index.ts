@@ -3,3 +3,4 @@
 // ============================================================
 
 export { MEAPAgent, ArcenPayAgent } from './agent';
+export type { AgentConfig, FetchOptions } from './agent';

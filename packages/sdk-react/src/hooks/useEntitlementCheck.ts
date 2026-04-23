@@ -38,6 +38,9 @@ export function useEntitlementCheck(
 
   const fetchEntitlement = useCallback(async () => {
     if (!session.token) {
+      setError(
+        "useEntitlementCheck() requires an Arcen session token. Pass `token` to ArcenPayProvider or supply an identify callback.",
+      );
       setLoading(false);
       return;
     }

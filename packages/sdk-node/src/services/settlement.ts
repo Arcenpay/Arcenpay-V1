@@ -6,7 +6,12 @@
 import { createPublicClient, http } from 'viem';
 import { sepolia, baseSepolia, base } from 'viem/chains';
 import type { BillingSettlement } from '@arcenpay/sdk';
-import { SessionVaultABI, ZKUsageVerifierABI, getContractAddresses } from '@arcenpay/sdk';
+import {
+  DEFAULT_CHAIN_ID,
+  SessionVaultABI,
+  ZKUsageVerifierABI,
+  getContractAddresses,
+} from '@arcenpay/sdk';
 
 type SettlementCallback = (settlement: BillingSettlement) => void;
 
@@ -37,13 +42,13 @@ export class SettlementService {
     sessionVaultAddress?: string;
   }) {
     this.rpcUrl = config.rpcUrl;
-    this.chainId = config.chainId || 11155111;
+    this.chainId = config.chainId ?? DEFAULT_CHAIN_ID;
 
     const contracts = getContractAddresses(this.chainId);
     this.zkVerifierAddress = config.zkVerifierAddress || contracts.zkUsageVerifier;
     this.sessionVaultAddress = config.sessionVaultAddress || contracts.sessionVault;
 
-    const chain = CHAIN_MAP[this.chainId] || sepolia;
+    const chain = CHAIN_MAP[this.chainId] || baseSepolia;
     this.publicClient = createPublicClient({
       chain,
       transport: http(this.rpcUrl),

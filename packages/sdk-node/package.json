@@ -36,7 +36,7 @@
     "@lit-protocol/constants": "^7.4.0",
     "@lit-protocol/encryption": "^7.4.0",
     "@lit-protocol/lit-node-client": "^7.4.0",
-    "@arcenpay/sdk": "*",
+    "@arcenpay/sdk": "0.0.1",
     "@tableland/sdk": "^7.2.1",
     "ethers": "^6.13.5",
     "redis": "^4.7.1",
@@ -50,5 +50,13 @@
   },
   "peerDependencies": {
     "express": "^4.0.0 || ^5.0.0"
+  },
+  "peerDependenciesMeta": {
+    "express": {
+      "optional": true
+    }
+  },
+  "engines": {
+    "node": ">=20.0.0"
   }
 }

@@ -605,5 +605,5 @@ export interface IdentifyResult {
   token: string;
   companyId: string;
   userId?: string;
-  expiresAt: number; // unix timestamp
+  expiresAt: string; // ISO timestamp
 }

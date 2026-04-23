@@ -13,6 +13,7 @@ import {
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { sepolia, baseSepolia, base } from "viem/chains";
+import { DEFAULT_CHAIN_ID } from "@arcenpay/sdk";
 
 const CHAIN_MAP: Record<number, any> = {
   11155111: sepolia,
@@ -115,9 +116,9 @@ export class AxelarTransport {
 
   constructor(config: AxelarTransportConfig) {
     this.config = config;
-    this.chainId = config.chainId || 11155111;
+    this.chainId = config.chainId ?? DEFAULT_CHAIN_ID;
 
-    const chain = CHAIN_MAP[this.chainId] || sepolia;
+    const chain = CHAIN_MAP[this.chainId] || baseSepolia;
     const account = privateKeyToAccount(config.privateKey);
     this.signerAddress = account.address;
 

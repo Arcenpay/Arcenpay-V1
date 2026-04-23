@@ -106,6 +106,12 @@ const CHAIN_MAP: Record<number, any> = {
   8453: base,
 };
 
+const CHAIN_ID_TO_NETWORK: Record<number, string> = {
+  11155111: "ethereum-sepolia",
+  84532: "base-sepolia",
+  8453: "base-mainnet",
+};
+
 function coerceBigInt(
   value: bigint | string | number,
   fallback: bigint,
@@ -194,8 +200,8 @@ export function x402Middleware(options: X402MiddlewareOptions) {
   const {
     planId,
     ratePerCall,
-    network = "base-sepolia",
-    chainId = 11155111,
+    chainId = 84532,
+    network,
     rpcUrl,
     payTo,
     settlePayment,
@@ -204,6 +210,14 @@ export function x402Middleware(options: X402MiddlewareOptions) {
     nonceTtlMs = 600_000, // 10 minutes
     nonceStore: externalNonceStore,
   } = options;
+
+  const inferredNetwork = CHAIN_ID_TO_NETWORK[chainId];
+  if (network && inferredNetwork && network !== inferredNetwork) {
+    throw new Error(
+      `[x402] network "${network}" does not match chainId ${chainId} (${inferredNetwork})`,
+    );
+  }
+  const resolvedNetwork = network ?? inferredNetwork ?? "ethereum-sepolia";
 
   // ── Nonce deduplication store ──────────────────────────────
   // Uses pluggable NonceStore for durable anti-replay protection.
@@ -256,7 +270,7 @@ export function x402Middleware(options: X402MiddlewareOptions) {
         accepts: [
           {
             scheme: X402_SCHEME,
-            network,
+            network: resolvedNetwork,
             maxAmountRequired: rateAtomicUnits.toString(),
             resource: `${req.protocol}://${req.get("host")}${req.originalUrl}`,
             description: `Premium API access — Plan: ${planId}`,

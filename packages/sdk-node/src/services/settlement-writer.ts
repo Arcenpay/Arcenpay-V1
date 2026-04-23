@@ -6,7 +6,12 @@
 import { createPublicClient, createWalletClient, http, isAddress, type Hex } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { sepolia, baseSepolia, base } from 'viem/chains';
-import { SessionVaultABI, FeeCollectorABI, getContractAddresses } from '@arcenpay/sdk';
+import {
+  DEFAULT_CHAIN_ID,
+  SessionVaultABI,
+  FeeCollectorABI,
+  getContractAddresses,
+} from '@arcenpay/sdk';
 
 const CHAIN_MAP: Record<number, any> = {
   11155111: sepolia,
@@ -102,8 +107,8 @@ export class SettlementWriterService {
   private readonly walletClient: any;
 
   constructor(config: SettlementWriterConfig) {
-    this.chainId = config.chainId || 11155111;
-    const chain = CHAIN_MAP[this.chainId] || sepolia;
+    this.chainId = config.chainId ?? DEFAULT_CHAIN_ID;
+    const chain = CHAIN_MAP[this.chainId] || baseSepolia;
     const contracts = getContractAddresses(this.chainId);
 
     this.sessionVaultAddress = (config.sessionVaultAddress || contracts.sessionVault) as `0x${string}`;

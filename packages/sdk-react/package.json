@@ -12,6 +12,12 @@
       "import": "./dist/index.mjs",
       "require": "./dist/index.js",
       "default": "./dist/index.mjs"
+    },
+    "./zerodev": {
+      "types": "./dist/zerodev.d.ts",
+      "import": "./dist/zerodev.mjs",
+      "require": "./dist/zerodev.js",
+      "default": "./dist/zerodev.mjs"
     }
   },
   "files": [
@@ -19,8 +25,8 @@
     "src"
   ],
   "scripts": {
-    "build": "tsup src/index.ts --format cjs,esm --dts --dts-resolve --sourcemap --external react --external @zerodev/sdk --external @zerodev/ecdsa-validator",
-    "dev": "tsup src/index.ts --format cjs,esm --dts --external react --external @zerodev/sdk --external @zerodev/ecdsa-validator --watch",
+    "build": "tsup src/index.ts src/zerodev.ts --format cjs,esm --dts --dts-resolve --sourcemap --external react --external @zerodev/sdk --external @zerodev/ecdsa-validator",
+    "dev": "tsup src/index.ts src/zerodev.ts --format cjs,esm --dts --external react --external @zerodev/sdk --external @zerodev/ecdsa-validator --watch",
     "test": "vitest run",
     "typecheck": "tsc --noEmit --skipLibCheck",
     "clean": "rm -rf dist"
@@ -40,7 +46,7 @@
     }
   },
   "dependencies": {
-    "@arcenpay/sdk": "*",
+    "@arcenpay/sdk": "0.0.1",
     "@tanstack/react-query": "^5.62.0",
     "viem": "^2.21.0",
     "wagmi": "^2.14.0"
@@ -53,5 +59,8 @@
     "react": "^19.0.0",
     "tsup": "^8.3.0",
     "typescript": "^5.7.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
   }
 }

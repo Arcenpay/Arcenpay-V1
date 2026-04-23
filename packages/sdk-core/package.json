@@ -48,5 +48,8 @@
     "permissionless": {
       "optional": true
     }
+  },
+  "engines": {
+    "node": ">=20.0.0"
   }
 }

@@ -39,7 +39,7 @@ export interface SmartAccountResult {
  * ```ts
  * const result = await createSmartAccount({
  *   ownerAddress: '0xabc...',
- *   chainId: 11155111,
+ *   chainId: 84532,
  *   zeroDevProjectId: process.env.NEXT_PUBLIC_ZERODEV_PROJECT_ID!,
  *   walletClient,
  * });

@@ -10,6 +10,12 @@ Add a complete USDC subscription billing flow to your React app in minutes. No p
 npm install @arcenpay/react @arcenpay/sdk wagmi viem @tanstack/react-query
 ```
 
+If you use the optional ZeroDev smart-account helpers, also install:
+
+```bash
+npm install @zerodev/sdk @zerodev/ecdsa-validator
+```
+
 ## Quick Start (5 minutes)
 
 ### 1. Wrap your app
@@ -21,8 +27,9 @@ import { ArcenPayProvider } from "@arcenpay/react";
 export default function Layout({ children }) {
   return (
     <ArcenPayProvider
-      chainId={84532}                                    // Base Sepolia testnet
+      chainId={84532}                                    // Base Sepolia
       walletConnectProjectId="your-walletconnect-id"    // from cloud.walletconnect.com
+      token="short-lived-access-token-from-your-backend"
     >
       {children}
     </ArcenPayProvider>
@@ -123,7 +130,7 @@ Root provider. Must wrap your entire app.
 
 ```tsx
 <ArcenPayProvider
-  chainId={8453}                          // Chain ID (default: 11155111 Sepolia)
+  chainId={84532}                         // Chain ID (default: 84532 Base Sepolia)
   walletConnectProjectId="..."            // From cloud.walletconnect.com
   config={{
     // Optional: override defaults
@@ -173,6 +180,10 @@ If you already have a provider backend, you can keep using `requestSubscription`
 If not, `CheckoutModal` can call the ArcenPay dashboard activation endpoint
 directly when `activationEndpoint` or `NEXT_PUBLIC_ARCEN_BASE_URL` /
 `NEXT_PUBLIC_ARCENPAY_BASE_URL` is configured.
+
+Do not pass a secret API key to `ArcenPayProvider` in the browser.
+Mint short-lived access tokens on your backend and pass `token`, or provide
+an `identify` callback that calls your own backend endpoint.
 
 ### `<SubscriptionStatus />`
 
@@ -291,11 +302,11 @@ if (!result.consumed) {
 Deploy a ZeroDev ERC-4337 smart account for a user (required for autopay).
 
 ```typescript
-import { deploySmartAccount } from "@arcenpay/react";
+import { deploySmartAccount } from "@arcenpay/react/zerodev";
 
 const { address, client } = await deploySmartAccount({
   signer,       // viem WalletClient
-  chainId: 8453,
+  chainId: 84532,
 });
 ```
 
@@ -304,11 +315,11 @@ const { address, client } = await deploySmartAccount({
 Uninstall the autopay module (cancel subscription).
 
 ```typescript
-import { revokeAutopayModule } from "@arcenpay/react";
+import { revokeAutopayModule } from "@arcenpay/react/zerodev";
 
 await revokeAutopayModule({
   smartAccountAddress: "0x...",
-  chainId: 8453,
+  chainId: 84532,
 });
 ```
 

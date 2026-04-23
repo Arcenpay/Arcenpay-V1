@@ -1,4 +1,16 @@
+import { TESTNET_NETWORK_ROWS } from "@/lib/testnet-deployments";
+
 export default function ContractAddressesPage() {
+  const contractEntries = [
+    { name: "PlanFactory", key: "planFactory" },
+    { name: "SubscriptionRegistry", key: "subscriptionRegistry" },
+    { name: "AutopayModule", key: "autopayModule" },
+    { name: "FeeCollector", key: "feeCollector" },
+    { name: "SessionVault", key: "sessionVault" },
+    { name: "ZKUsageVerifier", key: "zkUsageVerifier" },
+    { name: "MirrorRegistry", key: "mirrorRegistry" },
+  ] as const;
+
   return (
     <div className="docs-body" style={{ width: '100%' }}>
       <article className="docs-article">
@@ -7,22 +19,23 @@ export default function ContractAddressesPage() {
           <h1>Contract Addresses</h1>
         </div>
         <p className="docs-lead">
-          All ArcenPay contracts are deployed on Sepolia ETH (chainId 11155111) for testnet.
-          Base Mainnet addresses will be published at launch.
+          ArcenPay testnet contracts are live on Ethereum Sepolia and Base Sepolia.
+          Base Mainnet addresses will be published when production deployment is ready.
         </p>
 
-        <h2 id="sepolia">Sepolia Testnet</h2>
+        <h2 id="testnets">Testnet Deployments</h2>
         <table className="docs-table">
           <thead>
-            <tr><th>Contract</th><th>Address</th></tr>
+            <tr><th>Contract</th><th>Ethereum Sepolia</th><th>Base Sepolia</th></tr>
           </thead>
           <tbody>
-            <tr><td>PlanFactory</td><td><code>0x18707519A062AbCC3E73fBd4150C3B30B241f536</code></td></tr>
-            <tr><td>SubscriptionManager</td><td><code>0xA0Cf798816D4b9b9866b5704098F9C09F279c2C4</code></td></tr>
-            <tr><td>AutopayModule</td><td><code>0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D</code></td></tr>
-            <tr><td>SessionVault</td><td><code>0xdAC17F958D2ee523a2206206994597C13D831ec7</code></td></tr>
-            <tr><td>ZKUsageVerifier</td><td><code>0x6B175474E89094C44Da98b954EedeAC495271d0F</code></td></tr>
-            <tr><td>MirrorRegistry</td><td><code>0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599</code></td></tr>
+            {contractEntries.map(({ name, key }) => (
+              <tr key={name}>
+                <td>{name}</td>
+                <td><code>{TESTNET_NETWORK_ROWS[0].contracts[key] || "—"}</code></td>
+                <td><code>{TESTNET_NETWORK_ROWS[1].contracts[key] || "—"}</code></td>
+              </tr>
+            ))}
           </tbody>
         </table>
 
@@ -39,7 +52,7 @@ export default function ContractAddressesPage() {
       <nav className="docs-toc" aria-label="Table of contents">
         <div className="docs-toc-heading">On this page</div>
         <ul className="docs-toc-list">
-          <li className="docs-toc-item active"><a href="#sepolia">Sepolia Testnet</a></li>
+          <li className="docs-toc-item active"><a href="#testnets">Testnet Deployments</a></li>
         </ul>
       </nav>
     </div>

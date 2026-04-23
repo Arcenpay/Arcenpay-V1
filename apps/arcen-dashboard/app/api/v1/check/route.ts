@@ -20,6 +20,30 @@ import { resolveEntitlementResult } from "@/lib/entitlements";
 
 // ─── Header parsing ────────────────────────────────────────────────────────────
 
+function corsHeaders() {
+  return {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET,OPTIONS",
+    "Access-Control-Allow-Headers":
+      "Content-Type,Authorization,X-Arcen-Company-Keys,X-Arcen-User-Keys",
+  };
+}
+
+function jsonWithCors(body: unknown, init?: ResponseInit) {
+  const headers = new Headers(init?.headers);
+  for (const [key, value] of Object.entries(corsHeaders())) {
+    headers.set(key, value);
+  }
+  return NextResponse.json(body, { ...init, headers });
+}
+
+function withCors(response: NextResponse) {
+  for (const [key, value] of Object.entries(corsHeaders())) {
+    response.headers.set(key, value);
+  }
+  return response;
+}
+
 function parseKeyHeader(header: string | null): Record<string, string> {
   if (!header) return {};
   const result: Record<string, string> = {};
@@ -35,10 +59,17 @@ function parseKeyHeader(header: string | null): Record<string, string> {
 
 // ─── Main Handler ─────────────────────────────────────────────────────────────
 
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 204, headers: corsHeaders() });
+}
+
 export async function GET(req: NextRequest) {
   const featureKey = req.nextUrl.searchParams.get("key");
   if (!featureKey || featureKey.length > 128) {
-    return NextResponse.json({ error: "Missing or invalid query param: key" }, { status: 400 });
+    return jsonWithCors(
+      { error: "Missing or invalid query param: key" },
+      { status: 400 },
+    );
   }
 
   const authHeader = req.headers.get("authorization") ?? "";
@@ -52,7 +83,7 @@ export async function GET(req: NextRequest) {
 
   if (bearerToken.startsWith("api_")) {
     const ctx = await requireApiKey(req, { rateLimit: { limit: 500, windowMs: 60_000 } });
-    if (isApiKeyError(ctx)) return ctx;
+    if (isApiKeyError(ctx)) return withCors(ctx);
     teamId = ctx.teamId;
 
     const rawCompanyKeys = parseKeyHeader(req.headers.get("x-arcen-company-keys"));
@@ -65,7 +96,7 @@ export async function GET(req: NextRequest) {
     };
 
     if (!companyKeys.id && !companyKeys.wallet && !companyKeys.email) {
-      return NextResponse.json(
+      return jsonWithCors(
         { error: "At least one company key (id, wallet, or email) is required" },
         { status: 400 },
       );
@@ -82,13 +113,13 @@ export async function GET(req: NextRequest) {
   } else if (bearerToken) {
     const tokenCtx = await resolveEmbedAccessToken(bearerToken);
     if (!tokenCtx) {
-      return NextResponse.json({ error: "Invalid or expired token" }, { status: 401 });
+      return jsonWithCors({ error: "Invalid or expired token" }, { status: 401 });
     }
     teamId = tokenCtx.teamId;
     companyId = tokenCtx.companyId;
     userId = tokenCtx.userId;
   } else {
-    return NextResponse.json({ error: "Authorization required" }, { status: 401 });
+    return jsonWithCors({ error: "Authorization required" }, { status: 401 });
   }
 
   // Evaluate the flag
@@ -105,5 +136,5 @@ export async function GET(req: NextRequest) {
     featureKey,
   });
 
-  return NextResponse.json(result);
+  return jsonWithCors(result);
 }

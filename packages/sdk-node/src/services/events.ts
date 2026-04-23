@@ -6,7 +6,7 @@
 
 import { createPublicClient, http } from 'viem';
 import { sepolia, baseSepolia, base } from 'viem/chains';
-import { getContractAddresses } from '@arcenpay/sdk';
+import { DEFAULT_CHAIN_ID, getContractAddresses } from '@arcenpay/sdk';
 
 export type SubscriptionEventType =
     | 'minted'
@@ -65,8 +65,8 @@ export class EventListenerService {
         chainId?: number;
         registryAddress?: string;
     }) {
-        const chainId = config.chainId || 11155111;
-        const chain = CHAIN_MAP[chainId] || sepolia;
+        const chainId = config.chainId ?? DEFAULT_CHAIN_ID;
+        const chain = CHAIN_MAP[chainId] || baseSepolia;
         const contracts = getContractAddresses(chainId);
         this.registryAddress = config.registryAddress || contracts.subscriptionRegistry;
         this.autopayModuleAddress = contracts.autopayModule;

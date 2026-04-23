@@ -18,7 +18,6 @@ import {
   DEFAULT_CHAIN_ID,
   validateChainEnvironment,
 } from "@arcenpay/sdk";
-import { resolveDashboardBaseUrl } from "../lib/api";
 
 // ============================================================
 //  MEAPProvider / ArcenPayProvider — Root Context Provider
@@ -94,8 +93,13 @@ export interface MEAPProviderProps {
   config?: Partial<MEAPConfig>;
   chainId?: number;
   walletConnectProjectId?: string;
+  /**
+   * @deprecated Never pass a secret API key to the browser.
+   * Provide a short-lived `token` or an `identify` callback that talks to your backend instead.
+   */
   apiKey?: string;
   token?: string;
+  identify?: (input: ArcenIdentifyInput) => Promise<ArcenIdentifyResult>;
   company?: { id?: string; wallet?: string; email?: string; name?: string; traits?: Record<string, unknown> };
   user?: { id?: string; clerkUserId?: string; wallet?: string; email?: string; name?: string };
 }
@@ -176,67 +180,41 @@ export function MEAPProvider(props: MEAPProviderProps) {
     },
   });
 
-  const { apiKey, token: tokenProp, company, user } = props;
+  const { apiKey, token: tokenProp, identify: identifyProp, company, user } = props;
   const companyFingerprint = JSON.stringify(company ?? null);
   const userFingerprint = JSON.stringify(user ?? null);
 
   const identify = React.useCallback(
     async (input: ArcenIdentifyInput): Promise<ArcenIdentifyResult> => {
+      if (identifyProp) {
+        const result = await identifyProp(input);
+        const nextSession = {
+          token: result.token,
+          companyId: result.companyId,
+          userId: result.userId,
+          isReady: true,
+        };
+
+        setSessionCtx((current) => ({
+          ...current,
+          ...nextSession,
+          identify: current.identify,
+        }));
+
+        return result;
+      }
+
       if (!apiKey) {
-        throw new Error("apiKey is required to create an Arcen session");
+        throw new Error(
+          "ArcenPayProvider requires either a token or an identify callback to create a session",
+        );
       }
 
-      const baseUrl = resolveDashboardBaseUrl();
-      const response = await fetch(`${baseUrl}/api/v1/access-tokens`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          company: input.company,
-          user: input.user
-            ? {
-                id: input.user.id,
-                clerk_user_id: input.user.clerkUserId,
-                wallet: input.user.wallet,
-                email: input.user.email,
-                name: input.user.name,
-              }
-            : undefined,
-          expires_in: input.expiresIn ?? 3600,
-        }),
-      });
-
-      const json = (await response.json()) as {
-        error?: string;
-        data?: { token: string; company_id: string; user_id?: string };
-      };
-
-      if (!response.ok || !json.data?.token) {
-        throw new Error(json.error ?? "Failed to identify session");
-      }
-
-      const nextSession = {
-        token: json.data.token,
-        companyId: json.data.company_id,
-        userId: json.data.user_id ?? null,
-        isReady: true,
-      };
-
-      setSessionCtx((current) => ({
-        ...current,
-        ...nextSession,
-        identify: current.identify,
-      }));
-
-      return {
-        token: nextSession.token,
-        companyId: nextSession.companyId,
-        userId: nextSession.userId,
-      };
+      throw new Error(
+        "Passing apiKey to ArcenPayProvider in the browser is no longer supported. Mint access tokens on your backend and pass `token`, or provide an `identify` callback.",
+      );
     },
-    [apiKey],
+    [apiKey, identifyProp],
   );
 
   useEffect(() => {
@@ -252,14 +230,14 @@ export function MEAPProvider(props: MEAPProviderProps) {
   }, [tokenProp]);
 
   useEffect(() => {
-    if (tokenProp || !apiKey || (!company && !user)) return;
+    if (tokenProp || (!identifyProp && !apiKey) || (!company && !user)) return;
 
     void identify({
       company,
       user,
       expiresIn: 3600,
     }).catch((err) => console.error("[ArcenPayProvider] identify failed:", err));
-  }, [apiKey, tokenProp, companyFingerprint, userFingerprint, identify]);
+  }, [apiKey, identifyProp, tokenProp, companyFingerprint, userFingerprint, identify]);
 
   useEffect(() => {
     setSessionCtx((current) => ({

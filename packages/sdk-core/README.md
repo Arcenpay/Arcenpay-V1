@@ -85,7 +85,8 @@ console.log(TOKENS[8453].USDC);  // 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
 
 ## Contract Addresses
 
-Addresses are baked in for Sepolia (deployed). For Base Sepolia and Base Mainnet, set environment variables after deployment:
+Ethereum Sepolia and Base Sepolia have baked-in deployed contract addresses today.
+For Base Mainnet, set environment variables after deployment:
 
 ```bash
 # Override contract addresses for Base mainnet

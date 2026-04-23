@@ -11,7 +11,11 @@ import { createPublicClient, createWalletClient, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { sepolia, baseSepolia, base } from "viem/chains";
 import type { PublicInputs, UsageProof, BillingSettlement } from "@arcenpay/sdk";
-import { ZKUsageVerifierABI, getContractAddresses } from "@arcenpay/sdk";
+import {
+  DEFAULT_CHAIN_ID,
+  ZKUsageVerifierABI,
+  getContractAddresses,
+} from "@arcenpay/sdk";
 
 interface UsageLogEntry {
   sessionId: string;
@@ -114,8 +118,8 @@ export class UsageService {
   private runtimeValidated = false;
 
   constructor(config: UsageServiceConfig = {}) {
-    const chainId = config.chainId ?? 11155111;
-    const chain = CHAIN_MAP[chainId] || sepolia;
+    const chainId = config.chainId ?? DEFAULT_CHAIN_ID;
+    const chain = CHAIN_MAP[chainId] || baseSepolia;
     const rpcUrl = config.rpcUrl || chain.rpcUrls.default.http[0];
     const proofMode: ProofMode =
       config.proofMode ??
@@ -398,7 +402,7 @@ export class UsageService {
       );
     }
 
-    const chainId = this.config.chainId || 11155111;
+    const chainId = this.config.chainId ?? DEFAULT_CHAIN_ID;
     const contracts = getContractAddresses(chainId);
     const verifierAddress = contracts.zkUsageVerifier as `0x${string}`;
 

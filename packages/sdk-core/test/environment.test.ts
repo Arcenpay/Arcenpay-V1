@@ -30,7 +30,7 @@ describe("environment", () => {
     expect(env.services.rpcUrl).toContain("http");
   });
 
-  it("accepts Base Sepolia in non-production despite zero contract placeholders", () => {
+  it("accepts Base Sepolia in non-production with deployed contracts", () => {
     expect(() =>
       validateChainEnvironment(84532, {
         production: false,
@@ -39,10 +39,19 @@ describe("environment", () => {
     ).not.toThrow();
   });
 
-  it("rejects Base Sepolia in production with undeployed contracts", () => {
+  it("accepts Base Sepolia in production with deployed contracts", () => {
     process.env.NODE_ENV = "production";
     expect(() =>
       validateChainEnvironment(84532, {
+        production: true,
+      }),
+    ).not.toThrow();
+  });
+
+  it("rejects Base mainnet in production while contracts are still placeholders", () => {
+    process.env.NODE_ENV = "production";
+    expect(() =>
+      validateChainEnvironment(8453, {
         production: true,
       }),
     ).toThrow(/no deployed contracts/i);

@@ -65,7 +65,7 @@ interface AccessTokenApiResponse {
   token: string;
   company_id: string;
   user_id?: string;
-  expires_at: number;
+  expires_at: string;
 }
 
 export class ArcenClient {
@@ -327,7 +327,7 @@ export class ArcenClient {
     userKeys?: ArcenUserKeys,
     expiresIn = 3600,
   ): Promise<EmbedAccessTokenResponse> {
-    const res = await this.request<{ data: EmbedAccessTokenResponse }>(
+    const res = await this.request<{ data: AccessTokenApiResponse }>(
       'POST',
       '/api/v1/access-tokens',
       {
@@ -343,7 +343,10 @@ export class ArcenClient {
         },
       },
     );
-    return res.data;
+    return {
+      token: res.data.token,
+      expiresAt: res.data.expires_at,
+    };
   }
 }
 

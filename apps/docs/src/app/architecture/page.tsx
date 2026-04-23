@@ -50,7 +50,7 @@ export default function ArchitecturePage() {
 
         <h2 id="contract-map">Contract map</h2>
         <p>
-          Seven contracts form the protocol core. All are deployed on Sepolia ETH (chainId 11155111).
+          Seven contracts form the protocol core. The current live testnet deployments are Ethereum Sepolia (11155111) and Base Sepolia (84532).
           Additional contracts in the repo are currently kept as experimental frozen modules and are
           not part of the launch runtime.
         </p>

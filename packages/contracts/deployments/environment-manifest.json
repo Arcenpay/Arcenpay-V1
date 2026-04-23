@@ -1,0 +1,44 @@
+{
+  "manifestVersion": "2026-03-09.1",
+  "generatedAt": "2026-04-23T10:12:32.956Z",
+  "chains": {
+    "84532": {
+      "chainId": 84532,
+      "chainName": "Base Sepolia",
+      "isTestnet": true,
+      "contracts": {
+        "subscriptionRegistry": "0xF9610c064FFD64255A1d509d17b2Af8733084e50",
+        "autopayModule": "0x69Ac04bFdC045A99A2D31bb141A74da354a94c19",
+        "planFactory": "0x66775Af13C63781AAd28203CC5d3E9eE5d5eB83d",
+        "feeCollector": "0x5F32fBfF19385A78c3F721007758E9924FAD4133",
+        "sessionVault": "0x96BcE2d49e3e4EddBBF3aa07354E66615BC2623c",
+        "zkUsageVerifier": "0x03290b6988F87925A4939d974895bC30981aA90D",
+        "mirrorRegistry": "0xe7E0dFfa82596ee6Ba1755bc25c29376a07236dE"
+      },
+      "services": {
+        "rpcUrl": "https://sepolia.base.org",
+        "subgraphUrl": "",
+        "facilitatorUrl": ""
+      }
+    },
+    "11155111": {
+      "chainId": 11155111,
+      "chainName": "Sepolia",
+      "isTestnet": true,
+      "contracts": {
+        "subscriptionRegistry": "0xE206C519076535A9d24c852093860CFD780908C1",
+        "autopayModule": "0xc82417e378b23AD9Ae73229EF08a4BA7896a4351",
+        "planFactory": "0x4F97E0c2Ac053b735640fEb164a08Cb45ba83db1",
+        "feeCollector": "0xa8A0D3007e5680D387A50C1a1E2Eb0AD092ca396",
+        "sessionVault": "0xd68b9C0a34d61CC3b3F982A5EC6Cc5a5739e46D9",
+        "zkUsageVerifier": "0x1f75d66692416cE880d51Baf6CdcBeE98E5837c0",
+        "mirrorRegistry": "0xC187CD32d569ec0E84B9b378f8E63f3a74afac74"
+      },
+      "services": {
+        "rpcUrl": "https://ethereum-sepolia-rpc.publicnode.com",
+        "subgraphUrl": "",
+        "facilitatorUrl": ""
+      }
+    }
+  }
+}

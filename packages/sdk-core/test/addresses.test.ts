@@ -28,6 +28,7 @@ afterEach(() => {
     "MEAP_CONTRACT_84532_sessionVault",
     "MEAP_CONTRACT_84532_zkUsageVerifier",
     "MEAP_CONTRACT_84532_mirrorRegistry",
+    "MEAP_CONTRACT_8453_planFactory",
   );
   setContractAddresses(11155111, originalSepolia);
   setContractAddresses(84532, originalBaseSepolia);
@@ -51,19 +52,28 @@ describe("addresses", () => {
     expect(addresses.planFactory).toBe(override);
   });
 
+  it("returns configured Base Sepolia addresses", () => {
+    const addresses = getContractAddresses(84532);
+    expect(addresses.subscriptionRegistry).toBeTruthy();
+    expect(addresses.planFactory).toBeTruthy();
+    expect(addresses.subscriptionRegistry).not.toBe(
+      "0x0000000000000000000000000000000000000000",
+    );
+  });
+
   it("throws in production when all core addresses are zero placeholders", () => {
     process.env.NODE_ENV = "production";
-    expect(() => getContractAddresses(84532)).toThrow(
+    expect(() => getContractAddresses(8453)).toThrow(
       /has no deployed contracts/i,
     );
   });
 
   it("does not throw in production when at least one core address is overridden", () => {
     process.env.NODE_ENV = "production";
-    process.env.MEAP_CONTRACT_84532_planFactory =
+    process.env.MEAP_CONTRACT_8453_planFactory =
       "0x2222222222222222222222222222222222222222";
-    expect(() => getContractAddresses(84532)).not.toThrow();
-    const addresses = getContractAddresses(84532);
+    expect(() => getContractAddresses(8453)).not.toThrow();
+    const addresses = getContractAddresses(8453);
     expect(addresses.planFactory).toBe(
       "0x2222222222222222222222222222222222222222",
     );

@@ -7,6 +7,30 @@ import {
   ConsumeEntitlementError,
 } from "@/lib/usage-consume";
 
+function corsHeaders() {
+  return {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "POST,OPTIONS",
+    "Access-Control-Allow-Headers":
+      "Content-Type,Authorization,X-Arcen-Company-Keys,X-Arcen-User-Keys",
+  };
+}
+
+function jsonWithCors(body: unknown, init?: ResponseInit) {
+  const headers = new Headers(init?.headers);
+  for (const [key, value] of Object.entries(corsHeaders())) {
+    headers.set(key, value);
+  }
+  return NextResponse.json(body, { ...init, headers });
+}
+
+function withCors(response: NextResponse) {
+  for (const [key, value] of Object.entries(corsHeaders())) {
+    response.headers.set(key, value);
+  }
+  return response;
+}
+
 function parseKeyHeader(header: string | null): Record<string, string> {
   if (!header) return {};
   const result: Record<string, string> = {};
@@ -20,6 +44,10 @@ function parseKeyHeader(header: string | null): Record<string, string> {
   return result;
 }
 
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 204, headers: corsHeaders() });
+}
+
 export async function POST(req: NextRequest) {
   let body: {
     featureKey?: string;
@@ -30,11 +58,11 @@ export async function POST(req: NextRequest) {
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    return jsonWithCors({ error: "Invalid JSON body" }, { status: 400 });
   }
 
   if (!body.featureKey || body.featureKey.length > 128) {
-    return NextResponse.json(
+    return jsonWithCors(
       { error: "featureKey is required" },
       { status: 400 },
     );
@@ -46,7 +74,7 @@ export async function POST(req: NextRequest) {
       body.traits === null ||
       Array.isArray(body.traits))
   ) {
-    return NextResponse.json(
+    return jsonWithCors(
       { error: "traits must be a plain object" },
       { status: 400 },
     );
@@ -56,7 +84,7 @@ export async function POST(req: NextRequest) {
     body.idempotencyKey !== undefined &&
     (typeof body.idempotencyKey !== "string" || body.idempotencyKey.length > 128)
   ) {
-    return NextResponse.json(
+    return jsonWithCors(
       { error: "idempotencyKey must be a string up to 128 characters" },
       { status: 400 },
     );
@@ -75,7 +103,7 @@ export async function POST(req: NextRequest) {
     const ctx = await requireApiKey(req, {
       rateLimit: { limit: 500, windowMs: 60_000 },
     });
-    if (isApiKeyError(ctx)) return ctx;
+    if (isApiKeyError(ctx)) return withCors(ctx);
 
     teamId = ctx.teamId;
 
@@ -89,7 +117,7 @@ export async function POST(req: NextRequest) {
     };
 
     if (!companyKeys.id && !companyKeys.wallet && !companyKeys.email) {
-      return NextResponse.json(
+      return jsonWithCors(
         { error: "At least one company key (id, wallet, or email) is required" },
         { status: 400 },
       );
@@ -106,14 +134,14 @@ export async function POST(req: NextRequest) {
   } else if (bearerToken) {
     const tokenCtx = await resolveEmbedAccessToken(bearerToken);
     if (!tokenCtx) {
-      return NextResponse.json(
+      return jsonWithCors(
         { error: "Invalid or expired token" },
         { status: 401 },
       );
     }
 
     if (!tokenCtx.companyId) {
-      return NextResponse.json(
+      return jsonWithCors(
         { error: "Company context is required" },
         { status: 400 },
       );
@@ -123,7 +151,7 @@ export async function POST(req: NextRequest) {
     companyKeys = { internalId: tokenCtx.companyId };
     userKeys = tokenCtx.userId ? { internalId: tokenCtx.userId } : undefined;
   } else {
-    return NextResponse.json({ error: "Authorization required" }, { status: 401 });
+    return jsonWithCors({ error: "Authorization required" }, { status: 401 });
   }
 
   try {
@@ -136,10 +164,10 @@ export async function POST(req: NextRequest) {
       idempotencyKey: body.idempotencyKey,
     });
 
-    return NextResponse.json(result);
+    return jsonWithCors(result);
   } catch (error) {
     if (error instanceof ConsumeEntitlementError) {
-      return NextResponse.json(
+      return jsonWithCors(
         { error: error.message },
         { status: error.statusCode },
       );
