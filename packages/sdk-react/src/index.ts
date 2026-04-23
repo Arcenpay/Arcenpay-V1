@@ -63,9 +63,12 @@ export type {
 export { deploySmartAccount } from './lib/zerodev';
 export { revokeAutopayModule } from './lib/zerodev';
 export { sendSmartAccountTransaction } from './lib/zerodev';
+export { updateAutopayConfig, cancelSubscription } from './lib/zerodev';
 export type {
   DeploySmartAccountConfig,
   SmartAccountResult,
   RevokeAutopayConfig,
   SmartAccountTransactionConfig,
+  UpdateAutopayConfigInput,
+  CancelSubscriptionInput,
 } from './lib/zerodev';

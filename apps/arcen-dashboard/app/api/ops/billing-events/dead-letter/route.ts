@@ -38,7 +38,11 @@ const listQuerySchema = z.object({
 });
 
 function shouldTriggerInvoice(eventType: string): boolean {
-  return eventType === "SUBSCRIPTION_RENEWED" || eventType === "CREDIT_ISSUED";
+  return (
+    eventType === "SUBSCRIPTION_MINTED" ||
+    eventType === "SUBSCRIPTION_RENEWED" ||
+    eventType === "CREDIT_ISSUED"
+  );
 }
 
 /**

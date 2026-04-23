@@ -1,4 +1,4 @@
-export function resolveRenewalAmountMicros(input: {
+export function resolveSubscriptionChargeAmountMicros(input: {
   eventAmountPaid?: bigint | null;
   configuredMaxAmount?: bigint | null;
 }): bigint {
@@ -12,6 +12,9 @@ export function resolveRenewalAmountMicros(input: {
 
   return 0n;
 }
+
+// Backward-compatible alias for existing renewal call sites/tests.
+export const resolveRenewalAmountMicros = resolveSubscriptionChargeAmountMicros;
 
 export function microsToDecimalString(amountMicros: bigint): string {
   const isNegative = amountMicros < 0n;

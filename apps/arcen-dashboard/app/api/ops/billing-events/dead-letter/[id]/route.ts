@@ -13,7 +13,11 @@ import { FACILITATOR_URL, FACILITATOR_SECRET } from "@/lib/config";
 type Params = { params: Promise<{ id: string }> };
 
 function shouldTriggerInvoice(eventType: string): boolean {
-  return eventType === "SUBSCRIPTION_RENEWED" || eventType === "CREDIT_ISSUED";
+  return (
+    eventType === "SUBSCRIPTION_MINTED" ||
+    eventType === "SUBSCRIPTION_RENEWED" ||
+    eventType === "CREDIT_ISSUED"
+  );
 }
 
 async function requireAdmin(req: NextRequest) {

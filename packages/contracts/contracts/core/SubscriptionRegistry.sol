@@ -192,6 +192,29 @@ contract SubscriptionRegistry is
     }
 
     /// @inheritdoc ISubscriptionRegistry
+    function changePlan(uint256 tokenId, uint256 newPlanId) external {
+        address owner_ = ownerOf(tokenId);
+        require(
+            msg.sender == owner_ || authorizedBillers[msg.sender],
+            "SubscriptionRegistry: unauthorized"
+        );
+
+        require(_ownerOf(tokenId) != address(0), "SubscriptionRegistry: nonexistent token");
+
+        uint256 currentPlanId = _tokenPlans[tokenId];
+        require(currentPlanId != newPlanId, "SubscriptionRegistry: same plan");
+
+        IPlanFactory.Plan memory newPlan = planFactory.getPlan(newPlanId);
+        require(newPlan.active, "SubscriptionRegistry: plan inactive");
+
+        _tokenPlans[tokenId] = newPlanId;
+        _walletTokens[owner_] = tokenId;
+
+        emit SubscriptionUpdate(tokenId, _expirations[tokenId]);
+        emit SubscriptionPlanChanged(tokenId, currentPlanId, newPlanId, _expirations[tokenId]);
+    }
+
+    /// @inheritdoc ISubscriptionRegistry
     function isValid(uint256 tokenId) external view returns (bool) {
         if (_ownerOf(tokenId) == address(0)) return false;
         return _expirations[tokenId] > block.timestamp;

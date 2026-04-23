@@ -27,6 +27,14 @@ interface ISubscriptionRegistry {
     /// @notice Emitted when a subscription is cancelled
     event SubscriptionCancelled(uint256 indexed tokenId);
 
+    /// @notice Emitted when an existing subscription token switches plans
+    event SubscriptionPlanChanged(
+        uint256 indexed tokenId,
+        uint256 indexed previousPlanId,
+        uint256 indexed newPlanId,
+        uint64 expiration
+    );
+
     /// @notice Emitted on successful billing cycle
     event BillingSuccess(
         uint256 indexed tokenId,
@@ -73,6 +81,11 @@ interface ISubscriptionRegistry {
     /// @notice Cancels a subscription
     /// @param tokenId The token ID to cancel
     function cancel(uint256 tokenId) external;
+
+    /// @notice Changes the active plan for an existing subscription token
+    /// @param tokenId The token ID to update
+    /// @param newPlanId The new plan identifier
+    function changePlan(uint256 tokenId, uint256 newPlanId) external;
 
     /// @notice Returns true if subscription is currently active
     /// @param tokenId The token ID to check

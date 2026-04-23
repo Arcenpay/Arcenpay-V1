@@ -21,6 +21,7 @@ import { sepolia, baseSepolia, base } from "viem/chains";
 import {
     getContractAddresses,
     ERC7579AutopayModuleABI,
+    SubscriptionRegistryABI,
 } from "@arcenpay/sdk";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -71,6 +72,32 @@ export interface SmartAccountTransactionConfig {
     data: `0x${string}`;
     value?: bigint;
     smartAccountAddress?: `0x${string}`;
+    bundlerUrl?: string;
+    paymasterUrl?: string;
+}
+
+export interface UpdateAutopayConfigInput {
+    projectId: string;
+    chainId: number;
+    walletClient: WalletClient;
+    smartAccountAddress: `0x${string}`;
+    merchant: `0x${string}`;
+    maxAmount: bigint;
+    token: `0x${string}`;
+    interval: number;
+    startTime: bigint;
+    planId: bigint;
+    maxTotalAmount?: bigint;
+    bundlerUrl?: string;
+    paymasterUrl?: string;
+}
+
+export interface CancelSubscriptionInput {
+    projectId: string;
+    chainId: number;
+    walletClient: WalletClient;
+    smartAccountAddress: `0x${string}`;
+    tokenId: bigint;
     bundlerUrl?: string;
     paymasterUrl?: string;
 }
@@ -399,4 +426,74 @@ export async function sendSmartAccountTransaction(
         smartAccountAddress: kernelAccount.address,
         txHash,
     };
+}
+
+export async function updateAutopayConfig(
+    config: UpdateAutopayConfigInput,
+): Promise<{
+    smartAccountAddress: `0x${string}`;
+    txHash: `0x${string}`;
+}> {
+    const contracts = getContractAddresses(config.chainId);
+    if (!contracts.autopayModule) {
+        throw new Error("Autopay module address is not configured for this chain.");
+    }
+
+    const data = encodeFunctionData({
+        abi: ERC7579AutopayModuleABI as any,
+        functionName: "updateConfig",
+        args: [
+            {
+                merchant: config.merchant,
+                maxAmount: config.maxAmount,
+                token: config.token,
+                interval: config.interval,
+                startTime: config.startTime,
+                planId: config.planId,
+                maxTotalAmount: config.maxTotalAmount ?? 0n,
+            },
+        ],
+    });
+
+    return sendSmartAccountTransaction({
+        projectId: config.projectId,
+        chainId: config.chainId,
+        walletClient: config.walletClient,
+        smartAccountAddress: config.smartAccountAddress,
+        to: contracts.autopayModule as `0x${string}`,
+        data,
+        bundlerUrl: config.bundlerUrl,
+        paymasterUrl: config.paymasterUrl,
+    });
+}
+
+export async function cancelSubscription(
+    config: CancelSubscriptionInput,
+): Promise<{
+    smartAccountAddress: `0x${string}`;
+    txHash: `0x${string}`;
+}> {
+    const contracts = getContractAddresses(config.chainId);
+    if (!contracts.subscriptionRegistry) {
+        throw new Error(
+            "Subscription registry address is not configured for this chain.",
+        );
+    }
+
+    const data = encodeFunctionData({
+        abi: SubscriptionRegistryABI as any,
+        functionName: "cancelSubscription",
+        args: [config.tokenId],
+    });
+
+    return sendSmartAccountTransaction({
+        projectId: config.projectId,
+        chainId: config.chainId,
+        walletClient: config.walletClient,
+        smartAccountAddress: config.smartAccountAddress,
+        to: contracts.subscriptionRegistry as `0x${string}`,
+        data,
+        bundlerUrl: config.bundlerUrl,
+        paymasterUrl: config.paymasterUrl,
+    });
 }

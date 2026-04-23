@@ -110,7 +110,7 @@ contract ERC7579AutopayModule is IERC7579AutopayModule, ReentrancyGuard, Pausabl
         AutopayConfig memory config = abi.decode(data, (AutopayConfig));
 
         // Validate configuration
-        _validateConfig(config);
+        _validateConfig(config, false);
 
         // Store config
         _configs[msg.sender] = config;
@@ -122,6 +122,36 @@ contract ERC7579AutopayModule is IERC7579AutopayModule, ReentrancyGuard, Pausabl
             config.maxAmount,
             config.token,
             config.interval
+        );
+    }
+
+    /// @inheritdoc IERC7579AutopayModule
+    function updateConfig(AutopayConfig calldata config) external {
+        require(_initialized[msg.sender], "AutopayModule: not initialized");
+
+        AutopayConfig memory nextConfig = config;
+        _validateConfig(nextConfig, true);
+
+        AutopayConfig storage currentConfig = _configs[msg.sender];
+        uint256 previousPlanId = currentConfig.planId;
+
+        currentConfig.merchant = nextConfig.merchant;
+        currentConfig.maxAmount = nextConfig.maxAmount;
+        currentConfig.token = nextConfig.token;
+        currentConfig.interval = nextConfig.interval;
+        currentConfig.startTime = nextConfig.startTime;
+        currentConfig.planId = nextConfig.planId;
+        currentConfig.maxTotalAmount = nextConfig.maxTotalAmount;
+
+        // A new config defines a new lifetime budget window.
+        _totalPulled[msg.sender] = 0;
+
+        emit AutopayConfigUpdated(
+            msg.sender,
+            previousPlanId,
+            nextConfig.planId,
+            nextConfig.maxAmount,
+            nextConfig.interval
         );
     }
 
@@ -343,12 +373,14 @@ contract ERC7579AutopayModule is IERC7579AutopayModule, ReentrancyGuard, Pausabl
     //                    INTERNAL FUNCTIONS
     // ============================================================
 
-    function _validateConfig(AutopayConfig memory config) internal view {
+    function _validateConfig(AutopayConfig memory config, bool allowPastStartTime) internal view {
         require(config.merchant != address(0), "AutopayModule: zero merchant");
         require(config.maxAmount > 0, "AutopayModule: zero maxAmount");
         require(config.token != address(0), "AutopayModule: zero token");
         require(config.interval >= MIN_INTERVAL, "AutopayModule: interval too short");
-        require(config.startTime >= block.timestamp, "AutopayModule: start in past");
+        if (!allowPastStartTime) {
+            require(config.startTime >= block.timestamp, "AutopayModule: start in past");
+        }
 
         // Verify plan exists and is active
         IPlanFactory.Plan memory plan = planFactory.getPlan(config.planId);
@@ -369,6 +401,9 @@ contract ERC7579AutopayModule is IERC7579AutopayModule, ReentrancyGuard, Pausabl
             if (tokenPlanId == planId) {
                 return (walletToken, false);
             }
+
+            subscriptionRegistry.changePlan(walletToken, planId);
+            return (walletToken, false);
         }
 
         tokenId = subscriptionRegistry.mint(account, planId, uint64(_configs[account].interval));

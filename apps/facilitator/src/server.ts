@@ -90,7 +90,7 @@ import {
 } from "./subscription-routing.js";
 import {
   microsToDecimalString,
-  resolveRenewalAmountMicros,
+  resolveSubscriptionChargeAmountMicros,
 } from "./renewal-amount.js";
 
 const app = express();
@@ -137,6 +137,22 @@ const REDIS_PREFIX = process.env.REDIS_PREFIX || "meap";
 const FACILITATOR_SECRET = (process.env.FACILITATOR_SECRET || "").trim();
 const DASHBOARD_URL = (process.env.DASHBOARD_URL || "").replace(/\/$/, "");
 const DASHBOARD_PLAN_RESOLVER_PATH = "/api/internal/catalog/resolve-plan";
+const BILLING_MAINTENANCE_ENABLED =
+  process.env.ENABLE_BILLING_MAINTENANCE_AUTOMATION === "true";
+const BILLING_MAINTENANCE_EXECUTE_DUNNING =
+  process.env.BILLING_MAINTENANCE_EXECUTE_DUNNING === "true";
+const BILLING_MAINTENANCE_INTERVAL_MS = Number(
+  process.env.BILLING_MAINTENANCE_INTERVAL_MS || 15 * 60 * 1000,
+);
+const BILLING_MAINTENANCE_INITIAL_DELAY_MS = Number(
+  process.env.BILLING_MAINTENANCE_INITIAL_DELAY_MS || 30 * 1000,
+);
+const BILLING_MAINTENANCE_TEAM_LIMIT = Number(
+  process.env.BILLING_MAINTENANCE_TEAM_LIMIT || 200,
+);
+const BILLING_MAINTENANCE_LIMIT_PER_TEAM = Number(
+  process.env.BILLING_MAINTENANCE_LIMIT_PER_TEAM || 100,
+);
 const DEFAULT_ERC4337_ENTRYPOINT_V07 =
   "0x0000000071727de22e5e9d8baf0edac6f37da032";
 const PAYMASTER_RPC_URL = (
@@ -1015,7 +1031,7 @@ type SubscriptionSyncJobPayload = {
   teamId?: string | null;
   wallet: string | null;
   onChainPlanId: string | null;
-  event: "minted" | "renewed" | "cancelled";
+  event: "minted" | "renewed" | "plan_changed" | "cancelled";
   occurredAt?: string;
   sourceTxHash?: string;
   sourceTokenId?: string;
@@ -1188,7 +1204,7 @@ async function enqueueSubscriptionSync(input: {
   teamId?: string | null;
   wallet: string | null;
   onChainPlanId: string | null;
-  event: "minted" | "renewed" | "cancelled";
+  event: "minted" | "renewed" | "plan_changed" | "cancelled";
   occurredAt?: string;
   sourceTxHash?: string;
   sourceTokenId?: string;
@@ -1322,10 +1338,130 @@ async function resolveRenewalAmountForEvent(input: {
   }
 
   const config = await resolveAutopayConfigForSubscriber(input.subscriberWallet);
-  return resolveRenewalAmountMicros({
+  return resolveSubscriptionChargeAmountMicros({
     eventAmountPaid: input.eventAmountPaid,
     configuredMaxAmount: config?.maxAmount ?? null,
   });
+}
+
+async function resolveSubscriptionChargeAmountForSubscriber(input: {
+  subscriberWallet: string | null;
+  eventAmountPaid?: bigint | null;
+}): Promise<bigint> {
+  if (input.eventAmountPaid && input.eventAmountPaid > 0n) {
+    return input.eventAmountPaid;
+  }
+
+  if (!input.subscriberWallet) {
+    return 0n;
+  }
+
+  const config = await resolveAutopayConfigForSubscriber(input.subscriberWallet);
+  return resolveSubscriptionChargeAmountMicros({
+    eventAmountPaid: input.eventAmountPaid,
+    configuredMaxAmount: config?.maxAmount ?? null,
+  });
+}
+
+let billingMaintenanceRunInFlight = false;
+let billingMaintenanceLastRunAt: string | null = null;
+let billingMaintenanceLastSuccessAt: string | null = null;
+let billingMaintenanceLastError: string | null = null;
+
+async function triggerDashboardBillingMaintenance(): Promise<void> {
+  if (!DASHBOARD_URL) {
+    throw new Error(
+      "DASHBOARD_URL is required to trigger dashboard billing maintenance.",
+    );
+  }
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (FACILITATOR_SECRET) {
+    headers.Authorization = `Bearer ${FACILITATOR_SECRET}`;
+  }
+
+  const response = await fetch(
+    `${DASHBOARD_URL}/api/internal/billing/maintenance/all`,
+    {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        executeDunning: BILLING_MAINTENANCE_EXECUTE_DUNNING,
+        teamLimit: BILLING_MAINTENANCE_TEAM_LIMIT,
+        limitPerTeam: BILLING_MAINTENANCE_LIMIT_PER_TEAM,
+      }),
+      signal: AbortSignal.timeout(20_000),
+    },
+  );
+
+  if (!response.ok) {
+    const body = await response.text().catch(() => "");
+    throw new Error(
+      `Dashboard billing maintenance failed with HTTP ${response.status}${body ? `: ${body}` : ""}`,
+    );
+  }
+}
+
+function startBillingMaintenanceScheduler() {
+  if (!BILLING_MAINTENANCE_ENABLED) {
+    return;
+  }
+
+  if (!DASHBOARD_URL) {
+    console.warn(
+      "[Facilitator] Billing maintenance automation enabled, but DASHBOARD_URL is not configured.",
+    );
+    return;
+  }
+
+  if (!FACILITATOR_SECRET) {
+    console.warn(
+      "[Facilitator] Billing maintenance automation enabled, but FACILITATOR_SECRET is not configured.",
+    );
+    return;
+  }
+
+  const run = async () => {
+    if (billingMaintenanceRunInFlight) {
+      console.warn(
+        "[Facilitator] Skipping billing maintenance tick because a previous run is still in flight.",
+      );
+      return;
+    }
+
+    billingMaintenanceRunInFlight = true;
+    billingMaintenanceLastRunAt = new Date().toISOString();
+    try {
+      await triggerDashboardBillingMaintenance();
+      billingMaintenanceLastSuccessAt = new Date().toISOString();
+      billingMaintenanceLastError = null;
+      console.log(
+        `[Facilitator] Billing maintenance completed (executeDunning=${BILLING_MAINTENANCE_EXECUTE_DUNNING})`,
+      );
+    } catch (err) {
+      billingMaintenanceLastError =
+        err instanceof Error ? err.message : "unknown error";
+      console.error(
+        "[Facilitator] Billing maintenance automation failed:",
+        err,
+      );
+    } finally {
+      billingMaintenanceRunInFlight = false;
+    }
+  };
+
+  setTimeout(() => {
+    void run();
+    setInterval(() => {
+      void run();
+    }, BILLING_MAINTENANCE_INTERVAL_MS);
+  }, BILLING_MAINTENANCE_INITIAL_DELAY_MS);
+
+  console.log(
+    `[Facilitator] Billing maintenance automation active — interval=${BILLING_MAINTENANCE_INTERVAL_MS}ms executeDunning=${BILLING_MAINTENANCE_EXECUTE_DUNNING}`,
+  );
 }
 
 // Optional: Lit Protocol service
@@ -1649,6 +1785,18 @@ eventListener.on("minted", async (event) => {
     `[Facilitator] 🎉 New subscriber: ${event.subscriber} (Plan ${event.planId})`,
   );
   const tokenId = event.tokenId.toString();
+  const mintedSubscriberEmail = event.subscriber
+    ? await lookupSubscriberEmail(event.subscriber)
+    : null;
+  const mintedAmountMicros = await resolveSubscriptionChargeAmountForSubscriber({
+    subscriberWallet: event.subscriber ?? null,
+  });
+  const mintedAmount = microsToDecimalString(mintedAmountMicros);
+  if (mintedAmountMicros <= 0n) {
+    console.warn(
+      `[Facilitator] Unable to resolve non-zero activation amount for tokenId=${tokenId}`,
+    );
+  }
   const onChainPlanId = event.planId?.toString() ?? null;
   const occurredAt = event.timestamp
     ? new Date(Number(event.timestamp) * 1000).toISOString()
@@ -1681,10 +1829,14 @@ eventListener.on("minted", async (event) => {
       tokenId,
       planId: onChainPlanId,
       subscriber: event.subscriber,
+      customerWallet: event.subscriber,
+      amount: mintedAmount,
       txHash: event.transactionHash,
       timestamp: event.timestamp?.toString(),
+      ...(mintedSubscriberEmail && { email: mintedSubscriberEmail }),
+      description: "Subscription activation",
     },
-    false,
+    true,
     event.timestamp ? Number(event.timestamp) * 1000 : undefined,
     {
       teamId: mintedPlanScope?.teamId ?? null,
@@ -1926,6 +2078,53 @@ eventListener.on("renewed", async (event) => {
       }
     }
   }
+});
+
+eventListener.on("plan_changed", async (event) => {
+  console.log(
+    `[Facilitator] 🔀 Plan changed: tokenId=${event.tokenId} ${event.previousPlanId ?? "?"} -> ${event.planId ?? "?"}`,
+  );
+
+  const tokenId = event.tokenId.toString();
+  const existingRouteState = await subscriptionRouteStore.read(tokenId);
+  const subscriberWallet =
+    existingRouteState?.wallet || (await getTokenOwner(event.tokenId));
+  const onChainPlanId = event.planId?.toString() ?? null;
+  const planScope = onChainPlanId
+    ? await resolvePlanScopeFromDashboard(onChainPlanId).catch((err) => {
+        console.error(
+          "[Facilitator] Failed to resolve team for plan-changed subscription:",
+          err,
+        );
+        return null;
+      })
+    : null;
+  const teamId = existingRouteState?.teamId || planScope?.teamId || null;
+
+  if (subscriberWallet) {
+    await subscriptionRouteStore.write(tokenId, {
+      wallet: subscriberWallet.toLowerCase(),
+      teamId: teamId ?? null,
+      onChainPlanId,
+      updatedAt: event.timestamp
+        ? new Date(Number(event.timestamp) * 1000).toISOString()
+        : new Date().toISOString(),
+    });
+  }
+
+  enqueueSubscriptionSync({
+    teamId: teamId ?? null,
+    wallet: subscriberWallet,
+    onChainPlanId,
+    event: "plan_changed",
+    occurredAt: event.timestamp
+      ? new Date(Number(event.timestamp) * 1000).toISOString()
+      : undefined,
+    sourceTxHash: event.transactionHash,
+    sourceTokenId: tokenId,
+  }).catch((err) =>
+    console.error("[Facilitator] sync-subscription (plan_changed) failed:", err),
+  );
 });
 
 eventListener.on("cancelled", async (event) => {
@@ -2236,6 +2435,8 @@ if (process.env.ENABLE_BILLING_KEEPER === "true" && process.env.PRIVATE_KEY) {
   }
 }
 
+startBillingMaintenanceScheduler();
+
 // ============================================================
 //  Health Check
 // ============================================================
@@ -2299,6 +2500,19 @@ app.get("/health", async (_req, res) => {
     },
     replayProtection: replayProtection.getStats(),
     proofRuntime: usageService.getProofRuntimeConfig(),
+    billingMaintenance: {
+      enabled: BILLING_MAINTENANCE_ENABLED,
+      executeDunning: BILLING_MAINTENANCE_EXECUTE_DUNNING,
+      intervalMs: BILLING_MAINTENANCE_INTERVAL_MS,
+      initialDelayMs: BILLING_MAINTENANCE_INITIAL_DELAY_MS,
+      teamLimit: BILLING_MAINTENANCE_TEAM_LIMIT,
+      limitPerTeam: BILLING_MAINTENANCE_LIMIT_PER_TEAM,
+      dashboardUrlConfigured: Boolean(DASHBOARD_URL),
+      inFlight: billingMaintenanceRunInFlight,
+      lastRunAt: billingMaintenanceLastRunAt,
+      lastSuccessAt: billingMaintenanceLastSuccessAt,
+      lastError: billingMaintenanceLastError,
+    },
     slo: (() => {
       const billingStats = jobQueue.getStats("billing");
       const webhookStats = jobQueue.getStats("webhooks");

@@ -779,6 +779,116 @@ contract MEAPProtocolTest is Test {
         );
     }
 
+    function test_subscriptionRegistry_changePlan_preservesExpiry() public {
+        vm.startPrank(provider);
+        uint256 starterPlanId = planFactory.createPlan(
+            "Starter Plan",
+            "starter",
+            PLAN_PRICE,
+            MONTHLY,
+            address(usdc),
+            "ipfs://starter"
+        );
+        uint256 proPlanId = planFactory.createPlan(
+            "Pro Plan",
+            "pro",
+            20 * 10 ** 6,
+            MONTHLY,
+            address(usdc),
+            "ipfs://pro"
+        );
+        vm.stopPrank();
+
+        uint256 tokenId = registry.mint(subscriber, starterPlanId, DURATION);
+        uint64 expiryBefore = registry.expiresAt(tokenId);
+
+        vm.prank(subscriber);
+        registry.changePlan(tokenId, proPlanId);
+
+        (uint256 changedPlanId,) = registry.getPlanFeatures(tokenId);
+        uint64 expiryAfter = registry.expiresAt(tokenId);
+
+        assertEq(changedPlanId, proPlanId, "plan should switch in-place");
+        assertEq(expiryAfter, expiryBefore, "plan change must preserve expiry");
+        assertEq(registry.getWalletSubscription(subscriber), tokenId, "wallet should retain same token");
+    }
+
+    function test_autopayUpdateConfig_reusesExistingTokenWhenPlanChanges() public {
+        vm.startPrank(provider);
+        uint256 starterPlanId = planFactory.createPlan(
+            "Starter Plan",
+            "starter",
+            PLAN_PRICE,
+            MONTHLY,
+            address(usdc),
+            "ipfs://starter"
+        );
+        uint256 proPlanId = planFactory.createPlan(
+            "Pro Plan",
+            "pro",
+            20 * 10 ** 6,
+            MONTHLY,
+            address(usdc),
+            "ipfs://pro"
+        );
+        vm.stopPrank();
+
+        vm.prank(subscriber);
+        usdc.approve(address(autopayModule), type(uint256).max);
+
+        uint64 startTime = uint64(block.timestamp + 5);
+        IERC7579AutopayModule.AutopayConfig memory starterConfig = IERC7579AutopayModule
+            .AutopayConfig({
+                merchant: provider,
+                maxAmount: PLAN_PRICE,
+                token: address(usdc),
+                interval: MONTHLY,
+                startTime: startTime,
+                planId: starterPlanId,
+                maxTotalAmount: 0
+            });
+
+        vm.prank(subscriber);
+        autopayModule.onInstall(abi.encode(starterConfig));
+
+        vm.warp(startTime + 1);
+        vm.prank(provider);
+        autopayModule.execute(subscriber, PLAN_PRICE);
+
+        uint256 tokenId = registry.getWalletSubscription(subscriber);
+        uint64 expiryAfterFirstBilling = registry.expiresAt(tokenId);
+
+        IERC7579AutopayModule.AutopayConfig memory proConfig = IERC7579AutopayModule
+            .AutopayConfig({
+                merchant: provider,
+                maxAmount: 20 * 10 ** 6,
+                token: address(usdc),
+                interval: MONTHLY,
+                startTime: startTime,
+                planId: proPlanId,
+                maxTotalAmount: 0
+            });
+
+        vm.prank(subscriber);
+        autopayModule.updateConfig(proConfig);
+
+        vm.warp(block.timestamp + MONTHLY);
+        vm.prank(provider);
+        autopayModule.execute(subscriber, 20 * 10 ** 6);
+
+        uint256 walletTokenAfterChange = registry.getWalletSubscription(subscriber);
+        (uint256 activePlanId,) = registry.getPlanFeatures(walletTokenAfterChange);
+        uint64 expiryAfterSecondBilling = registry.expiresAt(walletTokenAfterChange);
+
+        assertEq(walletTokenAfterChange, tokenId, "plan change should reuse existing subscription token");
+        assertEq(activePlanId, proPlanId, "renewal should switch the token to the new plan");
+        assertEq(
+            expiryAfterSecondBilling,
+            expiryAfterFirstBilling + MONTHLY,
+            "renewal after plan change should preserve cadence"
+        );
+    }
+
     // ============================================================
     //          SECURITY FIX: MirrorRegistry trustedSources
     // ============================================================

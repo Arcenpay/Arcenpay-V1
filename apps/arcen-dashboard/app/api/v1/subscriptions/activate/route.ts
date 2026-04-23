@@ -42,18 +42,14 @@ import {
   resolveCompany,
   type CompanyKeys,
 } from "@/lib/flag-engine";
-import { deliverWebhook } from "@/lib/deliver-webhook";
 import { resolveEmbedAccessToken } from "@/lib/embed-access-token";
 import { getSession } from "@/lib/auth.server";
 import { resolveDashboardSessionIdentityDefaults } from "@/lib/dashboard-session-identity";
+import { resolveBillingRecipientEmail } from "@/lib/billing-events";
 import {
-  ingestBillingEvent,
-  resolveBillingRecipientEmail,
-} from "@/lib/billing-events";
-import {
-  recordSuccessfulPayment,
-  upsertSubscriptionLedgerState,
-} from "@/lib/billing-ledger";
+  enqueueSubscriptionActivationRecovery,
+  processBillingRecoveryTask,
+} from "@/lib/billing-recovery";
 
 const CHAIN_MAP: Record<number, Chain> = {
   11155111: sepolia,
@@ -487,60 +483,14 @@ export async function POST(req: NextRequest) {
       functionName: "getWalletSubscription",
       args: [paymentAccount],
     })) as bigint;
-
-    await db.arcenCompany.update({
-      where: { id: company.id },
-      data: {
-        walletAddress: paymentAccount,
-        activePlanId: catalogPlan.id,
-      },
-    });
-
-    try {
-      const ledgerOccurredAt = new Date();
-      const subscriptionState = await upsertSubscriptionLedgerState({
-        teamId,
-        companyId: company.id,
-        walletAddress: paymentAccount,
-        status: "ACTIVE",
-        catalogPlanId: catalogPlan.id,
-        onChainPlanId: onChainPlanId.toString(),
-        onChainTokenId: tokenId.toString(),
-        lastEvent: "subscription.minted",
-        lastEventAt: ledgerOccurredAt,
-        lastSourceTxHash: txHash,
-        metadata: {
-          source: "subscription.activate",
-        },
-      });
-
-      await recordSuccessfulPayment({
-        idempotencyKey: `payment:subscription.activate:${txHash}`,
-        teamId,
-        companyId: company.id,
-        walletAddress: paymentAccount,
-        subscriptionStateId: subscriptionState?.id,
-        kind: "SUBSCRIPTION_ACTIVATION",
-        amount: Number(chargeAmount) / 1e6,
-        currency: "USDC",
-        payerWallet: paymentAccount,
-        recipientWallet: merchantAddress,
-        acceptedToken: catalogPlan.acceptedToken ?? null,
-        txHash,
-        occurredAt: ledgerOccurredAt,
-        settledAt: ledgerOccurredAt,
-        metadata: {
-          tokenId: tokenId.toString(),
-          onChainPlanId: onChainPlanId.toString(),
-          source: "subscription.activate",
-        },
-      });
-    } catch (ledgerError) {
-      console.error(
-        "[subscriptions/activate] Ledger write failed after successful charge:",
-        ledgerError,
-      );
-    }
+    const expiresAt = (await publicClient.readContract({
+      address: subscriptionRegistryAddress,
+      abi: SubscriptionRegistryABI,
+      functionName: "expiresAt",
+      args: [tokenId],
+    })) as bigint;
+    const currentPeriodEnd =
+      expiresAt > 0n ? new Date(Number(expiresAt) * 1000) : null;
 
     const subscriberEmail = await resolveBillingRecipientEmail({
       teamId,
@@ -569,44 +519,29 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    try {
-      await ingestBillingEvent({
-        teamId,
-        eventType: "SUBSCRIPTION_MINTED",
-        eventName: "subscription.minted",
-        idempotencyKey: `subscription.minted:${txHash}`,
-        source: "subscription.activate",
-        occurredAt: new Date(),
-        triggerInvoice: true,
-        payload: {
-          tokenId: tokenId.toString(),
-          planId: catalogPlan.id,
-          onChainPlanId: onChainPlanId.toString(),
-          companyId: company.id,
-          userId: embedTokenContext?.userId ?? null,
-          customerWallet: paymentAccount,
-          subscriber: paymentAccount,
-          amount: Number(chargeAmount) / 1e6,
-          txHash,
-          description: `Subscription activation — ${catalogPlan.name}`,
-          ...(subscriberEmail ? { email: subscriberEmail } : {}),
-        },
-      });
-    } catch (billingError) {
-      console.error(
-        "[subscriptions/activate] Billing event ingestion failed:",
-        billingError,
-      );
-    }
-
-    deliverWebhook(teamId, "company.plan.changed", {
+    const recoveryTask = await enqueueSubscriptionActivationRecovery({
+      teamId,
       companyId: company.id,
-      planId: catalogPlan.id,
-      planName: catalogPlan.name,
-      previousPlanId: previousCompany?.activePlanId ?? null,
+      walletAddress: paymentAccount,
+      catalogPlanId: catalogPlan.id,
+      catalogPlanName: catalogPlan.name,
+      onChainPlanId: onChainPlanId.toString(),
+      onChainTokenId: tokenId.toString(),
+      expiration: expiresAt.toString(),
       txHash,
-      source: "subscription.activate",
-    }).catch(() => {});
+      amount: Number(chargeAmount) / 1e6,
+      currency: "USDC",
+      merchantAddress,
+      acceptedToken: catalogPlan.acceptedToken ?? null,
+      subscriberEmail,
+      occurredAt: new Date(),
+      previousPlanId: previousCompany?.activePlanId ?? null,
+    });
+
+    const recoveryResult = await processBillingRecoveryTask({
+      taskId: recoveryTask.id,
+    });
+    const recoveryPending = !recoveryResult.ok;
 
     return NextResponse.json(
       {
@@ -616,9 +551,14 @@ export async function POST(req: NextRequest) {
           companyId: company.id,
           planId: catalogPlan.id,
           paymentAccount,
+          recoveryTaskId: recoveryTask.id,
+          recoveryPending,
         },
       },
-      { headers: corsHeaders() },
+      {
+        status: recoveryPending ? 202 : 200,
+        headers: corsHeaders(),
+      },
     );
   } catch (error) {
     const message =

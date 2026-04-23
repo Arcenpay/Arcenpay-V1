@@ -8,13 +8,14 @@ import { createPublicClient, http, type Log } from 'viem';
 import { sepolia, baseSepolia, base } from 'viem/chains';
 import { SubscriptionRegistryABI, getContractAddresses } from '@arcenpay/sdk';
 
-export type SubscriptionEventType = 'minted' | 'renewed' | 'cancelled';
+export type SubscriptionEventType = 'minted' | 'renewed' | 'cancelled' | 'plan_changed';
 
 export interface SubscriptionEventData {
     type: SubscriptionEventType;
     tokenId: bigint;
     subscriber?: string;
     planId?: bigint;
+    previousPlanId?: bigint;
     expiration?: bigint;
     amountPaid?: bigint;
     transactionHash: string;
@@ -37,6 +38,7 @@ const CHAIN_MAP: Record<number, any> = {
  *  - SubscriptionMinted(subscriber, tokenId, planId, expiration)
  *  - SubscriptionRenewed(tokenId, newExpiration, amountPaid)
  *  - SubscriptionCancelled(tokenId)
+ *  - SubscriptionPlanChanged(tokenId, previousPlanId, newPlanId, expiration)
  *
  * PRD §9.1 — On-Chain Event Listeners
  */
@@ -116,8 +118,8 @@ export class EventListenerService {
             const addr = this.registryAddress as `0x${string}`;
             const from = this.lastBlock + 1n;
 
-            // Fetch all 3 event types in parallel
-            const [mintedLogs, renewedLogs, cancelledLogs] = await Promise.all([
+            // Fetch all subscription lifecycle event types in parallel
+            const [mintedLogs, renewedLogs, cancelledLogs, planChangedLogs] = await Promise.all([
                 this.publicClient.getLogs({
                     address: addr,
                     event: {
@@ -159,6 +161,21 @@ export class EventListenerService {
                     fromBlock: from,
                     toBlock: currentBlock,
                 }),
+                this.publicClient.getLogs({
+                    address: addr,
+                    event: {
+                        type: 'event',
+                        name: 'SubscriptionPlanChanged',
+                        inputs: [
+                            { name: 'tokenId', type: 'uint256', indexed: true },
+                            { name: 'previousPlanId', type: 'uint256', indexed: true },
+                            { name: 'newPlanId', type: 'uint256', indexed: true },
+                            { name: 'expiration', type: 'uint64', indexed: false },
+                        ],
+                    },
+                    fromBlock: from,
+                    toBlock: currentBlock,
+                }),
             ]);
 
             // Process minted events
@@ -193,6 +210,20 @@ export class EventListenerService {
                 await this.emit({
                     type: 'cancelled',
                     tokenId: (log as any).args.tokenId,
+                    transactionHash: log.transactionHash,
+                    blockNumber: log.blockNumber,
+                    timestamp: Date.now(),
+                });
+            }
+
+            // Process plan-changed events
+            for (const log of planChangedLogs) {
+                await this.emit({
+                    type: 'plan_changed',
+                    tokenId: (log as any).args.tokenId,
+                    planId: (log as any).args.newPlanId,
+                    previousPlanId: (log as any).args.previousPlanId,
+                    expiration: (log as any).args.expiration,
                     transactionHash: log.transactionHash,
                     blockNumber: log.blockNumber,
                     timestamp: Date.now(),

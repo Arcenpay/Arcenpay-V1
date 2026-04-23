@@ -1,5 +1,6 @@
 import { getBillingReconciliationSummary } from "@/lib/billing-reconciliation";
 import { runBillingDunningSweep } from "@/lib/billing-dunning";
+import { processPendingBillingRecoveryTasks } from "@/lib/billing-recovery";
 import { db } from "@/lib/db";
 
 export async function runBillingMaintenance(input: {
@@ -13,6 +14,12 @@ export async function runBillingMaintenance(input: {
   const reconciliationBefore = await getBillingReconciliationSummary({
     teamId: input.teamId,
     now,
+  });
+
+  const recovery = await processPendingBillingRecoveryTasks({
+    teamId: input.teamId,
+    now,
+    limit: input.limit ?? 100,
   });
 
   const dunning =
@@ -40,6 +47,7 @@ export async function runBillingMaintenance(input: {
     teamId: input.teamId,
     executeDunning: Boolean(input.executeDunning),
     reconciliationBefore,
+    recovery,
     dunning,
     reconciliationAfter,
   };
@@ -59,6 +67,7 @@ export async function runBillingMaintenanceForAllTeams(input?: {
         { invoices: { some: {} } },
         { billingEvents: { some: {} } },
         { subscriptionStates: { some: {} } },
+        { billingRecoveryTasks: { some: {} } },
       ],
     },
     orderBy: { createdAt: "asc" },

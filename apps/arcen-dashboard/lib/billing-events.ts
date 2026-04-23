@@ -151,6 +151,9 @@ export async function createIssuedChargeInvoice(
       subtotal: toSix(input.amount),
       taxTotal: toSix(0),
       total: toSix(input.amount),
+      amountPaid: toSix(0),
+      amountCredited: toSix(0),
+      amountOutstanding: toSix(input.amount),
       issuedAt: input.issuedAt ?? new Date(),
       planId: input.planId ?? undefined,
       metadata: toPrismaJson(input.metadata ?? {}),
@@ -255,6 +258,26 @@ async function processStoredBillingEvent(
       ? (event.payload as Record<string, unknown>)
       : {};
 
+  const resolveExpirationDate = () => {
+    const rawExpiration = payload.expiration;
+    if (
+      typeof rawExpiration === "number" &&
+      Number.isFinite(rawExpiration) &&
+      rawExpiration > 0
+    ) {
+      return new Date(rawExpiration * 1000);
+    }
+
+    if (typeof rawExpiration === "string" && rawExpiration.trim()) {
+      const asNumber = Number(rawExpiration);
+      if (Number.isFinite(asNumber) && asNumber > 0) {
+        return new Date(asNumber * 1000);
+      }
+    }
+
+    return null;
+  };
+
   const occurredAtFromPayload =
     payload._event &&
     typeof payload._event === "object" &&
@@ -313,11 +336,12 @@ async function processStoredBillingEvent(
     typeof payload.tokenId === "string" ? payload.tokenId : null;
   const amount = Number(payload.amount ?? 0);
   const occurredAt = options.occurredAt ?? occurredAtFromPayload ?? new Date();
+  const currentPeriodEnd = resolveExpirationDate();
 
   if (
-    event.eventType === "SUBSCRIPTION_RENEWED" &&
-    Number.isFinite(amount) &&
-    amount > 0
+    (event.eventType === "SUBSCRIPTION_MINTED" ||
+      event.eventType === "SUBSCRIPTION_RENEWED") &&
+    (customerWallet || companyId)
   ) {
     const subscriptionState = await upsertSubscriptionLedgerState({
       teamId: event.teamId,
@@ -327,6 +351,8 @@ async function processStoredBillingEvent(
       catalogPlanId,
       onChainPlanId,
       onChainTokenId,
+      currentPeriodStart: occurredAt,
+      currentPeriodEnd,
       cancelAtPeriodEnd: false,
       cancelledAt: null,
       pastDueAt: null,
@@ -340,27 +366,32 @@ async function processStoredBillingEvent(
       },
     });
 
-    await recordSuccessfulPayment({
-      idempotencyKey: `payment:${event.idempotencyKey}`,
-      teamId: event.teamId,
-      companyId,
-      walletAddress: customerWallet,
-      invoiceId,
-      subscriptionStateId: subscriptionState?.id,
-      kind: "SUBSCRIPTION_RENEWAL",
-      amount,
-      currency: "USDC",
-      payerWallet: customerWallet,
-      txHash: typeof payload.txHash === "string" ? payload.txHash : null,
-      occurredAt,
-      settledAt: occurredAt,
-      metadata: {
-        source: "billing-event",
-        billingEventId: event.id,
-        canonicalEventName: options.canonicalEventName,
-        ...payload,
-      },
-    });
+    if (Number.isFinite(amount) && amount > 0) {
+      await recordSuccessfulPayment({
+        idempotencyKey: `payment:${event.idempotencyKey}`,
+        teamId: event.teamId,
+        companyId,
+        walletAddress: customerWallet,
+        invoiceId,
+        subscriptionStateId: subscriptionState?.id,
+        kind:
+          event.eventType === "SUBSCRIPTION_MINTED"
+            ? "SUBSCRIPTION_ACTIVATION"
+            : "SUBSCRIPTION_RENEWAL",
+        amount,
+        currency: "USDC",
+        payerWallet: customerWallet,
+        txHash: typeof payload.txHash === "string" ? payload.txHash : null,
+        occurredAt,
+        settledAt: occurredAt,
+        metadata: {
+          source: "billing-event",
+          billingEventId: event.id,
+          canonicalEventName: options.canonicalEventName,
+          ...payload,
+        },
+      });
+    }
   }
 
   if (event.eventType === "PAYMENT_FAILED") {

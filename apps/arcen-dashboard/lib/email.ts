@@ -7,8 +7,8 @@
 import { Resend } from "resend";
 import { RESEND_API_KEY, EMAIL_FROM, APP_URL } from "@/lib/config";
 
-const resend = new Resend(RESEND_API_KEY);
 const FROM = EMAIL_FROM;
+let resendClient: Resend | null = null;
 
 export function isEmailDeliveryConfigured(): boolean {
   return Boolean(RESEND_API_KEY?.trim() && FROM?.trim());
@@ -23,14 +23,20 @@ function requireEmailConfig() {
   }
 }
 
+function getResendClient(): Resend {
+  requireEmailConfig();
+  if (!resendClient) {
+    resendClient = new Resend(RESEND_API_KEY);
+  }
+  return resendClient;
+}
+
 async function sendWithResend(input: {
   to: string;
   subject: string;
   html: string;
 }) {
-  requireEmailConfig();
-
-  const result = await resend.emails.send({
+  const result = await getResendClient().emails.send({
     from: FROM,
     to: input.to,
     subject: input.subject,

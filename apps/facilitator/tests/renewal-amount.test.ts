@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   microsToDecimalString,
+  resolveSubscriptionChargeAmountMicros,
   resolveRenewalAmountMicros,
 } from "../src/renewal-amount.js";
 
@@ -21,6 +22,14 @@ test("falls back to configured maxAmount when renewed events report zero", () =>
   });
 
   assert.equal(amount, 4_200_000n);
+});
+
+test("uses configured maxAmount for minted subscription charges when no event amount exists", () => {
+  const amount = resolveSubscriptionChargeAmountMicros({
+    configuredMaxAmount: 7_500_000n,
+  });
+
+  assert.equal(amount, 7_500_000n);
 });
 
 test("formats micros as a trimmed decimal string", () => {

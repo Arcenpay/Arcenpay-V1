@@ -13,6 +13,7 @@ export async function getBillingReconciliationSummary(input: {
     failedPaymentsWithoutPastDueRows,
     renewalEvents,
     paymentRows,
+    pendingRecoveryTasks,
   ] = await Promise.all([
     db.invoice.findMany({
       where: {
@@ -90,6 +91,22 @@ export async function getBillingReconciliationSummary(input: {
       take: 1000,
       orderBy: { createdAt: "desc" },
     }),
+    db.billingRecoveryTask.findMany({
+      where: {
+        teamId: input.teamId,
+        status: { in: ["PENDING", "FAILED"] },
+      },
+      select: {
+        id: true,
+        kind: true,
+        status: true,
+        txHash: true,
+        lastError: true,
+        nextAttemptAt: true,
+      },
+      take: 50,
+      orderBy: [{ createdAt: "asc" }, { updatedAt: "asc" }],
+    }),
   ]);
 
   const paymentKeys = new Set(paymentRows.map((row) => row.idempotencyKey));
@@ -112,6 +129,7 @@ export async function getBillingReconciliationSummary(input: {
       failedPaymentsWithoutPastDueState:
         failedPaymentsWithoutPastDueRows.length,
       renewalEventsWithoutPayment: renewalEventsWithoutPaymentRows.length,
+      pendingRecoveryTasks: pendingRecoveryTasks.length,
     },
     samples: {
       paidInvoicesWithoutPayment: paidInvoicesWithoutPaymentRows,
@@ -120,6 +138,7 @@ export async function getBillingReconciliationSummary(input: {
       pastDueBeyondGrace: pastDueBeyondGraceRows,
       failedPaymentsWithoutPastDueState: failedPaymentsWithoutPastDueRows,
       renewalEventsWithoutPayment: renewalEventsWithoutPaymentRows,
+      pendingRecoveryTasks,
     },
   };
 }

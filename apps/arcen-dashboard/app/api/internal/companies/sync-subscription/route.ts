@@ -9,7 +9,7 @@
  * Body:
  *   wallet        — subscriber wallet address
  *   onChainPlanId — the planId from PlanFactory.sol (null for cancellation)
- *   event         — 'minted' | 'renewed' | 'cancelled'
+ *   event         — 'minted' | 'renewed' | 'plan_changed' | 'cancelled'
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -29,7 +29,7 @@ const bodySchema = z.object({
   teamId: z.string().min(1),
   wallet: z.string().regex(/^0x[0-9a-fA-F]{40}$/i),
   onChainPlanId: z.string().nullable(),
-  event: z.enum(["minted", "renewed", "cancelled"]),
+  event: z.enum(["minted", "renewed", "plan_changed", "cancelled"]),
   occurredAt: z.coerce.date().optional(),
   sourceTxHash: z
     .string()
@@ -41,7 +41,7 @@ const bodySchema = z.object({
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["onChainPlanId"],
-      message: "onChainPlanId is required for minted and renewed events.",
+      message: "onChainPlanId is required for minted, renewed, and plan_changed events.",
     });
   }
 });
@@ -202,7 +202,7 @@ export async function PATCH(req: NextRequest) {
     });
   }
 
-  // minted | renewed — resolve the on-chain plan to our internal plan
+  // minted | renewed | plan_changed — resolve the on-chain plan to our internal plan
   const plan = await db.catalogPlan.findFirst({
     where: { onChainPlanId, teamId: company.teamId },
     select: { id: true },
@@ -242,7 +242,12 @@ export async function PATCH(req: NextRequest) {
     cancelledAt: null,
     pastDueAt: null,
     graceEndsAt: null,
-    lastEvent: event === "minted" ? "subscription.minted" : "subscription.renewed",
+    lastEvent:
+      event === "minted"
+        ? "subscription.minted"
+        : event === "renewed"
+          ? "subscription.renewed"
+          : "subscription.plan_changed",
     lastEventAt: occurredAt ?? new Date(),
     lastSourceTxHash: sourceTxHash ?? null,
     metadata: {

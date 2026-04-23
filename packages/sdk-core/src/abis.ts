@@ -37,6 +37,16 @@ export const SubscriptionRegistryABI = [
   },
   {
     type: "function",
+    name: "changePlan",
+    inputs: [
+      { name: "tokenId", type: "uint256" },
+      { name: "newPlanId", type: "uint256" },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
     name: "isValid",
     inputs: [{ name: "tokenId", type: "uint256" }],
     outputs: [{ name: "", type: "bool" }],
@@ -121,6 +131,16 @@ export const SubscriptionRegistryABI = [
     type: "event",
     name: "SubscriptionCancelled",
     inputs: [{ name: "tokenId", type: "uint256", indexed: true }],
+  },
+  {
+    type: "event",
+    name: "SubscriptionPlanChanged",
+    inputs: [
+      { name: "tokenId", type: "uint256", indexed: true },
+      { name: "previousPlanId", type: "uint256", indexed: true },
+      { name: "newPlanId", type: "uint256", indexed: true },
+      { name: "expiration", type: "uint64", indexed: false },
+    ],
   },
   {
     type: "event",
@@ -297,10 +317,32 @@ export const ERC7579AutopayModuleABI = [
           { name: "interval", type: "uint32" },
           { name: "startTime", type: "uint64" },
           { name: "planId", type: "uint256" },
+          { name: "maxTotalAmount", type: "uint256" },
         ],
       },
     ],
     stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "updateConfig",
+    inputs: [
+      {
+        name: "config",
+        type: "tuple",
+        components: [
+          { name: "merchant", type: "address" },
+          { name: "maxAmount", type: "uint256" },
+          { name: "token", type: "address" },
+          { name: "interval", type: "uint32" },
+          { name: "startTime", type: "uint64" },
+          { name: "planId", type: "uint256" },
+          { name: "maxTotalAmount", type: "uint256" },
+        ],
+      },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
   },
   {
     type: "function",
@@ -324,6 +366,17 @@ export const ERC7579AutopayModuleABI = [
       { name: "merchant", type: "address", indexed: true },
       { name: "maxAmount", type: "uint256", indexed: false },
       { name: "token", type: "address", indexed: false },
+      { name: "interval", type: "uint32", indexed: false },
+    ],
+  },
+  {
+    type: "event",
+    name: "AutopayConfigUpdated",
+    inputs: [
+      { name: "account", type: "address", indexed: true },
+      { name: "previousPlanId", type: "uint256", indexed: true },
+      { name: "newPlanId", type: "uint256", indexed: true },
+      { name: "maxAmount", type: "uint256", indexed: false },
       { name: "interval", type: "uint32", indexed: false },
     ],
   },

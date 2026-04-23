@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { toPrismaJson } from "@/lib/prisma-json";
 import { toSix } from "@/lib/invoices";
+import { applyInvoicePayment } from "@/lib/billing-balances";
 
 function normalizeWallet(value?: string | null): string | null {
   return value?.trim() ? value.trim().toLowerCase() : null;
@@ -49,7 +50,11 @@ export async function upsertSubscriptionLedgerState(input: {
   const company = await resolveCompany(input);
   if (!company) return null;
 
-  return db.subscriptionState.upsert({
+  const nextCatalogPlanId =
+    input.catalogPlanId !== undefined
+      ? input.catalogPlanId
+      : company.activePlanId ?? null;
+  const subscriptionState = await db.subscriptionState.upsert({
     where: { companyId: company.id },
     update: {
       walletAddress: normalizeWallet(input.walletAddress) ?? company.walletAddress ?? null,
@@ -81,7 +86,7 @@ export async function upsertSubscriptionLedgerState(input: {
       companyId: company.id,
       walletAddress: normalizeWallet(input.walletAddress) ?? company.walletAddress ?? null,
       status: input.status,
-      catalogPlanId: input.catalogPlanId ?? company.activePlanId ?? null,
+      catalogPlanId: nextCatalogPlanId,
       onChainPlanId: input.onChainPlanId ?? null,
       onChainTokenId: input.onChainTokenId ?? null,
       currentPeriodStart: input.currentPeriodStart ?? null,
@@ -96,6 +101,23 @@ export async function upsertSubscriptionLedgerState(input: {
       ...(input.metadata ? { metadata: toPrismaJson(input.metadata) } : {}),
     },
   });
+
+  if (
+    input.status === "ACTIVE" ||
+    input.status === "PAST_DUE"
+  ) {
+    await db.arcenCompany.update({
+      where: { id: company.id },
+      data: {
+        ...(nextCatalogPlanId !== undefined ? { activePlanId: nextCatalogPlanId } : {}),
+        ...(input.walletAddress
+          ? { walletAddress: normalizeWallet(input.walletAddress) }
+          : {}),
+      },
+    });
+  }
+
+  return subscriptionState;
 }
 
 async function resolvePaymentRecord(input: {
@@ -121,7 +143,11 @@ export async function recordSuccessfulPayment(input: {
   walletAddress?: string | null;
   invoiceId?: string | null;
   subscriptionStateId?: string | null;
-  kind: "SUBSCRIPTION_ACTIVATION" | "SUBSCRIPTION_RENEWAL" | "MANUAL_INVOICE_PAYMENT";
+  kind:
+    | "SUBSCRIPTION_ACTIVATION"
+    | "SUBSCRIPTION_RENEWAL"
+    | "SUBSCRIPTION_PLAN_CHANGE_UPGRADE"
+    | "MANUAL_INVOICE_PAYMENT";
   amount: number;
   currency?: string;
   payerWallet?: string | null;
@@ -219,15 +245,36 @@ export async function recordSuccessfulPayment(input: {
   }
 
   if (subscriptionState?.id) {
-    await db.subscriptionState.update({
-      where: { id: subscriptionState.id },
-      data: {
-        status: "ACTIVE",
-        cancelAtPeriodEnd: false,
-        cancelledAt: null,
-        pastDueAt: null,
-        graceEndsAt: null,
-      },
+    await db.$transaction([
+      db.subscriptionState.update({
+        where: { id: subscriptionState.id },
+        data: {
+          status: "ACTIVE",
+          cancelAtPeriodEnd: false,
+          cancelledAt: null,
+          pastDueAt: null,
+          graceEndsAt: null,
+        },
+      }),
+      ...(company?.id && subscriptionState
+        ? [
+            db.arcenCompany.update({
+              where: { id: company.id },
+              data: {
+                ...(input.walletAddress
+                  ? { walletAddress: normalizeWallet(input.walletAddress) }
+                  : {}),
+              },
+            }),
+          ]
+        : []),
+    ]);
+  }
+
+  if (input.invoiceId) {
+    await applyInvoicePayment({
+      invoiceId: input.invoiceId,
+      amount: input.amount,
     });
   }
 
@@ -240,7 +287,11 @@ export async function recordFailedPayment(input: {
   companyId?: string | null;
   walletAddress?: string | null;
   subscriptionStateId?: string | null;
-  kind: "SUBSCRIPTION_ACTIVATION" | "SUBSCRIPTION_RENEWAL" | "MANUAL_INVOICE_PAYMENT";
+  kind:
+    | "SUBSCRIPTION_ACTIVATION"
+    | "SUBSCRIPTION_RENEWAL"
+    | "SUBSCRIPTION_PLAN_CHANGE_UPGRADE"
+    | "MANUAL_INVOICE_PAYMENT";
   amount?: number;
   currency?: string;
   txHash?: string | null;

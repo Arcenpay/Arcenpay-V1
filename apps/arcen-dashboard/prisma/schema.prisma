@@ -83,6 +83,7 @@ enum BillingEventType {
 enum PaymentKind {
   SUBSCRIPTION_ACTIVATION
   SUBSCRIPTION_RENEWAL
+  SUBSCRIPTION_PLAN_CHANGE_UPGRADE
   MANUAL_INVOICE_PAYMENT
 }
 
@@ -103,6 +104,37 @@ enum SubscriptionStatus {
   ACTIVE
   PAST_DUE
   CANCELLED
+}
+
+enum BillingRecoveryTaskKind {
+  SUBSCRIPTION_ACTIVATION
+}
+
+enum BillingRecoveryTaskStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum BillingAdjustmentKind {
+  UPGRADE_PRORATION_CHARGE
+  DOWNGRADE_PRORATION_CREDIT
+  MANUAL_CREDIT
+  MANUAL_DEBIT
+}
+
+enum BillingAdjustmentStatus {
+  PENDING
+  POSTED
+  VOIDED
+}
+
+enum RefundStatus {
+  PENDING
+  SETTLED
+  FAILED
+  VOIDED
 }
 
 enum AuditActorType {
@@ -221,7 +253,11 @@ model Team {
 
   invoices         Invoice[]
   payments         Payment[]
+  billingBalances  BillingBalance[]
+  refunds          Refund[]
+  billingAdjustments BillingAdjustment[]
   subscriptionStates SubscriptionState[]
+  billingRecoveryTasks BillingRecoveryTask[]
   taxProfile       TaxProfile?
   invoiceSequences InvoiceSequence[]
 
@@ -592,6 +628,9 @@ model Invoice {
   subtotal Decimal @default(0) @db.Decimal(20, 6)
   taxTotal  Decimal @default(0) @db.Decimal(20, 6)
   total     Decimal @default(0) @db.Decimal(20, 6)
+  amountPaid      Decimal @default(0) @db.Decimal(20, 6)
+  amountCredited  Decimal @default(0) @db.Decimal(20, 6)
+  amountOutstanding Decimal @default(0) @db.Decimal(20, 6)
 
   dueAt      DateTime?
   issuedAt   DateTime?
@@ -605,6 +644,7 @@ model Invoice {
   deliveries InvoiceDelivery[]
   creditNotes CreditNote[]
   payments   Payment[]
+  refunds    Refund[]
 
   @@index([teamId, status, issuedAt])
   @@index([teamId, environmentMode])
@@ -730,6 +770,7 @@ model SubscriptionState {
   team    Team         @relation(fields: [teamId], references: [id], onDelete: Cascade)
   company ArcenCompany @relation(fields: [companyId], references: [id], onDelete: Cascade)
   payments Payment[]
+  billingAdjustments BillingAdjustment[]
 
   @@index([teamId, status])
   @@index([teamId, walletAddress])
@@ -763,6 +804,7 @@ model Payment {
   invoice           Invoice?          @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
   subscriptionState SubscriptionState? @relation(fields: [subscriptionStateId], references: [id], onDelete: SetNull)
   attempts          PaymentAttempt[]
+  billingAdjustments BillingAdjustment[]
 
   @@index([teamId, status, occurredAt])
   @@index([companyId, createdAt])
@@ -787,6 +829,117 @@ model PaymentAttempt {
 
   @@index([paymentId, attemptedAt])
   @@index([txHash])
+}
+
+model BillingAdjustment {
+  id                  String                  @id @default(cuid())
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
+  teamId              String
+  companyId           String
+  subscriptionStateId String?
+  paymentId           String?
+  kind                BillingAdjustmentKind
+  status              BillingAdjustmentStatus @default(PENDING)
+  currency            String                  @default("USDC")
+  amount              Decimal                 @db.Decimal(20, 6)
+  fromCatalogPlanId   String?
+  toCatalogPlanId     String?
+  periodStartedAt     DateTime?
+  periodEndsAt        DateTime?
+  effectiveAt         DateTime?
+  postedAt            DateTime?
+  voidedAt            DateTime?
+  metadata            Json?
+
+  team              Team               @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  company           ArcenCompany       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  subscriptionState SubscriptionState? @relation(fields: [subscriptionStateId], references: [id], onDelete: SetNull)
+  payment           Payment?           @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  refunds           Refund[]
+
+  @@index([teamId, status, createdAt])
+  @@index([companyId, createdAt])
+  @@index([subscriptionStateId, createdAt])
+  @@index([paymentId])
+}
+
+model BillingBalance {
+  id                  String   @id @default(cuid())
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  teamId              String
+  companyId           String   @unique
+  currency            String   @default("USDC")
+  availableCredit     Decimal  @default(0) @db.Decimal(20, 6)
+  totalCredited       Decimal  @default(0) @db.Decimal(20, 6)
+  totalDebited        Decimal  @default(0) @db.Decimal(20, 6)
+  lastAppliedAt       DateTime?
+  metadata            Json?
+
+  team    Team         @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  company ArcenCompany @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([teamId, currency, updatedAt])
+}
+
+model Refund {
+  id                  String       @id @default(cuid())
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+  teamId              String
+  companyId           String?
+  invoiceId           String?
+  paymentId           String?
+  billingAdjustmentId String?
+  status              RefundStatus @default(PENDING)
+  currency            String       @default("USDC")
+  amount              Decimal      @db.Decimal(20, 6)
+  reason              String
+  txHash              String?      @unique
+  externalRef         String?
+  occurredAt          DateTime?
+  settledAt           DateTime?
+  failedAt            DateTime?
+  metadata            Json?
+
+  team              Team               @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  company           ArcenCompany?      @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  invoice           Invoice?           @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  payment           Payment?           @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  billingAdjustment BillingAdjustment? @relation(fields: [billingAdjustmentId], references: [id], onDelete: SetNull)
+
+  @@index([teamId, status, createdAt])
+  @@index([companyId, createdAt])
+  @@index([invoiceId])
+  @@index([paymentId])
+  @@index([billingAdjustmentId])
+}
+
+model BillingRecoveryTask {
+  id            String                   @id @default(cuid())
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
+  teamId        String
+  companyId     String?
+  kind          BillingRecoveryTaskKind
+  status        BillingRecoveryTaskStatus @default(PENDING)
+  idempotencyKey String                  @unique
+  txHash        String?                  @unique
+  walletAddress String?
+  payload       Json
+  attempts      Int                      @default(0)
+  lastAttemptAt DateTime?
+  nextAttemptAt DateTime?
+  completedAt   DateTime?
+  lastError     String?
+
+  team    Team          @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  company ArcenCompany? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  @@index([teamId, status, nextAttemptAt, createdAt])
+  @@index([companyId, createdAt])
+  @@index([walletAddress, createdAt])
 }
 
 model WebhookDelivery {
@@ -915,7 +1068,11 @@ model ArcenCompany {
   events    ArcenEvent[]
   zkProofs  ZkTlsProof[]
   subscriptionState SubscriptionState?
+  billingBalance BillingBalance?
   payments  Payment[]
+  refunds   Refund[]
+  billingAdjustments BillingAdjustment[]
+  billingRecoveryTasks BillingRecoveryTask[]
 
   @@unique([teamId, walletAddress])
   @@unique([teamId, externalId])

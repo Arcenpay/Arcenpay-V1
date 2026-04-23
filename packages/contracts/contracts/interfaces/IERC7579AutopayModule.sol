@@ -54,6 +54,15 @@ interface IERC7579AutopayModule is IERC7579Module {
         uint32 interval
     );
 
+    /// @notice Emitted when autopay config is updated for an account
+    event AutopayConfigUpdated(
+        address indexed account,
+        uint256 indexed previousPlanId,
+        uint256 indexed newPlanId,
+        uint256 maxAmount,
+        uint32 interval
+    );
+
     /// @notice Emitted on successful payment pull
     event PaymentExecuted(
         address indexed account,
@@ -87,6 +96,10 @@ interface IERC7579AutopayModule is IERC7579Module {
     /// @param account The smart account address
     /// @return config The autopay configuration
     function getConfig(address account) external view returns (AutopayConfig memory config);
+
+    /// @notice Updates the autopay configuration for an already initialized account
+    /// @param config The new autopay configuration
+    function updateConfig(AutopayConfig calldata config) external;
 
     /// @notice Returns the timestamp of the last successful pull
     /// @param account The smart account address
