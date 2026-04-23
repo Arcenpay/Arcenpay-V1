@@ -12,6 +12,7 @@ import { resolveTeamContext } from "@/lib/team-session";
 import { db } from "@/lib/db";
 import { slugify } from "@/lib/auth";
 import { writeAuditEvent } from "@/lib/audit";
+import { normalizeEnvironmentMode } from "@/lib/default-chain";
 
 export async function GET() {
   try {
@@ -54,7 +55,7 @@ export async function GET() {
       id: team.id,
       name: team.name,
       slug: team.slug,
-      environmentMode: team.environmentMode,
+      environmentMode: normalizeEnvironmentMode(team.environmentMode),
       createdAt: team.createdAt,
       members,
       myRole: teamCtx.teamRole,
@@ -173,6 +174,13 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
+    if (parsed.data.environmentMode !== "DEVELOPMENT") {
+      return NextResponse.json(
+        { error: "Only Base Sepolia development mode is supported right now." },
+        { status: 400 },
+      );
+    }
+
     const existing = await db.team.findUnique({
       where: { id: teamCtx.teamId },
       select: { id: true, environmentMode: true },
@@ -183,7 +191,7 @@ export async function PATCH(req: NextRequest) {
 
     const team = await db.team.update({
       where: { id: teamCtx.teamId },
-      data: { environmentMode: parsed.data.environmentMode },
+      data: { environmentMode: normalizeEnvironmentMode(parsed.data.environmentMode) },
       select: { id: true, environmentMode: true },
     });
 
@@ -199,7 +207,10 @@ export async function PATCH(req: NextRequest) {
       afterData: team,
     });
 
-    return NextResponse.json(team);
+    return NextResponse.json({
+      ...team,
+      environmentMode: normalizeEnvironmentMode(team.environmentMode),
+    });
   } catch (err) {
     console.error("[api/team PATCH]", err);
     return NextResponse.json(

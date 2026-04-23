@@ -57,7 +57,6 @@ import { getBlockExplorerUrl } from "@/lib/format";
 import { CANONICAL_WEBHOOK_EVENTS } from "@/lib/webhook-events";
 import { useDashboardSession } from "@/hooks/use-dashboard-session";
 import {
-  DEFAULT_PRODUCTION_CHAIN_ID,
   DEFAULT_TESTNET_CHAIN_ID,
   getChainLabel,
 } from "@/lib/default-chain";
@@ -317,46 +316,6 @@ export function SettingsSection() {
     }
   };
 
-  const handleSwitchEnvironment = async (
-    nextMode: "DEVELOPMENT" | "PRODUCTION",
-  ) => {
-    if (nextMode === environmentMode) return;
-    const confirmText = window.prompt(
-      `Switch workspace mode to ${nextMode}? Type CONFIRM to continue.`,
-      "",
-    );
-    if (confirmText !== "CONFIRM") {
-      toast.error("Environment switch cancelled");
-      return;
-    }
-
-    try {
-      const chainIdHint =
-        nextMode === "PRODUCTION"
-          ? DEFAULT_PRODUCTION_CHAIN_ID
-          : DEFAULT_TESTNET_CHAIN_ID;
-      const res = await fetch("/api/environment/switch", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          environmentMode: nextMode,
-          chainId: chainIdHint,
-          confirmText,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Environment switch failed");
-      }
-      setEnvironmentMode(nextMode);
-      toast.success(`Workspace now in ${nextMode} mode`);
-    } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Environment switch failed",
-      );
-    }
-  };
-
   const toggleNotification = (id: string, type: "email") => {
     const updated = notifications.map((n) =>
       n.id === id ? { ...n, [type]: !n[type] } : n,
@@ -599,7 +558,7 @@ export function SettingsSection() {
                 <div className="flex items-center justify-between gap-3 flex-wrap">
                   <div>
                     <p className="text-sm font-medium text-foreground">
-                      Workspace Environment Mode
+                      Workspace Network
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
                       Current mode:{" "}
@@ -608,28 +567,13 @@ export function SettingsSection() {
                       </span>
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant={
-                        environmentMode === "DEVELOPMENT"
-                          ? "default"
-                          : "outline"
-                      }
-                      size="sm"
-                      onClick={() => handleSwitchEnvironment("DEVELOPMENT")}
-                    >
-                      Development
-                    </Button>
-                    <Button
-                      variant={
-                        environmentMode === "PRODUCTION" ? "default" : "outline"
-                      }
-                      size="sm"
-                      onClick={() => handleSwitchEnvironment("PRODUCTION")}
-                    >
-                      Production
-                    </Button>
-                  </div>
+                  <Badge variant="outline">Base Sepolia Only</Badge>
+                </div>
+                <div className="mt-3 rounded-md border border-border bg-background/60 px-3 py-2">
+                  <p className="text-xs text-muted-foreground">
+                    ArcenPay dashboard is currently pinned to Base Sepolia testnet.
+                    Mainnet and other testnet switching are disabled for now.
+                  </p>
                 </div>
               </div>
             </CardContent>

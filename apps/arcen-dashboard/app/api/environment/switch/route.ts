@@ -17,7 +17,7 @@ import { db } from "@/lib/db";
 import { requirePermission, isErrorResponse } from "@/lib/api-auth";
 import { writeAuditEvent } from "@/lib/audit";
 import { FACILITATOR_URL, GRAPH_URL, getRpcUrl } from "@/lib/config";
-import { resolveEnvironmentChainId } from "@/lib/default-chain";
+import { normalizeEnvironmentMode, resolveEnvironmentChainId } from "@/lib/default-chain";
 import { SUBGRAPH_REQUIRED } from "@/lib/launch-flags";
 
 const switchSchema = z.object({
@@ -104,9 +104,16 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  if (parsed.data.environmentMode !== "DEVELOPMENT") {
+    return NextResponse.json(
+      { error: "Only Base Sepolia development mode is supported right now." },
+      { status: 400 },
+    );
+  }
+
   const targetChainId =
     resolveEnvironmentChainId(
-      parsed.data.environmentMode,
+      normalizeEnvironmentMode(parsed.data.environmentMode),
       parsed.data.chainId,
     );
 
@@ -120,32 +127,27 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (
-    parsed.data.environmentMode === "PRODUCTION" &&
-    hasZeroAddress(addresses)
-  ) {
+  if (hasZeroAddress(addresses)) {
     return NextResponse.json(
       {
         error:
-          "Production switch blocked: contract registry contains zero-address placeholders.",
+          "Environment switch blocked: contract registry contains zero-address placeholders.",
       },
       { status: 409 },
     );
   }
 
-  if (parsed.data.environmentMode === "PRODUCTION") {
-    const missingServices: string[] = [];
-    if (SUBGRAPH_REQUIRED && !GRAPH_URL) missingServices.push("NEXT_PUBLIC_GRAPH_URL");
-    if (!FACILITATOR_URL) missingServices.push("FACILITATOR_URL");
-    if (missingServices.length > 0) {
-      return NextResponse.json(
-        {
-          error: "Production switch blocked: required service endpoints are missing.",
-          missingServices,
-        },
-        { status: 409 },
-      );
-    }
+  const missingServices: string[] = [];
+  if (SUBGRAPH_REQUIRED && !GRAPH_URL) missingServices.push("NEXT_PUBLIC_GRAPH_URL");
+  if (!FACILITATOR_URL) missingServices.push("FACILITATOR_URL");
+  if (missingServices.length > 0) {
+    return NextResponse.json(
+      {
+        error: "Environment switch blocked: required service endpoints are missing.",
+        missingServices,
+      },
+      { status: 409 },
+    );
   }
 
   // ── Contract health preflight ────────────────────────────────────────────────
@@ -183,7 +185,7 @@ export async function POST(request: NextRequest) {
 
   const team = await db.team.update({
     where: { id: auth.team.teamId },
-    data: { environmentMode: parsed.data.environmentMode },
+    data: { environmentMode: normalizeEnvironmentMode(parsed.data.environmentMode) },
   });
 
   await writeAuditEvent({
@@ -198,7 +200,7 @@ export async function POST(request: NextRequest) {
       environmentMode: previous.environmentMode,
     },
     afterData: {
-      environmentMode: team.environmentMode,
+      environmentMode: normalizeEnvironmentMode(team.environmentMode),
       chainId: targetChainId,
     },
     metadata: {
@@ -209,7 +211,7 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({
     ok: true,
     teamId: team.id,
-    environmentMode: team.environmentMode,
+    environmentMode: normalizeEnvironmentMode(team.environmentMode),
     chainId: targetChainId,
     preflight: preflight.checks,
   });

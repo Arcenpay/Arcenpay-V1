@@ -3,7 +3,10 @@ import { z } from "zod";
 import { FACILITATOR_SECRET, FACILITATOR_URL, getGraphUrl } from "@/lib/config";
 import { isErrorResponse, requirePermission } from "@/lib/api-auth";
 import { db } from "@/lib/db";
-import { resolveEnvironmentChainId } from "@/lib/default-chain";
+import {
+  normalizeEnvironmentMode,
+  resolveEnvironmentChainId,
+} from "@/lib/default-chain";
 
 const querySchema = z.object({
   chainId: z.coerce.number().int().positive().optional(),
@@ -206,7 +209,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Team not found" }, { status: 404 });
   }
 
-  const environmentMode = parsed.data.environmentMode || team.environmentMode;
+  const environmentMode = normalizeEnvironmentMode(
+    parsed.data.environmentMode || team.environmentMode,
+  );
   const chainId = resolveEnvironmentChainId(
     environmentMode,
     parsed.data.chainId,

@@ -14,7 +14,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { formatUsdc } from "@/lib/format";
-import { DEFAULT_TESTNET_CHAIN_ID } from "@/lib/default-chain";
+import { DEFAULT_CHAIN_ID } from "@/lib/default-chain";
 
 type OverviewPayload = {
   context: {
@@ -44,9 +44,7 @@ export function OverviewSection() {
 
   const effectiveChainId = isConnected
     ? walletChainId
-    : envMode === "PRODUCTION"
-      ? 8453
-      : DEFAULT_TESTNET_CHAIN_ID;
+    : DEFAULT_CHAIN_ID;
 
   useEffect(() => {
     if (!mounted || envLoading) return;

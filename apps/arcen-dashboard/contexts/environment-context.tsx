@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useAppKitNetwork } from "@reown/appkit/react";
+import { BASE_SEPOLIA_CHAIN_ID, normalizeEnvironmentMode } from "@/lib/default-chain";
 
 export type EnvMode = "DEVELOPMENT" | "PRODUCTION";
 
@@ -15,14 +16,9 @@ const EnvironmentContext = createContext<EnvironmentContextType | undefined>(
   undefined,
 );
 
-// Map of chain IDs to their environment
-const TESTNET_CHAINS = [11155111, 84532]; // sepolia, baseSepolia
-const MAINNET_CHAINS = [1, 8453]; // mainnet, base
-
 function getEnvModeFromChainId(chainId: number | undefined): EnvMode | null {
   if (!chainId) return null;
-  if (TESTNET_CHAINS.includes(chainId)) return "DEVELOPMENT";
-  if (MAINNET_CHAINS.includes(chainId)) return "PRODUCTION";
+  if (chainId === BASE_SEPOLIA_CHAIN_ID) return "DEVELOPMENT";
   return null;
 }
 
@@ -41,7 +37,7 @@ export function EnvironmentProvider({
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (data?.environmentMode) {
-          setEnvMode(data.environmentMode as EnvMode);
+          setEnvMode(normalizeEnvironmentMode(data.environmentMode));
         }
       })
       .catch(() => {})
@@ -54,13 +50,15 @@ export function EnvironmentProvider({
 
     const newEnvMode = getEnvModeFromChainId(Number(chainId));
     if (newEnvMode && newEnvMode !== envMode) {
-      setEnvMode(newEnvMode);
+      setEnvMode(normalizeEnvironmentMode(newEnvMode));
 
       // Sync with backend
       fetch("/api/team", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ environmentMode: newEnvMode }),
+        body: JSON.stringify({
+          environmentMode: normalizeEnvironmentMode(newEnvMode),
+        }),
       }).catch((err) => {
         console.error("Failed to sync environment mode:", err);
       });

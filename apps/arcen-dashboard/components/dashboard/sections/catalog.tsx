@@ -3384,11 +3384,16 @@ const CHAIN_INFO: Record<
 > = {
   DEVELOPMENT: {
     chainId: DEFAULT_TESTNET_CHAIN_ID,
-    name: DEFAULT_TESTNET_CHAIN_ID === 11155111 ? "Sepolia Testnet" : "Base Sepolia Testnet",
+    name: "Base Sepolia Testnet",
     color: "bg-zinc-400",
     tag: "testnet",
   },
-  PRODUCTION: { chainId: 8453, name: "Base Mainnet", color: "bg-foreground", tag: "mainnet" },
+  PRODUCTION: {
+    chainId: DEFAULT_TESTNET_CHAIN_ID,
+    name: "Base Sepolia Testnet",
+    color: "bg-zinc-400",
+    tag: "testnet",
+  },
 };
 
 type CatalogConfigSettings = {
@@ -3481,7 +3486,7 @@ function ConfigurationTab() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Failed to save");
-      toast.success(`Configuration saved for ${envMode === "PRODUCTION" ? "Mainnet" : "Testnet"}`);
+      toast.success("Configuration saved for Base Sepolia");
     } catch (err: unknown) {
       setConfigError(err instanceof Error ? err.message : "Failed to save configuration");
     } finally {
@@ -3537,16 +3542,16 @@ function ConfigurationTab() {
       {/* Active environment status bar */}
       <div className="rounded-xl border border-border bg-card p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${envMode === "PRODUCTION" ? "bg-foreground" : "bg-zinc-400"}`} />
+          <div className="w-2.5 h-2.5 rounded-full shrink-0 bg-zinc-400" />
           <div>
             <p className="text-sm font-bold text-foreground leading-tight">
-              {envMode === "DEVELOPMENT" ? "Development" : "Production"} Environment
+              Base Sepolia Environment
             </p>
             <p className="text-xs text-muted-foreground mt-0.5">
               {currentChainInfo.name} · Chain {currentChainInfo.chainId}
             </p>
           </div>
-          <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-full border ${envMode === "PRODUCTION" ? "border-foreground/30 text-foreground" : "border-border text-muted-foreground"}`}>
+          <span className="text-[9px] font-bold uppercase px-2 py-0.5 rounded-full border border-border text-muted-foreground">
             {currentChainInfo.tag}
           </span>
         </div>
@@ -3784,13 +3789,13 @@ function ConfigurationTab() {
               <SheetHeader className="pb-4 border-b border-border">
                 <SheetTitle>Switch Environment</SheetTitle>
                 <SheetDescription>
-                  Change the active environment. All catalog operations will target the new chain.
+                  Base Sepolia is the only supported dashboard network right now.
                 </SheetDescription>
               </SheetHeader>
               <form onSubmit={handleSwitch} className="space-y-5 py-5">
                 {/* Target selector */}
-                <div className="grid grid-cols-2 gap-3">
-                  {(["DEVELOPMENT", "PRODUCTION"] as EnvMode[]).map((mode) => {
+                <div className="grid grid-cols-1 gap-3">
+                  {(["DEVELOPMENT"] as EnvMode[]).map((mode) => {
                     const info = CHAIN_INFO[mode];
                     const isSelected = switchTarget === mode;
                     return (
@@ -3803,7 +3808,7 @@ function ConfigurationTab() {
                         <div className="flex items-center gap-2">
                           <div className={`w-2 h-2 rounded-full ${info.color}`} />
                           <span className="text-xs font-bold uppercase tracking-wider text-foreground">
-                            {mode === "DEVELOPMENT" ? "Development" : "Production"}
+                            Development
                           </span>
                         </div>
                         <p className="text-xs text-muted-foreground">{info.name}</p>
@@ -3813,18 +3818,6 @@ function ConfigurationTab() {
                     );
                   })}
                 </div>
-
-                {switchTarget === "PRODUCTION" && (
-                  <div className="flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-4">
-                    <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-destructive" />
-                    <div>
-                      <p className="text-sm font-semibold text-destructive">Production requires deployed contracts</p>
-                      <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                        Ensure PlanFactory and SubscriptionManager are deployed on Base Mainnet before switching.
-                      </p>
-                    </div>
-                  </div>
-                )}
 
                 <div className="space-y-2">
                   <Label htmlFor="confirm-text" className="text-sm font-semibold">

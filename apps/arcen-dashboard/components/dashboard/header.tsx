@@ -214,12 +214,10 @@ export function Header({ activeSection }: HeaderProps) {
           variant="outline"
           className={cn(
             "text-xs font-medium px-2.5 py-1",
-            mounted && envMode === "PRODUCTION"
-              ? "border-orange-400/50 text-orange-400 bg-orange-400/5"
-              : "border-blue-400/50 text-blue-400 bg-blue-400/5",
+            "border-blue-400/50 text-blue-400 bg-blue-400/5",
           )}
         >
-          {mounted && envMode === "PRODUCTION" ? "Mainnet" : "Testnet"}
+          {mounted && envMode ? "Base Sepolia" : "Base Sepolia"}
         </Badge>
 
         {/* Search */}

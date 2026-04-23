@@ -6,7 +6,7 @@ import {
   isAddress,
   type Chain,
 } from "viem";
-import { base, baseSepolia, sepolia } from "viem/chains";
+import { baseSepolia } from "viem/chains";
 import {
   ERC7579AutopayModuleABI,
   getContractAddresses,
@@ -17,9 +17,7 @@ import { getRpcUrl } from "@/lib/config";
 import { DEFAULT_CHAIN_ID } from "@/lib/default-chain";
 
 const CHAIN_MAP: Record<number, Chain> = {
-  11155111: sepolia,
   84532: baseSepolia,
-  8453: base,
 };
 
 const ERC20_TRANSFER_ABI = [
@@ -76,7 +74,7 @@ export function decimalToAtomicUnits(value: string, decimals = 6): bigint {
 
 function resolveChain(): Chain {
   const chainId = DEFAULT_CHAIN_ID;
-  return CHAIN_MAP[chainId] ?? sepolia;
+  return CHAIN_MAP[chainId] ?? baseSepolia;
 }
 
 function createChainPublicClient() {

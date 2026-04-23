@@ -111,7 +111,7 @@ export function Sidebar({
     ? `${address.slice(0, 6)}…${address.slice(-4)}`
     : null;
 
-  const networkLabel = envMode === "PRODUCTION" ? "Mainnet" : "Testnet";
+  const networkLabel = envMode ? "Base Sepolia" : "Base Sepolia";
 
   return (
     <aside

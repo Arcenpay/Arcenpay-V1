@@ -5,7 +5,11 @@ import { FeeCollectorABI, TOKENS, getContractAddresses } from "@arcenpay/sdk";
 import { db } from "@/lib/db";
 import { isErrorResponse, requirePermission } from "@/lib/api-auth";
 import { getGraphUrl, getRpcUrl } from "@/lib/config";
-import { DEFAULT_CHAIN_ID, resolveEnvironmentChainId } from "@/lib/default-chain";
+import {
+  DEFAULT_CHAIN_ID,
+  normalizeEnvironmentMode,
+  resolveEnvironmentChainId,
+} from "@/lib/default-chain";
 
 const querySchema = z.object({
   chainId: z.coerce.number().int().positive().optional(),
@@ -124,8 +128,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Team not found" }, { status: 404 });
   }
 
-  const environmentMode =
-    parsed.data.environmentMode || team.environmentMode;
+  const environmentMode = normalizeEnvironmentMode(
+    parsed.data.environmentMode || team.environmentMode,
+  );
   const chainId = resolveEnvironmentChainId(
     environmentMode,
     parsed.data.chainId,

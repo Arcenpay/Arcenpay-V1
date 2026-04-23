@@ -6,7 +6,7 @@
 //
 //  Rules:
 //  - Always sponsor subscriber-side transactions (checkout, renewal)
-//  - L2 chains only (Base, Base Sepolia) — reject L1 sponsorship
+//  - Base Sepolia only for the current testnet-only rollout
 //  - Enforce daily gas budget per team tier
 //  - Anti-abuse: max sponsorship per wallet per day
 //  - Budget alert thresholds at 80% and 100%
@@ -20,7 +20,6 @@ import { PlatformTier, Prisma } from "@/src/generated/prisma/client";
 // ── Allowed chains for gas sponsorship (L2 only) ─────────────────────────────
 
 const SPONSORED_CHAIN_IDS = new Set<number>([
-    8453,   // Base mainnet
     84532,  // Base Sepolia
 ]);
 
@@ -28,6 +27,7 @@ const SPONSORED_CHAIN_IDS = new Set<number>([
 const BLOCKED_CHAIN_IDS = new Set<number>([
     1,          // Ethereum mainnet
     11155111,   // Sepolia (L1 testnet)
+    8453,       // Base mainnet
 ]);
 
 // ── Anti-abuse limits ────────────────────────────────────────────────────────

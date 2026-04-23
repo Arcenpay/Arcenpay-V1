@@ -1,10 +1,10 @@
 "use client";
 
 import { wagmiAdapter, projectId } from "@/lib/wagmi";
-import { DEFAULT_CHAIN_ID } from "@/lib/default-chain";
+import { BASE_SEPOLIA_CHAIN_ID, DEFAULT_CHAIN_ID } from "@/lib/default-chain";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createAppKit } from "@reown/appkit/react";
-import { mainnet, base, sepolia, baseSepolia } from "@reown/appkit/networks";
+import { baseSepolia } from "@reown/appkit/networks";
 import React, { type ReactNode } from "react";
 import { cookieToInitialState, WagmiProvider, type Config } from "wagmi";
 import { ApolloProvider } from "@apollo/client";
@@ -14,11 +14,7 @@ import { apolloClient } from "@/lib/graphql";
 const queryClient = new QueryClient();
 
 const defaultNetwork =
-  DEFAULT_CHAIN_ID === 8453
-    ? base
-    : DEFAULT_CHAIN_ID === 11155111
-      ? sepolia
-      : baseSepolia;
+  DEFAULT_CHAIN_ID === BASE_SEPOLIA_CHAIN_ID ? baseSepolia : baseSepolia;
 
 // Dynamic metadata URL based on environment
 const getMetadataUrl = () => {
@@ -33,7 +29,7 @@ createAppKit({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   adapters: [wagmiAdapter as any],
   projectId,
-  networks: [baseSepolia, base, sepolia, mainnet],
+  networks: [baseSepolia],
   defaultNetwork,
   metadata: {
     name: "ArcenPay Dashboard",

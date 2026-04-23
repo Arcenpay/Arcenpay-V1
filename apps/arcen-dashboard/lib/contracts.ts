@@ -41,15 +41,9 @@ function resolveUsdcOverride(chainId: number): `0x${string}` | null {
     process.env.NEXT_PUBLIC_USDC_ADDRESS || process.env.NEXT_PUBLIC_MOCK_USDC_ADDRESS;
 
   const chainOverrides: Record<number, string | undefined> = {
-    11155111:
-      process.env.NEXT_PUBLIC_USDC_ADDRESS_11155111 ||
-      process.env.NEXT_PUBLIC_MOCK_USDC_ADDRESS_11155111,
     84532:
       process.env.NEXT_PUBLIC_USDC_ADDRESS_84532 ||
       process.env.NEXT_PUBLIC_MOCK_USDC_ADDRESS_84532,
-    8453:
-      process.env.NEXT_PUBLIC_USDC_ADDRESS_8453 ||
-      process.env.NEXT_PUBLIC_MOCK_USDC_ADDRESS_8453,
   };
 
   const candidate = chainOverrides[chainId] || globalOverride;
@@ -78,9 +72,7 @@ export function getUsdcTokenOptions(): Array<{
     label: string;
     tag: "testnet" | "mainnet";
   }> = [
-    { chainId: 11155111, label: "Sepolia", tag: "testnet" },
     { chainId: 84532, label: "Base Sepolia", tag: "testnet" },
-    { chainId: 8453, label: "Base", tag: "mainnet" },
   ];
 
   const options: Array<{
@@ -136,4 +128,4 @@ export function useContractAddresses() {
 }
 
 /** Backward-compatible alias for Sepolia token resolution */
-export const SEPOLIA_USDC = getUsdcAddress(11155111);
+export const SEPOLIA_USDC = getUsdcAddress(DEFAULT_CHAIN_ID);

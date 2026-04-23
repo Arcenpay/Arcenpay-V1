@@ -13,7 +13,7 @@ import {
   verifyTypedData,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { sepolia, base, baseSepolia } from "viem/chains";
+import { baseSepolia } from "viem/chains";
 import { PlanFactoryABI, getContractAddresses, TOKENS } from "@arcenpay/sdk";
 import { isAddress, type Chain } from "viem";
 import { z } from "zod";
@@ -111,9 +111,7 @@ const OWNABLE_OWNER_ABI = [
 ] as const;
 
 const CHAIN_MAP: Record<number, Chain> = {
-  11155111: sepolia,
   84532: baseSepolia,
-  8453: base,
 };
 
 type Params = { id: string };
@@ -235,7 +233,7 @@ export async function POST(
 
   const chainId = DEFAULT_CHAIN_ID;
   const rpcUrl = getRpcUrl(chainId);
-  const chain = CHAIN_MAP[chainId] ?? sepolia;
+  const chain = CHAIN_MAP[chainId] ?? baseSepolia;
 
   const contracts = getContractAddresses(chainId);
   const planFactoryAddress = contracts.planFactory as `0x${string}`;

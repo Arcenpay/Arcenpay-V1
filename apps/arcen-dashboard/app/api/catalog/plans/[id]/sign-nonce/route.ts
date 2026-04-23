@@ -5,13 +5,11 @@ import { requirePermission, isErrorResponse } from "@/lib/api-auth";
 import { getContractAddresses } from "@arcenpay/sdk";
 import { getRpcUrl } from "@/lib/config";
 import { DEFAULT_CHAIN_ID } from "@/lib/default-chain";
-import { sepolia, baseSepolia, base } from "viem/chains";
+import { baseSepolia } from "viem/chains";
 import { isAddress, type Chain } from "viem";
 
 const CHAIN_MAP: Record<number, Chain> = {
-  11155111: sepolia,
   84532: baseSepolia,
-  8453: base,
 };
 
 const NONCES_ABI = [
@@ -66,7 +64,7 @@ export async function GET(
 
   const chainId = DEFAULT_CHAIN_ID;
   const rpcUrl = getRpcUrl(chainId);
-  const chain = CHAIN_MAP[chainId] ?? sepolia;
+  const chain = CHAIN_MAP[chainId] ?? baseSepolia;
   const contracts = getContractAddresses(chainId);
   const planFactoryAddress = contracts.planFactory as `0x${string}`;
 

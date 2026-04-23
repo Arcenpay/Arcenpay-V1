@@ -26,7 +26,7 @@ import {
   isAddress,
   type Chain,
 } from "viem";
-import { base, baseSepolia, sepolia } from "viem/chains";
+import { baseSepolia } from "viem/chains";
 import { z } from "zod";
 import {
   ERC7579AutopayModuleABI,
@@ -53,9 +53,7 @@ import {
 } from "@/lib/billing-recovery";
 
 const CHAIN_MAP: Record<number, Chain> = {
-  11155111: sepolia,
   84532: baseSepolia,
-  8453: base,
 };
 
 const addressSchema = z.string().refine(
@@ -235,7 +233,7 @@ export async function POST(req: NextRequest) {
   }
 
   const chainId = DEFAULT_CHAIN_ID;
-  const chain = CHAIN_MAP[chainId] ?? sepolia;
+  const chain = CHAIN_MAP[chainId] ?? baseSepolia;
   const rpcUrl = getRpcUrl(chainId);
   const contracts = getContractAddresses(chainId);
 
