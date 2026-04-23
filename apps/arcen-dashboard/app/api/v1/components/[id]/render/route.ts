@@ -349,8 +349,14 @@ export async function GET(
             functionName: "getWalletSubscription",
             args: [billingPaymentAccount.toLowerCase() as `0x${string}`],
           })) as bigint;
+          const hasActiveSubscription = (await client.readContract({
+            address: contracts.subscriptionRegistry as `0x${string}`,
+            abi: SubscriptionRegistryABI,
+            functionName: "hasActiveSubscription",
+            args: [billingPaymentAccount.toLowerCase() as `0x${string}`],
+          })) as boolean;
 
-          if (tokenId > 0n) {
+          if (hasActiveSubscription && tokenId > 0n) {
             const expiration = (await client.readContract({
               address: contracts.subscriptionRegistry as `0x${string}`,
               abi: SubscriptionRegistryABI,

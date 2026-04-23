@@ -42,6 +42,7 @@ import {
 import {
   cancelSubscription,
   deploySmartAccount,
+  isRecoverableSmartAccountFundingError,
   sendSmartAccountTransaction,
   updateAutopayConfig,
 } from "../lib/zerodev";
@@ -86,6 +87,8 @@ type AppliedCouponQuote = {
   baseAmountMicros: number;
   discountedAmountMicros: number;
 };
+
+const AUTOPAY_START_TIME_BUFFER_SECONDS = 60;
 
 interface PortalState {
   data: ComponentRenderData | null;
@@ -1253,6 +1256,15 @@ async function readWalletSubscriptionTokenId(
   const chain = getChain(chainId);
   const contracts = getContractAddresses(chainId);
   const publicClient = createPublicClient({ chain, transport: http() });
+  const hasActiveSubscription = (await publicClient.readContract({
+    address: contracts.subscriptionRegistry as `0x${string}`,
+    abi: SubscriptionRegistryABI,
+    functionName: "hasActiveSubscription",
+    args: [paymentAccount as `0x${string}`],
+  })) as boolean;
+
+  if (!hasActiveSubscription) return 0n;
+
   return (await publicClient.readContract({
     address: contracts.subscriptionRegistry as `0x${string}`,
     abi: SubscriptionRegistryABI,
@@ -4177,14 +4189,26 @@ function PaymentContent({
 
     await ensureWalletOnTargetChain(resolvedWalletClient, chainId);
 
-    const result = await deploySmartAccount({
-      projectId: zeroDevProjectId,
-      chainId,
-      walletClient: resolvedWalletClient,
-    });
+    try {
+      const result = await deploySmartAccount({
+        projectId: zeroDevProjectId,
+        chainId,
+        walletClient: resolvedWalletClient,
+      });
 
-    setProvisionedSmartAccountAddress(result.smartAccountAddress);
-    return result.smartAccountAddress;
+      setProvisionedSmartAccountAddress(result.smartAccountAddress);
+      return result.smartAccountAddress;
+    } catch (error) {
+      if (isRecoverableSmartAccountFundingError(error) && finalAddress) {
+        console.warn(
+          "[ArcenEmbed] Smart-account sponsorship unavailable; falling back to direct wallet autopay setup.",
+          error,
+        );
+        return finalAddress as `0x${string}`;
+      }
+
+      throw error;
+    }
   }
 
   async function ensureAutopayReadyForActivation(onChainPlanId: string) {
@@ -4219,7 +4243,11 @@ function PaymentContent({
       maxAmount: chargeAmount,
       token: tokenAddress,
       interval: Number(targetPlan.billingInterval),
-      startTime: BigInt(Math.floor(Date.now() / 1000)),
+      // Give the install transaction a small buffer so onInstall() does not
+      // revert with "start in past" by the time it is mined.
+      startTime: BigInt(
+        Math.floor(Date.now() / 1000) + AUTOPAY_START_TIME_BUFFER_SECONDS,
+      ),
       planId: BigInt(onChainPlanId),
       maxTotalAmount: 0n,
     };

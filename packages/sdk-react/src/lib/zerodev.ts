@@ -55,37 +55,61 @@ function resolveZeroDevUrls(params: {
         process.env[`NEXT_PUBLIC_ZERODEV_BUNDLER_RPC_${params.chainId}`];
     const specificPaymaster =
         process.env[`NEXT_PUBLIC_ZERODEV_PAYMASTER_RPC_${params.chainId}`];
+    const genericUnified = process.env.NEXT_PUBLIC_ZERODEV_RPC;
+    const genericBundler = process.env.NEXT_PUBLIC_ZERODEV_BUNDLER_RPC;
+    const genericPaymaster = process.env.NEXT_PUBLIC_ZERODEV_PAYMASTER_RPC;
+    const defaultUnifiedV3 =
+        `https://rpc.zerodev.app/api/v3/${params.projectId}/chain/${params.chainId}`;
+    const hasConfiguredUrls = !!(
+        params.bundlerUrl ||
+        params.paymasterUrl ||
+        specificUnified ||
+        specificBundler ||
+        specificPaymaster ||
+        genericUnified ||
+        genericBundler ||
+        genericPaymaster
+    );
 
     return {
         bundlerUrl:
             params.bundlerUrl ||
             specificUnified ||
             specificBundler ||
-            process.env.NEXT_PUBLIC_ZERODEV_RPC ||
-            process.env.NEXT_PUBLIC_ZERODEV_BUNDLER_RPC ||
+            genericUnified ||
+            genericBundler ||
+            defaultUnifiedV3 ||
             `https://rpc.zerodev.app/api/v2/bundler/${params.projectId}`,
         paymasterUrl:
             params.paymasterUrl ||
             specificUnified ||
             specificPaymaster ||
-            process.env.NEXT_PUBLIC_ZERODEV_RPC ||
-            process.env.NEXT_PUBLIC_ZERODEV_PAYMASTER_RPC ||
+            genericUnified ||
+            genericPaymaster ||
+            defaultUnifiedV3 ||
             `https://rpc.zerodev.app/api/v2/paymaster/${params.projectId}`,
+        hasConfiguredUrls,
     };
 }
 
 function normalizeZeroDevError(
     error: unknown,
-    params: { projectId: string; chainId: number; bundlerUrl?: string; paymasterUrl?: string },
+    params: {
+        projectId: string;
+        chainId: number;
+        bundlerUrl?: string;
+        paymasterUrl?: string;
+        hasConfiguredUrls?: boolean;
+    },
 ): Error {
     const message = error instanceof Error ? error.message : String(error ?? "");
     const chainLabel = getZeroDevChainLabel(params.chainId);
-    const usingDefaultUrls = !params.bundlerUrl && !params.paymasterUrl;
+    const usingDefaultUrls = !params.hasConfiguredUrls;
 
     if (message.includes("ChainId not found")) {
         const nextStep = usingDefaultUrls
             ? `Enable ${chainLabel} for ZeroDev project ${params.projectId}, or set NEXT_PUBLIC_ZERODEV_BUNDLER_RPC_${params.chainId} and NEXT_PUBLIC_ZERODEV_PAYMASTER_RPC_${params.chainId} to chain-specific endpoints.`
-            : `The configured ZeroDev endpoint does not recognize ${chainLabel} for project ${params.projectId}. Verify the project supports chain ${params.chainId} or replace the override URLs.`;
+            : `The configured ZeroDev endpoint does not recognize ${chainLabel} for project ${params.projectId}. Verify the project supports chain ${params.chainId} or replace the override URLs. Bundler URL: ${params.bundlerUrl ?? "n/a"}. Paymaster URL: ${params.paymasterUrl ?? "n/a"}.`;
 
         return new Error(
             `ZeroDev project ${params.projectId} is not configured for ${chainLabel} (chain ${params.chainId}). ${nextStep}`,
@@ -93,6 +117,18 @@ function normalizeZeroDevError(
     }
 
     return error instanceof Error ? error : new Error(message);
+}
+
+export function isRecoverableSmartAccountFundingError(error: unknown): boolean {
+    const message = error instanceof Error ? error.message : String(error ?? "");
+    const lower = message.toLowerCase();
+
+    return (
+        lower.includes("smart account does not have sufficient funds") ||
+        lower.includes("sufficient funds to execute the user operation") ||
+        lower.includes("insufficient funds") ||
+        (lower.includes("user operation") && lower.includes("paymaster"))
+    );
 }
 
 export interface DeploySmartAccountConfig {
@@ -172,7 +208,7 @@ async function createKernelExecutionContext(config: {
     paymasterUrl?: string;
 }) {
     const chain = CHAIN_MAP[config.chainId] || baseSepolia;
-    const { bundlerUrl, paymasterUrl } = resolveZeroDevUrls({
+    const { bundlerUrl, paymasterUrl, hasConfiguredUrls } = resolveZeroDevUrls({
         projectId: config.projectId,
         chainId: config.chainId,
         bundlerUrl: config.bundlerUrl,
@@ -219,6 +255,9 @@ async function createKernelExecutionContext(config: {
         publicClient,
         kernelAccount,
         kernelClient,
+        bundlerUrl,
+        paymasterUrl,
+        hasConfiguredUrls,
     };
 }
 
@@ -240,7 +279,7 @@ export async function deploySmartAccount(
     const chain = CHAIN_MAP[config.chainId] || baseSepolia;
     const contracts = getContractAddresses(config.chainId);
 
-    const { bundlerUrl, paymasterUrl } = resolveZeroDevUrls({
+    const { bundlerUrl, paymasterUrl, hasConfiguredUrls } = resolveZeroDevUrls({
         projectId: config.projectId,
         chainId: config.chainId,
         bundlerUrl: config.bundlerUrl,
@@ -365,6 +404,7 @@ export async function deploySmartAccount(
                     chainId: config.chainId,
                     bundlerUrl,
                     paymasterUrl,
+                    hasConfiguredUrls,
                 });
                 console.error("[ZeroDev] Module installation failed:", normalizedError.message);
                 throw normalizedError;
@@ -393,7 +433,7 @@ export async function revokeAutopayModule(
         throw new Error("Autopay module address not configured for this chain.");
     }
 
-    const { bundlerUrl, paymasterUrl } = resolveZeroDevUrls({
+    const { bundlerUrl, paymasterUrl, hasConfiguredUrls } = resolveZeroDevUrls({
         projectId: config.projectId,
         chainId: config.chainId,
         bundlerUrl: config.bundlerUrl,
@@ -453,6 +493,7 @@ export async function revokeAutopayModule(
             chainId: config.chainId,
             bundlerUrl,
             paymasterUrl,
+            hasConfiguredUrls,
         });
     }
 }
@@ -472,6 +513,9 @@ export async function sendSmartAccountTransaction(
         publicClient,
         kernelAccount,
         kernelClient,
+        bundlerUrl,
+        paymasterUrl,
+        hasConfiguredUrls,
     } = await createKernelExecutionContext({
         projectId: config.projectId,
         chainId: config.chainId,
@@ -507,8 +551,9 @@ export async function sendSmartAccountTransaction(
         throw normalizeZeroDevError(error, {
             projectId: config.projectId,
             chainId: config.chainId,
-            bundlerUrl: config.bundlerUrl,
-            paymasterUrl: config.paymasterUrl,
+            bundlerUrl,
+            paymasterUrl,
+            hasConfiguredUrls,
         });
     }
 }

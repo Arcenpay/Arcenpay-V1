@@ -291,8 +291,8 @@ export const PlanFactoryABI = [
     name: "updatePlan",
     inputs: [
       { name: "planId", type: "uint256" },
-      { name: "newPrice", type: "uint256" },
-      { name: "newInterval", type: "uint32" },
+      { name: "price", type: "uint256" },
+      { name: "metadataURI", type: "string" },
     ],
     outputs: [],
     stateMutability: "nonpayable",

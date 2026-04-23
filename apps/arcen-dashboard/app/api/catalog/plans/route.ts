@@ -28,7 +28,7 @@ const updateSchema = z.object({
   name: z.string().min(1).optional(),
   tier: z.string().min(1).optional(),
   description: z.string().nullable().optional(),
-  price: z.coerce.number().positive().optional(),
+  price: z.coerce.number().nonnegative().optional(),
   annualPrice: z.coerce.number().nonnegative().nullable().optional(),
   billingInterval: z.coerce.number().int().positive().optional(),
   acceptedToken: z.string().min(1).optional(),
@@ -36,6 +36,44 @@ const updateSchema = z.object({
   status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]).optional(),
   active: z.boolean().optional(),
 });
+
+function normalizeComparableAddress(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+function getLockedOnChainFieldChanges(
+  existing: {
+    name: string;
+    tier: string;
+    billingInterval: number;
+    acceptedToken: string;
+  },
+  updates: z.infer<typeof updateSchema>,
+): string[] {
+  const changedFields: string[] = [];
+
+  if (updates.name !== undefined && updates.name !== existing.name) {
+    changedFields.push("name");
+  }
+  if (updates.tier !== undefined && updates.tier !== existing.tier) {
+    changedFields.push("tier");
+  }
+  if (
+    updates.billingInterval !== undefined &&
+    updates.billingInterval !== existing.billingInterval
+  ) {
+    changedFields.push("billing interval");
+  }
+  if (
+    updates.acceptedToken !== undefined &&
+    normalizeComparableAddress(updates.acceptedToken) !==
+      normalizeComparableAddress(existing.acceptedToken)
+  ) {
+    changedFields.push("accepted token");
+  }
+
+  return changedFields;
+}
 
 const deleteSchema = z.object({
   id: z.string().min(1),
@@ -186,12 +224,62 @@ export async function PUT(request: NextRequest) {
   }
 
   const nextVersion = existing.version + 1;
+  const existingPrice = parseFloat(existing.price.toString());
+  const nextPrice = parsed.data.price ?? existingPrice;
+  const lockedFieldChanges = existing.onChainPlanId
+    ? getLockedOnChainFieldChanges(existing, parsed.data)
+    : [];
 
-  // If price changes, update chainSyncStatus accordingly (only when not yet on-chain)
-  const newPrice = parsed.data.price ?? parseFloat(existing.price.toString());
-  const chainSyncUpdate =
-    !existing.onChainPlanId && parsed.data.price !== undefined
-      ? { chainSyncStatus: newPrice === 0 ? ("NOT_APPLICABLE" as const) : ("PENDING" as const) }
+  if (existing.onChainPlanId && lockedFieldChanges.length > 0) {
+    return NextResponse.json(
+      {
+        error: `This plan is already registered on-chain. ${lockedFieldChanges.join(
+          ", ",
+        )} cannot be changed on the existing on-chain plan. Create a new plan to change those fields.`,
+      },
+      { status: 409 },
+    );
+  }
+
+  if (existing.onChainPlanId && parsed.data.price !== undefined && nextPrice === 0) {
+    return NextResponse.json(
+      {
+        error:
+          "This plan is already registered on-chain. Converting it to a free plan would leave the on-chain plan paid. Create a new free plan instead.",
+      },
+      { status: 409 },
+    );
+  }
+
+  const priceChanged =
+    parsed.data.price !== undefined && parsed.data.price !== existingPrice;
+  const onChainRelevantUpdate =
+    parsed.data.price !== undefined ||
+    parsed.data.name !== undefined ||
+    parsed.data.tier !== undefined ||
+    parsed.data.billingInterval !== undefined ||
+    parsed.data.acceptedToken !== undefined;
+
+  const chainSyncUpdate = existing.onChainPlanId
+    ? priceChanged
+      ? {
+          chainSyncStatus: "PENDING" as const,
+          chainSyncError: null,
+          chainSyncedAt: null,
+        }
+      : {}
+    : onChainRelevantUpdate
+      ? nextPrice === 0
+        ? {
+            chainSyncStatus: "NOT_APPLICABLE" as const,
+            chainSyncError: null,
+            chainSyncedAt: null,
+          }
+        : {
+            chainSyncStatus: "PENDING" as const,
+            chainSyncError: null,
+            chainSyncedAt: null,
+          }
       : {};
 
   const updated = await db.catalogPlan.update({

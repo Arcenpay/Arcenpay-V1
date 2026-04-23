@@ -24,7 +24,10 @@ import {
   createSmartAccount,
 } from "@arcenpay/sdk";
 import { useArcenSession, useMEAP } from "../providers/MEAPProvider";
-import { sendSmartAccountTransaction } from "../lib/zerodev";
+import {
+  isRecoverableSmartAccountFundingError,
+  sendSmartAccountTransaction,
+} from "../lib/zerodev";
 import {
   mergeActivationHeaders,
   resolveActivationEndpoint,
@@ -473,6 +476,17 @@ export function CheckoutModal({
         }
       }
     } catch (err) {
+      if (isRecoverableSmartAccountFundingError(err)) {
+        console.warn(
+          "[CheckoutModal] Smart-account sponsorship unavailable; continuing with direct wallet autopay setup.",
+          err,
+        );
+        setSmartAccountAddress(undefined);
+        setSmartAccountDeployTxHash(undefined);
+        setStep("autopay");
+        return;
+      }
+
       emitCheckoutError(
         CHECKOUT_ERROR_CODES.SMART_ACCOUNT_DEPLOYMENT_FAILED,
         err,

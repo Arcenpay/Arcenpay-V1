@@ -22,8 +22,10 @@ import { privateKeyToAccount } from "viem/accounts";
 import {
   createPublicClient,
   createWalletClient,
+  formatUnits,
   http,
   isAddress,
+  parseEventLogs,
   type Chain,
 } from "viem";
 import { baseSepolia } from "viem/chains";
@@ -91,6 +93,50 @@ const registryBillerStatusAbi = [
   },
 ] as const;
 
+const registryOwnerOfAbi = [
+  {
+    inputs: [{ internalType: "uint256", name: "tokenId", type: "uint256" }],
+    name: "ownerOf",
+    outputs: [{ internalType: "address", name: "", type: "address" }],
+    stateMutability: "view",
+    type: "function",
+  },
+] as const;
+
+const erc20ReadAbi = [
+  {
+    type: "function",
+    name: "balanceOf",
+    inputs: [{ name: "account", type: "address" }],
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "allowance",
+    inputs: [
+      { name: "owner", type: "address" },
+      { name: "spender", type: "address" },
+    ],
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "decimals",
+    inputs: [],
+    outputs: [{ name: "", type: "uint8" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "symbol",
+    inputs: [],
+    outputs: [{ name: "", type: "string" }],
+    stateMutability: "view",
+  },
+] as const;
+
 function corsHeaders() {
   return {
     "Access-Control-Allow-Origin": "*",
@@ -107,6 +153,53 @@ function normalizePrivateKey(raw: string | undefined): `0x${string}` | null {
   return /^0x[a-fA-F0-9]{64}$/.test(withPrefix)
     ? (withPrefix as `0x${string}`)
     : null;
+}
+
+function formatTokenAmount(
+  amount: bigint,
+  decimals: number,
+  symbol: string,
+): string {
+  const formatted = Number(formatUnits(amount, decimals));
+  const safe =
+    Number.isFinite(formatted) && formatted < 1_000_000_000
+      ? formatted.toFixed(decimals === 6 ? 2 : Math.min(decimals, 4))
+      : formatUnits(amount, decimals);
+  return `${safe} ${symbol}`;
+}
+
+function normalizeActivationError(message: string): {
+  status: number;
+  error: string;
+} {
+  const lower = message.toLowerCase();
+
+  if (
+    lower.includes("transfer amount exceeds balance") ||
+    lower.includes("erc20insufficientbalance")
+  ) {
+    return {
+      status: 409,
+      error:
+        "The payment account does not have enough token balance for the first subscription charge.",
+    };
+  }
+
+  if (
+    lower.includes("insufficient allowance") ||
+    lower.includes("erc20insufficientallowance")
+  ) {
+    return {
+      status: 409,
+      error:
+        "The payment account has not approved enough token allowance for autopay to collect the first charge.",
+    };
+  }
+
+  return {
+    status: 500,
+    error: message,
+  };
 }
 
 async function upsertCompanyForActivation(
@@ -150,6 +243,39 @@ async function upsertCompanyForActivation(
   });
 
   return { id: created.id, activePlanId: null, created: true };
+}
+
+async function readActiveWalletSubscriptionTokenId(params: {
+  publicClient: ReturnType<typeof createPublicClient>;
+  subscriptionRegistryAddress: `0x${string}`;
+  wallet: `0x${string}`;
+}): Promise<bigint> {
+  const hasActiveSubscription = (await params.publicClient.readContract({
+    address: params.subscriptionRegistryAddress,
+    abi: SubscriptionRegistryABI,
+    functionName: "hasActiveSubscription",
+    args: [params.wallet],
+  })) as boolean;
+
+  if (!hasActiveSubscription) return 0n;
+
+  const tokenId = (await params.publicClient.readContract({
+    address: params.subscriptionRegistryAddress,
+    abi: SubscriptionRegistryABI,
+    functionName: "getWalletSubscription",
+    args: [params.wallet],
+  })) as bigint;
+
+  if (tokenId <= 0n) return 0n;
+
+  const owner = (await params.publicClient.readContract({
+    address: params.subscriptionRegistryAddress,
+    abi: registryOwnerOfAbi,
+    functionName: "ownerOf",
+    args: [tokenId],
+  })) as `0x${string}`;
+
+  return owner.toLowerCase() === params.wallet.toLowerCase() ? tokenId : 0n;
 }
 
 export async function OPTIONS() {
@@ -307,6 +433,7 @@ export async function POST(req: NextRequest) {
     provider?: string;
     active?: boolean;
     price?: bigint;
+    acceptedToken?: string;
   };
 
   const merchantAddress = String(onChainPlan?.provider ?? "").toLowerCase();
@@ -406,6 +533,76 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const acceptedTokenAddress =
+    isAddress(String(onChainPlan?.acceptedToken ?? catalogPlan.acceptedToken ?? ""))
+      ? (String(
+          onChainPlan?.acceptedToken ?? catalogPlan.acceptedToken,
+        ).toLowerCase() as `0x${string}`)
+      : null;
+
+  if (!acceptedTokenAddress) {
+    return NextResponse.json(
+      { error: "Catalog plan accepted token is not configured correctly." },
+      { status: 409, headers: corsHeaders() },
+    );
+  }
+
+  const [tokenBalance, tokenAllowance, tokenDecimals, tokenSymbol] =
+    await Promise.all([
+      publicClient.readContract({
+        address: acceptedTokenAddress,
+        abi: erc20ReadAbi,
+        functionName: "balanceOf",
+        args: [paymentAccount],
+      }) as Promise<bigint>,
+      publicClient.readContract({
+        address: acceptedTokenAddress,
+        abi: erc20ReadAbi,
+        functionName: "allowance",
+        args: [paymentAccount, autopayAddress],
+      }) as Promise<bigint>,
+      publicClient
+        .readContract({
+          address: acceptedTokenAddress,
+          abi: erc20ReadAbi,
+          functionName: "decimals",
+        })
+        .then((value) => Number(value))
+        .catch(() => 6),
+      publicClient
+        .readContract({
+          address: acceptedTokenAddress,
+          abi: erc20ReadAbi,
+          functionName: "symbol",
+        })
+        .then((value) => String(value))
+        .catch(() => "tokens"),
+    ]);
+
+  if (tokenBalance < chargeAmount) {
+    return NextResponse.json(
+      {
+        error:
+          `The payment account does not have enough ${tokenSymbol} for the first charge. ` +
+          `Required: ${formatTokenAmount(chargeAmount, tokenDecimals, tokenSymbol)}. ` +
+          `Available: ${formatTokenAmount(tokenBalance, tokenDecimals, tokenSymbol)}.`,
+      },
+      { status: 409, headers: corsHeaders() },
+    );
+  }
+
+  if (tokenAllowance < chargeAmount) {
+    return NextResponse.json(
+      {
+        error:
+          `The payment account has not approved enough ${tokenSymbol} for autopay. ` +
+          `Required: ${formatTokenAmount(chargeAmount, tokenDecimals, tokenSymbol)}. ` +
+          `Approved: ${formatTokenAmount(tokenAllowance, tokenDecimals, tokenSymbol)}.`,
+      },
+      { status: 409, headers: corsHeaders() },
+    );
+  }
+
   const startTime = Number(autopayConfig?.startTime ?? 0n);
   const nowSeconds = Math.floor(Date.now() / 1000);
   if (startTime > nowSeconds) {
@@ -418,12 +615,11 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const existingTokenId = (await publicClient.readContract({
-    address: subscriptionRegistryAddress,
-    abi: SubscriptionRegistryABI,
-    functionName: "getWalletSubscription",
-    args: [paymentAccount],
-  })) as bigint;
+  const existingTokenId = await readActiveWalletSubscriptionTokenId({
+    publicClient,
+    subscriptionRegistryAddress,
+    wallet: paymentAccount,
+  });
 
   if (existingTokenId > 0n) {
     return NextResponse.json(
@@ -483,18 +679,105 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const tokenId = (await publicClient.readContract({
-      address: subscriptionRegistryAddress,
+    const billingLogs = parseEventLogs({
+      abi: ERC7579AutopayModuleABI,
+      logs: receipt.logs,
+      eventName: "BillingExecuted",
+      strict: false,
+    });
+    const latestBillingLog = [...billingLogs].reverse().find((log) => {
+      const args = log.args as
+        | { account?: string; merchant?: string; tokenId?: bigint }
+        | undefined;
+      return (
+        typeof args?.account === "string" &&
+        typeof args?.merchant === "string" &&
+        args.account.toLowerCase() === paymentAccount &&
+        args.merchant.toLowerCase() === merchantAddress
+      );
+    });
+
+    let tokenId =
+      ((latestBillingLog?.args as { tokenId?: bigint } | undefined)?.tokenId ??
+        0n) as bigint;
+
+    const mintedLogs = parseEventLogs({
       abi: SubscriptionRegistryABI,
-      functionName: "getWalletSubscription",
-      args: [paymentAccount],
-    })) as bigint;
-    const expiresAt = (await publicClient.readContract({
-      address: subscriptionRegistryAddress,
+      logs: receipt.logs,
+      eventName: "SubscriptionMinted",
+      strict: false,
+    });
+    const renewedLogs = parseEventLogs({
       abi: SubscriptionRegistryABI,
-      functionName: "expiresAt",
-      args: [tokenId],
-    })) as bigint;
+      logs: receipt.logs,
+      eventName: "SubscriptionRenewed",
+      strict: false,
+    });
+
+    let expiresAt = 0n;
+
+    const latestMintLog = [...mintedLogs].reverse().find((log) => {
+      const args = log.args as
+        | { subscriber?: string; tokenId?: bigint; expiration?: bigint }
+        | undefined;
+      return (
+        typeof args?.subscriber === "string" &&
+        args.subscriber.toLowerCase() === paymentAccount &&
+        (tokenId <= 0n || args.tokenId === tokenId)
+      );
+    });
+
+    if (latestMintLog) {
+      const args = latestMintLog.args as {
+        tokenId?: bigint;
+        expiration?: bigint;
+      };
+      if (args.tokenId && args.tokenId > 0n) tokenId = args.tokenId;
+      if (args.expiration && args.expiration > 0n) expiresAt = args.expiration;
+    }
+
+    const latestRenewLog =
+      tokenId > 0n
+        ? [...renewedLogs].reverse().find((log) => {
+            const args = log.args as
+              | { tokenId?: bigint; newExpiration?: bigint }
+              | undefined;
+            return args?.tokenId === tokenId;
+          })
+        : undefined;
+
+    if (!latestMintLog && latestRenewLog) {
+      const args = latestRenewLog.args as {
+        newExpiration?: bigint;
+      };
+      if (args.newExpiration && args.newExpiration > 0n) {
+        expiresAt = args.newExpiration;
+      }
+    }
+
+    if (tokenId <= 0n) {
+      tokenId = await readActiveWalletSubscriptionTokenId({
+        publicClient,
+        subscriptionRegistryAddress,
+        wallet: paymentAccount,
+      });
+    }
+
+    if (tokenId <= 0n) {
+      throw new Error(
+        "Activation transaction succeeded, but no active subscription token could be resolved for the payment account.",
+      );
+    }
+
+    if (expiresAt <= 0n) {
+      expiresAt = (await publicClient.readContract({
+        address: subscriptionRegistryAddress,
+        abi: SubscriptionRegistryABI,
+        functionName: "expiresAt",
+        args: [tokenId],
+      })) as bigint;
+    }
+
     const currentPeriodEnd =
       expiresAt > 0n ? new Date(Number(expiresAt) * 1000) : null;
 
@@ -569,9 +852,10 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Failed to activate subscription.";
+    const normalized = normalizeActivationError(message);
     return NextResponse.json(
-      { error: message },
-      { status: 500, headers: corsHeaders() },
+      { error: normalized.error },
+      { status: normalized.status, headers: corsHeaders() },
     );
   }
 }

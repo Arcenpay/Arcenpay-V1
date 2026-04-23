@@ -57,9 +57,10 @@ export class EntitlementError extends Error {
  *
  * Performs real on-chain reads against SubscriptionRegistry:
  * 1. getWalletSubscription(wallet) → tokenId
- * 2. isValid(tokenId)
- * 3. expiresAt(tokenId)
- * 4. getPlanFeatures(tokenId) → { planId, planTier }
+ * 2. hasActiveSubscription(wallet) → confirm the mapping still points to a live token
+ * 3. isValid(tokenId)
+ * 4. expiresAt(tokenId)
+ * 5. getPlanFeatures(tokenId) → { planId, planTier }
  *
  * Feature values are resolved with this precedence:
  * 1. dashboard company entitlements when an Arcen session token is available
@@ -183,6 +184,13 @@ export function useEntitlement(
         args: [walletAddress as `0x${string}`],
         chainId: network.chainId,
       },
+      {
+        address: registryAddress,
+        abi: SubscriptionRegistryABI,
+        functionName: 'hasActiveSubscription',
+        args: [walletAddress as `0x${string}`],
+        chainId: network.chainId,
+      },
     ],
     query: {
       enabled: !!walletAddress,
@@ -191,7 +199,13 @@ export function useEntitlement(
   });
 
   const tokenId = tokenIdResult?.[0]?.result as bigint | undefined;
-  const hasToken = tokenId !== undefined && tokenId > 0n;
+  const hasActiveSubscription = tokenIdResult?.[1]?.result as
+    | boolean
+    | undefined;
+  const hasToken =
+    tokenId !== undefined &&
+    tokenId > 0n &&
+    hasActiveSubscription === true;
 
   // Step 2: If we have a tokenId, batch-read isValid, expiresAt, getPlanFeatures
   const {

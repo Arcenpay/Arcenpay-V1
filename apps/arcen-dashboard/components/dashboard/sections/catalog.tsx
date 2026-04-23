@@ -72,10 +72,20 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEnvironment } from "@/contexts/environment-context";
-import { useAccount, useSignTypedData, useChainId } from "wagmi";
+import {
+  useAccount,
+  useChainId,
+  usePublicClient,
+  useSignTypedData,
+  useWriteContract,
+} from "wagmi";
 import { getUsdcAddress, getUsdcTokenOptions } from "@/lib/contracts";
-import { DEFAULT_TESTNET_CHAIN_ID } from "@/lib/default-chain";
+import {
+  DEFAULT_CHAIN_ID,
+  DEFAULT_TESTNET_CHAIN_ID,
+} from "@/lib/default-chain";
 import { toast } from "sonner";
+import { PlanFactoryABI } from "@arcenpay/sdk";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -168,6 +178,7 @@ interface RegisterOnChainResponse {
   ownerActionRequired?: OwnerActionRequiredPayload;
   providerAddress?: string;
   signingRequired?: boolean;
+  noOp?: boolean;
 }
 
 // ─── Token Options ────────────────────────────────────────────────────────────
@@ -1834,7 +1845,9 @@ function PlansTable({
 }) {
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
+  const publicClient = usePublicClient({ chainId: DEFAULT_CHAIN_ID });
   const { signTypedDataAsync } = useSignTypedData();
+  const { writeContractAsync } = useWriteContract();
 
   const [plans, setPlans] = useState<CatalogPlan[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1924,6 +1937,11 @@ function PlansTable({
         providerAddress?: string;
       };
 
+      if (chainId !== DEFAULT_CHAIN_ID) {
+        toast.error("Switch your wallet to Base Sepolia to sync this plan.");
+        return;
+      }
+
       if (signingRequired) {
         // Verify the connected wallet matches the stored provider wallet
         try {
@@ -1952,6 +1970,52 @@ function PlansTable({
         Math.round(parseFloat(plan.price) * 1_000_000),
       );
       const billingIntervalSeconds = plan.billingInterval * 86400;
+
+      if (plan.onChainPlanId && signingRequired) {
+        if (!publicClient) {
+          throw new Error("Public client unavailable for Base Sepolia");
+        }
+
+        const txHash = await writeContractAsync({
+          address: planFactoryAddress as `0x${string}`,
+          abi: PlanFactoryABI,
+          functionName: "updatePlan",
+          args: [BigInt(plan.onChainPlanId), priceInUsdc, ""],
+        });
+
+        const receipt = await publicClient.waitForTransactionReceipt({
+          hash: txHash,
+          timeout: 45_000,
+        });
+
+        if (receipt.status === "reverted") {
+          throw new Error("Transaction reverted on-chain");
+        }
+
+        const confirmRes = await fetch(
+          `/api/catalog/plans/${plan.id}/chain-confirm`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              txHash,
+              onChainPlanId: plan.onChainPlanId,
+              success: true,
+            }),
+          },
+        );
+
+        if (!confirmRes.ok) {
+          const confirmErr = await confirmRes.json().catch(() => ({}));
+          throw new Error(
+            confirmErr.error || "Failed to confirm on-chain price sync",
+          );
+        }
+
+        toast.success(`Synced on-chain · ${txHash.slice(0, 10)}…`);
+        load();
+        return;
+      }
 
       // 3. Sign EIP-712 typed data when the provider is the connected wallet
       const signature = signingRequired
@@ -2025,7 +2089,13 @@ function PlansTable({
         }
         throw new Error(data.error || "Registration failed");
       }
-      toast.success(`Registered on-chain · ${(data.txHash ?? "").slice(0, 10)}…`);
+      toast.success(
+        data.noOp
+          ? "Plan is already in sync on-chain"
+          : `${plan.onChainPlanId ? "Synced" : "Registered"} on-chain · ${(
+              data.txHash ?? ""
+            ).slice(0, 10)}…`,
+      );
       load();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Registration failed";
@@ -2266,8 +2336,12 @@ function PlansTable({
                             disabled={syncingPlanId === plan.id}
                           >
                             {syncingPlanId === plan.id
-                              ? "Registering…"
-                              : "Register On-Chain"}
+                              ? plan.onChainPlanId
+                                ? "Syncing…"
+                                : "Registering…"
+                              : plan.onChainPlanId
+                                ? "Sync On-Chain"
+                                : "Register On-Chain"}
                           </DropdownMenuItem>
                         ) : null}
                         {!plan.onChainPlanId && plan.status !== "PUBLISHED" && (
@@ -4408,29 +4482,41 @@ function EditPlanDialog({
   const open = externalOpen !== undefined ? externalOpen : internalOpen;
   const setOpen = externalOnOpenChange ?? setInternalOpen;
   const [loading, setLoading] = useState(false);
+  const isOnChainLocked = Boolean(plan.onChainPlanId);
 
-  // Determine initial plan type from price
   const initPlanType: "free" | "paid" = parseFloat(plan.price) === 0 ? "free" : "paid";
   const [planType, setPlanType] = useState<"free" | "paid">(initPlanType);
-
-  // Find matching interval or keep raw value
-  const initIntervalDays = plan.billingInterval;
-  const matchedInterval = BILLING_INTERVALS.find((i) => i.days === initIntervalDays);
-  const [billingIntervalDays, setBillingIntervalDays] = useState(initIntervalDays);
+  const [billingIntervalDays, setBillingIntervalDays] = useState(plan.billingInterval);
+  const initialAnnualPrice =
+    plan.annualPrice && parseFloat(plan.annualPrice) > 0
+      ? parseFloat(plan.annualPrice).toFixed(2)
+      : "";
+  const [hasAnnualPrice, setHasAnnualPrice] = useState(Boolean(initialAnnualPrice));
+  const [annualDiscount, setAnnualDiscount] = useState(() => {
+    const monthly = parseFloat(plan.price);
+    const annual = plan.annualPrice ? parseFloat(plan.annualPrice) : 0;
+    if (monthly > 0 && annual > 0) {
+      const pct = Math.round((1 - annual / (monthly * 12)) * 100);
+      return String(Math.min(60, Math.max(0, pct)));
+    }
+    return "20";
+  });
 
   const [form, setForm] = useState({
     name: plan.name,
     tier: plan.tier,
     description: plan.description ?? "",
     price: parseFloat(plan.price).toFixed(2),
+    annualPrice: initialAnnualPrice,
     acceptedToken: plan.acceptedToken,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Auto-derive tier from name
   const autoTier = form.name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
-
   const selectedChainOpt = USDC_CHAIN_OPTIONS.find((o) => o.address === form.acceptedToken);
+  const selectedIntervalLabel =
+    BILLING_INTERVALS.find((i) => i.days === billingIntervalDays)?.label.toLowerCase() ??
+    `${billingIntervalDays}d`;
   const chainName = (o: typeof USDC_CHAIN_OPTIONS[number]) =>
     o.label.replace(/USDC — |Custom USDC — /, "");
   const chainInitial = (o: typeof USDC_CHAIN_OPTIONS[number]) => {
@@ -4445,6 +4531,15 @@ function EditPlanDialog({
     if (planType === "paid") {
       if (!form.price || isNaN(Number(form.price)) || Number(form.price) <= 0)
         errs.price = "Must be positive";
+      if (hasAnnualPrice) {
+        if (
+          !form.annualPrice ||
+          isNaN(Number(form.annualPrice)) ||
+          Number(form.annualPrice) <= 0
+        ) {
+          errs.annualPrice = "Must be positive";
+        }
+      }
     }
     if (Object.keys(errs).length) { setErrors(errs); return; }
     setLoading(true);
@@ -4458,16 +4553,24 @@ function EditPlanDialog({
           tier: form.tier.trim() || autoTier || plan.tier,
           description: form.description || undefined,
           price: planType === "free" ? 0 : Number(form.price),
+          annualPrice:
+            planType === "paid" && hasAnnualPrice && form.annualPrice
+              ? Number(form.annualPrice)
+              : null,
           billingInterval: billingIntervalDays,
           acceptedToken: form.acceptedToken,
         }),
       });
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
         setOpen(false);
-        toast.success("Plan updated");
+        toast.success(
+          data.plan?.chainSyncStatus === "PENDING" && plan.onChainPlanId
+            ? "Plan updated — sync the monthly price on-chain to finish."
+            : "Plan updated",
+        );
         onSaved();
       } else {
-        const data = await res.json();
         setErrors({ _global: data.error || "Failed to update plan" });
       }
     } finally {
@@ -4519,10 +4622,20 @@ function EditPlanDialog({
                     {planType === "free" ? "Free" : form.price ? `$${form.price} USDC` : "—"}
                     {planType === "paid" && form.price && (
                       <span className="text-xs font-normal text-muted-foreground ml-1">
-                        / {matchedInterval?.label.toLowerCase() ?? `${billingIntervalDays}d`}
+                        / {selectedIntervalLabel}
                       </span>
                     )}
                   </p>
+                  {planType === "paid" && hasAnnualPrice && form.annualPrice && (
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      or ${form.annualPrice} USDC / year
+                      {form.price && Number(form.annualPrice) < Number(form.price) * 12 && (
+                        <span className="text-green-500 ml-1">
+                          (save {Math.round((1 - Number(form.annualPrice) / (Number(form.price) * 12)) * 100)}%)
+                        </span>
+                      )}
+                    </p>
+                  )}
                 </div>
                 <div className="p-4">
                   <p className="text-xs text-muted-foreground text-center py-3">No entitlements yet</p>
@@ -4557,6 +4670,17 @@ function EditPlanDialog({
                   </div>
                 )}
 
+                {isOnChainLocked && (
+                  <div className="rounded-lg border border-yellow-500/20 bg-yellow-500/5 p-4">
+                    <p className="text-sm font-medium text-yellow-700 dark:text-yellow-300">
+                      This plan is already on-chain.
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Monthly price changes can be synced. Name, tier, billing interval, and token stay locked on the existing on-chain plan, so create a new plan if you need to change them.
+                    </p>
+                  </div>
+                )}
+
                 {/* Name + Tier */}
                 <div className="grid grid-cols-[1fr_auto] gap-4 items-start">
                   <div>
@@ -4566,6 +4690,7 @@ function EditPlanDialog({
                       onChange={(e) => { setForm((f) => ({ ...f, name: e.target.value })); setErrors((p) => ({ ...p, name: "" })); }}
                       placeholder="e.g. Pro, Starter, Enterprise"
                       className="h-11 bg-background border-border"
+                      disabled={isOnChainLocked}
                     />
                     {errors.name && <p className="text-xs text-destructive mt-1">{errors.name}</p>}
                   </div>
@@ -4579,6 +4704,7 @@ function EditPlanDialog({
                       onChange={(e) => setForm((f) => ({ ...f, tier: e.target.value }))}
                       placeholder={autoTier || plan.tier}
                       className="h-11 bg-background border-border font-mono text-sm"
+                      disabled={isOnChainLocked}
                     />
                   </div>
                 </div>
@@ -4608,20 +4734,31 @@ function EditPlanDialog({
                       <Label className="text-sm font-medium text-foreground mb-2 block">Type</Label>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <button type="button" className="w-full flex items-center justify-between h-11 px-3 rounded-lg bg-background border border-border text-sm text-foreground hover:bg-secondary/50 transition-colors">
+                          <button
+                            type="button"
+                            disabled={isOnChainLocked}
+                            className="w-full flex items-center justify-between h-11 px-3 rounded-lg bg-background border border-border text-sm text-foreground hover:bg-secondary/50 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+                          >
                             <span className="font-medium">{planType === "free" ? "Free" : "Paid"}</span>
                             <ChevronDown className="w-4 h-4 text-muted-foreground" />
                           </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width]">
-                          <DropdownMenuItem onClick={() => { setPlanType("free"); setForm((f) => ({ ...f, price: "0" })); }}>
+                          <DropdownMenuItem
+                            disabled={isOnChainLocked}
+                            onClick={() => {
+                              setPlanType("free");
+                              setHasAnnualPrice(false);
+                              setForm((f) => ({ ...f, price: "0", annualPrice: "" }));
+                            }}
+                          >
                             <div className="flex-1">
                               <p className="text-sm font-medium">Free</p>
                               <p className="text-xs text-muted-foreground">No charge — $0.00 USDC</p>
                             </div>
                             {planType === "free" && <Check className="w-4 h-4 ml-2 text-foreground" />}
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => setPlanType("paid")}>
+                          <DropdownMenuItem disabled={isOnChainLocked} onClick={() => setPlanType("paid")}>
                             <div className="flex-1">
                               <p className="text-sm font-medium">Paid</p>
                               <p className="text-xs text-muted-foreground">Recurring USDC payment</p>
@@ -4637,7 +4774,11 @@ function EditPlanDialog({
                       <Label className="text-sm font-medium text-foreground mb-2 block">Billing Integration</Label>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <button type="button" className="w-full flex items-center justify-between h-11 px-3 rounded-lg bg-background border border-border text-sm text-foreground hover:bg-secondary/50 transition-colors">
+                          <button
+                            type="button"
+                            disabled={isOnChainLocked}
+                            className="w-full flex items-center justify-between h-11 px-3 rounded-lg bg-background border border-border text-sm text-foreground hover:bg-secondary/50 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+                          >
                             <div className="flex items-center gap-2 min-w-0">
                               <span className="font-medium truncate">
                                 {selectedChainOpt ? chainName(selectedChainOpt) : "Select chain"}
@@ -4661,7 +4802,7 @@ function EditPlanDialog({
                               {USDC_CHAIN_OPTIONS.filter((o) => o.tag === "testnet").map((opt) => {
                                 const isConn = opt.chainId === chainId;
                                 return (
-                                  <DropdownMenuItem key={opt.chainId} disabled={!isConn} onClick={() => isConn && setForm((f) => ({ ...f, acceptedToken: opt.address }))} className={`flex items-center justify-between gap-3 py-2.5 ${!isConn ? "opacity-40 cursor-not-allowed" : ""}`}>
+                                  <DropdownMenuItem key={opt.chainId} disabled={isOnChainLocked || !isConn} onClick={() => isConn && setForm((f) => ({ ...f, acceptedToken: opt.address }))} className={`flex items-center justify-between gap-3 py-2.5 ${!isConn ? "opacity-40 cursor-not-allowed" : ""}`}>
                                     <div className="flex items-center gap-2.5">
                                       <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 border ${isConn ? "bg-foreground text-background border-foreground" : "bg-secondary text-muted-foreground border-border"}`}>
                                         <span className="text-[10px] font-bold">{chainInitial(opt)}</span>
@@ -4688,7 +4829,7 @@ function EditPlanDialog({
                               {USDC_CHAIN_OPTIONS.filter((o) => o.tag === "mainnet").map((opt) => {
                                 const isConn = opt.chainId === chainId;
                                 return (
-                                  <DropdownMenuItem key={opt.chainId} disabled={!isConn} onClick={() => isConn && setForm((f) => ({ ...f, acceptedToken: opt.address }))} className={`flex items-center justify-between gap-3 py-2.5 ${!isConn ? "opacity-40 cursor-not-allowed" : ""}`}>
+                                  <DropdownMenuItem key={opt.chainId} disabled={isOnChainLocked || !isConn} onClick={() => isConn && setForm((f) => ({ ...f, acceptedToken: opt.address }))} className={`flex items-center justify-between gap-3 py-2.5 ${!isConn ? "opacity-40 cursor-not-allowed" : ""}`}>
                                     <div className="flex items-center gap-2.5">
                                       <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 border ${isConn ? "bg-foreground text-background border-foreground" : "bg-secondary text-muted-foreground border-border"}`}>
                                         <span className="text-[10px] font-bold">{chainInitial(opt)}</span>
@@ -4718,46 +4859,189 @@ function EditPlanDialog({
 
                   {/* Paid-only: Price + Interval */}
                   {planType === "paid" && (
-                    <div className="grid grid-cols-2 gap-4 mt-4">
-                      <div>
-                        <Label className="text-sm font-medium text-foreground mb-2 block">Price (USDC) *</Label>
-                        <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">$</span>
-                          <Input
-                            value={form.price}
-                            onChange={(e) => { setForm((f) => ({ ...f, price: e.target.value })); setErrors((p) => ({ ...p, price: "" })); }}
-                            placeholder="29.00"
-                            type="number"
-                            min="0.01"
-                            step="0.01"
-                            className="h-11 bg-background border-border pl-6"
-                          />
+                    <>
+                      <div className="grid grid-cols-2 gap-4 mt-4">
+                        <div>
+                          <Label className="text-sm font-medium text-foreground mb-2 block">Monthly Price (USDC) *</Label>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">$</span>
+                            <Input
+                              value={form.price}
+                              onChange={(e) => {
+                                const nextPrice = e.target.value;
+                                setForm((f) => {
+                                  if (!hasAnnualPrice || !nextPrice || isNaN(Number(nextPrice))) {
+                                    return { ...f, price: nextPrice };
+                                  }
+                                  const computed = (
+                                    Number(nextPrice) *
+                                    12 *
+                                    (1 - Number(annualDiscount) / 100)
+                                  ).toFixed(2);
+                                  return { ...f, price: nextPrice, annualPrice: computed };
+                                });
+                                setErrors((p) => ({ ...p, price: "", annualPrice: "" }));
+                              }}
+                              placeholder="29.00"
+                              type="number"
+                              min="0.01"
+                              step="0.01"
+                              className="h-11 bg-background border-border pl-6"
+                            />
+                          </div>
+                          {errors.price && <p className="text-xs text-destructive mt-1">{errors.price}</p>}
                         </div>
-                        {errors.price && <p className="text-xs text-destructive mt-1">{errors.price}</p>}
+                        <div>
+                          <Label className="text-sm font-medium text-foreground mb-2 block">Billing Interval</Label>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button
+                                type="button"
+                                disabled={isOnChainLocked}
+                                className="w-full flex items-center justify-between h-11 px-3 rounded-lg bg-background border border-border text-sm text-foreground hover:bg-secondary/50 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+                              >
+                                <span className="font-medium">{BILLING_INTERVALS.find((i) => i.days === billingIntervalDays)?.label ?? `${billingIntervalDays} days`}</span>
+                                <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width]">
+                              {BILLING_INTERVALS.map((iv) => (
+                                <DropdownMenuItem key={iv.days} disabled={isOnChainLocked} onClick={() => setBillingIntervalDays(iv.days)} className="flex items-center justify-between">
+                                  <div>
+                                    <p className="text-sm font-medium">{iv.label}</p>
+                                    <p className="text-xs text-muted-foreground">{iv.sublabel}</p>
+                                  </div>
+                                  {billingIntervalDays === iv.days && <Check className="w-4 h-4 text-foreground ml-2" />}
+                                </DropdownMenuItem>
+                              ))}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       </div>
-                      <div>
-                        <Label className="text-sm font-medium text-foreground mb-2 block">Billing Interval</Label>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <button type="button" className="w-full flex items-center justify-between h-11 px-3 rounded-lg bg-background border border-border text-sm text-foreground hover:bg-secondary/50 transition-colors">
-                              <span className="font-medium">{BILLING_INTERVALS.find((i) => i.days === billingIntervalDays)?.label ?? `${billingIntervalDays} days`}</span>
-                              <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                            </button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width]">
-                            {BILLING_INTERVALS.map((iv) => (
-                              <DropdownMenuItem key={iv.days} onClick={() => setBillingIntervalDays(iv.days)} className="flex items-center justify-between">
-                                <div>
-                                  <p className="text-sm font-medium">{iv.label}</p>
-                                  <p className="text-xs text-muted-foreground">{iv.sublabel}</p>
+
+                      <div className="mt-4 rounded-lg border border-border bg-secondary/20 p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-foreground">Annual Pricing</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              Optional yearly price for checkout. This stays off-chain; only the monthly price syncs on-chain.
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            role="switch"
+                            aria-checked={hasAnnualPrice}
+                            onClick={() => {
+                              const next = !hasAnnualPrice;
+                              setHasAnnualPrice(next);
+                              if (!next) {
+                                setForm((f) => ({ ...f, annualPrice: "" }));
+                              } else if (form.price) {
+                                const computed = (Number(form.price) * 12 * 0.8).toFixed(2);
+                                setForm((f) => ({ ...f, annualPrice: computed }));
+                                setAnnualDiscount("20");
+                              }
+                            }}
+                            className={cn(
+                              "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors",
+                              hasAnnualPrice ? "bg-primary" : "bg-secondary",
+                            )}
+                          >
+                            <span
+                              className={cn(
+                                "pointer-events-none block h-5 w-5 rounded-full bg-background shadow-lg transition-transform",
+                                hasAnnualPrice ? "translate-x-5" : "translate-x-0",
+                              )}
+                            />
+                          </button>
+                        </div>
+                        {hasAnnualPrice && (
+                          <div className="mt-4 space-y-3">
+                            <div className="flex items-center gap-3">
+                              <div className="flex-1">
+                                <Label className="text-xs text-muted-foreground mb-1.5 block">Discount off monthly × 12</Label>
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    type="range"
+                                    min="0"
+                                    max="60"
+                                    step="1"
+                                    value={annualDiscount}
+                                    onChange={(e) => {
+                                      const pct = e.target.value;
+                                      setAnnualDiscount(pct);
+                                      if (form.price) {
+                                        const computed = (Number(form.price) * 12 * (1 - Number(pct) / 100)).toFixed(2);
+                                        setForm((f) => ({ ...f, annualPrice: computed }));
+                                        setErrors((p) => ({ ...p, annualPrice: "" }));
+                                      }
+                                    }}
+                                    className="flex-1 h-1.5 accent-primary cursor-pointer"
+                                  />
+                                  <div className="flex items-center gap-0.5 w-16 h-9 rounded-md border border-border bg-background px-2">
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      max="60"
+                                      value={annualDiscount}
+                                      onChange={(e) => {
+                                        const pct = Math.min(60, Math.max(0, Number(e.target.value) || 0)).toString();
+                                        setAnnualDiscount(pct);
+                                        if (form.price) {
+                                          const computed = (Number(form.price) * 12 * (1 - Number(pct) / 100)).toFixed(2);
+                                          setForm((f) => ({ ...f, annualPrice: computed }));
+                                          setErrors((p) => ({ ...p, annualPrice: "" }));
+                                        }
+                                      }}
+                                      className="w-full text-sm text-foreground bg-transparent outline-none"
+                                    />
+                                    <span className="text-xs text-muted-foreground">%</span>
+                                  </div>
                                 </div>
-                                {billingIntervalDays === iv.days && <Check className="w-4 h-4 text-foreground ml-2" />}
-                              </DropdownMenuItem>
-                            ))}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                              </div>
+                            </div>
+
+                            <div className="flex items-start gap-3">
+                              <div className="flex-1">
+                                <Label className="text-xs text-muted-foreground mb-1.5 block">Annual price (USDC)</Label>
+                                <div className="relative">
+                                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">$</span>
+                                  <Input
+                                    value={form.annualPrice}
+                                    onChange={(e) => {
+                                      const val = e.target.value;
+                                      setForm((f) => ({ ...f, annualPrice: val }));
+                                      setErrors((p) => ({ ...p, annualPrice: "" }));
+                                      if (form.price && val && Number(val) > 0) {
+                                        const backPct = Math.round((1 - Number(val) / (Number(form.price) * 12)) * 100);
+                                        if (backPct >= 0 && backPct <= 60) setAnnualDiscount(String(backPct));
+                                      }
+                                    }}
+                                    placeholder={form.price ? (Number(form.price) * 12 * 0.8).toFixed(2) : "278.40"}
+                                    type="number"
+                                    min="0.01"
+                                    step="0.01"
+                                    className="h-9 bg-background border-border pl-6 text-sm"
+                                  />
+                                </div>
+                                {errors.annualPrice && <p className="text-xs text-destructive mt-1">{errors.annualPrice}</p>}
+                              </div>
+
+                              {form.price && form.annualPrice && Number(form.annualPrice) > 0 && (
+                                <div className="pt-6 text-right">
+                                  <p className="text-xs font-semibold text-green-500">
+                                    {Math.round((1 - Number(form.annualPrice) / (Number(form.price) * 12)) * 100)}% off
+                                  </p>
+                                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                                    vs ${(Number(form.price) * 12).toFixed(2)}/yr
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    </div>
+                    </>
                   )}
                 </div>
               </div>
@@ -5782,15 +6066,15 @@ function PlanDetailView({
               <div className="flex items-center justify-between p-4 rounded-lg bg-yellow-500/5 border border-yellow-500/20">
                 <div className="flex items-center gap-2 text-yellow-600 text-sm dark:text-yellow-400">
                   <Loader2 className="w-4 h-4" />
-                  Pending on-chain registration
+                  Pending on-chain sync
                 </div>
                 <Button
                   size="sm"
                   variant="outline"
                   className="gap-1.5 border-yellow-500/30 text-yellow-600 hover:bg-yellow-500/10 dark:text-yellow-400"
-                  onClick={() => toast.info("Use the Register on-chain button in the plans list")}
+                  onClick={() => toast.info("Use the sync button in the plans list")}
                 >
-                  Register on-chain
+                  Sync on-chain
                 </Button>
               </div>
             ) : (

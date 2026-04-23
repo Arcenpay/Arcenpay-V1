@@ -1,5 +1,6 @@
 export {
   deploySmartAccount,
+  isRecoverableSmartAccountFundingError,
   revokeAutopayModule,
   sendSmartAccountTransaction,
   updateAutopayConfig,

@@ -140,6 +140,10 @@ function getManagedProviderPrivateKey(): `0x${string}` | null {
   );
 }
 
+function sameAddress(a: string, b: string): boolean {
+  return a.toLowerCase() === b.toLowerCase();
+}
+
 export async function POST(
   request: NextRequest,
   context: { params: Promise<Params> },
@@ -268,6 +272,194 @@ export async function POST(
       ? storedToken
       : (TOKENS[chainId as keyof typeof TOKENS]?.USDC ?? storedToken)
   ) as `0x${string}`;
+
+  if (plan.onChainPlanId) {
+    const onChainPlanId = BigInt(plan.onChainPlanId);
+    const onChainPlan = (await publicClient.readContract({
+      address: planFactoryAddress,
+      abi: PlanFactoryABI,
+      functionName: "getPlan",
+      args: [onChainPlanId],
+    })) as {
+      id: bigint;
+      provider: `0x${string}`;
+      name: string;
+      tier: string;
+      price: bigint;
+      billingInterval: number;
+      acceptedToken: `0x${string}`;
+      active: boolean;
+      metadataURI: string;
+    };
+
+    if (!sameAddress(onChainPlan.provider, providerAddress)) {
+      const message = `Configured provider wallet ${providerAddress} does not own on-chain plan ${plan.onChainPlanId}. Current owner is ${onChainPlan.provider}.`;
+      await db.catalogPlan.update({
+        where: { id: planId },
+        data: { chainSyncStatus: "FAILED", chainSyncError: message },
+      });
+      return NextResponse.json({ error: message }, { status: 409 });
+    }
+
+    const immutableMismatches: string[] = [];
+    if (onChainPlan.name !== plan.name) immutableMismatches.push("name");
+    if (onChainPlan.tier !== plan.tier) immutableMismatches.push("tier");
+    if (Number(onChainPlan.billingInterval) !== billingIntervalSeconds) {
+      immutableMismatches.push("billing interval");
+    }
+    if (!sameAddress(onChainPlan.acceptedToken, usdcAddress)) {
+      immutableMismatches.push("accepted token");
+    }
+
+    if (immutableMismatches.length > 0) {
+      const message = `On-chain plan ${plan.onChainPlanId} can only sync price updates. These fields differ from the on-chain plan: ${immutableMismatches.join(", ")}. Create a new plan to change them.`;
+      await db.catalogPlan.update({
+        where: { id: planId },
+        data: { chainSyncStatus: "FAILED", chainSyncError: message },
+      });
+      return NextResponse.json({ error: message }, { status: 409 });
+    }
+
+    if (onChainPlan.price === priceInUsdc) {
+      const syncedPlan = await db.catalogPlan.update({
+        where: { id: planId },
+        data: {
+          chainSyncStatus: "SYNCED",
+          chainSyncError: null,
+          chainSyncedAt: new Date(),
+        },
+      });
+
+      await writeAuditEvent({
+        request,
+        teamId: auth.team.teamId,
+        userId: auth.team.userId,
+        walletAddress: auth.team.walletAddress,
+        action: "catalog.plan.chain_sync_confirmed",
+        resourceType: "CatalogPlan",
+        resourceId: planId,
+        metadata: {
+          onChainPlanId: plan.onChainPlanId,
+          syncMode: "already_synced",
+          planOwner: providerAddress,
+        },
+      });
+
+      return NextResponse.json({
+        ok: true,
+        noOp: true,
+        onChainPlanId: plan.onChainPlanId,
+        plan: syncedPlan,
+        planOwner: providerAddress,
+        signingRequired: false,
+      });
+    }
+
+    await db.catalogPlan.update({
+      where: { id: planId },
+      data: { chainSyncStatus: "PENDING", chainSyncError: null },
+    });
+
+    if (!managedProviderAccount) {
+      return NextResponse.json(
+        {
+          error:
+            "This plan already exists on-chain. Price updates must be sent from the provider wallet because PlanFactory.updatePlan is not relayer-signable.",
+          providerAddress,
+          signingRequired: true,
+        },
+        { status: 409 },
+      );
+    }
+
+    let txHash: `0x${string}`;
+    try {
+      const providerWalletClient = createWalletClient({
+        account: managedProviderAccount,
+        chain,
+        transport: http(rpcUrl),
+      });
+      txHash = await providerWalletClient.writeContract({
+        address: planFactoryAddress,
+        abi: PlanFactoryABI,
+        functionName: "updatePlan",
+        args: [onChainPlanId, priceInUsdc, onChainPlan.metadataURI ?? ""],
+      });
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Transaction submission failed";
+      await db.catalogPlan.update({
+        where: { id: planId },
+        data: { chainSyncStatus: "FAILED", chainSyncError: message },
+      });
+      return NextResponse.json({ error: message }, { status: 500 });
+    }
+
+    let confirmedOnChain = false;
+    try {
+      const receipt = await publicClient.waitForTransactionReceipt({
+        hash: txHash,
+        timeout: 45_000,
+      });
+
+      if (receipt.status === "reverted") {
+        await db.catalogPlan.update({
+          where: { id: planId },
+          data: {
+            chainSyncStatus: "FAILED",
+            chainTxHash: txHash,
+            chainSyncError: "Transaction reverted on-chain",
+          },
+        });
+        return NextResponse.json(
+          { error: "Transaction reverted on-chain", txHash },
+          { status: 500 },
+        );
+      }
+
+      confirmedOnChain = true;
+    } catch {
+      // Confirmation timed out or receipt fetch failed — tx was submitted.
+    }
+
+    const updatedPlan = await db.catalogPlan.update({
+      where: { id: planId },
+      data: {
+        chainSyncStatus: confirmedOnChain ? "SYNCED" : "PENDING",
+        chainTxHash: txHash,
+        chainSyncError: null,
+        chainSyncedAt: confirmedOnChain ? new Date() : null,
+      },
+    });
+
+    await writeAuditEvent({
+      request,
+      teamId: auth.team.teamId,
+      userId: auth.team.userId,
+      walletAddress: auth.team.walletAddress,
+      action: confirmedOnChain
+        ? "catalog.plan.chain_synced"
+        : "catalog.plan.chain_sync_pending",
+      resourceType: "CatalogPlan",
+      resourceId: planId,
+      metadata: {
+        txHash,
+        onChainPlanId: plan.onChainPlanId,
+        relayer: managedProviderAccount.address,
+        planOwner: providerAddress,
+        registrationMode: "managed_provider_update",
+      },
+    });
+
+    return NextResponse.json({
+      ok: true,
+      txHash,
+      onChainPlanId: plan.onChainPlanId,
+      plan: updatedPlan,
+      planOwner: providerAddress,
+      signingRequired: false,
+    });
+  }
 
   let nonce: bigint | null = null;
   if (requiresUserSignature) {

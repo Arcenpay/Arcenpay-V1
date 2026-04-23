@@ -63,17 +63,24 @@ export async function createSmartAccount(
         process.env[`NEXT_PUBLIC_ZERODEV_BUNDLER_RPC_${chainId}`];
     const specificPaymaster =
         process.env[`NEXT_PUBLIC_ZERODEV_PAYMASTER_RPC_${chainId}`];
+    const genericUnified = process.env.NEXT_PUBLIC_ZERODEV_RPC;
+    const genericBundler = process.env.NEXT_PUBLIC_ZERODEV_BUNDLER_RPC;
+    const genericPaymaster = process.env.NEXT_PUBLIC_ZERODEV_PAYMASTER_RPC;
+    const defaultUnifiedV3 =
+        `https://rpc.zerodev.app/api/v3/${zeroDevProjectId}/chain/${chainId}`;
     const bundlerRpc =
         specificUnified ||
         specificBundler ||
-        process.env.NEXT_PUBLIC_ZERODEV_RPC ||
-        process.env.NEXT_PUBLIC_ZERODEV_BUNDLER_RPC ||
+        genericUnified ||
+        genericBundler ||
+        defaultUnifiedV3 ||
         `https://rpc.zerodev.app/api/v2/bundler/${zeroDevProjectId}`;
     const paymasterRpc =
         specificUnified ||
         specificPaymaster ||
-        process.env.NEXT_PUBLIC_ZERODEV_RPC ||
-        process.env.NEXT_PUBLIC_ZERODEV_PAYMASTER_RPC ||
+        genericUnified ||
+        genericPaymaster ||
+        defaultUnifiedV3 ||
         `https://rpc.zerodev.app/api/v2/paymaster/${zeroDevProjectId}`;
 
     // Dynamically import ZeroDev to avoid SSR issues + keep tree-shakable
