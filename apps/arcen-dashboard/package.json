@@ -5,9 +5,9 @@
   "scripts": {
     "build": "prisma generate && next build --webpack",
     "dev": "prisma generate && next dev",
-    "lint": "next typegen && tsc --noEmit --incremental false",
+    "lint": "tsc --noEmit --incremental false",
     "test": "vitest run",
-    "typecheck": "next typegen && tsc --noEmit --incremental false",
+    "typecheck": "tsc --noEmit --incremental false",
     "start": "next start",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",

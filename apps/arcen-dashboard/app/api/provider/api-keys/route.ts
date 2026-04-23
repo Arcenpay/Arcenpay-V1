@@ -2,41 +2,27 @@
 //  Dashboard API — Provider API Keys
 //  GET    /api/provider/api-keys  — list all API keys for team
 //  POST   /api/provider/api-keys  — generate a new API key
-//  DELETE /api/provider/api-keys  — revoke current (legacy) API key
+//  DELETE /api/provider/api-keys  — revoke all keys from the legacy settings flow
 //
 //  The full key is returned ONCE on generation and never stored
 //  in plaintext. Only a SHA-256 hash + display prefix is saved.
 // ============================================================
 
 import { NextRequest, NextResponse } from "next/server";
-import { createHash, randomBytes } from "crypto";
-import { getSession } from "@/lib/auth.server";
-import { resolveTeamContext } from "@/lib/team-session";
 import { db } from "@/lib/db";
 import { writeAuditEvent } from "@/lib/audit";
-
-function hashApiKey(key: string): string {
-  return createHash("sha256").update(key).digest("hex");
-}
-
-async function resolveTeamId(
-  session: NonNullable<Awaited<ReturnType<typeof getSession>>>,
-): Promise<string | null> {
-  const ctx = await resolveTeamContext(session);
-  return ctx?.teamId ?? null;
-}
+import { generateApiKey } from "@/lib/api-key-auth";
+import { requireTeamRoles, isErrorResponse } from "@/lib/api-auth";
 
 // ── GET — list keys ───────────────────────────────────────────────────────────
 
 export async function GET(request: NextRequest) {
   void request;
-  const session = await getSession();
-  if (!session)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = await requireTeamRoles(["OWNER", "ADMIN"]);
+  if (isErrorResponse(auth)) return auth;
 
-  const teamId = await resolveTeamId(session);
-  if (!teamId)
-    return NextResponse.json({ error: "No team found" }, { status: 403 });
+  const { team } = auth;
+  const teamId = team.teamId;
 
   const keys = await db.arcenApiKey.findMany({
     where: { teamId },
@@ -64,13 +50,11 @@ export async function GET(request: NextRequest) {
 // ── POST — generate key ───────────────────────────────────────────────────────
 
 export async function POST(request: NextRequest) {
-  const session = await getSession();
-  if (!session)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = await requireTeamRoles(["OWNER", "ADMIN"]);
+  if (isErrorResponse(auth)) return auth;
 
-  const teamId = await resolveTeamId(session);
-  if (!teamId)
-    return NextResponse.json({ error: "No team found" }, { status: 403 });
+  const { team } = auth;
+  const teamId = team.teamId;
 
   let body: { name?: string } = {};
   try {
@@ -81,9 +65,7 @@ export async function POST(request: NextRequest) {
 
   const name = (body.name ?? "").trim() || "API Key";
 
-  const rawKey = `ak_live_${randomBytes(28).toString("hex")}`;
-  const keyHash = hashApiKey(rawKey);
-  const prefix = rawKey.slice(0, 16);
+  const { raw: rawKey, hash: keyHash, prefix } = generateApiKey();
 
   // Also keep providerProfile in sync for legacy x402 auth
   await db.providerProfile.upsert({
@@ -105,7 +87,8 @@ export async function POST(request: NextRequest) {
   await writeAuditEvent({
     request,
     teamId,
-    userId: session.clerkUserId,
+    userId: team.userId,
+    walletAddress: team.walletAddress,
     action: "provider.api_key.generate",
     resourceType: "ProviderProfile",
     resourceId: teamId,
@@ -128,13 +111,15 @@ export async function POST(request: NextRequest) {
 // ── DELETE — revoke key ───────────────────────────────────────────────────────
 
 export async function DELETE(request: NextRequest) {
-  const session = await getSession();
-  if (!session)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = await requireTeamRoles(["OWNER", "ADMIN"]);
+  if (isErrorResponse(auth)) return auth;
 
-  const teamId = await resolveTeamId(session);
-  if (!teamId)
-    return NextResponse.json({ error: "No team found" }, { status: 403 });
+  const { team } = auth;
+  const teamId = team.teamId;
+
+  await db.arcenApiKey.deleteMany({
+    where: { teamId },
+  });
 
   await db.providerProfile.updateMany({
     where: { teamId },
@@ -144,7 +129,8 @@ export async function DELETE(request: NextRequest) {
   await writeAuditEvent({
     request,
     teamId,
-    userId: session.clerkUserId,
+    userId: team.userId,
+    walletAddress: team.walletAddress,
     action: "provider.api_key.revoke",
     resourceType: "ProviderProfile",
     resourceId: teamId,

@@ -39,15 +39,35 @@ export async function generateNonce(): Promise<
  * Returns the stored record on success, null on any failure.
  */
 export async function consumeNonce(nonce: string): Promise<NonceRecord | null> {
-  const record = await db.authNonce.findUnique({ where: { nonce } });
-  if (!record) return null;
-  if (record.usedAt !== null) return null;
-  if (new Date() > record.expiresAt) return null;
+  const now = new Date();
 
-  await db.authNonce.update({
-    where: { nonce },
-    data: { usedAt: new Date() },
+  return db.$transaction(async (tx) => {
+    const record = await tx.authNonce.findUnique({
+      where: { nonce },
+      select: {
+        nonce: true,
+        issuedAt: true,
+        expiresAt: true,
+        usedAt: true,
+      },
+    });
+    if (!record) return null;
+    if (record.usedAt !== null) return null;
+    if (now > record.expiresAt) return null;
+
+    const consumed = await tx.authNonce.updateMany({
+      where: {
+        nonce,
+        usedAt: null,
+        expiresAt: { gt: now },
+      },
+      data: { usedAt: now },
+    });
+
+    if (consumed.count !== 1) {
+      return null;
+    }
+
+    return { issuedAt: record.issuedAt };
   });
-
-  return { issuedAt: record.issuedAt };
 }

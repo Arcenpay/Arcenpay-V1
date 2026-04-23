@@ -93,9 +93,9 @@ function ApiKeysTab() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/provider/api-keys")
+    fetch("/api/v1/api-keys")
       .then((r) => r.json())
-      .then((d) => setKeys(d.keys ?? []))
+      .then((d) => setKeys(d.data ?? []))
       .catch(() => setKeys([]))
       .finally(() => setLoading(false));
   }, []);
@@ -104,18 +104,17 @@ function ApiKeysTab() {
     if (!newKeyName.trim()) return;
     setCreating(true);
     try {
-      const res = await fetch("/api/provider/api-keys", {
+      const res = await fetch("/api/v1/api-keys", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: newKeyName }),
       });
       const data = await res.json() as {
-        key?: string;
-        apiKey?: { id: string; name: string; prefix: string; createdAt: string; lastUsedAt: string | null };
+        data?: { id: string; name: string; prefix: string; key: string; createdAt: string };
       };
-      if (data.key && data.apiKey) {
-        setCreatedKey(data.key);
-        setKeys((prev) => [{ ...data.apiKey!, expiresAt: null }, ...prev]);
+      if (data.data?.key) {
+        setCreatedKey(data.data.key);
+        setKeys((prev) => [{ ...data.data!, lastUsedAt: null, expiresAt: null }, ...prev]);
         setNewKeyName("");
         setShowCreate(false);
       }
@@ -125,7 +124,7 @@ function ApiKeysTab() {
   };
 
   const handleDelete = async (id: string) => {
-    await fetch(`/api/provider/api-keys/${id}`, { method: "DELETE" });
+    await fetch(`/api/v1/api-keys?id=${id}`, { method: "DELETE" });
     setKeys((prev) => prev.filter((k) => k.id !== id));
   };
 

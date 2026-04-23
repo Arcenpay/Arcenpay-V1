@@ -6,19 +6,15 @@
 // ============================================================
 
 import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/lib/auth.server";
-import { resolveTeamContext } from "@/lib/team-session";
 import { db } from "@/lib/db";
 import { FACILITATOR_URL, FACILITATOR_SECRET } from "@/lib/config";
+import { requireTeamRoles, isErrorResponse } from "@/lib/api-auth";
 
 export async function GET(request: NextRequest) {
-  // Require a valid session
-  const session = await getSession();
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const auth = await requireTeamRoles(["OWNER", "ADMIN"]);
+  if (isErrorResponse(auth)) return auth;
 
-  const team = await resolveTeamContext(session);
+  const { team } = auth;
   if (team) {
     const limitParam = Number(
       request.nextUrl.searchParams.get("limit") || "50",

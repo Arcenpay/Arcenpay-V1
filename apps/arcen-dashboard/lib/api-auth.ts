@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSession, type ClerkSession } from "@/lib/auth.server";
 import { resolveTeamContext, type TeamContext } from "@/lib/team-session";
 import { hasPermission, type Permission } from "@/lib/rbac";
+import type { TeamRole } from "@/lib/auth";
 
 export type AuthorizedContext = {
   session: ClerkSession;
@@ -22,6 +23,26 @@ export async function requirePermission(
   }
 
   if (!hasPermission(team.teamRole, permission)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  return { session, team };
+}
+
+export async function requireTeamRoles(
+  roles: TeamRole[],
+): Promise<AuthorizedContext | NextResponse> {
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const team = await resolveTeamContext(session);
+  if (!team) {
+    return NextResponse.json({ error: "No team found" }, { status: 403 });
+  }
+
+  if (!roles.includes(team.teamRole)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

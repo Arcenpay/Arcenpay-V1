@@ -10,10 +10,9 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { getSession } from "@/lib/auth.server";
-import { resolveTeamContext } from "@/lib/team-session";
 import { db } from "@/lib/db";
 import { writeAuditEvent } from "@/lib/audit";
+import { requireTeamRoles, isErrorResponse } from "@/lib/api-auth";
 
 const NotificationEntrySchema = z.object({
   id: z.string().min(1),
@@ -27,23 +26,13 @@ const PutSchema = z.object({
 
 type NotificationEntry = z.infer<typeof NotificationEntrySchema>;
 
-async function resolveTeamId(
-  session: NonNullable<Awaited<ReturnType<typeof getSession>>>,
-): Promise<string | null> {
-  const ctx = await resolveTeamContext(session);
-  return ctx?.teamId ?? null;
-}
-
 // ── GET ───────────────────────────────────────────────────────────────────────
 
 export async function GET() {
-  const session = await getSession();
-  if (!session)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = await requireTeamRoles(["OWNER", "ADMIN"]);
+  if (isErrorResponse(auth)) return auth;
 
-  const teamId = await resolveTeamId(session);
-  if (!teamId)
-    return NextResponse.json({ notifications: [] });
+  const teamId = auth.team.teamId;
 
   const profile = await db.providerProfile.findUnique({
     where: { teamId },
@@ -60,9 +49,8 @@ export async function GET() {
 // ── PUT ───────────────────────────────────────────────────────────────────────
 
 export async function PUT(request: NextRequest) {
-  const session = await getSession();
-  if (!session)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = await requireTeamRoles(["OWNER", "ADMIN"]);
+  if (isErrorResponse(auth)) return auth;
 
   const body = await request.json().catch(() => ({}));
   const parsed = PutSchema.safeParse(body);
@@ -73,10 +61,8 @@ export async function PUT(request: NextRequest) {
     );
   }
 
-  const teamId = await resolveTeamId(session);
-  if (!teamId)
-    return NextResponse.json({ error: "No team found" }, { status: 403 });
-
+  const { team } = auth;
+  const teamId = team.teamId;
   const { notifications } = parsed.data;
 
   // Derive aggregate flags from per-event settings
@@ -101,7 +87,8 @@ export async function PUT(request: NextRequest) {
   await writeAuditEvent({
     request,
     teamId,
-    userId: session.clerkUserId,
+    userId: team.userId,
+    walletAddress: team.walletAddress,
     action: "provider.notifications.update",
     resourceType: "ProviderProfile",
     resourceId: teamId,

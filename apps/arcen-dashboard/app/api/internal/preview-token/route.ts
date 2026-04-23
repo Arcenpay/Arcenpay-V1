@@ -8,9 +8,8 @@
  * Returns: { token: string; expiresAt: string }
  */
 import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/lib/auth.server";
-import { resolveTeamContext } from "@/lib/team-session";
 import { createHash, randomBytes, createHmac } from "crypto";
+import { requirePermission, isErrorResponse } from "@/lib/api-auth";
 import { db } from "@/lib/db";
 
 function signToken(payload: Record<string, unknown>, secret: string): string {
@@ -22,16 +21,32 @@ function signToken(payload: Record<string, unknown>, secret: string): string {
 }
 
 export async function POST(req: NextRequest) {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = await requirePermission("catalog:read");
+  if (isErrorResponse(auth)) return auth;
 
-  const teamCtx = await resolveTeamContext(session);
-  if (!teamCtx) return NextResponse.json({ error: "No team found" }, { status: 404 });
-
-  const { teamId } = teamCtx;
+  const teamId = auth.team.teamId;
 
   let body: { companyId?: string; componentId?: string };
   try { body = await req.json(); } catch { body = {}; }
+
+  const componentId = body.componentId?.trim();
+  if (!componentId) {
+    return NextResponse.json(
+      { error: "componentId is required" },
+      { status: 400 },
+    );
+  }
+
+  const component = await db.embedComponent.findFirst({
+    where: { id: componentId, teamId },
+    select: { id: true },
+  });
+  if (!component) {
+    return NextResponse.json(
+      { error: "Component not found" },
+      { status: 404 },
+    );
+  }
 
   const expiresIn = 600; // 10 minutes for preview
   const expiresAt = new Date(Date.now() + expiresIn * 1000);
@@ -43,6 +58,7 @@ export async function POST(req: NextRequest) {
     teamId,
     companyId: body.companyId ?? null,
     userId: null,
+    componentId,
     exp: Math.floor(expiresAt.getTime() / 1000),
     iat: Math.floor(Date.now() / 1000),
     jti: randomBytes(16).toString("hex"),

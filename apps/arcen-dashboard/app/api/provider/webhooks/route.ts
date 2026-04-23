@@ -5,10 +5,9 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { getSession } from "@/lib/auth.server";
-import { resolveTeamContext } from "@/lib/team-session";
 import { db } from "@/lib/db";
 import { writeAuditEvent } from "@/lib/audit";
+import { requireTeamRoles, isErrorResponse } from "@/lib/api-auth";
 
 const EventSubSchema = z.object({
   id: z.string(),
@@ -29,21 +28,13 @@ const UpdateSchema = z.object({
 });
 
 export async function GET() {
-  const session = await getSession();
-  if (!session)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = await requireTeamRoles(["OWNER", "ADMIN"]);
+  if (isErrorResponse(auth)) return auth;
 
-  const ctx = await resolveTeamContext(session);
-  if (!ctx) {
-    return NextResponse.json({
-      webhookUrl: null,
-      hasSecret: false,
-      eventSubscriptions: [],
-    });
-  }
+  const { team } = auth;
 
   const profile = await db.providerProfile.findUnique({
-    where: { teamId: ctx.teamId },
+    where: { teamId: team.teamId },
     select: {
       webhookUrl: true,
       webhookSigningSecret: true,
@@ -85,9 +76,8 @@ export async function GET() {
 }
 
 export async function PUT(req: NextRequest) {
-  const session = await getSession();
-  if (!session)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = await requireTeamRoles(["OWNER", "ADMIN"]);
+  if (isErrorResponse(auth)) return auth;
 
   const body = await req.json().catch(() => ({}));
   const parsed = UpdateSchema.safeParse(body);
@@ -98,11 +88,8 @@ export async function PUT(req: NextRequest) {
     );
   }
 
-  const ctx = await resolveTeamContext(session);
-  if (!ctx)
-    return NextResponse.json({ error: "No team found" }, { status: 403 });
-
-  const { teamId } = ctx;
+  const { team } = auth;
+  const teamId = team.teamId;
   const { webhookUrl, eventSubscriptions } = parsed.data;
 
   const updateData: Record<string, unknown> = {};
@@ -154,7 +141,8 @@ export async function PUT(req: NextRequest) {
   await writeAuditEvent({
     request: req,
     teamId,
-    userId: session.clerkUserId,
+    userId: team.userId,
+    walletAddress: team.walletAddress,
     action: "provider.webhook.update",
     resourceType: "ProviderProfile",
     resourceId: teamId,

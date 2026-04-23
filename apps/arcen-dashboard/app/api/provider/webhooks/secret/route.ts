@@ -11,21 +11,16 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { randomBytes } from "crypto";
-import { getSession } from "@/lib/auth.server";
-import { resolveTeamContext } from "@/lib/team-session";
 import { db } from "@/lib/db";
 import { writeAuditEvent } from "@/lib/audit";
+import { requireTeamRoles, isErrorResponse } from "@/lib/api-auth";
 
 export async function POST(req: NextRequest) {
-  const session = await getSession();
-  if (!session)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = await requireTeamRoles(["OWNER", "ADMIN"]);
+  if (isErrorResponse(auth)) return auth;
 
-  const ctx = await resolveTeamContext(session);
-  if (!ctx)
-    return NextResponse.json({ error: "No team found" }, { status: 403 });
-
-  const { teamId } = ctx;
+  const { team } = auth;
+  const teamId = team.teamId;
 
   // Generate a 32-byte random secret — prefix with "whsec_" for clarity
   const raw = randomBytes(32).toString("hex");
@@ -41,7 +36,8 @@ export async function POST(req: NextRequest) {
   await writeAuditEvent({
     request: req,
     teamId,
-    userId: session.clerkUserId,
+    userId: team.userId,
+    walletAddress: team.walletAddress,
     action: "provider.webhook.secret.rotate",
     resourceType: "ProviderProfile",
     resourceId: teamId,

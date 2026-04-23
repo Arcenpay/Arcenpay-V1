@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/lib/auth.server";
-import { resolveTeamContext } from "@/lib/team-session";
 import { sendWebhookDelivery } from "@/lib/deliver-webhook";
+import { requireTeamRoles, isErrorResponse } from "@/lib/api-auth";
 
 const TEST_PAYLOAD = {
   companyId: "test_company",
@@ -12,35 +11,17 @@ const TEST_PAYLOAD = {
 };
 
 export async function POST(request: NextRequest) {
-  const session = await getSession();
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  void request;
+  const auth = await requireTeamRoles(["OWNER", "ADMIN"]);
+  if (isErrorResponse(auth)) return auth;
 
-  const body = await request.text();
-  let reqPayload: { url?: string; secret?: string } = {};
-  try {
-    reqPayload = body ? JSON.parse(body) : {};
-  } catch {
-    // ignore parse errors
-  }
-
-  const teamCtx = await resolveTeamContext(session);
-  if (!teamCtx) {
-    return NextResponse.json({ error: "No team found" }, { status: 403 });
-  }
+  const { team } = auth;
 
   try {
     const result = await sendWebhookDelivery({
-      teamId: teamCtx.teamId,
+      teamId: team.teamId,
       eventName: "company.plan.changed",
       data: TEST_PAYLOAD,
-      webhookUrl:
-        typeof reqPayload.url === "string" ? reqPayload.url.trim() : undefined,
-      signingSecret:
-        typeof reqPayload.secret === "string"
-          ? reqPayload.secret.trim()
-          : undefined,
       force: true,
     });
 

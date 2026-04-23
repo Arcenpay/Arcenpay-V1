@@ -6,6 +6,8 @@ export interface EmbedAccessTokenContext {
   teamId: string;
   companyId: string | null;
   userId: string | null;
+  componentId?: string | null;
+  preview?: boolean;
 }
 
 function verifySignedEmbedAccessToken(
@@ -29,6 +31,8 @@ function verifySignedEmbedAccessToken(
       teamId?: string;
       companyId?: string | null;
       userId?: string | null;
+      componentId?: string | null;
+      preview?: boolean;
     };
 
     if (!payload.teamId) return null;
@@ -40,6 +44,8 @@ function verifySignedEmbedAccessToken(
       teamId: payload.teamId,
       companyId: payload.companyId ?? null,
       userId: payload.userId ?? null,
+      componentId: payload.componentId ?? null,
+      preview: payload.preview === true,
     };
   } catch {
     return null;
@@ -86,5 +92,7 @@ export async function resolveEmbedAccessToken(
     teamId: verified.teamId,
     companyId: record.companyId,
     userId: record.userId,
+    componentId: verified.componentId,
+    preview: verified.preview,
   };
 }

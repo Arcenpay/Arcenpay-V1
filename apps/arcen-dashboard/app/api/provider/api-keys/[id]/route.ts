@@ -3,29 +3,19 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/lib/auth.server";
-import { resolveTeamContext } from "@/lib/team-session";
 import { db } from "@/lib/db";
 import { writeAuditEvent } from "@/lib/audit";
-
-async function resolveTeamId(
-  session: NonNullable<Awaited<ReturnType<typeof getSession>>>,
-): Promise<string | null> {
-  const ctx = await resolveTeamContext(session);
-  return ctx?.teamId ?? null;
-}
+import { requireTeamRoles, isErrorResponse } from "@/lib/api-auth";
 
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const session = await getSession();
-  if (!session)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = await requireTeamRoles(["OWNER", "ADMIN"]);
+  if (isErrorResponse(auth)) return auth;
 
-  const teamId = await resolveTeamId(session);
-  if (!teamId)
-    return NextResponse.json({ error: "No team found" }, { status: 403 });
+  const { team } = auth;
+  const teamId = team.teamId;
 
   const { id } = await params;
 
@@ -43,7 +33,8 @@ export async function DELETE(
   await writeAuditEvent({
     request,
     teamId,
-    userId: session.clerkUserId,
+    userId: team.userId,
+    walletAddress: team.walletAddress,
     action: "provider.api_key.revoke",
     resourceType: "ArcenApiKey",
     resourceId: id,

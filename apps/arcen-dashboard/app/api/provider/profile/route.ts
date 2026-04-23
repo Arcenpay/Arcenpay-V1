@@ -6,10 +6,9 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { getSession } from "@/lib/auth.server";
-import { resolveTeamContext } from "@/lib/team-session";
 import { db } from "@/lib/db";
 import { writeAuditEvent } from "@/lib/audit";
+import { requireTeamRoles, isErrorResponse } from "@/lib/api-auth";
 
 const EMPTY_PROFILE = {
   providerName: null,
@@ -37,23 +36,14 @@ const UpdateSchema = z.object({
   webhookSigningSecret: z.string().min(16).max(256).optional(),
 });
 
-/** Resolves teamId from session — looks up DB if not in JWT */
-async function resolveTeamId(
-  session: NonNullable<Awaited<ReturnType<typeof getSession>>>,
-): Promise<string | null> {
-  const ctx = await resolveTeamContext(session);
-  return ctx?.teamId ?? null;
-}
-
 // ── GET ───────────────────────────────────────────────────────────────────────
 
 export async function GET() {
-  const session = await getSession();
-  if (!session)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = await requireTeamRoles(["OWNER", "ADMIN"]);
+  if (isErrorResponse(auth)) return auth;
 
-  const teamId = await resolveTeamId(session);
-  if (!teamId) return NextResponse.json(EMPTY_PROFILE);
+  const { team } = auth;
+  const teamId = team.teamId;
 
   const profile = await db.providerProfile.findUnique({
     where: { teamId },
@@ -75,9 +65,8 @@ export async function GET() {
 // ── PUT ───────────────────────────────────────────────────────────────────────
 
 export async function PUT(req: NextRequest) {
-  const session = await getSession();
-  if (!session)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = await requireTeamRoles(["OWNER", "ADMIN"]);
+  if (isErrorResponse(auth)) return auth;
 
   const body = await req.json().catch(() => ({}));
   const parsed = UpdateSchema.safeParse(body);
@@ -88,9 +77,8 @@ export async function PUT(req: NextRequest) {
     );
   }
 
-  const teamId = await resolveTeamId(session);
-  if (!teamId)
-    return NextResponse.json({ error: "No team found" }, { status: 403 });
+  const { team } = auth;
+  const teamId = team.teamId;
 
   const d = parsed.data;
   const data: Record<string, unknown> = {};
@@ -134,7 +122,8 @@ export async function PUT(req: NextRequest) {
   await writeAuditEvent({
     request: req,
     teamId,
-    userId: session.clerkUserId,
+    userId: team.userId,
+    walletAddress: team.walletAddress,
     action: "provider.profile.update",
     resourceType: "ProviderProfile",
     resourceId: teamId,

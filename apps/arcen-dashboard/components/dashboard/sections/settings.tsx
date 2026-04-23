@@ -118,15 +118,6 @@ export function SettingsSection() {
   const [website, setWebsite] = useState("");
   const [contactEmail, setContactEmail] = useState("");
 
-  // API key
-  const [apiKeyPrefix, setApiKeyPrefix] = useState<string | null>(null);
-  const [newlyGeneratedKey, setNewlyGeneratedKey] = useState<string | null>(
-    null,
-  );
-  const [isGeneratingKey, setIsGeneratingKey] = useState(false);
-  const [copiedKey, setCopiedKey] = useState(false);
-  const [generateKeySheetOpen, setGenerateKeySheetOpen] = useState(false);
-  const [revokeKeySheetOpen, setRevokeKeySheetOpen] = useState(false);
   const [pendingDangerAction, setPendingDangerAction] = useState<{
     confirmTitle: string;
     confirmDesc: string;
@@ -223,7 +214,6 @@ export function SettingsSection() {
         if (profile.providerName) setProviderName(profile.providerName);
         if (profile.website) setWebsite(profile.website);
         if (profile.contactEmail) setContactEmail(profile.contactEmail);
-        if (profile.apiKeyPrefix) setApiKeyPrefix(profile.apiKeyPrefix);
       })
       .catch(() => {});
     // Load notification preferences from server (source of truth — not localStorage)
@@ -365,41 +355,6 @@ export function SettingsSection() {
         err instanceof Error ? err.message : "Environment switch failed",
       );
     }
-  };
-
-  const handleGenerateApiKey = async () => {
-    setIsGeneratingKey(true);
-    try {
-      const res = await fetch("/api/provider/api-keys", { method: "POST" });
-      if (!res.ok) throw new Error("Generation failed");
-      const { key, prefix } = await res.json();
-      setApiKeyPrefix(prefix);
-      setNewlyGeneratedKey(key);
-      setCopiedKey(false);
-    } catch {
-      toast.error("Could not generate API key");
-    } finally {
-      setIsGeneratingKey(false);
-    }
-  };
-
-  const handleRevokeApiKey = async () => {
-    try {
-      const res = await fetch("/api/provider/api-keys", { method: "DELETE" });
-      if (!res.ok) throw new Error("Revoke failed");
-      setApiKeyPrefix(null);
-      setNewlyGeneratedKey(null);
-      toast.success("API key revoked");
-    } catch {
-      toast.error("Could not revoke API key");
-    }
-  };
-
-  const handleCopyApiKey = () => {
-    if (!newlyGeneratedKey) return;
-    navigator.clipboard.writeText(newlyGeneratedKey);
-    setCopiedKey(true);
-    setTimeout(() => setCopiedKey(false), 2000);
   };
 
   const toggleNotification = (id: string, type: "email") => {

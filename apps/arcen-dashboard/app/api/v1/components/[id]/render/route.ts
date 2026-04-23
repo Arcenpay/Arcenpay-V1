@@ -118,11 +118,18 @@ export async function GET(
     );
   }
 
-  const { teamId, companyId, userId } = decoded;
+  const { teamId, companyId, userId, componentId, preview } = decoded;
   if (!teamId) {
     return NextResponse.json(
       { error: "Invalid access token context" },
       { status: 401, headers: corsHeaders() },
+    );
+  }
+
+  if (preview && componentId !== id) {
+    return NextResponse.json(
+      { error: "Preview token is not valid for this component" },
+      { status: 403, headers: corsHeaders() },
     );
   }
 

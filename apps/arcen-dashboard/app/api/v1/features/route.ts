@@ -4,8 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/lib/auth.server";
-import { resolveTeamContext } from "@/lib/team-session";
+import { requirePermission, isErrorResponse } from "@/lib/api-auth";
 import { db } from "@/lib/db";
 
 function toUiFeatureType(
@@ -39,24 +38,14 @@ function toStoredFeatureType(
   }
 }
 
-async function requireTeamId(): Promise<string | NextResponse> {
-  const session = await getSession();
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  const ctx = await resolveTeamContext(session);
-  if (!ctx) {
-    return NextResponse.json({ error: "No team found" }, { status: 403 });
-  }
-  return ctx.teamId;
-}
-
 // ── GET — list features ───────────────────────────────────────────────────────
 
 export async function GET(request: NextRequest) {
-  const result = await requireTeamId();
-  if (result instanceof NextResponse) return result;
-  const teamId = result;
+  void request;
+  const auth = await requirePermission("catalog:read");
+  if (isErrorResponse(auth)) return auth;
+
+  const teamId = auth.team.teamId;
 
   const flags = await db.catalogFeatureFlag.findMany({
     where: { teamId },
@@ -90,9 +79,10 @@ export async function GET(request: NextRequest) {
 // ── POST — create feature ─────────────────────────────────────────────────────
 
 export async function POST(request: NextRequest) {
-  const result = await requireTeamId();
-  if (result instanceof NextResponse) return result;
-  const teamId = result;
+  const auth = await requirePermission("catalog:write");
+  if (isErrorResponse(auth)) return auth;
+
+  const teamId = auth.team.teamId;
 
   let body: {
     name?: string;

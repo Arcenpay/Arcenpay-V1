@@ -5,16 +5,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { getSession } from "@/lib/auth.server";
-import { resolveTeamContext } from "@/lib/team-session";
+import { requirePermission, isErrorResponse } from "@/lib/api-auth";
 import { db } from "@/lib/db";
-
-async function resolveTeamId(
-  session: NonNullable<Awaited<ReturnType<typeof getSession>>>,
-): Promise<string | null> {
-  const ctx = await resolveTeamContext(session);
-  return ctx?.teamId ?? null;
-}
 
 const ComponentSchema = z.object({
   name: z.string().min(1).max(120),
@@ -25,15 +17,10 @@ const ComponentSchema = z.object({
 });
 
 export async function GET() {
-  const session = await getSession();
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const auth = await requirePermission("catalog:read");
+  if (isErrorResponse(auth)) return auth;
 
-  const teamId = await resolveTeamId(session);
-  if (!teamId) {
-    return NextResponse.json({ data: [] });
-  }
+  const teamId = auth.team.teamId;
 
   const components = await db.embedComponent.findMany({
     where: { teamId },
@@ -52,15 +39,10 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const session = await getSession();
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const auth = await requirePermission("catalog:write");
+  if (isErrorResponse(auth)) return auth;
 
-  const teamId = await resolveTeamId(session);
-  if (!teamId) {
-    return NextResponse.json({ error: "No team found" }, { status: 403 });
-  }
+  const teamId = auth.team.teamId;
 
   const body = await req.json().catch(() => ({}));
   const parsed = ComponentSchema.safeParse(body);
