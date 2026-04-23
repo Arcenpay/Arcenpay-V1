@@ -3471,6 +3471,34 @@ function ConfigurationTab() {
     return () => { cancelled = true; };
   }, [envMode]);
 
+  useEffect(() => {
+    if (catalogPlans.length === 0) return;
+
+    const resolvePlanId = (value: string) => {
+      if (!value || value === "none") return value;
+      const match = catalogPlans.find(
+        (plan) => plan.id === value || plan.tier === value || plan.name === value,
+      );
+      return match?.id ?? value;
+    };
+
+    setSettings((current) => {
+      const nextInitial = resolvePlanId(current.initialPlan);
+      const nextFallback = resolvePlanId(current.fallbackPlan);
+      if (
+        nextInitial === current.initialPlan &&
+        nextFallback === current.fallbackPlan
+      ) {
+        return current;
+      }
+      return {
+        ...current,
+        initialPlan: nextInitial,
+        fallbackPlan: nextFallback,
+      };
+    });
+  }, [catalogPlans]);
+
   async function handleSave() {
     setSavingConfig(true);
     setConfigError(null);
@@ -3595,7 +3623,7 @@ function ConfigurationTab() {
                 <SelectContent>
                   <SelectItem value="none">None</SelectItem>
                   {catalogPlans.map((p) => (
-                    <SelectItem key={p.id} value={p.tier}>
+                    <SelectItem key={p.id} value={p.id}>
                       <div className="flex items-center gap-2">
                         <span>{p.name}</span>
                         <span className="text-xs text-muted-foreground">
@@ -3617,7 +3645,7 @@ function ConfigurationTab() {
                 <SelectContent>
                   <SelectItem value="none">None</SelectItem>
                   {catalogPlans.filter((p) => parseFloat(p.price) === 0).map((p) => (
-                    <SelectItem key={p.id} value={p.tier}>{p.name} (Free)</SelectItem>
+                    <SelectItem key={p.id} value={p.id}>{p.name} (Free)</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

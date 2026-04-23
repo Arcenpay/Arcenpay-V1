@@ -3,7 +3,7 @@
  *
  * Switch the authenticated company's active plan.
  * Auth: Bearer <embed_access_token>
- * Body: { planId: string }
+ * Body: { planId: string, customerEmail?: string }
  */
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
@@ -172,6 +172,7 @@ export async function POST(req: NextRequest) {
     txHash?: string;
     scheduleAtPeriodEnd?: boolean;
     couponCode?: string;
+    customerEmail?: string;
   };
   try {
     body = await req.json();
@@ -188,6 +189,7 @@ export async function POST(req: NextRequest) {
     txHash,
     scheduleAtPeriodEnd,
     couponCode,
+    customerEmail,
   } = body;
   if (!planId)
     return NextResponse.json(
@@ -225,6 +227,7 @@ export async function POST(req: NextRequest) {
       subscriptionState: {
         select: {
           id: true,
+          walletAddress: true,
           currentPeriodStart: true,
           currentPeriodEnd: true,
           onChainTokenId: true,
@@ -237,6 +240,44 @@ export async function POST(req: NextRequest) {
       { error: "Company not found" },
       { status: 404, headers: corsHeaders() },
     );
+  }
+
+  const companyPaymentAccount =
+    company.subscriptionState?.walletAddress ?? company.walletAddress ?? null;
+
+  const normalizedCustomerEmail =
+    typeof customerEmail === "string" ? customerEmail.trim() : "";
+  const hasCustomerEmail =
+    normalizedCustomerEmail.length > 0 &&
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedCustomerEmail);
+
+  if (normalizedCustomerEmail && !hasCustomerEmail) {
+    return NextResponse.json(
+      { error: "customerEmail must be a valid email address" },
+      { status: 400, headers: corsHeaders() },
+    );
+  }
+
+  if (hasCustomerEmail && company.email !== normalizedCustomerEmail) {
+    await db.arcenCompany.update({
+      where: { id: company.id },
+      data: { email: normalizedCustomerEmail },
+    });
+
+    if (companyPaymentAccount) {
+      await db.subscriberEmail.upsert({
+        where: { walletAddress: companyPaymentAccount },
+        update: {
+          email: normalizedCustomerEmail,
+          planId: company.activePlanId ?? planId,
+        },
+        create: {
+          walletAddress: companyPaymentAccount,
+          email: normalizedCustomerEmail,
+          planId: company.activePlanId ?? planId,
+        },
+      });
+    }
   }
 
   const [currentPlan, catalogConfig] = await Promise.all([
@@ -437,7 +478,7 @@ export async function POST(req: NextRequest) {
   const consumedPaymentTxHashes = readConsumedPaymentTxHashes(currentTraits);
 
   if (usesAuthoritativeOnChainPlanChange) {
-    if (!company.walletAddress) {
+    if (!companyPaymentAccount) {
       return NextResponse.json(
         {
           error:
@@ -469,7 +510,7 @@ export async function POST(req: NextRequest) {
     }
 
     const verification = await verifyAutopayPlanChange({
-      paymentAccount: company.walletAddress,
+      paymentAccount: companyPaymentAccount,
       txHash: normalizedTxHash,
       expectedOnChainPlanId: plan.onChainPlanId!,
     });
@@ -531,7 +572,7 @@ export async function POST(req: NextRequest) {
       where: { id: companyId },
       data: {
         activePlanId: planId,
-        walletAddress: company.walletAddress.toLowerCase(),
+        walletAddress: company.walletAddress?.toLowerCase() ?? null,
         traits: toPrismaJson(nextTraits),
       },
     });
@@ -539,7 +580,7 @@ export async function POST(req: NextRequest) {
     const subscriptionState = await upsertSubscriptionLedgerState({
       teamId,
       companyId,
-      walletAddress: company.walletAddress,
+      walletAddress: companyPaymentAccount,
       status: "ACTIVE",
       catalogPlanId: plan.id,
       onChainPlanId: verification.onChainPlanId,
@@ -563,7 +604,7 @@ export async function POST(req: NextRequest) {
       await postBillingCredit({
         teamId,
         companyId,
-        walletAddress: company.walletAddress,
+        walletAddress: companyPaymentAccount,
         amount: creditedAmount,
         metadata: {
           source: "self_service_plan_change",

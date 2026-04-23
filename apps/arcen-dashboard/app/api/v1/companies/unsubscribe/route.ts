@@ -90,6 +90,11 @@ export async function POST(req: NextRequest) {
         activePlanId: true,
         traits: true,
         walletAddress: true,
+        subscriptionState: {
+          select: {
+            walletAddress: true,
+          },
+        },
       },
     }),
     resolvePublishedFreePlan(teamId),
@@ -113,9 +118,11 @@ export async function POST(req: NextRequest) {
   }
 
   const currentTraits = asRecord(company.traits);
+  const companyPaymentAccount =
+    company.subscriptionState?.walletAddress ?? company.walletAddress ?? null;
 
   if (company.activePlanId && company.activePlanId !== freePlan.id) {
-    if (!company.walletAddress) {
+    if (!companyPaymentAccount) {
       return NextResponse.json(
         {
           error:
@@ -137,7 +144,7 @@ export async function POST(req: NextRequest) {
     }
 
     const verification = await verifySubscriptionCancellation({
-      paymentAccount: company.walletAddress,
+      paymentAccount: companyPaymentAccount,
       txHash: normalizedTxHash,
     });
     if (!verification.ok) {
@@ -161,7 +168,7 @@ export async function POST(req: NextRequest) {
     await upsertSubscriptionLedgerState({
       teamId,
       companyId,
-      walletAddress: company.walletAddress,
+      walletAddress: companyPaymentAccount,
       status: "CANCELLED",
       catalogPlanId: freePlan.id,
       onChainPlanId: null,

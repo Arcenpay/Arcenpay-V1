@@ -127,6 +127,7 @@ export interface UserKeys {
   internalId?: string; // ArcenUser.id
   clerkUserId?: string;
   wallet?: string;
+  email?: string;
 }
 
 export interface FlagCheckResult {
@@ -149,7 +150,12 @@ export async function resolveCompany(
   if (keys.internalId) where.push({ id: keys.internalId, teamId });
   if (keys.id) where.push({ teamId, externalId: keys.id });
   if (keys.wallet) where.push({ teamId, walletAddress: keys.wallet.toLowerCase() });
-  if (keys.email) where.push({ teamId, email: keys.email });
+  if (keys.email) {
+    where.push({
+      teamId,
+      email: { equals: keys.email.trim(), mode: "insensitive" },
+    });
+  }
 
   const company = await db.arcenCompany.findFirst({
     where: { OR: where },
@@ -198,18 +204,30 @@ export async function resolveCompany(
 export async function resolveUser(
   teamId: string,
   keys: UserKeys,
-): Promise<{ id: string; traits: Record<string, unknown> } | null> {
-  if (!keys.id && !keys.internalId && !keys.clerkUserId && !keys.wallet) return null;
+): Promise<{
+  id: string;
+  companyId: string;
+  traits: Record<string, unknown>;
+} | null> {
+  if (!keys.id && !keys.internalId && !keys.clerkUserId && !keys.wallet && !keys.email) {
+    return null;
+  }
 
   const where: Record<string, unknown>[] = [];
   if (keys.internalId) where.push({ id: keys.internalId, teamId });
   if (keys.id) where.push({ teamId, externalId: keys.id });
   if (keys.clerkUserId) where.push({ teamId, clerkUserId: keys.clerkUserId });
   if (keys.wallet) where.push({ teamId, walletAddress: keys.wallet.toLowerCase() });
+  if (keys.email) {
+    where.push({
+      teamId,
+      email: { equals: keys.email.trim(), mode: "insensitive" },
+    });
+  }
 
   const user = await db.arcenUser.findFirst({
     where: { OR: where },
-    select: { id: true, traits: true },
+    select: { id: true, companyId: true, traits: true },
   });
 
   if (!user) return null;
@@ -218,7 +236,11 @@ export async function resolveUser(
     .update({ where: { id: user.id }, data: { lastSeenAt: new Date() } })
     .catch(() => {});
 
-  return { id: user.id, traits: (user.traits as Record<string, unknown>) ?? {} };
+  return {
+    id: user.id,
+    companyId: user.companyId,
+    traits: (user.traits as Record<string, unknown>) ?? {},
+  };
 }
 
 // ─── Condition Evaluation ─────────────────────────────────────────────────────

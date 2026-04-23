@@ -174,13 +174,6 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
-    if (parsed.data.environmentMode !== "DEVELOPMENT") {
-      return NextResponse.json(
-        { error: "Only Base Sepolia development mode is supported right now." },
-        { status: 400 },
-      );
-    }
-
     const existing = await db.team.findUnique({
       where: { id: teamCtx.teamId },
       select: { id: true, environmentMode: true },

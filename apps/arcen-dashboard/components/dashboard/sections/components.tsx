@@ -26,6 +26,7 @@ import {
   type ComponentConfig,
   type ComponentElement,
 } from "@/components/dashboard/component-editor";
+import { normalizeComponentStyling } from "@/lib/component-design";
 import { cn } from "@/lib/utils";
 import type { Section } from "@/app/(dashboard)/page";
 
@@ -408,19 +409,6 @@ export function ComponentsSection({ onSectionChange }: ComponentsSectionProps = 
             c.design && typeof c.design === "object" && !Array.isArray(c.design)
               ? (c.design as Record<string, unknown>)
               : {};
-          const defaultStyling: ComponentConfig["styling"] = {
-            columns: 2,
-            sections: "merged" as const,
-            primaryColor: "#000000",
-            secondaryColor: "#f5f5f5",
-            cardStyle: {
-              backgroundColor: "#FFFFFF",
-              borderRadius: "10px",
-              cardShadow: true,
-              cardPadding: "24px",
-            },
-            typography: { fontFamily: "Inter", fontSize: "14px" },
-          };
           return {
             id: c.id,
             name: c.name,
@@ -430,18 +418,7 @@ export function ComponentsSection({ onSectionChange }: ComponentsSectionProps = 
             elements: Array.isArray(c.elements)
               ? (c.elements as ComponentConfig["elements"])
               : [],
-            styling: {
-              ...defaultStyling,
-              ...(savedDesign as Partial<ComponentConfig["styling"]>),
-              cardStyle: {
-                ...defaultStyling.cardStyle,
-                ...((savedDesign.cardStyle as Record<string, unknown>) ?? {}),
-              },
-              typography: {
-                ...defaultStyling.typography,
-                ...((savedDesign.typography as Record<string, unknown>) ?? {}),
-              },
-            },
+            styling: normalizeComponentStyling(savedDesign),
             template: "blank",
             createdAt: new Date(c.createdAt),
             updatedAt: new Date(c.updatedAt),

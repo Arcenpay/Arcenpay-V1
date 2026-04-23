@@ -118,6 +118,18 @@ async function upsertCompanyForActivation(
 ): Promise<{ id: string; activePlanId: string | null; created: boolean }> {
   const existing = await resolveCompany(teamId, keys);
   if (existing) {
+    const updates: Record<string, unknown> = {};
+    if (keys.name?.trim()) updates.name = keys.name.trim();
+    if (keys.email?.trim()) updates.email = keys.email.trim();
+    if (keys.wallet?.trim()) {
+      updates.walletAddress = keys.wallet.trim().toLowerCase();
+    }
+    if (Object.keys(updates).length > 0) {
+      await db.arcenCompany.update({
+        where: { id: existing.id },
+        data: updates,
+      });
+    }
     return {
       id: existing.id,
       activePlanId: existing.activePlanId,

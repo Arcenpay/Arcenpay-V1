@@ -31,7 +31,9 @@ export async function GET(req: NextRequest) {
     where: {
       onChainPlanId: parsed.data.onChainPlanId,
       ...(parsed.data.teamId ? { teamId: parsed.data.teamId } : {}),
-      environmentMode: parsed.data.environmentMode ?? "PRODUCTION",
+      ...(parsed.data.environmentMode
+        ? { environmentMode: parsed.data.environmentMode }
+        : {}),
       status: "PUBLISHED",
       active: true,
     },

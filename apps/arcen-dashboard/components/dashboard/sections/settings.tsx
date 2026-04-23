@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   Card,
   CardContent,
@@ -39,6 +40,11 @@ import {
   Info,
   Key,
   Wallet,
+  Building2,
+  Users,
+  UserPlus,
+  Trash2,
+  Mail,
 } from "lucide-react";
 import { ProtocolKeysPanel } from "@/components/dashboard/sections/api-keys";
 import {
@@ -98,6 +104,7 @@ const REGISTRY_GMP_ABI = [
 // ── Main SettingsSection ──────────────────────────────────────────────────────
 
 export function SettingsSection() {
+  const searchParams = useSearchParams();
   const { isConnected, address: connectedAddress } = useAccount();
   const { data: sessionData } = useDashboardSession();
   const chainId = useChainId();
@@ -111,6 +118,36 @@ export function SettingsSection() {
   const [environmentMode, setEnvironmentMode] = useState<
     "DEVELOPMENT" | "PRODUCTION"
   >("DEVELOPMENT");
+  const [teamInfo, setTeamInfo] = useState<{
+    id: string;
+    name: string;
+    slug: string;
+    environmentMode: "DEVELOPMENT" | "PRODUCTION";
+    myRole: string;
+    members: Array<{
+      id: string;
+      userId: string;
+      role: string;
+      email: string | null;
+      walletAddress: string | null;
+      joinedAt: string;
+    }>;
+  } | null>(null);
+  const [pendingInvites, setPendingInvites] = useState<
+    Array<{
+      id: string;
+      emailAddress: string;
+      role: string;
+      createdAt: string;
+      expiresAt: string;
+    }>
+  >([]);
+  const [workspaceLoading, setWorkspaceLoading] = useState(true);
+  const [workspaceBusy, setWorkspaceBusy] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState<
+    "ADMIN" | "MEMBER" | "FINANCE" | "DEVELOPER" | "SUPPORT"
+  >("MEMBER");
 
   // Profile
   const [providerName, setProviderName] = useState("");
@@ -203,6 +240,42 @@ export function SettingsSection() {
       setIsSettingTransports(false);
     }
   };
+
+  useEffect(() => {
+    const requestedTab = searchParams.get("tab");
+    if (requestedTab) {
+      setActiveTab(requestedTab);
+    }
+  }, [searchParams]);
+
+  const loadWorkspaceData = useCallback(async () => {
+    try {
+      setWorkspaceLoading(true);
+      const [teamRes, invitesRes] = await Promise.all([
+        fetch("/api/team", { cache: "no-store" }),
+        fetch("/api/team/invites", { cache: "no-store" }),
+      ]);
+
+      const teamPayload = teamRes.ok ? await teamRes.json() : null;
+      const invitesPayload = invitesRes.ok ? await invitesRes.json() : null;
+
+      setTeamInfo(teamPayload);
+      setPendingInvites(
+        Array.isArray(invitesPayload?.invitations)
+          ? invitesPayload.invitations
+          : [],
+      );
+    } catch {
+      setTeamInfo(null);
+      setPendingInvites([]);
+    } finally {
+      setWorkspaceLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadWorkspaceData();
+  }, [loadWorkspaceData]);
 
   useEffect(() => {
     // Load all profile fields from the server — localStorage is no longer used
@@ -349,6 +422,84 @@ export function SettingsSection() {
     }
   };
 
+  const canManageWorkspace =
+    teamInfo?.myRole === "OWNER" || teamInfo?.myRole === "ADMIN";
+
+  const handleInviteMember = async () => {
+    if (!inviteEmail.trim()) {
+      toast.error("Enter an email address to invite");
+      return;
+    }
+
+    setWorkspaceBusy(true);
+    try {
+      const response = await fetch("/api/team/invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: inviteEmail.trim(),
+          role: inviteRole,
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload?.error ?? "Failed to send invitation");
+      }
+      toast.success(`Invitation sent to ${inviteEmail.trim()}`);
+      setInviteEmail("");
+      setInviteRole("MEMBER");
+      await loadWorkspaceData();
+    } catch (err: unknown) {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to send invitation",
+      );
+    } finally {
+      setWorkspaceBusy(false);
+    }
+  };
+
+  const handleRevokeInvite = async (invitationId: string, email: string) => {
+    setWorkspaceBusy(true);
+    try {
+      const response = await fetch(`/api/team/invites?id=${invitationId}`, {
+        method: "DELETE",
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload?.error ?? "Failed to revoke invitation");
+      }
+      toast.success(`Revoked invite for ${email}`);
+      await loadWorkspaceData();
+    } catch (err: unknown) {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to revoke invitation",
+      );
+    } finally {
+      setWorkspaceBusy(false);
+    }
+  };
+
+  const handleRemoveMember = async (userId: string, label: string) => {
+    setWorkspaceBusy(true);
+    try {
+      const response = await fetch(`/api/team/members?userId=${userId}`, {
+        method: "DELETE",
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload?.error ?? "Failed to remove member");
+      }
+      toast.success(`Removed ${label} from workspace`);
+      await loadWorkspaceData();
+    } catch (err: unknown) {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to remove member",
+      );
+    } finally {
+      setWorkspaceBusy(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -364,6 +515,13 @@ export function SettingsSection() {
         className="space-y-6"
       >
         <TabsList className="bg-secondary border border-border p-1 flex-wrap h-auto gap-1">
+          <TabsTrigger
+            value="workspace"
+            className="data-[state=active]:bg-card data-[state=active]:text-foreground"
+          >
+            <Building2 className="w-4 h-4 mr-2" />
+            Workspace
+          </TabsTrigger>
           <TabsTrigger
             value="profile"
             className="data-[state=active]:bg-card data-[state=active]:text-foreground"
@@ -407,6 +565,242 @@ export function SettingsSection() {
             Danger Zone
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent
+          value="workspace"
+          className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300"
+        >
+          <Card className="border-border bg-card">
+            <CardHeader>
+              <CardTitle className="text-base font-medium flex items-center gap-2">
+                <Building2 className="w-4 h-4 text-accent" />
+                Workspace Management
+              </CardTitle>
+              <CardDescription>
+                Manage members, invitations, and the currently active workspace.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {workspaceLoading ? (
+                <div className="text-sm text-muted-foreground">Loading workspace details…</div>
+              ) : teamInfo ? (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="rounded-xl border border-border bg-secondary/40 p-4">
+                      <p className="text-xs text-muted-foreground mb-1">Workspace</p>
+                      <p className="text-sm font-semibold text-foreground">{teamInfo.name}</p>
+                      <p className="text-xs text-muted-foreground mt-1">/{teamInfo.slug}</p>
+                    </div>
+                    <div className="rounded-xl border border-border bg-secondary/40 p-4">
+                      <p className="text-xs text-muted-foreground mb-1">Your role</p>
+                      <p className="text-sm font-semibold text-foreground">{teamInfo.myRole}</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Current environment: {teamInfo.environmentMode}
+                      </p>
+                    </div>
+                    <div className="rounded-xl border border-border bg-secondary/40 p-4">
+                      <p className="text-xs text-muted-foreground mb-1">Other workspaces</p>
+                      <p className="text-sm font-semibold text-foreground">
+                        {sessionData?.teams.length ?? 0} total membership
+                        {(sessionData?.teams.length ?? 0) === 1 ? "" : "s"}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Switch instantly from the workspace menu in the header.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-medium text-foreground">Team members</p>
+                        <p className="text-xs text-muted-foreground">
+                          People with access to this workspace right now.
+                        </p>
+                      </div>
+                      <Badge variant="secondary">
+                        <Users className="w-3.5 h-3.5 mr-1" />
+                        {teamInfo.members.length}
+                      </Badge>
+                    </div>
+                    <div className="space-y-3">
+                      {teamInfo.members.map((member) => {
+                        const label =
+                          member.email ||
+                          member.walletAddress ||
+                          member.userId;
+                        const isSelf = sessionData?.user.id === member.userId;
+                        return (
+                          <div
+                            key={member.id}
+                            className="flex flex-col gap-3 rounded-xl border border-border bg-secondary/30 p-4 md:flex-row md:items-center md:justify-between"
+                          >
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-foreground truncate">
+                                {member.email ?? "Wallet-only member"}
+                              </p>
+                              <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                                <span>{member.role}</span>
+                                {member.walletAddress ? (
+                                  <span className="font-mono">
+                                    {member.walletAddress.slice(0, 6)}…{member.walletAddress.slice(-4)}
+                                  </span>
+                                ) : null}
+                                <span>
+                                  Joined {new Date(member.joinedAt).toLocaleDateString()}
+                                </span>
+                              </div>
+                            </div>
+                            {canManageWorkspace && member.role !== "OWNER" ? (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="shrink-0"
+                                disabled={workspaceBusy || isSelf}
+                                onClick={() => void handleRemoveMember(member.userId, label)}
+                              >
+                                <Trash2 className="w-3.5 h-3.5 mr-2" />
+                                {isSelf ? "Current user" : "Remove"}
+                              </Button>
+                            ) : (
+                              <Badge variant="outline" className="shrink-0">
+                                {member.role === "OWNER" ? "Owner" : "Managed"}
+                              </Badge>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 rounded-xl border border-border bg-secondary/20 p-4">
+                    <div>
+                      <p className="text-sm font-medium text-foreground flex items-center gap-2">
+                        <UserPlus className="w-4 h-4 text-accent" />
+                        Invite teammates
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Send an email invitation with the correct workspace access.
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_180px_auto]">
+                      <div className="space-y-2">
+                        <Label htmlFor="inviteEmail">Email</Label>
+                        <Input
+                          id="inviteEmail"
+                          type="email"
+                          placeholder="teammate@company.com"
+                          value={inviteEmail}
+                          onChange={(e) => setInviteEmail(e.target.value)}
+                          disabled={!canManageWorkspace || workspaceBusy}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="inviteRole">Role</Label>
+                        <select
+                          id="inviteRole"
+                          value={inviteRole}
+                          onChange={(e) =>
+                            setInviteRole(
+                              e.target.value as
+                                | "ADMIN"
+                                | "MEMBER"
+                                | "FINANCE"
+                                | "DEVELOPER"
+                                | "SUPPORT",
+                            )
+                          }
+                          disabled={!canManageWorkspace || workspaceBusy}
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
+                        >
+                          <option value="MEMBER">Member</option>
+                          <option value="ADMIN">Admin</option>
+                          <option value="FINANCE">Finance</option>
+                          <option value="DEVELOPER">Developer</option>
+                          <option value="SUPPORT">Support</option>
+                        </select>
+                      </div>
+                      <div className="flex items-end">
+                        <Button
+                          className="w-full md:w-auto"
+                          disabled={!canManageWorkspace || workspaceBusy}
+                          onClick={() => void handleInviteMember()}
+                        >
+                          <Mail className="w-4 h-4 mr-2" />
+                          Send invite
+                        </Button>
+                      </div>
+                    </div>
+                    {!canManageWorkspace ? (
+                      <p className="text-xs text-muted-foreground">
+                        Only workspace owners and admins can invite or remove members.
+                      </p>
+                    ) : null}
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-medium text-foreground">Pending invitations</p>
+                        <p className="text-xs text-muted-foreground">
+                          Invitations that are still active and can be revoked.
+                        </p>
+                      </div>
+                      <Badge variant="outline">{pendingInvites.length}</Badge>
+                    </div>
+                    {pendingInvites.length === 0 ? (
+                      <div className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">
+                        No pending invitations.
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {pendingInvites.map((invite) => (
+                          <div
+                            key={invite.id}
+                            className="flex flex-col gap-3 rounded-xl border border-border bg-secondary/30 p-4 md:flex-row md:items-center md:justify-between"
+                          >
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-foreground truncate">
+                                {invite.emailAddress}
+                              </p>
+                              <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                                <span>{invite.role}</span>
+                                <span>
+                                  Sent {new Date(invite.createdAt).toLocaleDateString()}
+                                </span>
+                                <span>
+                                  Expires {new Date(invite.expiresAt).toLocaleDateString()}
+                                </span>
+                              </div>
+                            </div>
+                            {canManageWorkspace ? (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="shrink-0"
+                                disabled={workspaceBusy}
+                                onClick={() =>
+                                  void handleRevokeInvite(invite.id, invite.emailAddress)
+                                }
+                              >
+                                <Trash2 className="w-3.5 h-3.5 mr-2" />
+                                Revoke
+                              </Button>
+                            ) : null}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">
+                  Workspace details could not be loaded right now.
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* Provider Profile Tab */}
         <TabsContent

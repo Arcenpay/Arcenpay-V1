@@ -127,6 +127,7 @@ export async function POST(req: NextRequest) {
   }
 
   const walletAddress = body.wallet?.toLowerCase();
+  const email = body.email?.trim().toLowerCase();
 
   // Check for duplicates
   if (walletAddress) {
@@ -149,7 +150,7 @@ export async function POST(req: NextRequest) {
       teamId,
       name: body.name,
       walletAddress,
-      email: body.email,
+      email,
       externalId: body.id,
       traits: (body.traits ?? {}) as unknown as Prisma.InputJsonValue,
       logoUrl: body.logoUrl,

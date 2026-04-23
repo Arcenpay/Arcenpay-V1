@@ -18,6 +18,7 @@ import { db } from "@/lib/db";
 import { resolveEntitlementResults } from "@/lib/entitlements";
 import { getRpcUrl } from "@/lib/config";
 import { DEFAULT_CHAIN_ID } from "@/lib/default-chain";
+import { normalizeComponentDesign } from "@/lib/component-design";
 import {
   extractEmbedAccessToken,
   resolveEmbedAccessToken,
@@ -43,27 +44,6 @@ function normalizeElementType(type: string): string {
     "billing-history": "billingHistory",
   };
   return map[type] ?? type;
-}
-
-/**
- * Normalize the design/styling object saved by the dashboard editor.
- * Editor saves: { primaryColor, secondaryColor, fontFamily, fontSize, cardStyle, columns }
- * SDK reads:    { primaryColor, fontFamily, fontSize, fontColor, backgroundColor, borderRadius }
- */
-function normalizeDesign(
-  raw: Record<string, unknown>,
-): Record<string, unknown> {
-  return {
-    ...raw,
-    primaryColor: raw.primaryColor ?? "#000000",
-    secondaryColor: raw.secondaryColor ?? "#f3f4f6",
-    fontFamily: raw.fontFamily ?? "system-ui, sans-serif",
-    fontSize: raw.fontSize ?? "14",
-    cardStyle: raw.cardStyle ?? "minimal",
-    fontColor: raw.fontColor ?? "#111827",
-    backgroundColor: raw.backgroundColor ?? "#ffffff",
-    borderRadius: raw.borderRadius ?? "8",
-  };
 }
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -166,6 +146,12 @@ export async function GET(
           email: true,
           activePlanId: true,
           traits: true,
+          subscriptionState: {
+            select: {
+              walletAddress: true,
+              currentPeriodEnd: true,
+            },
+          },
         },
       }),
       userId
@@ -277,6 +263,9 @@ export async function GET(
         company.walletAddress
           ? { customerWallet: company.walletAddress.toLowerCase() }
           : null,
+        company.subscriptionState?.walletAddress
+          ? { customerWallet: company.subscriptionState.walletAddress.toLowerCase() }
+          : null,
         company.email ? { customerEmail: company.email } : null,
         user?.email ? { customerEmail: user.email } : null,
       ].filter(Boolean);
@@ -334,9 +323,11 @@ export async function GET(
       }
 
       const configuredChainId = DEFAULT_CHAIN_ID;
+      const billingPaymentAccount =
+        company.subscriptionState?.walletAddress ?? null;
 
       paymentMethod = {
-        walletAddress: company.walletAddress ?? user?.walletAddress ?? null,
+        walletAddress: billingPaymentAccount,
         token:
           typeof activePlan?.acceptedToken === "string"
             ? activePlan.acceptedToken
@@ -344,7 +335,9 @@ export async function GET(
         chainId: configuredChainId,
       };
 
-      if (company.walletAddress) {
+      if (company.subscriptionState?.currentPeriodEnd) {
+        nextBillingAt = company.subscriptionState.currentPeriodEnd.toISOString();
+      } else if (billingPaymentAccount) {
         try {
           const client = createPublicClient({
             transport: http(getRpcUrl(configuredChainId)),
@@ -354,7 +347,7 @@ export async function GET(
             address: contracts.subscriptionRegistry as `0x${string}`,
             abi: SubscriptionRegistryABI,
             functionName: "getWalletSubscription",
-            args: [company.walletAddress.toLowerCase() as `0x${string}`],
+            args: [billingPaymentAccount.toLowerCase() as `0x${string}`],
           })) as bigint;
 
           if (tokenId > 0n) {
@@ -509,7 +502,7 @@ export async function GET(
             ...el,
             type: normalizeElementType(String(el.type ?? "")),
           })),
-          design: normalizeDesign(rawDesign),
+          design: normalizeComponentDesign(rawDesign),
         },
         company: companyData,
         activePlan,

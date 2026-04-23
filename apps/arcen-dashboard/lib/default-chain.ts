@@ -35,19 +35,25 @@ export const DEFAULT_TESTNET_CHAIN_ID: SupportedDashboardChainId =
     : BASE_SEPOLIA_CHAIN_ID;
 
 export const DEFAULT_PRODUCTION_CHAIN_ID: SupportedDashboardChainId =
-  BASE_SEPOLIA_CHAIN_ID;
+  DEFAULT_CHAIN_ID;
 
-export function normalizeEnvironmentMode(_: unknown): EnvironmentMode {
+export function normalizeEnvironmentMode(value: unknown): EnvironmentMode {
+  if (typeof value === "string") {
+    const normalized = value.trim().toUpperCase();
+    if (normalized === "PRODUCTION") return "PRODUCTION";
+  }
   return "DEVELOPMENT";
 }
 
 export function resolveEnvironmentChainId(
-  _environmentMode: EnvironmentMode,
+  environmentMode: EnvironmentMode,
   requestedChainId?: unknown,
 ): SupportedDashboardChainId {
   const explicit = parseChainId(requestedChainId);
   if (explicit) return explicit;
-  return DEFAULT_TESTNET_CHAIN_ID;
+  return environmentMode === "PRODUCTION"
+    ? DEFAULT_PRODUCTION_CHAIN_ID
+    : DEFAULT_TESTNET_CHAIN_ID;
 }
 
 export function getChainLabel(chainId: number): string {

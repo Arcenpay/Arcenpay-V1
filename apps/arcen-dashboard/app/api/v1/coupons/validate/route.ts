@@ -9,12 +9,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireAnyAuth, isAnyAuthError } from "@/lib/require-any-auth";
 import { resolveEmbedAccessToken } from "@/lib/embed-access-token";
-import { resolveCouponQuote } from "@/lib/catalog-billing";
+import {
+  normalizeBillingPeriod,
+  resolveCouponQuote,
+} from "@/lib/catalog-billing";
 
 const querySchema = z.object({
   code: z.string().trim().min(1),
   planId: z.string().trim().min(1),
-  billingPeriod: z.enum(["monthly", "annual"]).optional(),
+  billingPeriod: z
+    .enum(["monthly", "annual", "yearly"])
+    .transform((value) => normalizeBillingPeriod(value))
+    .optional(),
 });
 
 function corsHeaders() {

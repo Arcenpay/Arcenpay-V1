@@ -18,7 +18,12 @@ const EnvironmentContext = createContext<EnvironmentContextType | undefined>(
 
 function getEnvModeFromChainId(chainId: number | undefined): EnvMode | null {
   if (!chainId) return null;
-  if (chainId === BASE_SEPOLIA_CHAIN_ID) return "DEVELOPMENT";
+  if (chainId === BASE_SEPOLIA_CHAIN_ID) {
+    // The current launch profile uses the same chain for both development and
+    // production catalog slices, so chain selection alone cannot determine the
+    // workspace environment mode.
+    return null;
+  }
   return null;
 }
 

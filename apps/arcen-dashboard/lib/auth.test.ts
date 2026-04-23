@@ -27,7 +27,12 @@ describe("buildSIWEMessage", () => {
 // client so these tests run without a real database.
 
 vi.mock("@/lib/db", () => {
-  const records = new Map();
+  const records = new Map<string, {
+    nonce: string;
+    issuedAt: string;
+    expiresAt: Date;
+    usedAt: Date | null;
+  }>();
 
   const authNonce = {
     create: vi.fn(async ({ data }) => {
@@ -42,10 +47,26 @@ vi.mock("@/lib/db", () => {
       if (rec) rec.usedAt = data.usedAt;
       return rec;
     }),
+    updateMany: vi.fn(async ({ where, data }) => {
+      const rec = records.get(where.nonce);
+      if (!rec) return { count: 0 };
+      if (rec.usedAt !== null) return { count: 0 };
+      if (where.expiresAt?.gt && !(rec.expiresAt > where.expiresAt.gt)) {
+        return { count: 0 };
+      }
+
+      rec.usedAt = data.usedAt;
+      return { count: 1 };
+    }),
     deleteMany: vi.fn(async () => ({ count: 0 })),
   };
 
-  return { db: { authNonce } };
+  const db = {
+    authNonce,
+    $transaction: vi.fn(async (callback) => callback({ authNonce })),
+  };
+
+  return { db };
 });
 
 describe("DB-backed nonce (nonce.server.ts)", async () => {

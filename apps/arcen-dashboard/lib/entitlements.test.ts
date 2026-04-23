@@ -82,6 +82,33 @@ describe("resolveEntitlementResults", () => {
           },
         ],
       },
+      {
+        featureKey: "ai_summary",
+        featureType: "boolean",
+        defaultValue: true,
+        eventKey: null,
+        rules: [],
+      },
+      {
+        featureKey: "priority_support",
+        featureType: "boolean",
+        defaultValue: false,
+        eventKey: null,
+        rules: [
+          {
+            priority: 100,
+            value: true,
+            conditions: [
+              {
+                criteriaType: "company_trait",
+                operator: "is_one_of",
+                traitKey: "beta_access",
+                values: ["true"],
+              },
+            ],
+          },
+        ],
+      },
     ]);
     (db.companyOverride.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([]);
   });
@@ -123,6 +150,45 @@ describe("resolveEntitlementResults", () => {
         allocation: 3,
         usage: 2,
         exceeded: false,
+      }),
+    ]);
+  });
+
+  it("does not expose default-on flags that are not included in the active plan", async () => {
+    const result = await resolveEntitlementResults({
+      teamId: "team_1",
+      companyKeys: { internalId: "company_1" },
+      featureKeys: ["ai_summary"],
+    });
+
+    expect(result.entitlements).toEqual([
+      expect.objectContaining({
+        key: "ai_summary",
+        enabled: false,
+        reason: "Not included in the current plan",
+      }),
+    ]);
+  });
+
+  it("still enables targeted flags even when the plan metadata does not list them", async () => {
+    mockResolveCompany.mockResolvedValue({
+      id: "company_1",
+      traits: { beta_access: "true" },
+      activePlanId: "plan_1",
+      activeAddOnIds: [],
+    });
+
+    const result = await resolveEntitlementResults({
+      teamId: "team_1",
+      companyKeys: { internalId: "company_1" },
+      featureKeys: ["priority_support"],
+    });
+
+    expect(result.entitlements).toEqual([
+      expect.objectContaining({
+        key: "priority_support",
+        enabled: true,
+        reason: "Rule 101 matched",
       }),
     ]);
   });

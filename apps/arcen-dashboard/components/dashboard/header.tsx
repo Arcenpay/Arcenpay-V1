@@ -385,6 +385,21 @@ export function Header({ activeSection }: HeaderProps) {
                   </button>
                 ))}
               </div>
+              <div className="mt-2 border-t border-border pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowWorkspaceMenu(false);
+                    router.push("/?section=settings&tab=workspace", { scroll: false });
+                  }}
+                  className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-secondary/70 hover:text-foreground"
+                >
+                  <span>Manage workspace</span>
+                  <span className="text-[11px] uppercase tracking-[0.14em]">
+                    Settings
+                  </span>
+                </button>
+              </div>
             </div>
           ) : null}
         </div>

@@ -64,7 +64,10 @@ function microsToAmountString(value: number): string {
 export function normalizeBillingPeriod(
   value?: string | null,
 ): BillingPeriod {
-  return value === "annual" ? "annual" : "monthly";
+  if (value === "annual" || value === "yearly") {
+    return "annual";
+  }
+  return "monthly";
 }
 
 export function normalizeCouponCode(value?: string | null): string | null {
@@ -90,7 +93,66 @@ async function resolveTeamEnvironmentMode(
     where: { id: teamId },
     select: { environmentMode: true },
   });
-  return team?.environmentMode ?? "PRODUCTION";
+  return team?.environmentMode ?? "DEVELOPMENT";
+}
+
+type PublishedPlanIdentity = {
+  id: string;
+  name: string;
+  tier?: string | null;
+};
+
+async function resolveConfiguredPublishedPlan(
+  teamId: string,
+  environmentMode: "DEVELOPMENT" | "PRODUCTION",
+  preference: string | null | undefined,
+  requireFree: boolean,
+): Promise<PublishedPlanIdentity | null> {
+  const candidate = preference?.trim();
+  if (!candidate) return null;
+
+  return db.catalogPlan.findFirst({
+    where: {
+      teamId,
+      environmentMode,
+      status: "PUBLISHED",
+      active: true,
+      ...(requireFree
+        ? { price: { equals: new Prisma.Decimal(0) } }
+        : {}),
+      OR: [{ id: candidate }, { name: candidate }, { tier: candidate }],
+    },
+    orderBy: [{ updatedAt: "desc" }, { createdAt: "asc" }],
+    select: { id: true, name: true, tier: true },
+  });
+}
+
+export async function resolvePublishedInitialPlan(teamId: string): Promise<{
+  id: string;
+  name: string;
+} | null> {
+  const environmentMode = await resolveTeamEnvironmentMode(teamId);
+  const config = await db.catalogConfig.findUnique({
+    where: {
+      teamId_environmentMode: {
+        teamId,
+        environmentMode,
+      },
+    },
+    select: { initialPlan: true },
+  });
+
+  const configuredPlan = await resolveConfiguredPublishedPlan(
+    teamId,
+    environmentMode,
+    config?.initialPlan,
+    false,
+  );
+  if (configuredPlan) {
+    return { id: configuredPlan.id, name: configuredPlan.name };
+  }
+
+  return resolvePublishedFreePlan(teamId);
 }
 
 export async function resolvePublishedFreePlan(teamId: string): Promise<{
@@ -108,24 +170,16 @@ export async function resolvePublishedFreePlan(teamId: string): Promise<{
     select: { fallbackPlan: true, initialPlan: true },
   });
 
-  const preferredPlanNames = [
-    config?.fallbackPlan?.trim(),
-    config?.initialPlan?.trim(),
-  ].filter((value): value is string => Boolean(value));
-
-  for (const planName of preferredPlanNames) {
-    const namedFreePlan = await db.catalogPlan.findFirst({
-      where: {
-        teamId,
-        environmentMode,
-        status: "PUBLISHED",
-        active: true,
-        name: planName,
-        price: { equals: new Prisma.Decimal(0) },
-      },
-      select: { id: true, name: true },
-    });
-    if (namedFreePlan) return namedFreePlan;
+  for (const preference of [config?.fallbackPlan, config?.initialPlan]) {
+    const configuredFreePlan = await resolveConfiguredPublishedPlan(
+      teamId,
+      environmentMode,
+      preference,
+      true,
+    );
+    if (configuredFreePlan) {
+      return { id: configuredFreePlan.id, name: configuredFreePlan.name };
+    }
   }
 
   return db.catalogPlan.findFirst({

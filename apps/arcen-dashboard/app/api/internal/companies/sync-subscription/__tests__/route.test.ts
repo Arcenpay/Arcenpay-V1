@@ -3,6 +3,7 @@ import { PATCH } from "../route";
 import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { resolvePublishedFreePlan } from "@/lib/catalog-billing";
+import { upsertSubscriptionLedgerState } from "@/lib/billing-ledger";
 
 vi.mock("@/lib/db", () => ({
   db: {
@@ -18,6 +19,10 @@ vi.mock("@/lib/db", () => ({
 
 vi.mock("@/lib/catalog-billing", () => ({
   resolvePublishedFreePlan: vi.fn(),
+}));
+
+vi.mock("@/lib/billing-ledger", () => ({
+  upsertSubscriptionLedgerState: vi.fn(),
 }));
 
 const FACILITATOR_SECRET = "test-secret";
@@ -42,6 +47,9 @@ describe("PATCH /api/internal/companies/sync-subscription", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     process.env.FACILITATOR_SECRET = FACILITATOR_SECRET;
+    (upsertSubscriptionLedgerState as ReturnType<typeof vi.fn>).mockResolvedValue(
+      null,
+    );
   });
 
   it("returns 401 without correct secret", async () => {

@@ -8,7 +8,7 @@ export function Providers({ children }: { children: ReactNode }) {
     Number(
       process.env.NEXT_PUBLIC_CHAIN_ID ??
         process.env.NEXT_PUBLIC_MEAP_DEFAULT_CHAIN_ID,
-    ) || 11155111;
+    ) || 84532;
 
   return (
     <ArcenPayProvider

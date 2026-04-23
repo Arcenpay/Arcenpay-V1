@@ -136,15 +136,16 @@ export async function GET(request: NextRequest) {
     parsed.data.chainId,
   );
 
-  const [activePlans, invoiceTotals, invoiceRows, protocolStats, feesRaw] =
+  const [planRows, invoiceTotals, invoiceRows, protocolStats, feesRaw] =
     await Promise.all([
-      db.catalogPlan.count({
+      db.catalogPlan.findMany({
         where: {
           teamId: auth.team.teamId,
           environmentMode,
           active: true,
           status: { not: "ARCHIVED" },
         },
+        select: { id: true },
       }),
       db.invoice.aggregate({
         where: {
@@ -169,6 +170,17 @@ export async function GET(request: NextRequest) {
       readProtocolFees(chainId),
     ]);
 
+  const activePlans = planRows.length;
+  const activePlanIds = planRows.map((plan) => plan.id);
+  const workspaceSubscriberCount = activePlanIds.length
+    ? await db.arcenCompany.count({
+        where: {
+          teamId: auth.team.teamId,
+          activePlanId: { in: activePlanIds },
+        },
+      })
+    : 0;
+
   const uniqueSubscribers = new Set<string>();
   for (const row of invoiceRows) {
     if (row.customerWallet) uniqueSubscribers.add(`w:${row.customerWallet.toLowerCase()}`);
@@ -186,11 +198,12 @@ export async function GET(request: NextRequest) {
       activeSubscribers:
         protocolStats.activeSubscribers != null
           ? protocolStats.activeSubscribers
-          : uniqueSubscribers.size,
+          : Math.max(uniqueSubscribers.size, workspaceSubscriberCount),
       monthlyRevenueRaw:
         decimalUsdcToMicroString(invoiceTotals._sum.total) ??
-        protocolStats.totalRevenueRaw,
-      protocolFeesRaw: feesRaw,
+        protocolStats.totalRevenueRaw ??
+        "0",
+      protocolFeesRaw: feesRaw ?? "0",
     },
   });
 }

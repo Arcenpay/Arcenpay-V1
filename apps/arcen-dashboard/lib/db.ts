@@ -6,21 +6,211 @@
 
 import { Pool } from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient } from "../src/generated/prisma/client";
+import { Prisma, PrismaClient } from "../src/generated/prisma/client";
 
-const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
+type PrismaGlobal = {
+  prisma?: PrismaClient;
+  prismaPool?: Pool;
+};
 
-function createPrismaClient(): PrismaClient {
+const globalForPrisma = globalThis as unknown as PrismaGlobal;
+const RETRYABLE_PRISMA_ERROR_CODES = new Set(["P1001", "P1017", "P2024"]);
+const PRISMA_RETRY_ATTEMPTS = 3;
+
+function getErrorCode(error: unknown): string | null {
+  if (!error || typeof error !== "object" || !("code" in error)) {
+    return null;
+  }
+
+  const code = (error as { code?: unknown }).code;
+  return typeof code === "string" ? code : null;
+}
+
+function collectErrorMessages(error: unknown): string[] {
+  const messages: string[] = [];
+  const queue: unknown[] = [error];
+  const seen = new Set<unknown>();
+
+  while (queue.length > 0) {
+    const current = queue.shift();
+    if (!current || seen.has(current)) continue;
+    seen.add(current);
+
+    if (current instanceof Error && current.message) {
+      messages.push(current.message.toLowerCase());
+    }
+
+    if (typeof current === "object" && "cause" in current) {
+      queue.push((current as { cause?: unknown }).cause);
+    }
+  }
+
+  return messages;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function buildPrismaState(): { client: PrismaClient; pool: Pool } {
   const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
+    connectionTimeoutMillis: 10_000,
+    idleTimeoutMillis: 30_000,
+    keepAlive: true,
+    maxLifetimeSeconds: 60,
   });
   const adapter = new PrismaPg(pool);
-  return new PrismaClient({
+  const client = new PrismaClient({
     adapter,
     log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
   });
+
+  pool.on("error", () => {
+    void resetPrismaClient(pool);
+  });
+
+  return { client, pool };
 }
 
-export const db = globalForPrisma.prisma ?? createPrismaClient();
+function getPrismaClient(): PrismaClient {
+  if (!globalForPrisma.prisma || !globalForPrisma.prismaPool) {
+    const state = buildPrismaState();
+    globalForPrisma.prisma = state.client;
+    globalForPrisma.prismaPool = state.pool;
+  }
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = db;
+  return globalForPrisma.prisma;
+}
+
+function isRetryableConnectionError(error: unknown): boolean {
+  if (error instanceof Prisma.PrismaClientInitializationError) return true;
+  if (error instanceof Prisma.PrismaClientRustPanicError) return true;
+  const code = getErrorCode(error);
+  if (
+    (error instanceof Prisma.PrismaClientKnownRequestError && code !== null) ||
+    code !== null
+  ) {
+    if (RETRYABLE_PRISMA_ERROR_CODES.has(code)) return true;
+  }
+
+  const messages = collectErrorMessages(error);
+  if (
+    messages.some(
+      (message) =>
+        message.includes("server has closed the connection") ||
+        message.includes("connection terminated unexpectedly") ||
+        message.includes("terminating connection due to administrator command") ||
+        message.includes("can't reach database server") ||
+        message.includes("connection reset") ||
+        message.includes("econnreset") ||
+        message.includes("socket closed unexpectedly") ||
+        message.includes("the database server closed the connection"),
+    )
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+async function resetPrismaClient(expectedPool?: Pool): Promise<void> {
+  const currentClient = globalForPrisma.prisma;
+  const currentPool = globalForPrisma.prismaPool;
+
+  if (expectedPool && currentPool !== expectedPool) {
+    return;
+  }
+
+  globalForPrisma.prisma = undefined;
+  globalForPrisma.prismaPool = undefined;
+
+  await Promise.allSettled([
+    currentClient?.$disconnect(),
+    currentPool?.end(),
+  ]);
+}
+
+export async function withPrismaReconnect<T>(
+  operation: (client: PrismaClient) => Promise<T>,
+): Promise<T> {
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt < PRISMA_RETRY_ATTEMPTS; attempt += 1) {
+    try {
+      return await operation(getPrismaClient());
+    } catch (error) {
+      lastError = error;
+      if (!isRetryableConnectionError(error) || attempt === PRISMA_RETRY_ATTEMPTS - 1) {
+        throw error;
+      }
+
+      await resetPrismaClient();
+      await sleep(100 * (attempt + 1));
+    }
+  }
+
+  throw lastError;
+}
+
+function wrapClientMethod(
+  prop: PropertyKey,
+): (...args: unknown[]) => Promise<unknown> {
+  return (...args: unknown[]) =>
+    withPrismaReconnect(async (client) =>
+      Reflect.apply(
+        Reflect.get(client, prop, client) as (...args: unknown[]) => unknown,
+        client,
+        args,
+      ),
+    );
+}
+
+function wrapDelegateMethod(
+  delegateProp: PropertyKey,
+  methodProp: PropertyKey,
+): (...args: unknown[]) => Promise<unknown> {
+  return (...args: unknown[]) =>
+    withPrismaReconnect(async (client) => {
+      const delegate = Reflect.get(client, delegateProp, client) as Record<PropertyKey, unknown>;
+      const method = Reflect.get(
+        delegate,
+        methodProp,
+        delegate,
+      ) as (...args: unknown[]) => unknown;
+      return Reflect.apply(method, delegate, args);
+    });
+}
+
+function createDelegateProxy(delegateProp: PropertyKey): object {
+  return new Proxy(
+    {},
+    {
+      get(_target, methodProp) {
+        const client = getPrismaClient();
+        const delegate = Reflect.get(client, delegateProp, client);
+        const value = Reflect.get(delegate as object, methodProp, delegate);
+        return typeof value === "function"
+          ? wrapDelegateMethod(delegateProp, methodProp)
+          : value;
+      },
+    },
+  );
+}
+
+export const db = new Proxy({} as PrismaClient, {
+  get(_target, prop) {
+    const client = getPrismaClient();
+    const value = Reflect.get(client, prop, client);
+
+    if (typeof value === "function") {
+      return wrapClientMethod(prop);
+    }
+
+    if (value && typeof value === "object" && typeof prop !== "symbol") {
+      return createDelegateProxy(prop);
+    }
+
+    return value;
+  },
+});

@@ -66,6 +66,7 @@ describe("consumeMeteredEntitlement", () => {
     });
     mockResolveUser.mockResolvedValue({
       id: "user_1",
+      companyId: "company_1",
       traits: {},
     });
     (db.catalogFeatureFlag.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue({

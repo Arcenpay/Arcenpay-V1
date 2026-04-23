@@ -6,7 +6,7 @@
 import { createHmac, randomBytes } from "node:crypto";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { db } from "@/lib/db";
+import { withPrismaReconnect } from "@/lib/db";
 import { SIWE_JWT_SECRET } from "@/lib/config";
 import { AUTH_COOKIE_NAME, AUTH_SESSION_TTL_MS } from "@/lib/auth-constants";
 
@@ -45,19 +45,22 @@ export async function getSession(): Promise<DashboardSession | null> {
   if (!token) return null;
 
   const now = new Date();
-  const record = await db.authSession.findUnique({
-    where: { tokenHash: hashAuthValue(token) },
-    include: {
-      user: {
-        select: {
-          id: true,
-          email: true,
-          currentTeamId: true,
-          walletAddress: true,
+  const tokenHash = hashAuthValue(token);
+  const record = await withPrismaReconnect((client) =>
+    client.authSession.findUnique({
+      where: { tokenHash },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            currentTeamId: true,
+            walletAddress: true,
+          },
         },
       },
-    },
-  });
+    }),
+  );
 
   if (!record || record.revokedAt || record.expiresAt <= now) {
     return null;
@@ -66,13 +69,15 @@ export async function getSession(): Promise<DashboardSession | null> {
   const staleAfter = 6 * 60 * 60 * 1000;
   if (now.getTime() - record.lastSeenAt.getTime() > staleAfter) {
     const expiresAt = new Date(now.getTime() + AUTH_SESSION_TTL_MS);
-    await db.authSession.update({
-      where: { id: record.id },
-      data: {
-        lastSeenAt: now,
-        expiresAt,
-      },
-    });
+    await withPrismaReconnect((client) =>
+      client.authSession.update({
+        where: { id: record.id },
+        data: {
+          lastSeenAt: now,
+          expiresAt,
+        },
+      }),
+    );
 
     return {
       sessionId: record.id,
@@ -108,22 +113,26 @@ export async function createSession(userId: string): Promise<DashboardSession> {
 
   const [store, user, record] = await Promise.all([
     cookies(),
-    db.user.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        email: true,
-        currentTeamId: true,
-        walletAddress: true,
-      },
-    }),
-    db.authSession.create({
-      data: {
-        userId,
-        tokenHash: hashAuthValue(token),
-        expiresAt,
-      },
-    }),
+    withPrismaReconnect((client) =>
+      client.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          email: true,
+          currentTeamId: true,
+          walletAddress: true,
+        },
+      }),
+    ),
+    withPrismaReconnect((client) =>
+      client.authSession.create({
+        data: {
+          userId,
+          tokenHash: hashAuthValue(token),
+          expiresAt,
+        },
+      }),
+    ),
   ]);
 
   if (!user) {
@@ -146,13 +155,15 @@ export async function createSession(userId: string): Promise<DashboardSession> {
 export async function refreshSession(sessionId: string): Promise<void> {
   const now = new Date();
   const expiresAt = new Date(now.getTime() + AUTH_SESSION_TTL_MS);
-  await db.authSession.update({
-    where: { id: sessionId },
-    data: {
-      lastSeenAt: now,
-      expiresAt,
-    },
-  });
+  await withPrismaReconnect((client) =>
+    client.authSession.update({
+      where: { id: sessionId },
+      data: {
+        lastSeenAt: now,
+        expiresAt,
+      },
+    }),
+  );
 
   const store = await cookies();
   const token = store.get(AUTH_COOKIE_NAME)?.value;
@@ -166,22 +177,26 @@ export async function clearSession(): Promise<void> {
   const token = store.get(AUTH_COOKIE_NAME)?.value;
   if (token) {
     const tokenHash = hashAuthValue(token);
-    await db.authSession.updateMany({
-      where: {
-        tokenHash,
-        revokedAt: null,
-      },
-      data: {
-        revokedAt: new Date(),
-      },
-    });
+    await withPrismaReconnect((client) =>
+      client.authSession.updateMany({
+        where: {
+          tokenHash,
+          revokedAt: null,
+        },
+        data: {
+          revokedAt: new Date(),
+        },
+      }),
+    );
   }
 
   store.delete(AUTH_COOKIE_NAME);
 }
 
 export async function getDbUser(userId: string) {
-  return db.user.findUnique({ where: { id: userId } });
+  return withPrismaReconnect((client) =>
+    client.user.findUnique({ where: { id: userId } }),
+  );
 }
 
 export function hashOpaqueToken(value: string): string {

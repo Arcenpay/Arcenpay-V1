@@ -4,7 +4,8 @@
  * Generate a short-lived embed access token scoped to a company+user.
  *
  * **Schematic-style upsert:** If the company doesn't exist yet it is created
- * automatically and assigned the free plan — no separate "identify" call needed.
+ * automatically and assigned the configured initial plan — no separate
+ * "identify" call needed.
  * The same applies to users: unknown users linked to a known company are auto-created.
  *
  * Authorization: Bearer api_xxx  (call from your backend, never expose API key client-side)
@@ -34,7 +35,7 @@ import { deliverWebhook } from "@/lib/deliver-webhook";
 import { Prisma } from "@/src/generated/prisma/client";
 import { resolveDashboardSessionIdentityDefaults } from "@/lib/dashboard-session-identity";
 import { getSession } from "@/lib/auth.server";
-import { resolvePublishedFreePlan } from "@/lib/catalog-billing";
+import { resolvePublishedInitialPlan } from "@/lib/catalog-billing";
 
 // ─── Simple JWT-like token (HMAC-SHA256, no external dep) ─────────────────────
 
@@ -54,6 +55,11 @@ function toNullableTrimmed(value: string | undefined): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
+function toNormalizedEmail(value: string | undefined): string | null {
+  const trimmed = toNullableTrimmed(value);
+  return trimmed ? trimmed.toLowerCase() : null;
+}
+
 function isPrismaUniqueError(error: unknown): boolean {
   return (
     typeof error === "object" &&
@@ -71,15 +77,30 @@ async function upsertCompanyForToken(
 ): Promise<{ id: string; activePlanId: string | null; created: boolean }> {
   // Try to find existing company first
   const existing = await resolveCompany(teamId, keys);
-  if (existing)
+  if (existing) {
+    const updates: Record<string, unknown> = {};
+    const nextName = toNullableTrimmed(keys.name);
+    const nextEmail = toNormalizedEmail(keys.email);
+    const nextWallet = toNullableTrimmed(keys.wallet)?.toLowerCase() ?? null;
+
+    if (nextName) updates.name = nextName;
+    if (nextEmail) updates.email = nextEmail;
+    if (nextWallet) updates.walletAddress = nextWallet;
+    if (Object.keys(updates).length > 0) {
+      await db.arcenCompany.update({
+        where: { id: existing.id },
+        data: updates,
+      });
+    }
     return {
       id: existing.id,
       activePlanId: existing.activePlanId,
       created: false,
     };
+  }
 
   const externalId = toNullableTrimmed(keys.id);
-  const email = toNullableTrimmed(keys.email);
+  const email = toNormalizedEmail(keys.email);
   const wallet = toNullableTrimmed(keys.wallet)?.toLowerCase() ?? null;
   const fallbackName =
     toNullableTrimmed(keys.name) ?? email ?? externalId ?? wallet ?? "Unknown";
@@ -131,10 +152,34 @@ async function upsertUserForToken(
   },
 ): Promise<{ id: string; created: boolean }> {
   const existing = await resolveUser(teamId, keys);
-  if (existing) return { id: existing.id, created: false };
+  if (existing) {
+    const updates: Record<string, unknown> = {};
+    const nextName = toNullableTrimmed(keys.name);
+    const nextEmail = toNormalizedEmail(keys.email);
+    const nextWallet = toNullableTrimmed(keys.wallet)?.toLowerCase() ?? null;
+    const nextClerkUserId =
+      toNullableTrimmed(
+        (keys as Record<string, unknown>).clerk_user_id as string | undefined,
+      ) ?? toNullableTrimmed(keys.clerkUserId);
+
+    if (existing.companyId !== companyId) updates.companyId = companyId;
+    if (nextName) updates.name = nextName;
+    if (nextEmail) updates.email = nextEmail;
+    if (nextWallet) updates.walletAddress = nextWallet;
+    if (nextClerkUserId) updates.clerkUserId = nextClerkUserId;
+
+    if (Object.keys(updates).length > 0) {
+      await db.arcenUser.update({
+        where: { id: existing.id },
+        data: updates,
+      });
+    }
+
+    return { id: existing.id, created: false };
+  }
 
   const externalId = toNullableTrimmed(keys.id);
-  const email = toNullableTrimmed(keys.email);
+  const email = toNormalizedEmail(keys.email);
   const wallet = toNullableTrimmed(keys.wallet)?.toLowerCase() ?? null;
   const clerkUserId =
     toNullableTrimmed(
@@ -288,21 +333,21 @@ export async function POST(req: NextRequest) {
     const companyResult = await upsertCompanyForToken(teamId, companyInput);
     companyId = companyResult.id;
 
-    // Auto-assign free plan if no active plan
+    // Auto-assign the owner-configured initial plan if no active plan
     let activePlanId = companyResult.activePlanId;
     if (!activePlanId) {
-      const freePlan = await resolvePublishedFreePlan(teamId);
-      if (freePlan) {
+      const initialPlan = await resolvePublishedInitialPlan(teamId);
+      if (initialPlan) {
         await db.arcenCompany.update({
           where: { id: companyId },
-          data: { activePlanId: freePlan.id },
+          data: { activePlanId: initialPlan.id },
         });
-        activePlanId = freePlan.id;
+        activePlanId = initialPlan.id;
       } else {
         return NextResponse.json(
           {
             error:
-              "No published free plan is configured for this workspace. Publish or configure a free plan before issuing new access tokens.",
+              "No published initial plan is configured for this workspace. Publish a plan and set it as the initial plan before issuing new access tokens.",
           },
           { status: 409 },
         );

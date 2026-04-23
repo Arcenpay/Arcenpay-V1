@@ -142,6 +142,7 @@ export async function POST(req: NextRequest) {
   }
 
   const walletAddress = body.wallet?.toLowerCase();
+  const email = body.email?.trim().toLowerCase();
 
   // Check for duplicates
   const where: Record<string, unknown>[] = [];
@@ -149,6 +150,9 @@ export async function POST(req: NextRequest) {
   if (walletAddress) where.push({ teamId, walletAddress });
   if (body.clerk_user_id)
     where.push({ teamId, clerkUserId: body.clerk_user_id });
+  if (email) {
+    where.push({ teamId, email: { equals: email, mode: "insensitive" } });
+  }
 
   if (where.length > 0) {
     const existing = await db.arcenUser.findFirst({ where: { OR: where } });
@@ -168,7 +172,7 @@ export async function POST(req: NextRequest) {
       walletAddress,
       clerkUserId: body.clerk_user_id,
       name: body.name,
-      email: body.email,
+      email,
       traits: (body.traits ?? {}) as unknown as Prisma.InputJsonValue,
     },
   });

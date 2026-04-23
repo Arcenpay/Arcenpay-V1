@@ -93,11 +93,11 @@ export function OverviewSection() {
     mrr:
       payload?.metrics.monthlyRevenueRaw != null
         ? formatUsdc(payload.metrics.monthlyRevenueRaw)
-        : "—",
+        : formatUsdc("0"),
     feesCollected:
       payload?.metrics.protocolFeesRaw != null
         ? formatUsdc(payload.metrics.protocolFeesRaw)
-        : "—",
+        : formatUsdc("0"),
     activePlans:
       payload?.metrics.activePlans != null
         ? String(payload.metrics.activePlans)

@@ -32,6 +32,7 @@ import type {
   ComponentPaymentMethod,
 } from "@arcenpay/sdk";
 import {
+  ERC7579AutopayModuleABI,
   getBlockExplorerUrl,
   getChain,
   getContractAddresses,
@@ -40,14 +41,19 @@ import {
 } from "@arcenpay/sdk";
 import {
   cancelSubscription,
+  deploySmartAccount,
+  sendSmartAccountTransaction,
   updateAutopayConfig,
 } from "../lib/zerodev";
 import {
+  encodeAbiParameters,
+  encodeFunctionData,
   createPublicClient,
   createWalletClient,
   custom,
   http,
   isAddress,
+  parseAbiParameters,
   type WalletClient,
 } from "viem";
 
@@ -109,10 +115,18 @@ type PortalAction =
   | { type: "PROCESSING_DONE"; flashMsg?: string }
   | { type: "PROCESSING_ERR"; error: string };
 
+function isEnvEnabled(value: string | undefined, defaultValue = true): boolean {
+  const normalized = (value ?? "").trim().toLowerCase();
+  if (!normalized) return defaultValue;
+  if (["1", "true", "yes", "on"].includes(normalized)) return true;
+  if (["0", "false", "no", "off"].includes(normalized)) return false;
+  return defaultValue;
+}
+
 const PORTAL_SELF_SERVE_PLAN_CHANGES_ENABLED =
-  process.env.NEXT_PUBLIC_ARCENPAY_ENABLE_PORTAL_PLAN_CHANGES === "true";
+  isEnvEnabled(process.env.NEXT_PUBLIC_ARCENPAY_ENABLE_PORTAL_PLAN_CHANGES);
 const PORTAL_SELF_SERVE_CANCELLATION_ENABLED =
-  process.env.NEXT_PUBLIC_ARCENPAY_ENABLE_PORTAL_CANCELLATION === "true";
+  isEnvEnabled(process.env.NEXT_PUBLIC_ARCENPAY_ENABLE_PORTAL_CANCELLATION);
 
 const initialState: PortalState = {
   data: null,
@@ -287,6 +301,26 @@ function intervalLabel(billingInterval: number): string {
   return "";
 }
 
+function billingPeriodUnit(
+  billingPeriod: "monthly" | "annual",
+): "mo" | "yr" {
+  return billingPeriod === "annual" ? "yr" : "mo";
+}
+
+function billingPeriodWord(
+  billingPeriod: "monthly" | "annual",
+): "month" | "year" {
+  return billingPeriod === "annual" ? "year" : "month";
+}
+
+function normalizeCustomerEmail(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+function isValidCustomerEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizeCustomerEmail(value));
+}
+
 function fmtPrice(price: string | number, billingInterval?: number): string {
   const p = parseFloat(String(price));
   if (p === 0) return "Free";
@@ -355,6 +389,75 @@ function getUsageItems(data: ComponentRenderData): ComponentUsageItem[] {
       limit: entitlement.limit,
       unitSingular: entitlement.unitSingular ?? null,
       unitPlural: entitlement.unitPlural ?? null,
+    }));
+}
+
+type ResolvedBooleanFeature = {
+  featureKey: string;
+  name: string;
+  value: true;
+  featureType: "boolean";
+};
+
+function getActivePlanBooleanFeatures(
+  data: ComponentRenderData,
+): ResolvedBooleanFeature[] {
+  const entitlements = data.entitlements as Array<
+    ComponentEntitlement & { featureType?: string }
+  >;
+  const activePlanId =
+    typeof data.activePlan?.id === "string" ? data.activePlan.id : null;
+  const matchedPlan = activePlanId
+    ? data.plans.find((plan) => plan.id === activePlanId)
+    : null;
+  const metadataSource =
+    ((matchedPlan as { metadata?: unknown } | null | undefined)?.metadata ??
+      (data.activePlan as { metadata?: unknown } | null | undefined)?.metadata ??
+      null) as Record<string, unknown> | null;
+
+  if (metadataSource && typeof metadataSource === "object") {
+    const rawEntitlements = Array.isArray(metadataSource.entitlements)
+      ? metadataSource.entitlements
+      : [];
+
+    return rawEntitlements
+      .filter(
+        (entry): entry is {
+          featureKey: string;
+          featureName?: string;
+          type?: string;
+          enabled?: boolean;
+        } =>
+          Boolean(
+            entry &&
+              typeof entry === "object" &&
+              typeof (entry as { featureKey?: unknown }).featureKey === "string",
+          ),
+      )
+      .filter(
+        (entry) =>
+          entry.enabled === true &&
+          (!entry.type || entry.type === "BOOLEAN"),
+      )
+      .map((entry) => ({
+        featureKey: entry.featureKey,
+        name: entry.featureName ?? entry.featureKey,
+        value: true as const,
+        featureType: "boolean" as const,
+      }));
+  }
+
+  return entitlements
+    .filter(
+      (entry) =>
+        (!entry.featureType || entry.featureType === "boolean") &&
+        (entry.value === true || entry.value === "true"),
+    )
+    .map((entry) => ({
+      featureKey: entry.featureKey,
+      name: entry.name ?? entry.featureKey,
+      value: true as const,
+      featureType: "boolean" as const,
     }));
 }
 
@@ -802,12 +905,94 @@ function getPlanDisplayPrice(
 }
 
 function getWindowEthereum():
-  | { request: (args: { method: string }) => Promise<string[]> }
+  | { request: (args: { method: string; params?: unknown[] }) => Promise<unknown> }
   | undefined {
   if (typeof window === "undefined") return undefined;
   return (window as unknown as {
-    ethereum?: { request: (args: { method: string }) => Promise<string[]> };
+    ethereum?: {
+      request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
+    };
   }).ethereum;
+}
+
+const WALLET_CONNECT_TIMEOUT_MS = 20_000;
+
+function getWalletConnectionErrorMessage(error: unknown): string {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code?: number }).code === 4001
+  ) {
+    return "Wallet connection was cancelled.";
+  }
+
+  const message = error instanceof Error ? error.message : "";
+  if (!message) {
+    return "Wallet connection failed. Please try again.";
+  }
+
+  const normalized = message.toLowerCase();
+  if (
+    normalized.includes("user rejected") ||
+    normalized.includes("user denied") ||
+    normalized.includes("cancelled")
+  ) {
+    return "Wallet connection was cancelled.";
+  }
+
+  return message;
+}
+
+async function requestWindowEthereumAccounts(): Promise<string[]> {
+  const eth = getWindowEthereum();
+  if (!eth) {
+    throw new Error(
+      "No browser wallet found. Install a wallet like MetaMask to continue.",
+    );
+  }
+
+  const existingAccounts = await eth
+    .request({ method: "eth_accounts" })
+    .catch(() => []);
+
+  if (
+    Array.isArray(existingAccounts) &&
+    typeof existingAccounts[0] === "string" &&
+    existingAccounts[0]
+  ) {
+    return existingAccounts as string[];
+  }
+
+  let timeoutId: number | undefined;
+  try {
+    const requestedAccounts = await Promise.race([
+      eth.request({ method: "eth_requestAccounts" }),
+      new Promise<never>((_, reject) => {
+        timeoutId = window.setTimeout(() => {
+          reject(
+            new Error(
+              "Wallet connection timed out. Open your wallet and approve the request, then try again.",
+            ),
+          );
+        }, WALLET_CONNECT_TIMEOUT_MS);
+      }),
+    ]);
+
+    if (
+      !Array.isArray(requestedAccounts) ||
+      typeof requestedAccounts[0] !== "string" ||
+      !requestedAccounts[0]
+    ) {
+      throw new Error("No wallet account was returned.");
+    }
+
+    return requestedAccounts as string[];
+  } finally {
+    if (timeoutId) {
+      window.clearTimeout(timeoutId);
+    }
+  }
 }
 
 function createBrowserWalletClient(params: {
@@ -822,6 +1007,108 @@ function createBrowserWalletClient(params: {
     chain: getChain(params.chainId),
     transport: custom(ethereum),
   }) as WalletClient;
+}
+
+async function getCurrentWalletChainId(walletClient: WalletClient): Promise<number | null> {
+  try {
+    const chainId = await walletClient.getChainId();
+    return Number.isFinite(chainId) ? chainId : null;
+  } catch {
+    const ethereum = getWindowEthereum();
+    if (!ethereum) return null;
+    try {
+      const chainHex = await ethereum.request({ method: "eth_chainId" });
+      if (typeof chainHex !== "string") return null;
+      const parsed = Number.parseInt(chainHex, 16);
+      return Number.isFinite(parsed) ? parsed : null;
+    } catch {
+      return null;
+    }
+  }
+}
+
+async function ensureWalletOnTargetChain(
+  walletClient: WalletClient,
+  chainId: number,
+): Promise<void> {
+  const currentChainId = await getCurrentWalletChainId(walletClient);
+  if (currentChainId === chainId) return;
+
+  const targetChain = getChain(chainId);
+  const ethereum = getWindowEthereum();
+  const chainHex = `0x${chainId.toString(16)}`;
+
+  const addChain = async () => {
+    if (!ethereum) {
+      throw new Error(
+        `Switch your wallet to ${targetChain.name} (Chain ID: ${chainId}) and try again.`,
+      );
+    }
+
+    await ethereum.request({
+      method: "wallet_addEthereumChain",
+      params: [
+        {
+          chainId: chainHex,
+          chainName: targetChain.name,
+          nativeCurrency: targetChain.nativeCurrency,
+          rpcUrls: Array.from(
+            new Set([
+              ...(targetChain.rpcUrls.default.http ?? []),
+              ...(targetChain.rpcUrls.public?.http ?? []),
+            ]),
+          ),
+          blockExplorerUrls: targetChain.blockExplorers?.default?.url
+            ? [targetChain.blockExplorers.default.url]
+            : [],
+        },
+      ],
+    });
+  };
+
+  try {
+    if (typeof walletClient.switchChain === "function") {
+      await walletClient.switchChain({ id: chainId });
+      return;
+    }
+
+    if (!ethereum) {
+      throw new Error(
+        `Switch your wallet to ${targetChain.name} (Chain ID: ${chainId}) and try again.`,
+      );
+    }
+
+    await ethereum.request({
+      method: "wallet_switchEthereumChain",
+      params: [{ chainId: chainHex }],
+    });
+  } catch (error) {
+    const code =
+      typeof error === "object" && error !== null && "code" in error
+        ? Number((error as { code?: number | string }).code)
+        : null;
+    const message = error instanceof Error ? error.message.toLowerCase() : "";
+
+    if (code === 4902 || message.includes("unrecognized chain")) {
+      await addChain();
+      return;
+    }
+
+    if (code === 4001 || message.includes("user rejected")) {
+      throw new Error(`Switch to ${targetChain.name} in your wallet to continue.`);
+    }
+
+    throw new Error(
+      `Unable to switch the wallet to ${targetChain.name}. Open your wallet and change to Chain ID ${chainId}.`,
+    );
+  }
+
+  const confirmedChainId = await getCurrentWalletChainId(walletClient);
+  if (confirmedChainId !== chainId) {
+    throw new Error(
+      `Wallet is still on the wrong network. Switch to ${targetChain.name} (Chain ID: ${chainId}) and try again.`,
+    );
+  }
 }
 
 async function readOnChainPlan(
@@ -891,6 +1178,72 @@ async function readAutopayConfig(chainId: number, paymentAccount: string) {
     planId?: bigint;
     maxTotalAmount?: bigint;
   };
+}
+
+async function readAutopayInitialized(
+  chainId: number,
+  paymentAccount: string,
+): Promise<boolean> {
+  const chain = getChain(chainId);
+  const contracts = getContractAddresses(chainId);
+  const publicClient = createPublicClient({ chain, transport: http() });
+  return (await publicClient.readContract({
+    address: contracts.autopayModule as `0x${string}`,
+    abi: ERC7579AutopayModuleABI,
+    functionName: "isInitialized",
+    args: [paymentAccount as `0x${string}`],
+  })) as boolean;
+}
+
+function encodeAutopayInstallData(params: {
+  merchant: `0x${string}`;
+  maxAmount: bigint;
+  token: `0x${string}`;
+  interval: number;
+  startTime: bigint;
+  planId: bigint;
+}): `0x${string}` {
+  return encodeAbiParameters(
+    parseAbiParameters(
+      "(address merchant,uint256 maxAmount,address token,uint32 interval,uint64 startTime,uint256 planId,uint256 maxTotalAmount)",
+    ),
+    [
+      {
+        merchant: params.merchant,
+        maxAmount: params.maxAmount,
+        token: params.token,
+        interval: params.interval,
+        startTime: params.startTime,
+        planId: params.planId,
+        maxTotalAmount: 0n,
+      },
+    ],
+  );
+}
+
+async function submitWalletTransaction(params: {
+  chainId: number;
+  walletClient: WalletClient;
+  account: `0x${string}`;
+  to: `0x${string}`;
+  data: `0x${string}`;
+  value?: bigint;
+}): Promise<{ txHash: `0x${string}` }> {
+  await ensureWalletOnTargetChain(params.walletClient, params.chainId);
+  const publicClient = createPublicClient({
+    chain: getChain(params.chainId),
+    transport: http(),
+  });
+  const txHash = await params.walletClient.sendTransaction({
+    account: params.account,
+    chain: getChain(params.chainId),
+    to: params.to,
+    data: params.data,
+    value: params.value ?? 0n,
+  });
+
+  await publicClient.waitForTransactionReceipt({ hash: txHash });
+  return { txHash };
 }
 
 async function readWalletSubscriptionTokenId(
@@ -1043,11 +1396,7 @@ export function renderElement(
       const ents = data.entitlements as Array<
         ComponentEntitlement & { featureType?: string }
       >;
-      const boolFeats = ents.filter(
-        (e) =>
-          (!e.featureType || e.featureType === "boolean") &&
-          (e.value === true || e.value === "true"),
-      );
+      const boolFeats = getActivePlanBooleanFeatures(data);
       const creditFeats = ents.filter((e) => e.featureType === "credit");
       const traitFeats = ents.filter((e) => e.featureType === "trait_based");
       const hasAny =
@@ -1950,12 +2299,7 @@ function PortalContent({
   const isPaid = plan ? parseFloat(String(plan.price)) > 0 : false;
   const price = plan ? parseFloat(String(plan.price)) : 0;
 
-  const ents = data.entitlements as Array<
-    ComponentEntitlement & { featureType?: string }
-  >;
-  const boolFeats = ents.filter(
-    (e) => !e.featureType || e.featureType === "boolean",
-  );
+  const boolFeats = getActivePlanBooleanFeatures(data);
 
   // Respect the designer's columns + sections settings
   const designColumns = tokens.columns ?? 1;
@@ -2748,8 +3092,10 @@ function CheckoutContent({
   couponQuote,
   processing,
   tokens,
+  customerEmail,
   onSelectPlan,
   onBillingPeriodChange,
+  onCustomerEmailChange,
   onCouponQuoteChange,
   onSubscribeClose,
   onNextPayment,
@@ -2764,8 +3110,10 @@ function CheckoutContent({
   couponQuote: AppliedCouponQuote | null;
   processing: boolean;
   tokens: Tokens;
+  customerEmail: string;
   onSelectPlan: (id: string) => void;
   onBillingPeriodChange: (p: "monthly" | "annual") => void;
+  onCustomerEmailChange: (value: string) => void;
   onCouponQuoteChange: (quote: AppliedCouponQuote | null) => void;
   onSubscribeClose: () => void;
   onNextPayment: () => void;
@@ -2846,6 +3194,10 @@ function CheckoutContent({
     discountedPrice <= (currentPlan ? getDisplayPrice(currentPlan) : 0)
       ? 0
       : discountedPrice;
+  const normalizedCustomerEmail = normalizeCustomerEmail(customerEmail);
+  const hasCustomerEmail = normalizedCustomerEmail.length > 0;
+  const hasInvalidCustomerEmail =
+    hasCustomerEmail && !isValidCustomerEmail(normalizedCustomerEmail);
 
   useEffect(() => {
     setCouponApplied(
@@ -3116,7 +3468,7 @@ function CheckoutContent({
                   padding: "24px 20px",
                   borderRadius: tokens.radius,
                   border: isSelected
-                    ? `2px solid ${tokens.textColor}`
+                    ? `2px solid ${tokens.primary}`
                     : `1px solid #e5e7eb`,
                   background: tokens.bg,
                   cursor: "pointer",
@@ -3132,8 +3484,8 @@ function CheckoutContent({
                       position: "absolute",
                       top: 12,
                       right: 12,
-                      background: tokens.textColor,
-                      color: tokens.bg,
+                      background: tokens.primary,
+                      color: isLightColor(tokens.primary) ? "#000" : "#fff",
                       fontSize: 10,
                       fontWeight: 700,
                       padding: "3px 10px",
@@ -3186,7 +3538,7 @@ function CheckoutContent({
                     >
                       /
                       {billingPeriod === "annual" && annualVal > 0
-                        ? "month"
+                        ? "year"
                         : "month"}
                     </span>
                   )}
@@ -3230,15 +3582,22 @@ function CheckoutContent({
                       width: "100%",
                       padding: "11px 0",
                       borderRadius: tokens.radius / 1.5,
-                      background: tokens.textColor,
-                      color: tokens.bg,
-                      border: "none",
+                      background: isSelected ? `${tokens.primary}14` : tokens.primary,
+                      color: isSelected
+                        ? tokens.primary
+                        : isLightColor(tokens.primary)
+                          ? "#000"
+                          : "#fff",
+                      border: isSelected
+                        ? `1px solid ${tokens.primary}`
+                        : "none",
                       cursor: "pointer",
                       fontSize: tokens.size,
                       fontWeight: 600,
+                      pointerEvents: "none",
                     }}
                   >
-                    Choose plan
+                    {isSelected ? "Selected plan" : "Choose plan"}
                   </button>
                 )}
               </div>
@@ -3308,8 +3667,8 @@ function CheckoutContent({
                   }}
                 >
                   {selectedDisplayPrice === 0
-                    ? "$0.00/mo"
-                    : `$${selectedDisplayPrice.toFixed(2)}/${billingPeriod === "annual" ? "yr" : "mo"}`}
+                    ? `$0.00/${billingPeriodUnit(billingPeriod)}`
+                    : `$${selectedDisplayPrice.toFixed(2)}/${billingPeriodUnit(billingPeriod)}`}
                 </div>
               </div>
             </div>
@@ -3429,6 +3788,50 @@ function CheckoutContent({
 
             <div style={S.divider} />
 
+            <div style={{ marginBottom: 12 }}>
+              <div
+                style={{
+                  fontSize: tokens.size - 2,
+                  color: tokens.mutedColor,
+                  marginBottom: 6,
+                }}
+              >
+                Billing email
+              </div>
+              <input
+                value={customerEmail}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  onCustomerEmailChange(e.target.value)
+                }
+                placeholder="you@company.com"
+                type="email"
+                style={{
+                  width: "100%",
+                  padding: "8px 10px",
+                  borderRadius: 6,
+                  border: `1px solid ${hasInvalidCustomerEmail ? "#fecaca" : "#e5e7eb"}`,
+                  fontSize: tokens.size - 1,
+                  outline: "none",
+                  fontFamily: tokens.font,
+                  boxSizing: "border-box",
+                }}
+              />
+              <div
+                style={{
+                  fontSize: tokens.size - 2,
+                  color: hasInvalidCustomerEmail ? "#dc2626" : tokens.mutedColor,
+                  marginTop: 4,
+                  lineHeight: 1.5,
+                }}
+              >
+                {hasInvalidCustomerEmail
+                  ? "Enter a valid email address so invoices and billing notices reach the customer."
+                  : "We’ll use this for receipts, invoices, and subscription notices."}
+              </div>
+            </div>
+
+            <div style={S.divider} />
+
             {/* Totals */}
             <div
               style={{
@@ -3452,7 +3855,7 @@ function CheckoutContent({
                 }}
               >
                 ${discountedPrice.toFixed(2)}/
-                {billingPeriod === "annual" ? "yr" : "mo"}
+                {billingPeriodUnit(billingPeriod)}
               </span>
             </div>
             <div
@@ -3486,8 +3889,8 @@ function CheckoutContent({
                   width: "100%",
                   padding: "12px 0",
                   borderRadius: tokens.radius / 1.5,
-                  background: tokens.textColor,
-                  color: tokens.bg,
+                  background: tokens.primary,
+                  color: isLightColor(tokens.primary) ? "#000" : "#fff",
                   border: "none",
                   cursor: "pointer",
                   fontSize: tokens.size - 1,
@@ -3503,13 +3906,15 @@ function CheckoutContent({
                   width: "100%",
                   padding: "12px 0",
                   borderRadius: tokens.radius / 1.5,
-                  background: tokens.textColor,
-                  color: tokens.bg,
+                  background: tokens.primary,
+                  color: isLightColor(tokens.primary) ? "#000" : "#fff",
                   border: "none",
                   cursor: "pointer",
                   fontSize: tokens.size - 1,
                   fontWeight: 700,
+                  opacity: hasInvalidCustomerEmail ? 0.6 : 1,
                 }}
+                disabled={hasInvalidCustomerEmail}
               >
                 {isAuthoritativeOnChainPlanChange
                   ? "Next: Confirm plan change"
@@ -3522,19 +3927,19 @@ function CheckoutContent({
             ) : (
               <button
                 onClick={onSubscribeClose}
-                disabled={processing}
                 style={{
                   width: "100%",
                   padding: "12px 0",
                   borderRadius: tokens.radius / 1.5,
-                  background: tokens.textColor,
-                  color: tokens.bg,
+                  background: tokens.primary,
+                  color: isLightColor(tokens.primary) ? "#000" : "#fff",
                   border: "none",
                   cursor: processing ? "not-allowed" : "pointer",
                   fontSize: tokens.size - 1,
                   fontWeight: 700,
-                  opacity: processing ? 0.7 : 1,
+                  opacity: processing || hasInvalidCustomerEmail ? 0.7 : 1,
                 }}
+                disabled={processing || hasInvalidCustomerEmail}
               >
                 {processing ? "Processing…" : "Subscribe and close"}
               </button>
@@ -3551,9 +3956,9 @@ function CheckoutContent({
                 }}
               >
                 You will be billed ${discountedPrice.toFixed(2)}/
-                {billingPeriod === "annual" ? "yr" : "mo"} every{" "}
-                {billingPeriod === "annual" ? "year" : "month"} while the
-                subscription remains active.
+                {billingPeriodUnit(billingPeriod)} every{" "}
+                {billingPeriodWord(billingPeriod)} while the subscription
+                remains active.
               </div>
             )}
           </div>
@@ -3585,20 +3990,33 @@ function PaymentContent({
   data,
   selectedPlanId,
   billingPeriod,
+  apiBaseUrl,
+  accessToken,
   couponQuote,
   processing,
   tokens,
+  customerEmail,
+  onCustomerEmailChange,
   onConfirm,
+  onActivationComplete,
   onBack,
   containerWidth,
 }: {
   data: ComponentRenderData;
   selectedPlanId: string | null;
   billingPeriod: "monthly" | "annual";
+  apiBaseUrl: string;
+  accessToken: string;
   couponQuote: AppliedCouponQuote | null;
   processing: boolean;
   tokens: Tokens;
+  customerEmail: string;
+  onCustomerEmailChange: (value: string) => void;
   onConfirm: (txHash?: string) => void;
+  onActivationComplete: (result: {
+    txHash?: string;
+    pending?: boolean;
+  }) => Promise<void> | void;
   onBack: () => void;
   containerWidth: number;
 }) {
@@ -3609,6 +4027,8 @@ function PaymentContent({
   const { address, isConnected } = useSafeAccount();
   const { walletClient: wagmiWalletClient } = useSafeWalletClient();
   const [localAddress, setLocalAddress] = useState<string | null>(null);
+  const [provisionedSmartAccountAddress, setProvisionedSmartAccountAddress] =
+    useState<string | null>(null);
   const [connecting, setConnecting] = useState(false);
   const [txStatus, setTxStatus] = useState<
     "idle" | "approving" | "confirmed" | "error"
@@ -3626,12 +4046,18 @@ function PaymentContent({
   const price = activeCouponQuote
     ? activeCouponQuote.discountedAmountMicros / 1_000_000
     : basePrice;
+  const normalizedCustomerEmail = normalizeCustomerEmail(customerEmail);
+  const hasCustomerEmail = normalizedCustomerEmail.length > 0;
+  const hasInvalidCustomerEmail =
+    hasCustomerEmail && !isValidCustomerEmail(normalizedCustomerEmail);
   const paymentMethod = data.paymentMethod as ComponentPaymentMethod | null;
   const chainId = paymentMethod?.chainId ?? null;
-  const smartAccountAddress =
+  const serverSmartAccountAddress =
     typeof paymentMethod?.walletAddress === "string"
       ? paymentMethod.walletAddress
       : null;
+  const smartAccountAddress =
+    provisionedSmartAccountAddress ?? serverSmartAccountAddress;
   const zeroDevProjectId =
     process.env.NEXT_PUBLIC_ZERODEV_PROJECT_ID ?? null;
   const selectedOnChainPlanId = selectedPlan?.onChainPlanId ?? null;
@@ -3656,6 +4082,7 @@ function PaymentContent({
 
   const isNarrowPayment = containerWidth < 700;
   const finalAddress = address || localAddress;
+  const paymentAccount = smartAccountAddress ?? finalAddress;
   const finalConnected = isConnected || !!localAddress;
   const resolvedWalletClient =
     wagmiWalletClient ??
@@ -3666,18 +4093,214 @@ function PaymentContent({
         })
       : null);
 
+  useEffect(() => {
+    if (serverSmartAccountAddress) {
+      setProvisionedSmartAccountAddress(serverSmartAccountAddress);
+    }
+  }, [serverSmartAccountAddress]);
+
   async function connectWindowEthereum() {
-    const eth = getWindowEthereum();
-    if (!eth) return;
+    setTxError("");
+    setTxStatus("idle");
     setConnecting(true);
     try {
-      const accounts = await eth.request({ method: "eth_requestAccounts" });
+      const accounts = await requestWindowEthereumAccounts();
       setLocalAddress(accounts[0] ?? null);
-    } catch {
-      /* rejected */
+    } catch (error) {
+      setTxStatus("error");
+      setTxError(getWalletConnectionErrorMessage(error));
     } finally {
       setConnecting(false);
     }
+  }
+
+  async function submitPaymentAccountTransaction(params: {
+    to: `0x${string}`;
+    data: `0x${string}`;
+    smartAccountAddressOverride?: `0x${string}`;
+  }) {
+    if (!chainId || !resolvedWalletClient) {
+      throw new Error("A connected wallet is required before continuing.");
+    }
+
+    const effectiveSmartAccountAddress =
+      params.smartAccountAddressOverride ?? smartAccountAddress;
+
+    const requiresSmartAccountExecution = Boolean(
+      effectiveSmartAccountAddress &&
+        finalAddress &&
+        effectiveSmartAccountAddress.toLowerCase() !== finalAddress.toLowerCase(),
+    );
+
+    if (requiresSmartAccountExecution) {
+      if (!zeroDevProjectId || !effectiveSmartAccountAddress) {
+        throw new Error(
+          "Smart-account autopay setup requires NEXT_PUBLIC_ZERODEV_PROJECT_ID.",
+        );
+      }
+
+      await ensureWalletOnTargetChain(resolvedWalletClient, chainId);
+
+      return sendSmartAccountTransaction({
+        projectId: zeroDevProjectId,
+        chainId,
+        walletClient: resolvedWalletClient,
+        smartAccountAddress: effectiveSmartAccountAddress as `0x${string}`,
+        to: params.to,
+        data: params.data,
+      });
+    }
+
+    if (!finalAddress) {
+      throw new Error("Connect the customer wallet before continuing.");
+    }
+
+    return submitWalletTransaction({
+      chainId,
+      walletClient: resolvedWalletClient,
+      account: finalAddress as `0x${string}`,
+      to: params.to,
+      data: params.data,
+    });
+  }
+
+  async function ensureBillingSmartAccount(): Promise<`0x${string}`> {
+    if (smartAccountAddress && isAddress(smartAccountAddress)) {
+      return smartAccountAddress as `0x${string}`;
+    }
+
+    if (!chainId || !resolvedWalletClient || !zeroDevProjectId || !finalAddress) {
+      throw new Error(
+        "A connected Base Sepolia wallet and NEXT_PUBLIC_ZERODEV_PROJECT_ID are required before activation.",
+      );
+    }
+
+    await ensureWalletOnTargetChain(resolvedWalletClient, chainId);
+
+    const result = await deploySmartAccount({
+      projectId: zeroDevProjectId,
+      chainId,
+      walletClient: resolvedWalletClient,
+    });
+
+    setProvisionedSmartAccountAddress(result.smartAccountAddress);
+    return result.smartAccountAddress;
+  }
+
+  async function ensureAutopayReadyForActivation(onChainPlanId: string) {
+    if (!chainId) {
+      throw new Error("Missing payment chain for autopay setup.");
+    }
+
+    const billingPaymentAccount = await ensureBillingSmartAccount();
+
+    const targetPlan = await readOnChainPlan(chainId, onChainPlanId);
+    if (!targetPlan?.active) {
+      throw new Error("The selected on-chain plan is not active anymore.");
+    }
+    if (
+      !targetPlan.provider ||
+      !targetPlan.acceptedToken ||
+      typeof targetPlan.billingInterval !== "number"
+    ) {
+      throw new Error("The selected on-chain plan is missing billing metadata.");
+    }
+
+    const contracts = getContractAddresses(chainId);
+    const autopayAddress = contracts.autopayModule as `0x${string}`;
+    const tokenAddress = targetPlan.acceptedToken as `0x${string}`;
+    const chargeAmount = BigInt(targetPlan.price ?? 0n);
+    if (chargeAmount <= 0n) {
+      throw new Error("The selected on-chain plan has no billable amount.");
+    }
+
+    const nextConfig = {
+      merchant: targetPlan.provider as `0x${string}`,
+      maxAmount: chargeAmount,
+      token: tokenAddress,
+      interval: Number(targetPlan.billingInterval),
+      startTime: BigInt(Math.floor(Date.now() / 1000)),
+      planId: BigInt(onChainPlanId),
+      maxTotalAmount: 0n,
+    };
+
+    const isInitialized = await readAutopayInitialized(
+      chainId,
+      billingPaymentAccount,
+    );
+    if (!isInitialized) {
+      const installData = encodeFunctionData({
+        abi: ERC7579AutopayModuleABI,
+        functionName: "onInstall",
+        args: [encodeAutopayInstallData(nextConfig)],
+      });
+
+      await submitPaymentAccountTransaction({
+        to: autopayAddress,
+        data: installData,
+        smartAccountAddressOverride: billingPaymentAccount,
+      });
+    } else {
+      const currentConfig = await readAutopayConfig(
+        chainId,
+        billingPaymentAccount,
+      );
+      const configMatches =
+        String(currentConfig.merchant ?? "").toLowerCase() ===
+          nextConfig.merchant.toLowerCase() &&
+        BigInt(currentConfig.maxAmount ?? 0n) === nextConfig.maxAmount &&
+        String(currentConfig.token ?? "").toLowerCase() ===
+          nextConfig.token.toLowerCase() &&
+        Number(currentConfig.interval ?? 0) === nextConfig.interval &&
+        BigInt(currentConfig.planId ?? 0n) === nextConfig.planId;
+
+      if (!configMatches) {
+        const updateData = encodeFunctionData({
+          abi: ERC7579AutopayModuleABI,
+          functionName: "updateConfig",
+          args: [
+            {
+              ...nextConfig,
+              maxTotalAmount:
+                typeof currentConfig.maxTotalAmount === "bigint"
+                  ? currentConfig.maxTotalAmount
+                  : 0n,
+            },
+          ],
+        });
+
+        await submitPaymentAccountTransaction({
+          to: autopayAddress,
+          data: updateData,
+          smartAccountAddressOverride: billingPaymentAccount,
+        });
+      }
+    }
+
+    const approveData = encodeFunctionData({
+      abi: [
+        {
+          type: "function",
+          name: "approve",
+          inputs: [
+            { name: "spender", type: "address" },
+            { name: "amount", type: "uint256" },
+          ],
+          outputs: [{ name: "", type: "bool" }],
+          stateMutability: "nonpayable",
+        },
+      ],
+      functionName: "approve",
+      args: [autopayAddress, chargeAmount * 13n],
+    });
+
+    await submitPaymentAccountTransaction({
+      to: tokenAddress,
+      data: approveData,
+      smartAccountAddressOverride: billingPaymentAccount,
+    });
+
+    return billingPaymentAccount;
   }
 
   async function handlePay() {
@@ -3688,10 +4311,84 @@ function PaymentContent({
     }
 
     if (requiresHostedActivation) {
-      setTxStatus("error");
-      setTxError(
-        "Initial paid activation now requires the hosted subscription checkout so autopay setup and the first bill happen together.",
-      );
+      if (!selectedOnChainPlanId || !selectedPlan) {
+        setTxStatus("error");
+        setTxError("Missing on-chain plan metadata for activation.");
+        return;
+      }
+
+      if (!finalAddress) {
+        setTxStatus("error");
+        setTxError("Connect a wallet before activating this subscription.");
+        return;
+      }
+
+      if (hasInvalidCustomerEmail) {
+        setTxStatus("error");
+        setTxError("Enter a valid billing email before activating.");
+        return;
+      }
+
+      setTxStatus("approving");
+      try {
+        const readyPaymentAccount =
+          await ensureAutopayReadyForActivation(selectedOnChainPlanId);
+        const company =
+          (data.company as Record<string, unknown> | null | undefined) ?? null;
+        const body = {
+          planId: selectedOnChainPlanId,
+          paymentAccount: readyPaymentAccount,
+          ...(hasCustomerEmail
+            ? { subscriberEmail: normalizedCustomerEmail }
+            : {}),
+          company: {
+            wallet:
+              typeof company?.walletAddress === "string" &&
+              company.walletAddress.trim()
+                ? String(company.walletAddress)
+                : readyPaymentAccount,
+            ...(typeof company?.name === "string" && company.name.trim()
+              ? { name: String(company.name) }
+              : {}),
+            ...(hasCustomerEmail
+              ? { email: normalizedCustomerEmail }
+              : typeof company?.email === "string" && company.email.trim()
+                ? { email: String(company.email).trim().toLowerCase() }
+                : {}),
+          },
+        };
+
+        const res = await fetch(`${apiBaseUrl}/api/v1/subscriptions/activate`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify(body),
+        });
+
+        const json = (await res.json().catch(() => ({}))) as {
+          error?: string;
+          data?: { txHash?: string };
+        };
+        if (!res.ok) {
+          throw new Error(json.error ?? `HTTP ${res.status}`);
+        }
+
+        setTxStatus("confirmed");
+        await onActivationComplete({
+          txHash: json.data?.txHash,
+          pending: res.status === 202,
+        });
+      } catch (err: unknown) {
+        setTxStatus("error");
+        const msg = err instanceof Error ? err.message : "Activation failed";
+        if (msg.includes("rejected") || msg.includes("denied")) {
+          setTxError("Transaction cancelled");
+        } else {
+          setTxError(msg.slice(0, 160));
+        }
+      }
       return;
     }
 
@@ -3727,6 +4424,8 @@ function PaymentContent({
 
     setTxStatus("approving");
     try {
+      await ensureWalletOnTargetChain(resolvedWalletClient, chainId);
+
       const [currentConfig, targetPlan] = await Promise.all([
         readAutopayConfig(chainId, smartAccountAddress),
         readOnChainPlan(chainId, selectedOnChainPlanId),
@@ -4118,13 +4817,14 @@ function PaymentContent({
                       color: tokens.textColor,
                     }}
                   >
-                    Hosted activation required
+                    Activate subscription
                   </div>
                   <div style={{ fontSize: 11, color: tokens.mutedColor }}>
-                    Autopay setup + first bill
+                    First bill + autopay setup
                   </div>
                 </div>
               </div>
+
               <div
                 style={{
                   padding: "12px 14px",
@@ -4137,14 +4837,183 @@ function PaymentContent({
                   lineHeight: 1.6,
                 }}
               >
-                First-time paid subscription activation now requires the
-                dedicated subscription checkout. This inline portal only handles
-                free activation plus verified on-chain plan changes and
-                cancellation.
+                This portal can activate the subscription directly from your
+                app. Connect the customer wallet, confirm the payment account,
+                and we will create the subscription on-chain for the selected
+                plan.
               </div>
-              <PrimaryButton tokens={tokens} fullWidth disabled>
-                Use hosted checkout
-              </PrimaryButton>
+
+              <div style={{ marginBottom: 16 }}>
+                <div
+                  style={{
+                    fontSize: tokens.size - 2,
+                    color: tokens.mutedColor,
+                    marginBottom: 6,
+                  }}
+                >
+                  Billing email
+                </div>
+                <input
+                  value={customerEmail}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    onCustomerEmailChange(e.target.value)
+                  }
+                  placeholder="you@company.com"
+                  type="email"
+                  style={{
+                    width: "100%",
+                    padding: "8px 10px",
+                    borderRadius: 6,
+                    border: `1px solid ${hasInvalidCustomerEmail ? "#fecaca" : "#e5e7eb"}`,
+                    fontSize: tokens.size - 1,
+                    outline: "none",
+                    fontFamily: tokens.font,
+                    boxSizing: "border-box",
+                  }}
+                />
+                <div
+                  style={{
+                    fontSize: tokens.size - 2,
+                    color: hasInvalidCustomerEmail ? "#dc2626" : tokens.mutedColor,
+                    marginTop: 4,
+                    lineHeight: 1.5,
+                  }}
+                >
+                  {hasInvalidCustomerEmail
+                    ? "Enter a valid email address so the subscription can be tied to the correct customer."
+                    : "Recommended for receipts, invoices, and lifecycle notices."}
+                </div>
+              </div>
+
+              {needsWallet ? (
+                hasWindowEth ? (
+                  <PrimaryButton
+                    tokens={tokens}
+                    fullWidth
+                    disabled={connecting}
+                    onClick={connectWindowEthereum}
+                  >
+                    {connecting ? "Connecting…" : "Connect wallet"}
+                  </PrimaryButton>
+                ) : (
+                  <div
+                    style={{
+                      padding: "12px 14px",
+                      background: "#fef9c3",
+                      border: "1px solid #fde68a",
+                      borderRadius: 8,
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontWeight: 600,
+                        fontSize: tokens.size - 1,
+                        color: "#92400e",
+                        marginBottom: 2,
+                      }}
+                    >
+                      No wallet found
+                    </div>
+                    <div
+                      style={{ fontSize: tokens.size - 2, color: "#78350f" }}
+                    >
+                      Install a Web3 wallet like MetaMask to continue.
+                    </div>
+                  </div>
+                )
+              ) : (
+                <div>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                      padding: "10px 12px",
+                      background: "#f0fdf4",
+                      border: "1px solid #bbf7d0",
+                      borderRadius: 8,
+                      marginBottom: 16,
+                    }}
+                  >
+                    <span
+                      style={{
+                        color: "#16a34a",
+                        fontWeight: 700,
+                        fontSize: 16,
+                      }}
+                    >
+                      ✓
+                    </span>
+                    <div>
+                      <div
+                        style={{
+                          fontWeight: 600,
+                          color: "#166534",
+                          fontSize: tokens.size - 1,
+                        }}
+                      >
+                        Wallet connected
+                      </div>
+                      <div
+                        style={{
+                          color: tokens.mutedColor,
+                          fontSize: 11,
+                          fontFamily: "monospace",
+                          marginTop: 1,
+                        }}
+                      >
+                        {finalAddress!.slice(0, 10)}…{finalAddress!.slice(-6)}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setLocalAddress(null);
+                      }}
+                      style={{
+                        marginLeft: "auto",
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        fontSize: 11,
+                        color: tokens.mutedColor,
+                      }}
+                    >
+                      Disconnect
+                    </button>
+                  </div>
+
+                  {txStatus === "error" && (
+                    <div
+                      style={{
+                        padding: "10px 12px",
+                        background: "#fef2f2",
+                        border: "1px solid #fecaca",
+                        borderRadius: 8,
+                        fontSize: tokens.size - 2,
+                        color: "#dc2626",
+                        marginBottom: 12,
+                      }}
+                    >
+                      {txError || "Activation failed. Please try again."}
+                    </div>
+                  )}
+
+                  <PrimaryButton
+                    tokens={tokens}
+                    fullWidth
+                    disabled={
+                      processing || txStatus === "approving" || hasInvalidCustomerEmail
+                    }
+                    onClick={handlePay}
+                  >
+                    {txStatus === "approving"
+                      ? "Activating subscription…"
+                      : processing
+                        ? "Processing…"
+                        : "Activate subscription"}
+                  </PrimaryButton>
+                </div>
+              )}
             </Card>
           ) : (
             /* ── Free / unsupported flow ── */
@@ -4474,6 +5343,9 @@ function UnsubscribeContent({
 }) {
   const activePlan = data.activePlan;
   const price = activePlan ? parseFloat(String(activePlan.price)) : 0;
+  const activePlanPeriod = activePlan
+    ? intervalLabel(Number(activePlan.billingInterval)).replace("/", "") || "mo"
+    : "mo";
   const isMobileUnsub = containerWidth < 600;
   const { address, isConnected } = useSafeAccount();
   const { walletClient: wagmiWalletClient } = useSafeWalletClient();
@@ -4510,14 +5382,15 @@ function UnsubscribeContent({
     requiresOnChainCancellation && (!resolvedWalletClient || !zeroDevProjectId);
 
   async function connectWindowEthereum() {
-    const eth = getWindowEthereum();
-    if (!eth) return;
+    setTxError("");
+    setTxStatus("idle");
     setConnecting(true);
     try {
-      const accounts = await eth.request({ method: "eth_requestAccounts" });
+      const accounts = await requestWindowEthereumAccounts();
       setLocalAddress(accounts[0] ?? null);
-    } catch {
-      // user rejected
+    } catch (error) {
+      setTxStatus("error");
+      setTxError(getWalletConnectionErrorMessage(error));
     } finally {
       setConnecting(false);
     }
@@ -4547,6 +5420,8 @@ function UnsubscribeContent({
 
     setTxStatus("approving");
     try {
+      await ensureWalletOnTargetChain(resolvedWalletClient, chainId);
+
       const tokenId = await readWalletSubscriptionTokenId(
         chainId,
         smartAccountAddress,
@@ -4764,7 +5639,7 @@ function UnsubscribeContent({
                 color: tokens.mutedColor,
               }}
             >
-              ${price.toFixed(2)}/mo
+              ${price.toFixed(2)}/{activePlanPeriod}
             </span>
           </div>
         </div>
@@ -4777,7 +5652,7 @@ function UnsubscribeContent({
           }}
         >
           <span style={{ fontSize: tokens.size - 1, color: tokens.mutedColor }}>
-            Monthly total:
+            {activePlanPeriod === "yr" ? "Annual total:" : "Monthly total:"}
           </span>
           <span
             style={{
@@ -4786,7 +5661,7 @@ function UnsubscribeContent({
               color: tokens.textColor,
             }}
           >
-            ${price.toFixed(2)}/mo
+            ${price.toFixed(2)}/{activePlanPeriod}
           </span>
         </div>
         <div style={{ flex: 1 }} />
@@ -4797,8 +5672,8 @@ function UnsubscribeContent({
             width: "100%",
             padding: "12px 0",
             borderRadius: tokens.radius / 1.5,
-            background: tokens.textColor,
-            color: tokens.bg,
+            background: tokens.primary,
+            color: isLightColor(tokens.primary) ? "#000" : "#fff",
             border: "none",
             cursor: processing ? "not-allowed" : "pointer",
             fontWeight: 700,
@@ -5084,6 +5959,7 @@ export function ArcenEmbed({
   const [couponQuote, setCouponQuote] = useState<AppliedCouponQuote | null>(
     null,
   );
+  const [customerEmail, setCustomerEmail] = useState("");
   const tokenRef = useRef(accessToken);
   const baseRef = useRef(baseUrl);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -5154,6 +6030,17 @@ export function ArcenEmbed({
     });
   }, [state.billingPeriod, state.selectedPlanId]);
 
+  useEffect(() => {
+    const company = (state.data?.company as Record<string, unknown> | null) ?? null;
+    const nextEmail =
+      typeof company?.email === "string"
+        ? normalizeCustomerEmail(company.email)
+        : "";
+
+    if (!nextEmail) return;
+    setCustomerEmail((current) => current || nextEmail);
+  }, [state.data]);
+
   const callApi = useCallback(
     async (path: string, body?: Record<string, unknown>) => {
       const res = await fetch(`${baseRef.current}${path}`, {
@@ -5182,9 +6069,13 @@ export function ArcenEmbed({
     async (planId: string, txHash?: string) => {
       dispatch({ type: "PROCESSING_START" });
       try {
+        const normalizedCustomerEmail = normalizeCustomerEmail(customerEmail);
         const response = await callApi("/api/v1/companies/plan", {
           planId,
           billingPeriod: state.billingPeriod,
+          ...(isValidCustomerEmail(normalizedCustomerEmail)
+            ? { customerEmail: normalizedCustomerEmail }
+            : {}),
           ...(couponQuote?.planId === planId &&
           couponQuote.billingPeriod === state.billingPeriod
             ? { couponCode: couponQuote.code }
@@ -5219,7 +6110,38 @@ export function ArcenEmbed({
         });
       }
     },
-    [callApi, couponQuote, fetchData, onPlanChange, state.billingPeriod],
+    [
+      callApi,
+      couponQuote,
+      customerEmail,
+      fetchData,
+      onPlanChange,
+      state.billingPeriod,
+    ],
+  );
+
+  const handleActivateSubscription = useCallback(
+    async (result: { txHash?: string; pending?: boolean }) => {
+      const selectedPlan = state.data?.plans.find(
+        (plan: ComponentPlanSummary) => plan.id === state.selectedPlanId,
+      );
+
+      await fetchData();
+      setCouponQuote(null);
+
+      if (selectedPlan?.id) {
+        onPlanChange?.(selectedPlan.id);
+      }
+
+      dispatch({
+        type: "GOTO_SUCCESS",
+        successMsg: result.pending
+          ? "Subscription activation submitted. We’re finalizing the on-chain billing state now."
+          : "Subscription activated!",
+        txHash: result.txHash,
+      });
+    },
+    [fetchData, onPlanChange, state.data, state.selectedPlanId],
   );
 
   const handleUnsubscribe = useCallback(async (txHash?: string) => {
@@ -5261,6 +6183,29 @@ export function ArcenEmbed({
     successMsg,
     successTxHash,
   } = state;
+
+  useEffect(() => {
+    if (
+      view === "unsubscribe" &&
+      !PORTAL_SELF_SERVE_CANCELLATION_ENABLED
+    ) {
+      dispatch({
+        type: "GOTO_PORTAL",
+        flashMsg:
+          "Self-serve cancellation is disabled for this launch. Contact support to cancel or downgrade.",
+      });
+    }
+  }, [view]);
+
+  const handleOpenCheckout = useCallback(() => {
+    if (!PORTAL_SELF_SERVE_PLAN_CHANGES_ENABLED) return;
+    dispatch({ type: "OPEN_CHECKOUT" });
+  }, []);
+
+  const handleOpenUnsubscribe = useCallback(() => {
+    if (!PORTAL_SELF_SERVE_CANCELLATION_ENABLED) return;
+    dispatch({ type: "OPEN_UNSUBSCRIBE" });
+  }, []);
 
   // Guard: missing required props — rendered after all hooks to comply with Rules of Hooks
   if (!accessToken) {
@@ -5469,29 +6414,6 @@ export function ArcenEmbed({
     ...style,
   };
 
-  useEffect(() => {
-    if (
-      view === "unsubscribe" &&
-      !PORTAL_SELF_SERVE_CANCELLATION_ENABLED
-    ) {
-      dispatch({
-        type: "GOTO_PORTAL",
-        flashMsg:
-          "Self-serve cancellation is disabled for this launch. Contact support to cancel or downgrade.",
-      });
-    }
-  }, [view]);
-
-  const handleOpenCheckout = useCallback(() => {
-    if (!PORTAL_SELF_SERVE_PLAN_CHANGES_ENABLED) return;
-    dispatch({ type: "OPEN_CHECKOUT" });
-  }, []);
-
-  const handleOpenUnsubscribe = useCallback(() => {
-    if (!PORTAL_SELF_SERVE_CANCELLATION_ENABLED) return;
-    dispatch({ type: "OPEN_UNSUBSCRIBE" });
-  }, []);
-
   return (
     <div ref={containerRef} className={className} style={containerStyle}>
       {view === "portal" && (
@@ -5515,11 +6437,13 @@ export function ArcenEmbed({
           couponQuote={couponQuote}
           processing={processing}
           tokens={tokens}
+          customerEmail={customerEmail}
           containerWidth={containerWidth}
           onSelectPlan={(planId) => dispatch({ type: "SELECT_PLAN", planId })}
           onBillingPeriodChange={(p) =>
             dispatch({ type: "SET_BILLING_PERIOD", period: p })
           }
+          onCustomerEmailChange={setCustomerEmail}
           onCouponQuoteChange={setCouponQuote}
           onSubscribeClose={() => {
             const targetId = selectedPlanId ?? data.activePlan?.id ?? "";
@@ -5538,13 +6462,18 @@ export function ArcenEmbed({
           data={data}
           selectedPlanId={selectedPlanId}
           billingPeriod={billingPeriod}
+          apiBaseUrl={baseRef.current}
+          accessToken={tokenRef.current}
           couponQuote={couponQuote}
           processing={processing}
           tokens={tokens}
+          customerEmail={customerEmail}
           containerWidth={containerWidth}
+          onCustomerEmailChange={setCustomerEmail}
           onConfirm={(txHash) => {
             if (selectedPlanId) handleSwitchPlan(selectedPlanId, txHash);
           }}
+          onActivationComplete={handleActivateSubscription}
           onBack={() => dispatch({ type: "OPEN_CHECKOUT" })}
         />
       )}

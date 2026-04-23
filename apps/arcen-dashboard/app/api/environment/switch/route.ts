@@ -104,13 +104,6 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (parsed.data.environmentMode !== "DEVELOPMENT") {
-    return NextResponse.json(
-      { error: "Only Base Sepolia development mode is supported right now." },
-      { status: 400 },
-    );
-  }
-
   const targetChainId =
     resolveEnvironmentChainId(
       normalizeEnvironmentMode(parsed.data.environmentMode),

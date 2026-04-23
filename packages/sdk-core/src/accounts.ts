@@ -57,10 +57,22 @@ export async function createSmartAccount(
         );
     }
 
+    const specificUnified =
+        process.env[`NEXT_PUBLIC_ZERODEV_RPC_${chainId}`];
+    const specificBundler =
+        process.env[`NEXT_PUBLIC_ZERODEV_BUNDLER_RPC_${chainId}`];
+    const specificPaymaster =
+        process.env[`NEXT_PUBLIC_ZERODEV_PAYMASTER_RPC_${chainId}`];
     const bundlerRpc =
+        specificUnified ||
+        specificBundler ||
+        process.env.NEXT_PUBLIC_ZERODEV_RPC ||
         process.env.NEXT_PUBLIC_ZERODEV_BUNDLER_RPC ||
         `https://rpc.zerodev.app/api/v2/bundler/${zeroDevProjectId}`;
     const paymasterRpc =
+        specificUnified ||
+        specificPaymaster ||
+        process.env.NEXT_PUBLIC_ZERODEV_RPC ||
         process.env.NEXT_PUBLIC_ZERODEV_PAYMASTER_RPC ||
         `https://rpc.zerodev.app/api/v2/paymaster/${zeroDevProjectId}`;
 

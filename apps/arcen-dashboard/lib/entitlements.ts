@@ -356,6 +356,9 @@ export async function resolveEntitlementResults(
     candidateKeys.map(async (featureKey) => {
       const flag = flagMap.get(featureKey);
       const metadataEntitlement = metadataEntitlements.get(featureKey);
+      const hasCatalogAssignment = Boolean(
+        company?.activePlanId || (company?.activeAddOnIds?.length ?? 0) > 0,
+      );
 
       if (!flag) {
         const fallback = buildFallbackEntitlementResult(
@@ -382,6 +385,14 @@ export async function resolveEntitlementResults(
         user,
         overrides,
       });
+      const shouldSuppressDefaultFlag =
+        hasCatalogAssignment &&
+        !metadataEntitlement &&
+        evaluated.reason === "Default rule (no targeting rule matched)";
+      const enabled = shouldSuppressDefaultFlag ? false : evaluated.enabled;
+      const reason = shouldSuppressDefaultFlag
+        ? "Not included in the current plan"
+        : evaluated.reason;
 
       const isMetered =
         flag.featureType === "event_based" ||
@@ -404,8 +415,8 @@ export async function resolveEntitlementResults(
 
       const entitlement = {
         key: featureKey,
-        enabled: evaluated.enabled,
-        reason: evaluated.reason,
+        enabled,
+        reason,
         allocation,
         usage,
         exceeded: false,

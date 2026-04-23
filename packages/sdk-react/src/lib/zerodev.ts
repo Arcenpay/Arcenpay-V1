@@ -8,6 +8,7 @@ import {
     createKernelAccount,
     createKernelAccountClient,
     createZeroDevPaymasterClient,
+    constants as zeroDevConstants,
 } from "@zerodev/sdk";
 import { signerToEcdsaValidator } from "@zerodev/ecdsa-validator";
 import {
@@ -31,7 +32,68 @@ const CHAIN_MAP: Record<number, any> = {
     8453: base,
 };
 
-const ENTRY_POINT_ADDRESS = "0x0000000071727De22E5E9d8BAf0edAc6f37da032" as const; // ERC-4337 v0.7
+const ENTRY_POINT = zeroDevConstants.getEntryPoint("0.7");
+const ENTRY_POINT_ADDRESS = ENTRY_POINT.address;
+const KERNEL_VERSION = zeroDevConstants.KERNEL_V3_1;
+
+function getZeroDevChainLabel(chainId: number): string {
+    if (chainId === 84532) return "Base Sepolia";
+    if (chainId === 8453) return "Base";
+    if (chainId === 11155111) return "Sepolia";
+    return `Chain ${chainId}`;
+}
+
+function resolveZeroDevUrls(params: {
+    projectId: string;
+    chainId: number;
+    bundlerUrl?: string;
+    paymasterUrl?: string;
+}) {
+    const specificUnified =
+        process.env[`NEXT_PUBLIC_ZERODEV_RPC_${params.chainId}`];
+    const specificBundler =
+        process.env[`NEXT_PUBLIC_ZERODEV_BUNDLER_RPC_${params.chainId}`];
+    const specificPaymaster =
+        process.env[`NEXT_PUBLIC_ZERODEV_PAYMASTER_RPC_${params.chainId}`];
+
+    return {
+        bundlerUrl:
+            params.bundlerUrl ||
+            specificUnified ||
+            specificBundler ||
+            process.env.NEXT_PUBLIC_ZERODEV_RPC ||
+            process.env.NEXT_PUBLIC_ZERODEV_BUNDLER_RPC ||
+            `https://rpc.zerodev.app/api/v2/bundler/${params.projectId}`,
+        paymasterUrl:
+            params.paymasterUrl ||
+            specificUnified ||
+            specificPaymaster ||
+            process.env.NEXT_PUBLIC_ZERODEV_RPC ||
+            process.env.NEXT_PUBLIC_ZERODEV_PAYMASTER_RPC ||
+            `https://rpc.zerodev.app/api/v2/paymaster/${params.projectId}`,
+    };
+}
+
+function normalizeZeroDevError(
+    error: unknown,
+    params: { projectId: string; chainId: number; bundlerUrl?: string; paymasterUrl?: string },
+): Error {
+    const message = error instanceof Error ? error.message : String(error ?? "");
+    const chainLabel = getZeroDevChainLabel(params.chainId);
+    const usingDefaultUrls = !params.bundlerUrl && !params.paymasterUrl;
+
+    if (message.includes("ChainId not found")) {
+        const nextStep = usingDefaultUrls
+            ? `Enable ${chainLabel} for ZeroDev project ${params.projectId}, or set NEXT_PUBLIC_ZERODEV_BUNDLER_RPC_${params.chainId} and NEXT_PUBLIC_ZERODEV_PAYMASTER_RPC_${params.chainId} to chain-specific endpoints.`
+            : `The configured ZeroDev endpoint does not recognize ${chainLabel} for project ${params.projectId}. Verify the project supports chain ${params.chainId} or replace the override URLs.`;
+
+        return new Error(
+            `ZeroDev project ${params.projectId} is not configured for ${chainLabel} (chain ${params.chainId}). ${nextStep}`,
+        );
+    }
+
+    return error instanceof Error ? error : new Error(message);
+}
 
 export interface DeploySmartAccountConfig {
     /** ZeroDev project ID (from dashboard.zerodev.app) */
@@ -110,12 +172,12 @@ async function createKernelExecutionContext(config: {
     paymasterUrl?: string;
 }) {
     const chain = CHAIN_MAP[config.chainId] || baseSepolia;
-    const bundlerUrl =
-        config.bundlerUrl ||
-        `https://rpc.zerodev.app/api/v2/bundler/${config.projectId}`;
-    const paymasterUrl =
-        config.paymasterUrl ||
-        `https://rpc.zerodev.app/api/v2/paymaster/${config.projectId}`;
+    const { bundlerUrl, paymasterUrl } = resolveZeroDevUrls({
+        projectId: config.projectId,
+        chainId: config.chainId,
+        bundlerUrl: config.bundlerUrl,
+        paymasterUrl: config.paymasterUrl,
+    });
 
     const publicClient = createPublicClient({
         chain,
@@ -124,19 +186,19 @@ async function createKernelExecutionContext(config: {
 
     const ecdsaValidator = await signerToEcdsaValidator(publicClient, {
         signer: config.walletClient as any,
-        entryPoint: ENTRY_POINT_ADDRESS as any,
-        kernelVersion: "0.3.1",
+        entryPoint: ENTRY_POINT as any,
+        kernelVersion: KERNEL_VERSION,
     });
 
     const kernelAccount = await createKernelAccount(publicClient, {
         plugins: { sudo: ecdsaValidator },
-        entryPoint: ENTRY_POINT_ADDRESS as any,
+        entryPoint: ENTRY_POINT as any,
+        kernelVersion: KERNEL_VERSION,
     } as any);
 
     const paymasterClient = createZeroDevPaymasterClient({
         chain,
         transport: http(paymasterUrl),
-        entryPoint: ENTRY_POINT_ADDRESS as any,
     } as any);
 
     const kernelClient = createKernelAccountClient({
@@ -178,13 +240,12 @@ export async function deploySmartAccount(
     const chain = CHAIN_MAP[config.chainId] || baseSepolia;
     const contracts = getContractAddresses(config.chainId);
 
-    // ZeroDev URLs
-    const bundlerUrl =
-        config.bundlerUrl ||
-        `https://rpc.zerodev.app/api/v2/bundler/${config.projectId}`;
-    const paymasterUrl =
-        config.paymasterUrl ||
-        `https://rpc.zerodev.app/api/v2/paymaster/${config.projectId}`;
+    const { bundlerUrl, paymasterUrl } = resolveZeroDevUrls({
+        projectId: config.projectId,
+        chainId: config.chainId,
+        bundlerUrl: config.bundlerUrl,
+        paymasterUrl: config.paymasterUrl,
+    });
 
     const publicClient = createPublicClient({
         chain,
@@ -194,8 +255,8 @@ export async function deploySmartAccount(
     // Step 1: Create ECDSA validator from user's wallet
     const ecdsaValidator = await signerToEcdsaValidator(publicClient, {
         signer: config.walletClient as any,
-        entryPoint: ENTRY_POINT_ADDRESS as any,
-        kernelVersion: "0.3.1",
+        entryPoint: ENTRY_POINT as any,
+        kernelVersion: KERNEL_VERSION,
     });
 
     // Step 2: Create Kernel account
@@ -203,7 +264,8 @@ export async function deploySmartAccount(
         plugins: {
             sudo: ecdsaValidator,
         },
-        entryPoint: ENTRY_POINT_ADDRESS as any,
+        entryPoint: ENTRY_POINT as any,
+        kernelVersion: KERNEL_VERSION,
     } as any);
 
     const smartAccountAddress = kernelAccount.address;
@@ -216,7 +278,6 @@ export async function deploySmartAccount(
     const paymasterClient = createZeroDevPaymasterClient({
         chain,
         transport: http(paymasterUrl),
-        entryPoint: ENTRY_POINT_ADDRESS as any,
     } as any);
 
     const kernelClient = createKernelAccountClient({
@@ -299,8 +360,14 @@ export async function deploySmartAccount(
                     `[ZeroDev] AutopayModule already installed on ${smartAccountAddress}`,
                 );
             } else {
-                console.error("[ZeroDev] Module installation failed:", err?.message);
-                throw err;
+                const normalizedError = normalizeZeroDevError(err, {
+                    projectId: config.projectId,
+                    chainId: config.chainId,
+                    bundlerUrl,
+                    paymasterUrl,
+                });
+                console.error("[ZeroDev] Module installation failed:", normalizedError.message);
+                throw normalizedError;
             }
         }
     }
@@ -326,12 +393,12 @@ export async function revokeAutopayModule(
         throw new Error("Autopay module address not configured for this chain.");
     }
 
-    const bundlerUrl =
-        config.bundlerUrl ||
-        `https://rpc.zerodev.app/api/v2/bundler/${config.projectId}`;
-    const paymasterUrl =
-        config.paymasterUrl ||
-        `https://rpc.zerodev.app/api/v2/paymaster/${config.projectId}`;
+    const { bundlerUrl, paymasterUrl } = resolveZeroDevUrls({
+        projectId: config.projectId,
+        chainId: config.chainId,
+        bundlerUrl: config.bundlerUrl,
+        paymasterUrl: config.paymasterUrl,
+    });
 
     const publicClient = createPublicClient({
         chain,
@@ -372,13 +439,22 @@ export async function revokeAutopayModule(
         args: ["0x"],
     });
 
-    const txHash = await (kernelClient as any).sendTransaction({
-        to: contracts.autopayModule as `0x${string}`,
-        data: revokeData,
-        value: 0n,
-    });
+    try {
+        const txHash = await (kernelClient as any).sendTransaction({
+            to: contracts.autopayModule as `0x${string}`,
+            data: revokeData,
+            value: 0n,
+        });
 
-    return { txHash, alreadyRevoked: false };
+        return { txHash, alreadyRevoked: false };
+    } catch (error) {
+        throw normalizeZeroDevError(error, {
+            projectId: config.projectId,
+            chainId: config.chainId,
+            bundlerUrl,
+            paymasterUrl,
+        });
+    }
 }
 
 /**
@@ -414,18 +490,27 @@ export async function sendSmartAccountTransaction(
         );
     }
 
-    const txHash = await (kernelClient as any).sendTransaction({
-        to: config.to,
-        data: config.data,
-        value: config.value ?? 0n,
-    });
+    try {
+        const txHash = await (kernelClient as any).sendTransaction({
+            to: config.to,
+            data: config.data,
+            value: config.value ?? 0n,
+        });
 
-    await publicClient.waitForTransactionReceipt({ hash: txHash });
+        await publicClient.waitForTransactionReceipt({ hash: txHash });
 
-    return {
-        smartAccountAddress: kernelAccount.address,
-        txHash,
-    };
+        return {
+            smartAccountAddress: kernelAccount.address,
+            txHash,
+        };
+    } catch (error) {
+        throw normalizeZeroDevError(error, {
+            projectId: config.projectId,
+            chainId: config.chainId,
+            bundlerUrl: config.bundlerUrl,
+            paymasterUrl: config.paymasterUrl,
+        });
+    }
 }
 
 export async function updateAutopayConfig(
