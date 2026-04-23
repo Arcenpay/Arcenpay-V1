@@ -68,6 +68,18 @@ contract MEAPProtocolTest is Test {
     uint32 public constant MONTHLY = 2_592_000; // 30 days
     uint64 public constant DURATION = 2_592_000; // 30 days
 
+    event BillingExecuted(
+        address indexed account,
+        address indexed merchant,
+        uint256 indexed tokenId,
+        uint256 planId,
+        uint8 reason,
+        uint256 grossAmount,
+        uint256 merchantAmount,
+        uint256 protocolFee,
+        uint256 timestamp
+    );
+
     // ============================================================
     //                       SETUP
     // ============================================================
@@ -886,6 +898,122 @@ contract MEAPProtocolTest is Test {
             expiryAfterSecondBilling,
             expiryAfterFirstBilling + MONTHLY,
             "renewal after plan change should preserve cadence"
+        );
+    }
+
+    function test_autopayExecute_emitsAuthoritativeBillingExecutedEvent() public {
+        vm.prank(provider);
+        uint256 planId = planFactory.createPlan(
+            "Pro Plan",
+            "pro",
+            PLAN_PRICE,
+            MONTHLY,
+            address(usdc),
+            "ipfs://pro-plan"
+        );
+
+        vm.prank(subscriber);
+        usdc.approve(address(autopayModule), type(uint256).max);
+
+        uint64 startTime = uint64(block.timestamp + 5);
+        IERC7579AutopayModule.AutopayConfig memory config = IERC7579AutopayModule
+            .AutopayConfig({
+                merchant: provider,
+                maxAmount: PLAN_PRICE,
+                token: address(usdc),
+                interval: MONTHLY,
+                startTime: startTime,
+                planId: planId,
+                maxTotalAmount: 0
+            });
+
+        vm.prank(subscriber);
+        autopayModule.onInstall(abi.encode(config));
+
+        vm.warp(startTime + 1);
+
+        vm.expectEmit(true, true, true, true, address(autopayModule));
+        emit BillingExecuted(
+            subscriber,
+            provider,
+            1,
+            planId,
+            uint8(IERC7579AutopayModule.BillingReason.ACTIVATION),
+            PLAN_PRICE,
+            PLAN_PRICE - 50_000,
+            50_000,
+            block.timestamp
+        );
+
+        vm.prank(provider);
+        autopayModule.execute(subscriber, PLAN_PRICE);
+    }
+
+    function test_subscriptionRegistry_importSubscription_preservesTokenIds() public {
+        vm.prank(provider);
+        uint256 planId = planFactory.createPlan("Pro", "pro", PLAN_PRICE, MONTHLY, address(usdc), "");
+
+        registry.importSubscription(subscriber, 42, planId, uint64(block.timestamp) + DURATION);
+
+        assertEq(registry.ownerOf(42), subscriber);
+        assertEq(registry.getWalletSubscription(subscriber), 42);
+        assertEq(registry.expiresAt(42), uint64(block.timestamp) + DURATION);
+
+        address nextSubscriber = address(0x222);
+        uint256 newTokenId = registry.mint(nextSubscriber, planId, DURATION);
+        assertEq(newTokenId, 43, "next token id should advance past imported token");
+
+        registry.finalizeMigration();
+        vm.expectRevert("SubscriptionRegistry: migration closed");
+        registry.importSubscription(address(0x333), 44, planId, uint64(block.timestamp) + DURATION);
+    }
+
+    function test_autopayModule_importAccountState_and_finalizeMigration() public {
+        vm.prank(provider);
+        uint256 planId = planFactory.createPlan(
+            "Pro Plan",
+            "pro",
+            PLAN_PRICE,
+            MONTHLY,
+            address(usdc),
+            "ipfs://pro"
+        );
+
+        IERC7579AutopayModule.AutopayConfig memory config = IERC7579AutopayModule
+            .AutopayConfig({
+                merchant: provider,
+                maxAmount: PLAN_PRICE,
+                token: address(usdc),
+                interval: MONTHLY,
+                startTime: uint64(block.timestamp),
+                planId: planId,
+                maxTotalAmount: PLAN_PRICE * 12
+            });
+
+        autopayModule.importAccountState(
+            subscriber,
+            config,
+            uint64(block.timestamp),
+            PLAN_PRICE,
+            8453,
+            true
+        );
+
+        assertTrue(autopayModule.isInitialized(subscriber));
+        assertEq(autopayModule.lastPullTime(subscriber), uint64(block.timestamp));
+        assertEq(autopayModule.totalPulled(subscriber), PLAN_PRICE);
+        assertEq(autopayModule.mirrorDestinationChainId(subscriber), 8453);
+        assertTrue(autopayModule.isAccountPaused(subscriber));
+
+        autopayModule.finalizeMigration();
+        vm.expectRevert("AutopayModule: migration closed");
+        autopayModule.importAccountState(
+            address(0x99),
+            config,
+            uint64(block.timestamp),
+            0,
+            0,
+            false
         );
     }
 

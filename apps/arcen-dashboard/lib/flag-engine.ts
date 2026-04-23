@@ -148,6 +148,13 @@ export async function resolveCompany(
       traits: true,
       activePlanId: true,
       activeAddOnIds: true,
+      subscriptionState: {
+        select: {
+          status: true,
+          catalogPlanId: true,
+          currentPeriodEnd: true,
+        },
+      },
     },
   });
 
@@ -158,10 +165,14 @@ export async function resolveCompany(
     .update({ where: { id: company.id }, data: { lastSeenAt: new Date() } })
     .catch(() => {});
 
-  let activePlanId = company.activePlanId;
+  let activePlanId =
+    company.subscriptionState?.status === "ACTIVE" ||
+    company.subscriptionState?.status === "PAST_DUE"
+      ? company.subscriptionState.catalogPlanId ?? company.activePlanId
+      : company.activePlanId;
 
   // On-chain fallback: if activePlanId is null but we have a wallet, try to resolve from chain
-  if (!activePlanId && keys.wallet) {
+  if (!activePlanId && keys.wallet && !company.subscriptionState) {
     const onChainPlanId = await resolveOnChainPlan(teamId, company.id, keys.wallet.toLowerCase());
     if (onChainPlanId) activePlanId = onChainPlanId;
   }

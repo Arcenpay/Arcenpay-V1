@@ -58,6 +58,17 @@ interface ISubscriptionRegistry {
         bytes primaryError
     );
 
+    /// @notice Emitted when an existing live subscription is imported during migration
+    event SubscriptionImported(
+        address indexed subscriber,
+        uint256 indexed tokenId,
+        uint256 indexed planId,
+        uint64 expiration
+    );
+
+    /// @notice Emitted when migration imports are permanently disabled
+    event RegistryMigrationFinalized();
+
     // ============================================================
     //                     CORE FUNCTIONS
     // ============================================================
@@ -124,4 +135,15 @@ interface ISubscriptionRegistry {
     /// @param wallet The wallet address
     /// @return tokenId The token ID (0 if none)
     function getWalletSubscription(address wallet) external view returns (uint256 tokenId);
+
+    /// @notice Imports a live subscription during a one-time migration window
+    function importSubscription(
+        address to,
+        uint256 tokenId,
+        uint256 planId,
+        uint64 expiration
+    ) external;
+
+    /// @notice Permanently disables migration imports
+    function finalizeMigration() external;
 }

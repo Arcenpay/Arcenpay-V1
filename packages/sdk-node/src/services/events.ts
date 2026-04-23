@@ -4,11 +4,16 @@
 //  SubscriptionCancelled events from SubscriptionRegistry
 // ============================================================
 
-import { createPublicClient, http, type Log } from 'viem';
+import { createPublicClient, http } from 'viem';
 import { sepolia, baseSepolia, base } from 'viem/chains';
-import { SubscriptionRegistryABI, getContractAddresses } from '@arcenpay/sdk';
+import { getContractAddresses } from '@arcenpay/sdk';
 
-export type SubscriptionEventType = 'minted' | 'renewed' | 'cancelled' | 'plan_changed';
+export type SubscriptionEventType =
+    | 'minted'
+    | 'renewed'
+    | 'cancelled'
+    | 'plan_changed'
+    | 'billing_executed';
 
 export interface SubscriptionEventData {
     type: SubscriptionEventType;
@@ -18,6 +23,11 @@ export interface SubscriptionEventData {
     previousPlanId?: bigint;
     expiration?: bigint;
     amountPaid?: bigint;
+    account?: string;
+    merchant?: string;
+    billingReason?: bigint;
+    merchantAmount?: bigint;
+    protocolFee?: bigint;
     transactionHash: string;
     blockNumber: bigint;
     timestamp: number;
@@ -45,6 +55,7 @@ const CHAIN_MAP: Record<number, any> = {
 export class EventListenerService {
     private publicClient: any;
     private registryAddress: string;
+    private autopayModuleAddress: string;
     private callbacks: Map<SubscriptionEventType | '*', EventCallback[]> = new Map();
     private pollInterval: ReturnType<typeof setInterval> | null = null;
     private lastBlock: bigint = 0n;
@@ -58,6 +69,7 @@ export class EventListenerService {
         const chain = CHAIN_MAP[chainId] || sepolia;
         const contracts = getContractAddresses(chainId);
         this.registryAddress = config.registryAddress || contracts.subscriptionRegistry;
+        this.autopayModuleAddress = contracts.autopayModule;
 
         this.publicClient = createPublicClient({
             chain,
@@ -119,7 +131,7 @@ export class EventListenerService {
             const from = this.lastBlock + 1n;
 
             // Fetch all subscription lifecycle event types in parallel
-            const [mintedLogs, renewedLogs, cancelledLogs, planChangedLogs] = await Promise.all([
+            const [mintedLogs, renewedLogs, cancelledLogs, planChangedLogs, billingLogs] = await Promise.all([
                 this.publicClient.getLogs({
                     address: addr,
                     event: {
@@ -176,6 +188,26 @@ export class EventListenerService {
                     fromBlock: from,
                     toBlock: currentBlock,
                 }),
+                this.publicClient.getLogs({
+                    address: this.autopayModuleAddress as `0x${string}`,
+                    event: {
+                        type: 'event',
+                        name: 'BillingExecuted',
+                        inputs: [
+                            { name: 'account', type: 'address', indexed: true },
+                            { name: 'merchant', type: 'address', indexed: true },
+                            { name: 'tokenId', type: 'uint256', indexed: true },
+                            { name: 'planId', type: 'uint256', indexed: false },
+                            { name: 'reason', type: 'uint8', indexed: false },
+                            { name: 'grossAmount', type: 'uint256', indexed: false },
+                            { name: 'merchantAmount', type: 'uint256', indexed: false },
+                            { name: 'protocolFee', type: 'uint256', indexed: false },
+                            { name: 'timestamp', type: 'uint256', indexed: false },
+                        ],
+                    },
+                    fromBlock: from,
+                    toBlock: currentBlock,
+                }),
             ]);
 
             // Process minted events
@@ -227,6 +259,23 @@ export class EventListenerService {
                     transactionHash: log.transactionHash,
                     blockNumber: log.blockNumber,
                     timestamp: Date.now(),
+                });
+            }
+
+            for (const log of billingLogs) {
+                await this.emit({
+                    type: 'billing_executed',
+                    tokenId: (log as any).args.tokenId,
+                    account: (log as any).args.account,
+                    merchant: (log as any).args.merchant,
+                    planId: (log as any).args.planId,
+                    billingReason: (log as any).args.reason,
+                    amountPaid: (log as any).args.grossAmount,
+                    merchantAmount: (log as any).args.merchantAmount,
+                    protocolFee: (log as any).args.protocolFee,
+                    transactionHash: log.transactionHash,
+                    blockNumber: log.blockNumber,
+                    timestamp: Number((log as any).args.timestamp ?? Date.now()),
                 });
             }
 

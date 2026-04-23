@@ -805,6 +805,7 @@ model Payment {
   subscriptionState SubscriptionState? @relation(fields: [subscriptionStateId], references: [id], onDelete: SetNull)
   attempts          PaymentAttempt[]
   billingAdjustments BillingAdjustment[]
+  refunds           Refund[]
 
   @@index([teamId, status, occurredAt])
   @@index([companyId, createdAt])

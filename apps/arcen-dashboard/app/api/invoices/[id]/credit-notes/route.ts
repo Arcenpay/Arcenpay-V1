@@ -6,6 +6,11 @@ import { requirePermission, isErrorResponse } from "@/lib/api-auth";
 import { writeAuditEvent } from "@/lib/audit";
 import { toPrismaNullableJson } from "@/lib/prisma-json";
 import { sendCreditNoteEmail } from "@/lib/email";
+import {
+  applyInvoiceCredit,
+  postBillingCredit,
+} from "@/lib/billing-balances";
+import { recordBillingAdjustment } from "@/lib/billing-adjustments";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -58,7 +63,15 @@ export async function POST(request: NextRequest, context: Params) {
 
   const invoice = await db.invoice.findFirst({
     where: { id, teamId: auth.team.teamId },
-    include: { creditNotes: { select: { amount: true } } },
+    include: {
+      creditNotes: { select: { amount: true } },
+      payments: {
+        where: { status: "SUCCEEDED" },
+        orderBy: { settledAt: "desc" },
+        select: { id: true },
+        take: 1,
+      },
+    },
   });
 
   if (!invoice) {
@@ -100,6 +113,57 @@ export async function POST(request: NextRequest, context: Params) {
       metadata: toPrismaNullableJson(parsed.data.metadata),
     },
   });
+
+  await applyInvoiceCredit({
+    invoiceId: invoice.id,
+    amount: parsed.data.amount,
+  });
+
+  if (invoice.status === "PAID" && invoice.customerWallet) {
+    await postBillingCredit({
+      teamId: auth.team.teamId,
+      walletAddress: invoice.customerWallet,
+      amount: parsed.data.amount,
+      metadata: {
+        source: "credit-note",
+        invoiceId: invoice.id,
+        creditNoteId: creditNote.id,
+        noteNumber,
+      },
+    });
+
+    const company = await db.arcenCompany.findFirst({
+      where: {
+        teamId: auth.team.teamId,
+        walletAddress: invoice.customerWallet.toLowerCase(),
+      },
+      select: {
+        id: true,
+        subscriptionState: { select: { id: true } },
+      },
+    });
+
+    if (company) {
+      await recordBillingAdjustment({
+        teamId: auth.team.teamId,
+        companyId: company.id,
+        subscriptionStateId: company.subscriptionState?.id ?? null,
+        paymentId: invoice.payments[0]?.id ?? null,
+        kind: "MANUAL_CREDIT",
+        status: "POSTED",
+        amount: parsed.data.amount,
+        effectiveAt: new Date(),
+        postedAt: new Date(),
+        metadata: {
+          source: "credit-note",
+          invoiceId: invoice.id,
+          creditNoteId: creditNote.id,
+          noteNumber,
+          reason: parsed.data.reason,
+        },
+      });
+    }
+  }
 
   await writeAuditEvent({
     request,

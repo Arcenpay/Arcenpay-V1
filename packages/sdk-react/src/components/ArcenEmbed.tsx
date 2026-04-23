@@ -31,6 +31,25 @@ import type {
   ComponentInvoiceSummary,
   ComponentPaymentMethod,
 } from "@arcenpay/sdk";
+import {
+  getBlockExplorerUrl,
+  getChain,
+  getContractAddresses,
+  PlanFactoryABI,
+  SubscriptionRegistryABI,
+} from "@arcenpay/sdk";
+import {
+  cancelSubscription,
+  updateAutopayConfig,
+} from "../lib/zerodev";
+import {
+  createPublicClient,
+  createWalletClient,
+  custom,
+  http,
+  isAddress,
+  type WalletClient,
+} from "viem";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -755,20 +774,133 @@ function useSafeAccount(): {
   }
 }
 
-function useSafeSendTransaction(): {
-  sendTransactionAsync:
-    | ((args: { to: string; data: string; value?: bigint }) => Promise<string>)
-    | null;
-} {
+function useSafeWalletClient(): { walletClient: WalletClient | null } {
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const wagmi = require("wagmi");
     // eslint-disable-next-line react-hooks/rules-of-hooks
-    const { sendTransactionAsync } = wagmi.useSendTransaction();
-    return { sendTransactionAsync };
+    const { data } = wagmi.useWalletClient();
+    return { walletClient: (data as WalletClient | undefined) ?? null };
   } catch {
-    return { sendTransactionAsync: null };
+    return { walletClient: null };
   }
+}
+
+function getPlanDisplayPrice(
+  plan: ComponentPlanSummary | null | undefined,
+  billingPeriod: "monthly" | "annual",
+): number {
+  if (!plan) return 0;
+  const monthly = parseFloat(String(plan.price));
+  const annual = plan.annualPrice ? parseFloat(String(plan.annualPrice)) : 0;
+  return billingPeriod === "annual" && annual > 0 ? annual : monthly;
+}
+
+function getWindowEthereum():
+  | { request: (args: { method: string }) => Promise<string[]> }
+  | undefined {
+  if (typeof window === "undefined") return undefined;
+  return (window as unknown as {
+    ethereum?: { request: (args: { method: string }) => Promise<string[]> };
+  }).ethereum;
+}
+
+function createBrowserWalletClient(params: {
+  chainId: number;
+  account: string | null | undefined;
+}): WalletClient | null {
+  const ethereum = getWindowEthereum();
+  if (!ethereum || !params.account || !isAddress(params.account)) return null;
+
+  return createWalletClient({
+    account: params.account as `0x${string}`,
+    chain: getChain(params.chainId),
+    transport: custom(ethereum),
+  }) as WalletClient;
+}
+
+async function readOnChainPlan(
+  chainId: number,
+  onChainPlanId: string,
+): Promise<{
+  provider?: string;
+  price?: bigint;
+  billingInterval?: number;
+  acceptedToken?: string;
+  active?: boolean;
+}> {
+  const chain = getChain(chainId);
+  const contracts = getContractAddresses(chainId);
+  const publicClient = createPublicClient({ chain, transport: http() });
+  return (await publicClient.readContract({
+    address: contracts.planFactory as `0x${string}`,
+    abi: PlanFactoryABI,
+    functionName: "getPlan",
+    args: [BigInt(onChainPlanId)],
+  })) as {
+    provider?: string;
+    price?: bigint;
+    billingInterval?: number;
+    acceptedToken?: string;
+    active?: boolean;
+  };
+}
+
+async function readAutopayConfig(chainId: number, paymentAccount: string) {
+  const chain = getChain(chainId);
+  const contracts = getContractAddresses(chainId);
+  const publicClient = createPublicClient({ chain, transport: http() });
+  return (await publicClient.readContract({
+    address: contracts.autopayModule as `0x${string}`,
+    abi: [
+      {
+        type: "function",
+        name: "getConfig",
+        inputs: [{ name: "account", type: "address" }],
+        outputs: [
+          {
+            components: [
+              { name: "merchant", type: "address" },
+              { name: "maxAmount", type: "uint256" },
+              { name: "token", type: "address" },
+              { name: "interval", type: "uint32" },
+              { name: "startTime", type: "uint64" },
+              { name: "planId", type: "uint256" },
+              { name: "maxTotalAmount", type: "uint256" },
+            ],
+            name: "config",
+            type: "tuple",
+          },
+        ],
+        stateMutability: "view",
+      },
+    ],
+    functionName: "getConfig",
+    args: [paymentAccount as `0x${string}`],
+  })) as {
+    merchant?: string;
+    maxAmount?: bigint;
+    token?: string;
+    interval?: number;
+    startTime?: bigint;
+    planId?: bigint;
+    maxTotalAmount?: bigint;
+  };
+}
+
+async function readWalletSubscriptionTokenId(
+  chainId: number,
+  paymentAccount: string,
+): Promise<bigint> {
+  const chain = getChain(chainId);
+  const contracts = getContractAddresses(chainId);
+  const publicClient = createPublicClient({ chain, transport: http() });
+  return (await publicClient.readContract({
+    address: contracts.subscriptionRegistry as `0x${string}`,
+    abi: SubscriptionRegistryABI,
+    functionName: "getWalletSubscription",
+    args: [paymentAccount as `0x${string}`],
+  })) as bigint;
 }
 
 // ─── Responsive container width hook ─────────────────────────────────────────
@@ -2630,6 +2762,26 @@ function CheckoutContent({
   const isFreePlanSelected = selectedPlan
     ? parseFloat(String(selectedPlan.price)) === 0
     : false;
+  const isAuthoritativeOnChainPlanChange = Boolean(
+    selectedPlan?.onChainPlanId &&
+      currentPlan?.onChainPlanId &&
+      !isCurrentPlanSelected,
+  );
+  const requiresHostedActivation = Boolean(
+    selectedPlan?.onChainPlanId &&
+      !currentPlan?.onChainPlanId &&
+      !isCurrentPlanSelected,
+  );
+  const isCancellationRequiredFirst = Boolean(
+    currentPlan?.onChainPlanId &&
+      !selectedPlan?.onChainPlanId &&
+      !isCurrentPlanSelected,
+  );
+  const couponsSupported = !(
+    isAuthoritativeOnChainPlanChange ||
+    requiresHostedActivation ||
+    isCancellationRequiredFirst
+  );
   const needsPayment =
     selectedPlanId && !isCurrentPlanSelected && !isFreePlanSelected;
 
@@ -2650,6 +2802,11 @@ function CheckoutContent({
   const discountedPrice = activeCouponQuote
     ? activeCouponQuote.discountedAmountMicros / 1_000_000
     : selectedDisplayPrice;
+  const immediateAmountDue =
+    isAuthoritativeOnChainPlanChange &&
+    discountedPrice <= (currentPlan ? getDisplayPrice(currentPlan) : 0)
+      ? 0
+      : discountedPrice;
 
   useEffect(() => {
     setCouponApplied(
@@ -3156,45 +3313,67 @@ function CheckoutContent({
                   </button>
                 </div>
               ) : (
-                <div style={{ display: "flex", gap: 6 }}>
-                  <input
-                    value={coupon}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                      setCoupon(e.target.value);
-                      setCouponError("");
-                    }}
-                    onKeyDown={(e: React.KeyboardEvent) => {
-                      if (e.key === "Enter") applyCoupon();
-                    }}
-                    placeholder="Coupon code"
-                    style={{
-                      flex: 1,
-                      padding: "6px 10px",
-                      borderRadius: 6,
-                      border: "1px solid #e5e7eb",
-                      fontSize: tokens.size - 1,
-                      outline: "none",
-                      fontFamily: tokens.font,
-                    }}
-                  />
-                  <button
-                    onClick={applyCoupon}
-                    disabled={couponLoading || !coupon.trim()}
-                    style={{
-                      padding: "6px 12px",
-                      borderRadius: 6,
-                      border: "1px solid #e5e7eb",
-                      background: "#fff",
-                      cursor: "pointer",
-                      fontSize: tokens.size - 1,
-                      fontWeight: 500,
-                      color: tokens.textColor,
-                      opacity: couponLoading ? 0.6 : 1,
-                    }}
-                  >
-                    {couponLoading ? "…" : "Apply"}
-                  </button>
-                </div>
+                <>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <input
+                      value={coupon}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                        setCoupon(e.target.value);
+                        setCouponError("");
+                      }}
+                      onKeyDown={(e: React.KeyboardEvent) => {
+                        if (e.key === "Enter" && couponsSupported) applyCoupon();
+                      }}
+                      placeholder="Coupon code"
+                      disabled={!couponsSupported}
+                      style={{
+                        flex: 1,
+                        padding: "6px 10px",
+                        borderRadius: 6,
+                        border: "1px solid #e5e7eb",
+                        fontSize: tokens.size - 1,
+                        outline: "none",
+                        fontFamily: tokens.font,
+                        opacity: couponsSupported ? 1 : 0.6,
+                        background: couponsSupported ? "#fff" : "#f9fafb",
+                        cursor: couponsSupported ? "text" : "not-allowed",
+                      }}
+                    />
+                    <button
+                      onClick={applyCoupon}
+                      disabled={couponLoading || !coupon.trim() || !couponsSupported}
+                      style={{
+                        padding: "6px 12px",
+                        borderRadius: 6,
+                        border: "1px solid #e5e7eb",
+                        background: "#fff",
+                        cursor:
+                          couponLoading || !coupon.trim() || !couponsSupported
+                            ? "not-allowed"
+                            : "pointer",
+                        fontSize: tokens.size - 1,
+                        fontWeight: 500,
+                        color: tokens.textColor,
+                        opacity:
+                          couponLoading || !couponsSupported ? 0.6 : 1,
+                      }}
+                    >
+                      {couponLoading ? "…" : "Apply"}
+                    </button>
+                  </div>
+                  {!couponsSupported && (
+                    <div
+                      style={{
+                        fontSize: tokens.size - 2,
+                        color: tokens.mutedColor,
+                        marginTop: 4,
+                      }}
+                    >
+                      Coupons are not supported for this on-chain subscription
+                      lifecycle flow.
+                    </div>
+                  )}
+                </>
               )}
               {couponError && (
                 <div
@@ -3256,7 +3435,7 @@ function CheckoutContent({
                   color: tokens.textColor,
                 }}
               >
-                ${isCurrentPlanSelected ? "0.00" : discountedPrice.toFixed(2)}
+                ${isCurrentPlanSelected ? "0.00" : immediateAmountDue.toFixed(2)}
               </span>
             </div>
 
@@ -3293,7 +3472,13 @@ function CheckoutContent({
                   fontWeight: 700,
                 }}
               >
-                Next: Payment
+                {isAuthoritativeOnChainPlanChange
+                  ? "Next: Confirm plan change"
+                  : requiresHostedActivation
+                    ? "Next: Activation instructions"
+                    : isCancellationRequiredFirst
+                      ? "Next: Cancellation instructions"
+                      : "Next: Payment"}
               </button>
             ) : (
               <button
@@ -3355,21 +3540,7 @@ function CheckoutContent({
   );
 }
 
-// ─── Payment content (inline) — real USDC transfer ────────────────────────────
-
-// Minimal ERC-20 transfer ABI
-const ERC20_TRANSFER_ABI = [
-  {
-    name: "transfer",
-    type: "function",
-    stateMutability: "nonpayable",
-    inputs: [
-      { name: "to", type: "address" },
-      { name: "amount", type: "uint256" },
-    ],
-    outputs: [{ name: "", type: "bool" }],
-  },
-] as const;
+// ─── Payment content (inline) — authoritative on-chain flow ──────────────────
 
 function PaymentContent({
   data,
@@ -3395,8 +3566,9 @@ function PaymentContent({
   const selectedPlan = data.plans.find(
     (p: ComponentPlanSummary) => p.id === selectedPlanId,
   );
+  const activePlan = data.activePlan;
   const { address, isConnected } = useSafeAccount();
-  const { sendTransactionAsync } = useSafeSendTransaction();
+  const { walletClient: wagmiWalletClient } = useSafeWalletClient();
   const [localAddress, setLocalAddress] = useState<string | null>(null);
   const [connecting, setConnecting] = useState(false);
   const [txStatus, setTxStatus] = useState<
@@ -3404,14 +3576,8 @@ function PaymentContent({
   >("idle");
   const [txError, setTxError] = useState("");
 
-  const monthlyPrice = selectedPlan
-    ? parseFloat(String(selectedPlan.price))
-    : 0;
-  const annualPrice = selectedPlan?.annualPrice
-    ? parseFloat(String(selectedPlan.annualPrice))
-    : 0;
-  const basePrice =
-    billingPeriod === "annual" && annualPrice > 0 ? annualPrice : monthlyPrice;
+  const basePrice = getPlanDisplayPrice(selectedPlan, billingPeriod);
+  const activePlanPrice = getPlanDisplayPrice(activePlan, billingPeriod);
   const activeCouponQuote =
     couponQuote &&
     couponQuote.planId === selectedPlanId &&
@@ -3421,22 +3587,48 @@ function PaymentContent({
   const price = activeCouponQuote
     ? activeCouponQuote.discountedAmountMicros / 1_000_000
     : basePrice;
-  const usdcContract = selectedPlan?.acceptedToken as `0x${string}` | undefined;
-  const providerWallet = data.providerWallet as
-    | `0x${string}`
-    | null
-    | undefined;
+  const paymentMethod = data.paymentMethod as ComponentPaymentMethod | null;
+  const chainId = paymentMethod?.chainId ?? null;
+  const smartAccountAddress =
+    typeof paymentMethod?.walletAddress === "string"
+      ? paymentMethod.walletAddress
+      : null;
+  const zeroDevProjectId =
+    process.env.NEXT_PUBLIC_ZERODEV_PROJECT_ID ?? null;
+  const selectedOnChainPlanId = selectedPlan?.onChainPlanId ?? null;
+  const activeOnChainPlanId = activePlan?.onChainPlanId ?? null;
+  const isOnChainPlanChange = Boolean(
+    selectedPlan &&
+      activePlan &&
+      selectedPlan.id !== activePlan.id &&
+      selectedOnChainPlanId &&
+      activeOnChainPlanId,
+  );
+  const isPriceIncreasingPlanChange =
+    isOnChainPlanChange && price > activePlanPrice;
+  const requiresHostedActivation = Boolean(
+    selectedOnChainPlanId && !activeOnChainPlanId,
+  );
+  const hasUnsupportedPaidFlow =
+    price > 0 &&
+    !isOnChainPlanChange &&
+    !requiresHostedActivation &&
+    selectedPlan?.id !== activePlan?.id;
 
   const isNarrowPayment = containerWidth < 700;
   const finalAddress = address || localAddress;
   const finalConnected = isConnected || !!localAddress;
+  const resolvedWalletClient =
+    wagmiWalletClient ??
+    (chainId
+      ? createBrowserWalletClient({
+          chainId,
+          account: finalAddress,
+        })
+      : null);
 
   async function connectWindowEthereum() {
-    const eth = (
-      window as unknown as {
-        ethereum?: { request: (a: { method: string }) => Promise<string[]> };
-      }
-    ).ethereum;
+    const eth = getWindowEthereum();
     if (!eth) return;
     setConnecting(true);
     try {
@@ -3451,30 +3643,82 @@ function PaymentContent({
 
   async function handlePay() {
     setTxError("");
-    // If no on-chain contract or provider wallet, fall back to off-chain record
-    if (
-      !usdcContract ||
-      !providerWallet ||
-      !sendTransactionAsync ||
-      price === 0
-    ) {
+    if (price === 0) {
       onConfirm(undefined);
+      return;
+    }
+
+    if (requiresHostedActivation) {
+      setTxStatus("error");
+      setTxError(
+        "Initial paid activation now requires the hosted subscription checkout so autopay setup and the first bill happen together.",
+      );
+      return;
+    }
+
+    if (!isOnChainPlanChange) {
+      setTxStatus("error");
+      setTxError(
+        "This embed no longer accepts direct token transfers for paid plan changes. Use the authoritative hosted checkout or supported on-chain plan-change flow instead.",
+      );
+      return;
+    }
+
+    if (isPriceIncreasingPlanChange) {
+      setTxStatus("error");
+      setTxError(
+        "Price-increasing upgrades are still blocked until the dedicated charge-plus-plan-change flow is deployed.",
+      );
+      return;
+    }
+
+    if (!chainId || !smartAccountAddress || !selectedOnChainPlanId) {
+      setTxStatus("error");
+      setTxError("Missing on-chain subscription metadata for this plan change.");
+      return;
+    }
+
+    if (!resolvedWalletClient || !zeroDevProjectId) {
+      setTxStatus("error");
+      setTxError(
+        "A wallet client and NEXT_PUBLIC_ZERODEV_PROJECT_ID are required for authoritative on-chain plan changes.",
+      );
       return;
     }
 
     setTxStatus("approving");
     try {
-      // Encode ERC-20 transfer(to, amount) — USDC has 6 decimals
-      const amountMicro = BigInt(Math.round(price * 1_000_000));
-      // transfer(address,uint256) selector = 0xa9059cbb
-      const toBytes = providerWallet
-        .toLowerCase()
-        .replace("0x", "")
-        .padStart(64, "0");
-      const amountHex = amountMicro.toString(16).padStart(64, "0");
-      const data = `0xa9059cbb${toBytes}${amountHex}` as `0x${string}`;
+      const [currentConfig, targetPlan] = await Promise.all([
+        readAutopayConfig(chainId, smartAccountAddress),
+        readOnChainPlan(chainId, selectedOnChainPlanId),
+      ]);
 
-      const txHash = await sendTransactionAsync({ to: usdcContract, data });
+      if (!targetPlan?.active) {
+        throw new Error("The selected on-chain plan is not active anymore.");
+      }
+      if (!targetPlan.provider || !targetPlan.acceptedToken) {
+        throw new Error("The selected on-chain plan is missing billing metadata.");
+      }
+
+      const { txHash } = await updateAutopayConfig({
+        projectId: zeroDevProjectId,
+        chainId,
+        walletClient: resolvedWalletClient,
+        smartAccountAddress: smartAccountAddress as `0x${string}`,
+        merchant: targetPlan.provider as `0x${string}`,
+        maxAmount: BigInt(targetPlan.price ?? 0n),
+        token: targetPlan.acceptedToken as `0x${string}`,
+        interval: Number(targetPlan.billingInterval ?? 0),
+        startTime:
+          typeof currentConfig.startTime === "bigint"
+            ? currentConfig.startTime
+            : BigInt(Math.floor(Date.now() / 1000)),
+        planId: BigInt(selectedOnChainPlanId),
+        maxTotalAmount:
+          typeof currentConfig.maxTotalAmount === "bigint"
+            ? currentConfig.maxTotalAmount
+            : 0n,
+      });
       setTxStatus("confirmed");
       onConfirm(txHash);
     } catch (err: unknown) {
@@ -3488,9 +3732,13 @@ function PaymentContent({
     }
   }
 
-  // Determine payment mode
-  const isOnChain = !!(usdcContract && providerWallet && price > 0);
-  const needsWallet = isOnChain && (!finalConnected || !finalAddress);
+  const needsWallet =
+    (isOnChainPlanChange || requiresHostedActivation) &&
+    (!finalConnected || !finalAddress);
+  const needsWalletClient =
+    isOnChainPlanChange && (!resolvedWalletClient || !zeroDevProjectId);
+  const immediateAmountDue =
+    isOnChainPlanChange && price <= activePlanPrice ? 0 : price;
   const hasWindowEth =
     typeof window !== "undefined" &&
     !!(window as unknown as { ethereum?: unknown }).ethereum;
@@ -3560,8 +3808,8 @@ function PaymentContent({
       >
         {/* Left: payment section */}
         <div style={{ flex: 1, minWidth: 0 }}>
-          {isOnChain ? (
-            /* ── On-chain USDC payment ── */
+          {isOnChainPlanChange ? (
+            /* ── On-chain plan change ── */
             <Card tokens={tokens} style={{ marginBottom: 0 }}>
               <div
                 style={{
@@ -3596,10 +3844,10 @@ function PaymentContent({
                       color: tokens.textColor,
                     }}
                   >
-                    Pay with USDC
+                    Update on-chain subscription
                   </div>
                   <div style={{ fontSize: 11, color: tokens.mutedColor }}>
-                    On-chain payment · EVM
+                    Smart account transaction · EVM
                   </div>
                 </div>
               </div>
@@ -3614,8 +3862,8 @@ function PaymentContent({
                       lineHeight: 1.5,
                     }}
                   >
-                    Connect your crypto wallet to pay{" "}
-                    <strong>${price.toFixed(2)} USDC</strong> on-chain.
+                    Connect the wallet that controls your subscription smart
+                    account before authorizing this on-chain plan change.
                   </div>
                   {hasWindowEth ? (
                     <PrimaryButton
@@ -3672,10 +3920,26 @@ function PaymentContent({
                       lineHeight: 1.6,
                     }}
                   >
-                    A connected wallet is required to complete this on-chain
-                    payment. If you need an invoice or manual billing flow,
-                    contact the provider directly.
+                    This route verifies a real `updateConfig(...)` transaction
+                    before your plan changes. Off-chain-only plan changes are
+                    intentionally rejected.
                   </div>
+                </div>
+              ) : needsWalletClient ? (
+                <div
+                  style={{
+                    padding: "12px 14px",
+                    background: "#fef2f2",
+                    border: "1px solid #fecaca",
+                    borderRadius: 8,
+                    fontSize: tokens.size - 2,
+                    color: "#b91c1c",
+                    lineHeight: 1.6,
+                  }}
+                >
+                  This embed needs a wallet client and
+                  `NEXT_PUBLIC_ZERODEV_PROJECT_ID` to send smart-account plan
+                  change transactions.
                 </div>
               ) : (
                 <div>
@@ -3765,7 +4029,7 @@ function PaymentContent({
                       ? "Confirm in wallet…"
                       : processing
                         ? "Processing…"
-                        : `Pay $${price.toFixed(2)} USDC`}
+                        : "Authorize plan change"}
                   </PrimaryButton>
 
                   <div
@@ -3776,18 +4040,75 @@ function PaymentContent({
                       lineHeight: 1.6,
                     }}
                   >
-                    Sending USDC to{" "}
-                    <span style={{ fontFamily: "monospace" }}>
-                      {providerWallet!.slice(0, 6)}…{providerWallet!.slice(-4)}
-                    </span>
-                    . Your plan activates immediately after the transaction
-                    confirms.
+                    {price < activePlanPrice
+                      ? "The backend will create the prorated wallet credit after it verifies this downgrade transaction."
+                      : "The backend will switch your plan after it verifies this on-chain config update."}
                   </div>
                 </div>
               )}
             </Card>
+          ) : requiresHostedActivation ? (
+            <Card tokens={tokens} style={{ marginBottom: 0 }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  marginBottom: 16,
+                }}
+              >
+                <div
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: "50%",
+                    background: "#eff6ff",
+                    border: "1px solid #bfdbfe",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <span style={{ color: "#2563eb", fontWeight: 800 }}>↗</span>
+                </div>
+                <div>
+                  <div
+                    style={{
+                      fontWeight: 700,
+                      fontSize: tokens.size,
+                      color: tokens.textColor,
+                    }}
+                  >
+                    Hosted activation required
+                  </div>
+                  <div style={{ fontSize: 11, color: tokens.mutedColor }}>
+                    Autopay setup + first bill
+                  </div>
+                </div>
+              </div>
+              <div
+                style={{
+                  padding: "12px 14px",
+                  background: "#f9fafb",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: 8,
+                  marginBottom: 16,
+                  fontSize: tokens.size - 1,
+                  color: tokens.mutedColor,
+                  lineHeight: 1.6,
+                }}
+              >
+                First-time paid subscription activation now requires the
+                dedicated subscription checkout. This inline portal only handles
+                free activation plus verified on-chain plan changes and
+                cancellation.
+              </div>
+              <PrimaryButton tokens={tokens} fullWidth disabled>
+                Use hosted checkout
+              </PrimaryButton>
+            </Card>
           ) : (
-            /* ── Off-chain / free plan activation ── */
+            /* ── Free / unsupported flow ── */
             <Card tokens={tokens} style={{ marginBottom: 0 }}>
               <div
                 style={{
@@ -3835,7 +4156,7 @@ function PaymentContent({
                   <div style={{ fontSize: 11, color: tokens.mutedColor }}>
                     {price === 0
                       ? "Free plan · no payment required"
-                      : "Payment setup required"}
+                      : "Authoritative flow required"}
                   </div>
                 </div>
               </div>
@@ -3855,10 +4176,12 @@ function PaymentContent({
                     color: tokens.mutedColor,
                     lineHeight: 1.6,
                   }}
-                >
+                  >
                   {price === 0
                     ? "This is a free plan. Click below to activate it — no payment needed."
-                    : "This plan cannot be self-activated until the provider finishes wallet and payment setup."}
+                    : hasUnsupportedPaidFlow
+                      ? "Paid changes in this portal must come from a verified on-chain subscription flow. Direct token transfer plan changes are disabled."
+                      : "This plan cannot be self-activated until the provider finishes wallet and payment setup."}
                 </div>
               </div>
 
@@ -3888,7 +4211,7 @@ function PaymentContent({
                   ? "Activating…"
                   : price === 0
                     ? "Activate free plan"
-                    : "Payment setup required"}
+                    : "Authoritative flow required"}
               </PrimaryButton>
             </Card>
           )}
@@ -4061,11 +4384,13 @@ function PaymentContent({
                       color: tokens.textColor,
                     }}
                   >
-                    {price === 0 ? "$0.00" : `$${price.toFixed(2)}`}
+                    {immediateAmountDue === 0
+                      ? "$0.00"
+                      : `$${immediateAmountDue.toFixed(2)}`}
                   </span>
                 </div>
 
-                {price > 0 && isOnChain && (
+                {price > 0 && (isOnChainPlanChange || requiresHostedActivation) && (
                   <div
                     style={{
                       fontSize: 11,
@@ -4073,7 +4398,7 @@ function PaymentContent({
                       marginTop: 6,
                     }}
                   >
-                    Paid in USDC · EVM
+                    On-chain subscription flow · EVM
                   </div>
                 )}
               </>
@@ -4104,24 +4429,114 @@ function UnsubscribeContent({
   data: ComponentRenderData;
   processing: boolean;
   tokens: Tokens;
-  onConfirm: () => void;
+  onConfirm: (txHash?: string) => void;
   onBack: () => void;
   containerWidth: number;
 }) {
   const activePlan = data.activePlan;
   const price = activePlan ? parseFloat(String(activePlan.price)) : 0;
   const isMobileUnsub = containerWidth < 600;
+  const { address, isConnected } = useSafeAccount();
+  const { walletClient: wagmiWalletClient } = useSafeWalletClient();
+  const [localAddress, setLocalAddress] = useState<string | null>(null);
+  const [connecting, setConnecting] = useState(false);
+  const [txStatus, setTxStatus] = useState<
+    "idle" | "approving" | "confirmed" | "error"
+  >("idle");
+  const [txError, setTxError] = useState("");
+  const paymentMethod = data.paymentMethod as ComponentPaymentMethod | null;
+  const chainId = paymentMethod?.chainId ?? null;
+  const smartAccountAddress =
+    typeof paymentMethod?.walletAddress === "string"
+      ? paymentMethod.walletAddress
+      : null;
+  const zeroDevProjectId =
+    process.env.NEXT_PUBLIC_ZERODEV_PROJECT_ID ?? null;
+  const finalAddress = address || localAddress;
+  const finalConnected = isConnected || !!localAddress;
+  const resolvedWalletClient =
+    wagmiWalletClient ??
+    (chainId
+      ? createBrowserWalletClient({
+          chainId,
+          account: finalAddress,
+        })
+      : null);
+  const requiresOnChainCancellation = Boolean(
+    activePlan?.onChainPlanId && smartAccountAddress && price > 0,
+  );
+  const needsWallet =
+    requiresOnChainCancellation && (!finalConnected || !finalAddress);
+  const needsWalletClient =
+    requiresOnChainCancellation && (!resolvedWalletClient || !zeroDevProjectId);
 
-  const endDate = (() => {
-    const d = new Date();
-    d.setMonth(d.getMonth() + 1);
-    d.setDate(28);
-    return d.toLocaleDateString("en-US", {
-      month: "numeric",
-      day: "numeric",
-      year: "numeric",
-    });
-  })();
+  async function connectWindowEthereum() {
+    const eth = getWindowEthereum();
+    if (!eth) return;
+    setConnecting(true);
+    try {
+      const accounts = await eth.request({ method: "eth_requestAccounts" });
+      setLocalAddress(accounts[0] ?? null);
+    } catch {
+      // user rejected
+    } finally {
+      setConnecting(false);
+    }
+  }
+
+  async function handleConfirm() {
+    setTxError("");
+
+    if (!requiresOnChainCancellation) {
+      onConfirm(undefined);
+      return;
+    }
+
+    if (!chainId || !smartAccountAddress) {
+      setTxStatus("error");
+      setTxError("Missing on-chain subscription metadata for cancellation.");
+      return;
+    }
+
+    if (!resolvedWalletClient || !zeroDevProjectId) {
+      setTxStatus("error");
+      setTxError(
+        "A wallet client and NEXT_PUBLIC_ZERODEV_PROJECT_ID are required for on-chain cancellation.",
+      );
+      return;
+    }
+
+    setTxStatus("approving");
+    try {
+      const tokenId = await readWalletSubscriptionTokenId(
+        chainId,
+        smartAccountAddress,
+      );
+      if (tokenId <= 0n) {
+        throw new Error(
+          "No active on-chain subscription token was found for this payment account.",
+        );
+      }
+
+      const { txHash } = await cancelSubscription({
+        projectId: zeroDevProjectId,
+        chainId,
+        walletClient: resolvedWalletClient,
+        smartAccountAddress: smartAccountAddress as `0x${string}`,
+        tokenId,
+      });
+
+      setTxStatus("confirmed");
+      onConfirm(txHash);
+    } catch (error) {
+      setTxStatus("error");
+      setTxError(
+        error instanceof Error
+          ? error.message
+          : "Cancellation transaction failed.",
+      );
+    }
+  }
 
   return (
     <div
@@ -4173,9 +4588,28 @@ function UnsubscribeContent({
             marginBottom: 24,
           }}
         >
-          You will retain access to your plan until the end of the billing
-          period, on {endDate}
+          {requiresOnChainCancellation
+            ? "Your paid subscription will be cancelled immediately once the on-chain transaction confirms."
+            : "Your subscription will be downgraded to the free plan immediately."}
         </div>
+        {requiresOnChainCancellation && (
+          <div
+            style={{
+              padding: "10px 12px",
+              background: "#fef2f2",
+              border: "1px solid #fecaca",
+              borderRadius: 8,
+              fontSize: tokens.size - 2,
+              color: "#b91c1c",
+              lineHeight: 1.6,
+              marginBottom: 20,
+            }}
+          >
+            Paid on-chain cancellations are immediate in the current protocol.
+            This flow verifies the real cancellation transaction before your
+            dashboard access is downgraded.
+          </div>
+        )}
         <div
           style={{
             fontSize: tokens.size - 1,
@@ -4200,6 +4634,52 @@ function UnsubscribeContent({
         >
           Manage plan
         </button>
+        {needsWallet && (
+          <div
+            style={{
+              marginTop: 16,
+              padding: "12px 14px",
+              background: "#f9fafb",
+              border: "1px solid #e5e7eb",
+              borderRadius: 8,
+            }}
+          >
+            <div
+              style={{
+                fontSize: tokens.size - 1,
+                color: tokens.mutedColor,
+                lineHeight: 1.6,
+                marginBottom: 12,
+              }}
+            >
+              Connect the wallet that controls your subscription smart account
+              before cancelling.
+            </div>
+            <PrimaryButton
+              tokens={tokens}
+              fullWidth
+              disabled={connecting}
+              onClick={connectWindowEthereum}
+            >
+              {connecting ? "Connecting…" : "Connect wallet"}
+            </PrimaryButton>
+          </div>
+        )}
+        {txStatus === "error" && txError && (
+          <div
+            style={{
+              marginTop: 16,
+              padding: "10px 12px",
+              background: "#fef2f2",
+              border: "1px solid #fecaca",
+              borderRadius: 8,
+              fontSize: tokens.size - 2,
+              color: "#dc2626",
+            }}
+          >
+            {txError}
+          </div>
+        )}
       </div>
 
       {/* Right: summary + action */}
@@ -4272,8 +4752,8 @@ function UnsubscribeContent({
         </div>
         <div style={{ flex: 1 }} />
         <button
-          onClick={onConfirm}
-          disabled={processing}
+          onClick={handleConfirm}
+          disabled={processing || txStatus === "approving" || needsWalletClient}
           style={{
             width: "100%",
             padding: "12px 0",
@@ -4287,8 +4767,27 @@ function UnsubscribeContent({
             opacity: processing ? 0.7 : 1,
           }}
         >
-          {processing ? "Cancelling…" : "Cancel subscription"}
+          {txStatus === "approving"
+            ? "Confirm in wallet…"
+            : processing
+              ? "Cancelling…"
+              : requiresOnChainCancellation
+                ? "Cancel on-chain subscription"
+                : "Cancel subscription"}
         </button>
+        {needsWalletClient && (
+          <div
+            style={{
+              marginTop: 10,
+              fontSize: 11,
+              color: "#b91c1c",
+              lineHeight: 1.5,
+            }}
+          >
+            This embed needs a wallet client and `NEXT_PUBLIC_ZERODEV_PROJECT_ID`
+            to submit the cancellation transaction.
+          </div>
+        )}
       </div>
     </div>
   );
@@ -4301,6 +4800,7 @@ function SuccessContent({
   selectedPlanId,
   successMsg,
   txHash,
+  chainId,
   tokens,
   onDone,
 }: {
@@ -4308,6 +4808,7 @@ function SuccessContent({
   selectedPlanId: string | null;
   successMsg: string | null;
   txHash: string | null;
+  chainId: number | null;
   tokens: Tokens;
   onDone: () => void;
 }) {
@@ -4332,6 +4833,14 @@ function SuccessContent({
   }, [onDone]);
 
   const price = selectedPlan ? parseFloat(String(selectedPlan.price)) : 0;
+  const showAmountPaid =
+    price > 0 &&
+    !String(successMsg ?? "")
+      .toLowerCase()
+      .includes("plan changed") &&
+    !String(successMsg ?? "")
+      .toLowerCase()
+      .includes("cancel");
 
   return (
     <div
@@ -4445,7 +4954,7 @@ function SuccessContent({
               Active
             </div>
           </div>
-          {price > 0 && (
+          {showAmountPaid && (
             <div
               style={{
                 display: "flex",
@@ -4474,7 +4983,11 @@ function SuccessContent({
                 Transaction
               </div>
               <a
-                href={`https://basescan.org/tx/${txHash}`}
+                href={
+                  chainId
+                    ? getBlockExplorerUrl(chainId, txHash as `0x${string}`)
+                    : "#"
+                }
                 target="_blank"
                 rel="noreferrer"
                 style={{
@@ -4630,7 +5143,7 @@ export function ArcenEmbed({
     async (planId: string, txHash?: string) => {
       dispatch({ type: "PROCESSING_START" });
       try {
-        await callApi("/api/v1/companies/plan", {
+        const response = await callApi("/api/v1/companies/plan", {
           planId,
           billingPeriod: state.billingPeriod,
           ...(couponQuote?.planId === planId &&
@@ -4642,9 +5155,21 @@ export function ArcenEmbed({
         await fetchData();
         setCouponQuote(null);
         onPlanChange?.(planId);
+        const mode = String(
+          (response as { data?: { mode?: string } })?.data?.mode ?? "",
+        );
+        const walletCreditCreated = Number(
+          (response as { data?: { walletCreditCreated?: string } })?.data
+            ?.walletCreditCreated ?? 0,
+        );
         dispatch({
           type: "GOTO_SUCCESS",
-          successMsg: "Plan activated!",
+          successMsg:
+            mode === "immediate_on_chain" && walletCreditCreated > 0
+              ? `Plan changed. $${walletCreditCreated.toFixed(2)} wallet credit created.`
+              : mode === "immediate_on_chain"
+                ? "Plan changed on-chain."
+                : "Plan activated!",
           txHash,
         });
       } catch (e: unknown) {
@@ -4658,15 +5183,23 @@ export function ArcenEmbed({
     [callApi, couponQuote, fetchData, onPlanChange, state.billingPeriod],
   );
 
-  const handleUnsubscribe = useCallback(async () => {
+  const handleUnsubscribe = useCallback(async (txHash?: string) => {
     dispatch({ type: "PROCESSING_START" });
     try {
-      await callApi("/api/v1/companies/unsubscribe");
+      await callApi("/api/v1/companies/unsubscribe", txHash ? { txHash } : {});
       await fetchData();
-      dispatch({
-        type: "GOTO_PORTAL",
-        flashMsg: "Subscription cancelled. You are now on the Free plan.",
-      });
+      if (txHash) {
+        dispatch({
+          type: "GOTO_SUCCESS",
+          successMsg: "Subscription cancelled on-chain.",
+          txHash,
+        });
+      } else {
+        dispatch({
+          type: "GOTO_PORTAL",
+          flashMsg: "Subscription cancelled. You are now on the Free plan.",
+        });
+      }
     } catch (e: unknown) {
       const msg =
         e instanceof Error ? e.message : "Failed to cancel subscription";
@@ -4957,7 +5490,7 @@ export function ArcenEmbed({
           processing={processing}
           tokens={tokens}
           containerWidth={containerWidth}
-          onConfirm={handleUnsubscribe}
+          onConfirm={(txHash) => handleUnsubscribe(txHash)}
           onBack={() => dispatch({ type: "GOTO_PORTAL" })}
         />
       )}
@@ -4967,6 +5500,7 @@ export function ArcenEmbed({
           selectedPlanId={selectedPlanId}
           successMsg={successMsg}
           txHash={successTxHash}
+          chainId={data.paymentMethod?.chainId ?? null}
           tokens={tokens}
           onDone={() => dispatch({ type: "GOTO_PORTAL" })}
         />

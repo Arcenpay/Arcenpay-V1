@@ -26,6 +26,7 @@ export async function GET(_request: NextRequest, context: Params) {
       lineItems: true,
       deliveries: { orderBy: { createdAt: "desc" } },
       creditNotes: { orderBy: { createdAt: "desc" } },
+      refunds: { orderBy: { createdAt: "desc" } },
     },
   });
 

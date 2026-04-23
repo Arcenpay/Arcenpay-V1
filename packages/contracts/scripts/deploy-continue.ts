@@ -74,6 +74,7 @@ async function main() {
     base.contracts.PlanFactory,
     base.contracts.SubscriptionRegistry,
     base.contracts.FeeCollector,
+    deployer.address,
   );
   await autopayModule.waitForDeployment();
   const autopayModuleAddr = await autopayModule.getAddress();

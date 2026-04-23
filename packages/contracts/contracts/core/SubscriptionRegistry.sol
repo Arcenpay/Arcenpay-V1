@@ -64,6 +64,9 @@ contract SubscriptionRegistry is
     /// @notice Fallback (CCIP) transport adapter
     address public ccipTransport;
 
+    /// @notice Migration import window toggle
+    bool public migrationEnabled = true;
+
     // ============================================================
     //                        CONSTRUCTOR
     // ============================================================
@@ -126,6 +129,42 @@ contract SubscriptionRegistry is
     ) external onlyOwner {
         axelarTransport = _axelarTransport;
         ccipTransport = _ccipTransport;
+    }
+
+    /// @inheritdoc ISubscriptionRegistry
+    function importSubscription(
+        address to,
+        uint256 tokenId,
+        uint256 planId,
+        uint64 expiration
+    ) external onlyOwner whenNotPaused {
+        require(migrationEnabled, "SubscriptionRegistry: migration closed");
+        require(to != address(0), "SubscriptionRegistry: zero address");
+        require(tokenId > 0, "SubscriptionRegistry: zero tokenId");
+        require(_ownerOf(tokenId) == address(0), "SubscriptionRegistry: token exists");
+        require(_walletTokens[to] == 0, "SubscriptionRegistry: wallet already imported");
+
+        IPlanFactory.Plan memory plan = planFactory.getPlan(planId);
+        require(plan.active, "SubscriptionRegistry: plan inactive");
+
+        _safeMint(to, tokenId);
+        _expirations[tokenId] = expiration;
+        _tokenPlans[tokenId] = planId;
+        _walletTokens[to] = tokenId;
+
+        if (tokenId >= _nextTokenId) {
+            _nextTokenId = tokenId + 1;
+        }
+
+        emit SubscriptionUpdate(tokenId, expiration);
+        emit SubscriptionImported(to, tokenId, planId, expiration);
+    }
+
+    /// @inheritdoc ISubscriptionRegistry
+    function finalizeMigration() external onlyOwner {
+        require(migrationEnabled, "SubscriptionRegistry: migration closed");
+        migrationEnabled = false;
+        emit RegistryMigrationFinalized();
     }
 
     // ============================================================

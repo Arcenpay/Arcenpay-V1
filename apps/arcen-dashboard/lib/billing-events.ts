@@ -43,7 +43,7 @@ const CANONICAL_EVENT_NAMES: Record<BillingEventType, string> = {
   SUBSCRIPTION_RENEWED: "subscription.renewed",
   SUBSCRIPTION_CANCELLED: "subscription.cancelled",
   PAYMENT_FAILED: "subscription.renewal_failed",
-  CREDIT_ISSUED: "invoice.issued",
+  CREDIT_ISSUED: "credit.issued",
 };
 
 export function resolveCanonicalBillingEventName(

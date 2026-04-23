@@ -78,6 +78,25 @@ export const SubscriptionRegistryABI = [
   },
   {
     type: "function",
+    name: "importSubscription",
+    inputs: [
+      { name: "to", type: "address" },
+      { name: "tokenId", type: "uint256" },
+      { name: "planId", type: "uint256" },
+      { name: "expiration", type: "uint64" },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "finalizeMigration",
+    inputs: [],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
     name: "hasActiveSubscription",
     inputs: [{ name: "wallet", type: "address" }],
     outputs: [{ name: "", type: "bool" }],
@@ -170,6 +189,21 @@ export const SubscriptionRegistryABI = [
       { name: "destinationChainId", type: "uint256", indexed: true },
       { name: "primaryError", type: "bytes", indexed: false },
     ],
+  },
+  {
+    type: "event",
+    name: "SubscriptionImported",
+    inputs: [
+      { name: "subscriber", type: "address", indexed: true },
+      { name: "tokenId", type: "uint256", indexed: true },
+      { name: "planId", type: "uint256", indexed: true },
+      { name: "expiration", type: "uint64", indexed: false },
+    ],
+  },
+  {
+    type: "event",
+    name: "RegistryMigrationFinalized",
+    inputs: [],
   },
   {
     type: "event",
@@ -359,6 +393,53 @@ export const ERC7579AutopayModuleABI = [
     stateMutability: "view",
   },
   {
+    type: "function",
+    name: "mirrorDestinationChainId",
+    inputs: [{ name: "account", type: "address" }],
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "isAccountPaused",
+    inputs: [{ name: "account", type: "address" }],
+    outputs: [{ name: "", type: "bool" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "importAccountState",
+    inputs: [
+      { name: "account", type: "address" },
+      {
+        name: "config",
+        type: "tuple",
+        components: [
+          { name: "merchant", type: "address" },
+          { name: "maxAmount", type: "uint256" },
+          { name: "token", type: "address" },
+          { name: "interval", type: "uint32" },
+          { name: "startTime", type: "uint64" },
+          { name: "planId", type: "uint256" },
+          { name: "maxTotalAmount", type: "uint256" },
+        ],
+      },
+      { name: "lastPullTime_", type: "uint64" },
+      { name: "totalPulled_", type: "uint256" },
+      { name: "mirrorDestinationChainId_", type: "uint256" },
+      { name: "accountPaused_", type: "bool" },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "finalizeMigration",
+    inputs: [],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
     type: "event",
     name: "AutopayConfigured",
     inputs: [
@@ -392,8 +473,37 @@ export const ERC7579AutopayModuleABI = [
   },
   {
     type: "event",
+    name: "BillingExecuted",
+    inputs: [
+      { name: "account", type: "address", indexed: true },
+      { name: "merchant", type: "address", indexed: true },
+      { name: "tokenId", type: "uint256", indexed: true },
+      { name: "planId", type: "uint256", indexed: false },
+      { name: "reason", type: "uint8", indexed: false },
+      { name: "grossAmount", type: "uint256", indexed: false },
+      { name: "merchantAmount", type: "uint256", indexed: false },
+      { name: "protocolFee", type: "uint256", indexed: false },
+      { name: "timestamp", type: "uint256", indexed: false },
+    ],
+  },
+  {
+    type: "event",
     name: "AutopayRevoked",
     inputs: [{ name: "account", type: "address", indexed: true }],
+  },
+  {
+    type: "event",
+    name: "AccountStateImported",
+    inputs: [
+      { name: "account", type: "address", indexed: true },
+      { name: "planId", type: "uint256", indexed: true },
+      { name: "lastPullTime", type: "uint64", indexed: false },
+    ],
+  },
+  {
+    type: "event",
+    name: "MigrationFinalized",
+    inputs: [],
   },
 ] as const;
 

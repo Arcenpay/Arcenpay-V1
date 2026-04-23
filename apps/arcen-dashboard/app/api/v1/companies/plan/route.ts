@@ -22,6 +22,9 @@ import {
   resolveCouponQuote,
 } from "@/lib/catalog-billing";
 import { upsertSubscriptionLedgerState } from "@/lib/billing-ledger";
+import { recordBillingAdjustment } from "@/lib/billing-adjustments";
+import { postBillingCredit } from "@/lib/billing-balances";
+import { computeProrationQuote } from "@/lib/billing-proration";
 import {
   normalizeTxHash,
   verifyAutopayPlanChange,
@@ -208,6 +211,14 @@ export async function POST(req: NextRequest) {
       traits: true,
       walletAddress: true,
       email: true,
+      subscriptionState: {
+        select: {
+          id: true,
+          currentPeriodStart: true,
+          currentPeriodEnd: true,
+          onChainTokenId: true,
+        },
+      },
     },
   });
   if (!company) {
@@ -258,16 +269,6 @@ export async function POST(req: NextRequest) {
 
   const currentPrice = Number(currentPlan?.price ?? 0);
   const targetPrice = Number(plan.price);
-  if (currentPrice > 0 || targetPrice > 0) {
-    return NextResponse.json(
-      {
-        error:
-          "Self-service paid plan changes are temporarily blocked because this endpoint does not update the authoritative on-chain subscription. Use the on-chain subscription flow and then sync the dashboard state.",
-      },
-      { status: 409, headers: corsHeaders() },
-    );
-  }
-
   const isDowngrade = !!currentPlan && targetPrice < currentPrice;
   const normalizedBillingPeriod = normalizeBillingPeriod(billingPeriod);
   const shouldScheduleDowngrade =
@@ -297,6 +298,16 @@ export async function POST(req: NextRequest) {
   }
   const normalizedCouponCode = normalizeCouponCode(couponCode);
   const quotedAmountMicros = quoteResult.quote.finalAmountMicros;
+
+  if ((currentPrice > 0 || targetPrice > 0) && !usesAuthoritativeOnChainPlanChange) {
+    return NextResponse.json(
+      {
+        error:
+          "Self-service paid plan changes must use the authoritative on-chain subscription flows. Off-chain paid plan changes remain blocked.",
+      },
+      { status: 409, headers: corsHeaders() },
+    );
+  }
 
   if (usesAuthoritativeOnChainPlanChange) {
     if (!currentPlan?.onChainPlanId) {
@@ -339,17 +350,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (currentPlanAmountMicros !== targetPlanAmountMicros) {
-      return NextResponse.json(
-        {
-          error:
-            "Price-changing paid plan changes are not enabled yet because the required proration and refund logic is not implemented end to end. Only equal-price on-chain plan changes are currently supported.",
-        },
-        { status: 409, headers: corsHeaders() },
-      );
-    }
-
-    if (quotedAmountMicros !== targetPlanAmountMicros) {
+    if (
+      targetPlanAmountMicros > currentPlanAmountMicros &&
+      quotedAmountMicros !== targetPlanAmountMicros
+    ) {
       return NextResponse.json(
         {
           error:
@@ -465,6 +469,44 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (targetPlanAmountMicros > currentPlanAmountMicros) {
+      return NextResponse.json(
+        {
+          error:
+            "Price-increasing paid plan changes still require the dedicated on-chain upgrade charge flow. Equal-price and downgrade changes are supported now; upgrades remain blocked until charge+plan-change execute in one authoritative step.",
+        },
+        { status: 409, headers: corsHeaders() },
+      );
+    }
+
+    let creditedAmount = 0;
+    const downgradePeriodStart = company.subscriptionState?.currentPeriodStart;
+    const downgradePeriodEnd = company.subscriptionState?.currentPeriodEnd;
+    if (targetPlanAmountMicros < currentPlanAmountMicros) {
+      if (!downgradePeriodStart || !downgradePeriodEnd) {
+        return NextResponse.json(
+          {
+            error:
+              "Cannot compute downgrade credit because the current billing period is missing from subscription state.",
+          },
+          { status: 409, headers: corsHeaders() },
+        );
+      }
+
+      const proration = computeProrationQuote({
+        currentAmountMicros: BigInt(currentPlanAmountMicros),
+        targetAmountMicros: BigInt(targetPlanAmountMicros),
+        currentPeriodStart: downgradePeriodStart,
+        currentPeriodEnd: downgradePeriodEnd,
+      });
+
+      if (proration.direction === "DOWNGRADE_PRORATION_CREDIT") {
+        creditedAmount =
+          Number(proration.deltaMicros < 0n ? -proration.deltaMicros : proration.deltaMicros) /
+          1_000_000;
+      }
+    }
+
     const nextTraits: Record<string, unknown> = {
       ...currentTraits,
       billingVerifiedTxHashes: [
@@ -483,7 +525,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    await upsertSubscriptionLedgerState({
+    const subscriptionState = await upsertSubscriptionLedgerState({
       teamId,
       companyId,
       walletAddress: company.walletAddress,
@@ -506,6 +548,44 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    if (creditedAmount > 0) {
+      await postBillingCredit({
+        teamId,
+        companyId,
+        walletAddress: company.walletAddress,
+        amount: creditedAmount,
+        metadata: {
+          source: "self_service_plan_change",
+          txHash: normalizedTxHash,
+          fromPlanId: currentPlan?.id ?? null,
+          toPlanId: plan.id,
+        },
+      });
+
+      if (subscriptionState) {
+        await recordBillingAdjustment({
+          teamId,
+          companyId,
+          subscriptionStateId: subscriptionState.id,
+          kind: "DOWNGRADE_PRORATION_CREDIT",
+          status: "POSTED",
+          amount: creditedAmount,
+          fromCatalogPlanId: currentPlan?.id ?? null,
+          toCatalogPlanId: plan.id,
+          periodStartedAt: downgradePeriodStart,
+          periodEndsAt: downgradePeriodEnd,
+          effectiveAt: new Date(),
+          postedAt: new Date(),
+          metadata: {
+            source: "self_service_plan_change",
+            txHash: normalizedTxHash,
+            previousOnChainPlanId: verification.previousOnChainPlanId,
+            onChainPlanId: verification.onChainPlanId,
+          },
+        });
+      }
+    }
+
     deliverWebhook(teamId, "company.plan.changed", {
       companyId,
       planId,
@@ -517,6 +597,7 @@ export async function POST(req: NextRequest) {
       txHash: normalizedTxHash,
       onChainPlanId: verification.onChainPlanId,
       verifiedOnChain: true,
+      ...(creditedAmount > 0 ? { walletCreditApplied: creditedAmount.toFixed(6) } : {}),
     }).catch(() => {});
 
     return NextResponse.json(
@@ -531,6 +612,9 @@ export async function POST(req: NextRequest) {
           onChainPlanId: verification.onChainPlanId,
           tokenId: verification.tokenId,
           currentPeriodEnd: verification.currentPeriodEnd,
+          ...(creditedAmount > 0
+            ? { walletCreditCreated: creditedAmount.toFixed(6) }
+            : {}),
         },
       },
       { headers: corsHeaders() },

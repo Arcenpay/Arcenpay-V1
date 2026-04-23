@@ -90,7 +90,6 @@ import {
 } from "./subscription-routing.js";
 import {
   microsToDecimalString,
-  resolveSubscriptionChargeAmountMicros,
 } from "./renewal-amount.js";
 
 const app = express();
@@ -1300,69 +1299,6 @@ async function getTokenOwner(tokenId: bigint): Promise<string | null> {
   }
 }
 
-async function resolveAutopayConfigForSubscriber(subscriberWallet: string) {
-  try {
-    const config = (await chainClient.readContract({
-      address: CONTRACTS.autopayModule as `0x${string}`,
-      abi: ERC7579AutopayModuleABI,
-      functionName: "getConfig",
-      args: [subscriberWallet as `0x${string}`],
-    })) as {
-      merchant?: string;
-      maxAmount?: bigint;
-      startTime?: bigint;
-      planId?: bigint;
-    };
-    return config;
-  } catch (err) {
-    console.error(
-      "[Facilitator] Failed to resolve autopay config for subscriber:",
-      subscriberWallet,
-      err,
-    );
-    return null;
-  }
-}
-
-async function resolveRenewalAmountForEvent(input: {
-  tokenId: bigint;
-  subscriberWallet: string | null;
-  eventAmountPaid?: bigint | null;
-}): Promise<bigint> {
-  if (input.eventAmountPaid && input.eventAmountPaid > 0n) {
-    return input.eventAmountPaid;
-  }
-
-  if (!input.subscriberWallet) {
-    return 0n;
-  }
-
-  const config = await resolveAutopayConfigForSubscriber(input.subscriberWallet);
-  return resolveSubscriptionChargeAmountMicros({
-    eventAmountPaid: input.eventAmountPaid,
-    configuredMaxAmount: config?.maxAmount ?? null,
-  });
-}
-
-async function resolveSubscriptionChargeAmountForSubscriber(input: {
-  subscriberWallet: string | null;
-  eventAmountPaid?: bigint | null;
-}): Promise<bigint> {
-  if (input.eventAmountPaid && input.eventAmountPaid > 0n) {
-    return input.eventAmountPaid;
-  }
-
-  if (!input.subscriberWallet) {
-    return 0n;
-  }
-
-  const config = await resolveAutopayConfigForSubscriber(input.subscriberWallet);
-  return resolveSubscriptionChargeAmountMicros({
-    eventAmountPaid: input.eventAmountPaid,
-    configuredMaxAmount: config?.maxAmount ?? null,
-  });
-}
-
 let billingMaintenanceRunInFlight = false;
 let billingMaintenanceLastRunAt: string | null = null;
 let billingMaintenanceLastSuccessAt: string | null = null;
@@ -1785,18 +1721,6 @@ eventListener.on("minted", async (event) => {
     `[Facilitator] 🎉 New subscriber: ${event.subscriber} (Plan ${event.planId})`,
   );
   const tokenId = event.tokenId.toString();
-  const mintedSubscriberEmail = event.subscriber
-    ? await lookupSubscriberEmail(event.subscriber)
-    : null;
-  const mintedAmountMicros = await resolveSubscriptionChargeAmountForSubscriber({
-    subscriberWallet: event.subscriber ?? null,
-  });
-  const mintedAmount = microsToDecimalString(mintedAmountMicros);
-  if (mintedAmountMicros <= 0n) {
-    console.warn(
-      `[Facilitator] Unable to resolve non-zero activation amount for tokenId=${tokenId}`,
-    );
-  }
   const onChainPlanId = event.planId?.toString() ?? null;
   const occurredAt = event.timestamp
     ? new Date(Number(event.timestamp) * 1000).toISOString()
@@ -1819,32 +1743,6 @@ eventListener.on("minted", async (event) => {
       updatedAt: occurredAt ?? new Date().toISOString(),
     });
   }
-
-  await persistBillingEvent(
-    "subscription.minted",
-    buildEventIdempotencyKey("subscription.minted", [
-      event.transactionHash || tokenId,
-    ]),
-    {
-      tokenId,
-      planId: onChainPlanId,
-      subscriber: event.subscriber,
-      customerWallet: event.subscriber,
-      amount: mintedAmount,
-      txHash: event.transactionHash,
-      timestamp: event.timestamp?.toString(),
-      ...(mintedSubscriberEmail && { email: mintedSubscriberEmail }),
-      description: "Subscription activation",
-    },
-    true,
-    event.timestamp ? Number(event.timestamp) * 1000 : undefined,
-    {
-      teamId: mintedPlanScope?.teamId ?? null,
-      onChainPlanId,
-      sourceTokenId: tokenId,
-      wallet: event.subscriber ?? null,
-    },
-  );
   // Sync subscription to dashboard DB so flag evaluation uses the correct plan
   if (event.subscriber) {
     enqueueSubscriptionSync({
@@ -1932,24 +1830,9 @@ eventListener.on("renewed", async (event) => {
   );
   const tokenId = event.tokenId.toString();
   const existingRouteState = await subscriptionRouteStore.read(tokenId);
-  // Look up subscriber email so invoice generation can proceed
   const renewedSubscriberWallet =
     existingRouteState?.wallet ||
     (await getTokenOwner(event.tokenId));
-  const renewedSubscriberEmail = renewedSubscriberWallet
-    ? await lookupSubscriberEmail(renewedSubscriberWallet)
-    : null;
-  const renewalAmountMicros = await resolveRenewalAmountForEvent({
-    tokenId: event.tokenId,
-    subscriberWallet: renewedSubscriberWallet,
-    eventAmountPaid: event.amountPaid ?? null,
-  });
-  const renewalAmount = microsToDecimalString(renewalAmountMicros);
-  if (renewalAmountMicros <= 0n) {
-    console.warn(
-      `[Facilitator] Unable to resolve non-zero renewal amount for tokenId=${tokenId}`,
-    );
-  }
   // Resolve the on-chain planId for this token so sync-subscription can set activePlanId
   let renewedPlanId: bigint | null = null;
   try {
@@ -1991,31 +1874,6 @@ eventListener.on("renewed", async (event) => {
     });
   }
 
-  await persistBillingEvent(
-    "subscription.renewed",
-    buildEventIdempotencyKey("subscription.renewed", [
-      event.transactionHash || tokenId,
-      event.expiration?.toString() || "",
-    ]),
-    {
-      tokenId,
-      expiration: event.expiration?.toString(),
-      amount: renewalAmount,
-      txHash: event.transactionHash,
-      timestamp: event.timestamp?.toString(),
-      ...(renewedSubscriberEmail && { email: renewedSubscriberEmail }),
-      description: "Subscription renewal",
-    },
-    true,
-    event.timestamp ? Number(event.timestamp) * 1000 : undefined,
-    {
-      teamId: renewedTeamId ?? null,
-      onChainPlanId: renewedOnChainPlanId,
-      sourceTokenId: tokenId,
-      wallet: renewedSubscriberWallet ?? null,
-    },
-  );
-
   // Sync subscription to dashboard DB so flag evaluation uses the correct plan
   enqueueSubscriptionSync({
     teamId: renewedTeamId ?? null,
@@ -2052,30 +1910,109 @@ eventListener.on("renewed", async (event) => {
       }
     }
   }
-  // Send renewal receipt email
-  if (emailService) {
-    const subscriberWallet = renewedSubscriberWallet;
-    if (subscriberWallet) {
-      const subscriberEmail = await lookupSubscriberEmail(subscriberWallet);
-      if (subscriberEmail) {
-        try {
-          const expiresAt = event.expiration
-            ? new Date(Number(event.expiration) * 1000).toISOString()
-            : undefined;
-          await emailService.sendTemplate(
-            "renewal_receipt" as any,
-            { email: subscriberEmail, walletAddress: subscriberWallet },
-            {
-              walletAddress: subscriberWallet,
-              tokenId: event.tokenId?.toString() || "",
-              expiresAt: expiresAt ?? "",
-              amount: renewalAmountMicros > 0n ? renewalAmount : "",
-            },
-          );
-        } catch (err) {
-          console.error("[Facilitator] Renewal receipt email failed:", err);
-        }
-      }
+});
+
+eventListener.on("billing_executed", async (event) => {
+  const tokenId = event.tokenId.toString();
+  const billingReason = Number(event.billingReason ?? 0n);
+  const onChainPlanId = event.planId?.toString() ?? null;
+  const subscriberWallet = event.account ?? (await getTokenOwner(event.tokenId));
+  const subscriberEmail = subscriberWallet
+    ? await lookupSubscriberEmail(subscriberWallet)
+    : null;
+  const amountMicros = event.amountPaid ?? 0n;
+  const amount = microsToDecimalString(amountMicros);
+  const merchantAmount = microsToDecimalString(event.merchantAmount ?? 0n);
+  const protocolFee = microsToDecimalString(event.protocolFee ?? 0n);
+  const occurredAtMs = event.timestamp ? Number(event.timestamp) * 1000 : undefined;
+  const occurredAtIso =
+    occurredAtMs !== undefined ? new Date(occurredAtMs).toISOString() : undefined;
+  const planScope = onChainPlanId
+    ? await resolvePlanScopeFromDashboard(onChainPlanId).catch((err) => {
+        console.error(
+          "[Facilitator] Failed to resolve team for billing execution:",
+          err,
+        );
+        return null;
+      })
+    : null;
+  const existingRouteState = await subscriptionRouteStore.read(tokenId);
+  const teamId = existingRouteState?.teamId || planScope?.teamId || null;
+
+  if (subscriberWallet) {
+    await subscriptionRouteStore.write(tokenId, {
+      wallet: subscriberWallet.toLowerCase(),
+      teamId,
+      onChainPlanId,
+      updatedAt: occurredAtIso ?? new Date().toISOString(),
+    });
+  }
+
+  const billingEventName =
+    billingReason === 0 ? "subscription.minted" : "subscription.renewed";
+
+  let currentExpiration: string | undefined;
+  try {
+    const snapshot = await getSubscriptionSnapshot(event.tokenId);
+    currentExpiration = snapshot.expiresAt.toString();
+  } catch (err) {
+    console.error(
+      "[Facilitator] Failed to resolve current expiration for billing execution:",
+      err,
+    );
+  }
+
+  await persistBillingEvent(
+    billingEventName,
+    buildEventIdempotencyKey(billingEventName, [
+      event.transactionHash || tokenId,
+      tokenId,
+    ]),
+    {
+      tokenId,
+      planId: onChainPlanId,
+      subscriber: subscriberWallet,
+      customerWallet: subscriberWallet,
+      amount,
+      grossAmount: amount,
+      merchantAmount,
+      protocolFee,
+      txHash: event.transactionHash,
+      timestamp: event.timestamp?.toString(),
+      expiration: currentExpiration,
+      billingReason,
+      ...(subscriberEmail && { email: subscriberEmail }),
+      description:
+        billingReason === 0
+          ? "Subscription activation"
+          : "Subscription renewal",
+    },
+    true,
+    occurredAtMs,
+    {
+      teamId,
+      onChainPlanId,
+      sourceTokenId: tokenId,
+      wallet: subscriberWallet ?? null,
+    },
+  );
+
+  if (emailService && billingReason === 1 && subscriberWallet && subscriberEmail) {
+    try {
+      await emailService.sendTemplate(
+        "renewal_receipt" as any,
+        { email: subscriberEmail, walletAddress: subscriberWallet },
+        {
+          walletAddress: subscriberWallet,
+          tokenId,
+          expiresAt: currentExpiration
+            ? new Date(Number(currentExpiration) * 1000).toISOString()
+            : "",
+          amount,
+        },
+      );
+    } catch (err) {
+      console.error("[Facilitator] Renewal receipt email failed:", err);
     }
   }
 });

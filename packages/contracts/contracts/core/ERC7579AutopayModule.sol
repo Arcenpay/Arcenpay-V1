@@ -74,6 +74,14 @@ contract ERC7579AutopayModule is IERC7579AutopayModule, ReentrancyGuard, Pausabl
     /// @notice Emitted when cross-chain dispatch fails (non-reverting)
     event CrossChainDispatchFailed(address indexed account, uint256 destinationChainId);
 
+    /// @notice Emitted when an account state is imported during migration
+    event AccountStateImported(address indexed account, uint256 indexed planId, uint64 lastPullTime);
+
+    /// @notice Emitted when migration imports are permanently disabled
+    event MigrationFinalized();
+
+    bool public migrationEnabled = true;
+
     // ============================================================
     //                        CONSTRUCTOR
     // ============================================================
@@ -97,6 +105,11 @@ contract ERC7579AutopayModule is IERC7579AutopayModule, ReentrancyGuard, Pausabl
 
     function pause() external { require(msg.sender == admin, "AutopayModule: not admin"); _pause(); }
     function unpause() external { require(msg.sender == admin, "AutopayModule: not admin"); _unpause(); }
+
+    modifier onlyAdmin() {
+        require(msg.sender == admin, "AutopayModule: not admin");
+        _;
+    }
 
     // ============================================================
     //                  ERC-7579 MODULE INTERFACE
@@ -245,14 +258,25 @@ contract ERC7579AutopayModule is IERC7579AutopayModule, ReentrancyGuard, Pausabl
         }
 
         emit PaymentExecuted(account, config.merchant, amount, block.timestamp);
+        emit BillingExecuted(
+            account,
+            config.merchant,
+            tokenId,
+            config.planId,
+            mintedNow ? BillingReason.ACTIVATION : BillingReason.RENEWAL,
+            amount,
+            merchantAmount,
+            protocolFee,
+            block.timestamp
+        );
 
         // Dispatch cross-chain GMP update to MirrorRegistry if destination is configured
-        uint256 mirrorDestinationChainId = _mirrorDestinationChainIds[account];
-        if (mirrorDestinationChainId != 0) {
+        uint256 destinationChainId = _mirrorDestinationChainIds[account];
+        if (destinationChainId != 0) {
             if (tokenId != 0) {
                 try subscriptionRegistry.dispatchCrossChainUpdate{value: 0}(
                     tokenId,
-                    mirrorDestinationChainId,
+                    destinationChainId,
                     config.merchant
                 ) {
                     // Success — clear any pending dispatch
@@ -261,11 +285,11 @@ contract ERC7579AutopayModule is IERC7579AutopayModule, ReentrancyGuard, Pausabl
                     // GMP dispatch failure should not revert the payment, but track for retry
                     _pendingDispatches[account] = PendingDispatch({
                         tokenId: tokenId,
-                        destinationChainId: mirrorDestinationChainId,
+                        destinationChainId: destinationChainId,
                         merchant: config.merchant,
                         timestamp: uint64(block.timestamp)
                     });
-                    emit CrossChainDispatchFailed(account, mirrorDestinationChainId);
+                    emit CrossChainDispatchFailed(account, destinationChainId);
                 }
             }
         }
@@ -328,6 +352,49 @@ contract ERC7579AutopayModule is IERC7579AutopayModule, ReentrancyGuard, Pausabl
     /// @inheritdoc IERC7579AutopayModule
     function totalPulled(address account) external view returns (uint256) {
         return _totalPulled[account];
+    }
+
+    /// @inheritdoc IERC7579AutopayModule
+    function mirrorDestinationChainId(address account) external view returns (uint256) {
+        return _mirrorDestinationChainIds[account];
+    }
+
+    /// @inheritdoc IERC7579AutopayModule
+    function isAccountPaused(address account) external view returns (bool) {
+        return _accountPaused[account];
+    }
+
+    /// @inheritdoc IERC7579AutopayModule
+    function importAccountState(
+        address account,
+        AutopayConfig calldata config,
+        uint64 lastPullTime_,
+        uint256 totalPulled_,
+        uint256 mirrorDestinationChainId_,
+        bool accountPaused_
+    ) external onlyAdmin whenNotPaused {
+        require(migrationEnabled, "AutopayModule: migration closed");
+        require(account != address(0), "AutopayModule: zero account");
+        require(!_initialized[account], "AutopayModule: already initialized");
+
+        AutopayConfig memory importedConfig = config;
+        _validateConfig(importedConfig, true);
+
+        _configs[account] = importedConfig;
+        _lastPullTimes[account] = lastPullTime_;
+        _totalPulled[account] = totalPulled_;
+        _mirrorDestinationChainIds[account] = mirrorDestinationChainId_;
+        _accountPaused[account] = accountPaused_;
+        _initialized[account] = true;
+
+        emit AccountStateImported(account, importedConfig.planId, lastPullTime_);
+    }
+
+    /// @inheritdoc IERC7579AutopayModule
+    function finalizeMigration() external onlyAdmin {
+        require(migrationEnabled, "AutopayModule: migration closed");
+        migrationEnabled = false;
+        emit MigrationFinalized();
     }
 
     // ============================================================

@@ -41,6 +41,12 @@ interface IERC7579AutopayModule is IERC7579Module {
         uint256 maxTotalAmount; // Maximum total amount pullable over config lifetime (0 = unlimited)
     }
 
+    enum BillingReason {
+        ACTIVATION,
+        RENEWAL,
+        PLAN_CHANGE_UPGRADE
+    }
+
     // ============================================================
     //                          EVENTS
     // ============================================================
@@ -68,6 +74,19 @@ interface IERC7579AutopayModule is IERC7579Module {
         address indexed account,
         address indexed merchant,
         uint256 amount,
+        uint256 timestamp
+    );
+
+    /// @notice Emitted with authoritative billing details for an executed charge
+    event BillingExecuted(
+        address indexed account,
+        address indexed merchant,
+        uint256 indexed tokenId,
+        uint256 planId,
+        BillingReason reason,
+        uint256 grossAmount,
+        uint256 merchantAmount,
+        uint256 protocolFee,
         uint256 timestamp
     );
 
@@ -119,4 +138,23 @@ interface IERC7579AutopayModule is IERC7579Module {
 
     /// @notice Returns total amount pulled for an account
     function totalPulled(address account) external view returns (uint256);
+
+    /// @notice Returns the configured mirror destination chain ID for an account
+    function mirrorDestinationChainId(address account) external view returns (uint256);
+
+    /// @notice Returns whether an account has paused its autopay
+    function isAccountPaused(address account) external view returns (bool);
+
+    /// @notice Imports a live account state during a one-time migration window
+    function importAccountState(
+        address account,
+        AutopayConfig calldata config,
+        uint64 lastPullTime_,
+        uint256 totalPulled_,
+        uint256 mirrorDestinationChainId_,
+        bool accountPaused_
+    ) external;
+
+    /// @notice Permanently disables migration imports
+    function finalizeMigration() external;
 }
