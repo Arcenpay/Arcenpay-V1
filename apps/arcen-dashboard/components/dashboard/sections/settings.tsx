@@ -56,6 +56,11 @@ import { useContractAddresses } from "@/lib/contracts";
 import { getBlockExplorerUrl } from "@/lib/format";
 import { CANONICAL_WEBHOOK_EVENTS } from "@/lib/webhook-events";
 import { useDashboardSession } from "@/hooks/use-dashboard-session";
+import {
+  DEFAULT_PRODUCTION_CHAIN_ID,
+  DEFAULT_TESTNET_CHAIN_ID,
+  getChainLabel,
+} from "@/lib/default-chain";
 
 const NOTIFICATION_DEFAULTS = CANONICAL_WEBHOOK_EVENTS.map((event) => ({
   ...event,
@@ -336,7 +341,10 @@ export function SettingsSection() {
     }
 
     try {
-      const chainIdHint = nextMode === "PRODUCTION" ? 8453 : 11155111;
+      const chainIdHint =
+        nextMode === "PRODUCTION"
+          ? DEFAULT_PRODUCTION_CHAIN_ID
+          : DEFAULT_TESTNET_CHAIN_ID;
       const res = await fetch("/api/environment/switch", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -626,13 +634,7 @@ export function SettingsSection() {
                   <div className="flex items-center gap-2">
                     <Globe className="w-4 h-4 text-muted-foreground" />
                     <span className="text-sm text-muted-foreground">
-                      {chainId === 11155111
-                        ? "Sepolia Testnet"
-                        : chainId === 8453
-                          ? "Base Mainnet"
-                          : chainId === 84532
-                            ? "Base Sepolia"
-                            : "Unknown"}{" "}
+                      {getChainLabel(chainId)}{" "}
                       (Chain ID: {chainId})
                     </span>
                   </div>
@@ -711,7 +713,7 @@ export function SettingsSection() {
               </CardTitle>
               <CardDescription>
                 Smart contracts deployed on{" "}
-                {chainId === 11155111 ? "Sepolia" : `Chain ${chainId}`}.
+                {getChainLabel(chainId)}.
                 Read-only — connect wallet to interact.
               </CardDescription>
             </CardHeader>

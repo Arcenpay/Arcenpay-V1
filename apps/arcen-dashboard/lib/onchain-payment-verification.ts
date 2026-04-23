@@ -14,6 +14,7 @@ import {
   SubscriptionRegistryABI,
 } from "@arcenpay/sdk";
 import { getRpcUrl } from "@/lib/config";
+import { DEFAULT_CHAIN_ID } from "@/lib/default-chain";
 
 const CHAIN_MAP: Record<number, Chain> = {
   11155111: sepolia,
@@ -74,12 +75,7 @@ export function decimalToAtomicUnits(value: string, decimals = 6): bigint {
 }
 
 function resolveChain(): Chain {
-  const chainId = Number(
-    process.env.MEAP_DEFAULT_CHAIN_ID ||
-      process.env.CHAIN_ID ||
-      process.env.NEXT_PUBLIC_CHAIN_ID ||
-      "11155111",
-  );
+  const chainId = DEFAULT_CHAIN_ID;
   return CHAIN_MAP[chainId] ?? sepolia;
 }
 

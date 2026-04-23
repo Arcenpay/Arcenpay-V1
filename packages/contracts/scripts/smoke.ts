@@ -47,6 +47,37 @@ async function assertContractCode(label: string, address: string): Promise<void>
   }
 }
 
+async function waitForTimestampAfter(targetTimestamp: bigint, timeoutMs = 30_000): Promise<bigint> {
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < timeoutMs) {
+    const latestBlock = await ethers.provider.getBlock("latest");
+    const latestTimestamp = BigInt(latestBlock?.timestamp ?? 0);
+    if (latestTimestamp > targetTimestamp) {
+      return latestTimestamp;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 2_000));
+  }
+
+  throw new Error(
+    `Timed out waiting for chain timestamp to exceed ${targetTimestamp.toString()} after ${timeoutMs}ms.`,
+  );
+}
+
+async function waitForTransactionReceipt(txHash: string, timeoutMs = 60_000) {
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < timeoutMs) {
+    const receipt = await ethers.provider.getTransactionReceipt(txHash);
+    if (receipt) {
+      return receipt;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1_000));
+  }
+
+  throw new Error(`Timed out waiting for transaction receipt ${txHash} after ${timeoutMs}ms.`);
+}
+
 async function main() {
   const [signer] = await ethers.getSigners();
   const chain = await ethers.provider.getNetwork();
@@ -61,6 +92,10 @@ async function main() {
   const duration = Number(process.env.SMOKE_DURATION_SECONDS || 2_592_000);
   const renewalExtension = Number(process.env.SMOKE_RENEW_EXTENSION_SECONDS || 86_400);
   const planPrice = BigInt(process.env.SMOKE_PLAN_PRICE_ATOMIC || "1000000");
+  const subscriberAddress =
+    process.env.SMOKE_SUBSCRIBER_ADDRESS && ethers.isAddress(process.env.SMOKE_SUBSCRIBER_ADDRESS)
+      ? process.env.SMOKE_SUBSCRIBER_ADDRESS
+      : ethers.Wallet.createRandom().address;
 
   const planFactory = await ethers.getContractAt(
     "PlanFactory",
@@ -87,6 +122,7 @@ async function main() {
     network: network.name,
     chainId,
     signer: signer.address,
+    subscriberAddress,
     startedAt: new Date().toISOString(),
     checks: [] as string[],
     warnings: [] as string[],
@@ -127,9 +163,18 @@ async function main() {
     checks.push("Authorized signer as biller");
   }
 
-  const mintTx = await registry.mint(signer.address, planId, duration);
+  const previewTokenId = (await registry.mint.staticCall(
+    subscriberAddress,
+    planId,
+    duration,
+  ).catch(() => 0n)) as bigint;
+  const mintTx = await registry.mint(subscriberAddress, planId, duration);
   await mintTx.wait();
-  const tokenId = (await registry.getWalletSubscription(signer.address)) as bigint;
+  const tokenId =
+    previewTokenId || ((await registry.getWalletSubscription(subscriberAddress)) as bigint);
+  if (tokenId <= 0n) {
+    throw new Error("Mint succeeded but no subscription token could be resolved for the subscriber.");
+  }
   checks.push(`Minted subscription token ${tokenId.toString()}`);
 
   const renewTx = await registry.renew(tokenId, renewalExtension);
@@ -138,8 +183,41 @@ async function main() {
 
   const cancelTx = await registry.cancel(tokenId);
   await cancelTx.wait();
-  const isValidAfterCancel = await registry.isValid(tokenId);
-  checks.push(`Cancelled subscription (isValid=${String(isValidAfterCancel)})`);
+  const cancelReceipt = await waitForTransactionReceipt(cancelTx.hash);
+  const cancelledExpiry = (await registry.expiresAt(tokenId)) as bigint;
+  const cancelBlock = cancelReceipt?.blockNumber
+    ? await ethers.provider.getBlock(cancelReceipt.blockNumber)
+    : null;
+  const cancelBlockTimestamp = BigInt(cancelBlock?.timestamp ?? 0);
+  const cancelledByExpiry = cancelledExpiry <= cancelBlockTimestamp;
+  if (!cancelledByExpiry) {
+    throw new Error(
+      `Cancellation verification failed for token ${tokenId.toString()} ` +
+        `(expiry=${cancelledExpiry.toString()} cancelBlock=${cancelBlockTimestamp.toString()}).`,
+    );
+  }
+  let finalityTimestamp = cancelBlockTimestamp;
+  let isValidAfterCancel = await registry.isValid(tokenId);
+  if (isValidAfterCancel) {
+    try {
+      finalityTimestamp = await waitForTimestampAfter(cancelledExpiry);
+      isValidAfterCancel = await registry.isValid(tokenId);
+    } catch {
+      warnings.push(
+        `Cancellation for token ${tokenId.toString()} was verified at block ${String(cancelReceipt?.blockNumber ?? "unknown")}, ` +
+          "but the network did not advance quickly enough to confirm post-cancel validity from a later block.",
+      );
+    }
+  }
+  if (isValidAfterCancel && finalityTimestamp > cancelledExpiry) {
+    throw new Error(
+      `Cancellation finality check failed for token ${tokenId.toString()} ` +
+        `(expiry=${cancelledExpiry.toString()} latest=${finalityTimestamp.toString()} isValid=${String(isValidAfterCancel)}).`,
+    );
+  }
+  checks.push(
+    `Cancelled subscription (cancelled=${String(cancelledByExpiry)} isValid=${String(isValidAfterCancel)})`,
+  );
 
   // 3) Optional session lifecycle (fund -> topup -> settle -> withdraw)
   const sessionDepositRaw = process.env.SMOKE_SESSION_DEPOSIT_ATOMIC || "";
@@ -207,4 +285,3 @@ main()
     console.error("Smoke script failed:", err);
     process.exit(1);
   });
-

@@ -1,0 +1,19 @@
+{
+  "network": "baseSepolia",
+  "chainId": 84532,
+  "deployer": "0x38f62CCfD6F771eF9E48e3bb86a3E0413aE5319B",
+  "contracts": {
+    "PlanFactory": "0x66775Af13C63781AAd28203CC5d3E9eE5d5eB83d",
+    "FeeCollector": "0x5F32fBfF19385A78c3F721007758E9924FAD4133",
+    "SubscriptionRegistry": "0xF9610c064FFD64255A1d509d17b2Af8733084e50",
+    "SessionVault": "0x96BcE2d49e3e4EddBBF3aa07354E66615BC2623c",
+    "ZKUsageVerifier": "0x03290b6988F87925A4939d974895bC30981aA90D",
+    "ERC7579AutopayModule": "0x69Ac04bFdC045A99A2D31bb141A74da354a94c19",
+    "MirrorRegistry": "0xe7E0dFfa82596ee6Ba1755bc25c29376a07236dE"
+  },
+  "config": {
+    "USDC": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+    "treasury": "0x38f62CCfD6F771eF9E48e3bb86a3E0413aE5319B"
+  },
+  "deployedAt": "2026-04-23T07:08:47.926Z"
+}

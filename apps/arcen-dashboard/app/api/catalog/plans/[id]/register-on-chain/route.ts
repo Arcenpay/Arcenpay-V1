@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { requirePermission, isErrorResponse } from "@/lib/api-auth";
 import { writeAuditEvent } from "@/lib/audit";
 import { getRpcUrl } from "@/lib/config";
+import { DEFAULT_CHAIN_ID } from "@/lib/default-chain";
 import {
   createWalletClient,
   createPublicClient,
@@ -232,7 +233,7 @@ export async function POST(
     );
   }
 
-  const chainId = parseInt(process.env.NEXT_PUBLIC_CHAIN_ID ?? "11155111");
+  const chainId = DEFAULT_CHAIN_ID;
   const rpcUrl = getRpcUrl(chainId);
   const chain = CHAIN_MAP[chainId] ?? sepolia;
 

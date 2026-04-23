@@ -4,6 +4,7 @@ import { privateKeyToAccount } from "viem/accounts";
 import { requirePermission, isErrorResponse } from "@/lib/api-auth";
 import { getContractAddresses } from "@arcenpay/sdk";
 import { getRpcUrl } from "@/lib/config";
+import { DEFAULT_CHAIN_ID } from "@/lib/default-chain";
 import { sepolia, baseSepolia, base } from "viem/chains";
 import { isAddress, type Chain } from "viem";
 
@@ -63,7 +64,7 @@ export async function GET(
     );
   }
 
-  const chainId = parseInt(process.env.NEXT_PUBLIC_CHAIN_ID ?? "11155111");
+  const chainId = DEFAULT_CHAIN_ID;
   const rpcUrl = getRpcUrl(chainId);
   const chain = CHAIN_MAP[chainId] ?? sepolia;
   const contracts = getContractAddresses(chainId);

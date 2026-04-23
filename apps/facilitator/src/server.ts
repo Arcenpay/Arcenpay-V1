@@ -94,7 +94,7 @@ import {
 
 const app = express();
 const PORT = process.env.PORT || 3402;
-const CHAIN_ID = parseInt(process.env.CHAIN_ID || "11155111", 10);
+const CHAIN_ID = parseInt(process.env.CHAIN_ID || "84532", 10);
 const CHAIN_ENV = getChainEnvironment(CHAIN_ID);
 const RPC_URL =
   process.env.RPC_URL ||

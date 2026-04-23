@@ -74,6 +74,7 @@ import { cn } from "@/lib/utils";
 import { useEnvironment } from "@/contexts/environment-context";
 import { useAccount, useSignTypedData, useChainId } from "wagmi";
 import { getUsdcAddress, getUsdcTokenOptions } from "@/lib/contracts";
+import { DEFAULT_TESTNET_CHAIN_ID } from "@/lib/default-chain";
 import { toast } from "sonner";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -179,7 +180,7 @@ const TOKEN_OPTIONS: { label: string; address: string }[] =
     address: option.address,
   }));
 
-const DEFAULT_TOKEN = getUsdcAddress(11155111);
+const DEFAULT_TOKEN = getUsdcAddress(DEFAULT_TESTNET_CHAIN_ID);
 
 const BILLING_INTERVALS: { label: string; days: number; sublabel: string }[] = [
   { label: "Monthly", days: 30, sublabel: "Every 30 days" },
@@ -3382,8 +3383,8 @@ const CHAIN_INFO: Record<
   { chainId: number; name: string; color: string; tag: string }
 > = {
   DEVELOPMENT: {
-    chainId: 11155111,
-    name: "Sepolia Testnet",
+    chainId: DEFAULT_TESTNET_CHAIN_ID,
+    name: DEFAULT_TESTNET_CHAIN_ID === 11155111 ? "Sepolia Testnet" : "Base Sepolia Testnet",
     color: "bg-zinc-400",
     tag: "testnet",
   },

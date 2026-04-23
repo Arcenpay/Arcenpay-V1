@@ -72,7 +72,7 @@ export const TOKENS = {
 } as const;
 
 // --- Default Chain ---
-export const DEFAULT_CHAIN_ID: SupportedChainId = 11155111; // Sepolia for development
+export const DEFAULT_CHAIN_ID: SupportedChainId = 84532; // Base Sepolia for launch/testnet
 
 /**
  * Returns the block explorer transaction URL for a given chainId and tx hash.

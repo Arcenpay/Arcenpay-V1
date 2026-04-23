@@ -37,6 +37,7 @@ import {
 import { Prisma } from "@/src/generated/prisma/client";
 import { db } from "@/lib/db";
 import { getRpcUrl } from "@/lib/config";
+import { DEFAULT_CHAIN_ID } from "@/lib/default-chain";
 import { requireAnyAuth, isAnyAuthError } from "@/lib/require-any-auth";
 import {
   resolveCompany,
@@ -233,12 +234,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const chainId = Number(
-    process.env.MEAP_DEFAULT_CHAIN_ID ||
-      process.env.CHAIN_ID ||
-      process.env.NEXT_PUBLIC_CHAIN_ID ||
-      "11155111",
-  );
+  const chainId = DEFAULT_CHAIN_ID;
   const chain = CHAIN_MAP[chainId] ?? sepolia;
   const rpcUrl = getRpcUrl(chainId);
   const contracts = getContractAddresses(chainId);

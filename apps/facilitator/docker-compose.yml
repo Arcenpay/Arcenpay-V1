@@ -10,7 +10,7 @@ services:
       - PORT=3402
       - NODE_ENV=production
       - RPC_URL=${RPC_URL:-https://ethereum-sepolia-rpc.publicnode.com}
-      - CHAIN_ID=${CHAIN_ID:-11155111}
+      - CHAIN_ID=${CHAIN_ID:-84532}
       - PRIVATE_KEY=${PRIVATE_KEY}
       - X402_ENABLE_SETTLEMENT=true
       - X402_REQUIRE_SETTLER_AUTH=true

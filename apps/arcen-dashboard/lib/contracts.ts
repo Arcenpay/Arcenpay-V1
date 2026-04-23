@@ -16,6 +16,7 @@ import {
   YieldSessionVaultABI,
   TOKENS,
 } from "@arcenpay/sdk";
+import { DEFAULT_CHAIN_ID } from "@/lib/default-chain";
 
 export {
   getContractAddresses,
@@ -62,7 +63,7 @@ export function getUsdcAddress(chainId: number): `0x${string}` {
 
   const token = TOKENS[chainId as keyof typeof TOKENS]?.USDC;
   if (isAddress(token)) return token;
-  return TOKENS[11155111].USDC as `0x${string}`;
+  return TOKENS[DEFAULT_CHAIN_ID].USDC as `0x${string}`;
 }
 
 export function getUsdcTokenOptions(): Array<{
@@ -106,7 +107,7 @@ export function getUsdcTokenOptions(): Array<{
 }
 
 /** Returns live contract addresses for the wallet's current chain.
- *  Falls back to Sepolia (11155111) when chain is unsupported. */
+ *  Falls back to the configured default chain when unsupported. */
 export function useContractAddresses() {
   const chainId = useChainId();
   try {
@@ -130,7 +131,7 @@ export function useContractAddresses() {
         `Unsupported chain ${chainId}. Configure supported production chain before enabling this workspace.`,
       );
     }
-    return getContractAddresses(11155111);
+    return getContractAddresses(DEFAULT_CHAIN_ID);
   }
 }
 

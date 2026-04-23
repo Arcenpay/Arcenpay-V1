@@ -3,6 +3,7 @@ import { z } from "zod";
 import { FACILITATOR_SECRET, FACILITATOR_URL, getGraphUrl } from "@/lib/config";
 import { isErrorResponse, requirePermission } from "@/lib/api-auth";
 import { db } from "@/lib/db";
+import { resolveEnvironmentChainId } from "@/lib/default-chain";
 
 const querySchema = z.object({
   chainId: z.coerce.number().int().positive().optional(),
@@ -51,12 +52,6 @@ type ActiveProofJob = {
   createdAt: string;
   lastAttemptAt?: string;
 };
-
-function resolveDefaultChainId(
-  environmentMode: "DEVELOPMENT" | "PRODUCTION",
-): number {
-  return environmentMode === "PRODUCTION" ? 8453 : 11155111;
-}
 
 const SESSIONS_AND_PROOFS_QUERY = `
   query DashboardSessionsAndProofs($sessionLimit: Int!, $proofLimit: Int!) {
@@ -212,7 +207,10 @@ export async function GET(request: NextRequest) {
   }
 
   const environmentMode = parsed.data.environmentMode || team.environmentMode;
-  const chainId = parsed.data.chainId || resolveDefaultChainId(environmentMode);
+  const chainId = resolveEnvironmentChainId(
+    environmentMode,
+    parsed.data.chainId,
+  );
   const sessionLimit = parsed.data.sessionLimit || 50;
   const proofLimit = parsed.data.proofLimit || 20;
 

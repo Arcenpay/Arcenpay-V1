@@ -13,23 +13,18 @@
 // ============================================================
 
 import * as MEAPCore from "@arcenpay/sdk";
+import { DEFAULT_CHAIN_ID } from "@/lib/default-chain";
+import { SUBGRAPH_REQUIRED } from "@/lib/launch-flags";
 
 const isProd =
   process.env.NODE_ENV === "production" &&
   process.env.NEXT_PHASE !== "phase-production-build";
 
-const DEFAULT_CHAIN_ID = Number(
-  process.env.MEAP_DEFAULT_CHAIN_ID ||
-    process.env.CHAIN_ID ||
-    process.env.NEXT_PUBLIC_CHAIN_ID ||
-    "11155111",
-);
-
 function resolveDefaultChainEnvironment() {
   try {
     return getChainEnvironmentCompat(DEFAULT_CHAIN_ID);
   } catch {
-    return getChainEnvironmentCompat(11155111);
+    return getChainEnvironmentCompat(84532);
   }
 }
 
@@ -113,7 +108,8 @@ export const APP_URL: string = (() => {
 
 /**
  * The Graph studio URL for the MEAP subgraph.
- * Required in production (placeholder URL is explicitly rejected).
+ * Optional for Base Sepolia MVP launch; can be made mandatory with
+ * ARCENPAY_REQUIRE_SUBGRAPH=true.
  */
 export const GRAPH_URL: string = (() => {
   const val =
@@ -123,18 +119,19 @@ export const GRAPH_URL: string = (() => {
     process.env.MEAP_SUBGRAPH_URL ||
     DEFAULT_CHAIN_ENV.services.subgraphUrl;
   if (!val) {
-    if (isProd) {
+    if (isProd && SUBGRAPH_REQUIRED) {
       throw new Error(
         "[config] NEXT_PUBLIC_GRAPH_URL must be set in production.",
       );
     }
-    // Dev warning so developers notice before deploying
     console.warn(
-      "[config] NEXT_PUBLIC_GRAPH_URL is not set. Subgraph queries will fail.",
+      SUBGRAPH_REQUIRED
+        ? "[config] NEXT_PUBLIC_GRAPH_URL is not set. Subgraph queries will fail."
+        : "[config] NEXT_PUBLIC_GRAPH_URL is not set. Subgraph-backed analytics will be unavailable.",
     );
     return "";
   }
-  if (isProd && val.includes("/placeholder/")) {
+  if (isProd && SUBGRAPH_REQUIRED && val.includes("/placeholder/")) {
     throw new Error(
       "[config] NEXT_PUBLIC_GRAPH_URL contains a placeholder — set a real subgraph URL.",
     );

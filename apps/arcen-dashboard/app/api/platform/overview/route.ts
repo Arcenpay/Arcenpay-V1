@@ -5,6 +5,7 @@ import { FeeCollectorABI, TOKENS, getContractAddresses } from "@arcenpay/sdk";
 import { db } from "@/lib/db";
 import { isErrorResponse, requirePermission } from "@/lib/api-auth";
 import { getGraphUrl, getRpcUrl } from "@/lib/config";
+import { DEFAULT_CHAIN_ID, resolveEnvironmentChainId } from "@/lib/default-chain";
 
 const querySchema = z.object({
   chainId: z.coerce.number().int().positive().optional(),
@@ -19,10 +20,6 @@ const PROTOCOL_STATS_QUERY = `
     }
   }
 `;
-
-function resolveDefaultChainId(environmentMode: "DEVELOPMENT" | "PRODUCTION"): number {
-  return environmentMode === "PRODUCTION" ? 8453 : 11155111;
-}
 
 function decimalUsdcToMicroString(value: unknown): string | null {
   if (value == null) return null;
@@ -82,7 +79,7 @@ async function readProtocolFees(chainId: number): Promise<string | null> {
 
     const usdc =
       TOKENS[chainId as keyof typeof TOKENS]?.USDC ||
-      TOKENS[11155111 as keyof typeof TOKENS]?.USDC;
+      TOKENS[DEFAULT_CHAIN_ID as keyof typeof TOKENS]?.USDC;
     if (!usdc) return null;
 
     const rpcUrl = getRpcUrl(chainId);
@@ -129,8 +126,10 @@ export async function GET(request: NextRequest) {
 
   const environmentMode =
     parsed.data.environmentMode || team.environmentMode;
-  const chainId =
-    parsed.data.chainId || resolveDefaultChainId(environmentMode);
+  const chainId = resolveEnvironmentChainId(
+    environmentMode,
+    parsed.data.chainId,
+  );
 
   const [activePlans, invoiceTotals, invoiceRows, protocolStats, feesRaw] =
     await Promise.all([

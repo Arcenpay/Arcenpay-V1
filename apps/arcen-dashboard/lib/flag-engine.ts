@@ -16,20 +16,30 @@ import { getCachedFlag, setCachedFlag } from "@/lib/flag-cache";
 import { createPublicClient, http } from "viem";
 import { sepolia, baseSepolia, base } from "viem/chains";
 import { getContractAddresses } from "@arcenpay/sdk";
+import { getRpcUrl } from "@/lib/config";
+import { DEFAULT_CHAIN_ID } from "@/lib/default-chain";
 
-const CHAIN_ID = Number(process.env.CHAIN_ID ?? 11155111);
-const RPC_URL = process.env.RPC_URL ?? "";
+const viemClients = new Map<number, unknown>();
 
-// Lazy-initialized viem client for on-chain reads
+function resolveViemChain(chainId: number) {
+  return chainId === 8453 ? base : chainId === 84532 ? baseSepolia : sepolia;
+}
+
+// Lazy-initialized viem clients for on-chain reads keyed by chain.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-let _viemClient: any = null;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function getViemClient(): any {
-  if (!RPC_URL) return null;
-  if (_viemClient) return _viemClient;
-  const chain = CHAIN_ID === 8453 ? base : CHAIN_ID === 84532 ? baseSepolia : sepolia;
-  _viemClient = createPublicClient({ chain, transport: http(RPC_URL) });
-  return _viemClient;
+function getViemClient(chainId: number): any {
+  const rpcUrl = getRpcUrl(chainId);
+  if (!rpcUrl) return null;
+
+  const cached = viemClients.get(chainId);
+  if (cached) return cached;
+
+  const client = createPublicClient({
+    chain: resolveViemChain(chainId),
+    transport: http(rpcUrl),
+  });
+  viemClients.set(chainId, client);
+  return client;
 }
 
 // Minimal ABI subset for on-chain subscription lookup
@@ -63,11 +73,11 @@ async function resolveOnChainPlan(
   companyId: string,
   wallet: string,
 ): Promise<string | null> {
-  const client = getViemClient();
+  const client = getViemClient(DEFAULT_CHAIN_ID);
   if (!client) return null;
 
   try {
-    const contracts = getContractAddresses(CHAIN_ID);
+    const contracts = getContractAddresses(DEFAULT_CHAIN_ID);
     if (!contracts.subscriptionRegistry) return null;
 
     const tokenId = await client.readContract({

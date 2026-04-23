@@ -30,6 +30,7 @@ import {
   verifyAutopayPlanChange,
   verifyDirectErc20Transfer,
 } from "@/lib/onchain-payment-verification";
+import { SELF_SERVE_PLAN_CHANGES_ENABLED } from "@/lib/launch-flags";
 
 type SubscriptionTransition = {
   mode: "period_end_downgrade" | "cancel_at_period_end";
@@ -128,6 +129,16 @@ export async function OPTIONS() {
 }
 
 export async function POST(req: NextRequest) {
+  if (!SELF_SERVE_PLAN_CHANGES_ENABLED) {
+    return NextResponse.json(
+      {
+        error:
+          "Self-service plan changes are disabled for this launch. Start a new subscription through checkout or contact support for plan changes.",
+      },
+      { status: 403, headers: corsHeaders() },
+    );
+  }
+
   const token = extractEmbedAccessToken(req);
   if (!token)
     return NextResponse.json(

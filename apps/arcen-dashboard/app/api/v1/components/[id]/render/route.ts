@@ -17,6 +17,7 @@ import {
 import { db } from "@/lib/db";
 import { resolveEntitlementResults } from "@/lib/entitlements";
 import { getRpcUrl } from "@/lib/config";
+import { DEFAULT_CHAIN_ID } from "@/lib/default-chain";
 import {
   extractEmbedAccessToken,
   resolveEmbedAccessToken,
@@ -325,12 +326,7 @@ export async function GET(
         );
       }
 
-      const configuredChainId = Number(
-        process.env.MEAP_DEFAULT_CHAIN_ID ||
-          process.env.CHAIN_ID ||
-          process.env.NEXT_PUBLIC_CHAIN_ID ||
-          "11155111",
-      );
+      const configuredChainId = DEFAULT_CHAIN_ID;
 
       paymentMethod = {
         walletAddress: company.walletAddress ?? user?.walletAddress ?? null,
@@ -402,12 +398,7 @@ export async function GET(
 
   if (recoverablePlans.length > 0) {
     try {
-      const configuredChainId = Number(
-        process.env.MEAP_DEFAULT_CHAIN_ID ||
-          process.env.CHAIN_ID ||
-          process.env.NEXT_PUBLIC_CHAIN_ID ||
-          "11155111",
-      );
+      const configuredChainId = DEFAULT_CHAIN_ID;
       const contracts = getContractAddresses(configuredChainId);
       const planFactoryAddress = contracts.planFactory as `0x${string}`;
 

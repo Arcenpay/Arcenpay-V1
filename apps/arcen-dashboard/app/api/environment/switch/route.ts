@@ -17,6 +17,8 @@ import { db } from "@/lib/db";
 import { requirePermission, isErrorResponse } from "@/lib/api-auth";
 import { writeAuditEvent } from "@/lib/audit";
 import { FACILITATOR_URL, GRAPH_URL, getRpcUrl } from "@/lib/config";
+import { resolveEnvironmentChainId } from "@/lib/default-chain";
+import { SUBGRAPH_REQUIRED } from "@/lib/launch-flags";
 
 const switchSchema = z.object({
   environmentMode: z.enum(["DEVELOPMENT", "PRODUCTION"]),
@@ -103,8 +105,10 @@ export async function POST(request: NextRequest) {
   }
 
   const targetChainId =
-    parsed.data.chainId ||
-    (parsed.data.environmentMode === "PRODUCTION" ? 8453 : 11155111);
+    resolveEnvironmentChainId(
+      parsed.data.environmentMode,
+      parsed.data.chainId,
+    );
 
   let addresses: ReturnType<typeof getContractAddresses>;
   try {
@@ -131,7 +135,7 @@ export async function POST(request: NextRequest) {
 
   if (parsed.data.environmentMode === "PRODUCTION") {
     const missingServices: string[] = [];
-    if (!GRAPH_URL) missingServices.push("NEXT_PUBLIC_GRAPH_URL");
+    if (SUBGRAPH_REQUIRED && !GRAPH_URL) missingServices.push("NEXT_PUBLIC_GRAPH_URL");
     if (!FACILITATOR_URL) missingServices.push("FACILITATOR_URL");
     if (missingServices.length > 0) {
       return NextResponse.json(

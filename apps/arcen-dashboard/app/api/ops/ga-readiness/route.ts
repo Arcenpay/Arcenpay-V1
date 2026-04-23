@@ -25,6 +25,7 @@ import {
 } from "@/lib/config";
 import { checkSubgraphHealth } from "@/lib/graphql";
 import { getBillingReconciliationSummary } from "@/lib/billing-reconciliation";
+import { SUBGRAPH_REQUIRED } from "@/lib/launch-flags";
 
 interface Gate {
   id: string;
@@ -53,7 +54,7 @@ export async function GET(request: NextRequest) {
 
   // ── Gate 1: Required env vars ────────────────────────────────
   const missingEnvVars: string[] = [];
-  if (!GRAPH_URL) missingEnvVars.push("NEXT_PUBLIC_GRAPH_URL");
+  if (SUBGRAPH_REQUIRED && !GRAPH_URL) missingEnvVars.push("NEXT_PUBLIC_GRAPH_URL");
   if (!RESEND_API_KEY) missingEnvVars.push("RESEND_API_KEY");
   if (!SIWE_JWT_SECRET || SIWE_JWT_SECRET === "dev_siwe_jwt_secret_not_for_production") {
     missingEnvVars.push("SIWE_JWT_SECRET");
@@ -85,22 +86,30 @@ export async function GET(request: NextRequest) {
   });
 
   // ── Gate 3: Subgraph health ───────────────────────────────────
-  const subgraphHealth = await checkSubgraphHealth().catch(() => ({
-    healthy: false,
-    lagSeconds: null,
-    latestBlock: null,
-    error: "health check threw",
-  }));
+  const subgraphHealth = SUBGRAPH_REQUIRED
+    ? await checkSubgraphHealth().catch(() => ({
+        healthy: false,
+        lagSeconds: null,
+        latestBlock: null,
+        error: "health check threw",
+      }))
+    : { healthy: true, lagSeconds: null, latestBlock: null, error: undefined };
   const subgraphLagOk = subgraphHealth.lagSeconds == null || subgraphHealth.lagSeconds < 120;
   gates.push({
     id: "subgraph",
-    description: "Subgraph is reachable, healthy, and within 120s of chain tip",
+    description: SUBGRAPH_REQUIRED
+      ? "Subgraph is reachable, healthy, and within 120s of chain tip"
+      : "Subgraph is optional for this launch profile",
     passed: subgraphHealth.healthy && subgraphLagOk,
-    detail: subgraphHealth.error
+    detail: SUBGRAPH_REQUIRED
+      ? subgraphHealth.error
       ? subgraphHealth.error
       : subgraphHealth.lagSeconds != null
         ? `Lag: ${subgraphHealth.lagSeconds}s, latestBlock: ${subgraphHealth.latestBlock}`
-        : "Lag unknown",
+        : "Lag unknown"
+      : GRAPH_URL
+        ? "Configured but not required"
+        : "Skipped for MVP launch profile",
   });
 
   // ── Gate 4: Facilitator health ───────────────────────────────

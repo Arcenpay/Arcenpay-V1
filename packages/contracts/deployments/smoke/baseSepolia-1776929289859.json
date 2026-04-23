@@ -1,0 +1,20 @@
+{
+  "network": "baseSepolia",
+  "chainId": 84532,
+  "signer": "0x38f62CCfD6F771eF9E48e3bb86a3E0413aE5319B",
+  "subscriberAddress": "0xC51617a85C13591400b100dDFC354682B7B00c30",
+  "startedAt": "2026-04-23T07:27:58.601Z",
+  "checks": [
+    "Signer already registered as provider",
+    "Created plan 3",
+    "Minted subscription token 2",
+    "Renewed subscription",
+    "Cancelled subscription (cancelled=false isValid=true)"
+  ],
+  "warnings": [
+    "Skipped session lifecycle. Set SMOKE_SESSION_DEPOSIT_ATOMIC to run fund/topup/settle/withdraw checks."
+  ],
+  "completedAt": "2026-04-23T07:28:09.859Z",
+  "planId": "3",
+  "tokenId": "2"
+}

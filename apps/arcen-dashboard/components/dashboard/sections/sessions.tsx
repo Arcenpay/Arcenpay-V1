@@ -55,6 +55,7 @@ import {
   shortHash,
 } from "@/lib/format";
 import { useEnvironment } from "@/contexts/environment-context";
+import { DEFAULT_TESTNET_CHAIN_ID } from "@/lib/default-chain";
 
 interface SessionRow {
   id: string;
@@ -148,7 +149,7 @@ export function SessionsSection() {
     ? walletChainId
     : envMode === "PRODUCTION"
       ? 8453
-      : 11155111;
+      : DEFAULT_TESTNET_CHAIN_ID;
   const sessionFundingToken = getUsdcAddress(walletChainId);
 
   const loadSessionsData = useCallback(async () => {

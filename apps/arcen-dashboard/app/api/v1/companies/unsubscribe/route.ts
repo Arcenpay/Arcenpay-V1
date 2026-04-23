@@ -18,6 +18,7 @@ import {
   normalizeTxHash,
   verifySubscriptionCancellation,
 } from "@/lib/onchain-payment-verification";
+import { SELF_SERVE_CANCELLATION_ENABLED } from "@/lib/launch-flags";
 
 function asRecord(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
@@ -37,6 +38,16 @@ export async function OPTIONS() {
 }
 
 export async function POST(req: NextRequest) {
+  if (!SELF_SERVE_CANCELLATION_ENABLED) {
+    return NextResponse.json(
+      {
+        error:
+          "Self-service cancellation is disabled for this launch. Contact support to cancel or downgrade your subscription.",
+      },
+      { status: 403, headers: corsHeaders() },
+    );
+  }
+
   const token = extractEmbedAccessToken(req);
   if (!token)
     return NextResponse.json(

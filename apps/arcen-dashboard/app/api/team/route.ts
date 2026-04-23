@@ -2,6 +2,7 @@
 //  Dashboard API — Team Info
 //  GET  /api/team   — get current team info + members
 //  PUT  /api/team   — update team name (OWNER/ADMIN only)
+//  PATCH /api/team  — update team environment mode (OWNER/ADMIN only)
 // ============================================================
 
 import { NextRequest, NextResponse } from "next/server";
@@ -71,6 +72,10 @@ const PutSchema = z.object({
   name: z.string().min(1).max(64),
 });
 
+const PatchSchema = z.object({
+  environmentMode: z.enum(["DEVELOPMENT", "PRODUCTION"]),
+});
+
 export async function PUT(req: NextRequest) {
   try {
     const session = await getSession();
@@ -133,6 +138,70 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ id: team.id, name: team.name, slug: team.slug });
   } catch (err) {
     console.error("[api/team PUT]", err);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 },
+    );
+  }
+}
+
+export async function PATCH(req: NextRequest) {
+  try {
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const teamCtx = await resolveTeamContext(session);
+    if (!teamCtx) {
+      return NextResponse.json({ error: "No team found" }, { status: 403 });
+    }
+
+    if (teamCtx.teamRole !== "OWNER" && teamCtx.teamRole !== "ADMIN") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const body = await req.json();
+    const parsed = PatchSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        {
+          error: "Invalid request",
+          details: parsed.error.flatten().fieldErrors,
+        },
+        { status: 400 },
+      );
+    }
+
+    const existing = await db.team.findUnique({
+      where: { id: teamCtx.teamId },
+      select: { id: true, environmentMode: true },
+    });
+    if (!existing) {
+      return NextResponse.json({ error: "Team not found" }, { status: 404 });
+    }
+
+    const team = await db.team.update({
+      where: { id: teamCtx.teamId },
+      data: { environmentMode: parsed.data.environmentMode },
+      select: { id: true, environmentMode: true },
+    });
+
+    await writeAuditEvent({
+      request: req,
+      teamId: teamCtx.teamId,
+      userId: teamCtx.userId,
+      walletAddress: teamCtx.walletAddress,
+      action: "team.environment.update",
+      resourceType: "Team",
+      resourceId: team.id,
+      beforeData: existing,
+      afterData: team,
+    });
+
+    return NextResponse.json(team);
+  } catch (err) {
+    console.error("[api/team PATCH]", err);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 },

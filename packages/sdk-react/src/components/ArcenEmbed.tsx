@@ -109,6 +109,11 @@ type PortalAction =
   | { type: "PROCESSING_DONE"; flashMsg?: string }
   | { type: "PROCESSING_ERR"; error: string };
 
+const PORTAL_SELF_SERVE_PLAN_CHANGES_ENABLED =
+  process.env.NEXT_PUBLIC_ARCENPAY_ENABLE_PORTAL_PLAN_CHANGES === "true";
+const PORTAL_SELF_SERVE_CANCELLATION_ENABLED =
+  process.env.NEXT_PUBLIC_ARCENPAY_ENABLE_PORTAL_CANCELLATION === "true";
+
 const initialState: PortalState = {
   data: null,
   loading: true,
@@ -932,6 +937,8 @@ export function renderElement(
   tokens: Tokens,
   onChangePlan: () => void,
   onUnsubscribe: () => void,
+  allowPlanChanges = true,
+  allowCancellation = true,
 ): React.ReactNode {
   const prop = (key: string) =>
     el[key] ?? (el.config as Record<string, unknown> | undefined)?.[key];
@@ -1022,9 +1029,11 @@ export function renderElement(
                 )}
               </div>
             </div>
-            <PrimaryButton tokens={tokens} onClick={onChangePlan} fullWidth>
-              Change plan
-            </PrimaryButton>
+            {allowPlanChanges ? (
+              <PrimaryButton tokens={tokens} onClick={onChangePlan} fullWidth>
+                Change plan
+              </PrimaryButton>
+            ) : null}
           </div>
         </div>
       );
@@ -1619,7 +1628,7 @@ export function renderElement(
     case "unsubscribe": {
       const plan = data.activePlan;
       const isPaidPlan = plan && parseFloat(String(plan.price)) > 0;
-      if (!isPaidPlan) return null;
+      if (!isPaidPlan || !allowCancellation) return null;
       // Rendered inside left card by PortalContent — standalone fallback:
       return (
         <div key={index} style={{ marginBottom: 12 }}>
@@ -1904,12 +1913,16 @@ function PortalContent({
   flashMsg,
   onChangePlan,
   onUnsubscribe,
+  allowPlanChanges,
+  allowCancellation,
 }: {
   data: ComponentRenderData;
   tokens: Tokens;
   flashMsg: string | null;
   onChangePlan: () => void;
   onUnsubscribe: () => void;
+  allowPlanChanges: boolean;
+  allowCancellation: boolean;
 }) {
   const elements = data.component.elements as Array<
     ComponentElement & Record<string, unknown>
@@ -1919,7 +1932,8 @@ function PortalContent({
   const hasPlanManager = elements.some((e) => e.type === "planManager");
   const hasIncluded = elements.some((e) => e.type === "includedFeatures");
   const hasMetered = elements.some((e) => e.type === "meteredFeatures");
-  const hasUnsubscribe = elements.some((e) => e.type === "unsubscribe");
+  const hasUnsubscribe =
+    allowCancellation && elements.some((e) => e.type === "unsubscribe");
   const billingTypes = [
     "nextBillDue",
     "paymentMethod",
@@ -1997,7 +2011,16 @@ function PortalContent({
 
       {/* Custom / full-width elements (text, button, plansTable) */}
       {customEls.map((el, i) =>
-        renderElement(el, i, data, tokens, onChangePlan, onUnsubscribe),
+        renderElement(
+          el,
+          i,
+          data,
+          tokens,
+          onChangePlan,
+          onUnsubscribe,
+          allowPlanChanges,
+          allowCancellation,
+        ),
       )}
 
       {/* Main layout */}
@@ -2076,9 +2099,15 @@ function PortalContent({
                     )}
                   </div>
                 </div>
-                <PrimaryButton tokens={tokens} onClick={onChangePlan} fullWidth>
-                  Change plan
-                </PrimaryButton>
+                {allowPlanChanges ? (
+                  <PrimaryButton
+                    tokens={tokens}
+                    onClick={onChangePlan}
+                    fullWidth
+                  >
+                    Change plan
+                  </PrimaryButton>
+                ) : null}
               </div>
             )}
             {hasIncluded && (
@@ -2172,6 +2201,8 @@ function PortalContent({
                 tokens,
                 onChangePlan,
                 onUnsubscribe,
+                allowPlanChanges,
+                allowCancellation,
               ),
             )}
             {hasUnsubscribe && isPaid && (
@@ -2273,13 +2304,15 @@ function PortalContent({
                         )}
                       </div>
                     </div>
-                    <PrimaryButton
-                      tokens={tokens}
-                      onClick={onChangePlan}
-                      fullWidth
-                    >
-                      Change plan
-                    </PrimaryButton>
+                    {allowPlanChanges ? (
+                      <PrimaryButton
+                        tokens={tokens}
+                        onClick={onChangePlan}
+                        fullWidth
+                      >
+                        Change plan
+                      </PrimaryButton>
+                    ) : null}
                   </div>
                 )}
                 {hasIncluded && (
@@ -2396,6 +2429,8 @@ function PortalContent({
                 tokens,
                 onChangePlan,
                 onUnsubscribe,
+                allowPlanChanges,
+                allowCancellation,
               ),
             )}
           </div>
@@ -2485,13 +2520,15 @@ function PortalContent({
                         )}
                       </div>
                     </div>
-                    <PrimaryButton
-                      tokens={tokens}
-                      onClick={onChangePlan}
-                      fullWidth
-                    >
-                      Change plan
-                    </PrimaryButton>
+                    {allowPlanChanges ? (
+                      <PrimaryButton
+                        tokens={tokens}
+                        onClick={onChangePlan}
+                        fullWidth
+                      >
+                        Change plan
+                      </PrimaryButton>
+                    ) : null}
                   </div>
                 )}
 
@@ -2663,6 +2700,8 @@ function PortalContent({
                     tokens,
                     onChangePlan,
                     onUnsubscribe,
+                    allowPlanChanges,
+                    allowCancellation,
                   ),
                 )}
                 {/* Branding */}
@@ -5430,6 +5469,29 @@ export function ArcenEmbed({
     ...style,
   };
 
+  useEffect(() => {
+    if (
+      view === "unsubscribe" &&
+      !PORTAL_SELF_SERVE_CANCELLATION_ENABLED
+    ) {
+      dispatch({
+        type: "GOTO_PORTAL",
+        flashMsg:
+          "Self-serve cancellation is disabled for this launch. Contact support to cancel or downgrade.",
+      });
+    }
+  }, [view]);
+
+  const handleOpenCheckout = useCallback(() => {
+    if (!PORTAL_SELF_SERVE_PLAN_CHANGES_ENABLED) return;
+    dispatch({ type: "OPEN_CHECKOUT" });
+  }, []);
+
+  const handleOpenUnsubscribe = useCallback(() => {
+    if (!PORTAL_SELF_SERVE_CANCELLATION_ENABLED) return;
+    dispatch({ type: "OPEN_UNSUBSCRIBE" });
+  }, []);
+
   return (
     <div ref={containerRef} className={className} style={containerStyle}>
       {view === "portal" && (
@@ -5437,8 +5499,10 @@ export function ArcenEmbed({
           data={data}
           tokens={tokens}
           flashMsg={flashMsg}
-          onChangePlan={() => dispatch({ type: "OPEN_CHECKOUT" })}
-          onUnsubscribe={() => dispatch({ type: "OPEN_UNSUBSCRIBE" })}
+          onChangePlan={handleOpenCheckout}
+          onUnsubscribe={handleOpenUnsubscribe}
+          allowPlanChanges={PORTAL_SELF_SERVE_PLAN_CHANGES_ENABLED}
+          allowCancellation={PORTAL_SELF_SERVE_CANCELLATION_ENABLED}
         />
       )}
       {view === "checkout" && (
