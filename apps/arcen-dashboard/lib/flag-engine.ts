@@ -52,6 +52,13 @@ const SUBSCRIPTION_REGISTRY_ABI = [
     outputs: [{ name: "tokenId", type: "uint256" }],
   },
   {
+    name: "hasActiveSubscription",
+    type: "function",
+    stateMutability: "view",
+    inputs: [{ name: "wallet", type: "address" }],
+    outputs: [{ name: "active", type: "bool" }],
+  },
+  {
     name: "getPlanFeatures",
     type: "function",
     stateMutability: "view",
@@ -80,14 +87,22 @@ async function resolveOnChainPlan(
     const contracts = getContractAddresses(DEFAULT_CHAIN_ID);
     if (!contracts.subscriptionRegistry) return null;
 
-    const tokenId = await client.readContract({
-      address: contracts.subscriptionRegistry as `0x${string}`,
-      abi: SUBSCRIPTION_REGISTRY_ABI,
-      functionName: "getWalletSubscription",
-      args: [wallet as `0x${string}`],
-    });
+    const [tokenId, hasActiveSubscription] = await Promise.all([
+      client.readContract({
+        address: contracts.subscriptionRegistry as `0x${string}`,
+        abi: SUBSCRIPTION_REGISTRY_ABI,
+        functionName: "getWalletSubscription",
+        args: [wallet as `0x${string}`],
+      }),
+      client.readContract({
+        address: contracts.subscriptionRegistry as `0x${string}`,
+        abi: SUBSCRIPTION_REGISTRY_ABI,
+        functionName: "hasActiveSubscription",
+        args: [wallet as `0x${string}`],
+      }),
+    ]);
 
-    if (!tokenId || tokenId === 0n) return null;
+    if (!tokenId || tokenId === 0n || hasActiveSubscription !== true) return null;
 
     const [onChainPlanId] = await client.readContract({
       address: contracts.subscriptionRegistry as `0x${string}`,
@@ -169,6 +184,7 @@ export async function resolveCompany(
           status: true,
           catalogPlanId: true,
           currentPeriodEnd: true,
+          graceEndsAt: true,
         },
       },
     },
@@ -181,11 +197,22 @@ export async function resolveCompany(
     .update({ where: { id: company.id }, data: { lastSeenAt: new Date() } })
     .catch(() => {});
 
+  const now = new Date();
+  const subscriptionHasPaidAccess =
+    company.subscriptionState?.status === "ACTIVE" &&
+    (!company.subscriptionState.currentPeriodEnd ||
+      company.subscriptionState.currentPeriodEnd > now);
+  const subscriptionHasGraceAccess =
+    company.subscriptionState?.status === "PAST_DUE" &&
+    Boolean(company.subscriptionState.graceEndsAt) &&
+    company.subscriptionState.graceEndsAt! > now;
+
   let activePlanId =
-    company.subscriptionState?.status === "ACTIVE" ||
-    company.subscriptionState?.status === "PAST_DUE"
-      ? company.subscriptionState.catalogPlanId ?? company.activePlanId
-      : company.activePlanId;
+    subscriptionHasPaidAccess || subscriptionHasGraceAccess
+      ? company.subscriptionState?.catalogPlanId ?? company.activePlanId
+      : company.subscriptionState
+        ? null
+        : company.activePlanId;
 
   // On-chain fallback: if activePlanId is null but we have a wallet, try to resolve from chain
   if (!activePlanId && keys.wallet && !company.subscriptionState) {

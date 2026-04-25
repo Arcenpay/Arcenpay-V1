@@ -2,6 +2,8 @@ import { db } from "@/lib/db";
 import { toPrismaJson } from "@/lib/prisma-json";
 import { toSix } from "@/lib/invoices";
 
+type InvoiceBalanceDb = Pick<typeof db, "invoice">;
+
 function normalizeWallet(value?: string | null): string | null {
   return value?.trim() ? value.trim().toLowerCase() : null;
 }
@@ -132,8 +134,11 @@ export async function consumeBillingCredit(input: {
   return { appliedAmount, balance: updated };
 }
 
-export async function recomputeInvoiceBalance(invoiceId: string) {
-  const invoice = await db.invoice.findUnique({
+export async function recomputeInvoiceBalance(
+  invoiceId: string,
+  client: InvoiceBalanceDb = db,
+) {
+  const invoice = await client.invoice.findUnique({
     where: { id: invoiceId },
     select: {
       id: true,
@@ -153,7 +158,7 @@ export async function recomputeInvoiceBalance(invoiceId: string) {
   const nextStatus =
     outstanding <= 0 && invoice.status !== "VOID" ? "PAID" : invoice.status;
 
-  return db.invoice.update({
+  return client.invoice.update({
     where: { id: invoiceId },
     data: {
       amountOutstanding: toSix(outstanding),
@@ -167,21 +172,21 @@ export async function recomputeInvoiceBalance(invoiceId: string) {
 export async function applyInvoicePayment(input: {
   invoiceId: string;
   amount: number;
-}) {
-  const invoice = await db.invoice.findUnique({
+}, client: InvoiceBalanceDb = db) {
+  const invoice = await client.invoice.findUnique({
     where: { id: input.invoiceId },
     select: { id: true, amountPaid: true },
   });
   if (!invoice) return null;
 
-  await db.invoice.update({
+  await client.invoice.update({
     where: { id: invoice.id },
     data: {
       amountPaid: toSix(Number(invoice.amountPaid) + input.amount),
     },
   });
 
-  return recomputeInvoiceBalance(invoice.id);
+  return recomputeInvoiceBalance(invoice.id, client);
 }
 
 export async function applyInvoiceCredit(input: {

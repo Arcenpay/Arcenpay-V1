@@ -14,6 +14,7 @@ import {
   resolveEmbedAccessToken,
 } from "@/lib/embed-access-token";
 import { toPrismaJson } from "@/lib/prisma-json";
+import { allocateInvoiceNumber } from "@/lib/invoices";
 import {
   incrementCouponRedemption,
   normalizeBillingPeriod,
@@ -21,19 +22,30 @@ import {
   resolvePlanAmountMicros,
   resolveCouponQuote,
 } from "@/lib/catalog-billing";
-import { upsertSubscriptionLedgerState } from "@/lib/billing-ledger";
+import {
+  recordSuccessfulPayment,
+  upsertSubscriptionLedgerState,
+} from "@/lib/billing-ledger";
 import { recordBillingAdjustment } from "@/lib/billing-adjustments";
-import { postBillingCredit } from "@/lib/billing-balances";
 import { computeProrationQuote } from "@/lib/billing-proration";
 import {
   normalizeTxHash,
   verifyAutopayPlanChange,
   verifyDirectErc20Transfer,
+  verifySubscriptionRegistryPlanChange,
 } from "@/lib/onchain-payment-verification";
 import { SELF_SERVE_PLAN_CHANGES_ENABLED } from "@/lib/launch-flags";
 
+type PlanRouteDb = Pick<
+  typeof db,
+  "team" | "invoice" | "arcenCompany" | "subscriptionState" | "payment" | "paymentAttempt" | "billingAdjustment"
+>;
+
 type SubscriptionTransition = {
-  mode: "period_end_downgrade" | "cancel_at_period_end";
+  mode:
+    | "period_end_downgrade"
+    | "cancel_at_period_end"
+    | "next_renewal_on_chain";
   targetPlanId: string | null;
   targetPlanName: string | null;
   previousPlanId: string | null;
@@ -88,6 +100,133 @@ function corsHeaders() {
     "Access-Control-Allow-Methods": "POST,OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type,Authorization",
   };
+}
+
+function microsToAmount(value: bigint | number): number {
+  return Number(value) / 1_000_000;
+}
+
+function microsToAmountString(value: bigint | number): string {
+  if (typeof value === "number") return value.toFixed(6);
+
+  const sign = value < 0n ? "-" : "";
+  const absolute = value < 0n ? -value : value;
+  const whole = absolute / 1_000_000n;
+  const fraction = (absolute % 1_000_000n).toString().padStart(6, "0");
+  return `${sign}${whole.toString()}.${fraction}`;
+}
+
+function createProrationSummary(params: {
+  currentPlanName: string;
+  targetPlanName: string;
+  currentPlanAmountMicros: bigint;
+  targetPlanAmountMicros: bigint;
+  currentPeriodStart: Date;
+  currentPeriodEnd: Date;
+  effectiveAt: Date;
+}) {
+  const quote = computeProrationQuote({
+    currentAmountMicros: params.currentPlanAmountMicros,
+    targetAmountMicros: params.targetPlanAmountMicros,
+    currentPeriodStart: params.currentPeriodStart,
+    currentPeriodEnd: params.currentPeriodEnd,
+    effectiveAt: params.effectiveAt,
+  });
+  const amountDueMicros = quote.deltaMicros > 0n ? quote.deltaMicros : 0n;
+  const unusedCreditMicros = -quote.currentRemainingMicros;
+
+  return {
+    quote,
+    amountDueMicros,
+    response: {
+      currency: "USDC",
+      currentPlanName: params.currentPlanName,
+      targetPlanName: params.targetPlanName,
+      currentPeriodStart: params.currentPeriodStart.toISOString(),
+      currentPeriodEnd: params.currentPeriodEnd.toISOString(),
+      effectiveAt: params.effectiveAt.toISOString(),
+      totalPeriodSeconds: quote.totalPeriodSeconds,
+      remainingSeconds: quote.remainingSeconds,
+      remainingRatio: quote.remainingRatio,
+      newPlanRemainingCharge: microsToAmountString(
+        quote.targetRemainingMicros,
+      ),
+      unusedOldPlanCredit: microsToAmountString(unusedCreditMicros),
+      amountDue: microsToAmountString(amountDueMicros),
+      amountPaid: microsToAmountString(amountDueMicros),
+      amountRemaining: "0.000000",
+    },
+  };
+}
+
+async function createProrationInvoice(input: {
+  teamId: string;
+  companyId: string;
+  customerEmail?: string | null;
+  customerWallet?: string | null;
+  planId: string;
+  currentPlanName: string;
+  targetPlanName: string;
+  targetRemainingMicros: bigint;
+  currentRemainingMicros: bigint;
+  amountDueMicros: bigint;
+  issuedAt: Date;
+  metadata?: Record<string, unknown>;
+}, client: Pick<PlanRouteDb, "team" | "invoice"> = db) {
+  const team = await client.team.findUnique({
+    where: { id: input.teamId },
+    select: { slug: true, invoicePrefix: true, environmentMode: true },
+  });
+  if (!team) throw new Error("Team not found");
+
+  const prefix = team.invoicePrefix || `INV-${team.slug.toUpperCase()}`;
+  const number = await allocateInvoiceNumber(input.teamId, prefix, input.issuedAt);
+  const targetCharge = microsToAmountString(input.targetRemainingMicros);
+  const unusedCredit = microsToAmountString(-input.currentRemainingMicros);
+  const amountDue = microsToAmountString(input.amountDueMicros);
+
+  return client.invoice.create({
+    data: {
+      teamId: input.teamId,
+      environmentMode: team.environmentMode,
+      status: "ISSUED",
+      number,
+      currency: "USDC",
+      customerEmail: input.customerEmail ?? null,
+      customerWallet: input.customerWallet?.toLowerCase() ?? null,
+      subtotal: amountDue,
+      taxTotal: "0.000000",
+      total: amountDue,
+      amountPaid: "0.000000",
+      amountCredited: "0.000000",
+      amountOutstanding: amountDue,
+      issuedAt: input.issuedAt,
+      planId: input.planId,
+      metadata: toPrismaJson(input.metadata ?? {}),
+      lineItems: {
+        create: [
+          {
+            description: `Remaining time on ${input.targetPlanName}`,
+            quantity: 1,
+            unitAmount: targetCharge,
+            taxRate: "0.0000",
+            lineSubtotal: targetCharge,
+            lineTax: "0.000000",
+            lineTotal: targetCharge,
+          },
+          {
+            description: `Unused time on ${input.currentPlanName}`,
+            quantity: 1,
+            unitAmount: unusedCredit,
+            taxRate: "0.0000",
+            lineSubtotal: unusedCredit,
+            lineTax: "0.000000",
+            lineTotal: unusedCredit,
+          },
+        ],
+      },
+    },
+  });
 }
 
 async function verifySelfServePlanPayment(params: {
@@ -170,6 +309,10 @@ export async function POST(req: NextRequest) {
     planId?: string;
     billingPeriod?: string;
     txHash?: string;
+    planChangeTxHash?: string;
+    autopayConfigTxHash?: string;
+    accessChangeTxHash?: string;
+    paymentTxHash?: string;
     scheduleAtPeriodEnd?: boolean;
     couponCode?: string;
     customerEmail?: string;
@@ -187,6 +330,10 @@ export async function POST(req: NextRequest) {
     planId,
     billingPeriod,
     txHash,
+    planChangeTxHash,
+    autopayConfigTxHash,
+    accessChangeTxHash,
+    paymentTxHash,
     scheduleAtPeriodEnd,
     couponCode,
     customerEmail,
@@ -382,16 +529,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (shouldScheduleDowngrade || scheduleAtPeriodEnd) {
-      return NextResponse.json(
-        {
-          error:
-            "Scheduled paid plan changes are not enabled yet. Execute the authoritative on-chain plan change when you are ready for the new plan to take effect.",
-        },
-        { status: 409, headers: corsHeaders() },
-      );
-    }
-
     if (normalizedCouponCode) {
       return NextResponse.json(
         {
@@ -402,18 +539,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (
-      targetPlanAmountMicros > currentPlanAmountMicros &&
-      quotedAmountMicros !== targetPlanAmountMicros
-    ) {
-      return NextResponse.json(
-        {
-          error:
-            "The quoted amount does not match the canonical plan amount. Refresh billing state and try again.",
-        },
-        { status: 409, headers: corsHeaders() },
-      );
-    }
   }
 
   if (isDowngrade && (catalogConfig?.disallowSelfServiceDowngrade ?? false)) {
@@ -488,8 +613,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const normalizedTxHash = normalizeTxHash(txHash);
-    if (!normalizedTxHash) {
+    const normalizedAutopayConfigTxHash = normalizeTxHash(
+      autopayConfigTxHash ?? planChangeTxHash ?? txHash,
+    );
+    if (!normalizedAutopayConfigTxHash) {
       return NextResponse.json(
         {
           error:
@@ -499,19 +626,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (consumedPaymentTxHashes.includes(normalizedTxHash)) {
+    if (consumedPaymentTxHashes.includes(normalizedAutopayConfigTxHash)) {
       return NextResponse.json(
         {
           error:
-            "This on-chain plan change transaction hash has already been used for a previous plan change.",
+            "This autopay config transaction hash has already been used for a previous plan change.",
         },
         { status: 409, headers: corsHeaders() },
       );
     }
 
+    const isUpgrade = targetPlanAmountMicros > currentPlanAmountMicros;
     const verification = await verifyAutopayPlanChange({
       paymentAccount: companyPaymentAccount,
-      txHash: normalizedTxHash,
+      txHash: normalizedAutopayConfigTxHash,
       expectedOnChainPlanId: plan.onChainPlanId!,
     });
     if (!verification.ok) {
@@ -521,122 +649,390 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (targetPlanAmountMicros > currentPlanAmountMicros) {
-      return NextResponse.json(
-        {
-          error:
-            "Price-increasing paid plan changes still require the dedicated on-chain upgrade charge flow. Equal-price and downgrade changes are supported now; upgrades remain blocked until charge+plan-change execute in one authoritative step.",
-        },
-        { status: 409, headers: corsHeaders() },
-      );
-    }
+    if (isUpgrade) {
+      const currentPeriodStart = company.subscriptionState?.currentPeriodStart;
+      const currentPeriodEnd = new Date(verification.currentPeriodEnd);
+      const effectiveAt = new Date();
 
-    let creditedAmount = 0;
-    const downgradePeriodStart = company.subscriptionState?.currentPeriodStart;
-    const downgradePeriodEnd = company.subscriptionState?.currentPeriodEnd;
-    if (targetPlanAmountMicros < currentPlanAmountMicros) {
-      if (!downgradePeriodStart || !downgradePeriodEnd) {
+      if (
+        !currentPeriodStart ||
+        Number.isNaN(currentPeriodEnd.getTime()) ||
+        currentPeriodEnd <= currentPeriodStart
+      ) {
         return NextResponse.json(
           {
             error:
-              "Cannot compute downgrade credit because the current billing period is missing from subscription state.",
+              "The current billing period is required before an upgrade can be prorated.",
           },
           { status: 409, headers: corsHeaders() },
         );
       }
 
-      const proration = computeProrationQuote({
-        currentAmountMicros: BigInt(currentPlanAmountMicros),
-        targetAmountMicros: BigInt(targetPlanAmountMicros),
-        currentPeriodStart: downgradePeriodStart,
-        currentPeriodEnd: downgradePeriodEnd,
+      const proration = createProrationSummary({
+        currentPlanName: currentPlan?.name ?? "Current plan",
+        targetPlanName: plan.name,
+        currentPlanAmountMicros: BigInt(currentPlanAmountMicros),
+        targetPlanAmountMicros: BigInt(targetPlanAmountMicros),
+        currentPeriodStart,
+        currentPeriodEnd,
+        effectiveAt,
       });
 
-      if (proration.direction === "DOWNGRADE_PRORATION_CREDIT") {
-        creditedAmount =
-          Number(proration.deltaMicros < 0n ? -proration.deltaMicros : proration.deltaMicros) /
-          1_000_000;
+      const normalizedPaymentTxHash = normalizeTxHash(paymentTxHash);
+      const normalizedAccessChangeTxHash = normalizeTxHash(
+        accessChangeTxHash ?? planChangeTxHash,
+      );
+      if (proration.amountDueMicros > 0n && !normalizedPaymentTxHash) {
+        return NextResponse.json(
+          {
+            error:
+              "Immediate upgrades require a confirmed prorated payment transaction hash.",
+            data: {
+              mode: "immediate_prorated_upgrade",
+              proration: proration.response,
+            },
+          },
+          { status: 400, headers: corsHeaders() },
+        );
       }
+
+      if (!normalizedAccessChangeTxHash) {
+        return NextResponse.json(
+          {
+            error:
+              "Immediate upgrades require the authorized biller SubscriptionRegistry.changePlan transaction hash.",
+            data: {
+              mode: "immediate_prorated_upgrade",
+              proration: proration.response,
+            },
+          },
+          { status: 400, headers: corsHeaders() },
+        );
+      }
+
+      if (
+        normalizedPaymentTxHash &&
+        consumedPaymentTxHashes.includes(normalizedPaymentTxHash)
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "This prorated payment transaction hash has already been used for a previous plan change.",
+          },
+          { status: 409, headers: corsHeaders() },
+        );
+      }
+
+      if (consumedPaymentTxHashes.includes(normalizedAccessChangeTxHash)) {
+        return NextResponse.json(
+          {
+            error:
+              "This subscription access-change transaction hash has already been used for a previous plan change.",
+          },
+          { status: 409, headers: corsHeaders() },
+        );
+      }
+
+      if (normalizedPaymentTxHash && proration.amountDueMicros > 0n) {
+        const paymentCheck = await verifyDirectErc20Transfer({
+          acceptedToken: verification.acceptedToken,
+          txHash: normalizedPaymentTxHash,
+          expectedAmountAtomic: proration.amountDueMicros,
+          recipientWallet: verification.merchantWallet,
+          senderWallet: companyPaymentAccount,
+        });
+        if (!paymentCheck.ok) {
+          return NextResponse.json(
+            { error: paymentCheck.error },
+            { status: paymentCheck.status, headers: corsHeaders() },
+          );
+        }
+      }
+
+      const accessChange = await verifySubscriptionRegistryPlanChange({
+        paymentAccount: companyPaymentAccount,
+        txHash: normalizedAccessChangeTxHash,
+        expectedOnChainPlanId: plan.onChainPlanId!,
+      });
+      if (!accessChange.ok) {
+        return NextResponse.json(
+          { error: accessChange.error },
+          { status: accessChange.status, headers: corsHeaders() },
+        );
+      }
+
+      let upgradeResult: { invoiceId: string | null; paymentId: string | null };
+      try {
+        upgradeResult = await db.$transaction(
+          async (tx) => {
+            const latestCompany = await tx.arcenCompany.findUnique({
+              where: { id: companyId },
+              select: { traits: true },
+            });
+            const latestTraits = asRecord(latestCompany?.traits);
+            const latestConsumedPaymentTxHashes =
+              readConsumedPaymentTxHashes(latestTraits);
+            const alreadyConsumed =
+              latestConsumedPaymentTxHashes.includes(normalizedAutopayConfigTxHash) ||
+              latestConsumedPaymentTxHashes.includes(normalizedAccessChangeTxHash) ||
+              (normalizedPaymentTxHash
+                ? latestConsumedPaymentTxHashes.includes(normalizedPaymentTxHash)
+                : false);
+
+            if (alreadyConsumed) {
+              throw new Error("PLAN_CHANGE_TX_REUSED");
+            }
+
+            const nextTraits: Record<string, unknown> = { ...latestTraits };
+            delete nextTraits.subscriptionTransition;
+            nextTraits.billingVerifiedTxHashes = [
+              ...latestConsumedPaymentTxHashes,
+              normalizedAutopayConfigTxHash,
+              normalizedAccessChangeTxHash,
+              ...(normalizedPaymentTxHash ? [normalizedPaymentTxHash] : []),
+            ].slice(-20);
+
+            await tx.arcenCompany.update({
+              where: { id: companyId },
+              data: {
+                activePlanId: plan.id,
+                traits: toPrismaJson(nextTraits),
+              },
+            });
+
+            const subscriptionState = await upsertSubscriptionLedgerState({
+              teamId,
+              companyId,
+              walletAddress: companyPaymentAccount,
+              status: "ACTIVE",
+              catalogPlanId: plan.id,
+              onChainPlanId: accessChange.onChainPlanId,
+              onChainTokenId: accessChange.tokenId,
+              currentPeriodStart,
+              currentPeriodEnd,
+              cancelAtPeriodEnd: false,
+              cancelledAt: null,
+              pastDueAt: null,
+              graceEndsAt: null,
+              lastEvent: "subscription.plan_upgraded",
+              lastEventAt: effectiveAt,
+              lastSourceTxHash: normalizedAccessChangeTxHash,
+              metadata: {
+                source: "self_service",
+                mode: "immediate_prorated_upgrade",
+                previousCatalogPlanId: previousPlanId ?? null,
+                previousOnChainPlanId: accessChange.previousOnChainPlanId,
+                proration: proration.response,
+                autopayConfigTxHash: normalizedAutopayConfigTxHash,
+                accessChangeTxHash: normalizedAccessChangeTxHash,
+                paymentTxHash: normalizedPaymentTxHash,
+              },
+            }, tx);
+
+            let invoiceId: string | null = null;
+            let paymentId: string | null = null;
+            if (proration.amountDueMicros > 0n && normalizedPaymentTxHash) {
+              const invoice = await createProrationInvoice({
+                teamId,
+                companyId,
+                customerEmail: company.email,
+                customerWallet: companyPaymentAccount,
+                planId: plan.id,
+                currentPlanName: currentPlan?.name ?? "Current plan",
+                targetPlanName: plan.name,
+                targetRemainingMicros: proration.quote.targetRemainingMicros,
+                currentRemainingMicros: proration.quote.currentRemainingMicros,
+                amountDueMicros: proration.amountDueMicros,
+                issuedAt: effectiveAt,
+                metadata: {
+                  source: "self_service",
+                  mode: "immediate_prorated_upgrade",
+                  previousPlanId: previousPlanId ?? null,
+                  autopayConfigTxHash: normalizedAutopayConfigTxHash,
+                  accessChangeTxHash: normalizedAccessChangeTxHash,
+                  paymentTxHash: normalizedPaymentTxHash,
+                  proration: proration.response,
+                },
+              }, tx);
+              invoiceId = invoice.id;
+
+              const payment = await recordSuccessfulPayment({
+                idempotencyKey: `payment:plan_change.upgrade:${normalizedPaymentTxHash}`,
+                teamId,
+                companyId,
+                walletAddress: companyPaymentAccount,
+                invoiceId,
+                subscriptionStateId: subscriptionState?.id,
+                kind: "SUBSCRIPTION_PLAN_CHANGE_UPGRADE",
+                amount: microsToAmount(proration.amountDueMicros),
+                currency: "USDC",
+                payerWallet: companyPaymentAccount,
+                recipientWallet: verification.merchantWallet,
+                acceptedToken: verification.acceptedToken,
+                txHash: normalizedPaymentTxHash,
+                occurredAt: effectiveAt,
+                settledAt: effectiveAt,
+                metadata: {
+                  source: "self_service",
+                  mode: "immediate_prorated_upgrade",
+                  autopayConfigTxHash: normalizedAutopayConfigTxHash,
+                  accessChangeTxHash: normalizedAccessChangeTxHash,
+                  proration: proration.response,
+                },
+              }, tx);
+              paymentId = payment.id;
+
+              await recordBillingAdjustment({
+                teamId,
+                companyId,
+                subscriptionStateId: subscriptionState?.id,
+                paymentId,
+                kind: "UPGRADE_PRORATION_CHARGE",
+                status: "POSTED",
+                amount: microsToAmount(proration.amountDueMicros),
+                fromCatalogPlanId: previousPlanId ?? null,
+                toCatalogPlanId: plan.id,
+                periodStartedAt: currentPeriodStart,
+                periodEndsAt: currentPeriodEnd,
+                effectiveAt,
+                postedAt: effectiveAt,
+                metadata: {
+                  source: "self_service",
+                  autopayConfigTxHash: normalizedAutopayConfigTxHash,
+                  accessChangeTxHash: normalizedAccessChangeTxHash,
+                  paymentTxHash: normalizedPaymentTxHash,
+                  proration: proration.response,
+                },
+              }, tx);
+            }
+
+            return { invoiceId, paymentId };
+          },
+          { isolationLevel: "Serializable" },
+        );
+      } catch (error) {
+        const code =
+          typeof error === "object" && error !== null && "code" in error
+            ? String((error as { code?: unknown }).code)
+            : null;
+        const message = error instanceof Error ? error.message : "";
+        if (message === "PLAN_CHANGE_TX_REUSED" || code === "P2034") {
+          return NextResponse.json(
+            {
+              error:
+                "This plan change is already being processed or one of its transaction hashes was already consumed. Refresh the subscription state and retry if needed.",
+            },
+            { status: 409, headers: corsHeaders() },
+          );
+        }
+        throw error;
+      }
+
+      const { invoiceId, paymentId } = upgradeResult;
+
+      deliverWebhook(teamId, "company.plan.changed", {
+        companyId,
+        planId,
+        planName: plan.name,
+        billingPeriod: normalizedBillingPeriod,
+        previousPlanId: previousPlanId ?? null,
+        mode: "immediate_prorated_upgrade",
+        scheduled: false,
+        txHash: normalizedAccessChangeTxHash,
+        autopayConfigTxHash: normalizedAutopayConfigTxHash,
+        accessChangeTxHash: normalizedAccessChangeTxHash,
+        paymentTxHash: normalizedPaymentTxHash,
+        invoiceId,
+        paymentId,
+        onChainPlanId: accessChange.onChainPlanId,
+        tokenId: accessChange.tokenId,
+        verifiedOnChain: true,
+        proration: proration.response,
+      }).catch(() => {});
+
+      return NextResponse.json(
+        {
+          data: {
+            success: true,
+            scheduled: false,
+            mode: "immediate_prorated_upgrade",
+            planId,
+            planName: plan.name,
+            previousPlanId: previousPlanId ?? null,
+            onChainPlanId: accessChange.onChainPlanId,
+            tokenId: accessChange.tokenId,
+            currentPeriodEnd: accessChange.currentPeriodEnd,
+            autopayConfigTxHash: normalizedAutopayConfigTxHash,
+            accessChangeTxHash: normalizedAccessChangeTxHash,
+            paymentTxHash: normalizedPaymentTxHash,
+            invoiceId,
+            paymentId,
+            proration: proration.response,
+          },
+        },
+        { headers: corsHeaders() },
+      );
     }
+
+    const transition: SubscriptionTransition = {
+      mode: "next_renewal_on_chain",
+      targetPlanId: plan.id,
+      targetPlanName: plan.name,
+      previousPlanId: previousPlanId ?? null,
+      requestedAt: new Date().toISOString(),
+      effectiveAt: verification.currentPeriodEnd,
+      source: "self_service",
+    };
+    const applyAccessPlanImmediately =
+      targetPlanAmountMicros >= currentPlanAmountMicros;
+    const effectiveCatalogPlanId = applyAccessPlanImmediately
+      ? plan.id
+      : currentPlan?.id ?? previousPlanId ?? null;
 
     const nextTraits: Record<string, unknown> = {
       ...currentTraits,
       billingVerifiedTxHashes: [
         ...consumedPaymentTxHashes,
-        normalizedTxHash,
+        normalizedAutopayConfigTxHash,
       ].slice(-20),
+      subscriptionTransition: transition,
     };
-    delete nextTraits.subscriptionTransition;
 
     await db.arcenCompany.update({
       where: { id: companyId },
       data: {
-        activePlanId: planId,
-        walletAddress: company.walletAddress?.toLowerCase() ?? null,
+        ...(effectiveCatalogPlanId ? { activePlanId: effectiveCatalogPlanId } : {}),
         traits: toPrismaJson(nextTraits),
       },
     });
 
-    const subscriptionState = await upsertSubscriptionLedgerState({
+    await upsertSubscriptionLedgerState({
       teamId,
       companyId,
       walletAddress: companyPaymentAccount,
       status: "ACTIVE",
-      catalogPlanId: plan.id,
-      onChainPlanId: verification.onChainPlanId,
+      catalogPlanId: effectiveCatalogPlanId,
+      onChainPlanId: applyAccessPlanImmediately
+        ? verification.onChainPlanId
+        : currentPlan?.onChainPlanId ?? verification.previousOnChainPlanId,
       onChainTokenId: verification.tokenId,
       currentPeriodEnd: new Date(verification.currentPeriodEnd),
       cancelAtPeriodEnd: false,
       cancelledAt: null,
       pastDueAt: null,
       graceEndsAt: null,
-      lastEvent: "subscription.plan_changed",
+      lastEvent: "subscription.plan_change_pending",
       lastEventAt: new Date(),
-      lastSourceTxHash: normalizedTxHash,
+      lastSourceTxHash: normalizedAutopayConfigTxHash,
       metadata: {
         source: "self_service",
+        accessPlanAppliedImmediately: applyAccessPlanImmediately,
+        pendingCatalogPlanId: plan.id,
+        pendingOnChainPlanId: verification.onChainPlanId,
         previousCatalogPlanId: previousPlanId ?? null,
         previousOnChainPlanId: verification.previousOnChainPlanId,
       },
     });
-
-    if (creditedAmount > 0) {
-      await postBillingCredit({
-        teamId,
-        companyId,
-        walletAddress: companyPaymentAccount,
-        amount: creditedAmount,
-        metadata: {
-          source: "self_service_plan_change",
-          txHash: normalizedTxHash,
-          fromPlanId: currentPlan?.id ?? null,
-          toPlanId: plan.id,
-        },
-      });
-
-      if (subscriptionState) {
-        await recordBillingAdjustment({
-          teamId,
-          companyId,
-          subscriptionStateId: subscriptionState.id,
-          kind: "DOWNGRADE_PRORATION_CREDIT",
-          status: "POSTED",
-          amount: creditedAmount,
-          fromCatalogPlanId: currentPlan?.id ?? null,
-          toCatalogPlanId: plan.id,
-          periodStartedAt: downgradePeriodStart,
-          periodEndsAt: downgradePeriodEnd,
-          effectiveAt: new Date(),
-          postedAt: new Date(),
-          metadata: {
-            source: "self_service_plan_change",
-            txHash: normalizedTxHash,
-            previousOnChainPlanId: verification.previousOnChainPlanId,
-            onChainPlanId: verification.onChainPlanId,
-          },
-        });
-      }
-    }
 
     deliverWebhook(teamId, "company.plan.changed", {
       companyId,
@@ -644,29 +1040,43 @@ export async function POST(req: NextRequest) {
       planName: plan.name,
       billingPeriod: normalizedBillingPeriod,
       previousPlanId: previousPlanId ?? null,
-      mode: "immediate",
-      scheduled: false,
-      txHash: normalizedTxHash,
+      mode: "next_renewal_on_chain",
+      scheduled: true,
+      txHash: normalizedAutopayConfigTxHash,
       onChainPlanId: verification.onChainPlanId,
       verifiedOnChain: true,
-      ...(creditedAmount > 0 ? { walletCreditApplied: creditedAmount.toFixed(6) } : {}),
+      effectiveAt: verification.currentPeriodEnd,
+      accessPlanAppliedImmediately: applyAccessPlanImmediately,
+      proration: {
+        currency: "USDC",
+        amountDue: "0.000000",
+        amountPaid: "0.000000",
+        amountRemaining: "0.000000",
+        note: "Downgrade access changes at the current period end.",
+      },
     }).catch(() => {});
 
     return NextResponse.json(
       {
         data: {
           success: true,
-          scheduled: false,
-          mode: "immediate_on_chain",
+          scheduled: true,
+          mode: "next_renewal_on_chain",
           planId,
           planName: plan.name,
           previousPlanId: previousPlanId ?? null,
           onChainPlanId: verification.onChainPlanId,
           tokenId: verification.tokenId,
+          effectiveAt: verification.currentPeriodEnd,
           currentPeriodEnd: verification.currentPeriodEnd,
-          ...(creditedAmount > 0
-            ? { walletCreditCreated: creditedAmount.toFixed(6) }
-            : {}),
+          accessPlanAppliedImmediately: applyAccessPlanImmediately,
+          proration: {
+            currency: "USDC",
+            amountDue: "0.000000",
+            amountPaid: "0.000000",
+            amountRemaining: "0.000000",
+            note: "Downgrade access changes at the current period end.",
+          },
         },
       },
       { headers: corsHeaders() },

@@ -72,6 +72,45 @@ export function decimalToAtomicUnits(value: string, decimals = 6): bigint {
   return BigInt(whole) * 10n ** BigInt(decimals) + BigInt(paddedFraction || "0");
 }
 
+function requiredConfirmations(): bigint {
+  const raw = process.env.ONCHAIN_MIN_CONFIRMATIONS?.trim();
+  if (!raw) return 2n;
+
+  const parsed = Number(raw);
+  if (!Number.isInteger(parsed) || parsed < 1) return 2n;
+  return BigInt(parsed);
+}
+
+async function assertReceiptFinalized(params: {
+  publicClient: ReturnType<typeof createPublicClient>;
+  receipt: { blockNumber?: bigint | null };
+  label: string;
+}): Promise<null | { ok: false; status: number; error: string }> {
+  const required = requiredConfirmations();
+  const blockNumber = params.receipt.blockNumber;
+  if (!blockNumber) {
+    return {
+      ok: false,
+      status: 502,
+      error: `${params.label} receipt is missing a block number.`,
+    };
+  }
+
+  const latestBlock = await params.publicClient.getBlockNumber();
+  const confirmations =
+    latestBlock >= blockNumber ? latestBlock - blockNumber + 1n : 0n;
+
+  if (confirmations < required) {
+    return {
+      ok: false,
+      status: 425,
+      error: `${params.label} has ${confirmations.toString()} confirmation(s); ${required.toString()} required before applying subscription changes.`,
+    };
+  }
+
+  return null;
+}
+
 function resolveChain(): Chain {
   const chainId = DEFAULT_CHAIN_ID;
   return CHAIN_MAP[chainId] ?? baseSepolia;
@@ -129,6 +168,13 @@ export async function verifyDirectErc20Transfer(
         error: "Payment transaction did not complete successfully.",
       };
     }
+
+    const finalityError = await assertReceiptFinalized({
+      publicClient,
+      receipt,
+      label: "Payment transaction",
+    });
+    if (finalityError) return finalityError;
 
     if (
       !transaction.to ||
@@ -205,6 +251,7 @@ export interface VerifyAutopayPlanChangeInput {
   paymentAccount: string;
   txHash: `0x${string}`;
   expectedOnChainPlanId: string;
+  requireRegistryPlanChange?: boolean;
 }
 
 export type VerifyAutopayPlanChangeResult =
@@ -217,6 +264,28 @@ export type VerifyAutopayPlanChangeResult =
       acceptedToken: string;
       merchantWallet: string;
       currentPeriodEnd: string;
+    }
+  | {
+      ok: false;
+      status: number;
+      error: string;
+    };
+
+export interface VerifySubscriptionRegistryPlanChangeInput {
+  paymentAccount: string;
+  txHash: `0x${string}`;
+  expectedOnChainPlanId: string;
+}
+
+export type VerifySubscriptionRegistryPlanChangeResult =
+  | {
+      ok: true;
+      txHash: `0x${string}`;
+      tokenId: string;
+      previousOnChainPlanId: string;
+      onChainPlanId: string;
+      currentPeriodEnd: string;
+      billerWallet: string;
     }
   | {
       ok: false;
@@ -282,6 +351,13 @@ export async function verifyAutopayPlanChange(
       };
     }
 
+    const finalityError = await assertReceiptFinalized({
+      publicClient,
+      receipt,
+      label: "Autopay config transaction",
+    });
+    if (finalityError) return finalityError;
+
     if (!targetPlan?.active) {
       return {
         ok: false,
@@ -298,15 +374,6 @@ export async function verifyAutopayPlanChange(
           interval: number;
         }
       | null = null;
-    let planChangedEvent:
-      | {
-          tokenId: bigint;
-          previousPlanId: bigint;
-          newPlanId: bigint;
-          expiration: bigint;
-        }
-      | null = null;
-
     for (const log of receipt.logs) {
       if (log.address.toLowerCase() === autopayAddress.toLowerCase()) {
         try {
@@ -339,26 +406,6 @@ export async function verifyAutopayPlanChange(
         }
       }
 
-      if (log.address.toLowerCase() === subscriptionRegistryAddress.toLowerCase()) {
-        try {
-          const decoded = decodeEventLog({
-            abi: SubscriptionRegistryABI as any,
-            data: log.data,
-            topics: log.topics,
-          }) as { eventName: string; args: Record<string, unknown> };
-          if (decoded.eventName === "SubscriptionPlanChanged") {
-            const args = decoded.args as unknown as {
-              tokenId: bigint;
-              previousPlanId: bigint;
-              newPlanId: bigint;
-              expiration: bigint;
-            };
-            planChangedEvent = args;
-          }
-        } catch {
-          // Ignore unrelated logs on the same contract.
-        }
-      }
     }
 
     if (!configUpdatedEvent) {
@@ -391,23 +438,6 @@ export async function verifyAutopayPlanChange(
         ok: false,
         status: 409,
         error: "Autopay config update used the wrong billing interval.",
-      };
-    }
-
-    if (!planChangedEvent) {
-      return {
-        ok: false,
-        status: 409,
-        error:
-          "Transaction did not emit SubscriptionPlanChanged. The subscription token was not updated.",
-      };
-    }
-
-    if (planChangedEvent.newPlanId !== expectedOnChainPlanId) {
-      return {
-        ok: false,
-        status: 409,
-        error: "Subscription token was moved to the wrong on-chain plan.",
       };
     }
 
@@ -486,26 +516,30 @@ export async function verifyAutopayPlanChange(
       };
     }
 
-    const [tokenFeatures, currentPeriodEnd] = await Promise.all([
-      publicClient.readContract({
-        address: subscriptionRegistryAddress,
-        abi: SubscriptionRegistryABI,
-        functionName: "getPlanFeatures",
-        args: [tokenId],
-      }) as Promise<{ planId?: bigint }>,
+    const [currentPeriodEnd, tokenFeatures] = (await Promise.all([
       publicClient.readContract({
         address: subscriptionRegistryAddress,
         abi: SubscriptionRegistryABI,
         functionName: "expiresAt",
         args: [tokenId],
       }) as Promise<bigint>,
-    ]);
+      publicClient.readContract({
+        address: subscriptionRegistryAddress,
+        abi: SubscriptionRegistryABI,
+        functionName: "getPlanFeatures",
+        args: [tokenId],
+      }) as Promise<[bigint, string]>,
+    ])) as [bigint, [bigint, string]];
 
-    if (BigInt(tokenFeatures?.planId ?? 0n) !== expectedOnChainPlanId) {
+    if (
+      params.requireRegistryPlanChange &&
+      tokenFeatures[0] !== expectedOnChainPlanId
+    ) {
       return {
         ok: false,
         status: 409,
-        error: "Subscription token still points at the wrong plan after the change transaction.",
+        error:
+          "The subscription token is not on the destination plan yet. Immediate upgrades must update SubscriptionRegistry access as part of the plan-change transaction.",
       };
     }
 
@@ -531,6 +565,204 @@ export async function verifyAutopayPlanChange(
   }
 }
 
+export async function verifySubscriptionRegistryPlanChange(
+  params: VerifySubscriptionRegistryPlanChangeInput,
+): Promise<VerifySubscriptionRegistryPlanChangeResult> {
+  if (!isAddress(params.paymentAccount)) {
+    return {
+      ok: false,
+      status: 409,
+      error: "Payment account is not configured correctly.",
+    };
+  }
+
+  const expectedOnChainPlanId = BigInt(params.expectedOnChainPlanId);
+  const { publicClient, contracts } = createChainPublicClient();
+  const subscriptionRegistryAddress =
+    contracts.subscriptionRegistry as `0x${string}`;
+
+  if (
+    !subscriptionRegistryAddress ||
+    !isAddress(subscriptionRegistryAddress)
+  ) {
+    return {
+      ok: false,
+      status: 503,
+      error: "Subscription registry is not configured for this chain.",
+    };
+  }
+
+  try {
+    const [transaction, receipt] = await Promise.all([
+      publicClient.getTransaction({ hash: params.txHash }),
+      publicClient.getTransactionReceipt({ hash: params.txHash }),
+    ]);
+
+    if (receipt.status !== "success") {
+      return {
+        ok: false,
+        status: 409,
+        error: "Subscription plan-change transaction did not complete successfully.",
+      };
+    }
+
+    const finalityError = await assertReceiptFinalized({
+      publicClient,
+      receipt,
+      label: "Subscription plan-change transaction",
+    });
+    if (finalityError) return finalityError;
+
+    if (
+      !transaction.to ||
+      transaction.to.toLowerCase() !== subscriptionRegistryAddress.toLowerCase()
+    ) {
+      return {
+        ok: false,
+        status: 409,
+        error: "Subscription plan-change transaction was sent to the wrong contract.",
+      };
+    }
+
+    const isAuthorizedBiller = (await publicClient.readContract({
+      address: subscriptionRegistryAddress,
+      abi: [
+        {
+          inputs: [{ internalType: "address", name: "", type: "address" }],
+          name: "authorizedBillers",
+          outputs: [{ internalType: "bool", name: "", type: "bool" }],
+          stateMutability: "view",
+          type: "function",
+        },
+      ] as const,
+      functionName: "authorizedBillers",
+      args: [transaction.from],
+    })) as boolean;
+
+    if (!isAuthorizedBiller) {
+      return {
+        ok: false,
+        status: 409,
+        error:
+          "Subscription plan-change transaction was not submitted by an authorized biller.",
+      };
+    }
+
+    let planChangedEvent:
+      | {
+          tokenId: bigint;
+          previousPlanId: bigint;
+          newPlanId: bigint;
+          expiration: bigint;
+        }
+      | null = null;
+
+    for (const log of receipt.logs) {
+      if (
+        log.address.toLowerCase() !== subscriptionRegistryAddress.toLowerCase()
+      ) {
+        continue;
+      }
+
+      try {
+        const decoded = decodeEventLog({
+          abi: SubscriptionRegistryABI as any,
+          data: log.data,
+          topics: log.topics,
+        }) as { eventName: string; args: Record<string, unknown> };
+        if (decoded.eventName !== "SubscriptionPlanChanged") continue;
+
+        const args = decoded.args as unknown as {
+          tokenId: bigint;
+          previousPlanId: bigint;
+          newPlanId: bigint;
+          expiration: bigint;
+        };
+        if (args.newPlanId === expectedOnChainPlanId) {
+          planChangedEvent = args;
+        }
+      } catch {
+        // Ignore unrelated logs on the registry.
+      }
+    }
+
+    if (!planChangedEvent) {
+      return {
+        ok: false,
+        status: 409,
+        error:
+          "Transaction did not emit SubscriptionPlanChanged for the destination plan.",
+      };
+    }
+
+    const [owner, tokenFeatures, currentPeriodEnd] = await Promise.all([
+      publicClient.readContract({
+        address: subscriptionRegistryAddress,
+        abi: [
+          {
+            inputs: [{ internalType: "uint256", name: "tokenId", type: "uint256" }],
+            name: "ownerOf",
+            outputs: [{ internalType: "address", name: "", type: "address" }],
+            stateMutability: "view",
+            type: "function",
+          },
+        ] as const,
+        functionName: "ownerOf",
+        args: [planChangedEvent.tokenId],
+      }) as Promise<`0x${string}`>,
+      publicClient.readContract({
+        address: subscriptionRegistryAddress,
+        abi: SubscriptionRegistryABI,
+        functionName: "getPlanFeatures",
+        args: [planChangedEvent.tokenId],
+      }) as Promise<[bigint, string]>,
+      publicClient.readContract({
+        address: subscriptionRegistryAddress,
+        abi: SubscriptionRegistryABI,
+        functionName: "expiresAt",
+        args: [planChangedEvent.tokenId],
+      }) as Promise<bigint>,
+    ]);
+
+    if (owner.toLowerCase() !== params.paymentAccount.toLowerCase()) {
+      return {
+        ok: false,
+        status: 409,
+        error:
+          "The changed subscription token does not belong to the current payment account.",
+      };
+    }
+
+    if (tokenFeatures[0] !== expectedOnChainPlanId) {
+      return {
+        ok: false,
+        status: 409,
+        error:
+          "The subscription token is not on the destination plan after the plan-change transaction.",
+      };
+    }
+
+    return {
+      ok: true,
+      txHash: params.txHash,
+      tokenId: planChangedEvent.tokenId.toString(),
+      previousOnChainPlanId: planChangedEvent.previousPlanId.toString(),
+      onChainPlanId: expectedOnChainPlanId.toString(),
+      currentPeriodEnd: new Date(Number(currentPeriodEnd) * 1000).toISOString(),
+      billerWallet: transaction.from.toLowerCase(),
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      status: 502,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Could not verify the subscription registry plan-change transaction.",
+    };
+  }
+}
+
 export interface VerifySubscriptionCancellationInput {
   paymentAccount: string;
   txHash: `0x${string}`;
@@ -549,6 +781,158 @@ export type VerifySubscriptionCancellationResult =
       status: number;
       error: string;
     };
+
+export interface VerifyAutopayCancellationControlInput {
+  paymentAccount: string;
+  txHash: `0x${string}`;
+}
+
+export type VerifyAutopayCancellationControlResult =
+  | {
+      ok: true;
+      txHash: `0x${string}`;
+      paymentAccount: string;
+      control: "PAUSED" | "REVOKED";
+      controlledAt: string;
+    }
+  | {
+      ok: false;
+      status: number;
+      error: string;
+    };
+
+export async function verifyAutopayCancellationControl(
+  params: VerifyAutopayCancellationControlInput,
+): Promise<VerifyAutopayCancellationControlResult> {
+  if (!isAddress(params.paymentAccount)) {
+    return {
+      ok: false,
+      status: 409,
+      error: "Payment account is not configured correctly.",
+    };
+  }
+
+  const { publicClient, contracts } = createChainPublicClient();
+  const autopayAddress = contracts.autopayModule as `0x${string}`;
+
+  if (!autopayAddress || !isAddress(autopayAddress)) {
+    return {
+      ok: false,
+      status: 503,
+      error: "Autopay module is not configured for this chain.",
+    };
+  }
+
+  try {
+    const receipt = await publicClient.getTransactionReceipt({
+      hash: params.txHash,
+    });
+
+    if (receipt.status !== "success") {
+      return {
+        ok: false,
+        status: 409,
+        error: "Autopay cancellation-control transaction did not complete successfully.",
+      };
+    }
+
+    const finalityError = await assertReceiptFinalized({
+      publicClient,
+      receipt,
+      label: "Autopay cancellation-control transaction",
+    });
+    if (finalityError) return finalityError;
+
+    let control: "PAUSED" | "REVOKED" | null = null;
+    for (const log of receipt.logs) {
+      if (log.address.toLowerCase() !== autopayAddress.toLowerCase()) continue;
+
+      try {
+        const decoded = decodeEventLog({
+          abi: ERC7579AutopayModuleABI as any,
+          data: log.data,
+          topics: log.topics,
+        }) as { eventName: string; args: Record<string, unknown> };
+
+        if (
+          decoded.eventName !== "AutopayRevoked" &&
+          decoded.eventName !== "AccountAutopayPaused"
+        ) {
+          continue;
+        }
+
+        const args = decoded.args as { account?: string };
+        if (
+          typeof args.account === "string" &&
+          args.account.toLowerCase() === params.paymentAccount.toLowerCase()
+        ) {
+          control =
+            decoded.eventName === "AutopayRevoked" ? "REVOKED" : "PAUSED";
+        }
+      } catch {
+        // Ignore unrelated logs on the same contract.
+      }
+    }
+
+    if (!control) {
+      return {
+        ok: false,
+        status: 409,
+        error:
+          "Transaction did not pause or revoke autopay for the current payment account.",
+      };
+    }
+
+    const isInitialized = (await publicClient.readContract({
+      address: autopayAddress,
+      abi: ERC7579AutopayModuleABI,
+      functionName: "isInitialized",
+      args: [params.paymentAccount as `0x${string}`],
+    })) as boolean;
+
+    if (control === "REVOKED" && isInitialized) {
+      return {
+        ok: false,
+        status: 409,
+        error: "Autopay is still initialized after the revoke transaction.",
+      };
+    }
+
+    if (control === "PAUSED") {
+      const isPaused = (await publicClient.readContract({
+        address: autopayAddress,
+        abi: ERC7579AutopayModuleABI,
+        functionName: "isAccountPaused",
+        args: [params.paymentAccount as `0x${string}`],
+      })) as boolean;
+
+      if (!isPaused) {
+        return {
+          ok: false,
+          status: 409,
+          error: "Autopay is not paused after the pause transaction.",
+        };
+      }
+    }
+
+    return {
+      ok: true,
+      txHash: params.txHash,
+      paymentAccount: params.paymentAccount.toLowerCase(),
+      control,
+      controlledAt: new Date().toISOString(),
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      status: 502,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Could not verify the autopay cancellation-control transaction.",
+    };
+  }
+}
 
 export async function verifySubscriptionCancellation(
   params: VerifySubscriptionCancellationInput,
@@ -585,6 +969,13 @@ export async function verifySubscriptionCancellation(
         error: "Cancellation transaction did not complete successfully.",
       };
     }
+
+    const finalityError = await assertReceiptFinalized({
+      publicClient,
+      receipt,
+      label: "Cancellation transaction",
+    });
+    if (finalityError) return finalityError;
 
     let cancelledTokenId: bigint | null = null;
     for (const log of receipt.logs) {

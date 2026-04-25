@@ -170,6 +170,10 @@ function formatTokenAmount(
   return `${safe} ${symbol}`;
 }
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function normalizeActivationError(message: string): {
   status: number;
   error: string;
@@ -608,13 +612,19 @@ export async function POST(req: NextRequest) {
   const startTime = Number(autopayConfig?.startTime ?? 0n);
   const nowSeconds = Math.floor(Date.now() / 1000);
   if (startTime > nowSeconds) {
-    return NextResponse.json(
-      {
-        error:
-          `Autopay cannot start yet. The configured start time is ${new Date(startTime * 1000).toISOString()}.`,
-      },
-      { status: 409, headers: corsHeaders() },
-    );
+    const waitSeconds = startTime - nowSeconds;
+
+    if (waitSeconds > 15) {
+      return NextResponse.json(
+        {
+          error:
+            `Autopay cannot start yet. The configured start time is ${new Date(startTime * 1000).toISOString()}.`,
+        },
+        { status: 409, headers: corsHeaders() },
+      );
+    }
+
+    await sleep((waitSeconds + 1) * 1000);
   }
 
   const existingTokenId = await readActiveWalletSubscriptionTokenId({

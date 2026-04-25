@@ -383,6 +383,16 @@ export interface ComponentPaymentMethod {
   chainId: number | null;
 }
 
+export interface ComponentSubscriptionTransition {
+  mode?: string | null;
+  targetPlanId?: string | null;
+  targetPlanName?: string | null;
+  previousPlanId?: string | null;
+  requestedAt?: string | null;
+  effectiveAt?: string | null;
+  source?: string | null;
+}
+
 export interface ComponentElement {
   type:
     | "planManager"
@@ -433,6 +443,7 @@ export interface ComponentRenderData {
   nextBillingAt?: string | null;
   paymentMethod?: ComponentPaymentMethod | null;
   recentInvoices?: ComponentInvoiceSummary[];
+  subscriptionTransition?: ComponentSubscriptionTransition | null;
 }
 
 // --- SDK Config ---

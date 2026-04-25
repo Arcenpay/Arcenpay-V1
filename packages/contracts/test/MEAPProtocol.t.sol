@@ -791,7 +791,34 @@ contract MEAPProtocolTest is Test {
         );
     }
 
-    function test_subscriptionRegistry_changePlan_preservesExpiry() public {
+    function test_subscriptionRegistry_changePlan_revert_subscriberCannotSelfUpgrade() public {
+        vm.startPrank(provider);
+        uint256 starterPlanId = planFactory.createPlan(
+            "Starter Plan",
+            "starter",
+            PLAN_PRICE,
+            MONTHLY,
+            address(usdc),
+            "ipfs://starter"
+        );
+        uint256 proPlanId = planFactory.createPlan(
+            "Pro Plan",
+            "pro",
+            20 * 10 ** 6,
+            MONTHLY,
+            address(usdc),
+            "ipfs://pro"
+        );
+        vm.stopPrank();
+
+        uint256 tokenId = registry.mint(subscriber, starterPlanId, DURATION);
+
+        vm.prank(subscriber);
+        vm.expectRevert("SubscriptionRegistry: unauthorized biller");
+        registry.changePlan(tokenId, proPlanId);
+    }
+
+    function test_subscriptionRegistry_changePlan_billerPreservesExpiry() public {
         vm.startPrank(provider);
         uint256 starterPlanId = planFactory.createPlan(
             "Starter Plan",
@@ -814,7 +841,6 @@ contract MEAPProtocolTest is Test {
         uint256 tokenId = registry.mint(subscriber, starterPlanId, DURATION);
         uint64 expiryBefore = registry.expiresAt(tokenId);
 
-        vm.prank(subscriber);
         registry.changePlan(tokenId, proPlanId);
 
         (uint256 changedPlanId,) = registry.getPlanFeatures(tokenId);

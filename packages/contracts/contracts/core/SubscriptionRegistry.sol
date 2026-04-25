@@ -231,12 +231,8 @@ contract SubscriptionRegistry is
     }
 
     /// @inheritdoc ISubscriptionRegistry
-    function changePlan(uint256 tokenId, uint256 newPlanId) external {
+    function changePlan(uint256 tokenId, uint256 newPlanId) external onlyBiller nonReentrant whenNotPaused {
         address owner_ = ownerOf(tokenId);
-        require(
-            msg.sender == owner_ || authorizedBillers[msg.sender],
-            "SubscriptionRegistry: unauthorized"
-        );
 
         require(_ownerOf(tokenId) != address(0), "SubscriptionRegistry: nonexistent token");
 

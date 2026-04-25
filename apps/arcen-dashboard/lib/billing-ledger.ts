@@ -3,6 +3,11 @@ import { toPrismaJson } from "@/lib/prisma-json";
 import { toSix } from "@/lib/invoices";
 import { applyInvoicePayment } from "@/lib/billing-balances";
 
+type BillingLedgerDb = Pick<
+  typeof db,
+  "arcenCompany" | "subscriptionState" | "payment" | "paymentAttempt" | "invoice"
+>;
+
 function normalizeWallet(value?: string | null): string | null {
   return value?.trim() ? value.trim().toLowerCase() : null;
 }
@@ -11,9 +16,9 @@ async function resolveCompany(input: {
   teamId: string;
   companyId?: string | null;
   walletAddress?: string | null;
-}) {
+}, client: BillingLedgerDb = db) {
   if (input.companyId) {
-    return db.arcenCompany.findFirst({
+    return client.arcenCompany.findFirst({
       where: { id: input.companyId, teamId: input.teamId },
       select: { id: true, teamId: true, walletAddress: true, activePlanId: true },
     });
@@ -22,7 +27,7 @@ async function resolveCompany(input: {
   const walletAddress = normalizeWallet(input.walletAddress);
   if (!walletAddress) return null;
 
-  const companyByIdentityWallet = await db.arcenCompany.findFirst({
+  const companyByIdentityWallet = await client.arcenCompany.findFirst({
     where: { teamId: input.teamId, walletAddress },
     select: { id: true, teamId: true, walletAddress: true, activePlanId: true },
   });
@@ -30,7 +35,7 @@ async function resolveCompany(input: {
     return companyByIdentityWallet;
   }
 
-  const subscriptionMatch = await db.subscriptionState.findFirst({
+  const subscriptionMatch = await client.subscriptionState.findFirst({
     where: { teamId: input.teamId, walletAddress },
     select: {
       company: {
@@ -65,15 +70,15 @@ export async function upsertSubscriptionLedgerState(input: {
   lastEventAt?: Date | null;
   lastSourceTxHash?: string | null;
   metadata?: Record<string, unknown>;
-}) {
-  const company = await resolveCompany(input);
+}, client: BillingLedgerDb = db) {
+  const company = await resolveCompany(input, client);
   if (!company) return null;
 
   const nextCatalogPlanId =
     input.catalogPlanId !== undefined
       ? input.catalogPlanId
       : company.activePlanId ?? null;
-  const subscriptionState = await db.subscriptionState.upsert({
+  const subscriptionState = await client.subscriptionState.upsert({
     where: { companyId: company.id },
     update: {
       walletAddress: normalizeWallet(input.walletAddress) ?? company.walletAddress ?? null,
@@ -125,7 +130,7 @@ export async function upsertSubscriptionLedgerState(input: {
     input.status === "ACTIVE" ||
     input.status === "PAST_DUE"
   ) {
-    await db.arcenCompany.update({
+    await client.arcenCompany.update({
       where: { id: company.id },
       data: {
         ...(nextCatalogPlanId !== undefined ? { activePlanId: nextCatalogPlanId } : {}),
@@ -139,15 +144,15 @@ export async function upsertSubscriptionLedgerState(input: {
 async function resolvePaymentRecord(input: {
   idempotencyKey: string;
   txHash?: string | null;
-}) {
+}, client: BillingLedgerDb = db) {
   if (input.txHash) {
-    const existingByTxHash = await db.payment.findUnique({
+    const existingByTxHash = await client.payment.findUnique({
       where: { txHash: input.txHash },
     });
     if (existingByTxHash) return existingByTxHash;
   }
 
-  return db.payment.findUnique({
+  return client.payment.findUnique({
     where: { idempotencyKey: input.idempotencyKey },
   });
 }
@@ -174,16 +179,16 @@ export async function recordSuccessfulPayment(input: {
   occurredAt?: Date | null;
   settledAt?: Date | null;
   metadata?: Record<string, unknown>;
-}) {
-  const company = await resolveCompany(input);
+}, client: BillingLedgerDb = db) {
+  const company = await resolveCompany(input, client);
   const subscriptionState =
     input.subscriptionStateId
-      ? await db.subscriptionState.findUnique({
+      ? await client.subscriptionState.findUnique({
           where: { id: input.subscriptionStateId },
           select: { id: true },
         })
-      : company
-        ? await db.subscriptionState.findUnique({
+        : company
+        ? await client.subscriptionState.findUnique({
             where: { companyId: company.id },
             select: { id: true },
           })
@@ -192,10 +197,10 @@ export async function recordSuccessfulPayment(input: {
   const existing = await resolvePaymentRecord({
     idempotencyKey: input.idempotencyKey,
     txHash: input.txHash,
-  });
+  }, client);
 
   const payment = existing
-    ? await db.payment.update({
+    ? await client.payment.update({
         where: { id: existing.id },
         data: {
           status: "SUCCEEDED",
@@ -216,7 +221,7 @@ export async function recordSuccessfulPayment(input: {
           ...(input.metadata ? { metadata: toPrismaJson(input.metadata) } : {}),
         },
       })
-    : await db.payment.create({
+    : await client.payment.create({
         data: {
           idempotencyKey: input.idempotencyKey,
           teamId: input.teamId,
@@ -238,7 +243,7 @@ export async function recordSuccessfulPayment(input: {
         },
       });
 
-  const existingAttempt = await db.paymentAttempt.findFirst({
+  const existingAttempt = await client.paymentAttempt.findFirst({
     where: {
       paymentId: payment.id,
       status: "SUCCEEDED",
@@ -248,7 +253,7 @@ export async function recordSuccessfulPayment(input: {
   });
 
   if (!existingAttempt) {
-    await db.paymentAttempt.create({
+    await client.paymentAttempt.create({
       data: {
         paymentId: payment.id,
         status: "SUCCEEDED",
@@ -261,7 +266,7 @@ export async function recordSuccessfulPayment(input: {
   }
 
   if (subscriptionState?.id) {
-    await db.subscriptionState.update({
+    await client.subscriptionState.update({
       where: { id: subscriptionState.id },
       data: {
         status: "ACTIVE",
@@ -277,7 +282,7 @@ export async function recordSuccessfulPayment(input: {
     await applyInvoicePayment({
       invoiceId: input.invoiceId,
       amount: input.amount,
-    });
+    }, client);
   }
 
   return payment;

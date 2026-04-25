@@ -524,9 +524,14 @@ export async function GET(
   const liveMatchedPlan = liveOnChainPlanId
     ? hydratedPlans.find((plan) => plan.onChainPlanId === liveOnChainPlanId) ?? null
     : null;
+  const hasPendingNextRenewalPlanChange =
+    typeof subscriptionTransition?.mode === "string" &&
+    subscriptionTransition.mode === "next_renewal_on_chain" &&
+    typeof subscriptionTransition?.targetPlanId === "string";
 
   if (
     liveMatchedPlan &&
+    !hasPendingNextRenewalPlanChange &&
     (!activePlan ||
       String((activePlan as { onChainPlanId?: unknown }).onChainPlanId ?? "") !==
         liveOnChainPlanId)

@@ -2,6 +2,8 @@ import { db } from "@/lib/db";
 import { toPrismaJson } from "@/lib/prisma-json";
 import { toSix } from "@/lib/invoices";
 
+type BillingAdjustmentDb = Pick<typeof db, "billingAdjustment">;
+
 export async function recordBillingAdjustment(input: {
   teamId: string;
   companyId: string;
@@ -23,8 +25,8 @@ export async function recordBillingAdjustment(input: {
   postedAt?: Date | null;
   voidedAt?: Date | null;
   metadata?: Record<string, unknown>;
-}) {
-  return db.billingAdjustment.create({
+}, client: BillingAdjustmentDb = db) {
+  return client.billingAdjustment.create({
     data: {
       teamId: input.teamId,
       companyId: input.companyId,

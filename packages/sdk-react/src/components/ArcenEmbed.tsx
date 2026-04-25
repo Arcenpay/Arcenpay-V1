@@ -30,6 +30,7 @@ import type {
   ComponentDesign,
   ComponentInvoiceSummary,
   ComponentPaymentMethod,
+  ComponentSubscriptionTransition,
 } from "@arcenpay/sdk";
 import {
   ERC7579AutopayModuleABI,
@@ -88,7 +89,14 @@ type AppliedCouponQuote = {
   discountedAmountMicros: number;
 };
 
-const AUTOPAY_START_TIME_BUFFER_SECONDS = 60;
+type PlanChangeConfirmation = {
+  txHash?: string;
+  autopayConfigTxHash?: string;
+  accessChangeTxHash?: string;
+  paymentTxHash?: string;
+};
+
+const AUTOPAY_START_TIME_BUFFER_SECONDS = 5;
 
 interface PortalState {
   data: ComponentRenderData | null;
@@ -393,6 +401,14 @@ function getUsageItems(data: ComponentRenderData): ComponentUsageItem[] {
       unitSingular: entitlement.unitSingular ?? null,
       unitPlural: entitlement.unitPlural ?? null,
     }));
+}
+
+function getSubscriptionTransition(
+  data: ComponentRenderData,
+): ComponentSubscriptionTransition | null {
+  const transition = data.subscriptionTransition;
+  if (!transition || typeof transition !== "object") return null;
+  return transition;
 }
 
 type ResolvedBooleanFeature = {
@@ -1622,12 +1638,34 @@ export function renderElement(
     }
 
     case "plansTable": {
+      const pendingTransition = getSubscriptionTransition(data);
       return (
         <div key={index} style={{ marginBottom: 24 }}>
           <SectionHeading tokens={tokens}>Available Plans</SectionHeading>
+          {pendingTransition?.targetPlanName ? (
+            <div
+              style={{
+                marginBottom: 12,
+                padding: "10px 12px",
+                borderRadius: tokens.radius / 1.5,
+                background: "#fff7ed",
+                border: "1px solid #fdba74",
+                color: "#9a3412",
+                fontSize: tokens.size - 2,
+                lineHeight: 1.6,
+              }}
+            >
+              Plan change pending: your subscription will move to{" "}
+              <strong>{pendingTransition.targetPlanName}</strong>
+              {pendingTransition.effectiveAt
+                ? ` on ${formatDateLabel(pendingTransition.effectiveAt) ?? "the next renewal"}.`
+                : " on the next renewal."}
+            </div>
+          ) : null}
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
             {data.plans.map((p: ComponentPlanSummary) => {
               const isActive = p.id === data.activePlan?.id;
+              const isPendingTarget = p.id === pendingTransition?.targetPlanId;
               return (
                 <div
                   key={p.id}
@@ -1685,6 +1723,16 @@ export function renderElement(
                     >
                       ✓ Current plan
                     </div>
+                  ) : isPendingTarget ? (
+                    <div
+                      style={{
+                        fontSize: tokens.size - 1,
+                        color: "#9a3412",
+                        fontWeight: 600,
+                      }}
+                    >
+                      Pending next renewal
+                    </div>
                   ) : (
                     <button
                       onClick={onChangePlan}
@@ -1713,6 +1761,7 @@ export function renderElement(
 
     case "nextBillDue": {
       const plan = data.activePlan;
+      const pendingTransition = getSubscriptionTransition(data);
       const priceVal = plan ? parseFloat(String(plan.price)) : 0;
       const nextBillingLabel = formatDateLabel(data.nextBillingAt);
       const nextBillingRelative = formatRelativeDate(data.nextBillingAt);
@@ -1742,6 +1791,26 @@ export function renderElement(
             </div>
           ) : (
             <div>
+              {pendingTransition?.targetPlanName ? (
+                <div
+                  style={{
+                    marginBottom: 12,
+                    padding: "10px 12px",
+                    borderRadius: tokens.radius / 1.5,
+                    background: "#eff6ff",
+                    border: "1px solid #bfdbfe",
+                    color: "#1d4ed8",
+                    fontSize: tokens.size - 2,
+                    lineHeight: 1.6,
+                  }}
+                >
+                  Future renewals are configured for{" "}
+                  <strong>{pendingTransition.targetPlanName}</strong>.
+                  {pendingTransition.effectiveAt
+                    ? ` The change takes effect on ${formatDateLabel(pendingTransition.effectiveAt) ?? "the next renewal"}.`
+                    : " The change takes effect on the next renewal."}
+                </div>
+              ) : null}
               <div
                 style={{
                   display: "flex",
@@ -4024,7 +4093,7 @@ function PaymentContent({
   tokens: Tokens;
   customerEmail: string;
   onCustomerEmailChange: (value: string) => void;
-  onConfirm: (txHash?: string) => void;
+  onConfirm: (result?: PlanChangeConfirmation) => void;
   onActivationComplete: (result: {
     txHash?: string;
     pending?: boolean;
@@ -4081,8 +4150,6 @@ function PaymentContent({
       selectedOnChainPlanId &&
       activeOnChainPlanId,
   );
-  const isPriceIncreasingPlanChange =
-    isOnChainPlanChange && price > activePlanPrice;
   const requiresHostedActivation = Boolean(
     selectedOnChainPlanId && !activeOnChainPlanId,
   );
@@ -4334,7 +4401,7 @@ function PaymentContent({
   async function handlePay() {
     setTxError("");
     if (price === 0) {
-      onConfirm(undefined);
+      onConfirm({});
       return;
     }
 
@@ -4428,14 +4495,6 @@ function PaymentContent({
       return;
     }
 
-    if (isPriceIncreasingPlanChange) {
-      setTxStatus("error");
-      setTxError(
-        "Price-increasing upgrades are still blocked until the dedicated charge-plus-plan-change flow is deployed.",
-      );
-      return;
-    }
-
     if (!chainId || !smartAccountAddress || !selectedOnChainPlanId) {
       setTxStatus("error");
       setTxError("Missing on-chain subscription metadata for this plan change.");
@@ -4486,7 +4545,7 @@ function PaymentContent({
             : 0n,
       });
       setTxStatus("confirmed");
-      onConfirm(txHash);
+      onConfirm({ txHash, autopayConfigTxHash: txHash });
     } catch (err: unknown) {
       setTxStatus("error");
       const msg = err instanceof Error ? err.message : "Transaction failed";
@@ -4503,8 +4562,7 @@ function PaymentContent({
     (!finalConnected || !finalAddress);
   const needsWalletClient =
     isOnChainPlanChange && (!resolvedWalletClient || !zeroDevProjectId);
-  const immediateAmountDue =
-    isOnChainPlanChange && price <= activePlanPrice ? 0 : price;
+  const immediateAmountDue = isOnChainPlanChange ? 0 : price;
   const hasWindowEth =
     typeof window !== "undefined" &&
     !!(window as unknown as { ethereum?: unknown }).ethereum;
@@ -4687,8 +4745,9 @@ function PaymentContent({
                     }}
                   >
                     This route verifies a real `updateConfig(...)` transaction
-                    before your plan changes. Off-chain-only plan changes are
-                    intentionally rejected.
+                    and updates future recurring billing. The selected plan
+                    takes effect on the next renewal rather than charging again
+                    today.
                   </div>
                 </div>
               ) : needsWalletClient ? (
@@ -4806,9 +4865,8 @@ function PaymentContent({
                       lineHeight: 1.6,
                     }}
                   >
-                    {price < activePlanPrice
-                      ? "The backend will create the prorated wallet credit after it verifies this downgrade transaction."
-                      : "The backend will switch your plan after it verifies this on-chain config update."}
+                    The backend will verify this on-chain config update and
+                    schedule the new plan for the next renewal cycle.
                   </div>
                 </div>
               )}
@@ -6094,10 +6152,15 @@ export function ArcenEmbed({
   );
 
   const handleSwitchPlan = useCallback(
-    async (planId: string, txHash?: string) => {
+    async (planId: string, confirmation?: PlanChangeConfirmation) => {
       dispatch({ type: "PROCESSING_START" });
       try {
         const normalizedCustomerEmail = normalizeCustomerEmail(customerEmail);
+        const successTxHash =
+          confirmation?.accessChangeTxHash ??
+          confirmation?.paymentTxHash ??
+          confirmation?.autopayConfigTxHash ??
+          confirmation?.txHash;
         const response = await callApi("/api/v1/companies/plan", {
           planId,
           billingPeriod: state.billingPeriod,
@@ -6108,11 +6171,24 @@ export function ArcenEmbed({
           couponQuote.billingPeriod === state.billingPeriod
             ? { couponCode: couponQuote.code }
             : {}),
-          ...(txHash ? { txHash } : {}),
+          ...(confirmation?.txHash ? { txHash: confirmation.txHash } : {}),
+          ...(confirmation?.autopayConfigTxHash
+            ? { autopayConfigTxHash: confirmation.autopayConfigTxHash }
+            : {}),
+          ...(confirmation?.accessChangeTxHash
+            ? { accessChangeTxHash: confirmation.accessChangeTxHash }
+            : {}),
+          ...(confirmation?.paymentTxHash
+            ? { paymentTxHash: confirmation.paymentTxHash }
+            : {}),
         });
         await fetchData();
         setCouponQuote(null);
         onPlanChange?.(planId);
+        const selectedPlan =
+          state.data?.plans.find(
+            (plan: ComponentPlanSummary) => plan.id === planId,
+          ) ?? null;
         const mode = String(
           (response as { data?: { mode?: string } })?.data?.mode ?? "",
         );
@@ -6120,15 +6196,22 @@ export function ArcenEmbed({
           (response as { data?: { walletCreditCreated?: string } })?.data
             ?.walletCreditCreated ?? 0,
         );
+        const effectiveAt =
+          (response as { data?: { effectiveAt?: string } })?.data?.effectiveAt ??
+          null;
+        const effectiveAtLabel =
+          typeof effectiveAt === "string" ? formatDateLabel(effectiveAt) : null;
         dispatch({
           type: "GOTO_SUCCESS",
           successMsg:
-            mode === "immediate_on_chain" && walletCreditCreated > 0
+            mode === "next_renewal_on_chain"
+              ? `Plan change scheduled.${selectedPlan?.name ? ` ${selectedPlan.name} will take effect` : " The new plan will take effect"}${effectiveAtLabel ? ` on ${effectiveAtLabel}` : " on the next renewal"}.`
+              : mode === "immediate_on_chain" && walletCreditCreated > 0
               ? `Plan changed. $${walletCreditCreated.toFixed(2)} wallet credit created.`
               : mode === "immediate_on_chain"
                 ? "Plan changed on-chain."
                 : "Plan activated!",
-          txHash,
+          txHash: successTxHash,
         });
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : "Failed to switch plan";
@@ -6144,6 +6227,7 @@ export function ArcenEmbed({
       customerEmail,
       fetchData,
       onPlanChange,
+      state.data,
       state.billingPeriod,
     ],
   );

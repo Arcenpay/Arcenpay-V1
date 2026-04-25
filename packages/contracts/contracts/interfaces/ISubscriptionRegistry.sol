@@ -93,7 +93,8 @@ interface ISubscriptionRegistry {
     /// @param tokenId The token ID to cancel
     function cancel(uint256 tokenId) external;
 
-    /// @notice Changes the active plan for an existing subscription token
+    /// @notice Changes the active plan for an existing subscription token.
+    /// @dev Biller-only so subscribers cannot self-upgrade access without payment.
     /// @param tokenId The token ID to update
     /// @param newPlanId The new plan identifier
     function changePlan(uint256 tokenId, uint256 newPlanId) external;

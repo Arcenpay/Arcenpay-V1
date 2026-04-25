@@ -16,6 +16,7 @@ import { upsertSubscriptionLedgerState } from "@/lib/billing-ledger";
 import { resolvePublishedFreePlan } from "@/lib/catalog-billing";
 import {
   normalizeTxHash,
+  verifyAutopayCancellationControl,
   verifySubscriptionCancellation,
 } from "@/lib/onchain-payment-verification";
 import { SELF_SERVE_CANCELLATION_ENABLED } from "@/lib/launch-flags";
@@ -75,9 +76,15 @@ export async function POST(req: NextRequest) {
       { status: 400, headers: corsHeaders() },
     );
 
-  let body: { txHash?: string } = {};
+  let body: {
+    txHash?: string;
+    cancellationTxHash?: string;
+    autopayControlTxHash?: string;
+    immediate?: boolean;
+    immediateCancel?: boolean;
+  } = {};
   try {
-    body = (await req.json()) as { txHash?: string };
+    body = (await req.json()) as typeof body;
   } catch {
     body = {};
   }
@@ -93,6 +100,9 @@ export async function POST(req: NextRequest) {
         subscriptionState: {
           select: {
             walletAddress: true,
+            currentPeriodEnd: true,
+            onChainPlanId: true,
+            onChainTokenId: true,
           },
         },
       },
@@ -120,8 +130,163 @@ export async function POST(req: NextRequest) {
   const currentTraits = asRecord(company.traits);
   const companyPaymentAccount =
     company.subscriptionState?.walletAddress ?? company.walletAddress ?? null;
+  const immediateCancel = body.immediateCancel === true || body.immediate === true;
 
   if (company.activePlanId && company.activePlanId !== freePlan.id) {
+    const currentPlan = await db.catalogPlan.findFirst({
+      where: { id: company.activePlanId, teamId },
+      select: { id: true, name: true, onChainPlanId: true },
+    });
+
+    if (!immediateCancel) {
+      const effectiveAt = company.subscriptionState?.currentPeriodEnd ?? null;
+      if (!effectiveAt || effectiveAt <= new Date()) {
+        return NextResponse.json(
+          {
+            error:
+              "The current billing period end is required before cancellation can be scheduled.",
+          },
+          { status: 409, headers: corsHeaders() },
+        );
+      }
+
+      const normalizedAutopayTxHash = normalizeTxHash(
+        body.autopayControlTxHash ?? body.txHash,
+      );
+      let autopayControl:
+        | Awaited<ReturnType<typeof verifyAutopayCancellationControl>>
+        | null = null;
+
+      if (currentPlan?.onChainPlanId) {
+        if (!companyPaymentAccount) {
+          return NextResponse.json(
+            {
+              error:
+                "The company must have a linked payment account before an on-chain cancellation can be scheduled.",
+            },
+            { status: 409, headers: corsHeaders() },
+          );
+        }
+
+        if (!normalizedAutopayTxHash) {
+          return NextResponse.json(
+            {
+              error:
+                "Scheduled paid subscription cancellation requires a confirmed AutopayModule.pauseAccount or onUninstall transaction hash.",
+            },
+            { status: 400, headers: corsHeaders() },
+          );
+        }
+
+        autopayControl = await verifyAutopayCancellationControl({
+          paymentAccount: companyPaymentAccount,
+          txHash: normalizedAutopayTxHash,
+        });
+        if (!autopayControl.ok) {
+          return NextResponse.json(
+            { error: autopayControl.error },
+            { status: autopayControl.status, headers: corsHeaders() },
+          );
+        }
+      }
+
+      const transition = {
+        mode: "cancel_at_period_end",
+        targetPlanId: freePlan.id,
+        targetPlanName: freePlan.name,
+        previousPlanId: company.activePlanId,
+        requestedAt: new Date().toISOString(),
+        effectiveAt: effectiveAt.toISOString(),
+        source: "self_service",
+      };
+
+      await db.arcenCompany.update({
+        where: { id: companyId },
+        data: {
+          traits: toPrismaJson({
+            ...currentTraits,
+            subscriptionTransition: transition,
+          }),
+        },
+      });
+
+      await upsertSubscriptionLedgerState({
+        teamId,
+        companyId,
+        walletAddress: companyPaymentAccount,
+        status: "ACTIVE",
+        catalogPlanId: company.activePlanId,
+        onChainPlanId:
+          company.subscriptionState?.onChainPlanId ??
+          currentPlan?.onChainPlanId ??
+          null,
+        onChainTokenId: company.subscriptionState?.onChainTokenId ?? null,
+        currentPeriodEnd: effectiveAt,
+        cancelAtPeriodEnd: true,
+        cancelledAt: null,
+        pastDueAt: null,
+        graceEndsAt: null,
+        lastEvent: "subscription.cancel_scheduled",
+        lastEventAt: new Date(),
+        lastSourceTxHash: normalizedAutopayTxHash,
+        metadata: {
+          source: "self_service",
+          fallbackPlanId: freePlan.id,
+          previousCatalogPlanId: company.activePlanId,
+          autopayControl:
+            autopayControl && autopayControl.ok
+              ? {
+                  control: autopayControl.control,
+                  txHash: autopayControl.txHash,
+                }
+              : null,
+        },
+      });
+
+      deliverWebhook(teamId, "company.plan.cancelled", {
+        companyId,
+        previousPlanId: company.activePlanId,
+        fallbackPlanId: freePlan.id,
+        mode: "cancel_at_period_end",
+        scheduled: true,
+        effectiveAt: effectiveAt.toISOString(),
+        autopayControlTxHash: normalizedAutopayTxHash,
+        autopayControl:
+          autopayControl && autopayControl.ok ? autopayControl.control : null,
+      }).catch(() => {});
+
+      deliverWebhook(teamId, "company.plan.changed", {
+        companyId,
+        previousPlanId: company.activePlanId,
+        planId: company.activePlanId,
+        planName: currentPlan?.name ?? null,
+        fallbackPlanId: freePlan.id,
+        mode: "cancel_at_period_end",
+        scheduled: true,
+        effectiveAt: effectiveAt.toISOString(),
+        cancellation: true,
+      }).catch(() => {});
+
+      return NextResponse.json(
+        {
+          data: {
+            success: true,
+            scheduled: true,
+            mode: "cancel_at_period_end",
+            planId: company.activePlanId,
+            fallbackPlanId: freePlan.id,
+            effectiveAt: effectiveAt.toISOString(),
+            autopayControlTxHash: normalizedAutopayTxHash,
+            autopayControl:
+              autopayControl && autopayControl.ok
+                ? autopayControl.control
+                : null,
+          },
+        },
+        { headers: corsHeaders() },
+      );
+    }
+
     if (!companyPaymentAccount) {
       return NextResponse.json(
         {
@@ -132,7 +297,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const normalizedTxHash = normalizeTxHash(body.txHash);
+    const normalizedTxHash = normalizeTxHash(
+      body.cancellationTxHash ?? body.txHash,
+    );
     if (!normalizedTxHash) {
       return NextResponse.json(
         {
