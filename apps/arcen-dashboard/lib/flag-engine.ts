@@ -179,6 +179,13 @@ export async function resolveCompany(
       traits: true,
       activePlanId: true,
       activeAddOnIds: true,
+      addOnGrants: {
+        select: {
+          catalogAddOnId: true,
+          status: true,
+          expiresAt: true,
+        },
+      },
       subscriptionState: {
         select: {
           status: true,
@@ -220,11 +227,28 @@ export async function resolveCompany(
     if (onChainPlanId) activePlanId = onChainPlanId;
   }
 
+  const activeGrantAddOnIds = [
+    ...new Set(
+      company.addOnGrants
+        .filter(
+          (grant) =>
+            grant.status === "ACTIVE" &&
+            (!grant.expiresAt || grant.expiresAt > now),
+        )
+        .map((grant) => grant.catalogAddOnId),
+    ),
+  ];
+
   return {
     id: company.id,
     traits: (company.traits as Record<string, unknown>) ?? {},
     activePlanId,
-    activeAddOnIds: Array.isArray(company.activeAddOnIds) ? (company.activeAddOnIds as string[]) : [],
+    activeAddOnIds:
+      activeGrantAddOnIds.length > 0
+        ? activeGrantAddOnIds
+        : Array.isArray(company.activeAddOnIds)
+          ? (company.activeAddOnIds as string[])
+          : [],
   };
 }
 

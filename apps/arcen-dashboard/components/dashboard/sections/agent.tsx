@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DASHBOARD_DOCS_URL } from "@/lib/docs-url";
 import { cn } from "@/lib/utils";
 import {
   Dialog,
@@ -454,16 +455,32 @@ ARCENPAY_FACILITATOR_URL=https://facilitator.arcenpay.xyz`;
       {/* Resources */}
       <div className="grid grid-cols-2 gap-3">
         {[
-          { icon: BookOpen, title: "Agent SDK docs", desc: "See the Docs section for SDK references." },
-          { icon: Terminal, title: "x402 protocol", desc: "Use the in-app quickstart snippets as the current reference." },
-        ].map(({ icon: Icon, title, desc }) => (
-          <div key={title} className="flex items-center gap-3 p-3 rounded-lg border border-border bg-secondary/10">
+          {
+            icon: BookOpen,
+            title: "Agent SDK docs",
+            desc: "Open the canonical docs app for agent setup and hosted payments.",
+            href: `${DASHBOARD_DOCS_URL}/sdk-reference/agent`,
+          },
+          {
+            icon: Terminal,
+            title: "x402 protocol",
+            desc: "Review the current sessions and payment flow in the docs app.",
+            href: `${DASHBOARD_DOCS_URL}/core-concepts/sessions`,
+          },
+        ].map(({ icon: Icon, title, desc, href }) => (
+          <a
+            key={title}
+            href={href}
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-3 rounded-lg border border-border bg-secondary/10 p-3 transition hover:border-border/80 hover:bg-secondary/20"
+          >
             <Icon className="w-4 h-4 text-muted-foreground group-hover:text-foreground" />
             <div className="min-w-0">
               <span className="text-sm text-foreground block">{title}</span>
               <span className="text-xs text-muted-foreground">{desc}</span>
             </div>
-          </div>
+          </a>
         ))}
       </div>
     </div>

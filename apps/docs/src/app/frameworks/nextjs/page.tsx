@@ -1,4 +1,5 @@
 'use client';
+
 import { useState } from 'react';
 
 function CodeBlock({ lang, code }: { lang: string; code: string }) {
@@ -7,7 +8,14 @@ function CodeBlock({ lang, code }: { lang: string; code: string }) {
     <div className="docs-codeblock">
       <div className="docs-codeblock-header">
         <span className="docs-codeblock-lang">{lang}</span>
-        <button className="docs-codeblock-copy" onClick={() => { navigator.clipboard.writeText(code); setCopied(true); setTimeout(() => setCopied(false), 2000); }}>
+        <button
+          className="docs-codeblock-copy"
+          onClick={() => {
+            navigator.clipboard.writeText(code);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+          }}
+        >
           {copied ? '✓ Copied' : 'Copy'}
         </button>
       </div>
@@ -24,78 +32,83 @@ export default function NextJSPage() {
         <div className="docs-page-title-row"><h1>Next.js Implementation</h1></div>
 
         <p className="docs-lead" id="nextjs">
-          ArcenPay is fully compatible with Next.js App Router, supporting both Client Components (hooks) 
-          and Server Components (verification).
+          Next.js is the reference integration model for the current product. The dashboard
+          itself uses App Router, server routes for billing APIs, and client
+          components for checkout, embeds, and operational tooling.
         </p>
 
-        <h2 id="setup">Project Setup</h2>
-        <CodeBlock lang="bash" code={`npx create-next-app@latest
-npm install @arcenpay/react @arcenpay/node wagmi viem`} />
+        <h2 id="setup">Install and configure</h2>
+        <CodeBlock
+          lang="bash"
+          code={`npm install @arcenpay/react @arcenpay/node @arcenpay/sdk viem wagmi`}
+        />
 
-        <h2 id="client-side">Client Side: Access Gating</h2>
-        <p>Wrap your Root Layout with <code>ArcenPayProvider</code> and check status in your pages.</p>
-        <CodeBlock lang="tsx" code={`"use client";
-import { useSubscription } from '@arcenpay/react';
+        <CodeBlock
+          lang="env"
+          code={`NEXT_PUBLIC_CHAIN_ID=84532
+NEXT_PUBLIC_GRAPH_URL_84532=https://your-subgraph
+FACILITATOR_BASE_URL_84532=http://localhost:3402
+BASE_SEPOLIA_RPC_URL=https://sepolia.base.org`}
+        />
 
-export default function PremiumDashboard() {
-  const { status, loading } = useSubscription();
+        <h2 id="subscriptions">Recurring subscriptions in client components</h2>
+        <CodeBlock
+          lang="tsx"
+          code={`'use client';
 
-  if (loading) return <Skeleton />;
-  if (status !== 'active') return <RedirectToCheckout />;
+import { CheckoutModal } from '@arcenpay/react';
 
-  return <PremiumContent />;
-}`} />
-
-        <h2 id="server-side">Server Side: Middleware</h2>
-        <p>Use Middleware to block entire route segments for non-subscribers at the edge.</p>
-        <CodeBlock lang="typescript" code={`// middleware.ts
-import { NextResponse } from 'next/server'
-import { ArcenPayClient } from '@arcenpay/node'
-
-export async function middleware(request) {
-  const wallet = request.cookies.get('user-wallet');
-  const client = new ArcenPayClient({ rpcUrl: process.env.RPC_URL });
-
-  const { isValid } = await client.verifySubscription(wallet);
-
-  if (!isValid && request.nextUrl.pathname.startsWith('/premium')) {
-    return NextResponse.redirect(new URL('/checkout', request.url))
-  }
-}`} />
-
-        <h2 id="server-actions">Server Actions & API Routes</h2>
-        <p>Verify payments inside Server Actions to ensure actions are only performed by paying customers.</p>
-        <CodeBlock lang="typescript" code={`"use server";
-import { client } from '@/lib/arcenpay';
-
-export async function processSensitiveData() {
-  const wallet = await getSessionWallet();
-  const { isValid } = await client.verifySubscription(wallet);
-
-  if (!isValid) throw new Error("Unauthorized");
-
-  // Perform action...
-}`} />
-
-        <h2 id="feature-gating">Advanced: Feature Gating</h2>
-        <p>Fetch decrypted configuration from Tableland/Lit Protocol on the server.</p>
-        <CodeBlock lang="tsx" code={`export default async function FeatureLockedPage() {
-  const flags = await client.getFeatureFlags(wallet);
-
+export function SubscribeButton() {
   return (
-    <div>
-      {flags.ai_editor ? <Editor /> : <UpgradePrompt />}
-    </div>
+    <CheckoutModal
+      planId={1n}
+      isOpen={open}
+      onClose={() => setOpen(false)}
+      activationEndpoint="/api/v1/subscriptions/activate"
+    />
   );
-}`} />
+}`}
+        />
 
-        <div className="docs-callout tip">
-          <span className="docs-callout-icon">💡</span>
-          <div>
-            We recommend using <code>iron-session</code> or <code>next-auth</code> to persist the user&apos;s wallet
-            address after the initial connection, reducing RPC calls on subsequent page loads.
-          </div>
-        </div>
+        <h2 id="hosted-payments">One-time hosted payments</h2>
+        <CodeBlock
+          lang="tsx"
+          code={`import { createPaymentLinkCheckoutUrl } from '@arcenpay/react';
+
+const paymentUrl = createPaymentLinkCheckoutUrl(paymentLink.slug);
+window.location.assign(paymentUrl);`}
+        />
+
+        <h2 id="server-routes">Server routes and protected data</h2>
+        <CodeBlock
+          lang="ts"
+          code={`import { NextResponse } from 'next/server';
+
+export async function GET() {
+  const response = await fetch(process.env.APP_URL + '/api/v1/check', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      companyId: 'company_123',
+      featureKey: 'analytics_export',
+    }),
+  });
+
+  const result = await response.json();
+  if (!result.enabled) {
+    return NextResponse.json({ error: 'Upgrade required' }, { status: 403 });
+  }
+
+  return NextResponse.json({ ok: true });
+}`}
+        />
+
+        <h2 id="feature-gating">Feature checks</h2>
+        <p>
+          The live entitlement path is dashboard-rule based. Use the dashboard
+          API or your server-side integration to verify protected access. Do not
+          assume a Tableland-only flag backend.
+        </p>
       </article>
 
       <nav className="docs-toc">
@@ -103,9 +116,10 @@ export async function processSensitiveData() {
         <ul className="docs-toc-list">
           <li className="docs-toc-item active"><a href="#nextjs">Next.js</a></li>
           <li className="docs-toc-item"><a href="#setup">Setup</a></li>
-          <li className="docs-toc-item"><a href="#client-side">Client Side</a></li>
-          <li className="docs-toc-item"><a href="#server-side">Server Side</a></li>
-          <li className="docs-toc-item"><a href="#server-actions">Server Actions</a></li>
+          <li className="docs-toc-item"><a href="#subscriptions">Subscriptions</a></li>
+          <li className="docs-toc-item"><a href="#hosted-payments">Hosted payments</a></li>
+          <li className="docs-toc-item"><a href="#server-routes">Server routes</a></li>
+          <li className="docs-toc-item"><a href="#feature-gating">Feature checks</a></li>
         </ul>
       </nav>
     </div>

@@ -1,4 +1,5 @@
 'use client';
+
 import { useState } from 'react';
 
 function CodeBlock({ lang, code }: { lang: string; code: string }) {
@@ -7,7 +8,14 @@ function CodeBlock({ lang, code }: { lang: string; code: string }) {
     <div className="docs-codeblock">
       <div className="docs-codeblock-header">
         <span className="docs-codeblock-lang">{lang}</span>
-        <button className="docs-codeblock-copy" onClick={() => { navigator.clipboard.writeText(code); setCopied(true); setTimeout(() => setCopied(false), 2000); }}>
+        <button
+          className="docs-codeblock-copy"
+          onClick={() => {
+            navigator.clipboard.writeText(code);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+          }}
+        >
           {copied ? '✓ Copied' : 'Copy'}
         </button>
       </div>
@@ -24,78 +32,67 @@ export default function FeatureGatingGuide() {
         <div className="docs-page-title-row"><h1>Feature Gating</h1></div>
 
         <p className="docs-lead" id="gating">
-          Use dynamic feature flags stored on decentralized storage (Tableland) and encrypted 
-          with Lit Protocol to enable/disable features for specific subscription tiers.
+          Feature gating in the current product is driven by dashboard-managed
+          rules, company overrides, active subscriptions, and add-on grants.
+          Optional Lit or zkTLS integrations can enrich the model, but they are
+          not the primary source of truth for launch-time entitlements.
         </p>
 
-        <h2 id="concept">Overview</h2>
-        <p>
-          Instead of hard-coding features to plan tiers, ArcenPay lets you define a JSON configuration 
-          for each tier. When a user subscribes, they unlock the configuration for their specific plan.
-        </p>
+        <h2 id="model">How the live model works</h2>
+        <ol>
+          <li>Resolve the company and its active plan or subscription state.</li>
+          <li>Resolve active add-on grants for standalone purchases or upsells.</li>
+          <li>Apply company overrides.</li>
+          <li>Evaluate prioritized rules for traits, usage thresholds, or zkTLS claims.</li>
+        </ol>
 
-        <h2 id="configuring">Configuring Flags</h2>
-        <p>In your provider settings, define your feature schema:</p>
-        <CodeBlock lang="json" code={`{
-  "pro": {
-    "max_projects": 50,
-    "beta_editor": true,
-    "api_access": true
-  },
-  "standard": {
-    "max_projects": 5,
-    "beta_editor": false,
-    "api_access": false
-  }
-}`} />
+        <h2 id="api">Server-side gating</h2>
+        <CodeBlock
+          lang="ts"
+          code={`const response = await fetch('/api/v1/check', {
+  method: 'POST',
+  headers: { 'content-type': 'application/json' },
+  body: JSON.stringify({
+    companyId: 'company_123',
+    featureKey: 'priority_support',
+  }),
+});
 
-        <h2 id="sdk-usage">Using flags in React</h2>
-        <p>The <code>useFeatureFlags</code> hook handles the decryption and fetching automatically.</p>
-        <CodeBlock lang="tsx" code={`const { flags, loading } = useFeatureFlags();
+const result = await response.json();
+if (!result.enabled) throw new Error('Upgrade required');`}
+        />
 
-if (loading) return <Spinner />;
+        <h2 id="react">Client-side checks</h2>
+        <CodeBlock
+          lang="tsx"
+          code={`import { useEntitlementCheck } from '@arcenpay/react';
 
-return (
-  <nav>
-    <Link href="/dashboard">Dashboard</Link>
-    {flags.api_access && <Link href="/dev">API Settings</Link>}
-    <p>Limit: {flags.max_projects} projects</p>
-  </nav>
-);`} />
+function ExportButton() {
+  const { result, loading } = useEntitlementCheck('analytics_export');
 
-        <h2 id="server-usage">Using flags in Node.js</h2>
-        <p>For sensitive operations, verify the flags server-side.</p>
-        <CodeBlock lang="typescript" code={`const flags = await client.getFeatureFlags(userWallet);
+  if (loading) return null;
+  if (!result?.enabled) return <UpgradePrompt />;
 
-if (!flags.beta_editor) {
-  throw new Error("Access Denied");
-}`} />
+  return <button>Export CSV</button>;
+}`}
+        />
 
-        <h2 id="updates">Dynamic Updates</h2>
-        <p>
-          When you update flags in the dashboard, the changes are written to the dashboard&apos;s
-          flag rules and entitlement records. The current launch path uses a DB-backed flag
-          engine, with optional on-chain subscription reads as a fallback for plan resolution.
-        </p>
-
-        <div className="docs-callout tip">
-          <span className="docs-callout-icon">💡</span>
-          <div>
-            Combine feature flags with <code>useSubscription</code> status to provide a &quot;grace period&quot; 
-            where features remain active for 24 hours after an NFT expires.
-          </div>
-        </div>
+        <h2 id="operational-notes">Operational notes</h2>
+        <ul>
+          <li>Use add-on grants for one-time or upsell unlocks instead of custom JSON-only access hacks.</li>
+          <li>Keep sensitive access checks on the server even if the React UI hides locked controls.</li>
+          <li>Only document Lit-encrypted content if your project has implemented the encryption write path too.</li>
+        </ul>
       </article>
 
       <nav className="docs-toc">
         <div className="docs-toc-heading">On this page</div>
         <ul className="docs-toc-list">
           <li className="docs-toc-item active"><a href="#gating">Feature Gating</a></li>
-          <li className="docs-toc-item"><a href="#concept">Overview</a></li>
-          <li className="docs-toc-item"><a href="#configuring">Configuring</a></li>
-          <li className="docs-toc-item"><a href="#sdk-usage">React Usage</a></li>
-          <li className="docs-toc-item"><a href="#server-usage">Node Usage</a></li>
-          <li className="docs-toc-item"><a href="#updates">Updates</a></li>
+          <li className="docs-toc-item"><a href="#model">Model</a></li>
+          <li className="docs-toc-item"><a href="#api">Server-side gating</a></li>
+          <li className="docs-toc-item"><a href="#react">Client-side checks</a></li>
+          <li className="docs-toc-item"><a href="#operational-notes">Operational notes</a></li>
         </ul>
       </nav>
     </div>

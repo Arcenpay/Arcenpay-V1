@@ -40,6 +40,24 @@ interface CompanyDetail extends Company {
     exceeded?: boolean;
   }[];
   activePlan: { id: string; name: string; tier: string; price: string } | null;
+  addOnGrants: Array<{
+    id: string;
+    status: string;
+    source: string;
+    grantedAt: string;
+    expiresAt?: string | null;
+    cancelAtPeriodEnd: boolean;
+    addOn: {
+      id: string;
+      name: string;
+      code: string;
+      billingType: string;
+      saleMode: string;
+      price: string;
+      billingIntervalDays?: number | null;
+      acceptedToken: string;
+    };
+  }>;
 }
 
 // ─── CopyButton ───────────────────────────────────────────────────────────────
@@ -151,6 +169,44 @@ function CompanyDetailContent({ company, onClose }: { company: CompanyDetail; on
                     )}
                   </div>
                   <Badge variant="outline" className="text-xs text-muted-foreground">✗ False</Badge>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section>
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+            Active Add-Ons
+          </h3>
+          {company.addOnGrants.length === 0 ? (
+            <div className="p-3 rounded-lg border border-dashed border-border/60 bg-muted/20 text-sm text-muted-foreground">
+              No add-ons granted yet
+            </div>
+          ) : (
+            <div className="space-y-1.5">
+              {company.addOnGrants.map((grant) => (
+                <div key={grant.id} className="rounded-lg border border-border/40 px-3 py-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <div className="text-sm font-medium text-foreground">{grant.addOn.name}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {grant.source.toLowerCase().replace(/_/g, " ")} · {grant.addOn.billingType === "RECURRING"
+                          ? grant.addOn.billingIntervalDays
+                            ? `every ${grant.addOn.billingIntervalDays} days`
+                            : "recurring"
+                          : "one-time"}
+                      </div>
+                    </div>
+                    <Badge variant={grant.status === "ACTIVE" ? "secondary" : "outline"} className="text-xs">
+                      {grant.status.toLowerCase()}
+                    </Badge>
+                  </div>
+                  <div className="mt-2 text-[11px] text-muted-foreground">
+                    Granted {new Date(grant.grantedAt).toLocaleDateString()}
+                    {grant.cancelAtPeriodEnd ? " · ends at renewal" : ""}
+                    {grant.expiresAt ? ` · expires ${new Date(grant.expiresAt).toLocaleDateString()}` : ""}
+                  </div>
                 </div>
               ))}
             </div>

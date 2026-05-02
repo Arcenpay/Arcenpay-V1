@@ -67,6 +67,9 @@ import {
   PlanFactoryABI,
   SessionVaultABI,
   SubscriptionRegistryABI,
+  PRIMARY_RUNTIME_CHAIN_ID,
+  getPrimaryRuntimeChainProfile,
+  formatRuntimeChainMismatch,
   getContractAddresses,
   getChainEnvironment,
   validateChainEnvironment,
@@ -96,10 +99,12 @@ const app = express();
 const PORT = process.env.PORT || 3402;
 const CHAIN_ID = parseInt(process.env.CHAIN_ID || "84532", 10);
 const CHAIN_ENV = getChainEnvironment(CHAIN_ID);
+const RUNTIME_CHAIN_PROFILE = getPrimaryRuntimeChainProfile();
 const RPC_URL =
   process.env.RPC_URL ||
   CHAIN_ENV.services.rpcUrl ||
-  "https://ethereum-sepolia-rpc.publicnode.com";
+  RUNTIME_CHAIN_PROFILE.rpcUrl ||
+  "https://sepolia.base.org";
 const CONTRACTS = CHAIN_ENV.contracts;
 const chainClient = createPublicClient({
   transport: http(RPC_URL),
@@ -2422,6 +2427,18 @@ app.get("/health", async (_req, res) => {
     version: "0.1.0",
     profile: FACILITATOR_PROFILE,
     chainId: CHAIN_ID,
+    runtimeChain: {
+      expectedChainId: PRIMARY_RUNTIME_CHAIN_ID,
+      expectedChainName: RUNTIME_CHAIN_PROFILE.chainName,
+      supported: CHAIN_ID === PRIMARY_RUNTIME_CHAIN_ID,
+      warning:
+        CHAIN_ID === PRIMARY_RUNTIME_CHAIN_ID
+          ? null
+          : `${formatRuntimeChainMismatch({
+              actualChainId: CHAIN_ID,
+              expectedChainId: PRIMARY_RUNTIME_CHAIN_ID,
+            })} Set CHAIN_ID=${PRIMARY_RUNTIME_CHAIN_ID} and a Base Sepolia RPC (${RUNTIME_CHAIN_PROFILE.rpcEnvKeys.join(", ")}).`,
+    },
     blockNumber,
     timestamp: new Date().toISOString(),
     services: {

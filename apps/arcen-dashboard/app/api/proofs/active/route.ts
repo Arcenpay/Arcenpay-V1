@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth.server";
 import { FACILITATOR_URL, FACILITATOR_SECRET } from "@/lib/config";
+import {
+  RUNTIME_CHAIN_ID,
+  RUNTIME_CHAIN_PROFILE,
+  getRuntimeChainWarning,
+} from "@/lib/runtime-chain";
 
 export async function GET(request: NextRequest) {
   const session = await getSession();
@@ -35,10 +40,19 @@ export async function GET(request: NextRequest) {
             count: 0,
             jobs: [],
             degraded: true,
-            message: "Facilitator is connected to a different chain.",
+            message: getRuntimeChainWarning({
+              actualChainId: health.chainId,
+              expectedChainId: requestedChainId,
+            }),
             chainMismatch: {
               requestedChainId,
               facilitatorChainId: health.chainId,
+            },
+            runtimeChain: {
+              expectedChainId: RUNTIME_CHAIN_ID,
+              expectedChainName: RUNTIME_CHAIN_PROFILE.chainName,
+              rpcEnvKeys: RUNTIME_CHAIN_PROFILE.rpcEnvKeys,
+              subgraphEnvKeys: RUNTIME_CHAIN_PROFILE.subgraphEnvKeys,
             },
           });
         }

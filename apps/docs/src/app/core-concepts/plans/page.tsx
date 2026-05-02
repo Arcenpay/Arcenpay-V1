@@ -128,8 +128,9 @@ export default function PlansPage() {
             <div className="docs-step-body">
               <div className="docs-step-title">Select the accepted token</div>
               <p className="docs-step-desc">
-                Choose the USDC contract for the chain your subscribers will pay on. Sepolia, Base Sepolia,
-                and Base Mainnet USDC addresses are pre-filled.
+                Choose the USDC contract for the chain your subscribers will pay
+                on. For the current product pass, keep your active dashboard and
+                facilitator setup aligned to Base Sepolia first.
               </p>
             </div>
           </div>

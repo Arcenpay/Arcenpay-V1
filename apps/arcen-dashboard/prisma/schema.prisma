@@ -53,6 +53,12 @@ enum AddOnBillingType {
   RECURRING
 }
 
+enum AddOnSaleMode {
+  STANDALONE
+  UPSELL
+  BOTH
+}
+
 enum TemplateInstallStatus {
   INSTALLED
   UNINSTALLED
@@ -85,6 +91,8 @@ enum PaymentKind {
   SUBSCRIPTION_RENEWAL
   SUBSCRIPTION_PLAN_CHANGE_UPGRADE
   MANUAL_INVOICE_PAYMENT
+  ADDON_PURCHASE
+  CUSTOM_PAYMENT
 }
 
 enum PaymentStatus {
@@ -92,6 +100,47 @@ enum PaymentStatus {
   SUCCEEDED
   FAILED
   CANCELLED
+}
+
+enum CompanyAddOnGrantStatus {
+  ACTIVE
+  CANCELLED
+  REVOKED
+  EXPIRED
+}
+
+enum CompanyAddOnGrantSource {
+  ADMIN
+  ADDON_PURCHASE
+  PAYMENT_LINK
+  INVOICE
+  SUBSCRIPTION_UPSELL
+}
+
+enum PaymentLinkKind {
+  ADDON
+  INVOICE
+  CUSTOM
+}
+
+enum PaymentLinkStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+enum CheckoutSessionPurpose {
+  ADDON
+  INVOICE
+  CUSTOM
+}
+
+enum CheckoutSessionStatus {
+  PENDING
+  PAID
+  EXPIRED
+  CANCELLED
+  FAILED
 }
 
 enum PaymentAttemptStatus {
@@ -253,6 +302,8 @@ model Team {
 
   invoices         Invoice[]
   payments         Payment[]
+  paymentLinks     PaymentLink[]
+  checkoutSessions CheckoutSession[]
   billingBalances  BillingBalance[]
   refunds          Refund[]
   billingAdjustments BillingAdjustment[]
@@ -270,6 +321,7 @@ model Team {
 
   // Web3 ArcenPay Protocol Layer
   arcenCompanies      ArcenCompany[]
+  addOnGrants         CompanyAddOnGrant[]
   featureFlags        CatalogFeatureFlag[]
   arcenApiKeys        ArcenApiKey[]
   embedComponents     EmbedComponent[]
@@ -414,7 +466,9 @@ model CatalogAddOn {
   code        String
   description String?
   billingType AddOnBillingType @default(ONE_TIME)
+  saleMode    AddOnSaleMode    @default(STANDALONE)
   price       Decimal          @db.Decimal(20, 6)
+  billingIntervalDays Int?
   acceptedToken String
   metadata    Json?
 
@@ -427,6 +481,9 @@ model CatalogAddOn {
   chainSyncedAt   DateTime?
 
   team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  companyGrants CompanyAddOnGrant[]
+  paymentLinks PaymentLink[]
+  checkoutSessions CheckoutSession[]
 
   @@unique([teamId, code, environmentMode])
   @@index([teamId, environmentMode, status])
@@ -645,6 +702,8 @@ model Invoice {
   creditNotes CreditNote[]
   payments   Payment[]
   refunds    Refund[]
+  paymentLinks PaymentLink[]
+  checkoutSessions CheckoutSession[]
 
   @@index([teamId, status, issuedAt])
   @@index([teamId, environmentMode])
@@ -771,6 +830,7 @@ model SubscriptionState {
   company ArcenCompany @relation(fields: [companyId], references: [id], onDelete: Cascade)
   payments Payment[]
   billingAdjustments BillingAdjustment[]
+  checkoutSessions CheckoutSession[]
 
   @@index([teamId, status])
   @@index([teamId, walletAddress])
@@ -806,6 +866,8 @@ model Payment {
   attempts          PaymentAttempt[]
   billingAdjustments BillingAdjustment[]
   refunds           Refund[]
+  checkoutSessions CheckoutSession[]
+  addOnGrants CompanyAddOnGrant[]
 
   @@index([teamId, status, occurredAt])
   @@index([companyId, createdAt])
@@ -1074,6 +1136,9 @@ model ArcenCompany {
   refunds   Refund[]
   billingAdjustments BillingAdjustment[]
   billingRecoveryTasks BillingRecoveryTask[]
+  addOnGrants CompanyAddOnGrant[]
+  paymentLinks PaymentLink[]
+  checkoutSessions CheckoutSession[]
 
   @@unique([teamId, walletAddress])
   @@unique([teamId, externalId])
@@ -1125,6 +1190,117 @@ model ArcenEvent {
   @@index([teamId, eventType, sentAt])
   @@index([teamId, companyId, sentAt])
   @@map("SchematicEvent")
+}
+
+model CompanyAddOnGrant {
+  id                String                  @id @default(cuid())
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+  teamId            String
+  companyId         String
+  catalogAddOnId    String
+  status            CompanyAddOnGrantStatus @default(ACTIVE)
+  source            CompanyAddOnGrantSource
+  paymentId         String?
+  checkoutSessionId String?
+  grantedAt         DateTime                @default(now())
+  expiresAt         DateTime?
+  cancelAtPeriodEnd Boolean                 @default(false)
+  cancelledAt       DateTime?
+  metadata          Json?
+
+  team             Team             @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  company          ArcenCompany     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  catalogAddOn     CatalogAddOn     @relation(fields: [catalogAddOnId], references: [id], onDelete: Cascade)
+  payment          Payment?         @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  checkoutSession  CheckoutSession? @relation(fields: [checkoutSessionId], references: [id], onDelete: SetNull)
+
+  @@index([teamId, companyId, status])
+  @@index([teamId, catalogAddOnId, status])
+  @@index([paymentId])
+  @@index([checkoutSessionId])
+}
+
+model PaymentLink {
+  id               String            @id @default(cuid())
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  teamId           String
+  kind             PaymentLinkKind
+  status           PaymentLinkStatus @default(ACTIVE)
+  name             String
+  slug             String            @unique
+  description      String?
+  companyId        String?
+  catalogAddOnId   String?
+  invoiceId        String?
+  currency         String            @default("USDC")
+  amount           Decimal           @db.Decimal(20, 6)
+  acceptedToken    String
+  chainId          Int               @default(84532)
+  recipientWallet  String
+  successUrl       String?
+  cancelUrl        String?
+  expiresAt        DateTime?
+  metadata         Json?
+
+  team             Team              @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  company          ArcenCompany?     @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  catalogAddOn     CatalogAddOn?     @relation(fields: [catalogAddOnId], references: [id], onDelete: SetNull)
+  invoice          Invoice?          @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  checkoutSessions CheckoutSession[]
+
+  @@index([teamId, status, kind])
+  @@index([teamId, companyId])
+  @@index([teamId, catalogAddOnId])
+  @@index([teamId, invoiceId])
+}
+
+model CheckoutSession {
+  id                String                 @id @default(cuid())
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+  teamId            String
+  paymentLinkId     String?
+  companyId         String?
+  catalogAddOnId    String?
+  invoiceId         String?
+  paymentId         String?
+  subscriptionStateId String?
+  purpose           CheckoutSessionPurpose
+  status            CheckoutSessionStatus  @default(PENDING)
+  customerEmail     String?
+  customerWallet    String?
+  customerName      String?
+  currency          String                 @default("USDC")
+  amount            Decimal                @db.Decimal(20, 6)
+  acceptedToken     String
+  chainId           Int                    @default(84532)
+  recipientWallet   String
+  txHash            String?                @unique
+  verificationError String?
+  successUrl        String?
+  cancelUrl         String?
+  expiresAt         DateTime?
+  paidAt            DateTime?
+  cancelledAt       DateTime?
+  metadata          Json?
+
+  team             Team               @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  paymentLink      PaymentLink?       @relation(fields: [paymentLinkId], references: [id], onDelete: SetNull)
+  company          ArcenCompany?      @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  catalogAddOn     CatalogAddOn?      @relation(fields: [catalogAddOnId], references: [id], onDelete: SetNull)
+  invoice          Invoice?           @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  payment          Payment?           @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  subscriptionState SubscriptionState? @relation(fields: [subscriptionStateId], references: [id], onDelete: SetNull)
+  addOnGrants      CompanyAddOnGrant[]
+
+  @@index([teamId, status, createdAt])
+  @@index([teamId, paymentLinkId])
+  @@index([teamId, companyId])
+  @@index([teamId, catalogAddOnId])
+  @@index([teamId, invoiceId])
+  @@index([teamId, subscriptionStateId])
 }
 
 model CatalogFeatureFlag {

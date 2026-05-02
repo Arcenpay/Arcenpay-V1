@@ -168,7 +168,9 @@ export async function recordSuccessfulPayment(input: {
     | "SUBSCRIPTION_ACTIVATION"
     | "SUBSCRIPTION_RENEWAL"
     | "SUBSCRIPTION_PLAN_CHANGE_UPGRADE"
-    | "MANUAL_INVOICE_PAYMENT";
+    | "MANUAL_INVOICE_PAYMENT"
+    | "ADDON_PURCHASE"
+    | "CUSTOM_PAYMENT";
   amount: number;
   currency?: string;
   payerWallet?: string | null;
@@ -298,7 +300,9 @@ export async function recordFailedPayment(input: {
     | "SUBSCRIPTION_ACTIVATION"
     | "SUBSCRIPTION_RENEWAL"
     | "SUBSCRIPTION_PLAN_CHANGE_UPGRADE"
-    | "MANUAL_INVOICE_PAYMENT";
+    | "MANUAL_INVOICE_PAYMENT"
+    | "ADDON_PURCHASE"
+    | "CUSTOM_PAYMENT";
   amount?: number;
   currency?: string;
   txHash?: string | null;

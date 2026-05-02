@@ -7,6 +7,11 @@ import {
   normalizeEnvironmentMode,
   resolveEnvironmentChainId,
 } from "@/lib/default-chain";
+import {
+  RUNTIME_CHAIN_ID,
+  RUNTIME_CHAIN_PROFILE,
+  getRuntimeChainWarning,
+} from "@/lib/runtime-chain";
 
 const querySchema = z.object({
   chainId: z.coerce.number().int().positive().optional(),
@@ -140,6 +145,7 @@ async function readActiveProofJobs(chainId: number): Promise<{
   jobs: ActiveProofJob[];
   status: "ok" | "unavailable" | "chain_mismatch";
   chainMismatch?: { requestedChainId: number; facilitatorChainId: number };
+  message?: string;
 }> {
   try {
     const healthRes = await fetch(`${FACILITATOR_URL}/health`, {
@@ -164,6 +170,10 @@ async function readActiveProofJobs(chainId: number): Promise<{
             requestedChainId: chainId,
             facilitatorChainId: health.chainId,
           },
+          message: getRuntimeChainWarning({
+            actualChainId: health.chainId,
+            expectedChainId: chainId,
+          }),
         };
       }
     }
@@ -246,5 +256,11 @@ export async function GET(request: NextRequest) {
     sessions: subgraphData.sessions,
     proofs: subgraphData.proofs,
     activeProofs,
+    runtimeChain: {
+      expectedChainId: RUNTIME_CHAIN_ID,
+      expectedChainName: RUNTIME_CHAIN_PROFILE.chainName,
+      rpcEnvKeys: RUNTIME_CHAIN_PROFILE.rpcEnvKeys,
+      subgraphEnvKeys: RUNTIME_CHAIN_PROFILE.subgraphEnvKeys,
+    },
   });
 }

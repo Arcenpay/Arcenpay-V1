@@ -1,4 +1,5 @@
 'use client';
+
 import { useState } from 'react';
 
 function CodeBlock({ lang, code }: { lang: string; code: string }) {
@@ -7,7 +8,14 @@ function CodeBlock({ lang, code }: { lang: string; code: string }) {
     <div className="docs-codeblock">
       <div className="docs-codeblock-header">
         <span className="docs-codeblock-lang">{lang}</span>
-        <button className="docs-codeblock-copy" onClick={() => { navigator.clipboard.writeText(code); setCopied(true); setTimeout(() => setCopied(false), 2000); }}>
+        <button
+          className="docs-codeblock-copy"
+          onClick={() => {
+            navigator.clipboard.writeText(code);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+          }}
+        >
           {copied ? '✓ Copied' : 'Copy'}
         </button>
       </div>
@@ -15,6 +23,15 @@ function CodeBlock({ lang, code }: { lang: string; code: string }) {
     </div>
   );
 }
+
+const contracts = [
+  ['PlanFactory', 'Creates plans and provider-level catalog state.'],
+  ['SubscriptionRegistry', 'Stores the subscription NFT lifecycle and renewal state.'],
+  ['ERC7579AutopayModule', 'Handles recurring pulls for subscriber smart accounts.'],
+  ['FeeCollector', 'Tracks protocol fees for subscription and usage billing.'],
+  ['SessionVault', 'Holds prefunded balances for x402 and proof-based settlement.'],
+  ['ZKUsageVerifier', 'Settles metered sessions after proof verification.'],
+];
 
 export default function ArchitecturePage() {
   return (
@@ -24,165 +41,133 @@ export default function ArchitecturePage() {
         <div className="docs-page-title-row"><h1>Architecture</h1></div>
 
         <p className="docs-lead" id="architecture">
-          ArcenPay is a two-subsystem protocol. <strong>ArcenPay Protocol</strong> handles structured recurring billing for humans
-          and organizations; <strong>ZKVUB</strong> handles metered AI agent micropayments with cryptographic proof of usage.
-          Both subsystems share the same <code>PlanFactory</code> and <code>FeeCollector</code> primitives.
+          ArcenPay has two real production-facing paths in the current platform:
+          recurring subscription billing for plans, and hosted one-time USDC
+          payments for add-ons, invoice pay-now links, and custom charges. The
+          current hardening pass standardizes the runtime on Base Sepolia
+          (84532).
         </p>
+
+        <div className="docs-callout info">
+          <span className="docs-callout-icon">i</span>
+          <div>
+            Base Sepolia is the primary runtime. Legacy Sepolia references may
+            still exist in low-priority docs or old examples, but the active
+            dashboard, facilitator, and hosted payment work should be configured
+            for chain ID <code>84532</code>.
+          </div>
+        </div>
 
         <h2 id="system-overview">System overview</h2>
         <table className="docs-table">
-          <thead><tr><th>Subsystem</th><th>Stands for</th><th>Use case</th><th>Key contracts</th></tr></thead>
+          <thead>
+            <tr><th>Layer</th><th>Responsibility</th><th>Where it lives</th></tr>
+          </thead>
           <tbody>
             <tr>
-              <td><strong>ArcenPay Protocol</strong></td>
-              <td>Modular Entitlement & Access Protocol</td>
-              <td>Recurring subscriptions, feature gating</td>
-              <td>PlanFactory, SubscriptionRegistry, ERC7579AutopayModule</td>
+              <td>Dashboard</td>
+              <td>Catalog, companies, invoices, payment links, checkout sessions, feature rules</td>
+              <td><code>apps/arcen-dashboard</code></td>
             </tr>
             <tr>
-              <td><strong>ZKVUB</strong></td>
-              <td>Zero-Knowledge Verifiable Usage Billing</td>
-              <td>Metered API calls, AI agent payments</td>
-              <td>SessionVault, ZKUsageVerifier</td>
+              <td>Facilitator</td>
+              <td>x402 usage settlement, proof orchestration, operational adjunct APIs</td>
+              <td><code>apps/facilitator</code></td>
+            </tr>
+            <tr>
+              <td>Contracts</td>
+              <td>Plans, subscriptions, autopay, fee collection, session vaults, proof settlement</td>
+              <td><code>packages/contracts</code></td>
+            </tr>
+            <tr>
+              <td>SDKs</td>
+              <td>Subscription checkout, entitlement checks, session and x402 helpers</td>
+              <td><code>packages/sdk-*</code></td>
             </tr>
           </tbody>
         </table>
 
-        <h2 id="contract-map">Contract map</h2>
-        <p>
-          Seven contracts form the protocol core. The current live testnet deployments are Ethereum Sepolia (11155111) and Base Sepolia (84532).
-          Additional contracts in the repo are currently kept as experimental frozen modules and are
-          not part of the launch runtime.
-        </p>
-        <div className="docs-lifecycle" style={{ marginBottom: 32 }}>
-          {[
-            { name: 'PlanFactory', desc: 'Creates and manages on-chain subscription plans. One plan per tier. Immutable after creation. Registers providers.', color: '#6366f1' },
-            { name: 'SubscriptionRegistry', desc: 'ERC-721 + ERC-5643 NFT contract. Mints, renews, and cancels subscription tokens. One active token per wallet.', color: '#8b5cf6' },
-            { name: 'ERC7579AutopayModule', desc: 'ERC-7579 executor module installed on subscriber\'s smart account. Pulls USDC on each billing interval. Calls SubscriptionRegistry.renew().', color: '#a78bfa' },
-            { name: 'SessionVault', desc: 'Pre-funded stablecoin vault for ZKVUB sessions. Agents deposit USDC; ZKUsageVerifier settles from the balance.', color: '#0ea5e9' },
-            { name: 'ZKUsageVerifier', desc: 'Verifies Groth16 zk-SNARK proofs and executes USDC settlement from SessionVault. Nullifier prevents double-spend.', color: '#06b6d4' },
-            { name: 'FeeCollector', desc: 'Protocol-level fee collection. 0.5% on subscriptions, 0.3% on ZKVUB settlements. Per-provider tier overrides.', color: '#10b981' },
-            { name: 'MirrorRegistry', desc: 'Cross-chain subscription state mirror. Receives ABI-encoded GMP payloads via Axelar (primary) or CCIP (fallback). Enables multi-chain gating.', color: '#f59e0b' },
-          ].map(({ name, desc, color }) => (
-            <div key={name} className="docs-lifecycle-item" style={{ borderLeft: `3px solid ${color}`, paddingLeft: 16 }}>
-              <div className="docs-lifecycle-name" style={{ color, fontFamily: 'monospace', fontSize: 13 }}>{name}</div>
-              <div className="docs-lifecycle-desc" style={{ marginTop: 4 }}>{desc}</div>
+        <h2 id="billing-paths">Billing paths</h2>
+        <div className="docs-lifecycle">
+          <div className="docs-lifecycle-item">
+            <div className="docs-lifecycle-badge active">Recurring</div>
+            <div className="docs-lifecycle-name">Plan subscriptions</div>
+            <div className="docs-lifecycle-desc">
+              Use <code>CheckoutModal</code>, on-chain plan state, smart-account
+              setup, and subscription activation for recurring access.
             </div>
-          ))}
+          </div>
+          <div className="docs-lifecycle-item">
+            <div className="docs-lifecycle-badge active">One-time</div>
+            <div className="docs-lifecycle-name">Hosted payments</div>
+            <div className="docs-lifecycle-desc">
+              Use payment links and checkout sessions for standalone add-ons,
+              invoice pay-now flows, and direct USDC collection.
+            </div>
+          </div>
         </div>
 
-        <h2 id="meap-flow">ArcenPay: recurring billing flow</h2>
+        <h2 id="contracts">Core contracts in the active runtime</h2>
+        <table className="docs-table">
+          <thead>
+            <tr><th>Contract</th><th>Role</th></tr>
+          </thead>
+          <tbody>
+            {contracts.map(([name, description]) => (
+              <tr key={name}>
+                <td><code>{name}</code></td>
+                <td>{description}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        <h2 id="request-flows">Main request flows</h2>
         <div className="docs-steps">
           <div className="docs-step">
             <div className="docs-step-num">1</div>
             <div className="docs-step-body">
-              <div className="docs-step-title">Provider deploys a plan</div>
-              <p className="docs-step-desc">Calls <code>PlanFactory.createPlan()</code> with name, tier, price (USDC), and billing interval (≥30 days). Returns a unique <code>planId</code>.</p>
+              <div className="docs-step-title">Catalog and company data lives in Prisma</div>
+              <p className="docs-step-desc">
+                Plans, add-ons, payment links, checkout sessions, invoices, and
+                feature rules are managed by the dashboard backend.
+              </p>
             </div>
           </div>
           <div className="docs-step">
             <div className="docs-step-num">2</div>
             <div className="docs-step-body">
-              <div className="docs-step-title">Subscriber installs AutopayModule</div>
-              <p className="docs-step-desc">Subscriber&apos;s ERC-7579 smart account calls <code>AutopayModule.onInstall(AutopayConfig)</code>. The module receives limited pull-payment authority — constrained to <code>maxAmount</code> per <code>interval</code>.</p>
+              <div className="docs-step-title">Subscriptions and proofs touch chain state</div>
+              <p className="docs-step-desc">
+                Subscription status is resolved from on-chain contracts and
+                subgraph-backed reads; metered usage settles through the
+                facilitator and proof contracts.
+              </p>
             </div>
           </div>
           <div className="docs-step">
             <div className="docs-step-num">3</div>
             <div className="docs-step-body">
-              <div className="docs-step-title">Provider triggers billing</div>
-              <p className="docs-step-desc">Provider (or a bot) calls <code>AutopayModule.execute(account, amount)</code>. The module verifies interval, pulls USDC, deducts protocol fee via <code>FeeCollector</code>, and renews the subscription NFT.</p>
-            </div>
-          </div>
-          <div className="docs-step">
-            <div className="docs-step-num">4</div>
-            <div className="docs-step-body">
-              <div className="docs-step-title">Access validated</div>
-              <p className="docs-step-desc">Any gated function calls <code>SubscriptionRegistry.hasActiveSubscription(wallet)</code>. Returns <code>true</code> while the NFT expiry is in the future.</p>
+              <div className="docs-step-title">Hosted one-time payments verify direct transfers</div>
+              <p className="docs-step-desc">
+                A customer sends the exact Base Sepolia USDC amount, the backend
+                verifies the transfer, records payment ledger rows, and then
+                grants invoice or add-on effects.
+              </p>
             </div>
           </div>
         </div>
 
-        <h2 id="zkvub-flow">ZKVUB: metered billing flow</h2>
-        <div className="docs-steps">
-          <div className="docs-step">
-            <div className="docs-step-num">1</div>
-            <div className="docs-step-body">
-              <div className="docs-step-title">Agent funds a session</div>
-              <p className="docs-step-desc"><code>SessionVault.fundSession(amount, usdcAddress)</code> — transfers USDC into the vault and returns a <code>sessionId</code> (bytes32).</p>
-            </div>
-          </div>
-          <div className="docs-step">
-            <div className="docs-step-num">2</div>
-            <div className="docs-step-body">
-              <div className="docs-step-title">Agent makes API calls</div>
-              <p className="docs-step-desc">Uses x402 HTTP payment headers. Each call is signed and logged off-chain by a Facilitator node. The agent&apos;s session balance acts as a spending limit.</p>
-            </div>
-          </div>
-          <div className="docs-step">
-            <div className="docs-step-num">3</div>
-            <div className="docs-step-body">
-              <div className="docs-step-title">Groth16 proof generated</div>
-              <p className="docs-step-desc">A Circom circuit computes a zk-SNARK proof over the merkle root of signed request logs. The proof attests to <code>callCount</code> without revealing individual request data.</p>
-            </div>
-          </div>
-          <div className="docs-step">
-            <div className="docs-step-num">4</div>
-            <div className="docs-step-body">
-              <div className="docs-step-title">On-chain settlement</div>
-              <p className="docs-step-desc"><code>ZKUsageVerifier.submitProof()</code> verifies the proof, calculates <code>callCount × ratePerCall</code>, and calls <code>SessionVault.settle()</code>. Nullifier prevents double-spend.</p>
-            </div>
-          </div>
-        </div>
-
-        <h2 id="cross-chain">Cross-chain architecture</h2>
-        <p>Subscription state can be mirrored to any EVM chain via <strong>General Message Passing (GMP)</strong>:</p>
-        <table className="docs-table">
-          <thead><tr><th>Route</th><th>Protocol</th><th>Priority</th><th>Fallback</th></tr></thead>
-          <tbody>
-            <tr><td>Primary</td><td>Axelar GMP</td><td>1st attempt</td><td>Falls back to CCIP on failure</td></tr>
-            <tr><td>Fallback</td><td>Chainlink CCIP</td><td>2nd attempt</td><td>Reverts if both fail</td></tr>
-          </tbody>
-        </table>
-        <p>
-          The <code>SubscriptionRegistry</code> on the source chain calls <code>dispatchCrossChainUpdate()</code> after each renewal.
-          The <code>MirrorRegistry</code> on the destination chain receives the ABI-encoded payload via <code>onAxelarMessage()</code> or <code>onCCIPMessage()</code>.
-        </p>
-        <p>
-          If cross-chain routing is not configured, the recurring billing and entitlement flow still works normally on the source chain.
-          <code>MirrorRegistry</code> is an optional extension, not a requirement for the launch path.
-        </p>
-
-        <h2 id="account-abstraction">Account abstraction</h2>
-        <p>
-          ArcenPay uses ERC-7579 (the modular smart account standard) for subscribers. This means:
-        </p>
-        <ul>
-          <li>Subscribers can pay gas in USDC (using a Paymaster)</li>
-          <li>The AutopayModule has <em>constrained</em> authority — it can only pull the exact plan amount, once per billing interval</li>
-          <li>ERC-4337 bundlers trigger billing transactions, enabling gasless UX</li>
-          <li>Subscribers can uninstall the module at any time to cancel</li>
-        </ul>
-
-        <h2 id="fee-model">Fee model</h2>
-        <table className="docs-table">
-          <thead><tr><th>Provider tier</th><th>Subscription fee</th><th>Settlement fee</th></tr></thead>
-          <tbody>
-            <tr><td>FREE</td><td>2.0% (200 bps)</td><td>1.0% (100 bps)</td></tr>
-            <tr><td>PLUS</td><td>1.0% (100 bps)</td><td>0.5% (50 bps)</td></tr>
-            <tr><td>PRO</td><td>0.5% (50 bps)</td><td>0.3% (30 bps)</td></tr>
-          </tbody>
-        </table>
-        <p>Fees are collected by <code>FeeCollector</code> and accumulated as USDC. The protocol owner withdraws fees to the treasury via <code>withdrawFees(token)</code>.</p>
-
-        <h2 id="security">Security model</h2>
-        <ul>
-          <li><strong>Reentrancy:</strong> All mutating functions use OpenZeppelin <code>ReentrancyGuard</code></li>
-          <li><strong>Access control:</strong> Ownable pattern. Billers, settlers, and bridges must be explicitly authorized by the owner</li>
-          <li><strong>Nullifiers:</strong> ZKUsageVerifier stores used nullifiers to prevent double-spend attacks</li>
-          <li><strong>Amount limits:</strong> AutopayModule enforces <code>maxAmount ≤ plan.price</code> and minimum 30-day intervals</li>
-          <li><strong>Token allowlist:</strong> PlanFactory only accepts pre-approved stablecoin addresses</li>
-        </ul>
+        <h2 id="env-contract">Minimum environment contract</h2>
+        <CodeBlock
+          lang="env"
+          code={`NEXT_PUBLIC_CHAIN_ID=84532
+MEAP_DEFAULT_CHAIN_ID=84532
+NEXT_PUBLIC_GRAPH_URL_84532=https://your-subgraph
+FACILITATOR_BASE_URL_84532=http://localhost:3402
+BASE_SEPOLIA_RPC_URL=https://sepolia.base.org
+CHAIN_ID=84532`}
+        />
       </article>
 
       <nav className="docs-toc">
@@ -190,13 +175,10 @@ export default function ArchitecturePage() {
         <ul className="docs-toc-list">
           <li className="docs-toc-item active"><a href="#architecture">Architecture</a></li>
           <li className="docs-toc-item"><a href="#system-overview">System overview</a></li>
-          <li className="docs-toc-item"><a href="#contract-map">Contract map</a></li>
-          <li className="docs-toc-item"><a href="#meap-flow">ArcenPay billing flow</a></li>
-          <li className="docs-toc-item"><a href="#zkvub-flow">ZKVUB metered flow</a></li>
-          <li className="docs-toc-item"><a href="#cross-chain">Cross-chain</a></li>
-          <li className="docs-toc-item"><a href="#account-abstraction">Account abstraction</a></li>
-          <li className="docs-toc-item"><a href="#fee-model">Fee model</a></li>
-          <li className="docs-toc-item"><a href="#security">Security model</a></li>
+          <li className="docs-toc-item"><a href="#billing-paths">Billing paths</a></li>
+          <li className="docs-toc-item"><a href="#contracts">Core contracts</a></li>
+          <li className="docs-toc-item"><a href="#request-flows">Request flows</a></li>
+          <li className="docs-toc-item"><a href="#env-contract">Environment</a></li>
         </ul>
       </nav>
     </div>

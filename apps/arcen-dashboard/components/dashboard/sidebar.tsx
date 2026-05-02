@@ -26,9 +26,11 @@ import {
   Bot,
   Webhook,
   BookOpen,
+  ArrowUpRight,
 } from "lucide-react";
 import { useEnvironment } from "@/contexts/environment-context";
 import { useDashboardSession } from "@/hooks/use-dashboard-session";
+import { DASHBOARD_DOCS_URL } from "@/lib/docs-url";
 
 interface SidebarProps {
   activeSection: Section;
@@ -79,14 +81,11 @@ const navGroups: NavGroup[] = [
     label: "Admin",
     items: [
       { id: "invoices", label: "Invoices", icon: ReceiptText },
+      { id: "payments", label: "Payments", icon: CreditCard },
       { id: "billing", label: "Billing & Plan", icon: CreditCard },
       { id: "audit-log", label: "Audit Log", icon: ClipboardList },
       { id: "settings", label: "Settings", icon: Settings },
     ],
-  },
-  {
-    label: "Help",
-    items: [{ id: "docs", label: "Docs & SDK", icon: BookOpen }],
   },
 ];
 
@@ -246,6 +245,30 @@ export function Sidebar({
             {networkLabel}
           </p>
         )}
+      </div>
+
+      <div className="border-t border-sidebar-border px-2 py-2">
+        <a
+          href={DASHBOARD_DOCS_URL}
+          target="_blank"
+          rel="noreferrer"
+          title={collapsed ? "Open docs" : undefined}
+          className={cn(
+            "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium text-muted-foreground transition hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
+            collapsed ? "justify-center" : "",
+          )}
+        >
+          <BookOpen className="h-4 w-4 shrink-0" />
+          <span
+            className={cn(
+              "whitespace-nowrap text-xs transition-all duration-300",
+              collapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100",
+            )}
+          >
+            Open Docs
+          </span>
+          {!collapsed && <ArrowUpRight className="ml-auto h-3.5 w-3.5" />}
+        </a>
       </div>
 
       {/* Collapse button */}

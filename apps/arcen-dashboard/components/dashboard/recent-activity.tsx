@@ -45,7 +45,7 @@ export function RecentActivity({ chainId }: RecentActivityProps) {
                     setJobs(Array.isArray(payload.jobs) ? payload.jobs : []);
                     setWarning(
                         payload.chainMismatch
-                            ? `Facilitator is connected to chain ${payload.chainMismatch.facilitatorChainId}, so proof activity for chain ${payload.chainMismatch.requestedChainId} is unavailable right now.`
+                            ? (payload.message ?? `Facilitator is connected to chain ${payload.chainMismatch.facilitatorChainId}, so proof activity for chain ${payload.chainMismatch.requestedChainId} is unavailable right now.`)
                             : payload.degraded
                               ? (payload.message ?? "Proof activity is temporarily unavailable.")
                               : null,

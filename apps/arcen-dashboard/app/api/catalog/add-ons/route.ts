@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { requirePermission, isErrorResponse } from "@/lib/api-auth";
 import { writeAuditEvent } from "@/lib/audit";
+import { APP_URL } from "@/lib/config";
 
 const createSchema = z.object({
   name: z.string().min(1),
@@ -12,9 +13,20 @@ const createSchema = z.object({
     .regex(/^[a-z0-9_\-]+$/i),
   description: z.string().optional(),
   billingType: z.enum(["ONE_TIME", "RECURRING"]).default("ONE_TIME"),
+  saleMode: z.enum(["STANDALONE", "UPSELL", "BOTH"]).default("STANDALONE"),
   price: z.coerce.number().nonnegative(),
+  billingIntervalDays: z.coerce.number().int().positive().optional(),
+  billingInterval: z.coerce.number().int().positive().optional(),
   acceptedToken: z.string().min(1),
   environmentMode: z.enum(["DEVELOPMENT", "PRODUCTION"]).default("DEVELOPMENT"),
+}).superRefine((value, ctx) => {
+  if (value.billingType === "RECURRING" && value.saleMode !== "UPSELL") {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["saleMode"],
+      message: "Recurring add-ons must use UPSELL sale mode.",
+    });
+  }
 });
 
 const updateSchema = z.object({
@@ -27,11 +39,45 @@ const updateSchema = z.object({
     .optional(),
   description: z.string().nullable().optional(),
   billingType: z.enum(["ONE_TIME", "RECURRING"]).optional(),
+  saleMode: z.enum(["STANDALONE", "UPSELL", "BOTH"]).optional(),
   price: z.coerce.number().positive().optional(),
+  billingIntervalDays: z.coerce.number().int().positive().nullable().optional(),
+  billingInterval: z.coerce.number().int().positive().nullable().optional(),
   acceptedToken: z.string().min(1).optional(),
   status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]).optional(),
   active: z.boolean().optional(),
+}).superRefine((value, ctx) => {
+  const nextBillingType = value.billingType;
+  const nextSaleMode = value.saleMode;
+  if (nextBillingType === "RECURRING" && nextSaleMode && nextSaleMode !== "UPSELL") {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["saleMode"],
+      message: "Recurring add-ons must use UPSELL sale mode.",
+    });
+  }
 });
+
+function addCheckoutUrl<T extends {
+  id: string;
+  status: string;
+  billingType: string;
+  saleMode: string;
+  paymentLinks?: Array<{ slug: string }>;
+}>(addOn: T) {
+  const activeSlug = addOn.paymentLinks?.[0]?.slug;
+  const checkoutUrl =
+    addOn.status === "PUBLISHED" &&
+    addOn.billingType === "ONE_TIME" &&
+    addOn.saleMode !== "UPSELL" &&
+    activeSlug
+      ? `${APP_URL}/pay/${activeSlug}`
+      : null;
+  return {
+    ...addOn,
+    purchaseUrl: checkoutUrl,
+  };
+}
 
 export async function GET(request: NextRequest) {
   const auth = await requirePermission("catalog:read");
@@ -49,10 +95,20 @@ export async function GET(request: NextRequest) {
       }),
       ...(status && { status: status as "DRAFT" | "PUBLISHED" | "ARCHIVED" }),
     },
+    include: {
+      paymentLinks: {
+        where: { status: "ACTIVE" },
+        select: { slug: true },
+        orderBy: { createdAt: "desc" },
+        take: 1,
+      },
+    },
     orderBy: [{ updatedAt: "desc" }],
   });
 
-  return NextResponse.json({ addOns });
+  return NextResponse.json({
+    addOns: addOns.map((addOn) => addCheckoutUrl(addOn)),
+  });
 }
 
 export async function POST(request: NextRequest) {
@@ -77,7 +133,12 @@ export async function POST(request: NextRequest) {
       code: data.code,
       description: data.description,
       billingType: data.billingType,
+      saleMode: data.saleMode,
       price: data.price.toFixed(6),
+      billingIntervalDays:
+        data.billingType === "RECURRING"
+          ? data.billingIntervalDays ?? data.billingInterval ?? 30
+          : null,
       acceptedToken: data.acceptedToken,
       status: "DRAFT",
       active: true,
@@ -108,7 +169,7 @@ export async function POST(request: NextRequest) {
     afterData: addOn,
   });
 
-  return NextResponse.json({ addOn }, { status: 201 });
+  return NextResponse.json({ addOn: addCheckoutUrl(addOn) }, { status: 201 });
 }
 
 export async function PUT(request: NextRequest) {
@@ -142,9 +203,19 @@ export async function PUT(request: NextRequest) {
       ...(parsed.data.billingType !== undefined && {
         billingType: parsed.data.billingType,
       }),
+      ...(parsed.data.saleMode !== undefined && {
+        saleMode: parsed.data.saleMode,
+      }),
       ...(parsed.data.price !== undefined && {
         price: parsed.data.price.toFixed(6),
       }),
+      ...(parsed.data.billingIntervalDays !== undefined && {
+        billingIntervalDays: parsed.data.billingIntervalDays,
+      }),
+      ...(parsed.data.billingInterval !== undefined &&
+      parsed.data.billingIntervalDays === undefined
+        ? { billingIntervalDays: parsed.data.billingInterval }
+        : {}),
       ...(parsed.data.acceptedToken !== undefined && {
         acceptedToken: parsed.data.acceptedToken,
       }),
@@ -180,5 +251,5 @@ export async function PUT(request: NextRequest) {
     afterData: updated,
   });
 
-  return NextResponse.json({ addOn: updated });
+  return NextResponse.json({ addOn: addCheckoutUrl(updated) });
 }

@@ -115,6 +115,13 @@ type SessionsPayload = {
     count: number;
     jobs: ActiveProofJob[];
     chainMismatch?: { requestedChainId: number; facilitatorChainId: number };
+    message?: string;
+  };
+  runtimeChain?: {
+    expectedChainId: number;
+    expectedChainName: string;
+    rpcEnvKeys: string[];
+    subgraphEnvKeys: string[];
   };
 };
 
@@ -301,9 +308,8 @@ export function SessionsSection() {
         <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-warning/5 border border-warning/20 animate-in fade-in slide-in-from-top-2 duration-300">
           <AlertTriangle className="w-4 h-4 text-warning shrink-0" />
           <p className="text-sm text-muted-foreground">
-            Facilitator is on chain {chainMismatch.facilitatorChainId} while
-            dashboard is set to {chainMismatch.requestedChainId}. Active proof
-            jobs are hidden until chains match.
+            {payload?.activeProofs.message ??
+              `Facilitator is on chain ${chainMismatch.facilitatorChainId} while dashboard is set to ${chainMismatch.requestedChainId}. Active proof jobs are hidden until chains match.`}
           </p>
         </div>
       )}

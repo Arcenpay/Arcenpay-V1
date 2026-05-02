@@ -118,7 +118,9 @@ interface CatalogAddOn {
   code: string;
   description?: string | null;
   billingType: "ONE_TIME" | "RECURRING";
+  saleMode: "STANDALONE" | "UPSELL" | "BOTH";
   price: string;
+  billingIntervalDays?: number | null;
   acceptedToken: string;
   environmentMode: EnvMode;
   status: CatalogStatus;
@@ -126,6 +128,7 @@ interface CatalogAddOn {
   version: number;
   publishedAt?: string | null;
   updatedAt: string;
+  purchaseUrl?: string | null;
 }
 
 interface CatalogCreditType {
@@ -888,6 +891,7 @@ function CreateAddOnDialog({
     name: "",
     description: "",
     billingType: "ONE_TIME" as "ONE_TIME" | "RECURRING",
+    saleMode: "STANDALONE" as "STANDALONE" | "UPSELL" | "BOTH",
     price: "",
     acceptedToken: connectedToken,
   });
@@ -914,7 +918,14 @@ function CreateAddOnDialog({
 
   function resetForm() {
     setBillingIntervalDays(30);
-    setForm({ name: "", description: "", billingType: "ONE_TIME", price: "", acceptedToken: connectedToken });
+    setForm({
+      name: "",
+      description: "",
+      billingType: "ONE_TIME",
+      saleMode: "STANDALONE",
+      price: "",
+      acceptedToken: connectedToken,
+    });
     setErrors({});
   }
 
@@ -932,7 +943,9 @@ function CreateAddOnDialog({
           code: autoCode || "add-on",
           description: form.description || undefined,
           billingType: form.billingType,
-          billingInterval: form.billingType === "RECURRING" ? billingIntervalDays : undefined,
+          saleMode: form.saleMode,
+          billingIntervalDays:
+            form.billingType === "RECURRING" ? billingIntervalDays : undefined,
           price: Number(form.price),
           acceptedToken: form.acceptedToken,
           environmentMode: env,
@@ -994,6 +1007,13 @@ function CreateAddOnDialog({
                     </p>
                     <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-secondary border border-border text-muted-foreground">
                       {form.billingType === "ONE_TIME" ? "One-time" : "Recurring"}
+                    </span>
+                    <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-blue-50 border border-blue-200 text-blue-700">
+                      {form.saleMode === "STANDALONE"
+                        ? "Standalone"
+                        : form.saleMode === "UPSELL"
+                          ? "Upsell"
+                          : "Standalone + upsell"}
                     </span>
                   </div>
                   {form.billingType === "RECURRING" && form.price && (
@@ -1082,13 +1102,22 @@ function CreateAddOnDialog({
                         </DropdownMenuTrigger>
                         <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width]">
                           <DropdownMenuItem onClick={() => setForm((p) => ({ ...p, billingType: "ONE_TIME" }))}>
+                            
                             <div className="flex-1">
                               <p className="text-sm font-medium">One-time</p>
                               <p className="text-xs text-muted-foreground">Single charge purchase</p>
                             </div>
                             {form.billingType === "ONE_TIME" && <Check className="w-4 h-4 ml-2 text-foreground" />}
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => setForm((p) => ({ ...p, billingType: "RECURRING" }))}>
+                          <DropdownMenuItem
+                            onClick={() =>
+                              setForm((p) => ({
+                                ...p,
+                                billingType: "RECURRING",
+                                saleMode: "UPSELL",
+                              }))
+                            }
+                          >
                             <div className="flex-1">
                               <p className="text-sm font-medium">Recurring</p>
                               <p className="text-xs text-muted-foreground">Billed on a schedule</p>
@@ -1099,8 +1128,64 @@ function CreateAddOnDialog({
                       </DropdownMenu>
                     </div>
 
-                    {/* Billing Integration */}
                     <div>
+                      <Label className="text-sm font-medium text-foreground mb-2 block">Sell As</Label>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button type="button" className="w-full flex items-center justify-between h-11 px-3 rounded-lg bg-background border border-border text-sm text-foreground hover:bg-secondary/50 transition-colors">
+                            <span className="font-medium">
+                              {form.saleMode === "STANDALONE"
+                                ? "Standalone checkout"
+                                : form.saleMode === "UPSELL"
+                                  ? "Subscriber upsell"
+                                  : "Standalone + upsell"}
+                            </span>
+                            <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width]">
+                          <DropdownMenuItem
+                            onClick={() =>
+                              setForm((p) => ({
+                                ...p,
+                                saleMode: "STANDALONE",
+                                billingType: "ONE_TIME",
+                              }))
+                            }
+                          >
+                            <div className="flex-1">
+                              <p className="text-sm font-medium">Standalone checkout</p>
+                              <p className="text-xs text-muted-foreground">Sell with a hosted one-time payment link</p>
+                            </div>
+                            {form.saleMode === "STANDALONE" && <Check className="w-4 h-4 ml-2 text-foreground" />}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setForm((p) => ({ ...p, saleMode: "UPSELL" }))}>
+                            <div className="flex-1">
+                              <p className="text-sm font-medium">Subscriber upsell</p>
+                              <p className="text-xs text-muted-foreground">Attach to existing customers or recurring subscriptions</p>
+                            </div>
+                            {form.saleMode === "UPSELL" && <Check className="w-4 h-4 ml-2 text-foreground" />}
+                          </DropdownMenuItem>
+                          {form.billingType === "ONE_TIME" && (
+                            <DropdownMenuItem onClick={() => setForm((p) => ({ ...p, saleMode: "BOTH" }))}>
+                              <div className="flex-1">
+                                <p className="text-sm font-medium">Standalone + upsell</p>
+                                <p className="text-xs text-muted-foreground">Offer a pay link and allow manual assignment</p>
+                              </div>
+                              {form.saleMode === "BOTH" && <Check className="w-4 h-4 ml-2 text-foreground" />}
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                      {form.billingType === "RECURRING" && (
+                        <p className="mt-1.5 text-xs text-muted-foreground">
+                          Recurring add-ons are limited to subscriber upsells for this launch.
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Billing Integration */}
+                    <div className="col-span-2">
                       <Label className="text-sm font-medium text-foreground mb-2 block">Billing Integration</Label>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -6106,8 +6191,79 @@ function AddOnDetailView({
   onBack: () => void;
   onUpdated: () => void;
 }) {
+  const { address } = useAccount();
   const [detailTab, setDetailTab] = useState<"companies" | "billing">("companies");
   const [copiedId, setCopiedId] = useState(false);
+  const [copiedCheckout, setCopiedCheckout] = useState(false);
+  const [grantRows, setGrantRows] = useState<
+    Array<{
+      id: string;
+      status: string;
+      source: string;
+      grantedAt: string;
+      expiresAt?: string | null;
+      cancelAtPeriodEnd: boolean;
+      company: {
+        id: string;
+        name: string;
+        email?: string | null;
+        walletAddress?: string | null;
+      };
+      payment?: {
+        txHash?: string | null;
+        amount?: string | null;
+        currency?: string | null;
+      } | null;
+    }>
+  >([]);
+  const [grantsLoading, setGrantsLoading] = useState(true);
+  const [creatingCheckoutLink, setCreatingCheckoutLink] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadGrants() {
+      try {
+        setGrantsLoading(true);
+        const res = await fetch(`/api/catalog/add-ons/${addon.id}/grants`, {
+          cache: "no-store",
+        });
+        const payload = (await res.json()) as {
+          grants?: Array<{
+            id: string;
+            status: string;
+            source: string;
+            grantedAt: string;
+            expiresAt?: string | null;
+            cancelAtPeriodEnd: boolean;
+            company: {
+              id: string;
+              name: string;
+              email?: string | null;
+              walletAddress?: string | null;
+            };
+            payment?: {
+              txHash?: string | null;
+              amount?: string | null;
+              currency?: string | null;
+            } | null;
+          }>;
+        };
+        if (!cancelled) {
+          setGrantRows(Array.isArray(payload.grants) ? payload.grants : []);
+        }
+      } catch {
+        if (!cancelled) setGrantRows([]);
+      } finally {
+        if (!cancelled) setGrantsLoading(false);
+      }
+    }
+
+    void loadGrants();
+    return () => {
+      cancelled = true;
+    };
+  }, [addon.id]);
 
   function copyId() {
     navigator.clipboard.writeText(addon.id);
@@ -6115,7 +6271,64 @@ function AddOnDetailView({
     setTimeout(() => setCopiedId(false), 2000);
   }
 
-  const priceLabel = `$${parseFloat(addon.price).toFixed(2)} ${addon.billingType === "ONE_TIME" ? "one-time" : "/ mo"}`;
+  function copyCheckoutUrl() {
+    if (!addon.purchaseUrl) return;
+    navigator.clipboard.writeText(addon.purchaseUrl);
+    setCopiedCheckout(true);
+    setTimeout(() => setCopiedCheckout(false), 2000);
+  }
+
+  async function ensureCheckoutLink() {
+    if (addon.purchaseUrl) {
+      copyCheckoutUrl();
+      return;
+    }
+    if (!address) {
+      toast.error("Connect the provider wallet you want to receive payments with before creating a checkout link.");
+      return;
+    }
+    setCreatingCheckoutLink(true);
+    try {
+      const res = await fetch("/api/v1/payment-links", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          kind: "ADDON",
+          name: addon.name,
+          catalogAddOnId: addon.id,
+          recipientWallet: address,
+        }),
+      });
+      const payload = (await res.json()) as {
+        error?: string;
+        paymentLink?: { checkoutUrl?: string | null };
+      };
+      if (!res.ok) {
+        throw new Error(payload.error || "Unable to create checkout link.");
+      }
+      if (payload.paymentLink?.checkoutUrl) {
+        navigator.clipboard.writeText(payload.paymentLink.checkoutUrl);
+        setCopiedCheckout(true);
+        setTimeout(() => setCopiedCheckout(false), 2000);
+      }
+      toast.success("Hosted checkout link ready");
+      onUpdated();
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Unable to create checkout link",
+      );
+    } finally {
+      setCreatingCheckoutLink(false);
+    }
+  }
+
+  const priceLabel = `$${parseFloat(addon.price).toFixed(2)} ${
+    addon.billingType === "ONE_TIME"
+      ? "one-time"
+      : addon.billingIntervalDays
+        ? `every ${addon.billingIntervalDays} days`
+        : "recurring"
+  }`;
 
   const DETAIL_TABS = ["companies", "billing"] as const;
 
@@ -6159,6 +6372,13 @@ function AddOnDetailView({
             <Badge variant="secondary" className="text-xs font-semibold">
               {priceLabel}
             </Badge>
+            <Badge variant="outline" className="text-xs">
+              {addon.saleMode === "STANDALONE"
+                ? "Standalone"
+                : addon.saleMode === "UPSELL"
+                  ? "Upsell"
+                  : "Standalone + upsell"}
+            </Badge>
             <StatusBadge status={addon.status} />
             <div className="h-6 w-px bg-border hidden sm:block" />
             <div className="flex items-center gap-2">
@@ -6176,6 +6396,26 @@ function AddOnDetailView({
                       <><Copy className="w-3.5 h-3.5 mr-2" />Copy Add-On ID</>
                     )}
                   </DropdownMenuItem>
+                  {addon.billingType === "ONE_TIME" && addon.saleMode !== "UPSELL" && (
+                    <DropdownMenuItem onClick={() => void ensureCheckoutLink()}>
+                      {creatingCheckoutLink ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />
+                          Creating checkout link…
+                        </>
+                      ) : copiedCheckout ? (
+                        <>
+                          <Check className="w-3.5 h-3.5 mr-2 text-green-500" />
+                          Checkout link copied
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3.5 h-3.5 mr-2" />
+                          {addon.purchaseUrl ? "Copy checkout link" : "Create checkout link"}
+                        </>
+                      )}
+                    </DropdownMenuItem>
+                  )}
                   {addon.status === "DRAFT" && (
                     <DropdownMenuItem
                       onClick={async () => {
@@ -6254,19 +6494,53 @@ function AddOnDetailView({
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <td colSpan={3} className="py-16 text-center">
-                    <div className="flex flex-col items-center gap-2">
-                      <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center mb-2">
-                        <Package className="w-6 h-6 text-muted-foreground/50" />
+                {grantsLoading ? (
+                  <tr>
+                    <td colSpan={3} className="py-12 text-center text-sm text-muted-foreground">
+                      Loading purchases…
+                    </td>
+                  </tr>
+                ) : grantRows.length === 0 ? (
+                  <tr>
+                    <td colSpan={3} className="py-16 text-center">
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center mb-2">
+                          <Package className="w-6 h-6 text-muted-foreground/50" />
+                        </div>
+                        <p className="text-sm font-medium text-foreground">No companies on this add-on yet</p>
+                        <p className="text-xs text-muted-foreground max-w-xs text-center">
+                          Companies that purchase this add-on or receive it as an upsell will appear here.
+                        </p>
                       </div>
-                      <p className="text-sm font-medium text-foreground">No companies on this add-on yet</p>
-                      <p className="text-xs text-muted-foreground max-w-xs text-center">
-                        Companies that purchase this add-on will appear here.
-                      </p>
-                    </div>
-                  </td>
-                </tr>
+                    </td>
+                  </tr>
+                ) : (
+                  grantRows.map((grant) => (
+                    <tr key={grant.id} className="border-t border-border/40">
+                      <td className="py-3 px-4">
+                        <div className="font-medium text-foreground">{grant.company.name}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {grant.company.email || grant.company.walletAddress || grant.source}
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 text-xs text-muted-foreground">
+                        {new Date(grant.grantedAt).toLocaleDateString()}
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-2">
+                          <Badge variant={grant.status === "ACTIVE" ? "secondary" : "outline"}>
+                            {grant.status.toLowerCase()}
+                          </Badge>
+                          {grant.cancelAtPeriodEnd && (
+                            <span className="text-[11px] text-muted-foreground">
+                              ends at renewal
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -6277,7 +6551,7 @@ function AddOnDetailView({
         <div className="space-y-4">
           <div className="bg-card border border-border rounded-xl p-6 space-y-6">
             <h3 className="text-base font-semibold">Billing Details</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
               <div>
                 <p className="text-xs text-muted-foreground mb-1.5">Price</p>
                 <p className="text-lg font-semibold">${parseFloat(addon.price).toFixed(2)}</p>
@@ -6288,6 +6562,23 @@ function AddOnDetailView({
                 <p className="text-sm font-semibold">
                   {addon.billingType === "ONE_TIME" ? "One-time" : "Recurring"}
                 </p>
+                <p className="text-xs text-muted-foreground">
+                  {addon.saleMode === "STANDALONE"
+                    ? "Standalone checkout"
+                    : addon.saleMode === "UPSELL"
+                      ? "Subscriber upsell"
+                      : "Standalone + upsell"}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1.5">Cadence</p>
+                <p className="text-sm font-semibold">
+                  {addon.billingType === "RECURRING"
+                    ? addon.billingIntervalDays
+                      ? `${addon.billingIntervalDays} days`
+                      : "Recurring"
+                    : "One-time"}
+                </p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground mb-1.5">Token</p>
@@ -6297,6 +6588,40 @@ function AddOnDetailView({
                 </p>
               </div>
             </div>
+            {addon.billingType === "ONE_TIME" && addon.saleMode !== "UPSELL" && (
+              <div className="rounded-xl border border-border bg-secondary/20 p-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Hosted checkout</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Create or copy a public Base Sepolia pay link for this add-on.
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => void ensureCheckoutLink()}
+                    disabled={creatingCheckoutLink}
+                  >
+                    {creatingCheckoutLink ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />
+                        Preparing…
+                      </>
+                    ) : addon.purchaseUrl ? (
+                      copiedCheckout ? "Copied" : "Copy checkout link"
+                    ) : (
+                      "Create checkout link"
+                    )}
+                  </Button>
+                </div>
+                {addon.purchaseUrl && (
+                  <p className="mt-3 break-all rounded-lg border border-border bg-background px-3 py-2 font-mono text-xs text-muted-foreground">
+                    {addon.purchaseUrl}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}

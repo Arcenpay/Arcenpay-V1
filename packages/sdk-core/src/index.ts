@@ -87,6 +87,14 @@ export {
   isZeroAddress,
 } from "./environment";
 export type { ValidateChainEnvironmentOptions } from "./environment";
+export {
+  PRIMARY_RUNTIME_CHAIN_ID,
+  LEGACY_RUNTIME_CHAIN_IDS,
+  getPrimaryRuntimeChainProfile,
+  isPrimaryRuntimeChain,
+  formatRuntimeChainMismatch,
+} from "./runtime-profile";
+export type { RuntimeChainProfile } from "./runtime-profile";
 
 // ABIs
 export {

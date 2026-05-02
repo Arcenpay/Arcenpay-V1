@@ -11,6 +11,7 @@ import { requireAnyAuth, isAnyAuthError } from "@/lib/require-any-auth";
 import { db } from "@/lib/db";
 import { resolveEntitlementResults } from "@/lib/entitlements";
 import type { Prisma } from "@/src/generated/prisma/client";
+import { getCompanyAddOnGrants } from "@/lib/addon-grants";
 
 export async function GET(
   req: NextRequest,
@@ -76,6 +77,18 @@ export async function GET(
     teamId,
     companyKeys,
   });
+  const addOnGrants = await getCompanyAddOnGrants(teamId, company.id);
+  const activeAddOnIds = [
+    ...new Set(
+      addOnGrants
+        .filter(
+          (grant) =>
+            grant.status === "ACTIVE" &&
+            (!grant.expiresAt || grant.expiresAt > new Date()),
+        )
+        .map((grant) => grant.catalogAddOnId),
+    ),
+  ];
 
   const entitlements = entitlementResults.entitlements.map((result) => ({
     featureKey: result.key,
@@ -96,7 +109,19 @@ export async function GET(
       logoUrl: company.logoUrl,
       traits: company.traits,
       activePlan,
-      activeAddOnIds: company.activeAddOnIds,
+      activeAddOnIds,
+      addOnGrants: addOnGrants.map((grant) => ({
+        id: grant.id,
+        status: grant.status,
+        source: grant.source,
+        grantedAt: grant.grantedAt,
+        expiresAt: grant.expiresAt,
+        cancelAtPeriodEnd: grant.cancelAtPeriodEnd,
+        cancelledAt: grant.cancelledAt,
+        addOn: grant.catalogAddOn,
+        payment: grant.payment,
+        checkoutSession: grant.checkoutSession,
+      })),
       createdAt: company.createdAt,
       lastSeenAt: company.lastSeenAt,
       users: company.users,

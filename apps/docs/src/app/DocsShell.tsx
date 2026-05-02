@@ -30,7 +30,7 @@ const NAV_GROUPS: NavGroup[] = [
         href: "/",
         description: "Conceptual overview and docs map",
       },
-      { label: "Quickstart", href: "/quickstart" },
+      { label: "Base Sepolia Quickstart", href: "/quickstart" },
       { label: "Architecture", href: "/architecture" },
       { label: "Migrate from Stripe", href: "/guides/migrate-from-stripe" },
       { label: "Migration Playbook", href: "/migration" },
@@ -43,7 +43,7 @@ const NAV_GROUPS: NavGroup[] = [
       { label: "Plan Modeling", href: "/core-concepts/plans" },
       { label: "Subscription Lifecycle", href: "/core-concepts/subscriptions" },
       { label: "Feature Flags", href: "/core-concepts/feature-flags" },
-      { label: "Checkout Flow", href: "/features/checkout" },
+      { label: "Checkout and Hosted Payments", href: "/features/checkout" },
       { label: "Customer Portal", href: "/features/customer-portal" },
       { label: "Webhooks", href: "/webhooks" },
     ],
@@ -112,23 +112,6 @@ const NAV_GROUPS: NavGroup[] = [
       { label: "Contract Addresses", href: "/contract-addresses" },
       { label: "Changelog", href: "/changelog" },
       { label: "Support", href: "/support" },
-      {
-        label: "GitHub Repository",
-        href: "https://github.com/arcenpay/arcenpay",
-        external: true,
-        icon: (
-          <span
-            style={{
-              fontFamily: "monospace",
-              fontWeight: 700,
-              fontSize: "12px",
-              color: "inherit",
-            }}
-          >
-            &gt;_
-          </span>
-        ),
-      },
     ],
   },
 ];
@@ -137,7 +120,20 @@ const FLOW_SHORTCUTS = [
   { label: "Get Started", href: "/quickstart" },
   { label: "Create Plans", href: "/core-concepts/plans" },
   { label: "Launch Checkout", href: "/features/checkout" },
-  { label: "Go Live", href: "/webhooks" },
+];
+
+const TOP_LEVEL_LINKS = [
+  { label: "Docs", href: "/" },
+  { label: "API Reference", href: "/api-reference/auth" },
+  { label: "Guides", href: "/guides/subscription-wall" },
+  { label: "Changelog", href: "/changelog" },
+  { label: "Support", href: "/support" },
+];
+
+const SPOTLIGHT_LINKS = [
+  { label: "Hosted Payments", href: "/features/checkout#hosted-payments" },
+  { label: "Contract Addresses", href: "/contract-addresses" },
+  { label: "Support", href: "/support" },
 ];
 
 function isItemActive(pathname: string, href: string) {
@@ -259,7 +255,7 @@ function Sidebar({
               </svg>
             </div>
             <span className="docs-brand-name">ArcenPay Docs</span>
-            <span className="docs-version-badge">v1.0</span>
+            <span className="docs-version-badge">Base 84532</span>
             <button
               className="docs-sidebar-close"
               onClick={onClose}
@@ -295,6 +291,19 @@ function Sidebar({
               );
             })}
           </div>
+
+          <div className="docs-sidebar-spotlights">
+            {SPOTLIGHT_LINKS.map((link) => (
+              <a
+                key={link.href}
+                href={link.href}
+                className={`docs-sidebar-spotlight${isItemActive(pathname, link.href) ? " active" : ""}`}
+                onClick={onClose}
+              >
+                {link.label}
+              </a>
+            ))}
+          </div>
         </div>
 
         <div className="docs-sidebar-inner">
@@ -322,7 +331,7 @@ function Sidebar({
             >
               <path d="m15 18-6-6 6-6" />
             </svg>
-            Back to Dashboard
+            Open Workspace
           </a>
 
           <div className="docs-nav-divider" />
@@ -442,22 +451,25 @@ export default function DocsShell({ children }: { children: React.ReactNode }) {
             </span>
           </div>
 
-          <div className="docs-topbar-flow">
-            {FLOW_SHORTCUTS.slice(0, 3).map((shortcut) => (
-              <a
-                key={shortcut.href}
-                href={shortcut.href}
-                className={`docs-topbar-flow-chip${isItemActive(pathname, shortcut.href) ? " active" : ""}`}
-              >
-                {shortcut.label}
-              </a>
-            ))}
+          <div className="docs-topbar-tabs">
+            {TOP_LEVEL_LINKS.map((link) => {
+              const active = isItemActive(pathname, link.href);
+              return (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  className={`docs-topbar-tab${active ? " active" : ""}`}
+                >
+                  {link.label}
+                </a>
+              );
+            })}
           </div>
 
           <div className="docs-topbar-right">
             <span className="docs-topbar-badge">
               <span className="docs-topbar-badge-dot" />
-              Testnet Live
+              Base Sepolia 84532
             </span>
             <a href={DASHBOARD_URL} className="docs-topbar-btn">
               <svg
@@ -472,7 +484,7 @@ export default function DocsShell({ children }: { children: React.ReactNode }) {
               >
                 <path d="m15 18-6-6 6-6" />
               </svg>
-              Dashboard
+              Workspace
             </a>
           </div>
         </div>

@@ -29,6 +29,11 @@ export function resolveActivationEndpoint(explicit?: string): string | null {
   return baseUrl ? `${baseUrl.replace(/\/$/, "")}/api/v1/subscriptions/activate` : null;
 }
 
+export function createPaymentLinkCheckoutUrl(slug: string, baseUrl?: string): string {
+  const resolvedBaseUrl = resolveDashboardBaseUrl(baseUrl);
+  return `${resolvedBaseUrl.replace(/\/$/, "")}/pay/${encodeURIComponent(slug)}`;
+}
+
 export function mergeActivationHeaders(
   activationHeaders: Record<string, string> | undefined,
   token: string | null,

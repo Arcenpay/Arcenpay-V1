@@ -58,3 +58,5 @@ export type {
   UseConsumeEntitlementOptions,
   UseConsumeEntitlementResult,
 } from './hooks/useConsumeEntitlement';
+
+export { createPaymentLinkCheckoutUrl } from './lib/api';

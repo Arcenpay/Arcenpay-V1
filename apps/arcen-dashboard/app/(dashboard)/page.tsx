@@ -19,7 +19,7 @@ import {
 } from "@/components/dashboard/sections/catalog";
 import { ComponentsSection } from "@/components/dashboard/sections/components";
 import { BillingSection } from "@/components/dashboard/sections/billing";
-import { DocsSection } from "@/components/dashboard/sections/docs";
+import { PaymentsSection } from "@/components/dashboard/sections/payments";
 import { CompaniesSection } from "@/components/dashboard/sections/companies";
 import { EventsStreamSection } from "@/components/dashboard/sections/events-stream";
 import { FeatureFlagsSection } from "@/components/dashboard/sections/feature-flags";
@@ -28,6 +28,7 @@ import { WebhooksSection } from "@/components/dashboard/sections/webhooks";
 import { SectionErrorBoundary } from "@/components/dashboard/section-error-boundary";
 import { SubgraphLagBanner } from "@/components/dashboard/subgraph-lag-banner";
 import { EnvironmentProvider } from "@/contexts/environment-context";
+import { DASHBOARD_DOCS_URL } from "@/lib/docs-url";
 
 export type Section =
   | "overview"
@@ -41,14 +42,40 @@ export type Section =
   | "features"
   | "components"
   | "billing"
+  | "payments"
   | "audit-log"
   | "settings"
-  | "docs"
   | "companies"
   | "events-stream"
   | "feature-flags"
   | "agent"
   | "webhooks";
+
+const VALID_SECTIONS: Section[] = [
+  "overview",
+  "catalog-plans",
+  "catalog-addons",
+  "catalog-credits",
+  "catalog-config",
+  "subscribers",
+  "invoices",
+  "sessions",
+  "features",
+  "components",
+  "billing",
+  "payments",
+  "audit-log",
+  "settings",
+  "companies",
+  "events-stream",
+  "feature-flags",
+  "agent",
+  "webhooks",
+];
+
+function isValidSection(section: string): section is Section {
+  return VALID_SECTIONS.includes(section as Section);
+}
 
 export default function Dashboard() {
   const router = useRouter();
@@ -58,9 +85,13 @@ export default function Dashboard() {
 
   // Read section from URL on mount
   useEffect(() => {
-    const section = searchParams.get("section") as Section;
-    if (section) {
-      setActiveSection(section as Section);
+    const section = searchParams.get("section");
+    if (section === "docs") {
+      window.location.assign(DASHBOARD_DOCS_URL);
+      return;
+    }
+    if (section && isValidSection(section)) {
+      setActiveSection(section);
     }
   }, [searchParams]);
 
@@ -144,16 +175,16 @@ export default function Dashboard() {
             <BillingSection />
           </SectionErrorBoundary>
         );
+      case "payments":
+        return (
+          <SectionErrorBoundary fallbackLabel="Payments failed to load">
+            <PaymentsSection />
+          </SectionErrorBoundary>
+        );
       case "audit-log":
         return (
           <SectionErrorBoundary fallbackLabel="Audit Log failed to load">
             <AuditLogSection />
-          </SectionErrorBoundary>
-        );
-      case "docs":
-        return (
-          <SectionErrorBoundary fallbackLabel="Docs failed to load">
-            <DocsSection />
           </SectionErrorBoundary>
         );
       case "companies":
