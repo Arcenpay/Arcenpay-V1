@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowUpRight, Activity } from "lucide-react";
+import { Activity } from "lucide-react";
 
 type ProofHistoryJob = {
     sessionId: string;
@@ -12,6 +12,17 @@ type ProofHistoryJob = {
     txHash?: string;
 };
 
+type ProofHistoryPayload = {
+    count: number;
+    jobs: ProofHistoryJob[];
+    degraded?: boolean;
+    message?: string;
+    chainMismatch?: {
+        requestedChainId: number;
+        facilitatorChainId: number;
+    };
+};
+
 interface RecentActivityProps {
     chainId: number;
 }
@@ -19,6 +30,7 @@ interface RecentActivityProps {
 export function RecentActivity({ chainId }: RecentActivityProps) {
     const [jobs, setJobs] = useState<ProofHistoryJob[]>([]);
     const [loading, setLoading] = useState(true);
+    const [warning, setWarning] = useState<string | null>(null);
 
     useEffect(() => {
         let cancelled = false;
@@ -28,13 +40,21 @@ export function RecentActivity({ chainId }: RecentActivityProps) {
                 setLoading(true);
                 const response = await fetch(`/api/proofs/history?limit=8&chainId=${chainId}`);
                 if (!response.ok) return;
-                const payload = await response.json();
+                const payload = await response.json() as ProofHistoryPayload;
                 if (!cancelled) {
                     setJobs(Array.isArray(payload.jobs) ? payload.jobs : []);
+                    setWarning(
+                        payload.chainMismatch
+                            ? `Facilitator is connected to chain ${payload.chainMismatch.facilitatorChainId}, so proof activity for chain ${payload.chainMismatch.requestedChainId} is unavailable right now.`
+                            : payload.degraded
+                              ? (payload.message ?? "Proof activity is temporarily unavailable.")
+                              : null,
+                    );
                 }
             } catch {
                 if (!cancelled) {
                     setJobs([]);
+                    setWarning("Proof activity is temporarily unavailable.");
                 }
             } finally {
                 if (!cancelled) {
@@ -58,16 +78,17 @@ export function RecentActivity({ chainId }: RecentActivityProps) {
         <div className="bg-card border border-border rounded-xl p-5 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-200">
             <div className="flex items-center justify-between mb-5">
                 <div>
-                    <h3 className="text-base font-semibold text-foreground">Recent Activity</h3>
+                    <h3 className="text-base font-semibold text-foreground">Recent Proof Activity</h3>
                     <p className="text-sm text-muted-foreground mt-0.5">
-                        On-chain events (Chain {chainId})
+                        Proof jobs and settlement submissions for chain {chainId}
                     </p>
                 </div>
-                <button className="flex items-center gap-1 text-sm text-accent hover:text-accent/80 font-medium transition-colors group">
-                    View all
-                    <ArrowUpRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-                </button>
             </div>
+            {warning && (
+                <div className="mb-4 rounded-lg border border-warning/20 bg-warning/5 px-3 py-2 text-xs text-muted-foreground">
+                    {warning}
+                </div>
+            )}
 
             {loading ? (
                 <div className="py-12 text-center text-sm text-muted-foreground">

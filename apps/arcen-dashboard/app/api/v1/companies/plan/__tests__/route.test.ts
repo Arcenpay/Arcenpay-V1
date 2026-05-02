@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { POST } from "../route";
 import { db } from "@/lib/db";
@@ -11,12 +11,42 @@ import {
 } from "@/lib/onchain-payment-verification";
 import { upsertSubscriptionLedgerState } from "@/lib/billing-ledger";
 
-vi.mock("@/lib/launch-flags", () => ({
-  SELF_SERVE_PLAN_CHANGES_ENABLED: true,
+const viemMocks = vi.hoisted(() => ({
+  createPublicClient: vi.fn(),
+  createWalletClient: vi.fn(),
+  http: vi.fn(() => ({})),
+  isAddress: vi.fn(() => true),
 }));
+
+const accountMocks = vi.hoisted(() => ({
+  privateKeyToAccount: vi.fn(() => ({
+    address: "0x3333333333333333333333333333333333333333",
+  })),
+}));
+
+vi.mock("viem", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("viem")>();
+  return {
+    ...actual,
+    ...viemMocks,
+  };
+});
+vi.mock("viem/accounts", () => accountMocks);
+
+vi.mock("@/lib/launch-flags", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/launch-flags")>();
+  return {
+    ...actual,
+    SELF_SERVE_PLAN_CHANGES_ENABLED: true,
+  };
+});
 
 vi.mock("@/lib/deliver-webhook", () => ({
   deliverWebhook: vi.fn(() => Promise.resolve()),
+}));
+
+vi.mock("@/lib/invoices", () => ({
+  allocateInvoiceNumber: vi.fn(() => Promise.resolve("INV-TEST-0001")),
 }));
 
 vi.mock("@/lib/entitlements", () => ({
@@ -179,28 +209,44 @@ function setupBaseMocks() {
     currentPeriodEnd: "2026-05-01T00:00:00.000Z",
     billerWallet: "0x3333333333333333333333333333333333333333",
   });
+  viemMocks.createPublicClient.mockReturnValue({
+    readContract: vi.fn().mockResolvedValue(true),
+    waitForTransactionReceipt: vi.fn().mockResolvedValue({
+      status: "success",
+    }),
+  });
+  viemMocks.createWalletClient.mockReturnValue({
+    writeContract: vi.fn().mockResolvedValue(ACCESS_TX),
+  });
 }
 
 describe("POST /api/v1/companies/plan", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-04-16T00:00:00.000Z"));
     process.env.ACCESS_TOKEN_SECRET = "test_secret";
+    process.env.SUBSCRIPTION_BILLER_PRIVATE_KEY = `0x${"1".repeat(64)}`;
     setupBaseMocks();
   });
 
-  it("rejects immediate on-chain upgrades without an authorized access-change transaction", async () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("returns an authoritative proration preview before any upgrade transactions are signed", async () => {
     const res = await POST(
       makeRequest({
         planId: "plan_target",
-        autopayConfigTxHash: AUTOPAY_TX,
-        paymentTxHash: PAYMENT_TX,
+        previewOnly: true,
       }),
     );
     const json = await res.json();
 
-    expect(res.status).toBe(400);
-    expect(json.error).toContain("SubscriptionRegistry.changePlan");
-    expect(db.$transaction).not.toHaveBeenCalled();
+    expect(res.status).toBe(200);
+    expect(json.data.mode).toBe("immediate_prorated_upgrade_preview");
+    expect(json.data.proration.amountDue).toBe("10.000000");
+    expect(verifyAutopayPlanChange).not.toHaveBeenCalled();
   });
 
   it("rejects reused autopay transaction hashes before verifying payment", async () => {

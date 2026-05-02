@@ -25,14 +25,11 @@ function toUiFeatureType(
 
 function toStoredFeatureType(
   featureType: string,
-): "boolean" | "event_based" | "trait_based" {
+): "boolean" | "event_based" {
   switch (featureType) {
     case "event":
     case "event_based":
       return "event_based";
-    case "trait":
-    case "trait_based":
-      return "trait_based";
     default:
       return "boolean";
   }
@@ -113,9 +110,18 @@ export async function POST(request: NextRequest) {
   }
 
   const featureType = body.featureType ?? "boolean";
-  const validTypes = ["boolean", "event", "trait", "event_based", "trait_based"];
+  const validTypes = ["boolean", "event", "event_based"];
   if (!validTypes.includes(featureType)) {
     return NextResponse.json({ error: "Invalid featureType" }, { status: 400 });
+  }
+  if (body.traitKey) {
+    return NextResponse.json(
+      {
+        error:
+          "Trait-based features are not yet supported by the persisted feature schema. Create the flag directly instead of using the feature shortcut.",
+      },
+      { status: 400 },
+    );
   }
 
   // Check for duplicate featureKey within team

@@ -91,10 +91,14 @@ async function readSessionsAndProofsFromSubgraph(
   chainId: number,
   sessionLimit: number,
   proofLimit: number,
-): Promise<{ sessions: SessionRow[]; proofs: ProofRow[] }> {
+): Promise<{
+  sessions: SessionRow[];
+  proofs: ProofRow[];
+  status: "ok" | "unavailable";
+}> {
   const graphUrl = getGraphUrl(chainId);
   if (!graphUrl) {
-    return { sessions: [], proofs: [] };
+    return { sessions: [], proofs: [], status: "unavailable" };
   }
 
   try {
@@ -109,7 +113,7 @@ async function readSessionsAndProofsFromSubgraph(
     });
 
     if (!res.ok) {
-      return { sessions: [], proofs: [] };
+      return { sessions: [], proofs: [], status: "unavailable" };
     }
 
     const json = (await res.json()) as {
@@ -124,15 +128,17 @@ async function readSessionsAndProofsFromSubgraph(
       proofs: Array.isArray(json.data?.proofSubmissions)
         ? json.data.proofSubmissions
         : [],
+      status: "ok",
     };
   } catch {
-    return { sessions: [], proofs: [] };
+    return { sessions: [], proofs: [], status: "unavailable" };
   }
 }
 
 async function readActiveProofJobs(chainId: number): Promise<{
   count: number;
   jobs: ActiveProofJob[];
+  status: "ok" | "unavailable" | "chain_mismatch";
   chainMismatch?: { requestedChainId: number; facilitatorChainId: number };
 }> {
   try {
@@ -153,6 +159,7 @@ async function readActiveProofJobs(chainId: number): Promise<{
         return {
           count: 0,
           jobs: [],
+          status: "chain_mismatch",
           chainMismatch: {
             requestedChainId: chainId,
             facilitatorChainId: health.chainId,
@@ -173,7 +180,7 @@ async function readActiveProofJobs(chainId: number): Promise<{
     });
 
     if (!upstream.ok) {
-      return { count: 0, jobs: [] };
+      return { count: 0, jobs: [], status: "unavailable" };
     }
 
     const payload = (await upstream.json()) as {
@@ -181,9 +188,9 @@ async function readActiveProofJobs(chainId: number): Promise<{
       jobs?: ActiveProofJob[];
     };
     const jobs = Array.isArray(payload.jobs) ? payload.jobs : [];
-    return { count: Number(payload.count) || jobs.length, jobs };
+    return { count: Number(payload.count) || jobs.length, jobs, status: "ok" };
   } catch {
-    return { count: 0, jobs: [] };
+    return { count: 0, jobs: [], status: "unavailable" };
   }
 }
 
@@ -229,6 +236,12 @@ export async function GET(request: NextRequest) {
       teamId: auth.team.teamId,
       environmentMode,
       chainId,
+    },
+    degraded:
+      subgraphData.status !== "ok" || activeProofs.status !== "ok",
+    dependencyHealth: {
+      subgraph: subgraphData.status,
+      facilitator: activeProofs.status,
     },
     sessions: subgraphData.sessions,
     proofs: subgraphData.proofs,

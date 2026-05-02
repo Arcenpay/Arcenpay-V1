@@ -104,6 +104,11 @@ type SessionsPayload = {
     environmentMode: "DEVELOPMENT" | "PRODUCTION";
     chainId: number;
   };
+  degraded: boolean;
+  dependencyHealth: {
+    subgraph: "ok" | "unavailable";
+    facilitator: "ok" | "unavailable" | "chain_mismatch";
+  };
   sessions: SessionRow[];
   proofs: ProofRow[];
   activeProofs: {
@@ -279,6 +284,7 @@ export function SessionsSection() {
 
   const chainId = payload?.context.chainId ?? effectiveChainId;
   const chainMismatch = payload?.activeProofs.chainMismatch;
+  const degraded = payload?.degraded ?? false;
 
   return (
     <div className="space-y-6">
@@ -298,6 +304,14 @@ export function SessionsSection() {
             Facilitator is on chain {chainMismatch.facilitatorChainId} while
             dashboard is set to {chainMismatch.requestedChainId}. Active proof
             jobs are hidden until chains match.
+          </p>
+        </div>
+      )}
+      {degraded && !chainMismatch && (
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-warning/5 border border-warning/20 animate-in fade-in slide-in-from-top-2 duration-300">
+          <AlertTriangle className="w-4 h-4 text-warning shrink-0" />
+          <p className="text-sm text-muted-foreground">
+            Some session data sources are temporarily unavailable. Empty proof or session lists may reflect an upstream outage, not a true zero state.
           </p>
         </div>
       )}

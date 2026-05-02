@@ -96,6 +96,31 @@ type PlanChangeConfirmation = {
   paymentTxHash?: string;
 };
 
+type PlanChangeProrationSummary = {
+  currency: string;
+  currentPlanName: string;
+  targetPlanName: string;
+  currentPeriodStart: string;
+  currentPeriodEnd: string;
+  effectiveAt: string;
+  totalPeriodSeconds: number;
+  remainingSeconds: number;
+  remainingRatio: string;
+  newPlanRemainingCharge: string;
+  unusedOldPlanCredit: string;
+  amountDue: string;
+  amountPaid: string;
+  amountRemaining: string;
+};
+
+type PlanChangePreviewResponse = {
+  data?: {
+    mode?: string;
+    proration?: PlanChangeProrationSummary;
+  };
+  error?: string;
+};
+
 const AUTOPAY_START_TIME_BUFFER_SECONDS = 5;
 
 interface PortalState {
@@ -338,6 +363,23 @@ function fmtPrice(price: string | number, billingInterval?: number): string {
   const interval =
     billingInterval !== undefined ? intervalLabel(billingInterval) : "";
   return `$${p.toFixed(2)}${interval}`;
+}
+
+function parseDecimalToAtomicUnits(value: string, decimals = 6): bigint {
+  const normalized = value.trim();
+  if (!/^\d+(\.\d+)?$/.test(normalized)) {
+    throw new Error(`Invalid decimal amount: ${value}`);
+  }
+
+  const [whole, fraction = ""] = normalized.split(".");
+  const paddedFraction = `${fraction}${"0".repeat(decimals)}`.slice(0, decimals);
+  return BigInt(whole) * 10n ** BigInt(decimals) + BigInt(paddedFraction || "0");
+}
+
+function formatUsdFromDecimalString(value: string): string {
+  const parsed = Number.parseFloat(value);
+  if (!Number.isFinite(parsed)) return "$0.00";
+  return `$${parsed.toFixed(2)}`;
 }
 
 function formatDateLabel(value?: string | null): string | null {
@@ -4115,6 +4157,10 @@ function PaymentContent({
     "idle" | "approving" | "confirmed" | "error"
   >("idle");
   const [txError, setTxError] = useState("");
+  const [planChangePreview, setPlanChangePreview] =
+    useState<PlanChangeProrationSummary | null>(null);
+  const [planChangePreviewError, setPlanChangePreviewError] = useState("");
+  const [planChangePreviewLoading, setPlanChangePreviewLoading] = useState(false);
 
   const basePrice = getPlanDisplayPrice(selectedPlan, billingPeriod);
   const activePlanPrice = getPlanDisplayPrice(activePlan, billingPeriod);
@@ -4158,10 +4204,16 @@ function PaymentContent({
     !isOnChainPlanChange &&
     !requiresHostedActivation &&
     selectedPlan?.id !== activePlan?.id;
+  const isImmediateOnChainUpgrade =
+    isOnChainPlanChange && basePrice > activePlanPrice;
+  const immediateAmountDue = isImmediateOnChainUpgrade
+    ? Number.parseFloat(planChangePreview?.amountDue ?? "0")
+    : isOnChainPlanChange
+      ? 0
+      : price;
 
   const isNarrowPayment = containerWidth < 700;
   const finalAddress = address || localAddress;
-  const paymentAccount = smartAccountAddress ?? finalAddress;
   const finalConnected = isConnected || !!localAddress;
   const resolvedWalletClient =
     wagmiWalletClient ??
@@ -4398,6 +4450,87 @@ function PaymentContent({
     return billingPaymentAccount;
   }
 
+  async function fetchImmediateUpgradePreview(): Promise<PlanChangeProrationSummary> {
+    if (!selectedPlanId) {
+      throw new Error("Select a destination plan before continuing.");
+    }
+
+    const res = await fetch(`${apiBaseUrl}/api/v1/companies/plan`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({
+        planId: selectedPlanId,
+        billingPeriod,
+        previewOnly: true,
+        ...(hasCustomerEmail
+          ? { customerEmail: normalizedCustomerEmail }
+          : {}),
+      }),
+    });
+
+    const json = (await res.json().catch(() => ({}))) as PlanChangePreviewResponse;
+    if (!res.ok) {
+      throw new Error(json.error ?? `HTTP ${res.status}`);
+    }
+
+    const proration = json.data?.proration;
+    if (!proration) {
+      throw new Error("Upgrade preview is missing proration details.");
+    }
+
+    return proration;
+  }
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!isImmediateOnChainUpgrade || !selectedPlanId) {
+      setPlanChangePreview(null);
+      setPlanChangePreviewError("");
+      setPlanChangePreviewLoading(false);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    setPlanChangePreviewLoading(true);
+    setPlanChangePreviewError("");
+
+    void fetchImmediateUpgradePreview()
+      .then((preview) => {
+        if (cancelled) return;
+        setPlanChangePreview(preview);
+      })
+      .catch((error: unknown) => {
+        if (cancelled) return;
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Could not calculate the upgrade amount.";
+        setPlanChangePreview(null);
+        setPlanChangePreviewError(message);
+      })
+      .finally(() => {
+        if (cancelled) return;
+        setPlanChangePreviewLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    accessToken,
+    apiBaseUrl,
+    billingPeriod,
+    hasCustomerEmail,
+    isImmediateOnChainUpgrade,
+    normalizedCustomerEmail,
+    selectedPlanId,
+  ]);
+
   async function handlePay() {
     setTxError("");
     if (price === 0) {
@@ -4525,7 +4658,13 @@ function PaymentContent({
         throw new Error("The selected on-chain plan is missing billing metadata.");
       }
 
-      const { txHash } = await updateAutopayConfig({
+      let preview = planChangePreview;
+      if (isImmediateOnChainUpgrade) {
+        preview = preview ?? (await fetchImmediateUpgradePreview());
+        setPlanChangePreview(preview);
+      }
+
+      const { txHash: autopayTxHash } = await updateAutopayConfig({
         projectId: zeroDevProjectId,
         chainId,
         walletClient: resolvedWalletClient,
@@ -4544,8 +4683,45 @@ function PaymentContent({
             ? currentConfig.maxTotalAmount
             : 0n,
       });
+
+      let paymentTransferTxHash: `0x${string}` | undefined;
+      if (isImmediateOnChainUpgrade) {
+        const amountDueAtomic = parseDecimalToAtomicUnits(
+          preview?.amountDue ?? "0.000000",
+        );
+
+        if (amountDueAtomic > 0n) {
+          const paymentTransferData = encodeFunctionData({
+            abi: [
+              {
+                type: "function",
+                name: "transfer",
+                inputs: [
+                  { name: "to", type: "address" },
+                  { name: "amount", type: "uint256" },
+                ],
+                outputs: [{ name: "", type: "bool" }],
+                stateMutability: "nonpayable",
+              },
+            ],
+            functionName: "transfer",
+            args: [targetPlan.provider as `0x${string}`, amountDueAtomic],
+          });
+
+          const paymentTransfer = await submitPaymentAccountTransaction({
+            to: targetPlan.acceptedToken as `0x${string}`,
+            data: paymentTransferData,
+          });
+          paymentTransferTxHash = paymentTransfer.txHash;
+        }
+      }
+
       setTxStatus("confirmed");
-      onConfirm({ txHash, autopayConfigTxHash: txHash });
+      onConfirm({
+        txHash: paymentTransferTxHash ?? autopayTxHash,
+        autopayConfigTxHash: autopayTxHash,
+        paymentTxHash: paymentTransferTxHash,
+      });
     } catch (err: unknown) {
       setTxStatus("error");
       const msg = err instanceof Error ? err.message : "Transaction failed";
@@ -4562,7 +4738,6 @@ function PaymentContent({
     (!finalConnected || !finalAddress);
   const needsWalletClient =
     isOnChainPlanChange && (!resolvedWalletClient || !zeroDevProjectId);
-  const immediateAmountDue = isOnChainPlanChange ? 0 : price;
   const hasWindowEth =
     typeof window !== "undefined" &&
     !!(window as unknown as { ethereum?: unknown }).ethereum;
@@ -4687,7 +4862,8 @@ function PaymentContent({
                     }}
                   >
                     Connect the wallet that controls your subscription smart
-                    account before authorizing this on-chain plan change.
+                    account before authorizing this on-chain{" "}
+                    {isImmediateOnChainUpgrade ? "upgrade" : "plan change"}.
                   </div>
                   {hasWindowEth ? (
                     <PrimaryButton
@@ -4744,10 +4920,9 @@ function PaymentContent({
                       lineHeight: 1.6,
                     }}
                   >
-                    This route verifies a real `updateConfig(...)` transaction
-                    and updates future recurring billing. The selected plan
-                    takes effect on the next renewal rather than charging again
-                    today.
+                    {isImmediateOnChainUpgrade
+                      ? "This route verifies the autopay config update, the prorated transfer, and the backend-authorized access update before applying the new plan."
+                      : "This route verifies a real updateConfig transaction and schedules the selected plan for the next renewal without charging again today."}
                   </div>
                 </div>
               ) : needsWalletClient ? (
@@ -4844,17 +5019,113 @@ function PaymentContent({
                     </div>
                   )}
 
+                  {planChangePreviewError && isImmediateOnChainUpgrade && (
+                    <div
+                      style={{
+                        padding: "10px 12px",
+                        background: "#fff7ed",
+                        border: "1px solid #fdba74",
+                        borderRadius: 8,
+                        fontSize: tokens.size - 2,
+                        color: "#c2410c",
+                        marginBottom: 12,
+                      }}
+                    >
+                      {planChangePreviewError}
+                    </div>
+                  )}
+
+                  {planChangePreview && isImmediateOnChainUpgrade && (
+                    <div
+                      style={{
+                        padding: "12px 14px",
+                        border: "1px solid #e5e7eb",
+                        borderRadius: 8,
+                        marginBottom: 14,
+                        background: "#fafafa",
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 700,
+                          color: tokens.mutedColor,
+                          textTransform: "uppercase",
+                          letterSpacing: 0.4,
+                          marginBottom: 8,
+                        }}
+                      >
+                        Upgrade summary
+                      </div>
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          fontSize: tokens.size - 1,
+                          marginBottom: 6,
+                          color: tokens.textColor,
+                        }}
+                      >
+                        <span>Remaining charge</span>
+                        <span>
+                          {formatUsdFromDecimalString(
+                            planChangePreview.newPlanRemainingCharge,
+                          )}
+                        </span>
+                      </div>
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          fontSize: tokens.size - 1,
+                          marginBottom: 6,
+                          color: tokens.textColor,
+                        }}
+                      >
+                        <span>Unused credit</span>
+                        <span>
+                          {formatUsdFromDecimalString(
+                            planChangePreview.unusedOldPlanCredit,
+                          )}
+                        </span>
+                      </div>
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          fontSize: tokens.size,
+                          fontWeight: 700,
+                          color: tokens.textColor,
+                        }}
+                      >
+                        <span>Due now</span>
+                        <span>
+                          {formatUsdFromDecimalString(planChangePreview.amountDue)}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
                   <PrimaryButton
                     tokens={tokens}
                     fullWidth
-                    disabled={processing || txStatus === "approving"}
+                    disabled={
+                      processing ||
+                      txStatus === "approving" ||
+                      (isImmediateOnChainUpgrade &&
+                        (planChangePreviewLoading || Boolean(planChangePreviewError)))
+                    }
                     onClick={handlePay}
                   >
-                    {txStatus === "approving"
+                    {planChangePreviewLoading && isImmediateOnChainUpgrade
+                      ? "Calculating upgrade…"
+                      : txStatus === "approving"
                       ? "Confirm in wallet…"
                       : processing
                         ? "Processing…"
-                        : "Authorize plan change"}
+                        : isImmediateOnChainUpgrade
+                          ? "Confirm prorated upgrade"
+                          : "Authorize plan change"}
                   </PrimaryButton>
 
                   <div
@@ -4865,8 +5136,9 @@ function PaymentContent({
                       lineHeight: 1.6,
                     }}
                   >
-                    The backend will verify this on-chain config update and
-                    schedule the new plan for the next renewal cycle.
+                    {isImmediateOnChainUpgrade
+                      ? "The backend verifies the real prorated payment before it changes your subscription access."
+                      : "The backend will verify this on-chain config update and schedule the new plan for the next renewal cycle."}
                   </div>
                 </div>
               )}
@@ -6196,6 +6468,9 @@ export function ArcenEmbed({
           (response as { data?: { walletCreditCreated?: string } })?.data
             ?.walletCreditCreated ?? 0,
         );
+        const prorationAmountDue =
+          (response as { data?: { proration?: { amountDue?: string } } })?.data
+            ?.proration?.amountDue ?? null;
         const effectiveAt =
           (response as { data?: { effectiveAt?: string } })?.data?.effectiveAt ??
           null;
@@ -6206,6 +6481,8 @@ export function ArcenEmbed({
           successMsg:
             mode === "next_renewal_on_chain"
               ? `Plan change scheduled.${selectedPlan?.name ? ` ${selectedPlan.name} will take effect` : " The new plan will take effect"}${effectiveAtLabel ? ` on ${effectiveAtLabel}` : " on the next renewal"}.`
+              : mode === "immediate_prorated_upgrade"
+                ? `Plan upgraded.${prorationAmountDue ? ` ${formatUsdFromDecimalString(prorationAmountDue)} was charged for the remaining term.` : ""}`
               : mode === "immediate_on_chain" && walletCreditCreated > 0
               ? `Plan changed. $${walletCreditCreated.toFixed(2)} wallet credit created.`
               : mode === "immediate_on_chain"

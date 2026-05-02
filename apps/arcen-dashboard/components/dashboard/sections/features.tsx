@@ -92,6 +92,7 @@ const FEATURE_TYPE_META: Record<
 };
 
 const DEFAULT_FEATURE_TYPE_META = FEATURE_TYPE_META.boolean;
+const CREATEABLE_FEATURE_TYPES: FeatureType[] = ["boolean", "event"];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -374,40 +375,11 @@ function CreateFeatureSheet({
         reset();
         onOpenChange(false);
       } else {
-        // Fallback: create locally for demo
-        const newFeature: Feature = {
-          id: `feat_${Math.random().toString(36).slice(2, 10)}`,
-          name: form.name,
-          featureKey: form.featureKey,
-          description: form.description || null,
-          featureType: form.featureType,
-          eventKey: form.featureType === "event" ? form.eventKey : null,
-          traitKey: form.featureType === "trait" ? form.traitKey : null,
-          linkedPlans: [],
-          createdAt: new Date().toISOString(),
-        };
-        onCreate(newFeature);
-        toast.success(`Feature "${form.name}" created`);
-        reset();
-        onOpenChange(false);
+        const data = (await res.json().catch(() => ({}))) as { error?: string };
+        setError(data.error ?? "Could not create feature");
       }
     } catch {
-      // Offline / no backend — create locally
-      const newFeature: Feature = {
-        id: `feat_${Math.random().toString(36).slice(2, 10)}`,
-        name: form.name,
-        featureKey: form.featureKey,
-        description: form.description || null,
-        featureType: form.featureType,
-        eventKey: form.featureType === "event" ? form.eventKey : null,
-        traitKey: form.featureType === "trait" ? form.traitKey : null,
-        linkedPlans: [],
-        createdAt: new Date().toISOString(),
-      };
-      onCreate(newFeature);
-      toast.success(`Feature "${form.name}" created`);
-      reset();
-      onOpenChange(false);
+      setError("Network error — feature was not created");
     } finally {
       setSaving(false);
     }
@@ -431,8 +403,9 @@ function CreateFeatureSheet({
           <div className="space-y-2">
             <Label>Type</Label>
             <div className="grid grid-cols-3 gap-2">
-              {(Object.entries(FEATURE_TYPE_META) as [FeatureType, typeof FEATURE_TYPE_META[FeatureType]][]).map(
-                ([type, typeMeta]) => {
+              {CREATEABLE_FEATURE_TYPES.map(
+                (type) => {
+                  const typeMeta = FEATURE_TYPE_META[type];
                   const TypeIcon = typeMeta.icon;
                   const isSelected = form.featureType === type;
                   return (
@@ -466,6 +439,9 @@ function CreateFeatureSheet({
               )}
             </div>
             <p className="text-xs text-muted-foreground">{meta.description}</p>
+            <p className="text-xs text-muted-foreground">
+              Trait-based targeting is available in Flags, but persisted feature shortcuts currently support boolean and event-based features only.
+            </p>
           </div>
 
           {/* Name */}
@@ -567,35 +543,6 @@ function CreateFeatureSheet({
             </div>
           )}
 
-          {/* Trait key (trait-based only) */}
-          {form.featureType === "trait" && (
-            <div className="space-y-2">
-              <Label htmlFor="feat-trait-key">
-                Trait key{" "}
-                <span className="text-muted-foreground font-normal text-xs">
-                  (company or user trait)
-                </span>
-              </Label>
-              <div className="relative">
-                <Tag className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-                <Input
-                  id="feat-trait-key"
-                  placeholder="e.g. subscription_tier"
-                  value={form.traitKey}
-                  onChange={(e) =>
-                    setForm((p) => ({
-                      ...p,
-                      traitKey: e.target.value
-                        .toLowerCase()
-                        .replace(/[^a-z0-9_]/g, "_"),
-                    }))
-                  }
-                  className="bg-secondary border-border font-mono text-sm pl-8"
-                />
-              </div>
-            </div>
-          )}
-
           {error && (
             <p className="text-sm text-destructive">{error}</p>
           )}
@@ -636,11 +583,12 @@ export function FeaturesSection() {
         const data = (await res.json()) as { features: Feature[] };
         setFeatures(data.features ?? []);
       } else {
-        // No backend yet — start with empty list
         setFeatures([]);
+        toast.error("Could not load features");
       }
     } catch {
       setFeatures([]);
+      toast.error("Could not load features");
     } finally {
       setLoading(false);
     }
@@ -652,12 +600,16 @@ export function FeaturesSection() {
 
   const handleDelete = async (id: string) => {
     try {
-      await fetch(`/api/v1/features/${id}`, { method: "DELETE" });
-    } catch {
-      // ignore
+      const res = await fetch(`/api/v1/features/${id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(data.error ?? "Could not delete feature");
+      }
+      setFeatures((prev) => prev.filter((f) => f.id !== id));
+      toast.success("Feature deleted");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not delete feature");
     }
-    setFeatures((prev) => prev.filter((f) => f.id !== id));
-    toast.success("Feature deleted");
   };
 
   const filtered = features.filter((f) => {

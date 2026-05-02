@@ -1403,6 +1403,17 @@ function startBillingMaintenanceScheduler() {
 // Optional: Lit Protocol service
 let litService: LitProtocolService | null = null;
 let litReady: Promise<void> | null = null;
+const litRuntimeState: {
+  configured: boolean;
+  network: string | null;
+  ready: boolean;
+  lastError: string | null;
+} = {
+  configured: false,
+  network: null,
+  ready: false,
+  lastError: null,
+};
 if (process.env.LIT_NETWORK) {
   const litNetwork = (
     process.env.LIT_NETWORK === "habanero" ||
@@ -1412,6 +1423,8 @@ if (process.env.LIT_NETWORK) {
       ? process.env.LIT_NETWORK
       : "manzano"
   ) as ConstructorParameters<typeof LitProtocolService>[0]["network"];
+  litRuntimeState.configured = true;
+  litRuntimeState.network = litNetwork;
   litService = new LitProtocolService({
     network: litNetwork,
     registryAddress: CONTRACTS.subscriptionRegistry,
@@ -1425,9 +1438,14 @@ if (process.env.LIT_NETWORK) {
   litReady = litService
     .connect()
     .then(() => {
+      litRuntimeState.ready = true;
+      litRuntimeState.lastError = null;
       console.log("[Facilitator] Lit service active");
     })
     .catch((err) => {
+      litRuntimeState.ready = false;
+      litRuntimeState.lastError =
+        err instanceof Error ? err.message : String(err);
       console.error("[Facilitator] Lit init failed:", err);
       litService = null;
     });
@@ -2411,7 +2429,11 @@ app.get("/health", async (_req, res) => {
       webhook: webhookService ? "active" : "not configured",
       email: emailService ? "active" : "not configured",
       tableland: tablelandService ? "active" : "not configured",
-      lit: litService ? "active" : "not configured",
+      lit: litRuntimeState.configured
+        ? litRuntimeState.ready
+          ? "active"
+          : "failed"
+        : "not configured",
       settlementWriter: settlementWriter ? "active" : "not configured",
       aggregator: "active",
       redis: redisUsageStore ? "active" : "not configured",
@@ -2434,6 +2456,12 @@ app.get("/health", async (_req, res) => {
       signerAuthorized: settlementAuthorizationState.authorized,
       lastAuthorizationCheckAt: settlementAuthorizationState.lastCheckedAt,
       authorizationError: settlementAuthorizationState.lastError,
+    },
+    litDetails: {
+      configured: litRuntimeState.configured,
+      network: litRuntimeState.network,
+      ready: litRuntimeState.ready,
+      lastError: litRuntimeState.lastError,
     },
     replayProtection: replayProtection.getStats(),
     proofRuntime: usageService.getProofRuntimeConfig(),

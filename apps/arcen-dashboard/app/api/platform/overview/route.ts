@@ -4,7 +4,7 @@ import { createPublicClient, http } from "viem";
 import { FeeCollectorABI, TOKENS, getContractAddresses } from "@arcenpay/sdk";
 import { db } from "@/lib/db";
 import { isErrorResponse, requirePermission } from "@/lib/api-auth";
-import { getGraphUrl, getRpcUrl } from "@/lib/config";
+import { getRpcUrl } from "@/lib/config";
 import {
   DEFAULT_CHAIN_ID,
   normalizeEnvironmentMode,
@@ -16,58 +16,11 @@ const querySchema = z.object({
   environmentMode: z.enum(["DEVELOPMENT", "PRODUCTION"]).optional(),
 });
 
-const PROTOCOL_STATS_QUERY = `
-  query ProtocolStats {
-    protocolStats(id: "global") {
-      activeSubscriptions
-      totalRevenue
-    }
-  }
-`;
-
 function decimalUsdcToMicroString(value: unknown): string | null {
   if (value == null) return null;
   const numeric = Number(String(value));
   if (!Number.isFinite(numeric)) return null;
   return String(Math.round(numeric * 1_000_000));
-}
-
-async function readProtocolStatsFromSubgraph(chainId: number): Promise<{
-  activeSubscribers: number | null;
-  totalRevenueRaw: string | null;
-}> {
-  const graphUrl = getGraphUrl(chainId);
-  if (!graphUrl) {
-    return { activeSubscribers: null, totalRevenueRaw: null };
-  }
-
-  try {
-    const res = await fetch(graphUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query: PROTOCOL_STATS_QUERY }),
-      cache: "no-store",
-    });
-
-    if (!res.ok) {
-      return { activeSubscribers: null, totalRevenueRaw: null };
-    }
-
-    const json = (await res.json()) as {
-      data?: { protocolStats?: { activeSubscriptions?: string; totalRevenue?: string } };
-    };
-
-    const activeSubscriptionsRaw = json.data?.protocolStats?.activeSubscriptions;
-    const totalRevenueRaw = json.data?.protocolStats?.totalRevenue;
-
-    return {
-      activeSubscribers:
-        activeSubscriptionsRaw != null ? Number(activeSubscriptionsRaw) : null,
-      totalRevenueRaw: totalRevenueRaw ?? null,
-    };
-  } catch {
-    return { activeSubscribers: null, totalRevenueRaw: null };
-  }
 }
 
 async function readProtocolFees(chainId: number): Promise<string | null> {
@@ -136,16 +89,26 @@ export async function GET(request: NextRequest) {
     parsed.data.chainId,
   );
 
-  const [planRows, invoiceTotals, invoiceRows, protocolStats, feesRaw] =
+  const [
+    activePlans,
+    activeSubscribers,
+    invoiceTotals,
+    feesRaw,
+  ] =
     await Promise.all([
-      db.catalogPlan.findMany({
+      db.catalogPlan.count({
         where: {
           teamId: auth.team.teamId,
           environmentMode,
           active: true,
           status: { not: "ARCHIVED" },
         },
-        select: { id: true },
+      }),
+      db.subscriptionState.count({
+        where: {
+          teamId: auth.team.teamId,
+          status: { in: ["ACTIVE", "PAST_DUE"] },
+        },
       }),
       db.invoice.aggregate({
         where: {
@@ -158,34 +121,12 @@ export async function GET(request: NextRequest) {
         },
         _sum: { total: true },
       }),
-      db.invoice.findMany({
-        where: {
-          teamId: auth.team.teamId,
-          environmentMode,
-          status: "PAID",
-        },
-        select: { customerWallet: true, customerEmail: true },
-      }),
-      readProtocolStatsFromSubgraph(chainId),
       readProtocolFees(chainId),
     ]);
-
-  const activePlans = planRows.length;
-  const activePlanIds = planRows.map((plan) => plan.id);
-  const workspaceSubscriberCount = activePlanIds.length
-    ? await db.arcenCompany.count({
-        where: {
-          teamId: auth.team.teamId,
-          activePlanId: { in: activePlanIds },
-        },
-      })
-    : 0;
-
-  const uniqueSubscribers = new Set<string>();
-  for (const row of invoiceRows) {
-    if (row.customerWallet) uniqueSubscribers.add(`w:${row.customerWallet.toLowerCase()}`);
-    else if (row.customerEmail) uniqueSubscribers.add(`e:${row.customerEmail.toLowerCase()}`);
-  }
+  const dependencyHealth = {
+    protocolFees: feesRaw ? "ok" : "unavailable",
+  } as const;
+  const degraded = dependencyHealth.protocolFees !== "ok";
 
   return NextResponse.json({
     context: {
@@ -193,17 +134,14 @@ export async function GET(request: NextRequest) {
       environmentMode,
       chainId,
     },
+    degraded,
+    dependencyHealth,
     metrics: {
       activePlans,
-      activeSubscribers:
-        protocolStats.activeSubscribers != null
-          ? protocolStats.activeSubscribers
-          : Math.max(uniqueSubscribers.size, workspaceSubscriberCount),
-      monthlyRevenueRaw:
-        decimalUsdcToMicroString(invoiceTotals._sum.total) ??
-        protocolStats.totalRevenueRaw ??
-        "0",
-      protocolFeesRaw: feesRaw ?? "0",
+      activeSubscribers,
+      paidInvoiceRevenue30dRaw:
+        decimalUsdcToMicroString(invoiceTotals._sum.total),
+      protocolFeesRaw: feesRaw,
     },
   });
 }

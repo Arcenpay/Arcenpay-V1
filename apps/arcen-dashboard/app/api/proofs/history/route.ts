@@ -39,6 +39,8 @@ export async function GET(request: NextRequest) {
           return NextResponse.json({
             count: 0,
             jobs: [],
+            degraded: true,
+            message: "Facilitator is connected to a different chain.",
             chainMismatch: {
               requestedChainId,
               facilitatorChainId: health.chainId,
@@ -63,7 +65,12 @@ export async function GET(request: NextRequest) {
     );
 
     if (!upstream.ok) {
-      return NextResponse.json({ count: 0, jobs: [] });
+      return NextResponse.json({
+        count: 0,
+        jobs: [],
+        degraded: true,
+        message: `Facilitator returned ${upstream.status}.`,
+      });
     }
 
     const payload = await upstream.json();
@@ -71,9 +78,15 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       count: Number(payload.count) || jobs.length,
       jobs,
+      degraded: false,
     });
   } catch (err) {
     console.error("[api/proofs/history]", err);
-    return NextResponse.json({ count: 0, jobs: [] });
+    return NextResponse.json({
+      count: 0,
+      jobs: [],
+      degraded: true,
+      message: err instanceof Error ? err.message : "Proof history unavailable.",
+    });
   }
 }

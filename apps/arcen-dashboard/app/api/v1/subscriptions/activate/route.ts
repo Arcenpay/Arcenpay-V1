@@ -174,6 +174,14 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function requiredConfirmations(): number {
+  const raw = process.env.ONCHAIN_MIN_CONFIRMATIONS?.trim();
+  if (!raw) return 2;
+
+  const parsed = Number.parseInt(raw, 10);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : 2;
+}
+
 function normalizeActivationError(message: string): {
   status: number;
   error: string;
@@ -202,10 +210,39 @@ function normalizeActivationError(message: string): {
     };
   }
 
+  if (lower.includes("confirmation")) {
+    return {
+      status: 425,
+      error: message,
+    };
+  }
+
   return {
     status: 500,
     error: message,
   };
+}
+
+async function assertReceiptFinalized(params: {
+  publicClient: ReturnType<typeof createPublicClient>;
+  receipt: { blockNumber?: bigint | null };
+  label: string;
+}): Promise<void> {
+  const blockNumber = params.receipt.blockNumber;
+  if (!blockNumber) {
+    throw new Error(`${params.label} receipt is missing a block number.`);
+  }
+
+  const latestBlock = await params.publicClient.getBlockNumber();
+  const confirmations =
+    latestBlock >= blockNumber ? latestBlock - blockNumber + 1n : 0n;
+  const required = BigInt(requiredConfirmations());
+
+  if (confirmations < required) {
+    throw new Error(
+      `${params.label} has ${confirmations.toString()} confirmation(s); ${required.toString()} required before activating the subscription.`,
+    );
+  }
 }
 
 async function upsertCompanyForActivation(
@@ -760,13 +797,30 @@ export async function POST(req: NextRequest) {
       chain,
     });
 
-    const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
+    const receipt = await publicClient.waitForTransactionReceipt({
+      hash: txHash,
+      confirmations: requiredConfirmations(),
+    });
     if (receipt.status !== "success") {
       return NextResponse.json(
         { error: "Initial subscription activation transaction failed." },
         { status: 502, headers: corsHeaders() },
       );
     }
+    await assertReceiptFinalized({
+      publicClient,
+      receipt,
+      label: "Initial subscription activation transaction",
+    });
+
+    const receiptBlock =
+      receipt.blockNumber != null
+        ? await publicClient.getBlock({ blockNumber: receipt.blockNumber })
+        : null;
+    const occurredAt =
+      receiptBlock?.timestamp != null
+        ? new Date(Number(receiptBlock.timestamp) * 1000)
+        : new Date();
 
     const billingLogs = parseEventLogs({
       abi: ERC7579AutopayModuleABI,
@@ -867,32 +921,6 @@ export async function POST(req: NextRequest) {
       })) as bigint;
     }
 
-    const currentPeriodEnd =
-      expiresAt > 0n ? new Date(Number(expiresAt) * 1000) : null;
-
-    await upsertSubscriptionLedgerState({
-      teamId,
-      companyId: company.id,
-      walletAddress: paymentAccount,
-      status: "ACTIVE",
-      catalogPlanId: catalogPlan.id,
-      onChainPlanId: onChainPlanId.toString(),
-      onChainTokenId: tokenId.toString(),
-      currentPeriodStart: receipt.blockNumber ? new Date() : new Date(),
-      currentPeriodEnd,
-      cancelAtPeriodEnd: false,
-      cancelledAt: null,
-      pastDueAt: null,
-      graceEndsAt: null,
-      lastEvent: "subscription.minted",
-      lastEventAt: new Date(),
-      lastSourceTxHash: txHash,
-      metadata: {
-        source: "subscription.activate",
-        activationMode: "immediate_sync",
-      },
-    });
-
     const subscriberEmail = await resolveBillingRecipientEmail({
       teamId,
       explicitEmail:
@@ -904,21 +932,6 @@ export async function POST(req: NextRequest) {
       companyId: company.id,
       walletAddress: paymentAccount,
     });
-
-    if (subscriberEmail) {
-      await db.subscriberEmail.upsert({
-        where: { walletAddress: paymentAccount },
-        update: {
-          email: subscriberEmail,
-          planId: catalogPlan.id,
-        },
-        create: {
-          walletAddress: paymentAccount,
-          email: subscriberEmail,
-          planId: catalogPlan.id,
-        },
-      });
-    }
 
     const finalizationPayload = {
       companyId: company.id,
@@ -934,7 +947,7 @@ export async function POST(req: NextRequest) {
       merchantAddress,
       acceptedToken: catalogPlan.acceptedToken ?? null,
       subscriberEmail,
-      occurredAt: new Date().toISOString(),
+      occurredAt: occurredAt.toISOString(),
       previousPlanId: previousCompany?.activePlanId ?? null,
     };
 

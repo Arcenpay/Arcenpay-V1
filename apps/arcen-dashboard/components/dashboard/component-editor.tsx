@@ -3910,10 +3910,10 @@ const { data } = await res.json();
                     }}
                   >
                     <SelectTrigger className="h-7 text-xs w-[160px]">
-                      <SelectValue placeholder="Sample Data" />
+                      <SelectValue placeholder="Sample Preview Data" />
                     </SelectTrigger>
                     <SelectContent className="z-[10000]">
-                      <SelectItem value="__sample__">Sample Data</SelectItem>
+                      <SelectItem value="__sample__">Sample Preview Data</SelectItem>
                       {companies.map((c) => (
                         <SelectItem key={c.id} value={c.id}>
                           {c.name}
@@ -3943,6 +3943,21 @@ const { data } = await res.json();
                     transition: "max-width 0.2s ease",
                   }}
                 >
+                  <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-secondary/20 px-3 py-2 text-xs text-muted-foreground">
+                    <span>
+                      {previewCompanyId
+                        ? "Live company preview. Billing, plans, entitlements, and invoices come from the selected company context."
+                        : "Sample preview mode. This editor uses seeded sample values for checkout, invoices, and billing states until you choose a real company."}
+                    </span>
+                    <span className={cn(
+                      "shrink-0 rounded-full px-2 py-0.5 font-medium",
+                      previewCompanyId
+                        ? "bg-blue-500/10 text-blue-600"
+                        : "bg-secondary text-muted-foreground",
+                    )}>
+                      {previewCompanyId ? "Live data" : "Sample data"}
+                    </span>
+                  </div>
                   {isCustom ? (
                     /* ── Custom component: ArcenEmbed for ALL views ── */
                     elements.length === 0 && activeViewState === "portal" ? (

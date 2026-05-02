@@ -15,7 +15,6 @@ import {
   EyeOff,
   Terminal,
   BookOpen,
-  ChevronRight,
   Shield,
   Clock,
   Database,
@@ -46,13 +45,20 @@ interface ApiKey {
 }
 
 interface SessionRow {
-  sessionId: string;
-  agentAddress: string;
-  balance: string;
+  id: string;
+  agent: string;
+  currentBalance: string;
   totalFunded: string;
   totalSettled: string;
-  active: boolean;
-  createdAt: string;
+}
+
+interface SessionsPayload {
+  sessions?: SessionRow[];
+  degraded?: boolean;
+  dependencyHealth?: {
+    subgraph: "ok" | "unavailable";
+    facilitator: "ok" | "unavailable" | "chain_mismatch";
+  };
 }
 
 // ─────────────────────────────────────────────
@@ -249,12 +255,23 @@ function ApiKeysTab() {
 function SessionsTab() {
   const [sessions, setSessions] = useState<SessionRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [warning, setWarning] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/platform/sessions")
       .then((r) => r.json())
-      .then((d) => setSessions(d.sessions ?? []))
-      .catch(() => setSessions([]))
+      .then((d: SessionsPayload) => {
+        setSessions(d.sessions ?? []);
+        setWarning(
+          d.degraded
+            ? "Some session data is temporarily unavailable. Empty results may reflect an upstream outage."
+            : null,
+        );
+      })
+      .catch(() => {
+        setSessions([]);
+        setWarning("Session data is temporarily unavailable.");
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -271,6 +288,11 @@ function SessionsTab() {
           SessionVault sessions used for x402 pay-per-call billing.
         </p>
       </div>
+      {warning && (
+        <div className="rounded-lg border border-warning/20 bg-warning/5 px-3 py-2 text-xs text-muted-foreground">
+          {warning}
+        </div>
+      )}
 
       {loading ? (
         <div className="text-sm text-muted-foreground">Loading…</div>
@@ -294,18 +316,18 @@ function SessionsTab() {
             </thead>
             <tbody className="divide-y divide-border">
               {sessions.map((s) => (
-                <tr key={s.sessionId} className="hover:bg-secondary/20 transition-colors">
+                <tr key={s.id} className="hover:bg-secondary/20 transition-colors">
                   <td className="px-4 py-3">
-                    <code className="text-xs font-mono text-muted-foreground">{s.sessionId.slice(0, 10)}…</code>
+                    <code className="text-xs font-mono text-muted-foreground">{s.id.slice(0, 10)}…</code>
                   </td>
                   <td className="px-4 py-3">
-                    <code className="text-xs font-mono text-muted-foreground">{s.agentAddress.slice(0, 8)}…{s.agentAddress.slice(-4)}</code>
+                    <code className="text-xs font-mono text-muted-foreground">{s.agent.slice(0, 8)}…{s.agent.slice(-4)}</code>
                   </td>
-                  <td className="px-4 py-3 text-right font-medium">{formatUsdc(s.balance)}</td>
+                  <td className="px-4 py-3 text-right font-medium">{formatUsdc(s.currentBalance)}</td>
                   <td className="px-4 py-3 text-right text-muted-foreground">{formatUsdc(s.totalSettled)}</td>
                   <td className="px-4 py-3 text-center">
-                    <Badge variant={s.active ? "default" : "secondary"} className={cn("text-xs", s.active && "bg-green-500/15 text-green-500 border-green-500/20")}>
-                      {s.active ? "Active" : "Closed"}
+                    <Badge variant={BigInt(s.currentBalance) > 0n ? "default" : "secondary"} className={cn("text-xs", BigInt(s.currentBalance) > 0n && "bg-green-500/15 text-green-500 border-green-500/20")}>
+                      {BigInt(s.currentBalance) > 0n ? "Active" : "Closed"}
                     </Badge>
                   </td>
                 </tr>
@@ -432,14 +454,16 @@ ARCENPAY_FACILITATOR_URL=https://facilitator.arcenpay.xyz`;
       {/* Resources */}
       <div className="grid grid-cols-2 gap-3">
         {[
-          { icon: BookOpen, title: "Agent SDK docs", href: "#" },
-          { icon: Terminal, title: "x402 Protocol spec", href: "#" },
-        ].map(({ icon: Icon, title, href }) => (
-          <a key={title} href={href} className="flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-secondary/30 transition-colors group">
+          { icon: BookOpen, title: "Agent SDK docs", desc: "See the Docs section for SDK references." },
+          { icon: Terminal, title: "x402 protocol", desc: "Use the in-app quickstart snippets as the current reference." },
+        ].map(({ icon: Icon, title, desc }) => (
+          <div key={title} className="flex items-center gap-3 p-3 rounded-lg border border-border bg-secondary/10">
             <Icon className="w-4 h-4 text-muted-foreground group-hover:text-foreground" />
-            <span className="text-sm text-foreground">{title}</span>
-            <ChevronRight className="w-3.5 h-3.5 text-muted-foreground ml-auto" />
-          </a>
+            <div className="min-w-0">
+              <span className="text-sm text-foreground block">{title}</span>
+              <span className="text-xs text-muted-foreground">{desc}</span>
+            </div>
+          </div>
         ))}
       </div>
     </div>

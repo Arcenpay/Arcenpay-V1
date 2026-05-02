@@ -499,10 +499,11 @@ export function ComponentsSection({ onSectionChange }: ComponentsSectionProps = 
               { ...component, id: data.data.id },
             ]);
             toast.success("Component created");
+            setEditorOpen(false);
+            setSelectedComponent(null);
           } else {
             const err = await res.json().catch(() => ({}));
             toast.error(err?.error ?? "Failed to create component");
-            setCustomComponents((prev) => [...prev, component]);
           }
         } else {
           const res = await fetch(`/api/v1/components/${component.id}`, {
@@ -515,34 +516,43 @@ export function ComponentsSection({ onSectionChange }: ComponentsSectionProps = 
             }),
           });
           if (res.ok) {
+            const data = await res.json().catch(() => null);
+            const next = [...customComponents];
+            next[existingIndex] = {
+              ...component,
+              updatedAt: data?.data?.updatedAt
+                ? new Date(data.data.updatedAt)
+                : new Date(),
+            };
+            setCustomComponents(next);
             toast.success("Component saved");
+            setEditorOpen(false);
+            setSelectedComponent(null);
           } else {
             const err = await res.json().catch(() => ({}));
             toast.error(err?.error ?? "Failed to save component");
           }
-          const next = [...customComponents];
-          next[existingIndex] = component;
-          setCustomComponents(next);
         }
       } catch {
-        toast.error("Network error — component not saved to server");
-        if (isNew) setCustomComponents((prev) => [...prev, component]);
-        else {
-          const next = [...customComponents];
-          next[existingIndex] = component;
-          setCustomComponents(next);
-        }
+        toast.error("Network error — component was not saved");
       }
     }
-    setEditorOpen(false);
-    setSelectedComponent(null);
   };
 
   const handleDeleteComponent = async (id: string) => {
-    setCustomComponents(customComponents.filter((c) => c.id !== id));
     try {
-      await fetch(`/api/v1/components/${id}`, { method: "DELETE" });
-    } catch {}
+      const res = await fetch(`/api/v1/components/${id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.error ?? "Failed to delete component");
+      }
+      setCustomComponents(customComponents.filter((c) => c.id !== id));
+      toast.success("Component deleted");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to delete component",
+      );
+    }
   };
 
   const handleDuplicateComponent = (component: ComponentConfig) => {
@@ -554,7 +564,8 @@ export function ComponentsSection({ onSectionChange }: ComponentsSectionProps = 
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    setCustomComponents([...customComponents, dup]);
+    setSelectedComponent(dup);
+    setEditorOpen(true);
   };
 
   if (editorOpen && selectedComponent) {

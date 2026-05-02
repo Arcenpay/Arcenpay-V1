@@ -22,10 +22,14 @@ type OverviewPayload = {
     environmentMode: "DEVELOPMENT" | "PRODUCTION";
     chainId: number;
   };
+  degraded: boolean;
+  dependencyHealth: {
+    protocolFees: "ok" | "unavailable";
+  };
   metrics: {
     activePlans: number;
     activeSubscribers: number;
-    monthlyRevenueRaw: string | null;
+    paidInvoiceRevenue30dRaw: string | null;
     protocolFeesRaw: string | null;
   };
 };
@@ -90,14 +94,14 @@ export function OverviewSection() {
       payload?.metrics.activeSubscribers != null
         ? String(payload.metrics.activeSubscribers)
         : "—",
-    mrr:
-      payload?.metrics.monthlyRevenueRaw != null
-        ? formatUsdc(payload.metrics.monthlyRevenueRaw)
-        : formatUsdc("0"),
+    paidInvoiceRevenue30d:
+      payload?.metrics.paidInvoiceRevenue30dRaw != null
+        ? formatUsdc(payload.metrics.paidInvoiceRevenue30dRaw)
+        : "—",
     feesCollected:
       payload?.metrics.protocolFeesRaw != null
         ? formatUsdc(payload.metrics.protocolFeesRaw)
-        : formatUsdc("0"),
+        : "—",
     activePlans:
       payload?.metrics.activePlans != null
         ? String(payload.metrics.activePlans)
@@ -115,6 +119,14 @@ export function OverviewSection() {
           </p>
         </div>
       )}
+      {payload?.degraded && (
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-warning/5 border border-warning/20 animate-in fade-in slide-in-from-top-2 duration-300">
+          <AlertTriangle className="w-4 h-4 text-warning shrink-0" />
+          <p className="text-sm text-muted-foreground">
+            Some protocol-level metrics are temporarily unavailable. Missing values are shown as dashes instead of zeroes.
+          </p>
+        </div>
+      )}
 
       {/* Metric cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -127,8 +139,8 @@ export function OverviewSection() {
           loading={mounted && (isLoading || envLoading)}
         />
         <MetricCard
-          title="Monthly Recurring Revenue"
-          value={mounted ? metrics.mrr : "—"}
+          title="Paid Invoice Revenue (30d)"
+          value={mounted ? metrics.paidInvoiceRevenue30d : "—"}
           changeType="neutral"
           icon={DollarSign}
           delay={1}

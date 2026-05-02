@@ -389,17 +389,25 @@ export function SettingsSection() {
     }
   };
 
-  const toggleNotification = (id: string, type: "email") => {
+  const toggleNotification = async (id: string, type: "email") => {
+    const previous = notifications;
     const updated = notifications.map((n) =>
       n.id === id ? { ...n, [type]: !n[type] } : n,
     );
     setNotifications(updated);
-    // Persist to server — fire-and-forget, UI already updated optimistically
-    fetch("/api/provider/notifications", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ notifications: updated }),
-    }).catch(() => {});
+    try {
+      const response = await fetch("/api/provider/notifications", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notifications: updated }),
+      });
+      if (!response.ok) {
+        throw new Error("Could not save notification preferences");
+      }
+    } catch {
+      setNotifications(previous);
+      toast.error("Could not save notification preferences");
+    }
   };
 
   const handleCopyAddress = (name: string, addr: string) => {

@@ -75,6 +75,12 @@ interface TestResult {
   error?: string;
 }
 
+interface DeliveryLogResponse {
+  entries?: Record<string, unknown>[];
+  degraded?: boolean;
+  message?: string;
+}
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const DEFAULT_EVENTS: EventSub[] = CANONICAL_WEBHOOK_EVENTS.map((event) => ({
@@ -189,6 +195,7 @@ export function WebhooksSection() {
   const [isRotating, setIsRotating] = useState(false);
   const [deliveries, setDeliveries] = useState<DeliveryEntry[]>([]);
   const [loadingLog, setLoadingLog] = useState(false);
+  const [logWarning, setLogWarning] = useState<string | null>(null);
   const [testResult, setTestResult] = useState<TestResult | null>(null);
   const [isTesting, setIsTesting] = useState(false);
   const [urlCopied, setUrlCopied] = useState(false);
@@ -219,7 +226,7 @@ export function WebhooksSection() {
     try {
       const res = await fetch("/api/webhooks/log?limit=50");
       if (!res.ok) return;
-      const data = await res.json();
+      const data = (await res.json()) as DeliveryLogResponse;
       const rows: DeliveryEntry[] = (
         Array.isArray(data.entries) ? data.entries : []
       ).map((e: Record<string, unknown>, i: number) => ({
@@ -242,8 +249,15 @@ export function WebhooksSection() {
         payload: e.payload ?? undefined,
       }));
       setDeliveries(rows);
+      setLogWarning(
+        data.degraded
+          ? (data.message ??
+              "Webhook delivery history is temporarily unavailable.")
+          : null,
+      );
     } catch {
       // Facilitator may not be running in dev
+      setLogWarning("Webhook delivery history is temporarily unavailable.");
     } finally {
       setLoadingLog(false);
     }
@@ -726,6 +740,11 @@ const valid = sig === req.headers['x-arcen-signature'].replace('sha256=', '');`}
           </Button>
         </CardHeader>
         <CardContent>
+          {logWarning && (
+            <div className="mb-4 rounded-lg border border-warning/20 bg-warning/5 px-3 py-2 text-xs text-muted-foreground">
+              {logWarning}
+            </div>
+          )}
           {deliveries.length === 0 ? (
             <div className="text-center py-10 space-y-2">
               <EyeOff className="w-8 h-8 text-muted-foreground/30 mx-auto" />

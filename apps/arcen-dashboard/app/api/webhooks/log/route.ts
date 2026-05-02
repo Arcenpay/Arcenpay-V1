@@ -35,6 +35,7 @@ export async function GET(request: NextRequest) {
         entries,
         log: entries,
         source: "database",
+        degraded: false,
       });
     }
   }
@@ -60,7 +61,12 @@ export async function GET(request: NextRequest) {
     if (!response.ok) {
       // Facilitator not available — return empty list gracefully
       if (response.status === 404 || response.status === 503) {
-        return NextResponse.json({ entries: [] });
+        return NextResponse.json({
+          entries: [],
+          degraded: true,
+          message: "Webhook delivery log backend is temporarily unavailable.",
+          source: "facilitator",
+        });
       }
       throw new Error(`Facilitator returned ${response.status}`);
     }
@@ -77,10 +83,19 @@ export async function GET(request: NextRequest) {
       entries,
       // deprecated alias retained for compatibility with legacy clients
       log: entries,
+      degraded: data.degraded === true,
+      message:
+        typeof data.message === "string" ? data.message : undefined,
+      source: "facilitator",
     });
   } catch (err) {
     console.error("[api/webhooks/log]", err);
     // Return empty list — don't break Settings page if facilitator is down
-    return NextResponse.json({ entries: [] });
+    return NextResponse.json({
+      entries: [],
+      degraded: true,
+      message: err instanceof Error ? err.message : "Webhook log unavailable.",
+      source: "facilitator",
+    });
   }
 }

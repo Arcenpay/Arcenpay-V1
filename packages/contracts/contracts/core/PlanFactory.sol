@@ -219,7 +219,7 @@ contract PlanFactory is IPlanFactory, Ownable, ReentrancyGuard, EIP712, Pausable
     function deactivatePlan(uint256 planId) external {
         Plan storage plan = _plans[planId];
         require(plan.id != 0, "PlanFactory: plan not found");
-        require(plan.provider == msg.sender || msg.sender == owner(), "PlanFactory: unauthorized");
+        require(plan.provider == msg.sender, "PlanFactory: not plan owner");
         require(plan.active, "PlanFactory: already inactive");
 
         plan.active = false;

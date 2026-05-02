@@ -12,7 +12,6 @@ import {
     DEFAULT_CHAIN_ID,
     SubscriptionRegistryABI,
     ERC7579AutopayModuleABI,
-    PlanFactoryABI,
     getContractAddresses,
 } from "@arcenpay/sdk";
 
@@ -214,33 +213,22 @@ export class BillingKeeper {
         deadline: bigint,
     ): Promise<bigint[]> {
         try {
-            // Look for recent SubscriptionMinted + SubscriptionRenewed events
-            // to build a list of active token IDs, then check expiry
-            const currentBlock = await this.publicClient.getBlockNumber();
-            const fromBlock =
-                currentBlock > 50000n ? currentBlock - 50000n : 0n;
-
-            const mintedLogs = await this.publicClient.getLogs({
+            const totalSupply = (await this.publicClient.readContract({
                 address: this.registryAddress,
-                event: {
-                    type: "event" as const,
-                    name: "SubscriptionMinted",
-                    inputs: [
-                        { name: "subscriber", type: "address", indexed: true },
-                        { name: "tokenId", type: "uint256", indexed: true },
-                        { name: "planId", type: "uint256", indexed: true },
-                        { name: "expiration", type: "uint64", indexed: false },
-                    ],
-                },
-                fromBlock,
-                toBlock: currentBlock,
-            });
+                abi: SubscriptionRegistryABI,
+                functionName: "totalSupply",
+            })) as bigint;
 
             const tokenIds: bigint[] = [];
-            for (const log of mintedLogs) {
-                const tokenId = (log as any).args.tokenId as bigint;
-
+            for (let index = 0n; index < totalSupply; index += 1n) {
                 try {
+                    const tokenId = (await this.publicClient.readContract({
+                        address: this.registryAddress,
+                        abi: SubscriptionRegistryABI,
+                        functionName: "tokenByIndex",
+                        args: [index],
+                    })) as bigint;
+
                     const expiresAt = (await this.publicClient.readContract({
                         address: this.registryAddress,
                         abi: SubscriptionRegistryABI,
@@ -248,12 +236,14 @@ export class BillingKeeper {
                         args: [tokenId],
                     })) as bigint;
 
-                    // Check if expiry is within the renewal window
                     if (expiresAt > now && expiresAt <= deadline) {
                         tokenIds.push(tokenId);
                     }
-                } catch {
-                    // Token might not exist anymore
+                } catch (err) {
+                    console.warn(
+                        `[BillingKeeper] Skipping token index ${index.toString()} while scanning expiring subscriptions:`,
+                        err,
+                    );
                 }
             }
 

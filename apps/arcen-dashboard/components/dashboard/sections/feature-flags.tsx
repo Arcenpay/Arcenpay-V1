@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { toast } from "sonner";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -49,6 +50,26 @@ interface FeatureFlag {
   defaultValue: boolean;
   createdAt: string;
   rules: FlagRule[];
+}
+
+interface CompanyOverrideRow {
+  id: string;
+  companyId: string;
+  featureKey: string;
+  value: boolean;
+  reason: string | null;
+  updatedAt?: string;
+  company?: {
+    id: string;
+    name: string | null;
+    email: string | null;
+    walletAddress: string | null;
+  } | null;
+}
+
+interface CompanyOption {
+  id: string;
+  name: string;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -605,6 +626,14 @@ function FlagDetailView({
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [copiedKey, setCopiedKey] = useState(false);
+  const [overrides, setOverrides] = useState<CompanyOverrideRow[]>([]);
+  const [overridesLoading, setOverridesLoading] = useState(false);
+  const [companies, setCompanies] = useState<CompanyOption[]>([]);
+  const [showOverrideForm, setShowOverrideForm] = useState(false);
+  const [overrideCompanyId, setOverrideCompanyId] = useState("");
+  const [overrideValue, setOverrideValue] = useState(true);
+  const [overrideReason, setOverrideReason] = useState("");
+  const [overrideBusy, setOverrideBusy] = useState(false);
 
   // Initialize rules from flag
   useState(() => {
@@ -615,6 +644,48 @@ function FlagDetailView({
   useEffect(() => {
     setRules(flag.rules.map((r) => ({ ...r })));
   }, [flag]);
+
+  useEffect(() => {
+    if (detailTab !== "companies") return;
+    let cancelled = false;
+
+    async function loadOverrides() {
+      setOverridesLoading(true);
+      try {
+        const [overridesRes, companiesRes] = await Promise.all([
+          fetch(`/api/v1/feature-flags/${flag.id}/overrides`, { cache: "no-store" }),
+          fetch("/api/v1/companies?limit=100", { cache: "no-store" }),
+        ]);
+
+        const overridesData = overridesRes.ok
+          ? ((await overridesRes.json()) as { data?: CompanyOverrideRow[] })
+          : { data: [] };
+        const companiesData = companiesRes.ok
+          ? ((await companiesRes.json()) as {
+              data?: Array<{ id: string; name: string | null }>;
+            })
+          : { data: [] };
+
+        if (cancelled) return;
+        setOverrides(Array.isArray(overridesData.data) ? overridesData.data : []);
+        setCompanies(
+          Array.isArray(companiesData.data)
+            ? companiesData.data.map((company) => ({
+                id: company.id,
+                name: company.name?.trim() || company.id,
+              }))
+            : [],
+        );
+      } finally {
+        if (!cancelled) setOverridesLoading(false);
+      }
+    }
+
+    void loadOverrides();
+    return () => {
+      cancelled = true;
+    };
+  }, [detailTab, flag.id]);
 
   const saveRules = async () => {
     setSaving(true);
@@ -637,6 +708,57 @@ function FlagDetailView({
     navigator.clipboard.writeText(flag.featureKey);
     setCopiedKey(true);
     setTimeout(() => setCopiedKey(false), 2000);
+  }
+
+  async function createOverride() {
+    if (!overrideCompanyId) return;
+    setOverrideBusy(true);
+    try {
+      const res = await fetch(`/api/v1/feature-flags/${flag.id}/overrides`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          companyId: overrideCompanyId,
+          value: overrideValue,
+          reason: overrideReason.trim() || null,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data?.error ?? "Failed to save override");
+      }
+      setOverrides((prev) => {
+        const next = prev.filter((row) => row.companyId !== data.data.companyId);
+        return [data.data as CompanyOverrideRow, ...next];
+      });
+      setShowOverrideForm(false);
+      setOverrideCompanyId("");
+      setOverrideReason("");
+      setOverrideValue(true);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to save override");
+    } finally {
+      setOverrideBusy(false);
+    }
+  }
+
+  async function removeOverride(companyId: string) {
+    setOverrideBusy(true);
+    try {
+      const res = await fetch(
+        `/api/v1/feature-flags/${flag.id}/overrides?companyId=${encodeURIComponent(companyId)}`,
+        { method: "DELETE" },
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data?.error ?? "Failed to delete override");
+      }
+      setOverrides((prev) => prev.filter((row) => row.companyId !== companyId));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to delete override");
+    } finally {
+      setOverrideBusy(false);
+    }
   }
 
   const DETAIL_TABS = ["rules", "companies"] as const;
@@ -787,20 +909,127 @@ function FlagDetailView({
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-base font-semibold">Company Overrides</h3>
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {}}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => setShowOverrideForm((value) => !value)}
+            >
               <Plus className="w-3.5 h-3.5" />
-              Add override
+              {showOverrideForm ? "Close" : "Add override"}
             </Button>
           </div>
-          <div className="border border-dashed border-border rounded-xl py-16 flex flex-col items-center justify-center gap-2">
-            <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center mb-2">
-              <Building2 className="w-6 h-6 text-muted-foreground/50" />
+          {showOverrideForm && (
+            <div className="rounded-xl border border-border bg-card p-4 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="space-y-1.5">
+                  <Label>Company</Label>
+                  <Select value={overrideCompanyId} onValueChange={setOverrideCompanyId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a company" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {companies.map((company) => (
+                        <SelectItem key={company.id} value={company.id}>
+                          {company.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Override value</Label>
+                  <Select
+                    value={overrideValue ? "true" : "false"}
+                    onValueChange={(value) => setOverrideValue(value === "true")}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="true">Force True</SelectItem>
+                      <SelectItem value="false">Force False</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Reason</Label>
+                  <Input
+                    value={overrideReason}
+                    onChange={(event) => setOverrideReason(event.target.value)}
+                    placeholder="Optional note"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end">
+                <Button
+                  size="sm"
+                  onClick={() => void createOverride()}
+                  disabled={!overrideCompanyId || overrideBusy}
+                >
+                  Save Override
+                </Button>
+              </div>
             </div>
-            <p className="text-sm font-medium text-foreground">No company overrides</p>
-            <p className="text-xs text-muted-foreground max-w-xs text-center">
-              Companies with manual flag overrides will appear here, regardless of rule evaluation.
-            </p>
-          </div>
+          )}
+          {overridesLoading ? (
+            <div className="rounded-xl border border-border py-10 text-center text-sm text-muted-foreground">
+              Loading company overrides…
+            </div>
+          ) : overrides.length === 0 ? (
+            <div className="border border-dashed border-border rounded-xl py-16 flex flex-col items-center justify-center gap-2">
+              <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center mb-2">
+                <Building2 className="w-6 h-6 text-muted-foreground/50" />
+              </div>
+              <p className="text-sm font-medium text-foreground">No company overrides</p>
+              <p className="text-xs text-muted-foreground max-w-xs text-center">
+                Companies with manual flag overrides will appear here, regardless of rule evaluation.
+              </p>
+            </div>
+          ) : (
+            <div className="rounded-xl border border-border overflow-hidden">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-muted/40 border-b border-border/60">
+                    <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Company</th>
+                    <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Value</th>
+                    <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Reason</th>
+                    <th className="px-4 py-2.5 w-10" />
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/40">
+                  {overrides.map((override) => (
+                    <tr key={override.id}>
+                      <td className="px-4 py-3">
+                        <div className="font-medium text-sm">
+                          {override.company?.name || override.company?.email || override.company?.walletAddress || override.companyId}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <Badge variant={override.value ? "default" : "outline"}>
+                          {override.value ? "True" : "False"}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground">
+                        {override.reason || "—"}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          disabled={overrideBusy}
+                          onClick={() => void removeOverride(override.companyId)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
     </div>

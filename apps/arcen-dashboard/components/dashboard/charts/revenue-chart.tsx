@@ -13,8 +13,8 @@ import {
 import { BarChart3 } from "lucide-react";
 
 type ProofHistoryJob = {
-  settlementAmount?: string;
-  createdAt?: number;
+  label: string;
+  revenueRaw: string;
 };
 
 type RevenuePoint = {
@@ -36,20 +36,18 @@ export function RevenueChart({ chainId }: RevenueChartProps) {
     const fetchRevenue = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`/api/proofs/history?limit=12&chainId=${chainId}`);
+        const response = await fetch(
+          `/api/platform/revenue-series?months=12`,
+        );
         if (!response.ok) return;
         const payload = await response.json();
-        const jobs = Array.isArray(payload.jobs) ? (payload.jobs as ProofHistoryJob[]) : [];
-        const points = jobs
-          .filter((job) => job.settlementAmount && job.createdAt)
-          .map((job) => ({
-            time: new Date(Number(job.createdAt)).toLocaleDateString(undefined, {
-              month: "short",
-              day: "numeric",
-            }),
-            revenue: Number(job.settlementAmount) / 1e6,
-          }))
-          .reverse();
+        const jobs = Array.isArray(payload.points)
+          ? (payload.points as ProofHistoryJob[])
+          : [];
+        const points = jobs.map((job) => ({
+          time: job.label,
+          revenue: Number(job.revenueRaw) / 1e6,
+        }));
 
         if (!cancelled) {
           setData(points);
@@ -80,9 +78,9 @@ export function RevenueChart({ chainId }: RevenueChartProps) {
     <div className="bg-card border border-border rounded-xl p-5 h-[380px] animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h3 className="text-base font-semibold text-foreground">Revenue Trend</h3>
+          <h3 className="text-base font-semibold text-foreground">Paid Invoice Revenue</h3>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Monthly recurring revenue (Chain {chainId})
+            Last 12 months of paid invoice revenue
           </p>
         </div>
         <div className="flex items-center gap-4 text-xs">
@@ -104,7 +102,7 @@ export function RevenueChart({ chainId }: RevenueChartProps) {
           </div>
           <p className="text-sm font-medium text-foreground mb-1">No revenue data yet</p>
           <p className="text-xs text-muted-foreground max-w-[280px]">
-            Revenue data will populate as subscribers are billed through the protocol
+            Revenue will populate once paid invoices are recorded for this workspace
           </p>
         </div>
       ) : (

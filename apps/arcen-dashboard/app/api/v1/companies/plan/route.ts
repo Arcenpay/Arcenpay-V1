@@ -7,6 +7,14 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { privateKeyToAccount } from "viem/accounts";
+import {
+  createPublicClient,
+  createWalletClient,
+  http,
+  isAddress,
+  type Chain,
+} from "viem";
 import { deliverWebhook } from "@/lib/deliver-webhook";
 import { resolveEntitlementResults } from "@/lib/entitlements";
 import {
@@ -35,11 +43,19 @@ import {
   verifySubscriptionRegistryPlanChange,
 } from "@/lib/onchain-payment-verification";
 import { SELF_SERVE_PLAN_CHANGES_ENABLED } from "@/lib/launch-flags";
+import { getContractAddresses, SubscriptionRegistryABI } from "@arcenpay/sdk";
+import { getRpcUrl } from "@/lib/config";
+import { DEFAULT_CHAIN_ID } from "@/lib/default-chain";
+import { baseSepolia } from "viem/chains";
 
 type PlanRouteDb = Pick<
   typeof db,
   "team" | "invoice" | "arcenCompany" | "subscriptionState" | "payment" | "paymentAttempt" | "billingAdjustment"
 >;
+
+const CHAIN_MAP: Record<number, Chain> = {
+  84532: baseSepolia,
+};
 
 type SubscriptionTransition = {
   mode:
@@ -99,6 +115,144 @@ function corsHeaders() {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "POST,OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type,Authorization",
+  };
+}
+
+function normalizePrivateKey(raw: string | undefined): `0x${string}` | null {
+  if (!raw) return null;
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  const withPrefix = trimmed.startsWith("0x") ? trimmed : `0x${trimmed}`;
+  return /^0x[a-fA-F0-9]{64}$/.test(withPrefix)
+    ? (withPrefix as `0x${string}`)
+    : null;
+}
+
+function requiredConfirmations(): number {
+  const raw = process.env.ONCHAIN_MIN_CONFIRMATIONS?.trim();
+  if (!raw) return 2;
+
+  const parsed = Number.parseInt(raw, 10);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : 2;
+}
+
+function createChainClients() {
+  const chainId = DEFAULT_CHAIN_ID;
+  const chain = CHAIN_MAP[chainId] ?? baseSepolia;
+  return {
+    chain,
+    publicClient: createPublicClient({
+      chain,
+      transport: http(getRpcUrl(chainId)),
+    }),
+    contracts: getContractAddresses(chainId),
+  };
+}
+
+function resolveAuthorizedRegistryPlanChangeCapability() {
+  const billerPrivateKey = normalizePrivateKey(
+    process.env.SUBSCRIPTION_BILLER_PRIVATE_KEY ||
+      process.env.BILLER_PRIVATE_KEY ||
+      process.env.PRIVATE_KEY ||
+      process.env.ONCHAIN_PROVIDER_PRIVATE_KEY ||
+      process.env.DEPLOYER_PRIVATE_KEY,
+  );
+
+  if (!billerPrivateKey) {
+    return {
+      ok: false as const,
+      status: 503,
+      error:
+        "Subscription biller signer is not configured on the backend. Set SUBSCRIPTION_BILLER_PRIVATE_KEY for immediate upgrades.",
+    };
+  }
+
+  return {
+    ok: true as const,
+    billerPrivateKey,
+  };
+}
+
+async function executeAuthorizedRegistryPlanChange(input: {
+  tokenId: string;
+  expectedOnChainPlanId: string;
+}) {
+  const capability = resolveAuthorizedRegistryPlanChangeCapability();
+  if (!capability.ok) {
+    return capability;
+  }
+  const { billerPrivateKey } = capability;
+
+  const { chain, publicClient, contracts } = createChainClients();
+  const subscriptionRegistryAddress =
+    contracts.subscriptionRegistry as `0x${string}`;
+
+  if (
+    !subscriptionRegistryAddress ||
+    !isAddress(subscriptionRegistryAddress)
+  ) {
+    return {
+      ok: false as const,
+      status: 503,
+      error: "Subscription registry is not configured for this chain.",
+    };
+  }
+
+  const signerAccount = privateKeyToAccount(billerPrivateKey);
+  const authorized = (await publicClient.readContract({
+    address: subscriptionRegistryAddress,
+    abi: [
+      {
+        inputs: [{ internalType: "address", name: "", type: "address" }],
+        name: "authorizedBillers",
+        outputs: [{ internalType: "bool", name: "", type: "bool" }],
+        stateMutability: "view",
+        type: "function",
+      },
+    ] as const,
+    functionName: "authorizedBillers",
+    args: [signerAccount.address],
+  })) as boolean;
+
+  if (!authorized) {
+    return {
+      ok: false as const,
+      status: 409,
+      error:
+        "The configured backend signer is not authorized as a SubscriptionRegistry biller, so immediate upgrades cannot finalize access yet.",
+    };
+  }
+
+  const walletClient = createWalletClient({
+    account: signerAccount,
+    chain,
+    transport: http(getRpcUrl(chain.id)),
+  });
+
+  const txHash = await walletClient.writeContract({
+    account: signerAccount,
+    chain,
+    address: subscriptionRegistryAddress,
+    abi: SubscriptionRegistryABI,
+    functionName: "changePlan",
+    args: [BigInt(input.tokenId), BigInt(input.expectedOnChainPlanId)],
+  });
+
+  const receipt = await publicClient.waitForTransactionReceipt({
+    hash: txHash,
+    confirmations: requiredConfirmations(),
+  });
+  if (receipt.status !== "success") {
+    return {
+      ok: false as const,
+      status: 502,
+      error: "Authorized SubscriptionRegistry plan change transaction failed.",
+    };
+  }
+
+  return {
+    ok: true as const,
+    txHash,
   };
 }
 
@@ -313,6 +467,7 @@ export async function POST(req: NextRequest) {
     autopayConfigTxHash?: string;
     accessChangeTxHash?: string;
     paymentTxHash?: string;
+    previewOnly?: boolean;
     scheduleAtPeriodEnd?: boolean;
     couponCode?: string;
     customerEmail?: string;
@@ -334,6 +489,7 @@ export async function POST(req: NextRequest) {
     autopayConfigTxHash,
     accessChangeTxHash,
     paymentTxHash,
+    previewOnly,
     scheduleAtPeriodEnd,
     couponCode,
     customerEmail,
@@ -613,6 +769,100 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const isUpgrade = targetPlanAmountMicros > currentPlanAmountMicros;
+    const currentPeriodStart = company.subscriptionState?.currentPeriodStart;
+    const currentPeriodEnd = company.subscriptionState?.currentPeriodEnd;
+    const effectiveAt = new Date();
+
+    if (isUpgrade && previewOnly === true) {
+      if (
+        !currentPeriodStart ||
+        !currentPeriodEnd ||
+        Number.isNaN(currentPeriodEnd.getTime()) ||
+        currentPeriodEnd <= currentPeriodStart
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "The current billing period is required before an upgrade can be prorated.",
+          },
+          { status: 409, headers: corsHeaders() },
+        );
+      }
+
+      const capability = resolveAuthorizedRegistryPlanChangeCapability();
+      if (!capability.ok) {
+        return NextResponse.json(
+          { error: capability.error },
+          { status: capability.status, headers: corsHeaders() },
+        );
+      }
+
+      const { publicClient, contracts } = createChainClients();
+      const subscriptionRegistryAddress =
+        contracts.subscriptionRegistry as `0x${string}`;
+      if (
+        !subscriptionRegistryAddress ||
+        !isAddress(subscriptionRegistryAddress)
+      ) {
+        return NextResponse.json(
+          { error: "Subscription registry is not configured for this chain." },
+          { status: 503, headers: corsHeaders() },
+        );
+      }
+      const signerAccount = privateKeyToAccount(capability.billerPrivateKey);
+      const authorized = (await publicClient.readContract({
+        address: subscriptionRegistryAddress,
+        abi: [
+          {
+            inputs: [{ internalType: "address", name: "", type: "address" }],
+            name: "authorizedBillers",
+            outputs: [{ internalType: "bool", name: "", type: "bool" }],
+            stateMutability: "view",
+            type: "function",
+          },
+        ] as const,
+        functionName: "authorizedBillers",
+        args: [signerAccount.address],
+      })) as boolean;
+
+      if (!authorized) {
+        return NextResponse.json(
+          {
+            error:
+              "The configured backend signer is not authorized as a SubscriptionRegistry biller, so immediate upgrades cannot finalize access yet.",
+          },
+          { status: 409, headers: corsHeaders() },
+        );
+      }
+
+      const proration = createProrationSummary({
+        currentPlanName: currentPlan?.name ?? "Current plan",
+        targetPlanName: plan.name,
+        currentPlanAmountMicros: BigInt(currentPlanAmountMicros),
+        targetPlanAmountMicros: BigInt(targetPlanAmountMicros),
+        currentPeriodStart,
+        currentPeriodEnd,
+        effectiveAt,
+      });
+
+      return NextResponse.json(
+        {
+          data: {
+            success: true,
+            previewOnly: true,
+            scheduled: false,
+            mode: "immediate_prorated_upgrade_preview",
+            planId,
+            planName: plan.name,
+            previousPlanId: previousPlanId ?? null,
+            proration: proration.response,
+          },
+        },
+        { headers: corsHeaders() },
+      );
+    }
+
     const normalizedAutopayConfigTxHash = normalizeTxHash(
       autopayConfigTxHash ?? planChangeTxHash ?? txHash,
     );
@@ -630,13 +880,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           error:
-            "This autopay config transaction hash has already been used for a previous plan change.",
+          "This autopay config transaction hash has already been used for a previous plan change.",
         },
         { status: 409, headers: corsHeaders() },
       );
     }
 
-    const isUpgrade = targetPlanAmountMicros > currentPlanAmountMicros;
     const verification = await verifyAutopayPlanChange({
       paymentAccount: companyPaymentAccount,
       txHash: normalizedAutopayConfigTxHash,
@@ -650,14 +899,13 @@ export async function POST(req: NextRequest) {
     }
 
     if (isUpgrade) {
-      const currentPeriodStart = company.subscriptionState?.currentPeriodStart;
-      const currentPeriodEnd = new Date(verification.currentPeriodEnd);
-      const effectiveAt = new Date();
+      const periodStart = currentPeriodStart;
+      const periodEnd = new Date(verification.currentPeriodEnd);
 
       if (
-        !currentPeriodStart ||
-        Number.isNaN(currentPeriodEnd.getTime()) ||
-        currentPeriodEnd <= currentPeriodStart
+        !periodStart ||
+        Number.isNaN(periodEnd.getTime()) ||
+        periodEnd <= periodStart
       ) {
         return NextResponse.json(
           {
@@ -673,34 +921,20 @@ export async function POST(req: NextRequest) {
         targetPlanName: plan.name,
         currentPlanAmountMicros: BigInt(currentPlanAmountMicros),
         targetPlanAmountMicros: BigInt(targetPlanAmountMicros),
-        currentPeriodStart,
-        currentPeriodEnd,
+        currentPeriodStart: periodStart,
+        currentPeriodEnd: periodEnd,
         effectiveAt,
       });
 
       const normalizedPaymentTxHash = normalizeTxHash(paymentTxHash);
-      const normalizedAccessChangeTxHash = normalizeTxHash(
-        accessChangeTxHash ?? planChangeTxHash,
+      const normalizedRequestedAccessChangeTxHash = normalizeTxHash(
+        body.accessChangeTxHash ?? planChangeTxHash,
       );
       if (proration.amountDueMicros > 0n && !normalizedPaymentTxHash) {
         return NextResponse.json(
           {
             error:
               "Immediate upgrades require a confirmed prorated payment transaction hash.",
-            data: {
-              mode: "immediate_prorated_upgrade",
-              proration: proration.response,
-            },
-          },
-          { status: 400, headers: corsHeaders() },
-        );
-      }
-
-      if (!normalizedAccessChangeTxHash) {
-        return NextResponse.json(
-          {
-            error:
-              "Immediate upgrades require the authorized biller SubscriptionRegistry.changePlan transaction hash.",
             data: {
               mode: "immediate_prorated_upgrade",
               proration: proration.response,
@@ -723,7 +957,10 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      if (consumedPaymentTxHashes.includes(normalizedAccessChangeTxHash)) {
+      if (
+        normalizedRequestedAccessChangeTxHash &&
+        consumedPaymentTxHashes.includes(normalizedRequestedAccessChangeTxHash)
+      ) {
         return NextResponse.json(
           {
             error:
@@ -749,9 +986,24 @@ export async function POST(req: NextRequest) {
         }
       }
 
+      let accessChangeTxHash = normalizedRequestedAccessChangeTxHash;
+      if (!accessChangeTxHash) {
+        const accessChangeExecution = await executeAuthorizedRegistryPlanChange({
+          tokenId: verification.tokenId,
+          expectedOnChainPlanId: plan.onChainPlanId!,
+        });
+        if (!accessChangeExecution.ok) {
+          return NextResponse.json(
+            { error: accessChangeExecution.error },
+            { status: accessChangeExecution.status, headers: corsHeaders() },
+          );
+        }
+        accessChangeTxHash = accessChangeExecution.txHash;
+      }
+
       const accessChange = await verifySubscriptionRegistryPlanChange({
         paymentAccount: companyPaymentAccount,
-        txHash: normalizedAccessChangeTxHash,
+        txHash: accessChangeTxHash,
         expectedOnChainPlanId: plan.onChainPlanId!,
       });
       if (!accessChange.ok) {
@@ -774,7 +1026,7 @@ export async function POST(req: NextRequest) {
               readConsumedPaymentTxHashes(latestTraits);
             const alreadyConsumed =
               latestConsumedPaymentTxHashes.includes(normalizedAutopayConfigTxHash) ||
-              latestConsumedPaymentTxHashes.includes(normalizedAccessChangeTxHash) ||
+              latestConsumedPaymentTxHashes.includes(accessChangeTxHash) ||
               (normalizedPaymentTxHash
                 ? latestConsumedPaymentTxHashes.includes(normalizedPaymentTxHash)
                 : false);
@@ -788,7 +1040,7 @@ export async function POST(req: NextRequest) {
             nextTraits.billingVerifiedTxHashes = [
               ...latestConsumedPaymentTxHashes,
               normalizedAutopayConfigTxHash,
-              normalizedAccessChangeTxHash,
+              accessChangeTxHash,
               ...(normalizedPaymentTxHash ? [normalizedPaymentTxHash] : []),
             ].slice(-20);
 
@@ -808,15 +1060,15 @@ export async function POST(req: NextRequest) {
               catalogPlanId: plan.id,
               onChainPlanId: accessChange.onChainPlanId,
               onChainTokenId: accessChange.tokenId,
-              currentPeriodStart,
-              currentPeriodEnd,
+              currentPeriodStart: periodStart,
+              currentPeriodEnd: periodEnd,
               cancelAtPeriodEnd: false,
               cancelledAt: null,
               pastDueAt: null,
               graceEndsAt: null,
               lastEvent: "subscription.plan_upgraded",
               lastEventAt: effectiveAt,
-              lastSourceTxHash: normalizedAccessChangeTxHash,
+              lastSourceTxHash: accessChangeTxHash,
               metadata: {
                 source: "self_service",
                 mode: "immediate_prorated_upgrade",
@@ -824,7 +1076,7 @@ export async function POST(req: NextRequest) {
                 previousOnChainPlanId: accessChange.previousOnChainPlanId,
                 proration: proration.response,
                 autopayConfigTxHash: normalizedAutopayConfigTxHash,
-                accessChangeTxHash: normalizedAccessChangeTxHash,
+                accessChangeTxHash,
                 paymentTxHash: normalizedPaymentTxHash,
               },
             }, tx);
@@ -849,7 +1101,7 @@ export async function POST(req: NextRequest) {
                   mode: "immediate_prorated_upgrade",
                   previousPlanId: previousPlanId ?? null,
                   autopayConfigTxHash: normalizedAutopayConfigTxHash,
-                  accessChangeTxHash: normalizedAccessChangeTxHash,
+                  accessChangeTxHash,
                   paymentTxHash: normalizedPaymentTxHash,
                   proration: proration.response,
                 },
@@ -876,7 +1128,7 @@ export async function POST(req: NextRequest) {
                   source: "self_service",
                   mode: "immediate_prorated_upgrade",
                   autopayConfigTxHash: normalizedAutopayConfigTxHash,
-                  accessChangeTxHash: normalizedAccessChangeTxHash,
+                  accessChangeTxHash,
                   proration: proration.response,
                 },
               }, tx);
@@ -892,14 +1144,14 @@ export async function POST(req: NextRequest) {
                 amount: microsToAmount(proration.amountDueMicros),
                 fromCatalogPlanId: previousPlanId ?? null,
                 toCatalogPlanId: plan.id,
-                periodStartedAt: currentPeriodStart,
-                periodEndsAt: currentPeriodEnd,
+                periodStartedAt: periodStart,
+                periodEndsAt: periodEnd,
                 effectiveAt,
                 postedAt: effectiveAt,
                 metadata: {
                   source: "self_service",
                   autopayConfigTxHash: normalizedAutopayConfigTxHash,
-                  accessChangeTxHash: normalizedAccessChangeTxHash,
+                  accessChangeTxHash,
                   paymentTxHash: normalizedPaymentTxHash,
                   proration: proration.response,
                 },
@@ -938,9 +1190,9 @@ export async function POST(req: NextRequest) {
         previousPlanId: previousPlanId ?? null,
         mode: "immediate_prorated_upgrade",
         scheduled: false,
-        txHash: normalizedAccessChangeTxHash,
+        txHash: accessChangeTxHash,
         autopayConfigTxHash: normalizedAutopayConfigTxHash,
-        accessChangeTxHash: normalizedAccessChangeTxHash,
+        accessChangeTxHash,
         paymentTxHash: normalizedPaymentTxHash,
         invoiceId,
         paymentId,
@@ -963,7 +1215,7 @@ export async function POST(req: NextRequest) {
             tokenId: accessChange.tokenId,
             currentPeriodEnd: accessChange.currentPeriodEnd,
             autopayConfigTxHash: normalizedAutopayConfigTxHash,
-            accessChangeTxHash: normalizedAccessChangeTxHash,
+            accessChangeTxHash,
             paymentTxHash: normalizedPaymentTxHash,
             invoiceId,
             paymentId,
