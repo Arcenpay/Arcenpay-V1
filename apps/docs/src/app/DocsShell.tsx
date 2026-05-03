@@ -1,100 +1,26 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { Moon, Sun, Search, Menu, X, ExternalLink, ChevronDown } from "lucide-react";
 import { useTheme } from "@/hooks/use-theme";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import DocsPageBehavior from "./DocsPageBehavior";
+import { DOCS_NAV_GROUPS, TOP_LEVEL_DOCS_LINKS } from "@/lib/docs-nav";
 
 const DASHBOARD_URL =
   process.env.NEXT_PUBLIC_DASHBOARD_URL ?? "http://localhost:3000";
 
-type NavItem = {
-  label: string;
-  href: string;
-  description?: string;
-  external?: boolean;
-};
-
-type NavGroup = {
-  id: string;
-  label: string;
-  items: NavItem[];
-};
-
-const NAV_GROUPS: NavGroup[] = [
-  {
-    id: "start-here",
-    label: "Start Here",
-    items: [
-      { label: "Introduction", href: "/", description: "Product overview and docs map" },
-      { label: "Base Sepolia Quickstart", href: "/quickstart", description: "Get subscriptions and payment links live quickly" },
-      { label: "Checkout Patterns", href: "/features/checkout", description: "Choose between recurring checkout and hosted links" },
-      { label: "Webhooks", href: "/webhooks", description: "Sync payments, invoices, and subscriptions" },
-    ],
-  },
-  {
-    id: "billing-models",
-    label: "Billing Models",
-    items: [
-      { label: "Plans", href: "/core-concepts/plans" },
-      { label: "Subscriptions", href: "/core-concepts/subscriptions" },
-      { label: "Feature Flags", href: "/core-concepts/feature-flags" },
-      { label: "Customer Portal", href: "/features/customer-portal" },
-    ],
-  },
-  {
-    id: "sdk-frameworks",
-    label: "SDKs & Frameworks",
-    items: [
-      { label: "SDK Overview", href: "/sdk-reference" },
-      { label: "React SDK", href: "/sdk-reference/react" },
-      { label: "Node.js SDK", href: "/sdk-reference/node" },
-      { label: "Next.js Integration", href: "/frameworks/nextjs" },
-      { label: "Express Integration", href: "/frameworks/express" },
-    ],
-  },
-  {
-    id: "api",
-    label: "API Reference",
-    items: [
-      { label: "Authentication", href: "/api-reference/auth" },
-      { label: "Plans API", href: "/api-reference/plans" },
-      { label: "Subscriptions API", href: "/api-reference/subscriptions" },
-      { label: "Errors API", href: "/api-reference/errors" },
-    ],
-  },
-  {
-    id: "guides",
-    label: "Guides",
-    items: [
-      { label: "SaaS Subscription Wall", href: "/guides/subscription-wall" },
-      { label: "Feature Gating", href: "/guides/feature-gating" },
-      { label: "Migrate from Stripe", href: "/guides/migrate-from-stripe" },
-    ],
-  },
-  {
-    id: "resources",
-    label: "Resources",
-    items: [
-      { label: "Changelog", href: "/changelog" },
-      { label: "Support", href: "/support" },
-    ],
-  },
-];
-
-const TOP_LEVEL_LINKS = [
-  { label: "Docs", href: "/" },
-  { label: "SDKs", href: "/sdk-reference" },
-  { label: "API Reference", href: "/api-reference/auth" },
-  { label: "Support", href: "/support" },
-];
-
 function isItemActive(pathname: string, href: string) {
-  if (href === "/") return pathname === "/";
-  return pathname === href || pathname.startsWith(`${href}/`);
+  return pathname === href.split("#")[0];
+}
+
+function isGroupItemMatch(pathname: string, href: string) {
+  const cleanHref = href.split("#")[0];
+  if (cleanHref === "/") return pathname === "/";
+  return pathname === cleanHref || pathname.startsWith(`${cleanHref}/`);
 }
 
 function prettifyPathname(pathname: string) {
@@ -140,8 +66,8 @@ function Sidebar({
   const q = query.trim().toLowerCase();
 
   const filteredGroups = useMemo(() => {
-    if (!q) return NAV_GROUPS;
-    return NAV_GROUPS
+    if (!q) return DOCS_NAV_GROUPS;
+    return DOCS_NAV_GROUPS
       .map((group) => {
         if (group.label.toLowerCase().includes(q)) return group;
         return {
@@ -240,9 +166,8 @@ function Sidebar({
           {filteredGroups.map((group) => {
             const isCollapsed = collapsed[group.id] ?? (q ? false : false);
             const hasActive = group.items.some((item) =>
-              isItemActive(pathname, item.href),
+              isGroupItemMatch(pathname, item.href),
             );
-            const shouldAutoExpand = !!q;
 
             return (
               <div key={group.id}>
@@ -310,12 +235,17 @@ function Sidebar({
 }
 
 export default function DocsShell({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
+  const pathname = usePathname() ?? "/";
   const { theme, toggle: toggleTheme } = useTheme();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [pathname]);
+
   return (
     <div className="flex min-h-screen bg-background">
+      <DocsPageBehavior />
       <Sidebar
         pathname={pathname}
         open={sidebarOpen}
@@ -346,7 +276,7 @@ export default function DocsShell({ children }: { children: React.ReactNode }) {
           </div>
 
           <div className="flex items-center gap-1 ml-auto">
-            {TOP_LEVEL_LINKS.map((link) => (
+            {TOP_LEVEL_DOCS_LINKS.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}

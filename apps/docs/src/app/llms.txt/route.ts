@@ -1,42 +1,38 @@
 import { NextResponse } from "next/server";
+import { ALL_DOCS_NAV_ITEMS, DOCS_NAV_GROUPS } from "@/lib/docs-nav";
 
-const LLMS_CONTENT = `# ArcenPay Docs
+const DOCS_URL = process.env.NEXT_PUBLIC_DOCS_URL ?? "https://docs.arcenpay.xyz";
 
-> Developer documentation for integrating ArcenPay subscriptions, hosted payments, invoices, and SDKs. Built for AI agents and humans alike.
+function absoluteUrl(path: string) {
+  return new URL(path, DOCS_URL).toString();
+}
 
-## Start Here
-- Introduction: https://docs.arcenpay.xyz
-- Base Sepolia Quickstart: https://docs.arcenpay.xyz/quickstart
-- Checkout Patterns: https://docs.arcenpay.xyz/features/checkout
-- Webhooks: https://docs.arcenpay.xyz/webhooks
-
-## Billing Models
-- Plans: https://docs.arcenpay.xyz/core-concepts/plans
-- Subscriptions: https://docs.arcenpay.xyz/core-concepts/subscriptions
-- Feature Flags: https://docs.arcenpay.xyz/core-concepts/feature-flags
-
-## SDKs and Frameworks
-- SDK Overview: https://docs.arcenpay.xyz/sdk-reference
-- React SDK: https://docs.arcenpay.xyz/sdk-reference/react
-- Node.js SDK: https://docs.arcenpay.xyz/sdk-reference/node
-- Next.js Integration: https://docs.arcenpay.xyz/frameworks/nextjs
-- Express Integration: https://docs.arcenpay.xyz/frameworks/express
-
-## API Reference
-- Authentication: https://docs.arcenpay.xyz/api-reference/auth
-- Plans API: https://docs.arcenpay.xyz/api-reference/plans
-- Subscriptions API: https://docs.arcenpay.xyz/api-reference/subscriptions
-- Errors API: https://docs.arcenpay.xyz/api-reference/errors
-
-## Guides
-- SaaS Subscription Wall: https://docs.arcenpay.xyz/guides/subscription-wall
-- Feature Gating: https://docs.arcenpay.xyz/guides/feature-gating
-- Migrate from Stripe: https://docs.arcenpay.xyz/guides/migrate-from-stripe
-
-## Resources
-- Changelog: https://docs.arcenpay.xyz/changelog
-- Support: https://docs.arcenpay.xyz/support
-`;
+const LLMS_CONTENT = [
+  "# ArcenPay Docs",
+  "",
+  "> Developer documentation for integrating ArcenPay checkout, embedded billing surfaces, entitlements, and agent payments.",
+  "",
+  "## For AI agents",
+  `- Docs index: ${absoluteUrl("/")}`,
+  `- Sitemap: ${absoluteUrl("/sitemap.xml")}`,
+  "- Every docs page can be requested as markdown by sending `Accept: text/markdown` to the normal page URL.",
+  "- Fallback explicit markdown endpoint: `/api/markdown-agent/<docs path>` (example: `/api/markdown-agent/sdk-reference`).",
+  "- Markdown responses include `Content-Type: text/markdown`, `Vary: Accept`, and `X-Markdown-Tokens`.",
+  "",
+  ...DOCS_NAV_GROUPS.flatMap((group) => [
+    `## ${group.label}`,
+    ...group.items.map((item) => {
+      const description = item.description ? ` — ${item.description}` : "";
+      return `- ${item.label}: ${absoluteUrl(item.href)}${description}`;
+    }),
+    "",
+  ]),
+  "## Direct Markdown Examples",
+  ...ALL_DOCS_NAV_ITEMS.slice(0, 6).map(
+    (item) => `- ${item.label}: curl -H "Accept: text/markdown" ${absoluteUrl(item.href)}`,
+  ),
+  "",
+].join("\n");
 
 export async function GET() {
   return new NextResponse(LLMS_CONTENT, {

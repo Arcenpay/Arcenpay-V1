@@ -32,9 +32,10 @@ export default function SDKReferencePage() {
         <div className="flex items-center justify-between gap-4 mb-3.5"><h1>SDK Reference</h1></div>
 
         <p className="text-[16.5px] text-muted-foreground leading-relaxed mb-7 max-w-[740px]" id="sdk-reference">
-          ArcenPay exposes a small public SDK surface for product integrations:
-          React components for checkout and entitlements, and a Node client for
-          secure server-side billing, access checks, and webhook verification.
+          ArcenPay exposes three public packages for platform integrations:
+          a React SDK for checkout and embedded billing UI, a Node SDK for
+          secure server-side workflows, and an agent SDK for autonomous x402
+          payment settlement.
         </p>
 
         <h2 id="packages">Packages</h2>
@@ -45,13 +46,18 @@ export default function SDKReferencePage() {
           <tbody>
             <tr>
               <td><code>@arcenpay/react</code></td>
-              <td>Checkout UI, hosted payment helpers, billing history, entitlement hooks</td>
+              <td>Checkout UI, ArcenEmbed surfaces, billing history, feature-flag hooks, usage tracking</td>
               <td><code>npm install @arcenpay/react @arcenpay/sdk wagmi viem @tanstack/react-query</code></td>
             </tr>
             <tr>
               <td><code>@arcenpay/node</code></td>
-              <td>Server-side identify, entitlement checks, subscription activation, webhook verification</td>
+              <td>Server-side identify, entitlement checks, subscription activation, invoice and webhook workflows</td>
               <td><code>npm install @arcenpay/node</code></td>
+            </tr>
+            <tr>
+              <td><code>@arcenpay/agent</code></td>
+              <td>x402 client for session funding, auto-topup, persistent state, and paid fetch flows</td>
+              <td><code>npm install @arcenpay/agent</code></td>
             </tr>
           </tbody>
         </table>
@@ -59,16 +65,37 @@ export default function SDKReferencePage() {
         <h2 id="react">React integration</h2>
         <CodeBlock
           lang="tsx"
-          code={`import { CheckoutModal, createPaymentLinkCheckoutUrl } from '@arcenpay/react';
+          code={`import {
+  ArcenPayProvider,
+  CheckoutModal,
+  ArcenEmbed,
+  useFlag,
+} from '@arcenpay/react';
 
-const hostedCheckoutUrl = createPaymentLinkCheckoutUrl(paymentLink.slug);
+function BillingExperience({ token }: { token: string }) {
+  const analytics = useFlag('analytics_export', { id: 'company_123' });
 
-<CheckoutModal
-  planId={1n}
-  isOpen={showCheckout}
-  onClose={() => setShowCheckout(false)}
-  activationEndpoint="/api/v1/subscriptions/activate"
-/>`}
+  return (
+    <>
+      <CheckoutModal
+        planId={1n}
+        isOpen
+        onClose={() => {}}
+        activationEndpoint="/api/v1/subscriptions/activate"
+      />
+      <ArcenEmbed accessToken={token} componentId="cmp_123" />
+      {analytics.value ? <button>Export</button> : null}
+    </>
+  );
+}
+
+function BillingSurface({ token }: { token: string }) {
+  return (
+    <ArcenPayProvider chainId={84532} token={token}>
+      <BillingExperience token={token} />
+    </ArcenPayProvider>
+  );
+}`}
         />
 
         <h2 id="node">Node integration</h2>
@@ -89,6 +116,28 @@ await client.identify({
 const result = await client.checkEntitlement('analytics_export');`}
         />
 
+        <h2 id="agent">Agent integration</h2>
+        <CodeBlock
+          lang="ts"
+          code={`import { MEAPAgent, FileStore } from '@arcenpay/agent';
+
+const agent = new MEAPAgent({
+  privateKey: process.env.AGENT_PRIVATE_KEY!,
+  rpcUrl: process.env.BASE_RPC_URL!,
+  chainId: 84532,
+  maxAutoApprove: '0.02',
+  store: new FileStore('/tmp/arcenpay-agent-state.json'),
+});
+
+await agent.restore();
+await agent.fundSession('5');
+
+const response = await agent.fetch('https://merchant.example/x402/resource', {
+  method: 'POST',
+  autoApprove: true,
+});`}
+        />
+
         <h2 id="webhooks">Webhook verification</h2>
         <CodeBlock
           lang="ts"
@@ -106,10 +155,11 @@ const isValid = verifyWebhookSignature(
 
         <h2 id="public-surface">Public integration surface</h2>
         <ul className="pl-5 mb-[18px] space-y-[7px]">
-          <li className="text-[15px] text-muted-foreground leading-relaxed">Use the dashboard for plans, payment links, invoices, and customer operations.</li>
-          <li className="text-[15px] text-muted-foreground leading-relaxed">Use the React SDK for checkout and customer-facing billing UI.</li>
-          <li className="text-[15px] text-muted-foreground leading-relaxed">Use the Node SDK for backend access checks and secure workflow automation.</li>
-          <li className="text-[15px] text-muted-foreground leading-relaxed">Do not depend on internal contracts, indexers, or protocol implementation details in your app code.</li>
+          <li className="text-[15px] text-muted-foreground leading-relaxed">Use the dashboard for plans, invoices, feature flags, embedded components, and customer operations.</li>
+          <li className="text-[15px] text-muted-foreground leading-relaxed">Use the React SDK for checkout, portal embeds, usage displays, and entitlement-aware UI.</li>
+          <li className="text-[15px] text-muted-foreground leading-relaxed">Use the Node SDK for backend access checks, subscription activation, and webhook verification.</li>
+          <li className="text-[15px] text-muted-foreground leading-relaxed">Use the agent SDK when your buyer is a service or autonomous agent that needs x402-compatible paid requests.</li>
+          <li className="text-[15px] text-muted-foreground leading-relaxed">Do not depend on private dashboard tables or low-level contract orchestration in app code unless you explicitly own that infrastructure.</li>
         </ul>
       </article>
 
@@ -120,6 +170,7 @@ const isValid = verifyWebhookSignature(
           <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#packages">Packages</a></li>
           <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#react">React integration</a></li>
           <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#node">Node integration</a></li>
+          <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#agent">Agent integration</a></li>
           <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#webhooks">Webhook verification</a></li>
           <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#public-surface">Public surface</a></li>
         </ul>

@@ -93,6 +93,12 @@ import {
 import {
   microsToDecimalString,
 } from "./renewal-amount.js";
+import { BalanceMonitor } from "./balance-monitor.js";
+import {
+  handleTelegramWebhook,
+  storePendingApproval,
+  getPendingApproval,
+} from "./telegram-webhook.js";
 
 const app = express();
 const PORT = process.env.PORT || 3402;
@@ -2313,6 +2319,56 @@ let eventListenerActive = false;
 proofOrchestrator.startAutoSubmit();
 console.log("[Facilitator] ProofOrchestrator auto-submit active");
 
+// Agent balance monitor — polls agent balances and triggers dispatch notifications
+const balanceMonitor = new BalanceMonitor({
+  dashboardUrl: DASHBOARD_URL,
+  facilitatorSecret: FACILITATOR_SECRET || undefined,
+  publicClient: chainClient,
+  sessionVaultAddress: CONTRACTS.sessionVault,
+  pollIntervalMs: 30000,
+  onDispatch: async (record, provider) => {
+    // Store the pending approval in memory for the agent SDK to poll
+    storePendingApproval({
+      requestId: record.requestId,
+      status: "pending",
+      agentAddress: record.agentAddress,
+      amount: record.amount,
+      chatId: provider.chatId || "",
+      botToken: provider.botToken || "",
+    });
+
+    // Send Telegram message
+    if (provider.type === "telegram" && provider.botToken && provider.chatId) {
+      const message = `<b>💰 ArcenPay Agent — Top-Up Request</b>\n\n` +
+        `<b>Agent:</b> <code>${record.agentAddress.slice(0, 6)}…${record.agentAddress.slice(-4)}</code>\n` +
+        `<b>Amount:</b> $${(Number(record.amount) / 1_000_000).toFixed(2)} USDC\n` +
+        `<b>Reason:</b> Balance below threshold\n` +
+        `<b>Request ID:</b> <code>${record.requestId}</code>\n\n` +
+        `<i>Tap one of the buttons below:</i>`;
+
+      try {
+        await fetch(`https://api.telegram.org/bot${provider.botToken}/sendMessage`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: provider.chatId,
+            text: message,
+            parse_mode: "HTML",
+            reply_markup: {
+              inline_keyboard: [[
+                { text: "✅ Approve", callback_data: `arcenpay:approve:${record.requestId}` },
+                { text: "❌ Deny", callback_data: `arcenpay:deny:${record.requestId}` },
+              ]],
+            },
+          }),
+        });
+      } catch (err) {
+        console.error("[BalanceMonitor] Telegram send failed:", err);
+      }
+    }
+  },
+});
+
 // Optional: Billing Keeper (if private key is configured and explicitly enabled)
 let billingKeeper: BillingKeeper | null = null;
 if (process.env.ENABLE_BILLING_KEEPER === "true" && process.env.PRIVATE_KEY) {
@@ -4147,6 +4203,30 @@ app.post(
 );
 
 // ============================================================
+//  Agent Dispatch Routes
+// ============================================================
+
+// Telegram webhook — receives Approve/Deny callbacks
+app.post("/api/telegram/webhook", (req, res) => {
+  void handleTelegramWebhook(req, res);
+});
+
+// Agent SDK polls this to check if a dispatch was approved
+app.get("/api/agent/dispatch/:requestId", (req, res) => {
+  const approval = getPendingApproval(req.params.requestId);
+  if (!approval) {
+    res.json({ status: "not_found" });
+    return;
+  }
+  res.json({
+    status: approval.status,
+    agentAddress: approval.agentAddress,
+    amount: approval.amount,
+    resolvedAt: approval.resolvedAt,
+  });
+});
+
+// ============================================================
 //  Start Server
 // ============================================================
 
@@ -4197,6 +4277,16 @@ void (async () => {
     } catch (err) {
       eventListenerActive = false;
       console.error("[Facilitator] EventListener failed to start:", err);
+    }
+
+    // Start agent balance monitor for dispatch notifications
+    let balanceMonitorActive = false;
+    try {
+      balanceMonitor.start();
+      balanceMonitorActive = true;
+      console.log("[Facilitator] BalanceMonitor started");
+    } catch (err) {
+      console.error("[Facilitator] BalanceMonitor failed to start:", err);
     }
 
     app.listen(PORT, () => {

@@ -13,13 +13,14 @@ export default function OverviewPage() {
             Public documentation
           </div>
           <h1 className="text-[clamp(34px,5vw,52px)] leading-[1.02] tracking-[-0.05em] font-bold mb-3.5">
-            Build subscriptions, hosted payment links, and invoice collection
-            with ArcenPay.
+            Build checkout, embedded billing surfaces, entitlements, and agent
+            payments with ArcenPay.
           </h1>
           <p className="text-[16.5px] text-muted-foreground leading-relaxed mb-0 max-w-[740px]">
             These docs focus on the supported product surface: dashboard-managed
-            billing, Base Sepolia checkout, customer-facing SDK components, and
-            server-side APIs for access control and billing operations.
+            billing, Base Sepolia checkout, embedded components, public SDKs,
+            and server-side APIs for access control, billing, and x402-backed
+            agent flows.
           </p>
 
           <div className="flex items-center gap-2.5 flex-wrap mt-[18px]">
@@ -63,10 +64,10 @@ export default function OverviewPage() {
             },
             {
               step: "Step 2",
-              title: "Embed checkout",
-              desc: "Use the React SDK for recurring subscription checkout or redirect customers to hosted payment links.",
-              href: "/features/checkout",
-              link: "Checkout patterns →",
+              title: "Embed billing surfaces",
+              desc: "Use the React SDK for recurring checkout, hosted payment links, or ArcenEmbed customer portal experiences.",
+              href: "/features/embedded-components",
+              link: "Embedded components →",
             },
             {
               step: "Step 3",
@@ -77,10 +78,10 @@ export default function OverviewPage() {
             },
             {
               step: "Step 4",
-              title: "Keep billing in sync",
-              desc: "Listen for subscription, invoice, and payment events with signed webhooks.",
-              href: "/webhooks",
-              link: "Webhooks →",
+              title: "Automate programmatic payments",
+              desc: "Use the agent SDK when you need autonomous x402 settlement, session funding, and tracked usage.",
+              href: "/sdk-reference/agent",
+              link: "Agent SDK →",
             },
           ].map((card) => (
             <div
@@ -121,11 +122,16 @@ export default function OverviewPage() {
             invoice pay-now flows.
           </li>
           <li className="text-[15px] text-muted-foreground leading-relaxed">
-            Customer billing history, invoice delivery, and portal experiences.
+            Embedded customer billing surfaces with plan management, invoice
+            history, usage blocks, and branded portal UI.
           </li>
           <li className="text-[15px] text-muted-foreground leading-relaxed">
             Server-side feature gating and entitlement checks using the SDKs and
             APIs.
+          </li>
+          <li className="text-[15px] text-muted-foreground leading-relaxed">
+            Agent-to-service payments with session funding, auto-topups, and
+            x402 payment negotiation.
           </li>
         </ul>
 
@@ -141,7 +147,8 @@ export default function OverviewPage() {
           </div>
           <pre>
             <code>{`npm install @arcenpay/react @arcenpay/sdk wagmi viem @tanstack/react-query
-npm install @arcenpay/node`}</code>
+npm install @arcenpay/node
+npm install @arcenpay/agent`}</code>
           </pre>
         </div>
 

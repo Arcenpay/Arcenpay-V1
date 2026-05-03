@@ -1474,8 +1474,9 @@ model ArcenAgentConfig {
   updatedAt DateTime @updatedAt
   teamId    String   @unique
 
-  autoTopUp Json     @default("{\"mode\":\"off\",\"dailyLimit\":\"5.00\",\"perTxnLimit\":\"1.00\",\"threshold\":\"0.50\"}")
-  dispatch  Json     @default("{\"enabled\":false,\"providers\":[],\"cooldownSeconds\":120,\"maxRetries\":3}")
+  autoTopUp          Json     @default("{\"mode\":\"off\",\"dailyLimit\":\"5.00\",\"perTxnLimit\":\"1.00\",\"threshold\":\"0.50\"}")
+  dispatch           Json     @default("{\"enabled\":false,\"providers\":[],\"cooldownSeconds\":120,\"maxRetries\":3}")
+  agentWalletAddress String?
 
   team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
 

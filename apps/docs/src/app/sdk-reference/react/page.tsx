@@ -26,7 +26,8 @@ export default function ReactSDKPage() {
         <p className="text-[16.5px] text-muted-foreground leading-relaxed mb-7 max-w-[740px]" id="react-sdk">
           <code>@arcenpay/react</code> is the main customer-facing SDK. Use it
           for recurring subscription checkout, hosted payment-link redirects,
-          billing history, embed surfaces, and entitlement-aware UI.
+          embedded billing surfaces, feature-flag checks, usage tracking, and
+          entitlement-aware UI.
         </p>
 
         <h2 id="installation">Installation</h2>
@@ -73,6 +74,34 @@ function App({ accessToken }: { accessToken: string }) {
         <p className="text-[15px] text-muted-foreground leading-relaxed mb-[15px]">Display customer-facing billing history and invoice downloads.</p>
         <CodeBlock lang="tsx" code={`<InvoiceList providerUrl="https://api.yourapp.com" />`} />
 
+        <h2 id="embedded-components">Embedded components</h2>
+        <p className="text-[15px] text-muted-foreground leading-relaxed mb-[15px]">
+          Use <code>ArcenEmbed</code> when you want a branded, self-serve
+          billing surface backed by a dashboard-managed component definition and
+          a short-lived embed access token.
+        </p>
+        <CodeBlock lang="tsx" code={`<ArcenEmbed
+  accessToken={embedToken}
+  componentId="cmp_123"
+  baseUrl="https://dashboard.arcenpay.xyz"
+  initialView="portal"
+  onPlanChange={(planId) => console.log('switched', planId)}
+/>`} />
+
+        <p className="text-[15px] text-muted-foreground leading-relaxed mb-[15px]">
+          For lightweight template-driven surfaces, use
+          <code>TemplateRenderer</code> with saved JSON blocks.
+        </p>
+        <CodeBlock lang="tsx" code={`<TemplateRenderer
+  name="starter-plan"
+  blocks={[
+    { type: 'heading', content: 'Starter' },
+    { type: 'price', amount: '$19', interval: '/month' },
+    { type: 'feature-list', items: ['1 seat', 'Usage dashboard'] },
+    { type: 'cta', content: 'Start trial', href: '/signup' },
+  ]}
+/>`} />
+
         <h2 id="hooks">Public hooks</h2>
 
         <h3>useEntitlementCheck</h3>
@@ -99,6 +128,35 @@ if (!result.consumed) {
   alert(result.reason);
 }`} />
 
+        <h3>useFlag / useFlags</h3>
+        <p className="text-[15px] text-muted-foreground leading-relaxed mb-[15px]">Resolve dashboard-managed feature flags for a company or user.</p>
+        <CodeBlock lang="tsx" code={`const exportFlag = useFlag(
+  'analytics_export',
+  { id: 'company_123' },
+  { wallet: address }
+);
+
+const { flags } = useFlags(
+  ['analytics_export', 'team_collaboration'],
+  { id: 'company_123' }
+);`} />
+
+        <h3>useCompanyEntitlements</h3>
+        <p className="text-[15px] text-muted-foreground leading-relaxed mb-[15px]">Read the full entitlement map in one request when you need limits and allocations together.</p>
+        <CodeBlock lang="tsx" code={`const { entitlements, loading } = useCompanyEntitlements(
+  { id: 'company_123' }
+);`} />
+
+        <h3>useTrack</h3>
+        <p className="text-[15px] text-muted-foreground leading-relaxed mb-[15px]">Send product usage events into ArcenPay when your pricing depends on tracked activity.</p>
+        <CodeBlock lang="tsx" code={`const { track } = useTrack();
+
+await track({
+  event: 'document.scan.completed',
+  featureKey: 'scan',
+  quantity: 1,
+});`} />
+
         <h2 id="hosted-payments">Hosted payment links</h2>
         <p className="text-[15px] text-muted-foreground leading-relaxed mb-[15px]">
           Use the helper below when you already created a payment link in the dashboard
@@ -117,6 +175,7 @@ window.location.assign(url);`} />
           <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#installation">Installation</a></li>
           <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#setup">Setup</a></li>
           <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#components">Components</a></li>
+          <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#embedded-components">Embedded components</a></li>
           <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#hooks">Hooks</a></li>
           <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#hosted-payments">Hosted payments</a></li>
         </ul>

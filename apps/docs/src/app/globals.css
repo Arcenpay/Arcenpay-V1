@@ -136,6 +136,14 @@
     @apply bg-background text-foreground antialiased;
   }
 
+  html {
+    scroll-behavior: smooth;
+  }
+
+  article [id] {
+    scroll-margin-top: 5rem;
+  }
+
   ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
@@ -281,5 +289,13 @@
 
   .docs-table tr:hover td {
     background: hsl(from var(--color-muted) h s l / 0.3);
+  }
+
+  .toc-item.active a {
+    @apply !text-foreground !font-semibold !border-foreground;
+  }
+
+  .toc-item:not(.active) a {
+    @apply !text-muted-foreground !border-transparent hover:!text-foreground;
   }
 }

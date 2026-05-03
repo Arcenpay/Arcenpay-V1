@@ -6,7 +6,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const pages = [
     { path: "", priority: 1 },
     { path: "/quickstart", priority: 0.9 },
+    { path: "/architecture", priority: 0.8 },
     { path: "/features/checkout", priority: 0.9 },
+    { path: "/features/embedded-components", priority: 0.85 },
     { path: "/features/customer-portal", priority: 0.8 },
     { path: "/webhooks", priority: 0.8 },
     { path: "/sdk-reference", priority: 0.9 },
@@ -29,6 +31,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: "/guides/feature-gating", priority: 0.7 },
     { path: "/guides/migrate-from-stripe", priority: 0.7 },
     { path: "/guides/ai-agent-payments", priority: 0.6 },
+    { path: "/contract-addresses", priority: 0.6 },
     { path: "/changelog", priority: 0.6 },
     { path: "/support", priority: 0.6 },
   ];
