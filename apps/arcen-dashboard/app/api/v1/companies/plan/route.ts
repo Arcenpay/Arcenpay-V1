@@ -13,7 +13,6 @@ import {
   createWalletClient,
   http,
   isAddress,
-  type Chain,
 } from "viem";
 import { deliverWebhook } from "@/lib/deliver-webhook";
 import { resolveEntitlementResults } from "@/lib/entitlements";
@@ -43,19 +42,18 @@ import {
   verifySubscriptionRegistryPlanChange,
 } from "@/lib/onchain-payment-verification";
 import { SELF_SERVE_PLAN_CHANGES_ENABLED } from "@/lib/launch-flags";
-import { getContractAddresses, SubscriptionRegistryABI } from "@arcenpay/sdk";
+import {
+  getChain,
+  getContractAddresses,
+  SubscriptionRegistryABI,
+} from "@arcenpay/sdk";
 import { getRpcUrl } from "@/lib/config";
 import { DEFAULT_CHAIN_ID } from "@/lib/default-chain";
-import { baseSepolia } from "viem/chains";
 
 type PlanRouteDb = Pick<
   typeof db,
   "team" | "invoice" | "arcenCompany" | "subscriptionState" | "payment" | "paymentAttempt" | "billingAdjustment"
 >;
-
-const CHAIN_MAP: Record<number, Chain> = {
-  84532: baseSepolia,
-};
 
 type SubscriptionTransition = {
   mode:
@@ -138,7 +136,7 @@ function requiredConfirmations(): number {
 
 function createChainClients() {
   const chainId = DEFAULT_CHAIN_ID;
-  const chain = CHAIN_MAP[chainId] ?? baseSepolia;
+  const chain = getChain(chainId);
   return {
     chain,
     publicClient: createPublicClient({

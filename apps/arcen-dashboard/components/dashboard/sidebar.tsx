@@ -28,9 +28,9 @@ import {
   BookOpen,
   ArrowUpRight,
 } from "lucide-react";
-import { useEnvironment } from "@/contexts/environment-context";
 import { useDashboardSession } from "@/hooks/use-dashboard-session";
 import { DASHBOARD_DOCS_URL } from "@/lib/docs-url";
+import { DEFAULT_CHAIN_ID, getChainLabel } from "@/lib/default-chain";
 
 interface SidebarProps {
   activeSection: Section;
@@ -96,7 +96,6 @@ export function Sidebar({
   onCollapsedChange,
 }: SidebarProps) {
   const { address, isConnected } = useAccount();
-  const { envMode } = useEnvironment();
   const { data: sessionData } = useDashboardSession();
   const [mounted, setMounted] = useState(false);
 
@@ -110,7 +109,7 @@ export function Sidebar({
     ? `${address.slice(0, 6)}…${address.slice(-4)}`
     : null;
 
-  const networkLabel = envMode ? "Base Sepolia" : "Base Sepolia";
+  const networkLabel = getChainLabel(DEFAULT_CHAIN_ID);
 
   return (
     <aside

@@ -183,6 +183,15 @@ type InvoiceEmailInput = {
   downloadUrl?: string | null;
 };
 
+type ReceiptEmailInput = {
+  to: string;
+  invoiceNumber: string;
+  total: string;
+  currency: string;
+  paidAt?: string | null;
+  downloadUrl?: string | null;
+};
+
 type CreditNoteEmailInput = {
   to: string;
   invoiceNumber: string;
@@ -275,6 +284,60 @@ export async function sendInvoiceEmail(input: InvoiceEmailInput): Promise<void> 
           </a>
           <p style="margin:18px 0 0;font-size:12px;color:#6b7280;">
             If the button does not work, open: <a href="${downloadUrl}" style="color:#1d4ed8;">${downloadUrl}</a>
+          </p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`,
+  });
+}
+
+/** Sends a payment receipt email after an invoice has been paid */
+export async function sendPaymentReceiptEmail(
+  input: ReceiptEmailInput,
+): Promise<void> {
+  const paidAt = input.paidAt
+    ? new Date(input.paidAt).toLocaleDateString()
+    : new Date().toLocaleDateString();
+  const downloadUrl =
+    input.downloadUrl ||
+    `${APP_URL}/invoices/${encodeURIComponent(input.invoiceNumber)}`;
+
+  await sendWithResend({
+    to: input.to,
+    subject: `Payment receipt for Invoice ${input.invoiceNumber}`,
+    html: `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Payment receipt for ${input.invoiceNumber}</title>
+</head>
+<body style="margin:0;padding:0;background:#f5f7fa;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 16px;">
+    <tr><td align="center">
+      <table width="520" cellpadding="0" cellspacing="0"
+             style="background:#ffffff;border:1px solid #d8dde6;border-radius:12px;padding:32px;">
+        <tr><td>
+          <p style="margin:0 0 24px;font-size:22px;font-weight:700;color:#0f172a;">ArcenPay</p>
+          <h1 style="margin:0 0 10px;font-size:20px;font-weight:600;color:#111827;">
+            Payment received
+          </h1>
+          <p style="margin:0 0 20px;font-size:14px;color:#4b5563;">
+            We received <strong>${input.total} ${input.currency}</strong> for invoice
+            <strong>${input.invoiceNumber}</strong> on <strong>${paidAt}</strong>.
+          </p>
+          <a href="${downloadUrl}"
+             style="display:inline-block;padding:11px 22px;background:#059669;color:#fff;
+                    text-decoration:none;border-radius:8px;font-size:14px;font-weight:600;">
+            Download receipt
+          </a>
+          <p style="margin:18px 0 0;font-size:12px;color:#6b7280;">
+            Need the invoice PDF too? Use the same link above or open:
+            <a href="${downloadUrl}" style="color:#059669;">${downloadUrl}</a>
           </p>
         </td></tr>
       </table>

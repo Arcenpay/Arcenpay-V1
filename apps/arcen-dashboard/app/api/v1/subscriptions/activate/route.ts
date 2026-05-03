@@ -26,12 +26,11 @@ import {
   http,
   isAddress,
   parseEventLogs,
-  type Chain,
 } from "viem";
-import { baseSepolia } from "viem/chains";
 import { z } from "zod";
 import {
   ERC7579AutopayModuleABI,
+  getChain,
   getContractAddresses,
   PlanFactoryABI,
   SubscriptionRegistryABI,
@@ -55,10 +54,6 @@ import {
   processBillingRecoveryTask,
 } from "@/lib/billing-recovery";
 import { upsertSubscriptionLedgerState } from "@/lib/billing-ledger";
-
-const CHAIN_MAP: Record<number, Chain> = {
-  84532: baseSepolia,
-};
 
 const addressSchema = z.string().refine(
   (value) => isAddress(value),
@@ -414,7 +409,7 @@ export async function POST(req: NextRequest) {
   }
 
   const chainId = DEFAULT_CHAIN_ID;
-  const chain = CHAIN_MAP[chainId] ?? baseSepolia;
+  const chain = getChain(chainId);
   const rpcUrl = getRpcUrl(chainId);
   const contracts = getContractAddresses(chainId);
 

@@ -13,9 +13,8 @@ import {
   verifyTypedData,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { baseSepolia } from "viem/chains";
-import { PlanFactoryABI, getContractAddresses, TOKENS } from "@arcenpay/sdk";
-import { isAddress, type Chain } from "viem";
+import { PlanFactoryABI, getChain, getContractAddresses, TOKENS } from "@arcenpay/sdk";
+import { isAddress } from "viem";
 import { z } from "zod";
 
 // Allow up to 60 s on Vercel (long enough to wait for tx confirmation)
@@ -109,10 +108,6 @@ const OWNABLE_OWNER_ABI = [
     type: "function",
   },
 ] as const;
-
-const CHAIN_MAP: Record<number, Chain> = {
-  84532: baseSepolia,
-};
 
 type Params = { id: string };
 
@@ -237,7 +232,7 @@ export async function POST(
 
   const chainId = DEFAULT_CHAIN_ID;
   const rpcUrl = getRpcUrl(chainId);
-  const chain = CHAIN_MAP[chainId] ?? baseSepolia;
+  const chain = getChain(chainId);
 
   const contracts = getContractAddresses(chainId);
   const planFactoryAddress = contracts.planFactory as `0x${string}`;

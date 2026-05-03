@@ -2,17 +2,17 @@
 
 import { cn } from "@/lib/utils";
 import type { Section } from "@/app/(dashboard)/page";
-import { Bell, Search, AlertTriangle, ChevronDown, LogOut, UserRound } from "lucide-react";
+import { Bell, Search, ChevronDown, LogOut, UserRound, Wallet } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import {
-  useAppKit,
-  useAppKitAccount,
-} from "@reown/appkit/react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useEnvironment } from "@/contexts/environment-context";
 import { useDashboardSession } from "@/hooks/use-dashboard-session";
+import { BASE_SEPOLIA_CHAIN_ID, getChainLabel } from "@/lib/default-chain";
+import {
+  REQUIRED_WALLET_CHAIN_LABEL,
+  useDashboardWallet,
+} from "@/hooks/use-dashboard-wallet";
 
 type AuditEntry = {
   id: string;
@@ -73,22 +73,28 @@ const sectionDescriptions: Record<Section, string> = {
 export function Header({ activeSection }: HeaderProps) {
   const router = useRouter();
   const [searchFocused, setSearchFocused] = useState(false);
-  const [mounted, setMounted] = useState(false);
-  const { open } = useAppKit();
-  const { address } = useAppKitAccount();
-  const { envMode } = useEnvironment();
   const { data: sessionData, refresh: refreshSessionData } = useDashboardSession();
-
-  // Wallet mismatch detection
-  const [storedWallet, setStoredWallet] = useState<string | null>(null);
-  const walletMismatch =
-    mounted &&
-    !!storedWallet &&
-    !!address &&
-    storedWallet.toLowerCase() !== address.toLowerCase();
+  const storedWallet = sessionData?.user.walletAddress ?? null;
+  const {
+    connectedWalletLabel,
+    currentNetworkLabel,
+    disconnectWallet,
+    hasConnectedWallet,
+    isDisconnecting,
+    isLinkedWalletConnected,
+    isOnRequiredNetwork,
+    isSwitchingChain,
+    isWrongWalletConnected,
+    linkedWalletLabel,
+    openAccountModal,
+    openConnectModal,
+    reconnectWallet,
+    switchToRequiredNetwork,
+  } = useDashboardWallet(storedWallet);
 
   // Notification bell state
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showWalletMenu, setShowWalletMenu] = useState(false);
   const [showWorkspaceMenu, setShowWorkspaceMenu] = useState(false);
   const [showAccountMenu, setShowAccountMenu] = useState(false);
   const [isSwitchingTeam, setIsSwitchingTeam] = useState(false);
@@ -96,22 +102,9 @@ export function Header({ activeSection }: HeaderProps) {
   const [auditEvents, setAuditEvents] = useState<AuditEntry[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const bellRef = useRef<HTMLDivElement>(null);
+  const walletRef = useRef<HTMLDivElement>(null);
   const workspaceRef = useRef<HTMLDivElement>(null);
   const accountRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // Fetch stored wallet
-  useEffect(() => {
-    fetch("/api/auth/wallet-status")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => {
-        if (d?.storedWallet) setStoredWallet(d.storedWallet);
-      })
-      .catch(() => {});
-  }, []);
 
   // Fetch recent audit events for bell dropdown
   useEffect(() => {
@@ -140,6 +133,9 @@ export function Header({ activeSection }: HeaderProps) {
       if (bellRef.current && !bellRef.current.contains(e.target as Node)) {
         setShowNotifications(false);
       }
+      if (walletRef.current && !walletRef.current.contains(e.target as Node)) {
+        setShowWalletMenu(false);
+      }
       if (workspaceRef.current && !workspaceRef.current.contains(e.target as Node)) {
         setShowWorkspaceMenu(false);
       }
@@ -147,11 +143,11 @@ export function Header({ activeSection }: HeaderProps) {
         setShowAccountMenu(false);
       }
     }
-    if (showNotifications || showWorkspaceMenu || showAccountMenu) {
+    if (showNotifications || showWalletMenu || showWorkspaceMenu || showAccountMenu) {
       document.addEventListener("mousedown", handleClick);
       return () => document.removeEventListener("mousedown", handleClick);
     }
-  }, [showAccountMenu, showNotifications, showWorkspaceMenu]);
+  }, [showAccountMenu, showNotifications, showWalletMenu, showWorkspaceMenu]);
 
   const markAllRead = useCallback(() => {
     localStorage.setItem("arcen_notif_last_viewed", new Date().toISOString());
@@ -217,7 +213,7 @@ export function Header({ activeSection }: HeaderProps) {
             "border-blue-400/50 text-blue-400 bg-blue-400/5",
           )}
         >
-          {mounted && envMode ? "Base Sepolia" : "Base Sepolia"}
+          {getChainLabel(BASE_SEPOLIA_CHAIN_ID)}
         </Badge>
 
         {/* Search */}
@@ -293,51 +289,131 @@ export function Header({ activeSection }: HeaderProps) {
           )}
         </div>
 
-        {/* Network Switcher */}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => open({ view: "Networks" })}
-          className="h-9 px-3 text-muted-foreground hover:text-foreground"
-          title="Switch network"
-        >
-          {mounted ? "Network" : "Network"}
-        </Button>
-
         {/* Wallet button */}
-        <div className="flex items-center gap-1">
-          {walletMismatch && (
-            <span
-              className="flex items-center gap-1 text-amber-400"
-              title={`Connected wallet differs from your provider wallet (${storedWallet!.slice(0, 6)}…${storedWallet!.slice(-4)}). On-chain operations require your provider wallet.`}
-            >
-              <AlertTriangle className="w-4 h-4" />
-            </span>
-          )}
+        <div ref={walletRef} className="relative">
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => open()}
-            className={cn(
-              "h-9 px-3 font-mono text-xs",
-              walletMismatch
-                ? "text-amber-400 hover:text-amber-300"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-            title={
-              walletMismatch
-                ? `Mismatch! Provider wallet: ${storedWallet!.slice(0, 6)}…${storedWallet!.slice(-4)}`
-                : mounted && storedWallet && !address
-                  ? `Provider wallet: ${storedWallet.slice(0, 6)}…${storedWallet.slice(-4)} (not connected)`
-                  : "Wallet"
-            }
+            onClick={() => setShowWalletMenu((open) => !open)}
+            className="h-9 gap-2 px-3 font-mono text-xs text-muted-foreground hover:text-foreground"
+            title={storedWallet ? `Provider wallet: ${storedWallet}` : "Provider wallet"}
           >
-            {mounted && address
-              ? `${address.slice(0, 6)}…${address.slice(-4)}`
-              : mounted && storedWallet
-                ? `${storedWallet.slice(0, 6)}…${storedWallet.slice(-4)}`
-                : "Connect"}
+            <Wallet className="h-3.5 w-3.5" />
+            {storedWallet
+              ? `${storedWallet.slice(0, 6)}…${storedWallet.slice(-4)}`
+              : "Wallet"}
+            <ChevronDown className="h-3.5 w-3.5" />
           </Button>
+
+          {showWalletMenu ? (
+            <div className="absolute right-0 top-11 z-50 w-80 rounded-2xl border border-border bg-popover p-2 shadow-lg">
+              <div className="rounded-xl bg-secondary/70 px-3 py-3">
+                <p className="text-sm font-medium text-foreground">Provider wallet</p>
+                <p className="mt-1 break-all font-mono text-xs text-muted-foreground">
+                  {storedWallet ?? "No wallet linked yet"}
+                </p>
+              </div>
+              <div className="mt-2 rounded-xl border border-border/70 px-3 py-3">
+                <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                  Connected wallet
+                </p>
+                <p className="mt-1 text-sm font-medium text-foreground">
+                  {connectedWalletLabel ?? "Not connected"}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Network: {currentNetworkLabel ?? "Not connected"}
+                </p>
+              </div>
+              <div className="mt-2 rounded-xl border border-border/70 px-3 py-3">
+                <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                  Active network
+                </p>
+                <p className="mt-1 text-sm font-medium text-foreground">
+                  {REQUIRED_WALLET_CHAIN_LABEL}
+                </p>
+              </div>
+              {!isLinkedWalletConnected && linkedWalletLabel && hasConnectedWallet ? (
+                <div className="mt-2 rounded-xl border border-amber-500/20 bg-amber-500/5 px-3 py-3 text-xs text-amber-700">
+                  Connected wallet does not match {linkedWalletLabel}. Reconnect with the linked wallet for on-chain actions.
+                </div>
+              ) : null}
+              {hasConnectedWallet && !isOnRequiredNetwork ? (
+                <div className="mt-2 rounded-xl border border-amber-500/20 bg-amber-500/5 px-3 py-3 text-xs text-amber-700">
+                  Switch this wallet to {REQUIRED_WALLET_CHAIN_LABEL} before using dashboard transactions.
+                </div>
+              ) : null}
+              <div className="mt-2 grid gap-2">
+                {!hasConnectedWallet ? (
+                  <Button
+                    size="sm"
+                    className="w-full"
+                    onClick={() => void openConnectModal()}
+                  >
+                    Connect wallet
+                  </Button>
+                ) : null}
+                {isWrongWalletConnected ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => void reconnectWallet()}
+                  >
+                    Reconnect correct wallet
+                  </Button>
+                ) : null}
+                {hasConnectedWallet && !isOnRequiredNetwork ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => void switchToRequiredNetwork()}
+                    disabled={isSwitchingChain}
+                  >
+                    {isSwitchingChain
+                      ? "Switching network..."
+                      : `Switch to ${REQUIRED_WALLET_CHAIN_LABEL}`}
+                  </Button>
+                ) : null}
+                {hasConnectedWallet ? (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="w-full"
+                    onClick={() => void openAccountModal()}
+                  >
+                    Open wallet modal
+                  </Button>
+                ) : null}
+                {hasConnectedWallet ? (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="w-full"
+                    onClick={() => void disconnectWallet()}
+                    disabled={isDisconnecting}
+                  >
+                    {isDisconnecting ? "Disconnecting..." : "Disconnect wallet"}
+                  </Button>
+                ) : null}
+              </div>
+              <div className="mt-2 border-t border-border pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowWalletMenu(false);
+                    router.push("/?section=settings&tab=wallet", { scroll: false });
+                  }}
+                  className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-secondary/70 hover:text-foreground"
+                >
+                  <span>Manage wallet settings</span>
+                  <span className="text-[11px] uppercase tracking-[0.14em]">
+                    Settings
+                  </span>
+                </button>
+              </div>
+            </div>
+          ) : null}
         </div>
 
         <div ref={workspaceRef} className="relative">

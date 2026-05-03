@@ -4,21 +4,16 @@ import {
   decodeFunctionData,
   http,
   isAddress,
-  type Chain,
 } from "viem";
-import { baseSepolia } from "viem/chains";
 import {
   ERC7579AutopayModuleABI,
+  getChain,
   getContractAddresses,
   PlanFactoryABI,
   SubscriptionRegistryABI,
 } from "@arcenpay/sdk";
 import { getRpcUrl } from "@/lib/config";
 import { DEFAULT_CHAIN_ID } from "@/lib/default-chain";
-
-const CHAIN_MAP: Record<number, Chain> = {
-  84532: baseSepolia,
-};
 
 const ERC20_TRANSFER_ABI = [
   {
@@ -111,9 +106,8 @@ async function assertReceiptFinalized(params: {
   return null;
 }
 
-function resolveChain(): Chain {
-  const chainId = DEFAULT_CHAIN_ID;
-  return CHAIN_MAP[chainId] ?? baseSepolia;
+function resolveChain() {
+  return getChain(DEFAULT_CHAIN_ID);
 }
 
 function createChainPublicClient() {

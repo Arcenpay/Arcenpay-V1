@@ -3,12 +3,15 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useAppKit } from "@reown/appkit/react";
 import { useAccount, useChainId, useSignMessage } from "wagmi";
 import { ArrowLeft, CheckCircle2, Loader2, Mail, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { buildSIWEMessage } from "@/lib/auth";
+import {
+  REQUIRED_WALLET_CHAIN_LABEL,
+  useDashboardWallet,
+} from "@/hooks/use-dashboard-wallet";
 import {
   InputOTP,
   InputOTPGroup,
@@ -36,10 +39,11 @@ function formatTimer(targetIso: string | null): string {
 
 export function EmailAuthFlow({ inviteToken }: EmailAuthFlowProps) {
   const router = useRouter();
-  const { open } = useAppKit();
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
   const { signMessageAsync } = useSignMessage();
+  const { isOnRequiredNetwork, isSwitchingChain, openConnectModal, reconnectWallet, switchToRequiredNetwork } =
+    useDashboardWallet();
   const [step, setStep] = useState<Step>("wallet");
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
@@ -68,6 +72,12 @@ export function EmailAuthFlow({ inviteToken }: EmailAuthFlowProps) {
   const linkWalletForSession = async (): Promise<boolean> => {
     if (!isConnected || !address) {
       setError("Reconnect your wallet to finish signing.");
+      setStep("wallet");
+      return false;
+    }
+
+    if (!isOnRequiredNetwork) {
+      setError(`Switch to ${REQUIRED_WALLET_CHAIN_LABEL} before signing.`);
       setStep("wallet");
       return false;
     }
@@ -218,7 +228,7 @@ export function EmailAuthFlow({ inviteToken }: EmailAuthFlowProps) {
             </h1>
             <p className="text-sm text-muted-foreground">
               {step === "wallet" &&
-                "Connect the wallet you want to use. After email verification, we'll request one signature and complete setup."}
+                `Connect the ${REQUIRED_WALLET_CHAIN_LABEL} wallet you want to use. After email verification, we'll request one signature and complete setup.`}
               {step === "email" &&
                 "Once your wallet is connected, we'll send a 6-digit code to your email."}
               {step === "code" &&
@@ -270,16 +280,35 @@ export function EmailAuthFlow({ inviteToken }: EmailAuthFlowProps) {
                 type="button"
                 variant={isConnected ? "outline" : "default"}
                 className="h-12 w-full"
-                onClick={() => open()}
+                onClick={() => void (isConnected ? reconnectWallet() : openConnectModal())}
               >
                 <Wallet className="mr-2 h-4 w-4" />
                 {isConnected ? "Change wallet" : "Connect wallet"}
               </Button>
 
+              {isConnected && !isOnRequiredNetwork ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-12 w-full"
+                  onClick={() => void switchToRequiredNetwork()}
+                  disabled={isSwitchingChain}
+                >
+                  {isSwitchingChain ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Switching network
+                    </>
+                  ) : (
+                    `Switch to ${REQUIRED_WALLET_CHAIN_LABEL}`
+                  )}
+                </Button>
+              ) : null}
+
               <Button
                 type="button"
                 className="h-12 w-full"
-                disabled={!isConnected || !address}
+                disabled={!isConnected || !address || !isOnRequiredNetwork}
                 onClick={() => {
                   setError(null);
                   setStep("email");
@@ -450,18 +479,39 @@ export function EmailAuthFlow({ inviteToken }: EmailAuthFlowProps) {
                 type="button"
                 variant={isConnected ? "outline" : "default"}
                 className="h-12 w-full"
-                onClick={() => open()}
+                onClick={() => void (isConnected ? reconnectWallet() : openConnectModal())}
               >
                 <Wallet className="mr-2 h-4 w-4" />
                 {isConnected ? "Change wallet" : "Connect wallet"}
               </Button>
+
+              {isConnected && !isOnRequiredNetwork ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-12 w-full"
+                  onClick={() => void switchToRequiredNetwork()}
+                  disabled={isSwitchingChain}
+                >
+                  {isSwitchingChain ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Switching network
+                    </>
+                  ) : (
+                    `Switch to ${REQUIRED_WALLET_CHAIN_LABEL}`
+                  )}
+                </Button>
+              ) : null}
 
               <Button
                 type="button"
                 onClick={() => {
                   void linkWalletForSession();
                 }}
-                disabled={isLinkingWallet || !isConnected || !address}
+                disabled={
+                  isLinkingWallet || !isConnected || !address || !isOnRequiredNetwork
+                }
                 className="h-12 w-full"
               >
                 {isLinkingWallet ? (

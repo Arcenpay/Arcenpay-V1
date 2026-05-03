@@ -58,7 +58,7 @@ interface SessionsPayload {
   degraded?: boolean;
   dependencyHealth?: {
     subgraph: "ok" | "unavailable";
-    facilitator: "ok" | "unavailable" | "chain_mismatch";
+    facilitator: "ok" | "unavailable";
   };
 }
 

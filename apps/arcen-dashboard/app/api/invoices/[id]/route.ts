@@ -7,6 +7,7 @@ import { writeAuditEvent } from "@/lib/audit";
 import { deliverWebhook } from "@/lib/deliver-webhook";
 import { toPrismaJson } from "@/lib/prisma-json";
 import { recordSuccessfulPayment } from "@/lib/billing-ledger";
+import { sendPaidInvoiceReceipt } from "@/lib/invoice-notifications";
 import {
   decimalToAtomicUnits,
   normalizeTxHash,
@@ -243,6 +244,12 @@ export async function PATCH(request: NextRequest, context: Params) {
   });
 
   if (parsed.data.status === "PAID") {
+    await sendPaidInvoiceReceipt({
+      teamId: auth.team.teamId,
+      invoiceId: updated.id,
+      txHash: verifiedPaymentProof?.txHash ?? null,
+    }).catch(() => {});
+
     deliverWebhook(auth.team.teamId, "invoice.paid", {
       invoiceId: updated.id,
       invoiceNumber: updated.number,

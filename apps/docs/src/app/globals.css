@@ -4,25 +4,25 @@
   --bg-secondary: #f4f4f5;
   --bg-code: #0f172a;
   --bg-code-header: #172033;
-  --text: #111111;
-  --text-muted: #52525b;
+  --text: #151515;
+  --text-muted: #5f6470;
   --text-subtle: #71717a;
-  --accent: #18181b;
-  --accent-soft: rgba(24, 24, 27, 0.05);
-  --accent-soft-strong: rgba(24, 24, 27, 0.12);
-  --border: #e4e4e7;
-  --border-strong: #d4d4d8;
+  --accent: #0f3ea8;
+  --accent-soft: rgba(15, 62, 168, 0.06);
+  --accent-soft-strong: rgba(15, 62, 168, 0.12);
+  --border: #e6e8ee;
+  --border-strong: #cfd5df;
   --success: #16a34a;
   --warning: #ca8a04;
-  --font: "Avenir Next", "Segoe UI", "Helvetica Neue", system-ui, sans-serif;
-  --font-display: "Avenir Next", "Segoe UI", "Helvetica Neue", system-ui, sans-serif;
+  --font: "DM Sans", "Avenir Next", "Segoe UI", "Helvetica Neue", system-ui, sans-serif;
+  --font-display: "DM Sans", "Avenir Next", "Segoe UI", "Helvetica Neue", system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", "JetBrains Mono", "SFMono-Regular", monospace;
   --radius: 10px;
   --radius-lg: 16px;
   --radius-xl: 20px;
-  --sidebar-w: 296px;
+  --sidebar-w: 284px;
   --toc-w: 232px;
-  --topbar-h: 60px;
+  --topbar-h: 56px;
   --content-max: 860px;
   --shadow-soft: 0 8px 28px rgba(0, 0, 0, 0.04);
 }
@@ -107,7 +107,7 @@ a {
 
 .docs-brand-name {
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 650;
   letter-spacing: -0.01em;
   font-family: var(--font-display);
 }
@@ -116,11 +116,11 @@ a {
   margin-left: auto;
   font-family: var(--font-mono);
   font-size: 10px;
-  font-weight: 600;
+  font-weight: 550;
   padding: 4px 8px;
   border-radius: 999px;
-  color: var(--text-muted);
-  background: var(--bg-secondary);
+  color: var(--accent);
+  background: rgba(15, 62, 168, 0.06);
   border: 1px solid var(--border);
 }
 
@@ -145,8 +145,8 @@ a {
   width: 100%;
   border: 1px solid var(--border);
   border-radius: 12px;
-  background: var(--bg-secondary);
-  padding: 10px 12px;
+  background: #f8f9fb;
+  padding: 11px 12px;
   font-size: 13px;
   color: var(--text);
   outline: none;
@@ -162,59 +162,30 @@ a {
   box-shadow: 0 0 0 4px rgba(24, 24, 27, 0.05);
 }
 
-.docs-sidebar-flow {
-  margin-top: 12px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.docs-sidebar-flow-chip {
-  font-size: 11px;
-  font-weight: 600;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 5px 8px;
-  color: var(--text-muted);
-  background: var(--bg-elevated);
-  transition: all 0.12s ease;
-}
-
-.docs-sidebar-flow-chip:hover,
-.docs-sidebar-flow-chip.active {
-  color: var(--text);
-  border-color: var(--border-strong);
-  background: var(--bg-secondary);
-}
-
-.docs-sidebar-spotlights {
-  margin-top: 12px;
-  display: grid;
-  gap: 6px;
-}
-
-.docs-sidebar-spotlight {
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--bg-elevated);
-  padding: 9px 10px;
-  font-size: 11.5px;
-  font-weight: 700;
-  color: var(--text-muted);
-  transition: all 0.14s ease;
-}
-
-.docs-sidebar-spotlight:hover,
-.docs-sidebar-spotlight.active {
-  border-color: var(--border-strong);
-  background: var(--bg-secondary);
-  color: var(--text);
-}
-
 .docs-sidebar-inner {
   padding: 14px 12px 28px;
   overflow-y: auto;
   flex: 1;
+}
+
+.docs-sidebar-utility {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 4px 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #f8f9fb;
+  font-size: 12.5px;
+  font-weight: 550;
+  color: var(--text);
+  transition: all 0.14s ease;
+}
+
+.docs-sidebar-utility:hover {
+  border-color: var(--border-strong);
+  background: #ffffff;
 }
 
 .docs-nav-group {
@@ -235,7 +206,7 @@ a {
 
 .docs-nav-group-label {
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 650;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--text-subtle);
@@ -278,14 +249,14 @@ a {
 }
 
 .docs-nav-link:hover {
-  background: var(--bg-secondary);
+  background: #f6f8fb;
   color: var(--text);
 }
 
 .docs-nav-link.active {
   color: var(--text);
-  background: var(--bg-secondary);
-  font-weight: 600;
+  background: var(--accent-soft);
+  font-weight: 550;
 }
 
 .docs-nav-link.active::before {
@@ -297,7 +268,7 @@ a {
   width: 3px;
   height: 16px;
   border-radius: 0 2px 2px 0;
-  background: var(--text);
+  background: var(--accent);
 }
 
 .docs-nav-link-icon {
@@ -369,7 +340,7 @@ a {
 
 .docs-topbar-breadcrumb-current {
   color: var(--text);
-  font-weight: 600;
+  font-weight: 550;
 }
 
 .docs-topbar-breadcrumb-sep {
@@ -385,7 +356,7 @@ a {
 
 .docs-topbar-tab {
   font-size: 12.5px;
-  font-weight: 600;
+  font-weight: 550;
   color: var(--text-muted);
   padding: 7px 10px;
   border-radius: 10px;
@@ -395,7 +366,7 @@ a {
 .docs-topbar-tab:hover,
 .docs-topbar-tab.active {
   color: var(--text);
-  background: var(--bg-elevated);
+  background: #ffffff;
 }
 
 .docs-topbar-flow {
@@ -433,7 +404,7 @@ a {
   align-items: center;
   gap: 6px;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 550;
   border: 1px solid var(--border);
   color: var(--text-muted);
   background: var(--bg-elevated);
@@ -462,12 +433,12 @@ a {
 }
 
 .docs-topbar-btn {
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-strong);
   border-radius: 12px;
-  background: var(--bg-elevated);
-  color: var(--text-muted);
+  background: #ffffff;
+  color: var(--text);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 600;
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -575,7 +546,7 @@ a {
 
 .docs-page-title-row h1 {
   font-size: clamp(30px, 4vw, 42px);
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: -0.04em;
   line-height: 1.08;
   font-family: var(--font-display);
@@ -620,7 +591,7 @@ a {
 
 .docs-article h2 {
   font-size: 24px;
-  font-weight: 750;
+  font-weight: 680;
   letter-spacing: -0.03em;
   margin-top: 42px;
   margin-bottom: 14px;
@@ -629,7 +600,7 @@ a {
 
 .docs-article h3 {
   font-size: 18px;
-  font-weight: 700;
+  font-weight: 650;
   margin-top: 28px;
   margin-bottom: 10px;
   color: var(--text);

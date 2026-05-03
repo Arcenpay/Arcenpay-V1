@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { toPrismaJson } from "@/lib/prisma-json";
+import { DEFAULT_CHAIN_ID } from "@/lib/default-chain";
 import {
   decimalToAtomicUnits,
   verifyDirectErc20Transfer,
@@ -7,6 +8,7 @@ import {
 import { recordSuccessfulPayment } from "@/lib/billing-ledger";
 import { createIssuedChargeInvoice } from "@/lib/billing-events";
 import { grantCompanyAddOn } from "@/lib/addon-grants";
+import { sendPaidInvoiceReceipt } from "@/lib/invoice-notifications";
 
 function normalizeWallet(value?: string | null): string | null {
   const trimmed = value?.trim().toLowerCase();
@@ -109,7 +111,7 @@ export async function createCheckoutSession(input: {
       amount: input.amount.toFixed(6),
       currency: input.currency ?? "USDC",
       acceptedToken: normalizeWallet(input.acceptedToken) || input.acceptedToken,
-      chainId: input.chainId ?? 84532,
+      chainId: input.chainId ?? DEFAULT_CHAIN_ID,
       recipientWallet:
         normalizeWallet(input.recipientWallet) || input.recipientWallet,
       successUrl: input.successUrl ?? null,
@@ -130,6 +132,35 @@ export async function createCheckoutSession(input: {
 export async function getCheckoutSessionById(id: string, teamId?: string) {
   return db.checkoutSession.findFirst({
     where: { id, ...(teamId ? { teamId } : {}) },
+    include: {
+      paymentLink: {
+        include: {
+          catalogAddOn: true,
+          invoice: true,
+          company: true,
+        },
+      },
+      catalogAddOn: true,
+      invoice: true,
+      company: true,
+      payment: true,
+    },
+  });
+}
+
+export async function updateCheckoutSessionCustomerDetails(input: {
+  sessionId: string;
+  customerEmail?: string | null;
+  customerWallet?: string | null;
+  customerName?: string | null;
+}) {
+  return db.checkoutSession.update({
+    where: { id: input.sessionId },
+    data: {
+      customerEmail: input.customerEmail?.trim() || null,
+      customerWallet: normalizeWallet(input.customerWallet),
+      customerName: input.customerName?.trim() || null,
+    },
     include: {
       paymentLink: {
         include: {
@@ -283,6 +314,14 @@ export async function confirmCheckoutSessionPayment(input: {
       payment: true,
     },
   });
+
+  if (invoiceId) {
+    await sendPaidInvoiceReceipt({
+      teamId: session.teamId,
+      invoiceId,
+      txHash: verification.txHash,
+    }).catch(() => {});
+  }
 
   return { ok: true as const, session: updated, payment };
 }

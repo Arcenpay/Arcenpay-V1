@@ -10,7 +10,6 @@ import {
 import {
   RUNTIME_CHAIN_ID,
   RUNTIME_CHAIN_PROFILE,
-  getRuntimeChainWarning,
 } from "@/lib/runtime-chain";
 
 const querySchema = z.object({
@@ -140,10 +139,10 @@ async function readSessionsAndProofsFromSubgraph(
   }
 }
 
-async function readActiveProofJobs(chainId: number): Promise<{
+async function readActiveProofJobs(_chainId: number): Promise<{
   count: number;
   jobs: ActiveProofJob[];
-  status: "ok" | "unavailable" | "chain_mismatch";
+  status: "ok" | "unavailable";
   chainMismatch?: { requestedChainId: number; facilitatorChainId: number };
   message?: string;
 }> {
@@ -159,21 +158,19 @@ async function readActiveProofJobs(chainId: number): Promise<{
       cache: "no-store",
     });
 
+    let chainMismatch:
+      | { requestedChainId: number; facilitatorChainId: number }
+      | undefined;
+
     if (healthRes.ok) {
       const health = (await healthRes.json()) as { chainId?: number };
-      if (typeof health.chainId === "number" && health.chainId !== chainId) {
-        return {
-          count: 0,
-          jobs: [],
-          status: "chain_mismatch",
-          chainMismatch: {
-            requestedChainId: chainId,
-            facilitatorChainId: health.chainId,
-          },
-          message: getRuntimeChainWarning({
-            actualChainId: health.chainId,
-            expectedChainId: chainId,
-          }),
+      if (
+        typeof health.chainId === "number" &&
+        health.chainId !== _chainId
+      ) {
+        chainMismatch = {
+          requestedChainId: _chainId,
+          facilitatorChainId: health.chainId,
         };
       }
     }
@@ -190,7 +187,12 @@ async function readActiveProofJobs(chainId: number): Promise<{
     });
 
     if (!upstream.ok) {
-      return { count: 0, jobs: [], status: "unavailable" };
+      return {
+        count: 0,
+        jobs: [],
+        status: "unavailable",
+        chainMismatch,
+      };
     }
 
     const payload = (await upstream.json()) as {
@@ -198,7 +200,12 @@ async function readActiveProofJobs(chainId: number): Promise<{
       jobs?: ActiveProofJob[];
     };
     const jobs = Array.isArray(payload.jobs) ? payload.jobs : [];
-    return { count: Number(payload.count) || jobs.length, jobs, status: "ok" };
+    return {
+      count: Number(payload.count) || jobs.length,
+      jobs,
+      status: "ok",
+      chainMismatch,
+    };
   } catch {
     return { count: 0, jobs: [], status: "unavailable" };
   }

@@ -1,64 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth.server";
 import { FACILITATOR_URL, FACILITATOR_SECRET } from "@/lib/config";
-import {
-  RUNTIME_CHAIN_ID,
-  RUNTIME_CHAIN_PROFILE,
-  getRuntimeChainWarning,
-} from "@/lib/runtime-chain";
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   const session = await getSession();
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
-    const requestedChainIdRaw = request.nextUrl.searchParams.get("chainId");
-    const requestedChainId = requestedChainIdRaw
-      ? Number.parseInt(requestedChainIdRaw, 10)
-      : null;
-
-    if (requestedChainId && Number.isFinite(requestedChainId)) {
-      const healthRes = await fetch(`${FACILITATOR_URL}/health`, {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-          ...(FACILITATOR_SECRET
-            ? { Authorization: `Bearer ${FACILITATOR_SECRET}` }
-            : {}),
-        },
-        cache: "no-store",
-      });
-      if (healthRes.ok) {
-        const health = (await healthRes.json()) as { chainId?: number };
-        if (
-          typeof health.chainId === "number" &&
-          health.chainId !== requestedChainId
-        ) {
-          return NextResponse.json({
-            count: 0,
-            jobs: [],
-            degraded: true,
-            message: getRuntimeChainWarning({
-              actualChainId: health.chainId,
-              expectedChainId: requestedChainId,
-            }),
-            chainMismatch: {
-              requestedChainId,
-              facilitatorChainId: health.chainId,
-            },
-            runtimeChain: {
-              expectedChainId: RUNTIME_CHAIN_ID,
-              expectedChainName: RUNTIME_CHAIN_PROFILE.chainName,
-              rpcEnvKeys: RUNTIME_CHAIN_PROFILE.rpcEnvKeys,
-              subgraphEnvKeys: RUNTIME_CHAIN_PROFILE.subgraphEnvKeys,
-            },
-          });
-        }
-      }
-    }
-
     const upstream = await fetch(`${FACILITATOR_URL}/api/proofs/active`, {
       method: "GET",
       headers: {

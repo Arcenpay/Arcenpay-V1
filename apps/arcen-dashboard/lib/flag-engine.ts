@@ -14,15 +14,14 @@ import { db } from "@/lib/db";
 import { aggregateUsage } from "@/lib/event-aggregator";
 import { getCachedFlag, setCachedFlag } from "@/lib/flag-cache";
 import { createPublicClient, http } from "viem";
-import { baseSepolia } from "viem/chains";
-import { getContractAddresses } from "@arcenpay/sdk";
+import { getChain, getContractAddresses } from "@arcenpay/sdk";
 import { getRpcUrl } from "@/lib/config";
 import { DEFAULT_CHAIN_ID } from "@/lib/default-chain";
 
 const viemClients = new Map<number, unknown>();
 
 function resolveViemChain(chainId: number) {
-  return chainId === 84532 ? baseSepolia : baseSepolia;
+  return getChain(chainId);
 }
 
 // Lazy-initialized viem clients for on-chain reads keyed by chain.

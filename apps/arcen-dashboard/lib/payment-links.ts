@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { db } from "@/lib/db";
 import { toPrismaJson } from "@/lib/prisma-json";
+import { DEFAULT_CHAIN_ID } from "@/lib/default-chain";
 
 function slugify(value: string): string {
   return value
@@ -50,7 +51,7 @@ export async function createPaymentLink(input: {
       currency: input.currency ?? "USDC",
       amount: input.amount.toFixed(6),
       acceptedToken: normalizeWallet(input.acceptedToken) || input.acceptedToken,
-      chainId: input.chainId ?? 84532,
+      chainId: input.chainId ?? DEFAULT_CHAIN_ID,
       recipientWallet:
         normalizeWallet(input.recipientWallet) || input.recipientWallet,
       successUrl: input.successUrl ?? null,

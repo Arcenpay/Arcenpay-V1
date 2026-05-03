@@ -6,6 +6,7 @@ import {
   upsertSubscriptionLedgerState,
 } from "@/lib/billing-ledger";
 import { deliverWebhook } from "@/lib/deliver-webhook";
+import { sendPaidInvoiceReceipt } from "@/lib/invoice-notifications";
 
 const BILLING_RECOVERY_RETRY_DELAYS_MS = [
   5 * 60 * 1000,
@@ -288,6 +289,14 @@ export async function finalizeSubscriptionActivation(
       txHash: input.payload.txHash,
       source,
       invoiceId: billingEvent.invoiceId,
+    }).catch(() => {});
+  }
+
+  if (billingEvent.invoiceId) {
+    await sendPaidInvoiceReceipt({
+      teamId: input.teamId,
+      invoiceId: billingEvent.invoiceId,
+      txHash: input.payload.txHash,
     }).catch(() => {});
   }
 

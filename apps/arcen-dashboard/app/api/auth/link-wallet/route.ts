@@ -10,6 +10,7 @@ import { db } from "@/lib/db";
 import { buildSIWEMessage } from "@/lib/auth";
 import { consumeNonce } from "@/lib/nonce.server";
 import { getSession } from "@/lib/auth.server";
+import { BASE_SEPOLIA_CHAIN_ID, getChainLabel } from "@/lib/default-chain";
 
 const Schema = z.object({
   message: z.string().min(1),
@@ -39,6 +40,16 @@ export async function POST(req: NextRequest) {
     }
 
     const { message, signature, address, chainId, nonce } = parsed.data;
+    const normalizedAddress = address.toLowerCase();
+
+    if (chainId !== BASE_SEPOLIA_CHAIN_ID) {
+      return NextResponse.json(
+        {
+          error: `Only ${getChainLabel(BASE_SEPOLIA_CHAIN_ID)} is supported right now`,
+        },
+        { status: 400 },
+      );
+    }
 
     const nonceRecord = await consumeNonce(nonce);
     if (!nonceRecord) {
@@ -78,7 +89,7 @@ export async function POST(req: NextRequest) {
     }
 
     const walletOwner = await db.user.findUnique({
-      where: { walletAddress: address },
+      where: { walletAddress: normalizedAddress },
       select: { id: true },
     });
 
@@ -92,11 +103,11 @@ export async function POST(req: NextRequest) {
     await db.user.update({
       where: { id: session.userId },
       data: {
-        walletAddress: address,
+        walletAddress: normalizedAddress,
       },
     });
 
-    return NextResponse.json({ ok: true, address });
+    return NextResponse.json({ ok: true, address: normalizedAddress });
   } catch (err) {
     console.error("[api/auth/link-wallet]", err);
     return NextResponse.json(

@@ -83,6 +83,7 @@ import { getUsdcAddress, getUsdcTokenOptions } from "@/lib/contracts";
 import {
   DEFAULT_CHAIN_ID,
   DEFAULT_TESTNET_CHAIN_ID,
+  getChainLabel,
 } from "@/lib/default-chain";
 import { toast } from "sonner";
 import { PlanFactoryABI } from "@arcenpay/sdk";
@@ -2023,7 +2024,9 @@ function PlansTable({
       };
 
       if (chainId !== DEFAULT_CHAIN_ID) {
-        toast.error("Switch your wallet to Base Sepolia to sync this plan.");
+        toast.error(
+          `Switch your wallet to ${getChainLabel(DEFAULT_CHAIN_ID)} to sync this plan.`,
+        );
         return;
       }
 
@@ -2058,7 +2061,9 @@ function PlansTable({
 
       if (plan.onChainPlanId && signingRequired) {
         if (!publicClient) {
-          throw new Error("Public client unavailable for Base Sepolia");
+          throw new Error(
+            `Public client unavailable for ${getChainLabel(DEFAULT_CHAIN_ID)}`,
+          );
         }
 
         const txHash = await writeContractAsync({
@@ -3543,13 +3548,13 @@ const CHAIN_INFO: Record<
 > = {
   DEVELOPMENT: {
     chainId: DEFAULT_TESTNET_CHAIN_ID,
-    name: "Base Sepolia Testnet",
+    name: getChainLabel(DEFAULT_TESTNET_CHAIN_ID),
     color: "bg-zinc-400",
     tag: "testnet",
   },
   PRODUCTION: {
-    chainId: DEFAULT_TESTNET_CHAIN_ID,
-    name: "Base Sepolia Testnet",
+    chainId: DEFAULT_CHAIN_ID,
+    name: getChainLabel(DEFAULT_CHAIN_ID),
     color: "bg-zinc-400",
     tag: "testnet",
   },
@@ -3673,7 +3678,7 @@ function ConfigurationTab() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Failed to save");
-      toast.success("Configuration saved for Base Sepolia");
+      toast.success(`Configuration saved for ${currentChainInfo.name}`);
     } catch (err: unknown) {
       setConfigError(err instanceof Error ? err.message : "Failed to save configuration");
     } finally {
@@ -3732,7 +3737,7 @@ function ConfigurationTab() {
           <div className="w-2.5 h-2.5 rounded-full shrink-0 bg-zinc-400" />
           <div>
             <p className="text-sm font-bold text-foreground leading-tight">
-              Base Sepolia Environment
+              Configured Network
             </p>
             <p className="text-xs text-muted-foreground mt-0.5">
               {currentChainInfo.name} · Chain {currentChainInfo.chainId}
@@ -3976,7 +3981,8 @@ function ConfigurationTab() {
               <SheetHeader className="pb-4 border-b border-border">
                 <SheetTitle>Switch Environment</SheetTitle>
                 <SheetDescription>
-                  Base Sepolia is the only supported dashboard network right now.
+                  Environment mode currently runs on the configured workspace
+                  network.
                 </SheetDescription>
               </SheetHeader>
               <form onSubmit={handleSwitch} className="space-y-5 py-5">
@@ -6594,7 +6600,8 @@ function AddOnDetailView({
                   <div>
                     <p className="text-sm font-medium text-foreground">Hosted checkout</p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Create or copy a public Base Sepolia pay link for this add-on.
+                      Create or copy a public {getChainLabel(DEFAULT_CHAIN_ID)} pay
+                      link for this add-on.
                     </p>
                   </div>
                   <Button

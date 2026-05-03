@@ -107,7 +107,7 @@ type SessionsPayload = {
   degraded: boolean;
   dependencyHealth: {
     subgraph: "ok" | "unavailable";
-    facilitator: "ok" | "unavailable" | "chain_mismatch";
+    facilitator: "ok" | "unavailable";
   };
   sessions: SessionRow[];
   proofs: ProofRow[];
@@ -309,7 +309,7 @@ export function SessionsSection() {
           <AlertTriangle className="w-4 h-4 text-warning shrink-0" />
           <p className="text-sm text-muted-foreground">
             {payload?.activeProofs.message ??
-              `Facilitator is on chain ${chainMismatch.facilitatorChainId} while dashboard is set to ${chainMismatch.requestedChainId}. Active proof jobs are hidden until chains match.`}
+              `Proof facilitator is on chain ${chainMismatch.facilitatorChainId} while dashboard is configured for chain ${chainMismatch.requestedChainId}. Proof data may not match on-chain state.`}
           </p>
         </div>
       )}

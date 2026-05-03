@@ -67,7 +67,6 @@ import {
   PlanFactoryABI,
   SessionVaultABI,
   SubscriptionRegistryABI,
-  PRIMARY_RUNTIME_CHAIN_ID,
   getPrimaryRuntimeChainProfile,
   formatRuntimeChainMismatch,
   getContractAddresses,
@@ -2428,16 +2427,16 @@ app.get("/health", async (_req, res) => {
     profile: FACILITATOR_PROFILE,
     chainId: CHAIN_ID,
     runtimeChain: {
-      expectedChainId: PRIMARY_RUNTIME_CHAIN_ID,
+      expectedChainId: RUNTIME_CHAIN_PROFILE.chainId,
       expectedChainName: RUNTIME_CHAIN_PROFILE.chainName,
-      supported: CHAIN_ID === PRIMARY_RUNTIME_CHAIN_ID,
+      supported: CHAIN_ID === RUNTIME_CHAIN_PROFILE.chainId,
       warning:
-        CHAIN_ID === PRIMARY_RUNTIME_CHAIN_ID
+        CHAIN_ID === RUNTIME_CHAIN_PROFILE.chainId
           ? null
           : `${formatRuntimeChainMismatch({
               actualChainId: CHAIN_ID,
-              expectedChainId: PRIMARY_RUNTIME_CHAIN_ID,
-            })} Set CHAIN_ID=${PRIMARY_RUNTIME_CHAIN_ID} and a Base Sepolia RPC (${RUNTIME_CHAIN_PROFILE.rpcEnvKeys.join(", ")}).`,
+              expectedChainId: RUNTIME_CHAIN_PROFILE.chainId,
+            })} Set CHAIN_ID=${RUNTIME_CHAIN_PROFILE.chainId} and a ${RUNTIME_CHAIN_PROFILE.chainName} RPC (${RUNTIME_CHAIN_PROFILE.rpcEnvKeys.join(", ")}).`,
     },
     blockNumber,
     timestamp: new Date().toISOString(),

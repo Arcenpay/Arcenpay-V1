@@ -3949,7 +3949,7 @@ function CheckoutContent({
               >
                 {hasInvalidCustomerEmail
                   ? "Enter a valid email address so invoices and billing notices reach the customer."
-                  : "We’ll use this for receipts, invoices, and subscription notices."}
+                  : "Billing email is required for paid subscriptions so we can send receipts, invoices, and subscription notices."}
               </div>
             </div>
 
@@ -4035,9 +4035,16 @@ function CheckoutContent({
                   cursor: "pointer",
                   fontSize: tokens.size - 1,
                   fontWeight: 700,
-                  opacity: hasInvalidCustomerEmail ? 0.6 : 1,
+                  opacity:
+                    hasInvalidCustomerEmail ||
+                    (requiresHostedActivation && !hasCustomerEmail)
+                      ? 0.6
+                      : 1,
                 }}
-                disabled={hasInvalidCustomerEmail}
+                disabled={
+                  hasInvalidCustomerEmail ||
+                  (requiresHostedActivation && !hasCustomerEmail)
+                }
               >
                 {isAuthoritativeOnChainPlanChange
                   ? "Next: Confirm plan change"
@@ -4554,6 +4561,12 @@ function PaymentContent({
       if (hasInvalidCustomerEmail) {
         setTxStatus("error");
         setTxError("Enter a valid billing email before activating.");
+        return;
+      }
+
+      if (!hasCustomerEmail) {
+        setTxStatus("error");
+        setTxError("Enter a billing email before activating.");
         return;
       }
 
@@ -5239,7 +5252,7 @@ function PaymentContent({
                 >
                   {hasInvalidCustomerEmail
                     ? "Enter a valid email address so the subscription can be tied to the correct customer."
-                    : "Recommended for receipts, invoices, and lifecycle notices."}
+                    : "Billing email is required for paid activations so ArcenPay can send invoices, receipts, and lifecycle notices."}
                 </div>
               </div>
 
@@ -5360,7 +5373,10 @@ function PaymentContent({
                     tokens={tokens}
                     fullWidth
                     disabled={
-                      processing || txStatus === "approving" || hasInvalidCustomerEmail
+                      processing ||
+                      txStatus === "approving" ||
+                      hasInvalidCustomerEmail ||
+                      !hasCustomerEmail
                     }
                     onClick={handlePay}
                   >

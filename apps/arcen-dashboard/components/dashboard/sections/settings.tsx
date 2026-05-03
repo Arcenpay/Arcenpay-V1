@@ -39,6 +39,8 @@ import {
   Plus,
   Info,
   Key,
+  Loader2,
+  Settings2,
   Wallet,
   Building2,
   Users,
@@ -63,9 +65,14 @@ import { getBlockExplorerUrl } from "@/lib/format";
 import { CANONICAL_WEBHOOK_EVENTS } from "@/lib/webhook-events";
 import { useDashboardSession } from "@/hooks/use-dashboard-session";
 import {
+  DEFAULT_CHAIN_ID,
   DEFAULT_TESTNET_CHAIN_ID,
   getChainLabel,
 } from "@/lib/default-chain";
+import {
+  REQUIRED_WALLET_CHAIN_LABEL,
+  useDashboardWallet,
+} from "@/hooks/use-dashboard-wallet";
 
 const NOTIFICATION_DEFAULTS = CANONICAL_WEBHOOK_EVENTS.map((event) => ({
   ...event,
@@ -109,6 +116,23 @@ export function SettingsSection() {
   const { data: sessionData } = useDashboardSession();
   const chainId = useChainId();
   const linkedWallet = sessionData?.user.walletAddress ?? undefined;
+  const {
+    connectedWalletLabel,
+    currentNetworkLabel,
+    disconnectWallet,
+    hasConnectedWallet,
+    isDisconnecting,
+    isLinkedWalletConnected,
+    isOnRequiredNetwork,
+    isSwitchingChain,
+    isWrongNetwork,
+    isWrongWalletConnected,
+    linkedWalletLabel,
+    openAccountModal,
+    openConnectModal,
+    reconnectWallet,
+    switchToRequiredNetwork,
+  } = useDashboardWallet(linkedWallet);
   const contractAddresses = useContractAddresses();
 
   const [activeTab, setActiveTab] = useState("profile");
@@ -168,6 +192,7 @@ export function SettingsSection() {
 
   const registryAddress =
     contractAddresses.subscriptionRegistry as `0x${string}`;
+  const configuredChainLabel = getChainLabel(DEFAULT_CHAIN_ID);
 
   const { data: transportData, refetch: refetchTransports } = useReadContracts({
     contracts: [
@@ -524,6 +549,13 @@ export function SettingsSection() {
       >
         <TabsList className="bg-secondary border border-border p-1 flex-wrap h-auto gap-1">
           <TabsTrigger
+            value="wallet"
+            className="data-[state=active]:bg-card data-[state=active]:text-foreground"
+          >
+            <Wallet className="w-4 h-4 mr-2" />
+            Wallet
+          </TabsTrigger>
+          <TabsTrigger
             value="workspace"
             className="data-[state=active]:bg-card data-[state=active]:text-foreground"
           >
@@ -573,6 +605,144 @@ export function SettingsSection() {
             Danger Zone
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent
+          value="wallet"
+          className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300"
+        >
+          <Card className="border-accent/30 bg-card">
+            <CardHeader>
+              <CardTitle className="text-base font-medium flex items-center gap-2">
+                <Wallet className="w-4 h-4 text-accent" />
+                Workspace Wallet
+              </CardTitle>
+              <CardDescription>
+                Dashboard wallet actions are limited to {REQUIRED_WALLET_CHAIN_LABEL} right now.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="rounded-xl border border-border bg-secondary/40 p-4">
+                <p className="text-xs text-muted-foreground mb-1">Linked workspace wallet</p>
+                <p className="font-mono text-sm text-foreground break-all">
+                  {linkedWallet ?? "No wallet linked yet"}
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-border bg-secondary/40 p-4">
+                <p className="text-xs text-muted-foreground mb-1">Connected wallet</p>
+                <p className="font-mono text-sm text-foreground">
+                  {connectedWalletLabel ?? "Not connected"}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Network: {currentNetworkLabel ?? "Not connected"}
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-border bg-secondary/40 p-4">
+                <p className="text-xs text-muted-foreground mb-1">Supported network</p>
+                <p className="text-sm font-medium text-foreground">
+                  {REQUIRED_WALLET_CHAIN_LABEL}
+                </p>
+              </div>
+
+              {linkedWallet && isLinkedWalletConnected ? (
+                <div className="flex items-start gap-2 rounded-lg border border-green-500/20 bg-green-500/5 p-3 text-sm text-green-700">
+                  <Check className="w-4 h-4 shrink-0 mt-0.5" />
+                  Connected wallet matches the workspace wallet.
+                </div>
+              ) : null}
+
+              {linkedWallet && isWrongWalletConnected ? (
+                <div className="flex items-start gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-sm text-amber-700">
+                  <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                  Connected wallet does not match {linkedWalletLabel}. Reconnect with the linked wallet before signing transactions.
+                </div>
+              ) : null}
+
+              {isWrongNetwork ? (
+                <div className="flex items-start gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-sm text-amber-700">
+                  <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                  This wallet is on the wrong network. Switch to {REQUIRED_WALLET_CHAIN_LABEL}.
+                </div>
+              ) : null}
+
+              <div className="grid gap-2 md:grid-cols-2">
+                {!hasConnectedWallet ? (
+                  <Button onClick={() => void openConnectModal()}>
+                    <Wallet className="w-4 h-4 mr-2" />
+                    Connect wallet
+                  </Button>
+                ) : null}
+
+                {hasConnectedWallet ? (
+                  <Button variant="outline" onClick={() => void openAccountModal()}>
+                    <Settings2 className="w-4 h-4 mr-2" />
+                    Open wallet modal
+                  </Button>
+                ) : null}
+
+                {isWrongWalletConnected ? (
+                  <Button variant="outline" onClick={() => void reconnectWallet()}>
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Reconnect correct wallet
+                  </Button>
+                ) : null}
+
+                {hasConnectedWallet && !isOnRequiredNetwork ? (
+                  <Button
+                    variant="outline"
+                    onClick={() => void switchToRequiredNetwork()}
+                    disabled={isSwitchingChain}
+                  >
+                    {isSwitchingChain ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Switching network...
+                      </>
+                    ) : (
+                      <>
+                        <Globe className="w-4 h-4 mr-2" />
+                        Switch to {REQUIRED_WALLET_CHAIN_LABEL}
+                      </>
+                    )}
+                  </Button>
+                ) : null}
+
+                {hasConnectedWallet ? (
+                  <Button
+                    variant="ghost"
+                    onClick={() => void disconnectWallet()}
+                    disabled={isDisconnecting}
+                  >
+                    {isDisconnecting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Disconnecting...
+                      </>
+                    ) : (
+                      <>
+                        <Wallet className="w-4 h-4 mr-2" />
+                        Disconnect wallet
+                      </>
+                    )}
+                  </Button>
+                ) : null}
+
+                {!linkedWallet ? (
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      window.location.href = "/onboarding/wallet";
+                    }}
+                  >
+                    <Link2 className="w-4 h-4 mr-2" />
+                    Link workspace wallet
+                  </Button>
+                ) : null}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent
           value="workspace"
@@ -823,10 +993,8 @@ export function SettingsSection() {
                 EVM Account Identity
               </CardTitle>
               <CardDescription>
-                Your linked wallet is your universal identity across{" "}
-                <span className="text-foreground font-medium">all EVM chains</span> —
-                Ethereum, Base, Polygon, Arbitrum, Optimism, and any EVM-compatible network.
-                One account = one wallet address. The chain can change but your address never does.
+                Your linked wallet is the workspace signing identity used by the dashboard on{" "}
+                <span className="text-foreground font-medium">{REQUIRED_WALLET_CHAIN_LABEL}</span>.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -872,7 +1040,7 @@ export function SettingsSection() {
                   <div className="flex items-start gap-2 p-3 rounded-lg bg-secondary/50 border border-border">
                     <Info className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
                     <p className="text-xs text-muted-foreground">
-                      This address is permanent and cannot be changed. It identifies your provider on-chain across all supported EVM networks.
+                      Keep this wallet connected when you need to sign dashboard transactions on {REQUIRED_WALLET_CHAIN_LABEL}.
                     </p>
                   </div>
                 </div>
@@ -969,12 +1137,13 @@ export function SettingsSection() {
                       </span>
                     </p>
                   </div>
-                  <Badge variant="outline">Base Sepolia Only</Badge>
+                  <Badge variant="outline">{configuredChainLabel}</Badge>
                 </div>
                 <div className="mt-3 rounded-md border border-border bg-background/60 px-3 py-2">
                   <p className="text-xs text-muted-foreground">
-                    ArcenPay dashboard is currently pinned to Base Sepolia testnet.
-                    Mainnet and other testnet switching are disabled for now.
+                    This workspace is configured for {configuredChainLabel}.
+                    Change the chain env values if you want the dashboard and
+                    facilitator to target a different supported network.
                   </p>
                 </div>
               </div>

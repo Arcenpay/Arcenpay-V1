@@ -16,7 +16,11 @@ import {
   YieldSessionVaultABI,
   TOKENS,
 } from "@arcenpay/sdk";
-import { DEFAULT_CHAIN_ID } from "@/lib/default-chain";
+import {
+  BASE_SEPOLIA_CHAIN_ID,
+  DEFAULT_CHAIN_ID,
+  getChainLabel,
+} from "@/lib/default-chain";
 
 export {
   getContractAddresses,
@@ -41,9 +45,15 @@ function resolveUsdcOverride(chainId: number): `0x${string}` | null {
     process.env.NEXT_PUBLIC_USDC_ADDRESS || process.env.NEXT_PUBLIC_MOCK_USDC_ADDRESS;
 
   const chainOverrides: Record<number, string | undefined> = {
+    11155111:
+      process.env.NEXT_PUBLIC_USDC_ADDRESS_11155111 ||
+      process.env.NEXT_PUBLIC_MOCK_USDC_ADDRESS_11155111,
     84532:
       process.env.NEXT_PUBLIC_USDC_ADDRESS_84532 ||
       process.env.NEXT_PUBLIC_MOCK_USDC_ADDRESS_84532,
+    8453:
+      process.env.NEXT_PUBLIC_USDC_ADDRESS_8453 ||
+      process.env.NEXT_PUBLIC_MOCK_USDC_ADDRESS_8453,
   };
 
   const candidate = chainOverrides[chainId] || globalOverride;
@@ -72,7 +82,11 @@ export function getUsdcTokenOptions(): Array<{
     label: string;
     tag: "testnet" | "mainnet";
   }> = [
-    { chainId: 84532, label: "Base Sepolia", tag: "testnet" },
+    {
+      chainId: BASE_SEPOLIA_CHAIN_ID,
+      label: getChainLabel(BASE_SEPOLIA_CHAIN_ID),
+      tag: "testnet",
+    },
   ];
 
   const options: Array<{

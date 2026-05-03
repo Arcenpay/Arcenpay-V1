@@ -116,24 +116,10 @@ const NAV_GROUPS: NavGroup[] = [
   },
 ];
 
-const FLOW_SHORTCUTS = [
-  { label: "Get Started", href: "/quickstart" },
-  { label: "Create Plans", href: "/core-concepts/plans" },
-  { label: "Launch Checkout", href: "/features/checkout" },
-];
-
 const TOP_LEVEL_LINKS = [
   { label: "Docs", href: "/" },
   { label: "API Reference", href: "/api-reference/auth" },
   { label: "Guides", href: "/guides/subscription-wall" },
-  { label: "Changelog", href: "/changelog" },
-  { label: "Support", href: "/support" },
-];
-
-const SPOTLIGHT_LINKS = [
-  { label: "Hosted Payments", href: "/features/checkout#hosted-payments" },
-  { label: "Contract Addresses", href: "/contract-addresses" },
-  { label: "Support", href: "/support" },
 ];
 
 function isItemActive(pathname: string, href: string) {
@@ -255,7 +241,7 @@ function Sidebar({
               </svg>
             </div>
             <span className="docs-brand-name">ArcenPay Docs</span>
-            <span className="docs-version-badge">Base 84532</span>
+            <span className="docs-version-badge">Live</span>
             <button
               className="docs-sidebar-close"
               onClick={onClose}
@@ -275,47 +261,13 @@ function Sidebar({
               aria-label="Search documentation"
             />
           </div>
-
-          <div className="docs-sidebar-flow">
-            {FLOW_SHORTCUTS.map((shortcut) => {
-              const active = isItemActive(pathname, shortcut.href);
-              return (
-                <a
-                  key={shortcut.href}
-                  href={shortcut.href}
-                  className={`docs-sidebar-flow-chip${active ? " active" : ""}`}
-                  onClick={onClose}
-                >
-                  {shortcut.label}
-                </a>
-              );
-            })}
-          </div>
-
-          <div className="docs-sidebar-spotlights">
-            {SPOTLIGHT_LINKS.map((link) => (
-              <a
-                key={link.href}
-                href={link.href}
-                className={`docs-sidebar-spotlight${isItemActive(pathname, link.href) ? " active" : ""}`}
-                onClick={onClose}
-              >
-                {link.label}
-              </a>
-            ))}
-          </div>
         </div>
 
         <div className="docs-sidebar-inner">
           {/* Back to dashboard */}
           <a
             href={DASHBOARD_URL}
-            className="docs-nav-link"
-            style={{
-              marginBottom: "8px",
-              fontSize: "12.5px",
-              color: "#6b7280",
-            }}
+            className="docs-sidebar-utility"
             onClick={onClose}
           >
             <svg
@@ -469,7 +421,7 @@ export default function DocsShell({ children }: { children: React.ReactNode }) {
           <div className="docs-topbar-right">
             <span className="docs-topbar-badge">
               <span className="docs-topbar-badge-dot" />
-              Base Sepolia 84532
+              Payments + Billing
             </span>
             <a href={DASHBOARD_URL} className="docs-topbar-btn">
               <svg

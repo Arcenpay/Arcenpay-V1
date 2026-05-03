@@ -90,6 +90,7 @@ export type { ValidateChainEnvironmentOptions } from "./environment";
 export {
   PRIMARY_RUNTIME_CHAIN_ID,
   LEGACY_RUNTIME_CHAIN_IDS,
+  getConfiguredRuntimeChainId,
   getPrimaryRuntimeChainProfile,
   isPrimaryRuntimeChain,
   formatRuntimeChainMismatch,
