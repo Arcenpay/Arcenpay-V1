@@ -18,101 +18,83 @@ function CodeBlock({ lang, code }: { lang: string; code: string }) {
 
 export default function NodeSDKPage() {
   return (
-    <div className="docs-body" style={{ width: '100%' }}>
-      <article className="docs-article">
-        <div className="docs-page-breadcrumb">Integrate</div>
-        <div className="docs-page-title-row"><h1>Node.js SDK</h1></div>
+    <div className="flex items-start justify-center gap-[18px] flex-1 px-4 lg:px-0">
+      <article className="flex-1 max-w-[860px] min-w-0 py-10 px-4 lg:px-[60px] pb-24">
+        <div className="text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground mb-3">Integrate</div>
+        <div className="flex items-center justify-between gap-4 mb-3.5"><h1>Node.js SDK</h1></div>
 
-        <p className="docs-lead" id="node-sdk">
-          The <code>@arcenpay/node</code> SDK is designed for server-side verification, webhook handling, and 
-          automated billing operations. It directly interacts with the ArcenPay smart contracts via a JSON-RPC provider.
+        <p className="text-[16.5px] text-muted-foreground leading-relaxed mb-7 max-w-[740px]" id="node-sdk">
+          <code>@arcenpay/node</code> is the supported backend SDK for public
+          integrations. Use the high-level client for customer identify flows,
+          entitlement checks, subscription activation, and webhook verification.
         </p>
 
         <h2 id="installation">Installation</h2>
-        <CodeBlock lang="bash" code={`npm install @arcenpay/node viem`} />
+        <CodeBlock lang="bash" code={`npm install @arcenpay/node`} />
 
         <h2 id="initialization">Initialization</h2>
-        <CodeBlock lang="typescript" code={`import { ArcenPayClient } from '@arcenpay/node';
+        <CodeBlock lang="typescript" code={`import { ArcenClient } from '@arcenpay/node';
 
-const client = new ArcenPayClient({
-  rpcUrl: process.env.RPC_URL,
-  privateKey: process.env.PROVIDER_PRIVATE_KEY, // Optional
+const client = new ArcenClient({
+  apiKey: process.env.ARCENPAY_API_KEY!,
+  baseUrl: process.env.NEXT_PUBLIC_ARCENPAY_BASE_URL,
 });`} />
 
-        <h2 id="verification">Verifying access</h2>
-        <p>Use this in your API middleware or server-side functions to gate access to premium resources.</p>
-        <CodeBlock lang="typescript" code={`async function gateAccess(req, res) {
-  const walletAddress = req.headers['x-wallet-address'];
+        <h2 id="identify">Identify a company or user</h2>
+        <p className="text-[15px] text-muted-foreground leading-relaxed mb-[15px]">Call <code>identify()</code> once to mint a short-lived session token for follow-up checks.</p>
+        <CodeBlock lang="typescript" code={`const session = await client.identify({
+  company: { id: 'company_123', name: 'Acme' },
+  user: { wallet: '0xabc...', email: 'owner@acme.com' },
+  expiresIn: 3600,
+});`} />
 
-  const { isValid, plan } = await client.verifySubscription(walletAddress);
+        <h2 id="entitlements">Check access</h2>
+        <CodeBlock lang="typescript" code={`const entitlement = await client.checkEntitlement('analytics_export');
 
-  if (!isValid) {
-    return res.status(402).json({ error: 'Subscription Required' });
-  }
-
-  console.log('User tier:', plan.tier);
+if (!entitlement.enabled) {
+  throw new Error('Upgrade required');
 }`} />
 
-        <h2 id="webhooks">Webhook verification</h2>
-        <p>Ensure that requests to your webhook endpoint are genuinely from the ArcenPay network.</p>
-        <CodeBlock lang="typescript" code={`const isValid = client.verifyWebhookSignature(
-  req.body,
-  req.headers['x-arcenpay-signature'],
-  process.env.WEBHOOK_SECRET
-);`} />
-
-        <h2 id="billing-ops">Billing operations</h2>
-        <p>If you aren&apos;t using the automated AutopayModule, you can trigger renewals manually for users who have granted approval.</p>
-        <CodeBlock lang="typescript" code={`await client.triggerRenewal({
-  subscriber: '0x...',
-  planId: 1
+        <h2 id="activation">Activate a subscription</h2>
+        <CodeBlock lang="typescript" code={`const result = await client.activateSubscription({
+  planId: 'starter-monthly',
+  paymentAccount: '0xabc...',
+  company: { id: 'company_123' },
+  subscriberEmail: 'owner@acme.com',
 });`} />
 
-        <h2 id="reference">Method reference</h2>
-        <table className="docs-table">
-          <thead><tr><th>Method</th><th>Description</th></tr></thead>
-          <tbody>
-            <tr>
-              <td><code>verifySubscription(address)</code></td>
-              <td>Check on-chain state for a wallet. Returns validity and plan info.</td>
-            </tr>
-            <tr>
-              <td><code>getFeatureFlags(address)</code></td>
-              <td>Gets decrypted feature flag configuration for a user.</td>
-            </tr>
-            <tr>
-              <td><code>listPlans()</code></td>
-              <td>Fetch all plans registered to your provider address.</td>
-            </tr>
-            <tr>
-              <td><code>getBillingHistory(address)</code></td>
-              <td>Paginated list of all renewals and mints for a wallet.</td>
-            </tr>
-            <tr>
-              <td><code>syncCrossChain(tokenId)</code></td>
-              <td>Manually trigger a GMP update to secondary chains.</td>
-            </tr>
-          </tbody>
-        </table>
+        <h2 id="webhooks">Verify webhook signatures</h2>
+        <CodeBlock lang="typescript" code={`import { verifyWebhookSignature } from '@arcenpay/node';
 
-        <div className="docs-callout warning">
+const isValid = verifyWebhookSignature(
+  rawRequestBody,
+  String(req.headers['x-meap-signature']),
+  process.env.ARCENPAY_WEBHOOK_SECRET!,
+);
+
+if (!isValid) {
+  throw new Error('Invalid webhook signature');
+}`} />
+
+        <div className="docs-callout-warning mb-5">
           <span className="docs-callout-icon">🔒</span>
           <div>
-            Never expose your <code>PROVIDER_PRIVATE_KEY</code> on the client side. Only use the Node.js SDK
-            in secure, server-side environments.
+            Keep your <code>ARCENPAY_API_KEY</code> on the server only. The browser
+            should receive short-lived access tokens, never your workspace API key.
           </div>
         </div>
       </article>
 
-      <nav className="docs-toc">
-        <div className="docs-toc-heading">On this page</div>
-        <ul className="docs-toc-list">
-          <li className="docs-toc-item active"><a href="#node-sdk">Node.js SDK</a></li>
-          <li className="docs-toc-item"><a href="#installation">Installation</a></li>
-          <li className="docs-toc-item"><a href="#initialization">Initialization</a></li>
-          <li className="docs-toc-item"><a href="#verification">Verification</a></li>
-          <li className="docs-toc-item"><a href="#webhooks">Webhooks</a></li>
-          <li className="docs-toc-item"><a href="#reference">Method reference</a></li>
+      <nav className="hidden xl:block w-[232px] shrink-0 sticky top-14 h-[calc(100vh-56px)] overflow-y-auto py-8 pr-5 pl-1.5">
+        <div className="text-[10.5px] font-bold uppercase tracking-[0.09em] text-muted-foreground mb-3.5">On this page</div>
+        <ul className="border-l-[1.5px] border-border flex flex-col gap-0.5 py-1">
+          <li className="toc-item active"><a className="block text-[12.5px] text-foreground font-semibold py-1 pl-[13px] -ml-[1.5px] border-l-2 border-foreground" href="#node-sdk">Node.js SDK</a></li>
+          <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#installation">Installation</a></li>
+          <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#initialization">Initialization</a></li>
+          <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#identify">Identify</a></li>
+          <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#entitlements">Check access</a></li>
+          <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#activation">Activate subscription</a></li>
+          <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#webhooks">Webhooks</a></li>
         </ul>
       </nav>
     </div>

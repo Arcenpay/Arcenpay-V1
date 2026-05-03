@@ -18,12 +18,12 @@ function CodeBlock({ lang, code }: { lang: string; code: string }) {
 
 export default function ApiErrorsPage() {
   return (
-    <div className="docs-body" style={{ width: '100%' }}>
-      <article className="docs-article">
-        <div className="docs-page-breadcrumb">API Reference</div>
-        <div className="docs-page-title-row"><h1>Error Codes</h1></div>
+    <div className="flex items-start justify-center gap-[18px] flex-1 px-4 lg:px-0">
+      <article className="flex-1 max-w-[860px] min-w-0 py-10 px-4 lg:px-[60px] pb-24">
+        <div className="text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground mb-3">API Reference</div>
+        <div className="flex items-center justify-between gap-4 mb-3.5"><h1>Error Codes</h1></div>
 
-        <p className="docs-lead" id="errors">
+        <p className="text-[16.5px] text-muted-foreground leading-relaxed mb-7 max-w-[740px]" id="errors">
           ArcenPay uses conventional HTTP response codes to indicate the success or failure of an API request.
         </p>
 
@@ -64,18 +64,18 @@ export default function ApiErrorsPage() {
         </table>
 
         <h2 id="handling-errors">Handling errors</h2>
-        <p>In your code, you should switch on the <code>type</code> and <code>code</code> fields to handle different failure states gracefully.</p>
-        <CodeBlock lang="typescript" code={`try {
-  await client.plans.create({...});
+        <p className="text-[15px] text-muted-foreground leading-relaxed mb-[15px]">Wrap SDK calls in <code>try/catch</code>. The <code>ArcenApiError</code> exposes <code>message</code> and <code>statusCode</code> for context.</p>
+        <CodeBlock lang="typescript" code={`import { ArcenApiError } from '@arcenpay/node';
+
+try {
+  const result = await client.checkEntitlement('analytics_export');
 } catch (err) {
-  if (err.code === 'insufficient_funds') {
-    // Notify user to bridge more USDC
-  } else if (err.type === 'invalid_request_error') {
-    // Debug your parameters
+  if (err instanceof ArcenApiError) {
+    console.error(\`API error \${err.statusCode}: \${err.message}\`);
   }
 }`} />
 
-        <div className="docs-callout info">
+        <div className="docs-callout-info mb-5">
           <span className="docs-callout-icon">💡</span>
           <div>
             We recommend logging the <code>id</code> of every error response when contacting support.
@@ -83,14 +83,14 @@ export default function ApiErrorsPage() {
         </div>
       </article>
 
-      <nav className="docs-toc">
-        <div className="docs-toc-heading">On this page</div>
-        <ul className="docs-toc-list">
-          <li className="docs-toc-item active"><a href="#errors">Error Codes</a></li>
-          <li className="docs-toc-item"><a href="#http-codes">HTTP Codes</a></li>
-          <li className="docs-toc-item"><a href="#error-objects">Error Object</a></li>
-          <li className="docs-toc-item"><a href="#code-list">Specific codes</a></li>
-          <li className="docs-toc-item"><a href="#handling-errors">Handling errors</a></li>
+      <nav className="hidden xl:block w-[232px] shrink-0 sticky top-14 h-[calc(100vh-56px)] overflow-y-auto py-8 pr-5 pl-1.5">
+        <div className="text-[10.5px] font-bold uppercase tracking-[0.09em] text-muted-foreground mb-3.5">On this page</div>
+        <ul className="border-l-[1.5px] border-border flex flex-col gap-0.5 py-1">
+          <li className="toc-item active"><a className="block text-[12.5px] text-foreground font-semibold py-1 pl-[13px] -ml-[1.5px] border-l-2 border-foreground" href="#errors">Error Codes</a></li>
+          <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#http-codes">HTTP Codes</a></li>
+          <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#error-objects">Error Object</a></li>
+          <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#code-list">Specific codes</a></li>
+          <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#handling-errors">Handling errors</a></li>
         </ul>
       </nav>
     </div>

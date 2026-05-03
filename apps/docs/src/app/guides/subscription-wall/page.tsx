@@ -18,91 +18,75 @@ function CodeBlock({ lang, code }: { lang: string; code: string }) {
 
 export default function SubscriptionWallGuide() {
   return (
-    <div className="docs-body" style={{ width: '100%' }}>
-      <article className="docs-article">
-        <div className="docs-page-breadcrumb">Guides</div>
-        <div className="docs-page-title-row"><h1>SaaS Subscription Wall</h1></div>
+    <div className="flex items-start justify-center gap-[18px] flex-1 px-4 lg:px-0">
+      <article className="flex-1 max-w-[860px] min-w-0 py-10 px-4 lg:px-[60px] pb-24">
+        <div className="text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground mb-3">Guides</div>
+        <div className="flex items-center justify-between gap-4 mb-3.5"><h1>SaaS Subscription Wall</h1></div>
 
-        <p className="docs-lead" id="saas-wall">
-          Learn how to implement a professional subscription-gated SaaS application using ArcenPay and Next.js.
+        <p className="text-[16.5px] text-muted-foreground leading-relaxed mb-7 max-w-[740px]" id="saas-wall">
+          A strong subscription wall uses server-side entitlement checks for
+          protected data and client-side checks for a smooth product experience.
         </p>
 
-        <h2 id="architecture">The Architecture</h2>
-        <p>
-          We use a hybrid approach: Client-side gating for UI responsiveness (hiding/showing elements) and 
-          Server-side gating (Middleware) for security (protecting sensitive data).
+        <h2 id="model">Recommended structure</h2>
+        <p className="text-[15px] text-muted-foreground leading-relaxed mb-[15px]">
+          Use a hybrid approach: the backend decides whether access is allowed,
+          while the frontend uses the React SDK to show upgrade prompts and hide
+          unavailable controls.
         </p>
 
-        <h2 id="step-1">Step 1: Define your tiers</h2>
-        <p>In the ArcenPay Dashboard, create two plans:</p>
-        <ul>
-          <li><strong>Free:</strong> $0/month (Optional, or just no NFT).</li>
-          <li><strong>Pro:</strong> $29/month.</li>
+        <h2 id="step-1">1. Define your tiers</h2>
+        <p className="text-[15px] text-muted-foreground leading-relaxed mb-[15px]">In the ArcenPay dashboard, create the plans your app wants to sell.</p>
+        <ul className="pl-5 mb-[18px] space-y-[7px]">
+          <li className="text-[15px] text-muted-foreground leading-relaxed"><strong>Starter:</strong> entry tier for basic access.</li>
+          <li className="text-[15px] text-muted-foreground leading-relaxed"><strong>Pro:</strong> paid tier for premium features.</li>
         </ul>
 
-        <h2 id="step-2">Step 2: Protecting Routes</h2>
-        <p>Create a <code>ProtectedRoute</code> component that wraps sensitive pages.</p>
-        <CodeBlock lang="tsx" code={`"use client";
-import { useSubscription } from '@arcenpay/react';
-import { useRouter } from 'next/navigation';
+        <h2 id="step-2">2. Gate the UI</h2>
+        <CodeBlock lang="tsx" code={`import { useEntitlementCheck } from '@arcenpay/react';
 
-export default function ProtectedRoute({ children, tier = 'pro' }) {
-  const { status, plan, loading } = useSubscription();
-  const router = useRouter();
+export function ProtectedPanel() {
+  const { enabled, loading } = useEntitlementCheck('analytics_export');
 
   if (loading) return <div>Loading...</div>;
+  if (!enabled) return <UpgradePrompt />;
 
-  if (status !== 'active' || (tier && plan.tier !== tier)) {
-    router.push('/pricing');
-    return null;
-  }
-
-  return children;
+  return <PremiumDashboard />;
 }`} />
 
-        <h2 id="step-3">Step 3: Handling Renewals</h2>
-        <p>
-          Since ArcenPay uses ERC-5643, your app should listen for the &quot;expired&quot; state and show a 
-          top-bar alert when the renewal fails or the user needs to add funds.
-        </p>
-        <CodeBlock lang="tsx" code={`const { status, renew } = useSubscription();
+        <h2 id="step-3">3. Gate the API</h2>
+        <CodeBlock lang="typescript" code={`await client.identify({
+  company: { id: 'company_123' },
+  user: { wallet: '0xabc...' },
+});
 
-{status === 'expired' && (
-  <div className="alert">
-    Your subscription expired. <button onClick={renew}>Renew Now</button>
-  </div>
-)}`} />
+const entitlement = await client.checkEntitlement('analytics_export');
+if (!entitlement.enabled) {
+  throw new Error('Upgrade required');
+}`} />
 
-        <h2 id="step-4">Step 4: Webhook Sync</h2>
-        <p>
-          Sync subscription events to your internal database (e.g. Supabase or Prisma) to track 
-          customer lifetime value (LTV).
+        <h2 id="step-4">4. Sync billing state</h2>
+        <p className="text-[15px] text-muted-foreground leading-relaxed mb-[15px]">
+          Process webhook events so your CRM, customer support tooling, and
+          analytics stay aligned with subscription changes.
         </p>
-        <CodeBlock lang="typescript" code={`// api/webhooks/route.ts
-if (event.type === 'subscription.created') {
-  await db.user.update({
-    where: { wallet: event.data.subscriber },
-    data: { isPro: true, expiry: event.data.newExpiration }
+        <CodeBlock lang="typescript" code={`if (event.event === 'invoice.paid') {
+  await db.accounts.update({
+    where: { arcenCompanyId: event.data.companyId },
+    data: { billingStatus: 'active' },
   });
 }`} />
-
-        <div className="docs-callout tip">
-          <span className="docs-callout-icon">💡</span>
-          <div>
-            You can use the <code>PricingTable</code> component to build your pricing page in seconds.
-          </div>
-        </div>
       </article>
 
-      <nav className="docs-toc">
-        <div className="docs-toc-heading">On this page</div>
-        <ul className="docs-toc-list">
-          <li className="docs-toc-item active"><a href="#saas-wall">SaaS Wall</a></li>
-          <li className="docs-toc-item"><a href="#architecture">Architecture</a></li>
-          <li className="docs-toc-item"><a href="#step-1">1. Tiers</a></li>
-          <li className="docs-toc-item"><a href="#step-2">2. Routes</a></li>
-          <li className="docs-toc-item"><a href="#step-3">3. Renewals</a></li>
-          <li className="docs-toc-item"><a href="#step-4">4. Sync</a></li>
+      <nav className="hidden xl:block w-[232px] shrink-0 sticky top-14 h-[calc(100vh-56px)] overflow-y-auto py-8 pr-5 pl-1.5">
+        <div className="text-[10.5px] font-bold uppercase tracking-[0.09em] text-muted-foreground mb-3.5">On this page</div>
+        <ul className="border-l-[1.5px] border-border flex flex-col gap-0.5 py-1">
+          <li className="toc-item active"><a className="block text-[12.5px] text-foreground font-semibold py-1 pl-[13px] -ml-[1.5px] border-l-2 border-foreground" href="#saas-wall">SaaS Wall</a></li>
+          <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#model">Model</a></li>
+          <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#step-1">1. Tiers</a></li>
+          <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#step-2">2. UI</a></li>
+          <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#step-3">3. API</a></li>
+          <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#step-4">4. Sync</a></li>
         </ul>
       </nav>
     </div>

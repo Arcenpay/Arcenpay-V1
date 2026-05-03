@@ -26,43 +26,29 @@ function CodeBlock({ lang, code }: { lang: string; code: string }) {
 
 export default function ApiAuthPage() {
   return (
-    <div className="docs-body" style={{ width: '100%' }}>
-      <article className="docs-article">
-        <div className="docs-page-breadcrumb">API Reference</div>
-        <div className="docs-page-title-row"><h1>Authentication</h1></div>
+    <div className="flex items-start justify-center gap-[18px] flex-1 px-4 lg:px-0">
+      <article className="flex-1 max-w-[860px] min-w-0 py-10 px-4 lg:px-[60px] pb-24">
+        <div className="text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground mb-3">API Reference</div>
+        <div className="flex items-center justify-between gap-4 mb-3.5"><h1>Authentication</h1></div>
 
-        <p className="docs-lead" id="auth">
-          External provider APIs are authenticated with ArcenPay API keys. The
-          current implementation accepts keys that begin with
-          <code>api_</code>, stores only the SHA-256 hash, and resolves them to
-          a team at request time.
+        <p className="text-[16.5px] text-muted-foreground leading-relaxed mb-7 max-w-[740px]" id="auth">
+          Authenticate server-to-server requests with your ArcenPay API key.
+          Keep the key on trusted backend infrastructure only and mint
+          short-lived customer access tokens when the browser needs ArcenPay context.
         </p>
 
-        <h2 id="key-format">Key format</h2>
-        <table className="docs-table">
-          <thead><tr><th>Field</th><th>Behavior</th></tr></thead>
-          <tbody>
-            <tr><td>Prefix</td><td><code>api_</code></td></tr>
-            <tr><td>Storage</td><td>Hashed before persistence</td></tr>
-            <tr><td>Presentation</td><td>Shown in full only at creation time</td></tr>
-            <tr><td>Lookup</td><td>Resolved from <code>Authorization</code> or <code>x-api-key</code></td></tr>
-          </tbody>
-        </table>
-
-        <h2 id="header">Using the header</h2>
+        <h2 id="header">Authorization header</h2>
         <CodeBlock
           lang="bash"
-          code={`curl https://your-dashboard.example.com/api/v1/check \\
-  -H "Authorization: Bearer api_xxxxxxxxxxxxxxxxx" \\
-  -H "Content-Type: application/json" \\
-  -d '{"companyId":"company_123","featureKey":"priority_support"}'`}
+          code={`curl "https://dashboard.arcenpay.xyz/api/v1/check?companyId=company_123&featureKey=priority_support" \\
+  -H "Authorization: Bearer api_xxxxxxxxxxxxxxxxx"`}
         />
 
-        <h2 id="behavior">Current runtime behavior</h2>
-        <ul>
-          <li>The server also accepts the raw key in <code>x-api-key</code>.</li>
-          <li>Malformed keys are rejected before DB lookup.</li>
-          <li>Per-key rate limiting is applied after the key resolves.</li>
+        <h2 id="guidelines">Usage guidelines</h2>
+        <ul className="pl-5 mb-[18px] space-y-[7px]">
+          <li className="text-[15px] text-muted-foreground leading-relaxed">Send your API key with the <code>Authorization: Bearer</code> header.</li>
+          <li className="text-[15px] text-muted-foreground leading-relaxed">Store the key in a secure server-side environment variable.</li>
+          <li className="text-[15px] text-muted-foreground leading-relaxed">Rotate keys if you suspect exposure or no longer need an integration.</li>
         </ul>
 
         <h2 id="errors">Authentication errors</h2>
@@ -74,14 +60,13 @@ export default function ApiAuthPage() {
         />
       </article>
 
-      <nav className="docs-toc">
-        <div className="docs-toc-heading">On this page</div>
-        <ul className="docs-toc-list">
-          <li className="docs-toc-item active"><a href="#auth">Authentication</a></li>
-          <li className="docs-toc-item"><a href="#key-format">Key format</a></li>
-          <li className="docs-toc-item"><a href="#header">Authorization header</a></li>
-          <li className="docs-toc-item"><a href="#behavior">Runtime behavior</a></li>
-          <li className="docs-toc-item"><a href="#errors">Errors</a></li>
+      <nav className="hidden xl:block w-[232px] shrink-0 sticky top-14 h-[calc(100vh-56px)] overflow-y-auto py-8 pr-5 pl-1.5">
+        <div className="text-[10.5px] font-bold uppercase tracking-[0.09em] text-muted-foreground mb-3.5">On this page</div>
+        <ul className="border-l-[1.5px] border-border flex flex-col gap-0.5 py-1">
+          <li className="toc-item active"><a className="block text-[12.5px] text-foreground font-semibold py-1 pl-[13px] -ml-[1.5px] border-l-2 border-foreground" href="#auth">Authentication</a></li>
+          <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#header">Authorization header</a></li>
+          <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#guidelines">Guidelines</a></li>
+          <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#errors">Errors</a></li>
         </ul>
       </nav>
     </div>

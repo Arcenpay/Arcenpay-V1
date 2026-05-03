@@ -26,39 +26,33 @@ function CodeBlock({ lang, code }: { lang: string; code: string }) {
 
 export default function FeatureGatingGuide() {
   return (
-    <div className="docs-body" style={{ width: '100%' }}>
-      <article className="docs-article">
-        <div className="docs-page-breadcrumb">Guides</div>
-        <div className="docs-page-title-row"><h1>Feature Gating</h1></div>
+    <div className="flex items-start justify-center gap-[18px] flex-1 px-4 lg:px-0">
+      <article className="flex-1 max-w-[860px] min-w-0 py-10 px-4 lg:px-[60px] pb-24">
+        <div className="text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground mb-3">Guides</div>
+        <div className="flex items-center justify-between gap-4 mb-3.5"><h1>Feature Gating</h1></div>
 
-        <p className="docs-lead" id="gating">
-          Feature gating in the current product is driven by dashboard-managed
-          rules, company overrides, active subscriptions, and add-on grants.
-          Optional Lit or zkTLS integrations can enrich the model, but they are
-          not the primary source of truth for launch-time entitlements.
+        <p className="text-[16.5px] text-muted-foreground leading-relaxed mb-7 max-w-[740px]" id="gating">
+          Build entitlement-aware product experiences by combining dashboard-managed
+          billing state with server-side checks in your app.
         </p>
 
-        <h2 id="model">How the live model works</h2>
+        <h2 id="model">Recommended model</h2>
         <ol>
-          <li>Resolve the company and its active plan or subscription state.</li>
-          <li>Resolve active add-on grants for standalone purchases or upsells.</li>
-          <li>Apply company overrides.</li>
-          <li>Evaluate prioritized rules for traits, usage thresholds, or zkTLS claims.</li>
+          <li>Resolve the customer identity in your backend.</li>
+          <li>Check the relevant entitlement before returning protected data.</li>
+          <li>Use the React SDK to reflect the same access state in the UI.</li>
+          <li>Keep plan and add-on mapping in ArcenPay, not in scattered frontend conditionals.</li>
         </ol>
 
         <h2 id="api">Server-side gating</h2>
         <CodeBlock
           lang="ts"
-          code={`const response = await fetch('/api/v1/check', {
-  method: 'POST',
-  headers: { 'content-type': 'application/json' },
-  body: JSON.stringify({
-    companyId: 'company_123',
-    featureKey: 'priority_support',
-  }),
+          code={`await client.identify({
+  company: { id: 'company_123' },
+  user: { wallet: '0xabc...' },
 });
 
-const result = await response.json();
+const result = await client.checkEntitlement('priority_support');
 if (!result.enabled) throw new Error('Upgrade required');`}
         />
 
@@ -68,31 +62,31 @@ if (!result.enabled) throw new Error('Upgrade required');`}
           code={`import { useEntitlementCheck } from '@arcenpay/react';
 
 function ExportButton() {
-  const { result, loading } = useEntitlementCheck('analytics_export');
+  const { enabled, loading } = useEntitlementCheck('analytics_export');
 
   if (loading) return null;
-  if (!result?.enabled) return <UpgradePrompt />;
+  if (!enabled) return <UpgradePrompt />;
 
   return <button>Export CSV</button>;
 }`}
         />
 
         <h2 id="operational-notes">Operational notes</h2>
-        <ul>
-          <li>Use add-on grants for one-time or upsell unlocks instead of custom JSON-only access hacks.</li>
-          <li>Keep sensitive access checks on the server even if the React UI hides locked controls.</li>
-          <li>Only document Lit-encrypted content if your project has implemented the encryption write path too.</li>
+        <ul className="pl-5 mb-[18px] space-y-[7px]">
+          <li className="text-[15px] text-muted-foreground leading-relaxed">Use add-on grants for one-time unlocks instead of custom ad hoc flags in your own app DB.</li>
+          <li className="text-[15px] text-muted-foreground leading-relaxed">Keep sensitive gating decisions on the server even if the UI hides locked controls.</li>
+          <li className="text-[15px] text-muted-foreground leading-relaxed">Use webhooks to react to plan changes, cancellations, and invoice payment events.</li>
         </ul>
       </article>
 
-      <nav className="docs-toc">
-        <div className="docs-toc-heading">On this page</div>
-        <ul className="docs-toc-list">
-          <li className="docs-toc-item active"><a href="#gating">Feature Gating</a></li>
-          <li className="docs-toc-item"><a href="#model">Model</a></li>
-          <li className="docs-toc-item"><a href="#api">Server-side gating</a></li>
-          <li className="docs-toc-item"><a href="#react">Client-side checks</a></li>
-          <li className="docs-toc-item"><a href="#operational-notes">Operational notes</a></li>
+      <nav className="hidden xl:block w-[232px] shrink-0 sticky top-14 h-[calc(100vh-56px)] overflow-y-auto py-8 pr-5 pl-1.5">
+        <div className="text-[10.5px] font-bold uppercase tracking-[0.09em] text-muted-foreground mb-3.5">On this page</div>
+        <ul className="border-l-[1.5px] border-border flex flex-col gap-0.5 py-1">
+          <li className="toc-item active"><a className="block text-[12.5px] text-foreground font-semibold py-1 pl-[13px] -ml-[1.5px] border-l-2 border-foreground" href="#gating">Feature Gating</a></li>
+          <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#model">Model</a></li>
+          <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#api">Server-side gating</a></li>
+          <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#react">Client-side checks</a></li>
+          <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#operational-notes">Operational notes</a></li>
         </ul>
       </nav>
     </div>

@@ -18,113 +18,79 @@ function CodeBlock({ lang, code }: { lang: string; code: string }) {
 
 export default function ExpressPage() {
   return (
-    <div className="docs-body" style={{ width: '100%' }}>
-      <article className="docs-article">
-        <div className="docs-page-breadcrumb">Frameworks</div>
-        <div className="docs-page-title-row"><h1>Express Implementation</h1></div>
+    <div className="flex items-start justify-center gap-[18px] flex-1 px-4 lg:px-0">
+      <article className="flex-1 max-w-[860px] min-w-0 py-10 px-4 lg:px-[60px] pb-24">
+        <div className="text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground mb-3">Frameworks</div>
+        <div className="flex items-center justify-between gap-4 mb-3.5"><h1>Express Integration</h1></div>
 
-        <p className="docs-lead" id="express">
-          Integrate ArcenPay into your Node.js Express server using our middleware for 
-          easy route protection and subscription validation.
+        <p className="text-[16.5px] text-muted-foreground leading-relaxed mb-7 max-w-[740px]" id="express">
+          Use the Node SDK inside your Express server to verify access, create
+          secure billing workflows, and validate webhook deliveries from ArcenPay.
         </p>
 
-        <h2 id="setup">Project Setup</h2>
+        <h2 id="setup">Project setup</h2>
         <CodeBlock lang="bash" code={`npm install express @arcenpay/node`} />
 
-        <h2 id="middleware">The Gating Middleware</h2>
-        <p>Create a reusable middleware function to protect your premium routes.</p>
-        <CodeBlock lang="typescript" code={`import { ArcenPayClient } from '@arcenpay/node';
+        <h2 id="client">Create the Arcen client</h2>
+        <CodeBlock lang="typescript" code={`import { ArcenClient } from '@arcenpay/node';
 
-const client = new ArcenPayClient({ rpcUrl: process.env.RPC_URL });
+export const arcen = new ArcenClient({
+  apiKey: process.env.ARCENPAY_API_KEY!,
+  baseUrl: process.env.NEXT_PUBLIC_ARCENPAY_BASE_URL,
+});`} />
 
-export const requireSubscription = async (req, res, next) => {
-  const wallet = req.headers['x-user-wallet'];
-  
-  if (!wallet) {
-    return res.status(401).json({ error: 'Missing wallet header' });
-  }
+        <h2 id="middleware">Protect premium routes</h2>
+        <CodeBlock lang="typescript" code={`export const requireEntitlement = (featureKey: string) => async (req, res, next) => {
+  await arcen.identify({
+    company: { id: req.headers['x-company-id'] as string },
+    user: { wallet: req.headers['x-user-wallet'] as string },
+  });
 
-  const { isValid } = await client.verifySubscription(wallet);
-
-  if (!isValid) {
-    return res.status(402).json({ 
-      error: 'Payment Required', 
-      checkoutUrl: 'https://app.arcenpay.com/checkout/...' 
-    });
+  const result = await arcen.checkEntitlement(featureKey);
+  if (!result.enabled) {
+    return res.status(403).json({ error: 'Upgrade required' });
   }
 
   next();
 };`} />
 
-        <h2 id="usage">Usage in Routes</h2>
+        <h2 id="usage">Use the middleware in routes</h2>
         <CodeBlock lang="typescript" code={`import express from 'express';
-import { requireSubscription } from './middleware';
+import { requireEntitlement } from './billing';
 
 const app = express();
 
-app.get('/api/free-content', (req, res) => {
+app.get('/api/free-content', (_req, res) => {
   res.send('Everyone can see this.');
 });
 
-app.get('/api/premium-content', requireSubscription, (req, res) => {
-  res.send('This is for paying subscribers only.');
-});
-
-app.listen(3000);`} />
-
-        <h2 id="scoped-access">Tier-scoped Access</h2>
-        <p>You can also create middleware that requires a specific plan tier (e.g., &quot;pro&quot;).</p>
-        <CodeBlock lang="typescript" code={`export const requireTier = (targetTier: string) => async (req, res, next) => {
-  const wallet = req.headers['x-user-wallet'];
-  const { isValid, plan } = await client.verifySubscription(wallet);
-
-  if (!isValid || plan.tier !== targetTier) {
-    return res.status(403).json({ error: \`Requires \${targetTier} tier\` });
-  }
-
-  next();
-};
-
-app.get('/api/enterprise-only', requireTier('enterprise'), (req, res) => {
-  res.send('Welcome, enterprise user.');
+app.get('/api/premium-content', requireEntitlement('analytics_export'), (_req, res) => {
+  res.send('This is for paying customers only.');
 });`} />
 
-        <h2 id="webhooks">Webhook integration</h2>
-        <p>Express makes it simple to handle incoming billing events from the ArcenPay network.</p>
-        <CodeBlock lang="typescript" code={`app.post('/api/arcenpay-webhook', express.raw({ type: 'application/json' }), (req, res) => {
-  const signature = req.headers['x-arcenpay-signature'];
-  
-  try {
-    const event = client.verifyWebhook(req.body, signature, process.env.WEBHOOK_SECRET);
-    
-    if (event.type === 'subscription.renewed') {
-      console.log('User renewed:', event.data.subscriber);
-    }
-    
-    res.json({ received: true });
-  } catch (err) {
-    res.status(400).send(\`Webhook Error: \${err.message}\`);
-  }
-});`} />
+        <h2 id="webhooks">Webhook verification</h2>
+        <CodeBlock lang="typescript" code={`import { verifyWebhookSignature } from '@arcenpay/node';
 
-        <div className="docs-callout info">
-          <span className="docs-callout-icon">💡</span>
-          <div>
-            Pro-tip: Use <code>express-rate-limit</code> alongside ArcenPay to prevent automated scraping
-            even by valid subscribers.
-          </div>
-        </div>
+app.post('/api/arcenpay-webhook', express.text({ type: '*/*' }), (req, res) => {
+  const signature = String(req.headers['x-meap-signature'] ?? '');
+
+  if (!verifyWebhookSignature(req.body, signature, process.env.ARCENPAY_WEBHOOK_SECRET!)) {
+    return res.status(400).send('Invalid signature');
+  }
+
+  res.json({ received: true });
+});`} />
       </article>
 
-      <nav className="docs-toc">
-        <div className="docs-toc-heading">On this page</div>
-        <ul className="docs-toc-list">
-          <li className="docs-toc-item active"><a href="#express">Express</a></li>
-          <li className="docs-toc-item"><a href="#setup">Setup</a></li>
-          <li className="docs-toc-item"><a href="#middleware">Gating Middleware</a></li>
-          <li className="docs-toc-item"><a href="#usage">Usage</a></li>
-          <li className="docs-toc-item"><a href="#scoped-access">Tier-scoped access</a></li>
-          <li className="docs-toc-item"><a href="#webhooks">Webhooks</a></li>
+      <nav className="hidden xl:block w-[232px] shrink-0 sticky top-14 h-[calc(100vh-56px)] overflow-y-auto py-8 pr-5 pl-1.5">
+        <div className="text-[10.5px] font-bold uppercase tracking-[0.09em] text-muted-foreground mb-3.5">On this page</div>
+        <ul className="border-l-[1.5px] border-border flex flex-col gap-0.5 py-1">
+          <li className="toc-item active"><a className="block text-[12.5px] text-foreground font-semibold py-1 pl-[13px] -ml-[1.5px] border-l-2 border-foreground" href="#express">Express</a></li>
+          <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#setup">Setup</a></li>
+          <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#client">Client</a></li>
+          <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#middleware">Middleware</a></li>
+          <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#usage">Usage</a></li>
+          <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#webhooks">Webhooks</a></li>
         </ul>
       </nav>
     </div>

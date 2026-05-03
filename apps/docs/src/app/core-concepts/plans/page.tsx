@@ -1,38 +1,14 @@
 'use client';
 import { useState } from 'react';
 
-function CopyIcon() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-    </svg>
-  );
-}
-
-function CheckIcon() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="20 6 9 17 4 12" />
-    </svg>
-  );
-}
-
 function CodeBlock({ lang, code }: { lang: string; code: string }) {
   const [copied, setCopied] = useState(false);
-  const handleCopy = () => {
-    navigator.clipboard.writeText(code);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
   return (
     <div className="docs-codeblock">
       <div className="docs-codeblock-header">
         <span className="docs-codeblock-lang">{lang}</span>
-        <button className="docs-codeblock-copy" onClick={handleCopy}>
-          {copied ? <CheckIcon /> : <CopyIcon />}
-          {copied ? 'Copied' : 'Copy'}
+        <button className="docs-codeblock-copy" onClick={() => { navigator.clipboard.writeText(code); setCopied(true); setTimeout(() => setCopied(false), 2000); }}>
+          {copied ? '✓ Copied' : 'Copy'}
         </button>
       </div>
       <pre><code>{code}</code></pre>
@@ -40,241 +16,93 @@ function CodeBlock({ lang, code }: { lang: string; code: string }) {
   );
 }
 
-function CopyPageButton() {
-  const [copied, setCopied] = useState(false);
-  const handleCopy = () => {
-    if (typeof window !== 'undefined') {
-      navigator.clipboard.writeText(window.location.href);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  };
-  return (
-    <button className="docs-copy-btn" onClick={handleCopy}>
-      {copied ? <CheckIcon /> : <CopyIcon />}
-      {copied ? 'Copied!' : 'Copy page'}
-    </button>
-  );
-}
-
-const CREATE_PLAN_CODE = `function createPlan(
-    string calldata name,
-    string calldata tier,
-    uint256 price,
-    uint32 billingInterval,
-    address acceptedToken,
-    string calldata metadataURI
-) external returns (uint256 planId)`;
-
-const PLAN_STRUCT_CODE = `struct Plan {
-    uint256 id;           // Auto-incremented plan ID
-    address provider;     // Address that deployed the plan
-    string  name;         // Human-readable plan name
-    string  tier;         // Tier label (e.g. "pro", "enterprise")
-    uint256 price;        // Price in USDC (6-decimal units)
-    uint32  billingInterval; // Seconds between billing cycles
-    address acceptedToken;   // Approved USDC token contract
-    bool    active;       // Whether the plan is live
-    string  metadataURI;  // IPFS URI for plan metadata
-}`;
-
 export default function PlansPage() {
   return (
-    <div className="docs-body" style={{ width: '100%' }}>
-      {/* ── Main article ── */}
-      <article className="docs-article">
+    <div className="flex items-start justify-center gap-[18px] flex-1 px-4 lg:px-0">
+      <article className="flex-1 max-w-[860px] min-w-0 py-10 px-4 lg:px-[60px] pb-24">
+        <div className="text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground mb-3">Core Concepts</div>
+        <div className="flex items-center justify-between gap-4 mb-3.5"><h1>Plans</h1></div>
 
-        {/* Breadcrumb + title row */}
-        <div className="docs-page-breadcrumb">Core Concepts</div>
-        <div className="docs-page-title-row">
-          <h1>Plans</h1>
-          <CopyPageButton />
-        </div>
-
-        {/* Lead */}
-        <p className="docs-lead" id="plans">
-          A plan is an on-chain struct stored in <strong>PlanFactory</strong>. It defines the name, tier, USDC price,
-          billing interval, and the accepted token address. Plans are immutable once created —
-          archive and redeploy to change pricing.
+        <p className="text-[16.5px] text-muted-foreground leading-relaxed mb-7 max-w-[740px]" id="plans">
+          A plan is your recurring offer in ArcenPay. It defines what the
+          customer is buying, how often they are billed, and which entitlements
+          should unlock after checkout.
         </p>
 
-        {/* ── Creating a plan ── */}
-        <h2 id="creating-a-plan">Creating a plan</h2>
-
+        <h2 id="creating">Create a plan</h2>
         <div className="docs-steps">
           <div className="docs-step">
             <div className="docs-step-num">1</div>
             <div className="docs-step-body">
-              <div className="docs-step-title">Open the Plans section</div>
-              <p className="docs-step-desc">
-                Navigate to <strong>Catalog → Plans</strong> in the sidebar and click <strong>Create Plan</strong>.
-              </p>
+              <div className="docs-step-title">Open the Catalog</div>
+              <p className="docs-step-desc">Go to the dashboard Catalog and create a new recurring plan.</p>
             </div>
           </div>
-
           <div className="docs-step">
             <div className="docs-step-num">2</div>
             <div className="docs-step-body">
-              <div className="docs-step-title">Fill in plan details</div>
-              <p className="docs-step-desc">
-                Enter a plan name (e.g. <code>Pro</code>), a USDC price, and choose a billing interval:
-                Monthly (30d), Quarterly (90d), or Annual (365d).
-              </p>
+              <div className="docs-step-title">Define the commercial terms</div>
+              <p className="docs-step-desc">Choose the plan name, price, billing cadence, and customer-facing description.</p>
             </div>
           </div>
-
           <div className="docs-step">
             <div className="docs-step-num">3</div>
             <div className="docs-step-body">
-              <div className="docs-step-title">Select the accepted token</div>
-              <p className="docs-step-desc">
-                Choose the USDC contract for the chain your subscribers will pay
-                on. For the current product pass, keep your active dashboard and
-                facilitator setup aligned to Base Sepolia first.
-              </p>
+              <div className="docs-step-title">Attach access rules</div>
+              <p className="docs-step-desc">Map the plan to the features, quotas, or product access your app should unlock.</p>
             </div>
           </div>
-
           <div className="docs-step">
             <div className="docs-step-num">4</div>
             <div className="docs-step-body">
-              <div className="docs-step-title">Deploy on-chain</div>
-              <p className="docs-step-desc">
-                Click <strong>Deploy Plan</strong>. Your wallet will prompt a transaction calling{' '}
-                <code>PlanFactory.createPlan()</code>. Estimated gas: ~120,000 units.
-              </p>
+              <div className="docs-step-title">Publish and reuse the plan id</div>
+              <p className="docs-step-desc">Use the published plan in your checkout UI, API calls, and entitlement checks.</p>
             </div>
           </div>
         </div>
 
-        {/* ── Contract call signature ── */}
-        <h2 id="contract-call-signature">Contract call signature</h2>
-        <p>Calling <code>createPlan</code> directly from your own contract or deployer script:</p>
-        <CodeBlock lang="Solidity" code={CREATE_PLAN_CODE} />
-
-        <h3>Parameters</h3>
+        <h2 id="fields">What a plan usually contains</h2>
         <table className="docs-table">
           <thead>
-            <tr>
-              <th>Parameter</th>
-              <th>Type</th>
-              <th>Description</th>
-            </tr>
+            <tr><th>Field</th><th>Purpose</th></tr>
           </thead>
           <tbody>
-            <tr>
-              <td><code>name</code></td>
-              <td><code>string</code></td>
-              <td>Human-readable plan name shown in UI (e.g. &ldquo;Pro&rdquo;)</td>
-            </tr>
-            <tr>
-              <td><code>tier</code></td>
-              <td><code>string</code></td>
-              <td>Internal tier label used by SDK gating (e.g. &ldquo;pro&rdquo;)</td>
-            </tr>
-            <tr>
-              <td><code>price</code></td>
-              <td><code>uint256</code></td>
-              <td>Price in USDC with 6 decimals (e.g. <code>10_000_000</code> = $10)</td>
-            </tr>
-            <tr>
-              <td><code>billingInterval</code></td>
-              <td><code>uint32</code></td>
-              <td>Seconds between billing cycles. Minimum 2,592,000 (30 days)</td>
-            </tr>
-            <tr>
-              <td><code>acceptedToken</code></td>
-              <td><code>address</code></td>
-              <td>Approved USDC token contract address for the target chain</td>
-            </tr>
-            <tr>
-              <td><code>metadataURI</code></td>
-              <td><code>string</code></td>
-              <td>IPFS URI containing extended plan metadata (optional)</td>
-            </tr>
+            <tr><td>Name</td><td>Customer-facing plan label such as Starter, Pro, or Enterprise.</td></tr>
+            <tr><td>Price</td><td>The recurring amount billed each cycle.</td></tr>
+            <tr><td>Interval</td><td>Monthly, quarterly, annual, or another supported cadence.</td></tr>
+            <tr><td>Feature mapping</td><td>The product access or usage allowance unlocked after payment.</td></tr>
+            <tr><td>Status</td><td>Whether the plan is available for new subscriptions.</td></tr>
           </tbody>
         </table>
 
-        {/* ── Plan struct ── */}
-        <h3>Plan struct</h3>
-        <CodeBlock lang="Solidity" code={PLAN_STRUCT_CODE} />
+        <h2 id="react">Use a plan in checkout</h2>
+        <CodeBlock lang="tsx" code={`<CheckoutModal
+  planId={1n}
+  isOpen={!!selectedPlan}
+  activationEndpoint="/api/v1/subscriptions/activate"
+  onClose={() => setSelectedPlan(null)}
+/>`} />
 
-        {/* ── Plan lifecycle ── */}
-        <h2 id="plan-lifecycle">Plan lifecycle</h2>
-        <p>Plans move through two lifecycle states on-chain:</p>
-
-        <div className="docs-lifecycle">
-          <div className="docs-lifecycle-item">
-            <div className="docs-lifecycle-badge active">
-              <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
-              Active
-            </div>
-            <div className="docs-lifecycle-name">Live plan</div>
-            <div className="docs-lifecycle-desc">
-              Subscribers can subscribe. AutopayModule will pull USDC on each billing interval.
-            </div>
-          </div>
-          <div className="docs-lifecycle-item">
-            <div className="docs-lifecycle-badge archived">Archived</div>
-            <div className="docs-lifecycle-name">Deactivated</div>
-            <div className="docs-lifecycle-desc">
-              New subscriptions blocked. Existing subscribers remain active until their period expires.
-            </div>
-          </div>
-        </div>
-
-        <div className="docs-callout info">
-          <span className="docs-callout-icon">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
-            </svg>
-          </span>
-          <div>
-            Plans are <strong>immutable</strong> once deployed. To change pricing, deactivate the existing plan
-            via <code>deactivatePlan(planId)</code> and create a new one with the updated parameters.
-          </div>
-        </div>
-
-        {/* ── Gas estimates ── */}
-        <h2 id="gas-estimates">Gas estimates</h2>
-        <table className="docs-table">
-          <thead>
-            <tr>
-              <th>Operation</th>
-              <th>Function</th>
-              <th>Estimated Gas</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>Create plan</td>
-              <td><code>createPlan()</code></td>
-              <td>~120,000 units</td>
-            </tr>
-            <tr>
-              <td>Deactivate plan</td>
-              <td><code>deactivatePlan()</code></td>
-              <td>~28,000 units</td>
-            </tr>
-            <tr>
-              <td>Read plan</td>
-              <td><code>getPlan()</code></td>
-              <td>Free (view)</td>
-            </tr>
-          </tbody>
-        </table>
-
+        <h2 id="api">Example plan response</h2>
+        <CodeBlock lang="json" code={`{
+  "id": "starter-monthly",
+  "name": "Starter Monthly",
+  "tier": "starter",
+  "currency": "USDC",
+  "price": "29.00",
+  "interval": "month",
+  "active": true
+}`} />
       </article>
 
-      {/* ── Right TOC ── */}
-      <nav className="docs-toc" aria-label="Table of contents">
-        <div className="docs-toc-heading">On this page</div>
-        <ul className="docs-toc-list">
-          <li className="docs-toc-item active"><a href="#plans">Plans</a></li>
-          <li className="docs-toc-item"><a href="#creating-a-plan">Creating a plan</a></li>
-          <li className="docs-toc-item"><a href="#contract-call-signature">Contract call signature</a></li>
-          <li className="docs-toc-item"><a href="#plan-lifecycle">Plan lifecycle</a></li>
-          <li className="docs-toc-item"><a href="#gas-estimates">Gas estimates</a></li>
+      <nav className="hidden xl:block w-[232px] shrink-0 sticky top-14 h-[calc(100vh-56px)] overflow-y-auto py-8 pr-5 pl-1.5">
+        <div className="text-[10.5px] font-bold uppercase tracking-[0.09em] text-muted-foreground mb-3.5">On this page</div>
+        <ul className="border-l-[1.5px] border-border flex flex-col gap-0.5 py-1">
+          <li className="toc-item active"><a className="block text-[12.5px] text-foreground font-semibold py-1 pl-[13px] -ml-[1.5px] border-l-2 border-foreground" href="#plans">Plans</a></li>
+          <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#creating">Create a plan</a></li>
+          <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#fields">Fields</a></li>
+          <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#react">Checkout</a></li>
+          <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#api">Example response</a></li>
         </ul>
       </nav>
     </div>
