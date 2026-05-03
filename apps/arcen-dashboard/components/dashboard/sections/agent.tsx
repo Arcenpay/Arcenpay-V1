@@ -45,12 +45,22 @@ interface ApiKey {
   expiresAt: string | null;
 }
 
+interface SettlementRow {
+  id: string;
+  callCount: string;
+  settlementAmount: string;
+  timestamp: string;
+  txHash: string;
+}
+
 interface SessionRow {
   id: string;
   agent: string;
   currentBalance: string;
   totalFunded: string;
+  totalWithdrawn: string;
   totalSettled: string;
+  settlements: SettlementRow[];
 }
 
 interface SessionsPayload {
@@ -60,6 +70,42 @@ interface SessionsPayload {
     subgraph: "ok" | "unavailable";
     facilitator: "ok" | "unavailable";
   };
+}
+
+interface ProviderConfig {
+  type: string;
+  label?: string;
+  enabled: boolean;
+  botToken?: string;
+  chatId?: string;
+  webhookUrl?: string;
+  email?: string;
+}
+
+interface PermissionConfig {
+  autoTopUp: {
+    mode: "auto" | "dispatch" | "off";
+    dailyLimit: string;
+    perTxnLimit: string;
+    threshold: string;
+  };
+  dispatch: {
+    enabled: boolean;
+    providers: ProviderConfig[];
+    cooldownSeconds: number;
+    maxRetries: number;
+  };
+}
+
+interface DispatchRequest {
+  id: string;
+  agentAddress: string;
+  amount: string;
+  reason: string;
+  status: "pending" | "approved" | "denied" | "expired";
+  createdAt: string;
+  provider: string;
+  providerTarget: string;
 }
 
 // ─────────────────────────────────────────────
@@ -257,6 +303,7 @@ function SessionsTab() {
   const [sessions, setSessions] = useState<SessionRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [warning, setWarning] = useState<string | null>(null);
+  const [expandedSession, setExpandedSession] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/platform/sessions")
@@ -280,6 +327,8 @@ function SessionsTab() {
     const n = parseFloat(raw) / 1_000_000;
     return isNaN(n) ? "—" : `$${n.toFixed(2)}`;
   };
+
+  const formatHex = (hex: string) => `${hex.slice(0, 10)}…`;
 
   return (
     <div className="space-y-5">
@@ -310,28 +359,53 @@ function SessionsTab() {
               <tr className="border-b border-border bg-secondary/30">
                 <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Session</th>
                 <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Agent</th>
-                <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Balance</th>
+                <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Funded</th>
                 <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Settled</th>
+                <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Withdrawn</th>
+                <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Balance</th>
                 <th className="text-center px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {sessions.map((s) => (
-                <tr key={s.id} className="hover:bg-secondary/20 transition-colors">
-                  <td className="px-4 py-3">
-                    <code className="text-xs font-mono text-muted-foreground">{s.id.slice(0, 10)}…</code>
-                  </td>
-                  <td className="px-4 py-3">
-                    <code className="text-xs font-mono text-muted-foreground">{s.agent.slice(0, 8)}…{s.agent.slice(-4)}</code>
-                  </td>
-                  <td className="px-4 py-3 text-right font-medium">{formatUsdc(s.currentBalance)}</td>
-                  <td className="px-4 py-3 text-right text-muted-foreground">{formatUsdc(s.totalSettled)}</td>
-                  <td className="px-4 py-3 text-center">
-                    <Badge variant={BigInt(s.currentBalance) > 0n ? "default" : "secondary"} className={cn("text-xs", BigInt(s.currentBalance) > 0n && "bg-green-500/15 text-green-500 border-green-500/20")}>
-                      {BigInt(s.currentBalance) > 0n ? "Active" : "Closed"}
-                    </Badge>
-                  </td>
-                </tr>
+                <React.Fragment key={s.id}>
+                  <tr
+                    className="hover:bg-secondary/20 transition-colors cursor-pointer"
+                    onClick={() => setExpandedSession(expandedSession === s.id ? null : s.id)}
+                  >
+                    <td className="px-4 py-3">
+                      <code className="text-xs font-mono text-muted-foreground">{formatHex(s.id)}</code>
+                    </td>
+                    <td className="px-4 py-3">
+                      <code className="text-xs font-mono text-muted-foreground">{s.agent.slice(0, 8)}…{s.agent.slice(-4)}</code>
+                    </td>
+                    <td className="px-4 py-3 text-right">{formatUsdc(s.totalFunded)}</td>
+                    <td className="px-4 py-3 text-right text-muted-foreground">{formatUsdc(s.totalSettled)}</td>
+                    <td className="px-4 py-3 text-right text-muted-foreground">{formatUsdc(s.totalWithdrawn)}</td>
+                    <td className="px-4 py-3 text-right font-medium">{formatUsdc(s.currentBalance)}</td>
+                    <td className="px-4 py-3 text-center">
+                      <Badge variant={BigInt(s.currentBalance) > 0n ? "default" : "secondary"} className={cn("text-xs", BigInt(s.currentBalance) > 0n && "bg-green-500/15 text-green-500 border-green-500/20")}>
+                        {BigInt(s.currentBalance) > 0n ? "Active" : "Closed"}
+                      </Badge>
+                    </td>
+                  </tr>
+                  {expandedSession === s.id && s.settlements.length > 0 && (
+                    <tr className="bg-secondary/10">
+                      <td colSpan={7} className="px-6 py-3">
+                        <div className="text-xs text-muted-foreground font-medium mb-2">Recent Settlements</div>
+                        <div className="grid grid-cols-4 gap-2 text-xs">
+                          {s.settlements.map((st) => (
+                            <div key={st.id} className="p-2 rounded bg-background/50 border border-border/50">
+                              <div className="text-muted-foreground">{formatUsdc(st.settlementAmount)}</div>
+                              <div className="text-muted-foreground/60">{st.callCount} calls</div>
+                              <div className="text-muted-foreground/40 font-mono text-[10px] break-all">{st.txHash.slice(0, 12)}…</div>
+                            </div>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
               ))}
             </tbody>
           </table>
@@ -488,9 +562,555 @@ ARCENPAY_FACILITATOR_URL=https://facilitator.arcenpay.xyz`;
 }
 
 // ─────────────────────────────────────────────
+//  Permissions Tab (Auto-Topup + Dispatch)
+// ─────────────────────────────────────────────
+function PermissionsTab() {
+  const [permissions, setPermissions] = useState<PermissionConfig>({
+    autoTopUp: { mode: "off", dailyLimit: "5.00", perTxnLimit: "1.00", threshold: "0.50" },
+    dispatch: { enabled: false, providers: [], cooldownSeconds: 120, maxRetries: 3 },
+  });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [showAddProvider, setShowAddProvider] = useState(false);
+  const [newProvider, setNewProvider] = useState({
+    type: "telegram" as string,
+    label: "",
+    botToken: "",
+    chatId: "",
+    webhookUrl: "",
+    email: "",
+  });
+  const [testingIdx, setTestingIdx] = useState<number | null>(null);
+  const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
+
+  useEffect(() => {
+    fetch("/api/v1/agent/permissions")
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
+      .then((d) => {
+        if (d.data) {
+          setPermissions({
+            autoTopUp: d.data.autoTopUp || permissions.autoTopUp,
+            dispatch: d.data.dispatch || permissions.dispatch,
+          });
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const savePermissions = async () => {
+    setSaving(true);
+    setSaved(false);
+    setSaveError(null);
+    try {
+      const res = await fetch("/api/v1/agent/permissions", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(permissions),
+      });
+      if (!res.ok) {
+        let errMsg = `Server returned ${res.status}`;
+        try {
+          const err = await res.json();
+          if (err.error) errMsg = err.error;
+        } catch {
+          const text = await res.text().catch(() => "");
+          if (text.includes("<!DOCTYPE") || text.includes("<html")) {
+            errMsg = `Auth required (${res.status}). Make sure you are logged in.`;
+          } else if (text) {
+            errMsg = `Server error ${res.status}: ${text.slice(0, 200)}`;
+          }
+        }
+        setSaveError(errMsg);
+        return;
+      }
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (e: any) {
+      if (e.message?.includes("Failed to fetch") || e.name === "TypeError") {
+        setSaveError("Network error — check your connection or if a wallet extension is blocking requests.");
+      } else {
+        setSaveError(e.message || "An unexpected error occurred");
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const testDispatchProvider = async (providerIndex: number) => {
+    const provider = permissions.dispatch.providers[providerIndex];
+    if (!provider) return;
+    setTestingIdx(providerIndex);
+    setTestResult(null);
+    try {
+      const res = await fetch("/api/v1/agent/dispatch/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider }),
+      });
+      let msg = "";
+      try {
+        const data = await res.json();
+        msg = data.message || "";
+      } catch {
+        const text = await res.text().catch(() => "");
+        msg = text.includes("<html") ? `Auth error (${res.status})` : `Server error ${res.status}`;
+      }
+      setTestResult({ ok: res.ok, message: msg || (res.ok ? "Test sent!" : "Test failed") });
+    } catch (e: any) {
+      if (e.message?.includes("Failed to fetch")) {
+        setTestResult({ ok: false, message: "Network error — check your connection or if a wallet extension is blocking requests." });
+      } else {
+        setTestResult({ ok: false, message: e.message || "Network error" });
+      }
+    } finally {
+      setTestingIdx(null);
+    }
+  };
+
+  const addProvider = () => {
+    const p = newProvider;
+    const valid =
+      (p.type === "telegram" && p.botToken.trim() && p.chatId.trim()) ||
+      ((p.type === "discord" || p.type === "slack") && p.webhookUrl.trim()) ||
+      (p.type === "email" && p.email.trim());
+    if (!valid) return;
+
+    const provider: ProviderConfig = {
+      type: p.type,
+      label: p.label.trim() || undefined,
+      enabled: true,
+    };
+    if (p.type === "telegram") {
+      provider.botToken = p.botToken.trim();
+      provider.chatId = p.chatId.trim();
+    } else if (p.type === "discord" || p.type === "slack") {
+      provider.webhookUrl = p.webhookUrl.trim();
+    } else if (p.type === "email") {
+      provider.email = p.email.trim();
+    }
+
+    setPermissions({
+      ...permissions,
+      dispatch: {
+        ...permissions.dispatch,
+        providers: [...permissions.dispatch.providers, provider],
+      },
+    });
+    setNewProvider({ type: "telegram", label: "", botToken: "", chatId: "", webhookUrl: "", email: "" });
+    setShowAddProvider(false);
+  };
+
+  const removeProvider = (index: number) => {
+    setPermissions({
+      ...permissions,
+      dispatch: {
+        ...permissions.dispatch,
+        providers: permissions.dispatch.providers.filter((_, i) => i !== index),
+      },
+    });
+  };
+
+  const toggleProviderEnabled = (index: number) => {
+    const providers = [...permissions.dispatch.providers];
+    providers[index] = { ...providers[index], enabled: !providers[index].enabled };
+    setPermissions({
+      ...permissions,
+      dispatch: { ...permissions.dispatch, providers },
+    });
+  };
+
+  return (
+    <div className="space-y-8 max-w-2xl">
+      <div>
+        <h3 className="text-base font-semibold text-foreground">Agent Permissions</h3>
+        <p className="text-sm text-muted-foreground mt-0.5">
+          Control how your agent handles top-ups and payment approvals.
+        </p>
+      </div>
+
+      {/* Auto-Topup Mode */}
+      <div className="space-y-4 p-5 rounded-lg border border-border bg-secondary/10">
+        <div className="flex items-center justify-between">
+          <div>
+            <h4 className="text-sm font-semibold text-foreground">Auto-Topup</h4>
+            <p className="text-xs text-muted-foreground mt-0.5">Automatically refill your agent's session when balance is low</p>
+          </div>
+          <select
+            value={permissions.autoTopUp.mode}
+            onChange={(e) => setPermissions({ ...permissions, autoTopUp: { ...permissions.autoTopUp, mode: e.target.value as "auto" | "dispatch" | "off" } })}
+            className="text-sm bg-background border border-border rounded px-3 py-1.5 text-foreground"
+          >
+            <option value="off">Off</option>
+            <option value="auto">Auto (no approval)</option>
+            <option value="dispatch">Dispatch (approve via msg)</option>
+          </select>
+        </div>
+
+        {permissions.autoTopUp.mode !== "off" && (
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <Label className="text-xs text-muted-foreground mb-1.5 block">Daily Limit</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">$</span>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={permissions.autoTopUp.dailyLimit}
+                  onChange={(e) => setPermissions({ ...permissions, autoTopUp: { ...permissions.autoTopUp, dailyLimit: e.target.value } })}
+                  className="pl-7 h-9 text-sm"
+                />
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground mb-1.5 block">Per Txn Limit</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">$</span>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={permissions.autoTopUp.perTxnLimit}
+                  onChange={(e) => setPermissions({ ...permissions, autoTopUp: { ...permissions.autoTopUp, perTxnLimit: e.target.value } })}
+                  className="pl-7 h-9 text-sm"
+                />
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground mb-1.5 block">Threshold</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">$</span>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={permissions.autoTopUp.threshold}
+                  onChange={(e) => setPermissions({ ...permissions, autoTopUp: { ...permissions.autoTopUp, threshold: e.target.value } })}
+                  className="pl-7 h-9 text-sm"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Dispatch Providers */}
+      <div className="space-y-4 p-5 rounded-lg border border-border bg-secondary/10">
+        <div className="flex items-center justify-between">
+          <div>
+            <h4 className="text-sm font-semibold text-foreground">Dispatch Providers</h4>
+            <p className="text-xs text-muted-foreground mt-0.5">Connect messaging apps to receive and approve top-up requests. Each provider carries its own credentials.</p>
+          </div>
+          <Button size="sm" variant="outline" onClick={() => setShowAddProvider(true)} className="gap-1.5">
+            <Plus className="w-3.5 h-3.5" />
+            Add Provider
+          </Button>
+        </div>
+
+        {permissions.dispatch.providers.length === 0 ? (
+          <div className="text-center py-6 border border-dashed border-border rounded-lg">
+            <p className="text-sm text-muted-foreground">No dispatch providers connected</p>
+            <p className="text-xs text-muted-foreground/60 mt-1">Click Add Provider to connect Telegram, Discord, Slack, or Email</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {permissions.dispatch.providers.map((p, i) => {
+              const detail =
+                p.type === "telegram" ? `Bot: ${(p.botToken || "").slice(0, 12)}… | Chat: ${p.chatId}` :
+                p.type === "discord" || p.type === "slack" ? (p.webhookUrl || "").slice(0, 40) + "…" :
+                p.email || "";
+              return (
+                <div key={i} className="flex items-center justify-between gap-3 p-3 rounded border border-border bg-background/50">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-8 h-8 rounded bg-secondary flex items-center justify-center text-xs font-bold text-muted-foreground uppercase shrink-0">
+                      {p.type.slice(0, 2)}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">{p.label || p.type}</p>
+                      <p className="text-xs text-muted-foreground font-mono truncate">{detail}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      onClick={() => toggleProviderEnabled(i)}
+                      className={cn(
+                        "w-8 h-5 rounded-full transition-colors relative",
+                        p.enabled ? "bg-green-500" : "bg-muted"
+                      )}
+                    >
+                      <span className={cn(
+                        "absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform",
+                        p.enabled ? "left-[14px]" : "left-[2px]"
+                      )} />
+                    </button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => testDispatchProvider(i)}
+                      disabled={testingIdx === i}
+                      className="h-7 text-xs"
+                    >
+                      {testingIdx === i ? "Sending…" : "Test"}
+                    </Button>
+                    <button onClick={() => removeProvider(i)} className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+            {testResult && (
+              <div className={cn(
+                "text-xs px-3 py-2 rounded",
+                testResult.ok ? "bg-green-500/10 text-green-400 border border-green-500/20" : "bg-red-500/10 text-red-400 border border-red-500/20"
+              )}>
+                {testResult.message}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Dispatch settings */}
+        {permissions.dispatch.providers.length > 0 && (
+          <div className="grid grid-cols-2 gap-4 pt-2">
+            <div>
+              <Label className="text-xs text-muted-foreground mb-1 block">Cooldown (seconds)</Label>
+              <Input
+                type="number"
+                min="30"
+                value={permissions.dispatch.cooldownSeconds}
+                onChange={(e) => setPermissions({
+                  ...permissions,
+                  dispatch: { ...permissions.dispatch, cooldownSeconds: parseInt(e.target.value) || 120 }
+                })}
+                className="h-9 text-sm"
+              />
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground mb-1 block">Max Retries</Label>
+              <Input
+                type="number"
+                min="1"
+                max="10"
+                value={permissions.dispatch.maxRetries}
+                onChange={(e) => setPermissions({
+                  ...permissions,
+                  dispatch: { ...permissions.dispatch, maxRetries: parseInt(e.target.value) || 3 }
+                })}
+                className="h-9 text-sm"
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Save */}
+      <div className="flex items-center gap-3">
+        <Button onClick={savePermissions} disabled={saving || loading}>
+          {loading ? "Loading…" : saving ? "Saving…" : saved ? "Saved ✓" : "Save Permissions"}
+        </Button>
+        {saved && <span className="text-xs text-green-500">Settings saved</span>}
+        {saveError && <span className="text-xs text-red-500">{saveError}</span>}
+      </div>
+
+      {/* Add Provider Dialog */}
+      <Dialog open={showAddProvider} onOpenChange={setShowAddProvider}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Add Dispatch Provider</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <Label className="text-sm font-medium mb-2 block">Provider Type</Label>
+              <select
+                value={newProvider.type}
+                onChange={(e) => setNewProvider({ type: e.target.value, label: "", botToken: "", chatId: "", webhookUrl: "", email: "" })}
+                className="w-full text-sm bg-background border border-border rounded px-3 py-2 text-foreground"
+              >
+                <option value="telegram">Telegram</option>
+                <option value="discord">Discord</option>
+                <option value="slack">Slack</option>
+                <option value="email">Email</option>
+              </select>
+            </div>
+
+            {newProvider.type === "telegram" && (
+              <>
+                <div>
+                  <Label className="text-sm font-medium mb-2 block">Bot Token</Label>
+                  <Input
+                    type="password"
+                    value={newProvider.botToken}
+                    onChange={(e) => setNewProvider({ ...newProvider, botToken: e.target.value })}
+                    placeholder="123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
+                    className="h-10 text-sm font-mono"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">From @BotFather on Telegram</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium mb-2 block">Chat ID</Label>
+                  <Input
+                    value={newProvider.chatId}
+                    onChange={(e) => setNewProvider({ ...newProvider, chatId: e.target.value })}
+                    placeholder="e.g. 123456789"
+                    className="h-10 text-sm"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">Your Telegram user or group chat ID</p>
+                </div>
+              </>
+            )}
+
+            {(newProvider.type === "discord" || newProvider.type === "slack") && (
+              <div>
+                <Label className="text-sm font-medium mb-2 block">Webhook URL</Label>
+                <Input
+                  value={newProvider.webhookUrl}
+                  onChange={(e) => setNewProvider({ ...newProvider, webhookUrl: e.target.value })}
+                  placeholder="https://hooks.provider.com/services/..."
+                  className="h-10 text-sm font-mono"
+                />
+              </div>
+            )}
+
+            {newProvider.type === "email" && (
+              <div>
+                <Label className="text-sm font-medium mb-2 block">Email Address</Label>
+                <Input
+                  value={newProvider.email}
+                  onChange={(e) => setNewProvider({ ...newProvider, email: e.target.value })}
+                  placeholder="alerts@example.com"
+                  className="h-10 text-sm"
+                  type="email"
+                />
+              </div>
+            )}
+
+            <div>
+              <Label className="text-sm font-medium mb-2 block">Label (optional)</Label>
+              <Input
+                value={newProvider.label}
+                onChange={(e) => setNewProvider({ ...newProvider, label: e.target.value })}
+                placeholder="e.g. My Telegram Bot"
+                className="h-10"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setShowAddProvider(false)}>Cancel</Button>
+            <Button
+              size="sm"
+              onClick={addProvider}
+              disabled={
+                (newProvider.type === "telegram" && (!newProvider.botToken.trim() || !newProvider.chatId.trim())) ||
+                ((newProvider.type === "discord" || newProvider.type === "slack") && !newProvider.webhookUrl.trim()) ||
+                (newProvider.type === "email" && !newProvider.email.trim())
+              }
+            >
+              Add Provider
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+//  Dispatch History Tab
+// ─────────────────────────────────────────────
+function DispatchHistoryTab() {
+  const [requests, setRequests] = useState<DispatchRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/v1/agent/dispatch")
+      .then((r) => r.json())
+      .then((d) => setRequests(d.requests ?? []))
+      .catch(() => setRequests([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const formatUsdc = (raw: string) => {
+    const n = parseFloat(raw) / 1_000_000;
+    return isNaN(n) ? "—" : `$${n.toFixed(2)}`;
+  };
+
+  const statusBadge = (status: string) => {
+    const variants: Record<string, { color: string; label: string }> = {
+      pending: { color: "bg-yellow-500/15 text-yellow-500 border-yellow-500/20", label: "Pending" },
+      approved: { color: "bg-green-500/15 text-green-500 border-green-500/20", label: "Approved" },
+      denied: { color: "bg-red-500/15 text-red-500 border-red-500/20", label: "Denied" },
+      expired: { color: "bg-muted text-muted-foreground border-border", label: "Expired" },
+    };
+    const v = variants[status] ?? variants.expired;
+    return <Badge className={cn("text-xs", v.color)}>{v.label}</Badge>;
+  };
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <h3 className="text-base font-semibold text-foreground">Dispatch History</h3>
+        <p className="text-sm text-muted-foreground mt-0.5">
+          History of top-up approval requests sent via dispatch providers.
+        </p>
+      </div>
+
+      {loading ? (
+        <div className="text-sm text-muted-foreground">Loading…</div>
+      ) : requests.length === 0 ? (
+        <div className="text-center py-10 border border-dashed border-border rounded-lg">
+          <Clock className="w-8 h-8 text-muted-foreground/40 mx-auto mb-2" />
+          <p className="text-sm text-muted-foreground">No dispatch requests yet</p>
+          <p className="text-xs text-muted-foreground/60 mt-1">Requests appear when your agent triggers a dispatch top-up</p>
+        </div>
+      ) : (
+        <div className="border border-border rounded-lg overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border bg-secondary/30">
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Time</th>
+                <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Amount</th>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Provider</th>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Reason</th>
+                <th className="text-center px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {requests.map((r) => (
+                <tr key={r.id} className="hover:bg-secondary/20 transition-colors">
+                  <td className="px-4 py-3 text-xs text-muted-foreground">
+                    {new Date(r.createdAt).toLocaleString()}
+                  </td>
+                  <td className="px-4 py-3 text-right font-medium">
+                    {formatUsdc(r.amount)}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="text-xs font-mono text-muted-foreground capitalize">{r.provider}</span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="text-xs text-muted-foreground max-w-[200px] truncate block">{r.reason}</span>
+                  </td>
+                  <td className="px-4 py-3 text-center">{statusBadge(r.status)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
 //  Main Agent Section
 // ─────────────────────────────────────────────
-type AgentTab = "quickstart" | "api-keys" | "sessions";
+type AgentTab = "quickstart" | "api-keys" | "sessions" | "permissions" | "dispatch";
 
 export function AgentSection() {
   const [tab, setTab] = useState<AgentTab>("quickstart");
@@ -500,6 +1120,8 @@ export function AgentSection() {
     { id: "quickstart", label: "Quickstart", icon: Zap },
     { id: "api-keys", label: "API Keys", icon: Key },
     { id: "sessions", label: "Sessions", icon: Activity },
+    { id: "permissions", label: "Permissions", icon: Shield },
+    { id: "dispatch", label: "Dispatch", icon: Clock },
   ];
 
   return (
@@ -513,7 +1135,7 @@ export function AgentSection() {
             </div>
             <div>
               <h1 className="text-xl font-bold text-foreground">Agent</h1>
-              <p className="text-xs text-muted-foreground">AI agent SDK, API keys, and session management</p>
+              <p className="text-xs text-muted-foreground">AI agent SDK, API keys, session management, auto-topup & dispatch</p>
             </div>
           </div>
           {isConnected && (
@@ -525,7 +1147,7 @@ export function AgentSection() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1">
+        <div className="flex gap-1 flex-wrap">
           {tabs.map(({ id, label, icon: Icon }) => (
             <button
               key={id}
@@ -549,6 +1171,8 @@ export function AgentSection() {
         {tab === "quickstart" && <QuickstartTab />}
         {tab === "api-keys" && <ApiKeysTab />}
         {tab === "sessions" && <SessionsTab />}
+        {tab === "permissions" && <PermissionsTab />}
+        {tab === "dispatch" && <DispatchHistoryTab />}
       </div>
     </div>
   );

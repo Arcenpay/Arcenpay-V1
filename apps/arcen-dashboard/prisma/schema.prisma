@@ -325,6 +325,8 @@ model Team {
   featureFlags        CatalogFeatureFlag[]
   arcenApiKeys        ArcenApiKey[]
   embedComponents     EmbedComponent[]
+  agentConfig         ArcenAgentConfig?
+  dispatchRequests    ArcenDispatchRequest[]
 
   @@index([slug])
   @@index([platformTier])
@@ -1462,4 +1464,40 @@ model EmbedComponent {
   team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
 
   @@index([teamId])
+}
+
+// ─── Agent Configuration & Dispatch ────────────────────────────────────────────
+
+model ArcenAgentConfig {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  teamId    String   @unique
+
+  autoTopUp Json     @default("{\"mode\":\"off\",\"dailyLimit\":\"5.00\",\"perTxnLimit\":\"1.00\",\"threshold\":\"0.50\"}")
+  dispatch  Json     @default("{\"enabled\":false,\"providers\":[],\"cooldownSeconds\":120,\"maxRetries\":3}")
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([teamId])
+}
+
+model ArcenDispatchRequest {
+  id             String   @id @default(cuid())
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  teamId         String
+
+  agentAddress   String
+  amount         String
+  reason         String
+  status         String   @default("pending")
+  provider       String
+  providerTarget String
+  respondedAt    DateTime?
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([teamId, status])
+  @@index([teamId, createdAt])
 }

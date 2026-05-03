@@ -558,6 +558,74 @@ export interface EmbedAccessTokenResponse {
   expiresAt: string;
 }
 
+// --- Agent Auto-Topup & Dispatch Types ---
+
+export type AutoTopUpMode = "auto" | "dispatch" | "off";
+
+export interface AutoTopUpConfig {
+  mode: AutoTopUpMode;
+  dailyLimit: string;
+  perTxnLimit: string;
+  threshold: string;
+}
+
+export type DispatchProviderType = "telegram" | "discord" | "slack" | "email";
+
+export interface DispatchProvider {
+  type: DispatchProviderType;
+  label?: string;
+  enabled: boolean;
+  /** Telegram: bot token from @BotFather */
+  botToken?: string;
+  /** Telegram: chat ID to send messages to */
+  chatId?: string;
+  /** Discord/Slack: incoming webhook URL */
+  webhookUrl?: string;
+  /** Email: recipient email address */
+  email?: string;
+}
+
+export interface DispatchConfig {
+  enabled: boolean;
+  providers: DispatchProvider[];
+  cooldownSeconds: number;
+  maxRetries: number;
+}
+
+export interface TopUpRequest {
+  id: string;
+  agentAddress: string;
+  amount: string;
+  reason: string;
+  status: "pending" | "approved" | "denied" | "expired";
+  createdAt: string;
+  respondedAt?: string;
+  provider: DispatchProviderType;
+  providerTarget: string;
+}
+
+export interface AgentPermissionConfig {
+  autoTopUp: AutoTopUpConfig;
+  dispatch: DispatchConfig;
+  dailySpent: string;
+  lastResetAt: string;
+  providerLinks: DispatchProvider[];
+}
+
+export interface PersistentAgentState {
+  nonce: string;
+  sessionId: string | null;
+  totalSpent: string;
+  lastPersistedAt: string;
+}
+
+export interface PersistentStore {
+  get(key: string): Promise<string | null>;
+  set(key: string, value: string): Promise<void>;
+  delete(key: string): Promise<void>;
+  keys?(): Promise<string[]>;
+}
+
 // --- Backward compatibility aliases ---
 
 /** @deprecated Use ArcenCompanyKeys instead */
