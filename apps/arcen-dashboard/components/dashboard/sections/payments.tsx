@@ -349,11 +349,8 @@ export function PaymentsSection() {
     });
   }
 
-  function selectCompanyWallet(companyId: string) {
-    const company = companies.find((c) => c.id === companyId);
-    if (company?.walletAddress) {
-      setForm((current) => ({ ...current, recipientWallet: company.walletAddress!, companyId }));
-    }
+  function selectCompany(companyId: string) {
+    setForm((current) => ({ ...current, companyId }));
   }
 
   const activeLinks = paymentLinks.filter((l) => l.status === "ACTIVE");
@@ -475,9 +472,9 @@ export function PaymentsSection() {
               <Label>Recipient wallet</Label>
               {companies.length > 0 && (
                 <div className="mb-2">
-                  <Select value={form.companyId} onValueChange={selectCompanyWallet}>
+                  <Select value={form.companyId} onValueChange={selectCompany}>
                     <SelectTrigger className="text-xs">
-                      <SelectValue placeholder="Or select from company wallets..." />
+                      <SelectValue placeholder="Associate with a company (optional)" />
                     </SelectTrigger>
                     <SelectContent>
                       {companies.map((c) => (
@@ -502,13 +499,15 @@ export function PaymentsSection() {
                     setForm((c) => ({
                       ...c,
                       recipientWallet: e.target.value,
-                      companyId: "",
                     }))
                   }
                   placeholder="0x..."
                   className="pl-10 font-mono text-xs"
                 />
               </div>
+              <p className="text-xs text-muted-foreground">
+                This is the wallet that receives the USDC payment.
+              </p>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">

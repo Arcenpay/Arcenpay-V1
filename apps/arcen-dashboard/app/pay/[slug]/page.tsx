@@ -2,8 +2,14 @@
 
 import { useEffect, useState, useCallback, useRef, Suspense } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useAccount, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
-import { parseUnits } from "viem";
+import {
+  useAccount,
+  useChainId,
+  useSwitchChain,
+  useWaitForTransactionReceipt,
+  useWriteContract,
+} from "wagmi";
+import { isAddress, parseUnits } from "viem";
 import { useAppKit } from "@reown/appkit/react";
 import {
   CheckCircle2,
@@ -19,7 +25,6 @@ import {
   User,
 } from "lucide-react";
 import { DEFAULT_CHAIN_ID, getChainLabel } from "@/lib/default-chain";
-import { getUsdcAddress } from "@/lib/contracts";
 
 const ERC20_TRANSFER_ABI = [
   {
@@ -76,6 +81,10 @@ function normalizeCustomerEmail(value: string) {
 
 function isValidCustomerEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+function normalizeWalletAddress(value?: string | null) {
+  return value?.trim().toLowerCase() ?? null;
 }
 
 function CopyField({ value }: { value: string }) {
@@ -169,6 +178,8 @@ function CheckoutContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { address, isConnected } = useAccount();
+  const connectedChainId = useChainId();
+  const { switchChainAsync, isPending: isSwitchingNetwork } = useSwitchChain();
   const { open } = useAppKit();
   const {
     writeContractAsync,
@@ -199,6 +210,17 @@ function CheckoutContent() {
     session?.invoice?.number ??
     session?.paymentLink?.name ??
     "One-time payment";
+  const isCorrectNetwork = !session || connectedChainId === session.chainId;
+  const isSelfPayment =
+    Boolean(session && address) &&
+    normalizeWalletAddress(address) ===
+      normalizeWalletAddress(session?.recipientWallet);
+  const canSubmitPayment =
+    !isSending &&
+    !missingCustomerEmail &&
+    !invalidCustomerEmail &&
+    isCorrectNetwork &&
+    !isSelfPayment;
 
   const { data: receipt, isLoading: isConfirming } = useWaitForTransactionReceipt({
     hash: sentTxHash as `0x${string}` | undefined,
@@ -353,12 +375,28 @@ function CheckoutContent() {
         return;
       }
 
+      if (!isCorrectNetwork) {
+        setError(`Switch your wallet to ${checkoutChainLabel} before paying.`);
+        return;
+      }
+
+      if (isSelfPayment) {
+        setError(
+          "The connected wallet matches the recipient wallet. Use a different payer wallet or change the payment link recipient.",
+        );
+        return;
+      }
+
+      if (!isAddress(session.acceptedToken)) {
+        setError("This checkout session has an invalid token contract.");
+        return;
+      }
+
       await persistCustomerDetails();
 
-      const usdcAddress = getUsdcAddress(session.chainId);
       const amountAtomic = parseUnits(session.amount, 6);
       const hash = await writeContractAsync({
-        address: usdcAddress,
+        address: session.acceptedToken as `0x${string}`,
         abi: ERC20_TRANSFER_ABI,
         functionName: "transfer",
         args: [session.recipientWallet as `0x${string}`, amountAtomic],
@@ -647,7 +685,70 @@ function CheckoutContent() {
                             <span>Network</span>
                             <span>{checkoutChainLabel}</span>
                           </div>
+                          <div className="flex items-center justify-between gap-3">
+                            <span>Token contract</span>
+                            <span className="font-mono">
+                              {session.acceptedToken.slice(0, 8)}…{session.acceptedToken.slice(-6)}
+                            </span>
+                          </div>
                         </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {!isCorrectNetwork && (
+                    <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                      <div className="flex items-start gap-3">
+                        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
+                        <div className="space-y-3">
+                          <div>
+                            <p className="text-sm font-medium text-amber-900">Wrong network</p>
+                            <p className="mt-1 text-xs text-amber-800">
+                              This checkout is for {checkoutChainLabel}. Switch networks before paying.
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => void switchChainAsync({ chainId: session.chainId })}
+                            disabled={isSwitchingNetwork}
+                            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-amber-100 px-4 text-sm font-medium text-amber-900 transition-colors hover:bg-amber-200 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {isSwitchingNetwork ? (
+                              <>
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                Switching network…
+                              </>
+                            ) : (
+                              <>Switch to {checkoutChainLabel}</>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {isSelfPayment && (
+                    <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                      <div className="flex items-start gap-3">
+                        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
+                        <div>
+                          <p className="text-sm font-medium text-amber-900">Recipient matches payer</p>
+                          <p className="mt-1 text-xs text-amber-800">
+                            This link is currently set to send funds back to the same wallet that is paying. No net USDC will move. Use a different payer wallet or update the payment link recipient.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="rounded-xl border border-blue-100 bg-blue-50 p-4">
+                    <div className="flex items-start gap-3">
+                      <Shield className="mt-0.5 h-4 w-4 shrink-0 text-blue-700" />
+                      <div>
+                        <p className="text-sm font-medium text-blue-900">Why your wallet shows 0 ETH</p>
+                        <p className="mt-1 text-xs text-blue-800">
+                          This checkout sends USDC through the token contract, so many wallets show 0 ETH at the top. The actual payment amount is the USDC transfer in the transaction data, and the real recipient is the wallet shown above.
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -655,7 +756,7 @@ function CheckoutContent() {
                   <button
                     type="button"
                     onClick={handlePay}
-                    disabled={isSending || missingCustomerEmail || invalidCustomerEmail}
+                    disabled={!canSubmitPayment}
                     className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-neutral-900 px-4 text-sm font-medium text-white transition-colors hover:bg-neutral-800 disabled:cursor-not-allowed disabled:bg-neutral-300"
                   >
                     {isSending ? (

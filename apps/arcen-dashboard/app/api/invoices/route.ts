@@ -86,6 +86,16 @@ export async function GET(request: NextRequest) {
     include: {
       lineItems: true,
       deliveries: { orderBy: { createdAt: "desc" }, take: 3 },
+      paymentLinks: {
+        select: {
+          id: true,
+          kind: true,
+          name: true,
+          slug: true,
+        },
+        orderBy: { createdAt: "desc" },
+        take: 3,
+      },
     },
     orderBy: [{ createdAt: "desc" }],
     take: 100,
