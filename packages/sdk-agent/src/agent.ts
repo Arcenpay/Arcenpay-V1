@@ -140,6 +140,9 @@ function parsePriceLimit(value: string | bigint, field: string): bigint {
 
 function formatUsdc(atomic: bigint): string {
   try {
+    if (atomic < 0n) {
+      return `-$${formatUnits(-atomic, 6)} USDC`;
+    }
     return `$${formatUnits(atomic, 6)} USDC`;
   } catch {
     return `${atomic} atomic units`;
@@ -771,11 +774,9 @@ export class MEAPAgent {
         await sleep(2000); // Poll every 2 seconds
 
         for (const req of requests) {
-          const resolved = this.resolveDispatchRequest(req.id, false); // Check without changing
-          if (!resolved && req.status === 'approved') {
-            // Actually resolve it
-            const finalReq = this.resolveDispatchRequest(req.id, true);
-            if (finalReq && finalReq.status === 'approved') {
+          if (req.status === 'approved') {
+            const resolved = this.resolveDispatchRequest(req.id, true);
+            if (resolved && resolved.status === 'approved') {
               try {
                 await this.topUpSession(this.sessionId!, amountUsdc);
                 console.log(`[MEAPAgent] Dispatch top-up approved and complete: ${amountUsdc} USDC`);

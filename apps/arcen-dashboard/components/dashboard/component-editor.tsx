@@ -3236,7 +3236,7 @@ const { data } = await res.json();
 
   // ── Right sidebar panel ─────────────────────────────────────
   const rightPanel = (
-    <div className="w-[280px] border-l border-border overflow-y-auto bg-card shrink-0 flex flex-col">
+    <div className="w-full md:w-[280px] border-t md:border-t-0 md:border-l border-border overflow-y-auto bg-card shrink-0 flex flex-col max-h-[50vh] md:max-h-none">
       {/* Tab switcher — Elements | Design | Properties */}
       <div className="border-b border-border shrink-0">
         <div className="flex">
@@ -3754,29 +3754,29 @@ const { data } = await res.json();
   const editorContent = (
     <div className="fixed inset-0 z-[9999] bg-background flex flex-col">
       {/* Header */}
-      <div className="h-14 border-b border-border flex items-center px-6 bg-background/80 backdrop-blur-sm shrink-0">
-        <div className="flex items-center gap-4 flex-1">
+      <div className="h-14 border-b border-border flex items-center px-3 md:px-6 bg-background/80 backdrop-blur-sm shrink-0 gap-2 md:gap-4">
+        <div className="flex items-center gap-2 md:gap-4 shrink-0">
           <Button
             variant="ghost"
             size="sm"
             onClick={onClose}
-            className="gap-2 text-muted-foreground hover:text-foreground"
+            className="gap-1.5 md:gap-2 text-muted-foreground hover:text-foreground px-2 md:px-3"
           >
-            ← Back
+            ← <span className="hidden sm:inline">Back</span>
           </Button>
           <div className="h-6 w-px bg-border" />
-          <div>
-            <h2 className="text-sm font-semibold text-foreground">
+          <div className="min-w-0">
+            <h2 className="text-sm font-semibold text-foreground truncate">
               {config.name}
             </h2>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground hidden sm:block">
               {config.type === "sdk" ? "SDK Component" : "Custom Component"}
             </p>
           </div>
         </div>
 
         {/* Center: viewport size switcher */}
-        <div className="flex items-center gap-1 bg-secondary/50 rounded-lg p-0.5">
+        <div className="flex items-center gap-1 bg-secondary/50 rounded-lg p-0.5 shrink-0">
           {(["desktop", "tablet", "mobile"] as const).map((size) => (
             <button
               key={size}
@@ -3827,7 +3827,7 @@ const { data } = await res.json();
           ))}
         </div>
 
-        <div className="flex items-center gap-3 flex-1 justify-end">
+        <div className="flex items-center gap-1.5 md:gap-3 shrink-0">
           {/* Component | Code switcher */}
           <div className="flex items-center gap-0.5 bg-secondary/50 rounded-lg p-0.5">
             {(["component", "code"] as const).map((v) => (
@@ -3835,7 +3835,7 @@ const { data } = await res.json();
                 key={v}
                 onClick={() => setActiveView(v)}
                 className={cn(
-                  "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 capitalize",
+                  "flex items-center gap-1 md:gap-1.5 px-2 md:px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 capitalize",
                   activeView === v
                     ? "bg-foreground/10 text-foreground font-semibold"
                     : "text-muted-foreground hover:text-foreground",
@@ -3846,23 +3846,23 @@ const { data } = await res.json();
                 ) : (
                   <Code2 className="w-3.5 h-3.5" />
                 )}
-                {v === "component" ? "Component" : "Code"}
+                <span className="hidden sm:inline">{v === "component" ? "Component" : "Code"}</span>
               </button>
             ))}
           </div>
-          <div className="h-6 w-px bg-border" />
+          <div className="h-6 w-px bg-border hidden md:block" />
           <Button
             variant="outline"
             size="sm"
             onClick={downloadCode}
-            className="gap-2 text-xs"
+            className="gap-2 text-xs hidden sm:flex"
           >
             <Download className="w-3.5 h-3.5" />
             Export
           </Button>
           <Button size="sm" onClick={handleSave} className="gap-2 text-xs">
             <Save className="w-3.5 h-3.5" />
-            Save
+            <span className="hidden sm:inline">Save</span>
           </Button>
         </div>
       </div>
@@ -3871,11 +3871,11 @@ const { data } = await res.json();
       <div className="flex flex-1 min-h-0">
         {/* ── COMPONENT view ── */}
         {activeView === "component" && (
-          <div className="flex flex-1 min-w-0">
+          <div className="flex flex-col md:flex-row flex-1 min-w-0 overflow-y-auto">
             {/* ── CENTER: Viewport ── */}
-            <div className="flex-1 flex flex-col min-w-0 bg-secondary/5">
+            <div className="flex-1 flex flex-col min-w-0 bg-secondary/5 shrink-0 md:shrink min-h-[50vh] md:min-h-0">
               {/* View-state tab bar — shown for ALL component types */}
-              <div className="flex items-center border-b border-border px-4 shrink-0 bg-background/80 backdrop-blur-sm">
+              <div className="flex items-center border-b border-border px-2 md:px-4 shrink-0 bg-background/80 backdrop-blur-sm overflow-x-auto">
                 {componentViews.map((vs) => (
                   <button
                     key={vs.id}
@@ -3895,8 +3895,8 @@ const { data } = await res.json();
                   </button>
                 ))}
                 {/* Company data selector */}
-                <div className="ml-auto flex items-center gap-2 py-2">
-                  <span className="text-[10px] text-muted-foreground shrink-0">
+                <div className="ml-auto flex items-center gap-1.5 md:gap-2 py-2 shrink-0">
+                  <span className="text-[10px] text-muted-foreground shrink-0 hidden sm:inline">
                     Preview as:
                   </span>
                   <Select
@@ -3909,7 +3909,7 @@ const { data } = await res.json();
                       }
                     }}
                   >
-                    <SelectTrigger className="h-7 text-xs w-[160px]">
+                    <SelectTrigger className="h-7 text-xs w-[120px] md:w-[160px]">
                       <SelectValue placeholder="Sample Preview Data" />
                     </SelectTrigger>
                     <SelectContent className="z-[10000]">
@@ -3930,7 +3930,7 @@ const { data } = await res.json();
               </div>
 
               {/* Viewport content */}
-              <div className="flex-1 overflow-y-auto p-6">
+              <div className="flex-1 overflow-y-auto p-3 md:p-6">
                 <div
                   style={{
                     maxWidth:
@@ -3943,11 +3943,14 @@ const { data } = await res.json();
                     transition: "max-width 0.2s ease",
                   }}
                 >
-                  <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-secondary/20 px-3 py-2 text-xs text-muted-foreground">
-                    <span>
+                  <div className="mb-3 md:mb-4 flex items-start md:items-center justify-between gap-2 md:gap-3 rounded-lg border border-border/60 bg-secondary/20 px-2 md:px-3 py-2 text-[10px] md:text-xs text-muted-foreground">
+                    <span className="hidden sm:inline">
                       {previewCompanyId
                         ? "Live company preview. Billing, plans, entitlements, and invoices come from the selected company context."
-                        : "Sample preview mode. This editor uses seeded sample values for checkout, invoices, and billing states until you choose a real company."}
+                        : "Sample preview mode. This editor uses seeded sample values until you choose a real company."}
+                    </span>
+                    <span className="sm:hidden">
+                      {previewCompanyId ? "Live data" : "Sample data"}
                     </span>
                     <span className={cn(
                       "shrink-0 rounded-full px-2 py-0.5 font-medium",
@@ -4017,6 +4020,7 @@ const { data } = await res.json();
                           initialView={tabToEmbedView(activeViewState)}
                           baseUrl=""
                           accessToken="preview"
+                          mode="inline"
                           onViewChange={(v) => {
                             const reverseMap: Record<string, string> = {
                               portal: "portal",

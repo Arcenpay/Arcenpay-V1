@@ -21,6 +21,7 @@ import React, {
   useRef,
   useState,
 } from "react";
+import { createPortal } from "react-dom";
 import type {
   ComponentRenderData,
   ComponentElement,
@@ -75,6 +76,8 @@ export interface ArcenEmbedProps {
   onViewChange?: (view: PortalView) => void;
   /** Called whenever the user successfully switches to a new plan */
   onPlanChange?: (planId: string) => void;
+  /** Display mode: "modal" opens checkout/payment/unsubscribe/success in a full-screen overlay, "inline" keeps them inline */
+  mode?: "inline" | "modal";
 }
 
 type PortalView = "portal" | "checkout" | "payment" | "unsubscribe" | "success";
@@ -2387,6 +2390,7 @@ function PortalContent({
   onUnsubscribe,
   allowPlanChanges,
   allowCancellation,
+  containerWidth,
 }: {
   data: ComponentRenderData;
   tokens: Tokens;
@@ -2395,6 +2399,7 @@ function PortalContent({
   onUnsubscribe: () => void;
   allowPlanChanges: boolean;
   allowCancellation: boolean;
+  containerWidth: number;
 }) {
   const elements = data.component.elements as Array<
     ComponentElement & Record<string, unknown>
@@ -2437,14 +2442,16 @@ function PortalContent({
   const hasLeftCard = hasPlanManager || hasIncluded || hasMetered;
   const hasRightCol = billingEls.length > 0;
 
+  const isNarrowPortal = containerWidth > 0 && containerWidth < 640;
+
   // In merged mode, ignore columns and put everything in one card
   const isMerged = designSections === "merged";
 
   // In separate mode with columns >= 2, use grid for left/right split
-  const useGrid = !isMerged && designColumns >= 2 && hasLeftCard && hasRightCol;
+  const useGrid = !isMerged && !isNarrowPortal && designColumns >= 2 && hasLeftCard && hasRightCol;
 
   // For columns=1 (single column), stack everything vertically even when separate
-  const singleColumn = !isMerged && designColumns === 1;
+  const singleColumn = !isMerged && (isNarrowPortal || designColumns === 1);
 
   // Card base style
   const leftCard: React.CSSProperties = {
@@ -3420,7 +3427,7 @@ function CheckoutContent({
   };
 
   return (
-    <div>
+    <div style={{ width: "100%", minWidth: 0, boxSizing: "border-box" }}>
       {/* Step header */}
       <div
         style={{
@@ -3496,7 +3503,7 @@ function CheckoutContent({
       <div
         style={{
           display: "flex",
-          justifyContent: "flex-end",
+          justifyContent: isMobile ? "flex-start" : "flex-end",
           marginBottom: 20,
         }}
       >
@@ -3513,11 +3520,11 @@ function CheckoutContent({
               key={period}
               onClick={() => onBillingPeriodChange(period)}
               style={{
-                padding: "6px 16px",
+                padding: isMobile ? "5px 10px" : "6px 16px",
                 borderRadius: 999,
                 border: "none",
                 cursor: "pointer",
-                fontSize: tokens.size - 1,
+                fontSize: isMobile ? tokens.size - 2 : tokens.size - 1,
                 fontWeight: 600,
                 background: billingPeriod === period ? "#fff" : "transparent",
                 color:
@@ -3530,9 +3537,10 @@ function CheckoutContent({
                     : "none",
                 transition: "all 0.15s",
                 position: "relative",
+                whiteSpace: "nowrap",
               }}
             >
-              {period === "monthly" ? "Billed monthly" : "Billed yearly"}
+              {isMobile ? (period === "monthly" ? "Monthly" : "Yearly") : (period === "monthly" ? "Billed monthly" : "Billed yearly")}
               {period === "annual" && hasAnyAnnualPrice && (
                 <span
                   style={{
@@ -3572,6 +3580,7 @@ function CheckoutContent({
               : `repeat(${Math.min(data.plans.length, 3)}, 1fr)`,
             gap: 12,
             minWidth: 0,
+            width: isNarrow ? "100%" : undefined,
           }}
         >
           {data.plans.map((plan: ComponentPlanSummary) => {
@@ -3588,7 +3597,7 @@ function CheckoutContent({
                 key={plan.id}
                 onClick={() => onSelectPlan(plan.id)}
                 style={{
-                  padding: "24px 20px",
+                  padding: isMobile ? "18px 14px" : "24px 20px",
                   borderRadius: tokens.radius,
                   border: isSelected
                     ? `2px solid ${tokens.primary}`
@@ -3598,7 +3607,8 @@ function CheckoutContent({
                   position: "relative",
                   display: "flex",
                   flexDirection: "column",
-                  minHeight: 180,
+                  minHeight: isMobile ? 140 : 180,
+                  boxSizing: "border-box",
                 }}
               >
                 {isActive && (
@@ -6081,6 +6091,57 @@ function UnsubscribeContent({
   );
 }
 
+// ─── Full-screen modal for modal mode ────────────────────────────────────────
+
+function FullScreenModal({
+  onClose,
+  tokens,
+  contentRef,
+  children,
+}: {
+  onClose: () => void;
+  tokens: Tokens;
+  contentRef: React.RefObject<HTMLDivElement | null>;
+  children: React.ReactNode;
+}) {
+  return createPortal(
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 99999,
+        background: "rgba(0,0,0,0.45)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <div
+        ref={contentRef}
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: tokens.bg,
+          borderRadius: tokens.radius * 1.5,
+          overflow: "hidden",
+          display: "flex",
+          flexDirection: "column",
+          width: "95vw",
+          maxWidth: 900,
+          height: "95vh",
+          maxHeight: 900,
+          position: "relative",
+        }}
+      >
+        <div style={{ flex: 1, overflowY: "auto", minHeight: 0, padding: 24 }}>
+          {children}
+        </div>
+      </div>
+    </div>,
+    typeof document !== "undefined" ? document.body : (undefined as unknown as HTMLElement),
+  );
+}
+
 // ─── Success content ──────────────────────────────────────────────────────────
 
 function SuccessContent({
@@ -6091,6 +6152,7 @@ function SuccessContent({
   chainId,
   tokens,
   onDone,
+  containerWidth,
 }: {
   data: ComponentRenderData;
   selectedPlanId: string | null;
@@ -6099,6 +6161,7 @@ function SuccessContent({
   chainId: number | null;
   tokens: Tokens;
   onDone: () => void;
+  containerWidth: number;
 }) {
   const selectedPlan =
     data.plans.find((p: ComponentPlanSummary) => p.id === selectedPlanId) ??
@@ -6321,6 +6384,7 @@ export function ArcenEmbed({
   initialView,
   onViewChange,
   onPlanChange,
+  mode = "modal",
 }: ArcenEmbedProps) {
   const resolvedId = componentId ?? id ?? "";
 
@@ -6338,6 +6402,30 @@ export function ArcenEmbed({
   const baseRef = useRef(baseUrl);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const containerWidth = useContainerWidth(containerRef);
+
+  const modalContentRef = useRef<HTMLDivElement | null>(null);
+  const [modalContentWidth, setModalContentWidth] = useState(0);
+
+  useEffect(() => {
+    const el = modalContentRef.current;
+    if (!el || state.view === "portal") return;
+    const measure = () => {
+      const w = el.clientWidth;
+      if (w > 0) setModalContentWidth(w);
+    };
+    measure();
+    const ro = new ResizeObserver((entries) => {
+      const w = entries[0]?.contentRect.width;
+      if (w) setModalContentWidth(w);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [state.view]);
+
+  const effectiveContainerWidth =
+    mode === "modal" ? (modalContentWidth || 360) : containerWidth;
+
+  const isInline = mode === "inline";
 
   // Notify parent whenever view changes
   useEffect(() => {
@@ -6821,87 +6909,186 @@ export function ArcenEmbed({
 
   return (
     <div ref={containerRef} className={className} style={containerStyle}>
-      {view === "portal" && (
-        <PortalContent
-          data={data}
-          tokens={tokens}
-          flashMsg={flashMsg}
-          onChangePlan={handleOpenCheckout}
-          onUnsubscribe={handleOpenUnsubscribe}
-          allowPlanChanges={PORTAL_SELF_SERVE_PLAN_CHANGES_ENABLED}
-          allowCancellation={PORTAL_SELF_SERVE_CANCELLATION_ENABLED}
-        />
-      )}
-      {view === "checkout" && (
-        <CheckoutContent
-          data={data}
-          selectedPlanId={selectedPlanId}
-          billingPeriod={billingPeriod}
-          apiBaseUrl={baseRef.current}
-          accessToken={tokenRef.current}
-          couponQuote={couponQuote}
-          processing={processing}
-          tokens={tokens}
-          customerEmail={customerEmail}
-          containerWidth={containerWidth}
-          onSelectPlan={(planId) => dispatch({ type: "SELECT_PLAN", planId })}
-          onBillingPeriodChange={(p) =>
-            dispatch({ type: "SET_BILLING_PERIOD", period: p })
-          }
-          onCustomerEmailChange={setCustomerEmail}
-          onCouponQuoteChange={setCouponQuote}
-          onSubscribeClose={() => {
-            const targetId = selectedPlanId ?? data.activePlan?.id ?? "";
-            if (targetId && targetId !== data.activePlan?.id) {
-              handleSwitchPlan(targetId);
-            } else {
-              dispatch({ type: "GOTO_PORTAL" });
-            }
-          }}
-          onNextPayment={() => dispatch({ type: "OPEN_PAYMENT" })}
-          onBack={() => dispatch({ type: "GOTO_PORTAL" })}
-        />
-      )}
-      {view === "payment" && (
-        <PaymentContent
-          data={data}
-          selectedPlanId={selectedPlanId}
-          billingPeriod={billingPeriod}
-          apiBaseUrl={baseRef.current}
-          accessToken={tokenRef.current}
-          couponQuote={couponQuote}
-          processing={processing}
-          tokens={tokens}
-          customerEmail={customerEmail}
-          containerWidth={containerWidth}
-          onCustomerEmailChange={setCustomerEmail}
-          onConfirm={(txHash) => {
-            if (selectedPlanId) handleSwitchPlan(selectedPlanId, txHash);
-          }}
-          onActivationComplete={handleActivateSubscription}
-          onBack={() => dispatch({ type: "OPEN_CHECKOUT" })}
-        />
-      )}
-      {view === "unsubscribe" && (
-        <UnsubscribeContent
-          data={data}
-          processing={processing}
-          tokens={tokens}
-          containerWidth={containerWidth}
-          onConfirm={(txHash) => handleUnsubscribe(txHash)}
-          onBack={() => dispatch({ type: "GOTO_PORTAL" })}
-        />
-      )}
-      {view === "success" && (
-        <SuccessContent
-          data={data}
-          selectedPlanId={selectedPlanId}
-          successMsg={successMsg}
-          txHash={successTxHash}
-          chainId={data.paymentMethod?.chainId ?? null}
-          tokens={tokens}
-          onDone={() => dispatch({ type: "GOTO_PORTAL" })}
-        />
+      {isInline ? (
+        <>
+          {view === "portal" && (
+            <PortalContent
+              data={data}
+              tokens={tokens}
+              flashMsg={flashMsg}
+              onChangePlan={handleOpenCheckout}
+              onUnsubscribe={handleOpenUnsubscribe}
+              allowPlanChanges={PORTAL_SELF_SERVE_PLAN_CHANGES_ENABLED}
+              allowCancellation={PORTAL_SELF_SERVE_CANCELLATION_ENABLED}
+              containerWidth={effectiveContainerWidth}
+            />
+          )}
+          {view === "checkout" && (
+            <CheckoutContent
+              data={data}
+              selectedPlanId={selectedPlanId}
+              billingPeriod={billingPeriod}
+              apiBaseUrl={baseRef.current}
+              accessToken={tokenRef.current}
+              couponQuote={couponQuote}
+              processing={processing}
+              tokens={tokens}
+              customerEmail={customerEmail}
+              containerWidth={effectiveContainerWidth}
+              onSelectPlan={(planId) => dispatch({ type: "SELECT_PLAN", planId })}
+              onBillingPeriodChange={(p) =>
+                dispatch({ type: "SET_BILLING_PERIOD", period: p })
+              }
+              onCustomerEmailChange={setCustomerEmail}
+              onCouponQuoteChange={setCouponQuote}
+              onSubscribeClose={() => {
+                const targetId = selectedPlanId ?? data.activePlan?.id ?? "";
+                if (targetId && targetId !== data.activePlan?.id) {
+                  handleSwitchPlan(targetId);
+                } else {
+                  dispatch({ type: "GOTO_PORTAL" });
+                }
+              }}
+              onNextPayment={() => dispatch({ type: "OPEN_PAYMENT" })}
+              onBack={() => dispatch({ type: "GOTO_PORTAL" })}
+            />
+          )}
+          {view === "payment" && (
+            <PaymentContent
+              data={data}
+              selectedPlanId={selectedPlanId}
+              billingPeriod={billingPeriod}
+              apiBaseUrl={baseRef.current}
+              accessToken={tokenRef.current}
+              couponQuote={couponQuote}
+              processing={processing}
+              tokens={tokens}
+              customerEmail={customerEmail}
+              containerWidth={effectiveContainerWidth}
+              onCustomerEmailChange={setCustomerEmail}
+              onConfirm={(txHash) => {
+                if (selectedPlanId) handleSwitchPlan(selectedPlanId, txHash);
+              }}
+              onActivationComplete={handleActivateSubscription}
+              onBack={() => dispatch({ type: "OPEN_CHECKOUT" })}
+            />
+          )}
+          {view === "unsubscribe" && (
+            <UnsubscribeContent
+              data={data}
+              processing={processing}
+              tokens={tokens}
+              containerWidth={effectiveContainerWidth}
+              onConfirm={(txHash) => handleUnsubscribe(txHash)}
+              onBack={() => dispatch({ type: "GOTO_PORTAL" })}
+            />
+          )}
+          {view === "success" && (
+            <SuccessContent
+              data={data}
+              selectedPlanId={selectedPlanId}
+              successMsg={successMsg}
+              txHash={successTxHash}
+              chainId={data.paymentMethod?.chainId ?? null}
+              tokens={tokens}
+              onDone={() => dispatch({ type: "GOTO_PORTAL" })}
+              containerWidth={effectiveContainerWidth}
+            />
+          )}
+        </>
+      ) : (
+        <>
+          <PortalContent
+            data={data}
+            tokens={tokens}
+            flashMsg={flashMsg}
+            onChangePlan={handleOpenCheckout}
+            onUnsubscribe={handleOpenUnsubscribe}
+            allowPlanChanges={PORTAL_SELF_SERVE_PLAN_CHANGES_ENABLED}
+            allowCancellation={PORTAL_SELF_SERVE_CANCELLATION_ENABLED}
+            containerWidth={containerWidth}
+          />
+          {view !== "portal" && (
+            <FullScreenModal
+              onClose={() => dispatch({ type: "GOTO_PORTAL" })}
+              tokens={tokens}
+              contentRef={modalContentRef}
+            >
+              {view === "checkout" && (
+                <CheckoutContent
+                  data={data}
+                  selectedPlanId={selectedPlanId}
+                  billingPeriod={billingPeriod}
+                  apiBaseUrl={baseRef.current}
+                  accessToken={tokenRef.current}
+                  couponQuote={couponQuote}
+                  processing={processing}
+                  tokens={tokens}
+                  customerEmail={customerEmail}
+                  containerWidth={effectiveContainerWidth}
+                  onSelectPlan={(planId) => dispatch({ type: "SELECT_PLAN", planId })}
+                  onBillingPeriodChange={(p) =>
+                    dispatch({ type: "SET_BILLING_PERIOD", period: p })
+                  }
+                  onCustomerEmailChange={setCustomerEmail}
+                  onCouponQuoteChange={setCouponQuote}
+                  onSubscribeClose={() => {
+                    const targetId = selectedPlanId ?? data.activePlan?.id ?? "";
+                    if (targetId && targetId !== data.activePlan?.id) {
+                      handleSwitchPlan(targetId);
+                    } else {
+                      dispatch({ type: "GOTO_PORTAL" });
+                    }
+                  }}
+                  onNextPayment={() => dispatch({ type: "OPEN_PAYMENT" })}
+                  onBack={() => dispatch({ type: "GOTO_PORTAL" })}
+                />
+              )}
+              {view === "payment" && (
+                <PaymentContent
+                  data={data}
+                  selectedPlanId={selectedPlanId}
+                  billingPeriod={billingPeriod}
+                  apiBaseUrl={baseRef.current}
+                  accessToken={tokenRef.current}
+                  couponQuote={couponQuote}
+                  processing={processing}
+                  tokens={tokens}
+                  customerEmail={customerEmail}
+                  containerWidth={effectiveContainerWidth}
+                  onCustomerEmailChange={setCustomerEmail}
+                  onConfirm={(txHash) => {
+                    if (selectedPlanId) handleSwitchPlan(selectedPlanId, txHash);
+                  }}
+                  onActivationComplete={handleActivateSubscription}
+                  onBack={() => dispatch({ type: "OPEN_CHECKOUT" })}
+                />
+              )}
+              {view === "unsubscribe" && (
+                <UnsubscribeContent
+                  data={data}
+                  processing={processing}
+                  tokens={tokens}
+                  containerWidth={effectiveContainerWidth}
+                  onConfirm={(txHash) => handleUnsubscribe(txHash)}
+                  onBack={() => dispatch({ type: "GOTO_PORTAL" })}
+                />
+              )}
+              {view === "success" && (
+                <SuccessContent
+                  data={data}
+                  selectedPlanId={selectedPlanId}
+                  successMsg={successMsg}
+                  txHash={successTxHash}
+                  chainId={data.paymentMethod?.chainId ?? null}
+                  tokens={tokens}
+                  onDone={() => dispatch({ type: "GOTO_PORTAL" })}
+                  containerWidth={effectiveContainerWidth}
+                />
+              )}
+            </FullScreenModal>
+          )}
+        </>
       )}
     </div>
   );

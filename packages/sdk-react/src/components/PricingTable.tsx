@@ -3,7 +3,7 @@
 import React, { useState, useCallback } from "react";
 import { useReadContract, useReadContracts } from "wagmi";
 import type { Plan } from "@arcenpay/sdk";
-import { PlanFactoryABI, getContractAddresses } from "@arcenpay/sdk";
+import { PlanFactoryABI, getContractAddresses, formatUsdc } from "@arcenpay/sdk";
 import { useMEAP } from "../providers/MEAPProvider";
 
 // ============================================================
@@ -99,11 +99,6 @@ export function PricingTable({
     [onSelectPlan],
   );
 
-  const formatPrice = (price: bigint) => {
-    const dollars = Number(price) / 1_000_000;
-    return `$${dollars.toFixed(2)}`;
-  };
-
   const formatInterval = (seconds: number) => {
     if (seconds >= 31_536_000) return "/yr";
     if (seconds >= 7_776_000) return "/qtr";
@@ -146,7 +141,7 @@ export function PricingTable({
           <div className="arcenpay-plan-tier">{plan.tier.toUpperCase()}</div>
           <h3 className="arcenpay-plan-name">{plan.name}</h3>
           <div className="arcenpay-plan-price">
-            <span className="arcenpay-plan-amount">{formatPrice(plan.price)}</span>
+            <span className="arcenpay-plan-amount">{formatUsdc(plan.price)}</span>
             <span className="arcenpay-plan-interval">
               {formatInterval(plan.billingInterval)}
             </span>

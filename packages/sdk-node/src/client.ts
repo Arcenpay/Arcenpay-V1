@@ -138,16 +138,33 @@ export class ArcenClient {
         signal: controller.signal,
       });
 
-      const json = await res.json() as T & { error?: string };
+      let json: (T & { error?: string }) | undefined;
+      try {
+        json = await res.json() as T & { error?: string };
+      } catch {
+        throw new ArcenApiError(
+          `Invalid JSON response from ${method} ${path}`,
+          res.status,
+        );
+      }
 
       if (!res.ok) {
         throw new ArcenApiError(
-          (json as { error?: string }).error ?? `HTTP ${res.status}`,
+          json.error ?? `HTTP ${res.status}`,
           res.status,
         );
       }
 
       return json;
+    } catch (err) {
+      if (err instanceof ArcenApiError) throw err;
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        throw new ArcenApiError(`Request timed out after ${this.timeoutMs}ms`, 408);
+      }
+      throw new ArcenApiError(
+        err instanceof Error ? err.message : 'Network request failed',
+        0,
+      );
     } finally {
       clearTimeout(timer);
     }

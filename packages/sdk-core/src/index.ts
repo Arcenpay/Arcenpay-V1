@@ -150,3 +150,12 @@ export type { SmartAccountInput, SmartAccountResult } from "./accounts";
 
 // Chain helpers
 export { getChain, getBlockExplorerUrl } from "./chains";
+
+// Formatting utilities
+export {
+  toISOCurrencyCode,
+  isStablecoinCode,
+  formatCurrency,
+  formatUsdc,
+  formatInvoiceTotal,
+} from "./format";

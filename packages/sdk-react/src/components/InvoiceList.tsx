@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import type { InvoiceSummary } from '@arcenpay/sdk';
+import { formatCurrency } from '@arcenpay/sdk';
 
 export interface InvoiceListProps {
   endpoint?: string;
@@ -87,7 +88,7 @@ export function InvoiceList({
             <p>{invoice.customerEmail || invoice.customerWallet || 'Unknown customer'}</p>
           </div>
           <div>
-            <p>{invoice.total} {invoice.currency}</p>
+            <p>{formatCurrency(invoice.total, invoice.currency)}</p>
             <p>{invoice.status}</p>
           </div>
         </div>

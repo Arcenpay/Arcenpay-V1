@@ -22,6 +22,7 @@ import {
   getBlockExplorerUrl,
   TOKENS,
   createSmartAccount,
+  formatUsdc,
 } from "@arcenpay/sdk";
 import { useArcenSession, useMEAP } from "../providers/MEAPProvider";
 import {
@@ -893,8 +894,6 @@ export function CheckoutModal({
 
   if (!isOpen) return null;
 
-  const formatPrice = (price: bigint) => `$${(Number(price) / 1e6).toFixed(2)}`;
-
   const STEP_CONFIG: Record<
     CheckoutStep,
     {
@@ -942,7 +941,7 @@ export function CheckoutModal({
     approve: {
       title: "Approve USDC",
       description: planPrice
-        ? `Authorize ${formatPrice(planPrice * 13n)} USDC for the autopay module. This covers your current cycle plus renewals.`
+        ? `Authorize ${formatUsdc(planPrice * 13n)} USDC for the autopay module. This covers your current cycle plus renewals.`
         : "Authorize USDC spending for the autopay module.",
       action: handleApprove,
       actionLabel: isApproving ? "Confirm in Wallet…" : "Approve USDC",
@@ -951,7 +950,7 @@ export function CheckoutModal({
       title: `Subscribe — ${planName || "Plan"}`,
       description: requestSubscription
         ? planPrice
-          ? `Request the initial biller-side activation. ${formatPrice(planPrice)} USDC will be charged when the authorized biller executes the first cycle.`
+          ? `Request the initial biller-side activation. ${formatUsdc(planPrice)} USDC will be charged when the authorized biller executes the first cycle.`
           : "Request the initial biller-side activation for this subscription."
         : "This checkout now requires a provider-side requestSubscription callback. Direct customer-side minting is intentionally blocked because SubscriptionRegistry.mint is biller-only.",
       action: handleSubscribe,
@@ -1012,7 +1011,7 @@ export function CheckoutModal({
                   fontWeight: 500,
                 }}
               >
-                {planName} · {planPrice ? formatPrice(planPrice) : "—"} USDC
+                {planName} · {planPrice ? formatUsdc(planPrice) : "—"} USDC
               </span>
             )}
           </div>

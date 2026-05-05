@@ -9,6 +9,7 @@ import type {
   ComponentRenderData,
   ComponentUsageItem,
 } from "@arcenpay/sdk";
+import { formatCurrency } from "@arcenpay/sdk";
 import Link from "next/link";
 import styles from "./page.module.css";
 
@@ -67,17 +68,6 @@ async function parseJsonResponse<T>(
   } catch {
     throw new Error(`${context} returned invalid JSON`);
   }
-}
-
-function formatCurrency(amount: string | number, currency = "USD") {
-  const numeric = Number(amount);
-  if (Number.isNaN(numeric)) return String(amount);
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency,
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(numeric);
 }
 
 function formatDateLabel(value?: string | null) {
