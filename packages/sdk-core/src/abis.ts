@@ -104,6 +104,13 @@ export const SubscriptionRegistryABI = [
   },
   {
     type: "function",
+    name: "authorizedBillers",
+    inputs: [{ name: "biller", type: "address" }],
+    outputs: [{ name: "isAuthorized", type: "bool" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
     name: "setCrossChainTransports",
     inputs: [
       { name: "axelarTransport", type: "address" },

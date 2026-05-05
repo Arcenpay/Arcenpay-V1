@@ -52,19 +52,13 @@ function asRecord(value: unknown): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
-function corsHeaders() {
-  return {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET,OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type,Authorization",
-  };
-}
+import { corsHeaders } from "@/lib/cors";
 
 // Handle CORS preflight requests from embedded apps
-export async function OPTIONS() {
+export async function OPTIONS(req: NextRequest) {
   return new NextResponse(null, {
     status: 204,
-    headers: corsHeaders(),
+    headers: corsHeaders(req.headers.get("origin")),
   });
 }
 
@@ -73,6 +67,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
+  const origin = req.headers.get("origin");
 
   // Extract token from Authorization header or query param
   const token = extractEmbedAccessToken(req, { allowQueryParam: true });
@@ -80,14 +75,14 @@ export async function GET(
   if (!token) {
     return NextResponse.json(
       { error: "Access token required" },
-      { status: 401, headers: corsHeaders() },
+      { status: 401, headers: corsHeaders(origin) },
     );
   }
 
   if (!process.env.ACCESS_TOKEN_SECRET) {
     return NextResponse.json(
       { error: "Server configuration error" },
-      { status: 500, headers: corsHeaders() },
+      { status: 500, headers: corsHeaders(origin) },
     );
   }
 
@@ -95,7 +90,7 @@ export async function GET(
   if (!decoded) {
     return NextResponse.json(
       { error: "Invalid or expired access token" },
-      { status: 401, headers: corsHeaders() },
+      { status: 401, headers: corsHeaders(origin) },
     );
   }
 
@@ -103,14 +98,14 @@ export async function GET(
   if (!teamId) {
     return NextResponse.json(
       { error: "Invalid access token context" },
-      { status: 401, headers: corsHeaders() },
+      { status: 401, headers: corsHeaders(origin) },
     );
   }
 
   if (preview && componentId !== id) {
     return NextResponse.json(
       { error: "Preview token is not valid for this component" },
-      { status: 403, headers: corsHeaders() },
+      { status: 403, headers: corsHeaders(origin) },
     );
   }
 
@@ -122,7 +117,7 @@ export async function GET(
   if (!component) {
     return NextResponse.json(
       { error: "Component not found" },
-      { status: 404, headers: corsHeaders() },
+      { status: 404, headers: corsHeaders(origin) },
     );
   }
 
@@ -625,6 +620,6 @@ export async function GET(
         subscriptionTransition,
       },
     },
-    { headers: corsHeaders() },
+    { headers: corsHeaders(origin) },
   );
 }

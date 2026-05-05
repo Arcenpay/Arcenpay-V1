@@ -121,6 +121,8 @@ export function useEntitlement(
     return `${providerUrl.replace(/\/$/, '')}/api/entitlements/${walletAddress.toLowerCase()}/flags`;
   }, [config.tablelandConfig?.featureFlagsEndpoint, config.tablelandConfig?.providerUrl, walletAddress]);
 
+  const sequenceRef = useRef(0);
+
   const refetchTableland = useCallback(async () => {
     if (!tablelandFeatureFlagsUrl) {
       setTablelandFeatures({});
@@ -129,6 +131,7 @@ export function useEntitlement(
       return;
     }
 
+    const seq = ++sequenceRef.current;
     setTablelandLoading(true);
     setTablelandError(null);
 
@@ -154,14 +157,18 @@ export function useEntitlement(
         throw new Error(data.error || 'Feature flags request failed.');
       }
 
+      if (sequenceRef.current !== seq) return;
       setTablelandFeatures(data.flags || {});
       setTablelandUpdatedAt(data.updatedAt || Date.now());
     } catch (err) {
+      if (sequenceRef.current !== seq) return;
       setTablelandFeatures({});
       setTablelandUpdatedAt(null);
       setTablelandError(err instanceof Error ? err : new Error('Feature flags fetch failed.'));
     } finally {
-      setTablelandLoading(false);
+      if (sequenceRef.current === seq) {
+        setTablelandLoading(false);
+      }
     }
   }, [tablelandFeatureFlagsUrl]);
 
