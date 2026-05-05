@@ -119,9 +119,12 @@ export class BalanceMonitor {
     );
     if (enabledProviders.length === 0) return;
 
-    const thresholdAtomic = parseFloat(autoTopUp.threshold || "0.50") * 1_000_000;
-    const perTxnAtomic = parseFloat(autoTopUp.perTxnLimit || "1.00") * 1_000_000;
-    const dailyLimitAtomic = parseFloat(autoTopUp.dailyLimit || "5.00") * 1_000_000;
+    const rawThreshold = parseFloat(autoTopUp.threshold || "0.50");
+    const rawPerTxn = parseFloat(autoTopUp.perTxnLimit || "1.00");
+    const rawDaily = parseFloat(autoTopUp.dailyLimit || "5.00");
+    const thresholdAtomic = (Number.isFinite(rawThreshold) ? rawThreshold : 0.50) * 1_000_000;
+    const perTxnAtomic = (Number.isFinite(rawPerTxn) ? rawPerTxn : 1.00) * 1_000_000;
+    const dailyLimitAtomic = (Number.isFinite(rawDaily) ? rawDaily : 5.00) * 1_000_000;
 
     // Check cooldown
     const cooldownKey = `cooldown:${teamId}`;

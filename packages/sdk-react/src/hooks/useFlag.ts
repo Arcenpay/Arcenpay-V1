@@ -178,11 +178,16 @@ export function useFlags(
   const session = useArcenSession();
   const baseUrl = resolveDashboardBaseUrl(options.baseUrl);
 
+  const controllerRef = useRef<AbortController | null>(null);
+
   useEffect(() => {
     if (skip || featureKeys.length === 0) {
       setLoading(false);
       return;
     }
+
+    const ctrl = new AbortController();
+    controllerRef.current = ctrl;
 
     // Session token takes precedence over explicitly passed apiKey
     const effectiveToken = session.token ?? undefined;
@@ -215,7 +220,7 @@ export function useFlags(
 
     Promise.all(
       featureKeys.map((key) =>
-        fetch(`${baseUrl}/api/v1/check?key=${encodeURIComponent(key)}`, { headers })
+        fetch(`${baseUrl}/api/v1/check?key=${encodeURIComponent(key)}`, { headers, signal: ctrl.signal })
           .then((r) => r.json() as Promise<{ key?: string; enabled?: boolean; reason?: string; error?: string }>)
           .then((json) => [key, json.enabled ?? null] as [string, boolean | null])
           .catch(() => [key, null] as [string, null]),
@@ -225,6 +230,10 @@ export function useFlags(
         setFlags(Object.fromEntries(results));
       })
       .finally(() => setLoading(false));
+
+    return () => {
+      controllerRef.current?.abort();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [featureKeys.join(','), JSON.stringify(companyKeys), JSON.stringify(userKeys), skip, session.token]);
 

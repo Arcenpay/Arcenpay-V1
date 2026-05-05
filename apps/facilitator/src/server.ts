@@ -1601,8 +1601,15 @@ function requireFacilitatorSecretIfConfigured(
   res: express.Response,
   next: express.NextFunction,
 ) {
+  // HARDEN: In production or when FACILITATOR_SECRET is configured, require it.
+  // Never silently allow all traffic when the secret is missing.
   if (!FACILITATOR_SECRET) {
-    return next();
+    return res.status(401).json({
+      ok: false,
+      error:
+        "FACILITATOR_SECRET is not configured — access denied for security. " +
+        "Set the FACILITATOR_SECRET environment variable to enable admin endpoints.",
+    });
   }
 
   const expected = `Bearer ${FACILITATOR_SECRET}`;
@@ -4300,7 +4307,7 @@ void (async () => {
 
 // Graceful shutdown
 process.on("SIGTERM", () => {
-  console.log("[Facilitator] Shutting down...");
+  console.log("[Facilitator] Shutting down after SIGTERM...");
   eventListener.stop();
   settlementService.stop();
   proofOrchestrator.stop();
@@ -4310,6 +4317,44 @@ process.on("SIGTERM", () => {
   jobQueue.stop();
   replayProtection.stop();
   process.exit(0);
+});
+
+process.on("SIGINT", () => {
+  console.log("[Facilitator] Shutting down after SIGINT...");
+  eventListener.stop();
+  settlementService.stop();
+  proofOrchestrator.stop();
+  billingKeeper?.stop();
+  webhookService?.stop();
+  void redisUsageStore?.stop();
+  jobQueue.stop();
+  replayProtection.stop();
+  process.exit(0);
+});
+
+// HARDEN: Catch unhandled rejections and exceptions to prevent silent process crashes.
+// Report to Sentry if configured, then exit so the process manager restarts.
+process.on("unhandledRejection", (reason: unknown, promise: Promise<unknown>) => {
+  console.error("[Facilitator] UNHANDLED REJECTION — exiting:", reason);
+  if (process.env.SENTRY_DSN) {
+    Sentry.captureException(
+      reason instanceof Error ? reason : new Error(String(reason)),
+    );
+    // Allow Sentry to flush before exit (up to 2s)
+    void Sentry.close(2000).finally(() => process.exit(1));
+  } else {
+    process.exit(1);
+  }
+});
+
+process.on("uncaughtException", (error: Error) => {
+  console.error("[Facilitator] UNCAUGHT EXCEPTION — exiting:", error);
+  if (process.env.SENTRY_DSN) {
+    Sentry.captureException(error);
+    void Sentry.close(2000).finally(() => process.exit(1));
+  } else {
+    process.exit(1);
+  }
 });
 
 export default app;

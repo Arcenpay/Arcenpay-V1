@@ -187,6 +187,7 @@ function reducer(state: PortalState, action: PortalAction): PortalState {
     case "FETCH_OK":
       return {
         ...state,
+        error: null,
         loading: false,
         data: action.data,
         view: "portal",
@@ -245,16 +246,18 @@ function reducer(state: PortalState, action: PortalAction): PortalState {
 export function getDesignTokens(design: ComponentDesign) {
   const primary = design.primaryColor ?? "#000000";
   const font = design.fontFamily ?? "system-ui, -apple-system, sans-serif";
+  const parsedSize = parseFloat(String(design.fontSize ?? "14"));
   const size =
     typeof design.fontSize === "number"
       ? design.fontSize
-      : parseFloat(String(design.fontSize ?? "14")) || 14;
+      : Number.isNaN(parsedSize) ? 14 : parsedSize;
   const textColor = design.fontColor ?? "#111827";
   const bg = design.backgroundColor ?? "#ffffff";
+  const parsedRadius = parseFloat(String(design.borderRadius ?? "8"));
   const radius =
     typeof design.borderRadius === "number"
       ? design.borderRadius
-      : parseFloat(String(design.borderRadius ?? "8")) || 8;
+      : Number.isNaN(parsedRadius) ? 8 : parsedRadius;
   const cardStyle =
     ((design as Record<string, unknown>).cardStyle as string | undefined) ??
     "minimal";
@@ -4501,13 +4504,14 @@ function PaymentContent({
     return billingPaymentAccount;
   }
 
-  async function fetchImmediateUpgradePreview(): Promise<PlanChangeProrationSummary> {
+  async function fetchImmediateUpgradePreview(signal?: AbortSignal): Promise<PlanChangeProrationSummary> {
     if (!selectedPlanId) {
       throw new Error("Select a destination plan before continuing.");
     }
 
     const res = await fetch(`${apiBaseUrl}/api/v1/companies/plan`, {
       method: "POST",
+      signal,
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${accessToken}`,
@@ -4537,6 +4541,7 @@ function PaymentContent({
 
   useEffect(() => {
     let cancelled = false;
+    const controller = new AbortController();
 
     if (!isImmediateOnChainUpgrade || !selectedPlanId) {
       setPlanChangePreview(null);
@@ -4550,7 +4555,7 @@ function PaymentContent({
     setPlanChangePreviewLoading(true);
     setPlanChangePreviewError("");
 
-    void fetchImmediateUpgradePreview()
+    void fetchImmediateUpgradePreview(controller.signal)
       .then((preview) => {
         if (cancelled) return;
         setPlanChangePreview(preview);
@@ -4571,6 +4576,7 @@ function PaymentContent({
 
     return () => {
       cancelled = true;
+      controller.abort();
     };
   }, [
     accessToken,
@@ -6461,6 +6467,7 @@ export function ArcenEmbed({
   const [customerEmail, setCustomerEmail] = useState("");
   const tokenRef = useRef(accessToken);
   const baseRef = useRef(baseUrl);
+  const abortRef = useRef<AbortController | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const containerWidth = useContainerWidth(containerRef);
 
@@ -6493,15 +6500,18 @@ export function ArcenEmbed({
     onViewChange?.(state.view);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.view]);
-  tokenRef.current = accessToken;
-  baseRef.current = baseUrl;
+  useEffect(() => {
+    tokenRef.current = accessToken;
+    baseRef.current = baseUrl;
+  }, [accessToken, baseUrl]);
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (signal?: AbortSignal) => {
     dispatch({ type: "FETCH_START" });
     try {
       const res = await fetch(
         `${baseRef.current}/api/v1/components/${resolvedId}/render`,
         {
+          signal,
           headers: { Authorization: `Bearer ${tokenRef.current}` },
         },
       );
@@ -6515,6 +6525,7 @@ export function ArcenEmbed({
       const json = await res.json();
       dispatch({ type: "FETCH_OK", data: json.data as ComponentRenderData });
     } catch (e: unknown) {
+      if (e instanceof DOMException && e.name === "AbortError") return;
       dispatch({
         type: "FETCH_ERR",
         error: e instanceof Error ? e.message : "Failed to load component",
@@ -6524,7 +6535,6 @@ export function ArcenEmbed({
 
   useEffect(() => {
     if (mockData) {
-      // For mock data, load data and jump to initialView (preserve nav state, don't reset to portal)
       dispatch({ type: "FETCH_OK", data: mockData });
       if (initialView && initialView !== "portal") {
         dispatch({
@@ -6540,7 +6550,12 @@ export function ArcenEmbed({
       }
       return;
     }
-    fetchData();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    fetchData(controller.signal);
+    return () => {
+      abortRef.current?.abort();
+    };
   }, [fetchData, mockData, initialView]);
 
   useEffect(() => {
@@ -6565,9 +6580,10 @@ export function ArcenEmbed({
   }, [state.data]);
 
   const callApi = useCallback(
-    async (path: string, body?: Record<string, unknown>) => {
+    async (path: string, body?: Record<string, unknown>, signal?: AbortSignal) => {
       const res = await fetch(`${baseRef.current}${path}`, {
         method: "POST",
+        signal,
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${tokenRef.current}`,
@@ -6598,27 +6614,32 @@ export function ArcenEmbed({
           confirmation?.paymentTxHash ??
           confirmation?.autopayConfigTxHash ??
           confirmation?.txHash;
-        const response = await callApi("/api/v1/companies/plan", {
-          planId,
-          billingPeriod: state.billingPeriod,
-          ...(isValidCustomerEmail(normalizedCustomerEmail)
-            ? { customerEmail: normalizedCustomerEmail }
-            : {}),
-          ...(couponQuote?.planId === planId &&
-          couponQuote.billingPeriod === state.billingPeriod
-            ? { couponCode: couponQuote.code }
-            : {}),
-          ...(confirmation?.txHash ? { txHash: confirmation.txHash } : {}),
-          ...(confirmation?.autopayConfigTxHash
-            ? { autopayConfigTxHash: confirmation.autopayConfigTxHash }
-            : {}),
-          ...(confirmation?.accessChangeTxHash
-            ? { accessChangeTxHash: confirmation.accessChangeTxHash }
-            : {}),
-          ...(confirmation?.paymentTxHash
-            ? { paymentTxHash: confirmation.paymentTxHash }
-            : {}),
-        });
+        const planApiController = new AbortController();
+        const response = await callApi(
+          "/api/v1/companies/plan",
+          {
+            planId,
+            billingPeriod: state.billingPeriod,
+            ...(isValidCustomerEmail(normalizedCustomerEmail)
+              ? { customerEmail: normalizedCustomerEmail }
+              : {}),
+            ...(couponQuote?.planId === planId &&
+            couponQuote.billingPeriod === state.billingPeriod
+              ? { couponCode: couponQuote.code }
+              : {}),
+            ...(confirmation?.txHash ? { txHash: confirmation.txHash } : {}),
+            ...(confirmation?.autopayConfigTxHash
+              ? { autopayConfigTxHash: confirmation.autopayConfigTxHash }
+              : {}),
+            ...(confirmation?.accessChangeTxHash
+              ? { accessChangeTxHash: confirmation.accessChangeTxHash }
+              : {}),
+            ...(confirmation?.paymentTxHash
+              ? { paymentTxHash: confirmation.paymentTxHash }
+              : {}),
+          },
+          planApiController.signal,
+        );
         await fetchData();
         setCouponQuote(null);
         onPlanChange?.(planId);
@@ -6656,6 +6677,7 @@ export function ArcenEmbed({
           txHash: successTxHash,
         });
       } catch (e: unknown) {
+        if (e instanceof DOMException && e.name === "AbortError") return;
         const msg = e instanceof Error ? e.message : "Failed to switch plan";
         dispatch({
           type: "FETCH_ERR",
@@ -6701,7 +6723,8 @@ export function ArcenEmbed({
   const handleUnsubscribe = useCallback(async (txHash?: string) => {
     dispatch({ type: "PROCESSING_START" });
     try {
-      await callApi("/api/v1/companies/unsubscribe", txHash ? { txHash } : {});
+      const unsubController = new AbortController();
+      await callApi("/api/v1/companies/unsubscribe", txHash ? { txHash } : {}, unsubController.signal);
       await fetchData();
       if (txHash) {
         dispatch({
@@ -6716,6 +6739,7 @@ export function ArcenEmbed({
         });
       }
     } catch (e: unknown) {
+      if (e instanceof DOMException && e.name === "AbortError") return;
       const msg =
         e instanceof Error ? e.message : "Failed to cancel subscription";
       dispatch({

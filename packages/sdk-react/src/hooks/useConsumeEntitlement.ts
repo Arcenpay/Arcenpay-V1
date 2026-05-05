@@ -25,6 +25,7 @@ export interface UseConsumeEntitlementOptions {
 export interface UseConsumeEntitlementResult {
   consume: (
     input: string | ConsumeEntitlementInput,
+    signal?: AbortSignal,
   ) => Promise<ConsumeEntitlementResult>;
   loading: boolean;
   error: string | null;
@@ -39,7 +40,7 @@ export function useConsumeEntitlement(
   const [error, setError] = useState<string | null>(null);
 
   const consume = useCallback(
-    async (input: string | ConsumeEntitlementInput) => {
+    async (input: string | ConsumeEntitlementInput, signal?: AbortSignal) => {
       const normalized =
         typeof input === "string" ? { featureKey: input } : input;
 
@@ -86,6 +87,7 @@ export function useConsumeEntitlement(
         const response = await fetch(`${baseUrl}/api/v1/usage/consume`, {
           method: "POST",
           headers,
+          signal,
           body: JSON.stringify({
             featureKey: normalized.featureKey,
             traits: normalized.traits,

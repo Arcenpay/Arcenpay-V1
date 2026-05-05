@@ -108,13 +108,7 @@ function readTargetNumericLimitsFromPlanMetadata(
   return limits;
 }
 
-function corsHeaders() {
-  return {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "POST,OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type,Authorization",
-  };
-}
+import { corsHeaders } from "@/lib/cors";
 
 function normalizePrivateKey(raw: string | undefined): `0x${string}` | null {
   if (!raw) return null;

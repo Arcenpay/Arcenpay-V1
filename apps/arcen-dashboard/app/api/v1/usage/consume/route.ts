@@ -7,14 +7,7 @@ import {
   ConsumeEntitlementError,
 } from "@/lib/usage-consume";
 
-function corsHeaders() {
-  return {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "POST,OPTIONS",
-    "Access-Control-Allow-Headers":
-      "Content-Type,Authorization,X-Arcen-Company-Keys,X-Arcen-User-Keys",
-  };
-}
+import { corsHeaders } from "@/lib/cors";
 
 function jsonWithCors(body: unknown, init?: ResponseInit) {
   const headers = new Headers(init?.headers);

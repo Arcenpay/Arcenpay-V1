@@ -23,13 +23,7 @@ const querySchema = z.object({
     .optional(),
 });
 
-function corsHeaders() {
-  return {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET,OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type,Authorization",
-  };
-}
+import { corsHeaders } from "@/lib/cors";
 
 async function resolveRequestTeamId(
   req: NextRequest,

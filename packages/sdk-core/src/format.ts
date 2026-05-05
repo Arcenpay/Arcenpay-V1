@@ -29,8 +29,8 @@ export function formatCurrency(
   currency: string = "USD",
   options?: { showCode?: boolean; locale?: string },
 ): string {
-  const numeric =
-    typeof amount === "bigint" ? Number(amount) : Number(amount);
+  const numeric = Number(amount);
+  if (Number.isNaN(numeric)) return "0.00";
   if (!Number.isFinite(numeric)) return String(amount);
 
   const isoCode = toISOCurrencyCode(currency);

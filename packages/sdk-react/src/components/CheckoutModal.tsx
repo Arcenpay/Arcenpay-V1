@@ -18,6 +18,7 @@ import {
 import {
   PlanFactoryABI,
   ERC7579AutopayModuleABI,
+  SubscriptionRegistryABI,
   getContractAddresses,
   getBlockExplorerUrl,
   TOKENS,
@@ -269,6 +270,20 @@ export function CheckoutModal({
         enabled: !!paymentAccount,
       },
     });
+
+  const subscriptionRegistryAddress =
+    contracts.subscriptionRegistry as `0x${string}`;
+
+  const { data: isCurrentWalletBiller } = useReadContract({
+    address: subscriptionRegistryAddress,
+    abi: SubscriptionRegistryABI,
+    functionName: "authorizedBillers",
+    args: [address!],
+    chainId: network.chainId,
+    query: {
+      enabled: !!address && isOpen,
+    },
+  });
 
   // Write: USDC approve
   const {
@@ -541,6 +556,17 @@ export function CheckoutModal({
       }
     }
 
+    const hasBackendMint = !!(requestSubscription || builtInActivationEndpoint);
+    if (!hasBackendMint && isCurrentWalletBiller === false) {
+      emitCheckoutError(
+        CHECKOUT_ERROR_CODES.SUBSCRIPTION_EXECUTION_UNSUPPORTED,
+        new Error(
+          "Your wallet is not authorized as the subscription biller. Only the biller address can mint subscriptions.",
+        ),
+      );
+      return;
+    }
+
     setStep("account");
     setLoading(false);
   }, [
@@ -549,6 +575,9 @@ export function CheckoutModal({
     planId,
     emitCheckoutError,
     subscriberEmailEndpoint,
+    requestSubscription,
+    builtInActivationEndpoint,
+    isCurrentWalletBiller,
   ]);
 
   const handleInstallAutopay = useCallback(() => {
@@ -832,6 +861,16 @@ export function CheckoutModal({
           }
         : undefined);
 
+    if (!executeRequestSubscription && isCurrentWalletBiller === false) {
+      emitCheckoutError(
+        CHECKOUT_ERROR_CODES.SUBSCRIPTION_EXECUTION_UNSUPPORTED,
+        new Error(
+          "Your wallet is not authorized as the subscription biller. Only the biller address can mint subscriptions.",
+        ),
+      );
+      return;
+    }
+
     if (!executeRequestSubscription) {
       emitCheckoutError(
         CHECKOUT_ERROR_CODES.SUBSCRIPTION_EXECUTION_UNSUPPORTED,
@@ -887,6 +926,7 @@ export function CheckoutModal({
     onCheckoutComplete,
     autopayInstalledLocally,
     isAutopayInitialized,
+    isCurrentWalletBiller,
     autopayInstallTxHash,
     smartAccountDeployTxHash,
     emitCheckoutError,

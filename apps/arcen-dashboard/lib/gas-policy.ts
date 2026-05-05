@@ -311,7 +311,8 @@ export async function getDailyGasSpend(teamId: string): Promise<GasBudgetInfo> {
         }),
     ]);
 
-    const spentTodayUsd = Number(result._sum.gasCostUsd ?? 0);
+    const rawSpent = Number(result._sum.gasCostUsd ?? 0);
+    const spentTodayUsd = Number.isFinite(rawSpent) ? rawSpent : 0;
     const remainingUsd = Math.max(0, dailyBudgetUsd - spentTodayUsd);
 
     return {

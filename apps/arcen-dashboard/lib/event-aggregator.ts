@@ -14,18 +14,18 @@ function getPeriodWindow(period: Period): { gte: Date } {
   switch (period) {
     case "daily": {
       const start = new Date(now);
-      start.setHours(0, 0, 0, 0);
+      start.setUTCHours(0, 0, 0, 0);
       return { gte: start };
     }
     case "weekly": {
       const start = new Date(now);
-      start.setDate(start.getDate() - start.getDay()); // Sunday
-      start.setHours(0, 0, 0, 0);
+      start.setUTCDate(start.getUTCDate() - start.getUTCDay()); // Sunday
+      start.setUTCHours(0, 0, 0, 0);
       return { gte: start };
     }
     case "monthly":
     default: {
-      const start = new Date(now.getFullYear(), now.getMonth(), 1);
+      const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
       return { gte: start };
     }
   }
