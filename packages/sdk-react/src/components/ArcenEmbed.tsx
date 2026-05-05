@@ -414,15 +414,39 @@ function truncateWallet(wallet?: string | null): string | null {
   return `${wallet.slice(0, 6)}…${wallet.slice(-4)}`;
 }
 
+const STABLECOIN_TO_ISO: Record<string, string> = {
+  USDC: "USD",
+  USDT: "USD",
+  DAI: "USD",
+  BUSD: "USD",
+  GUSD: "USD",
+  USDP: "USD",
+  TUSD: "USD",
+  FRAX: "USD",
+  LUSD: "USD",
+  SUSD: "USD",
+  EURC: "EUR",
+  EURT: "EUR",
+};
+
+function toISOCurrencyCode(currency: string | undefined | null): string {
+  if (!currency) return "USD";
+  return STABLECOIN_TO_ISO[currency.toUpperCase()] ?? currency.toUpperCase();
+}
+
 function formatMoney(amount: string | number, currency = "USD"): string {
   const value = Number(amount);
   if (Number.isNaN(value)) return String(amount);
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency,
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
+  try {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: toISOCurrencyCode(currency),
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value);
+  } catch {
+    return `${value.toFixed(2)} ${currency}`;
+  }
 }
 
 function formatChainLabel(chainId?: number | null): string | null {
@@ -1339,7 +1363,7 @@ async function readWalletSubscriptionTokenId(
 function useContainerWidth(
   ref: React.RefObject<HTMLDivElement | null>,
 ): number {
-  const [width, setWidth] = useState(800);
+  const [width, setWidth] = useState(360);
   useEffect(() => {
     if (!ref.current) return;
     const el = ref.current;
@@ -1711,13 +1735,14 @@ export function renderElement(
             {data.plans.map((p: ComponentPlanSummary) => {
               const isActive = p.id === data.activePlan?.id;
               const isPendingTarget = p.id === pendingTransition?.targetPlanId;
+              const isCompact = data.plans.length > 2;
               return (
                 <div
                   key={p.id}
                   style={{
-                    flex: "1 1 160px",
-                    minWidth: 150,
-                    maxWidth: 220,
+                    flex: isCompact ? "1 1 130px" : "1 1 160px",
+                    minWidth: isCompact ? 120 : 140,
+                    maxWidth: isCompact ? 180 : 220,
                     padding: 16,
                     borderRadius: tokens.radius,
                     border: isActive
@@ -2444,6 +2469,15 @@ function PortalContent({
 
   const isNarrowPortal = containerWidth > 0 && containerWidth < 640;
 
+  // Adjusted token sizes for narrow viewports
+  const responsiveTokens = isNarrowPortal
+    ? { ...tokens, size: Math.max(tokens.size - 1, 11) }
+    : tokens;
+  const cardPad = isNarrowPortal ? "16px 16px 14px" : "24px 24px 20px";
+  const sectionPad = isNarrowPortal ? "14px 16px" : "20px 24px";
+  const headingSize = responsiveTokens.size + (isNarrowPortal ? 10 : 18);
+  const priceSize = responsiveTokens.size + (isNarrowPortal ? 6 : 10);
+
   // In merged mode, ignore columns and put everything in one card
   const isMerged = designSections === "merged";
 
@@ -2503,7 +2537,7 @@ function PortalContent({
           /* ── MERGED mode: all elements inside one unified card ── */
           <div style={{ ...leftCard, marginBottom: 12 }}>
             {hasPlanManager && (
-              <div style={{ padding: "24px 24px 20px" }}>
+              <div style={{ padding: cardPad }}>
                 <div
                   style={{
                     display: "flex",
@@ -2516,10 +2550,10 @@ function PortalContent({
                   <div style={{ minWidth: 0 }}>
                     <div
                       style={{
-                        fontSize: tokens.size + 18,
+                        fontSize: headingSize,
                         fontWeight: 800,
                         lineHeight: 1.05,
-                        color: tokens.textColor,
+                        color: responsiveTokens.textColor,
                         letterSpacing: "-0.02em",
                       }}
                     >
@@ -2527,8 +2561,8 @@ function PortalContent({
                     </div>
                     <div
                       style={{
-                        fontSize: tokens.size - 1,
-                        color: tokens.mutedColor,
+                        fontSize: responsiveTokens.size - 1,
+                        color: responsiveTokens.mutedColor,
                         marginTop: 4,
                       }}
                     >
@@ -2540,8 +2574,8 @@ function PortalContent({
                         alignItems: "center",
                         gap: 4,
                         marginTop: 8,
-                        background: `${tokens.primary}18`,
-                        color: tokens.primary,
+                        background: `${responsiveTokens.primary}18`,
+                        color: responsiveTokens.primary,
                         fontSize: 11,
                         fontWeight: 600,
                         padding: "3px 10px",
@@ -2554,9 +2588,9 @@ function PortalContent({
                   <div style={{ textAlign: "right", flexShrink: 0 }}>
                     <div
                       style={{
-                        fontSize: tokens.size + 10,
+                        fontSize: priceSize,
                         fontWeight: 800,
-                        color: tokens.textColor,
+                        color: responsiveTokens.textColor,
                       }}
                     >
                       {price === 0 ? "Free" : `$${price.toFixed(2)}`}
@@ -2564,8 +2598,8 @@ function PortalContent({
                     {isPaid && (
                       <div
                         style={{
-                          fontSize: tokens.size - 2,
-                          color: tokens.mutedColor,
+                          fontSize: responsiveTokens.size - 2,
+                          color: responsiveTokens.mutedColor,
                         }}
                       >
                         {intervalLabel(plan!.billingInterval)}
@@ -2575,7 +2609,7 @@ function PortalContent({
                 </div>
                 {allowPlanChanges ? (
                   <PrimaryButton
-                    tokens={tokens}
+                    tokens={responsiveTokens}
                     onClick={onChangePlan}
                     fullWidth
                   >
@@ -2587,12 +2621,12 @@ function PortalContent({
             {hasIncluded && (
               <>
                 {hasPlanManager && divider}
-                <div style={{ padding: "20px 24px" }}>
+                <div style={{ padding: sectionPad }}>
                   <div
                     style={{
-                      fontSize: tokens.size,
+                      fontSize: responsiveTokens.size,
                       fontWeight: 700,
-                      color: tokens.textColor,
+                      color: responsiveTokens.textColor,
                       marginBottom: 12,
                     }}
                   >
@@ -2601,8 +2635,8 @@ function PortalContent({
                   {boolFeats.length === 0 ? (
                     <div
                       style={{
-                        color: tokens.mutedColor,
-                        fontSize: tokens.size - 1,
+                        color: responsiveTokens.mutedColor,
+                        fontSize: responsiveTokens.size - 1,
                       }}
                     >
                       No features configured.
@@ -2632,9 +2666,9 @@ function PortalContent({
                           <FeatureIcon>{DOC_ICON}</FeatureIcon>
                           <span
                             style={{
-                              fontSize: tokens.size,
+                              fontSize: responsiveTokens.size,
                               fontWeight: 500,
-                              color: tokens.textColor,
+                              color: responsiveTokens.textColor,
                             }}
                           >
                             {f.name ?? f.featureKey}
@@ -2652,18 +2686,18 @@ function PortalContent({
             {hasMetered && (
               <>
                 {(hasPlanManager || hasIncluded) && divider}
-                <div style={{ padding: "20px 24px" }}>
+                <div style={{ padding: sectionPad }}>
                   <div
                     style={{
-                      fontSize: tokens.size,
+                      fontSize: responsiveTokens.size,
                       fontWeight: 700,
-                      color: tokens.textColor,
+                      color: responsiveTokens.textColor,
                       marginBottom: 14,
                     }}
                   >
                     Usage
                   </div>
-                  {renderUsageCards(data, tokens)}
+                  {renderUsageCards(data, responsiveTokens)}
                 </div>
               </>
             )}
@@ -2672,7 +2706,7 @@ function PortalContent({
                 el as ComponentElement & Record<string, unknown>,
                 i + 200,
                 data,
-                tokens,
+                responsiveTokens,
                 onChangePlan,
                 onUnsubscribe,
                 allowPlanChanges,
@@ -2689,10 +2723,10 @@ function PortalContent({
                       background: "none",
                       border: "none",
                       cursor: "pointer",
-                      fontSize: tokens.size - 1,
-                      color: tokens.mutedColor,
+                      fontSize: responsiveTokens.size - 1,
+                      color: responsiveTokens.mutedColor,
                       padding: 0,
-                      fontFamily: tokens.font,
+                      fontFamily: responsiveTokens.font,
                     }}
                   >
                     Cancel subscription
@@ -2707,7 +2741,7 @@ function PortalContent({
             {hasLeftCard && (
               <div style={leftCard}>
                 {hasPlanManager && (
-                  <div style={{ padding: "24px 24px 20px" }}>
+                  <div style={{ padding: cardPad }}>
                     <div
                       style={{
                         display: "flex",
@@ -2720,10 +2754,10 @@ function PortalContent({
                       <div style={{ minWidth: 0 }}>
                         <div
                           style={{
-                            fontSize: tokens.size + 18,
+                            fontSize: headingSize,
                             fontWeight: 800,
                             lineHeight: 1.05,
-                            color: tokens.textColor,
+                            color: responsiveTokens.textColor,
                             letterSpacing: "-0.02em",
                           }}
                         >
@@ -2731,8 +2765,8 @@ function PortalContent({
                         </div>
                         <div
                           style={{
-                            fontSize: tokens.size - 1,
-                            color: tokens.mutedColor,
+                            fontSize: responsiveTokens.size - 1,
+                            color: responsiveTokens.mutedColor,
                             marginTop: 4,
                           }}
                         >
@@ -2745,8 +2779,8 @@ function PortalContent({
                             alignItems: "center",
                             gap: 4,
                             marginTop: 8,
-                            background: `${tokens.primary}18`,
-                            color: tokens.primary,
+                            background: `${responsiveTokens.primary}18`,
+                            color: responsiveTokens.primary,
                             fontSize: 11,
                             fontWeight: 600,
                             padding: "3px 10px",
@@ -2759,9 +2793,9 @@ function PortalContent({
                       <div style={{ textAlign: "right", flexShrink: 0 }}>
                         <div
                           style={{
-                            fontSize: tokens.size + 10,
+                            fontSize: priceSize,
                             fontWeight: 800,
-                            color: tokens.textColor,
+                            color: responsiveTokens.textColor,
                           }}
                         >
                           {price === 0 ? "Free" : `$${price.toFixed(2)}`}
@@ -2769,8 +2803,8 @@ function PortalContent({
                         {isPaid && (
                           <div
                             style={{
-                              fontSize: tokens.size - 2,
-                              color: tokens.mutedColor,
+                              fontSize: responsiveTokens.size - 2,
+                              color: responsiveTokens.mutedColor,
                             }}
                           >
                             {intervalLabel(plan!.billingInterval)}
@@ -2780,7 +2814,7 @@ function PortalContent({
                     </div>
                     {allowPlanChanges ? (
                       <PrimaryButton
-                        tokens={tokens}
+                        tokens={responsiveTokens}
                         onClick={onChangePlan}
                         fullWidth
                       >
@@ -2792,12 +2826,12 @@ function PortalContent({
                 {hasIncluded && (
                   <>
                     {hasPlanManager && divider}
-                    <div style={{ padding: "20px 24px" }}>
+                    <div style={{ padding: sectionPad }}>
                       <div
                         style={{
-                          fontSize: tokens.size,
+                          fontSize: responsiveTokens.size,
                           fontWeight: 700,
-                          color: tokens.textColor,
+                          color: responsiveTokens.textColor,
                           marginBottom: 12,
                         }}
                       >
@@ -2806,8 +2840,8 @@ function PortalContent({
                       {boolFeats.length === 0 ? (
                         <div
                           style={{
-                            color: tokens.mutedColor,
-                            fontSize: tokens.size - 1,
+                            color: responsiveTokens.mutedColor,
+                            fontSize: responsiveTokens.size - 1,
                           }}
                         >
                           No features configured.
@@ -2837,9 +2871,9 @@ function PortalContent({
                               <FeatureIcon>{DOC_ICON}</FeatureIcon>
                               <span
                                 style={{
-                                  fontSize: tokens.size,
+                                  fontSize: responsiveTokens.size,
                                   fontWeight: 500,
-                                  color: tokens.textColor,
+                                  color: responsiveTokens.textColor,
                                 }}
                               >
                                 {f.name ?? f.featureKey}
@@ -2857,18 +2891,18 @@ function PortalContent({
                 {hasMetered && (
                   <>
                     {(hasPlanManager || hasIncluded) && divider}
-                    <div style={{ padding: "20px 24px" }}>
+                    <div style={{ padding: sectionPad }}>
                       <div
                         style={{
-                          fontSize: tokens.size,
+                          fontSize: responsiveTokens.size,
                           fontWeight: 700,
-                          color: tokens.textColor,
+                          color: responsiveTokens.textColor,
                           marginBottom: 14,
                         }}
                       >
                         Usage
                       </div>
-                      {renderUsageCards(data, tokens)}
+                      {renderUsageCards(data, responsiveTokens)}
                     </div>
                   </>
                 )}
@@ -2882,10 +2916,10 @@ function PortalContent({
                           background: "none",
                           border: "none",
                           cursor: "pointer",
-                          fontSize: tokens.size - 1,
-                          color: tokens.mutedColor,
+                          fontSize: responsiveTokens.size - 1,
+                          color: responsiveTokens.mutedColor,
                           padding: 0,
-                          fontFamily: tokens.font,
+                          fontFamily: responsiveTokens.font,
                         }}
                       >
                         Cancel subscription
@@ -2900,7 +2934,7 @@ function PortalContent({
                 el as ComponentElement & Record<string, unknown>,
                 i + 200,
                 data,
-                tokens,
+                responsiveTokens,
                 onChangePlan,
                 onUnsubscribe,
                 allowPlanChanges,
@@ -6091,7 +6125,10 @@ function UnsubscribeContent({
   );
 }
 
-// ─── Full-screen modal for modal mode ────────────────────────────────────────
+// ─── Full-screen modal ────────────────────────────────────────────────────────
+// On mobile: true full-screen. On desktop: centered popup.
+
+let _modalIdCounter = 0;
 
 function FullScreenModal({
   onClose,
@@ -6104,40 +6141,64 @@ function FullScreenModal({
   contentRef: React.RefObject<HTMLDivElement | null>;
   children: React.ReactNode;
 }) {
+  const idRef = useRef(`am-${++_modalIdCounter}`);
+
   return createPortal(
-    <div
-      onClick={onClose}
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 99999,
-        background: "rgba(0,0,0,0.45)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
+    <>
+      <style>{`
+        .${idRef.current}-overlay {
+          position: fixed;
+          inset: 0;
+          z-index: 99999;
+          background: rgba(0,0,0,0.45);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .${idRef.current}-inner {
+          background: ${tokens.bg};
+          overflow: hidden;
+          display: flex;
+          flex-direction: column;
+          position: relative;
+        }
+        @media (max-width: 640px) {
+          .${idRef.current}-overlay {
+            background: ${tokens.bg};
+            align-items: stretch;
+            justify-content: stretch;
+          }
+          .${idRef.current}-inner {
+            width: 100vw !important;
+            height: 100vh !important;
+            border-radius: 0 !important;
+          }
+        }
+        @media (min-width: 641px) {
+          .${idRef.current}-inner {
+            width: 92vw;
+            max-width: 1100px;
+            height: 92vh;
+            max-height: 1100px;
+            border-radius: ${tokens.radius * 1.5}px;
+          }
+        }
+      `}</style>
       <div
-        ref={contentRef}
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          background: tokens.bg,
-          borderRadius: tokens.radius * 1.5,
-          overflow: "hidden",
-          display: "flex",
-          flexDirection: "column",
-          width: "95vw",
-          maxWidth: 900,
-          height: "95vh",
-          maxHeight: 900,
-          position: "relative",
-        }}
+        className={`${idRef.current}-overlay`}
+        onClick={onClose}
       >
-        <div style={{ flex: 1, overflowY: "auto", minHeight: 0, padding: 24 }}>
-          {children}
+        <div
+          ref={contentRef}
+          className={`${idRef.current}-inner`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div style={{ flex: 1, overflowY: "auto", minHeight: 0, padding: 24 }}>
+            {children}
+          </div>
         </div>
       </div>
-    </div>,
+    </>,
     typeof document !== "undefined" ? document.body : (undefined as unknown as HTMLElement),
   );
 }
@@ -6902,8 +6963,11 @@ export function ArcenEmbed({
     color: tokens.textColor,
     background: tokens.bg,
     lineHeight: 1.5,
-    padding: 24,
+    padding: 16,
     boxSizing: "border-box" as const,
+    minWidth: 0,
+    overflowWrap: "break-word",
+    wordBreak: "break-word",
     ...style,
   };
 
