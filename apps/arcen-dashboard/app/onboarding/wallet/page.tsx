@@ -83,6 +83,11 @@ export default function ConnectWalletPage() {
 
       if (!response.ok) {
         const errorPayload = await response.json().catch(() => ({}));
+        if (response.status === 409 && errorPayload.maskedOwnerEmail) {
+          throw new Error(
+            `This wallet is already linked to another account (${errorPayload.maskedOwnerEmail}). Please sign in with that email instead.`,
+          );
+        }
         throw new Error(errorPayload.error || "Failed to link wallet");
       }
 

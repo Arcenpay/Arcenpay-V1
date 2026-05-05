@@ -19,6 +19,45 @@ export function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
 
+export function normalizeWalletAddress(address: string): string {
+  return address.toLowerCase();
+}
+
+export function maskEmail(email: string): string {
+  const [local, domain] = email.split("@");
+  if (!local || !domain) return "***@***";
+  if (local.length <= 1) return `*@${domain}`;
+  return `${local[0]}${"*".repeat(Math.min(local.length - 1, 4))}@${domain}`;
+}
+
+export async function findWalletConflict(
+  walletAddress: string,
+  attemptEmail: string,
+): Promise<{ conflict: true; ownerEmail: string; maskedEmail: string } | { conflict: false }> {
+  const normalizedWallet = normalizeWalletAddress(walletAddress);
+  const normalizedAttemptEmail = normalizeEmail(attemptEmail);
+
+  const walletOwner = await db.user.findUnique({
+    where: { walletAddress: normalizedWallet },
+    select: { id: true, email: true },
+  });
+
+  if (!walletOwner) {
+    return { conflict: false };
+  }
+
+  const ownerEmail = normalizeEmail(walletOwner.email ?? "");
+  if (ownerEmail === normalizedAttemptEmail) {
+    return { conflict: false };
+  }
+
+  return {
+    conflict: true,
+    ownerEmail: walletOwner.email ?? "",
+    maskedEmail: maskEmail(walletOwner.email ?? ""),
+  };
+}
+
 function generateCode(): string {
   return String(randomInt(0, 1_000_000)).padStart(6, "0");
 }

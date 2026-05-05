@@ -121,6 +121,11 @@ export function EmailAuthFlow({ inviteToken }: EmailAuthFlowProps) {
 
       const linkPayload = await linkResponse.json().catch(() => ({}));
       if (!linkResponse.ok) {
+        if (linkResponse.status === 409 && linkPayload.maskedOwnerEmail) {
+          throw new Error(
+            `This wallet is already linked to another account (${linkPayload.maskedOwnerEmail}). Please sign in with that email instead.`,
+          );
+        }
         throw new Error(linkPayload.error || "Could not link this wallet.");
       }
 
@@ -155,13 +160,20 @@ export function EmailAuthFlow({ inviteToken }: EmailAuthFlowProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email,
+          walletAddress: address,
           ...(inviteToken ? { inviteToken } : {}),
         }),
       });
 
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
-        setError(payload.error || "Could not send a verification code.");
+        if (response.status === 409 && payload.maskedOwnerEmail) {
+          setError(
+            `This wallet is already linked to another account (${payload.maskedOwnerEmail}). Please sign in with that email instead.`,
+          );
+        } else {
+          setError(payload.error || "Could not send a verification code.");
+        }
         if (payload.retryAt) setRetryAt(payload.retryAt);
         return;
       }
@@ -183,13 +195,20 @@ export function EmailAuthFlow({ inviteToken }: EmailAuthFlowProps) {
         body: JSON.stringify({
           email,
           code,
+          walletAddress: address || undefined,
           ...(inviteToken ? { inviteToken } : {}),
         }),
       });
 
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
-        setError(payload.error || "Could not verify this code.");
+        if (response.status === 409 && payload.maskedOwnerEmail) {
+          setError(
+            `This wallet is already linked to another account (${payload.maskedOwnerEmail}). Please sign in with that email instead.`,
+          );
+        } else {
+          setError(payload.error || "Could not verify this code.");
+        }
         return;
       }
 

@@ -117,7 +117,7 @@ export async function sendTeamInviteEmail(
   teamName: string,
   inviterEmail: string | null,
 ): Promise<void> {
-  const url = `${APP_URL}/login?invite=${encodeURIComponent(token)}`;
+  const url = `${APP_URL}/invite?token=${encodeURIComponent(token)}`;
   const inviterText = inviterEmail
     ? `<strong style="color:#ccc">${inviterEmail}</strong>`
     : "A team admin";

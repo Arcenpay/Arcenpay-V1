@@ -9,6 +9,9 @@ export default async function LoginPage({
 }) {
   const [session, params] = await Promise.all([getSession(), searchParams]);
   if (session) {
+    if (params.invite) {
+      redirect(`/invite?token=${encodeURIComponent(params.invite)}`);
+    }
     redirect(session.walletAddress ? "/" : "/onboarding/wallet");
   }
 

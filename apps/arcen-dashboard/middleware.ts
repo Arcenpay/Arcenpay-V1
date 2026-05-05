@@ -5,6 +5,7 @@ const PUBLIC_PATHS = [
   /^\/login(?:\/.*)?$/,
   /^\/sign-in(?:\/.*)?$/,
   /^\/sign-up(?:\/.*)?$/,
+  /^\/invite(?:\/.*)?$/,
   /^\/api\/auth\/email\/start$/,
   /^\/api\/auth\/email\/verify$/,
   /^\/api\/auth\/session$/,

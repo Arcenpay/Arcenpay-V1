@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   EMAIL_AUTH_PURPOSE_LOGIN,
   EMAIL_AUTH_RESEND_COOLDOWN_MS,
+  findWalletConflict,
   getLatestActiveEmailCode,
   getActiveTeamInvitationByToken,
   issueEmailAuthCode,
@@ -12,6 +13,7 @@ import { applyRateLimitHeaders, rateLimit } from "@/lib/rate-limit";
 
 const Schema = z.object({
   email: z.string().email(),
+  walletAddress: z.string().regex(/^0x[0-9a-fA-F]{40}$/).optional(),
   inviteToken: z.string().min(1).optional(),
 });
 
@@ -51,12 +53,25 @@ export async function POST(request: NextRequest) {
 
   const email = normalizeEmail(parsed.data.email);
 
+  if (parsed.data.walletAddress) {
+    const conflict = await findWalletConflict(parsed.data.walletAddress, email);
+    if (conflict.conflict) {
+      return NextResponse.json(
+        {
+          error: "This wallet is already linked to another account. Please sign in with the email registered for that wallet.",
+          maskedOwnerEmail: conflict.maskedEmail,
+        },
+        { status: 409 },
+      );
+    }
+  }
+
   if (parsed.data.inviteToken) {
     const invitation = await getActiveTeamInvitationByToken(parsed.data.inviteToken);
     if (!invitation || invitation.revokedAt || invitation.acceptedAt || invitation.expiresAt <= new Date()) {
       return NextResponse.json({ error: "This invitation is no longer valid." }, { status: 404 });
     }
-    if (invitation.email !== email) {
+    if (normalizeEmail(invitation.email) !== email) {
       return NextResponse.json(
         { error: "Use the invited email address to accept this workspace invite." },
         { status: 409 },

@@ -10,6 +10,7 @@ import { db } from "@/lib/db";
 import { buildSIWEMessage } from "@/lib/auth";
 import { consumeNonce } from "@/lib/nonce.server";
 import { getSession } from "@/lib/auth.server";
+import { maskEmail } from "@/lib/auth-flow";
 import { BASE_SEPOLIA_CHAIN_ID, getChainLabel } from "@/lib/default-chain";
 
 const Schema = z.object({
@@ -90,12 +91,15 @@ export async function POST(req: NextRequest) {
 
     const walletOwner = await db.user.findUnique({
       where: { walletAddress: normalizedAddress },
-      select: { id: true },
+      select: { id: true, email: true },
     });
 
     if (walletOwner && walletOwner.id !== session.userId) {
       return NextResponse.json(
-        { error: "This wallet is already linked to another account" },
+        {
+          error: "This wallet is already linked to another account",
+          maskedOwnerEmail: maskEmail(walletOwner.email ?? ""),
+        },
         { status: 409 },
       );
     }

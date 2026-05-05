@@ -4,6 +4,7 @@ import {
   EMAIL_AUTH_MAX_ATTEMPTS,
   EMAIL_AUTH_PURPOSE_LOGIN,
   acceptTeamInvitation,
+  findWalletConflict,
   getActiveTeamInvitationByToken,
   normalizeEmail,
   provisionUserForEmail,
@@ -15,6 +16,7 @@ import { db } from "@/lib/db";
 const Schema = z.object({
   email: z.string().email(),
   code: z.string().regex(/^\d{6}$/),
+  walletAddress: z.string().regex(/^0x[0-9a-fA-F]{40}$/).optional(),
   inviteToken: z.string().min(1).optional(),
 });
 
@@ -37,7 +39,7 @@ export async function POST(request: NextRequest) {
     if (!invitation || invitation.revokedAt || invitation.acceptedAt || invitation.expiresAt <= new Date()) {
       return NextResponse.json({ error: "This invitation is no longer valid." }, { status: 404 });
     }
-    if (invitation.email !== email) {
+    if (normalizeEmail(invitation.email) !== email) {
       return NextResponse.json(
         { error: "Use the invited email address to accept this workspace invite." },
         { status: 409 },
@@ -67,6 +69,19 @@ export async function POST(request: NextRequest) {
         : "Incorrect verification code.";
 
     return NextResponse.json({ error: message }, { status: 401 });
+  }
+
+  if (parsed.data.walletAddress) {
+    const conflict = await findWalletConflict(parsed.data.walletAddress, email);
+    if (conflict.conflict) {
+      return NextResponse.json(
+        {
+          error: "This wallet is already linked to another account. Please sign in with the email registered for that wallet.",
+          maskedOwnerEmail: conflict.maskedEmail,
+        },
+        { status: 409 },
+      );
+    }
   }
 
   const user = await provisionUserForEmail(email);
