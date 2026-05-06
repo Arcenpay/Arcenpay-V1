@@ -1,30 +1,39 @@
-name: Dashboard CI
+name: Dashboard & Docs CI
 
 on:
   push:
-    branches: [main, nishar-end]
+    branches: [main]
     paths:
-      - 'apps/arcen-dashboard/**'
-      - 'packages/sdk-core/**'
-      - 'packages/sdk-react/**'
+      - "apps/arcen-dashboard/**"
+      - "apps/docs/**"
+      - "packages/sdk-core/**"
+      - "packages/sdk-react/**"
   pull_request:
     branches: [main]
     paths:
-      - 'apps/arcen-dashboard/**'
+      - "apps/arcen-dashboard/**"
+      - "apps/docs/**"
+      - "packages/sdk-core/**"
+      - "packages/sdk-react/**"
 
 jobs:
-  build:
+  dashboard:
+    name: Typecheck, Lint & Test
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: apps/arcen-dashboard
+    env:
+      SIWE_JWT_SECRET: ci-dev-secret
+      NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID: ci-placeholder
+      NEXT_PUBLIC_CHAIN_ID: "11155111"
 
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: 20
           cache: npm
           cache-dependency-path: package-lock.json
 
@@ -32,20 +41,43 @@ jobs:
         working-directory: .
         run: npm ci
 
+      - name: Build SDK dependencies
+        run: npx turbo run build --filter="./packages/sdk-core" --filter="./packages/sdk-react"
+
       - name: Generate Prisma client
         run: npx prisma generate
 
       - name: TypeScript check
         run: npx tsc --noEmit
 
-      - name: Lint
-        run: npm run lint --if-present
+      - name: Run tests
+        run: CI=true npx vitest run
 
-      - name: Build
+      - name: Build dashboard
         run: npm run build
         env:
-          NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID: ${{ secrets.WALLETCONNECT_PROJECT_ID || 'ci-placeholder' }}
-          NEXT_PUBLIC_CHAIN_ID: '11155111'
-          NEXT_PUBLIC_GRAPH_URL: ${{ secrets.GRAPH_URL || '' }}
-          NEXT_PUBLIC_FACILITATOR_BASE_URL: 'http://localhost:3402'
-          SIWE_JWT_SECRET: 'ci-dev-secret'
+          SKIP_ENV_VALIDATION: "true"
+          DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
+
+  docs:
+    name: Build Docs
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/docs
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        working-directory: .
+        run: npm ci
+
+      - name: Build docs
+        run: npm run build

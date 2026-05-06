@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateNonce } from "@/lib/nonce.server";
-import { rateLimit, applyRateLimitHeaders } from "@/lib/rate-limit";
+import { authNonceProtect } from "@/lib/arcjet";
 import { getSession } from "@/lib/auth.server";
-
-// 20 nonce requests per IP per minute — prevents brute-force SIWE replay farming
-const NONCE_LIMIT = 20;
-const NONCE_WINDOW_MS = 60_000;
 
 export async function GET(request: NextRequest) {
   const session = await getSession();
@@ -13,23 +9,17 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const ip =
-    request.headers.get("x-forwarded-for")?.split(",")[0].trim() ||
-    request.headers.get("x-real-ip") ||
-    "unknown";
-
-  const result = rateLimit(`nonce:${ip}`, NONCE_LIMIT, NONCE_WINDOW_MS);
-  if (!result.ok) {
-    const res = NextResponse.json(
+  const decision = await authNonceProtect.protect(request);
+  if (decision.isDenied()) {
+    if (decision.reason.isBot()) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    return NextResponse.json(
       { error: "Too many requests. Please try again later." },
       { status: 429 },
     );
-    applyRateLimitHeaders(res.headers, result, NONCE_LIMIT);
-    return res;
   }
 
   const nonce = await generateNonce();
-  const res = NextResponse.json(nonce);
-  applyRateLimitHeaders(res.headers, result, NONCE_LIMIT);
-  return res;
+  return NextResponse.json(nonce);
 }

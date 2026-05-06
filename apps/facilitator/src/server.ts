@@ -33,6 +33,7 @@ if (process.env.SENTRY_DSN) {
 
 import express from "express";
 import cors from "cors";
+import arcjet, { shield, detectBot, fixedWindow } from "@arcjet/node";
 import {
   collectDefaultMetrics,
   Counter,
@@ -384,56 +385,8 @@ const x402ReplayRejections = new Counter({
 });
 
 // ============================================================
-//  Rate Limiting (PRD §11.2)
+//  X402 Wallet Rate Limiting (per-wallet payment frequency)
 // ============================================================
-
-type InMemoryRateLimitOptions = {
-  windowMs: number;
-  max: number;
-  message: Record<string, string>;
-};
-
-function inMemoryRateLimit({
-  windowMs,
-  max,
-  message,
-}: InMemoryRateLimitOptions) {
-  const hits = new Map<string, { count: number; resetAt: number }>();
-
-  return (
-    req: express.Request,
-    res: express.Response,
-    next: express.NextFunction,
-  ) => {
-    const now = Date.now();
-    const key =
-      req.ip ||
-      String(req.headers["x-forwarded-for"] || "") ||
-      req.socket.remoteAddress ||
-      "unknown";
-
-    const entry = hits.get(key);
-    if (!entry || now >= entry.resetAt) {
-      hits.set(key, { count: 1, resetAt: now + windowMs });
-      return next();
-    }
-
-    if (entry.count >= max) {
-      res.setHeader("Retry-After", Math.ceil((entry.resetAt - now) / 1000));
-      return res.status(429).json(message);
-    }
-
-    entry.count += 1;
-    hits.set(key, entry);
-    return next();
-  };
-}
-
-const apiLimiter = inMemoryRateLimit({
-  windowMs: 60 * 1000, // 1 minute
-  max: 100, // 100 req/min per IP
-  message: { error: "Too many requests, please try again later." },
-});
 
 function extractWalletFromXPaymentHeader(
   headerValue: string | string[] | undefined,
@@ -502,6 +455,30 @@ const x402WalletLimiter = walletRateLimit({
 });
 
 // ============================================================
+//  Arcjet Security — shield, bot detection, rate limiting
+// ============================================================
+
+const aj = arcjet({
+  key: process.env.ARCJET_KEY!,
+  rules: [
+    shield({ mode: "LIVE" }),
+    detectBot({
+      mode: "LIVE",
+      allow: [
+        "CATEGORY:SEARCH_ENGINE",
+        "CATEGORY:MONITOR",
+      ],
+    }),
+    fixedWindow({
+      mode: "LIVE",
+      characteristics: ["ip.src"],
+      window: "60s",
+      max: 200,
+    }),
+  ],
+});
+
+// ============================================================
 //  Global Middleware
 // ============================================================
 
@@ -519,7 +496,16 @@ app.use(
   }),
 );
 app.use(express.json({ limit: "50kb" })); // 50KB body limit (PRD §11.2)
-app.use("/api", apiLimiter);
+app.use(async (req, res, next) => {
+  const decision = await aj.protect(req);
+  if (decision.isDenied()) {
+    if (decision.reason.isBot()) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+    return res.status(429).json({ error: "Too many requests" });
+  }
+  next();
+});
 
 // ============================================================
 //  Initialize Services

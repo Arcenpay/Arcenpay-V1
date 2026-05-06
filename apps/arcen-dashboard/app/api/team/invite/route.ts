@@ -9,12 +9,9 @@ import { getSession } from "@/lib/auth.server";
 import { resolveTeamContext } from "@/lib/team-session";
 import { db } from "@/lib/db";
 import { writeAuditEvent } from "@/lib/audit";
-import { rateLimit, applyRateLimitHeaders } from "@/lib/rate-limit";
+import { teamInviteProtect } from "@/lib/arcjet";
 import { assertCanInviteMember } from "@/lib/tier-guard";
 import { createTeamInvitation, normalizeEmail } from "@/lib/auth-flow";
-
-const INVITE_LIMIT = 5;
-const INVITE_WINDOW_MS = 60 * 60 * 1000;
 
 const InviteSchema = z.object({
   email: z.string().email(),
@@ -53,14 +50,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const rl = rateLimit(`invite:${team.teamId}`, INVITE_LIMIT, INVITE_WINDOW_MS);
-    if (!rl.ok) {
-      const res = NextResponse.json(
+    const decision = await teamInviteProtect.protect(req, { teamId: team.teamId });
+    if (decision.isDenied()) {
+      if (decision.reason.isBot()) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+      return NextResponse.json(
         { error: "Too many invitations sent. Please wait before sending more." },
         { status: 429 },
       );
-      applyRateLimitHeaders(res.headers, rl, INVITE_LIMIT);
-      return res;
     }
 
     const body = await req.json();

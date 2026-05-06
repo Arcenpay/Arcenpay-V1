@@ -45,16 +45,24 @@ vi.mock("@/lib/flag-cache", () => ({
 
 vi.mock("@arcenpay/sdk", () => ({
   getContractAddresses: mocks.getContractAddresses,
+  getChain: vi.fn((id: number) => ({
+    id,
+    name: `Chain ${id}`,
+    rpcUrls: { default: { http: [] } },
+    nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+  })),
 }));
 
-vi.mock("viem", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("viem")>();
-  return {
-    ...actual,
-    createPublicClient: mocks.createPublicClient,
-    http: vi.fn((url: string) => ({ url })),
-  };
-});
+vi.mock("viem", () => ({
+  http: vi.fn((url: string) => ({ url })),
+  createPublicClient: mocks.createPublicClient,
+  getChain: vi.fn((id: number) => ({
+    id,
+    name: `Chain ${id}`,
+    rpcUrls: { default: { http: [] } },
+    nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+  })),
+}));
 
 describe("resolveCompany subscription access window", () => {
   beforeEach(() => {
@@ -67,6 +75,16 @@ describe("resolveCompany subscription access window", () => {
     mocks.getContractAddresses.mockReturnValue({
       subscriptionRegistry: "0x0000000000000000000000000000000000000001",
     });
+    mocks.readContract.mockResolvedValue({});
+    // Default: no active subscription, no add-ons
+    mocks.arcenCompanyFindFirst.mockResolvedValue({
+      id: "company_1",
+      traits: {},
+      activePlanId: null,
+      activeAddOnIds: [],
+      addOnGrants: [],
+      subscriptionState: null,
+    });
   });
 
   it("does not grant plan access for an expired active subscription", async () => {
@@ -75,6 +93,7 @@ describe("resolveCompany subscription access window", () => {
       traits: {},
       activePlanId: "cached_paid_plan",
       activeAddOnIds: [],
+      addOnGrants: [],
       subscriptionState: {
         status: "ACTIVE",
         catalogPlanId: "paid_plan",
@@ -100,6 +119,7 @@ describe("resolveCompany subscription access window", () => {
       },
       activePlanId: "paid_plan",
       activeAddOnIds: [],
+      addOnGrants: [],
       subscriptionState: {
         status: "ACTIVE",
         catalogPlanId: "paid_plan",
@@ -121,6 +141,7 @@ describe("resolveCompany subscription access window", () => {
       traits: {},
       activePlanId: "cached_paid_plan",
       activeAddOnIds: [],
+      addOnGrants: [],
       subscriptionState: {
         status: "PAST_DUE",
         catalogPlanId: "paid_plan",
@@ -142,6 +163,7 @@ describe("resolveCompany subscription access window", () => {
       traits: {},
       activePlanId: null,
       activeAddOnIds: [],
+      addOnGrants: [],
       subscriptionState: null,
     });
     mocks.readContract.mockImplementation(({ functionName }) => {
