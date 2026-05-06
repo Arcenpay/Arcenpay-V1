@@ -25,6 +25,7 @@ import { createHash, randomBytes } from "crypto";
 import { createHmac } from "crypto";
 import { requireAnyAuth, isAnyAuthError } from "@/lib/require-any-auth";
 import { db } from "@/lib/db";
+import { corsHeaders } from "@/lib/cors";
 import {
   resolveCompany,
   resolveUser,
@@ -215,9 +216,17 @@ async function upsertUserForToken(
   }
 }
 
-// ─── Route handler ────────────────────────────────────────────────────────────
+// ─── Route handlers ──────────────────────────────────────────────────────────
+
+export async function OPTIONS(req: NextRequest) {
+  return new NextResponse(null, {
+    status: 204,
+    headers: corsHeaders(req.headers.get("origin")),
+  });
+}
 
 export async function POST(req: NextRequest) {
+  const origin = req.headers.get("origin");
   const ctx = await requireAnyAuth(req);
   if (isAnyAuthError(ctx)) return ctx;
 
@@ -236,7 +245,7 @@ export async function POST(req: NextRequest) {
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid JSON body"  }, { status: 400, headers: corsHeaders(origin) });
   }
 
   // ── expiresIn validation ──────────────────────────────────────────────────
@@ -419,5 +428,5 @@ export async function POST(req: NextRequest) {
       company_id: companyId,
       user_id: userId,
     },
-  });
+  }, { headers: corsHeaders(origin) });
 }

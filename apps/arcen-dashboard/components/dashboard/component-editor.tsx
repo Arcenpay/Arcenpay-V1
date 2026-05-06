@@ -1736,7 +1736,8 @@ export function ComponentEditor({
             ? "elevated"
             : "minimal") as ComponentDesign["cardStyle"],
           columns: config.styling.columns ?? 1,
-          sections: (config.styling.sections ?? "separate") as ComponentDesign["sections"],
+          sections: (config.styling.sections ??
+            "separate") as ComponentDesign["sections"],
         } as ComponentDesign,
       },
       company: {
@@ -1868,8 +1869,7 @@ const App = () => {
     <ArcenpayEmbed
       accessToken={token}
       id="${compId}"
-      baseUrl="https://dashboard.arcenpay.xyz"
-    />
+        />
   );
 };`;
   };
@@ -1879,7 +1879,7 @@ const App = () => {
       ? "YOUR_COMPONENT_ID"
       : config.id;
     return `// Node.js / server-side — generate a short-lived access token
-const res = await fetch('https://dashboard.arcenpay.xyz/api/v1/access-tokens', {
+const res = await fetch('http://localhost:3000/api/v1/access-tokens', {
   method: 'POST',
   headers: {
     'Authorization': 'Bearer api_your_api_key',
@@ -2580,7 +2580,9 @@ const { data } = await res.json();
                 ) : (
                   <Code2 className="w-3.5 h-3.5" />
                 )}
-                <span className="hidden sm:inline">{v === "component" ? "Component" : "Code"}</span>
+                <span className="hidden sm:inline">
+                  {v === "component" ? "Component" : "Code"}
+                </span>
               </button>
             ))}
           </div>
@@ -2646,7 +2648,9 @@ const { data } = await res.json();
                       <SelectValue placeholder="Sample Preview Data" />
                     </SelectTrigger>
                     <SelectContent className="z-[10000]">
-                      <SelectItem value="__sample__">Sample Preview Data</SelectItem>
+                      <SelectItem value="__sample__">
+                        Sample Preview Data
+                      </SelectItem>
                       {companies.map((c) => (
                         <SelectItem key={c.id} value={c.id}>
                           {c.name}
@@ -2683,12 +2687,14 @@ const { data } = await res.json();
                     <span className="sm:hidden">
                       {previewCompanyId ? "Live data" : "Sample data"}
                     </span>
-                    <span className={cn(
-                      "shrink-0 rounded-full px-2 py-0.5 font-medium",
-                      previewCompanyId
-                        ? "bg-blue-500/10 text-blue-600"
-                        : "bg-secondary text-muted-foreground",
-                    )}>
+                    <span
+                      className={cn(
+                        "shrink-0 rounded-full px-2 py-0.5 font-medium",
+                        previewCompanyId
+                          ? "bg-blue-500/10 text-blue-600"
+                          : "bg-secondary text-muted-foreground",
+                      )}
+                    >
                       {previewCompanyId ? "Live data" : "Sample data"}
                     </span>
                   </div>
@@ -2733,9 +2739,12 @@ const { data } = await res.json();
                         <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center">
                           <MinusCircle className="w-5 h-5" />
                         </div>
-                        <p className="text-sm font-semibold">Component disabled</p>
+                        <p className="text-sm font-semibold">
+                          Component disabled
+                        </p>
                         <p className="text-xs text-center max-w-[220px] leading-relaxed">
-                          This is how the component appears when disabled for a user segment.
+                          This is how the component appears when disabled for a
+                          user segment.
                         </p>
                       </div>
                     ) : (
@@ -2749,7 +2758,6 @@ const { data } = await res.json();
                           key={embedMountKey}
                           mockData={canvasMockData}
                           initialView={tabToEmbedView(activeViewState)}
-                          baseUrl=""
                           accessToken="preview"
                           mode="inline"
                           style={{
@@ -2780,58 +2788,59 @@ const { data } = await res.json();
                           <div className="mt-4 h-12 rounded-xl border-2 border-dashed border-foreground/30 bg-foreground/5 flex items-center justify-center gap-2">
                             <Plus className="w-4 h-4 text-foreground/50" />
                             <span className="text-sm text-foreground/50 font-medium">
-                              Drop &quot;{draggedElement.label}&quot; here to add
+                              Drop &quot;{draggedElement.label}&quot; here to
+                              add
                             </span>
                           </div>
                         )}
                       </div>
                     )
+                  ) : /* ── Non-custom SDK components: real ArcenEmbed preview ── */
+                  activeViewState === "disabled" ? (
+                    <div className="flex flex-col items-center justify-center min-h-[400px] gap-3 text-muted-foreground">
+                      <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center">
+                        <MinusCircle className="w-5 h-5" />
+                      </div>
+                      <p className="text-sm font-semibold">
+                        Component disabled
+                      </p>
+                      <p className="text-xs text-center max-w-[220px] leading-relaxed">
+                        This is how the component appears when disabled for a
+                        user segment.
+                      </p>
+                    </div>
                   ) : (
-                    /* ── Non-custom SDK components: real ArcenEmbed preview ── */
-                    activeViewState === "disabled" ? (
-                      <div className="flex flex-col items-center justify-center min-h-[400px] gap-3 text-muted-foreground">
-                        <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center">
-                          <MinusCircle className="w-5 h-5" />
-                        </div>
-                        <p className="text-sm font-semibold">Component disabled</p>
-                        <p className="text-xs text-center max-w-[220px] leading-relaxed">
-                          This is how the component appears when disabled for a user segment.
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="min-h-full">
-                        <ArcenEmbed
-                          key={embedMountKey}
-                          mockData={canvasMockData}
-                          initialView={tabToEmbedView(activeViewState)}
-                          baseUrl=""
-                          accessToken="preview"
-                          mode="inline"
-                          style={{
-                            width:
-                              viewportSize === "desktop"
-                                ? "100%"
-                                : viewportSize === "tablet"
-                                  ? "768px"
-                                  : "360px",
-                            maxWidth: "100%",
-                            minWidth: 0,
-                            margin: "0 auto",
-                            overflow: "hidden",
-                          }}
-                          onViewChange={(v) => {
-                            const reverseMap: Record<string, string> = {
-                              portal: "portal",
-                              checkout: "checkout",
-                              payment: "payment-method",
-                              unsubscribe: "unsubscribe",
-                              success: "portal",
-                            };
-                            setActiveViewState(reverseMap[v] ?? activeViewState);
-                          }}
-                        />
-                      </div>
-                    )
+                    <div className="min-h-full">
+                      <ArcenEmbed
+                        key={embedMountKey}
+                        mockData={canvasMockData}
+                        initialView={tabToEmbedView(activeViewState)}
+                        accessToken="preview"
+                        mode="inline"
+                        style={{
+                          width:
+                            viewportSize === "desktop"
+                              ? "100%"
+                              : viewportSize === "tablet"
+                                ? "768px"
+                                : "360px",
+                          maxWidth: "100%",
+                          minWidth: 0,
+                          margin: "0 auto",
+                          overflow: "hidden",
+                        }}
+                        onViewChange={(v) => {
+                          const reverseMap: Record<string, string> = {
+                            portal: "portal",
+                            checkout: "checkout",
+                            payment: "payment-method",
+                            unsubscribe: "unsubscribe",
+                            success: "portal",
+                          };
+                          setActiveViewState(reverseMap[v] ?? activeViewState);
+                        }}
+                      />
+                    </div>
                   )}
                 </div>
               </div>

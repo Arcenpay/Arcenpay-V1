@@ -69,7 +69,7 @@ export function getArcenClient(): DemoArcenClient {
 
   const rawClient = new ArcenClient({
     apiKey,
-    baseUrl: process.env.ARCENPAY_BASE_URL ?? "https://dashboard.arcenpay.xyz",
+    baseUrl: process.env.ARCENPAY_BASE_URL ?? "http://localhost:3000",
   });
 
   const client: DemoArcenClient = {
@@ -133,7 +133,7 @@ export async function ensureDemoIdentity(): Promise<void> {
   }
 
   const baseUrl = (
-    process.env.ARCENPAY_BASE_URL ?? "https://dashboard.arcenpay.xyz"
+    process.env.ARCENPAY_BASE_URL ?? "http://localhost:3000"
   ).replace(/\/$/, "");
 
   const response = await fetch(`${baseUrl}/api/v1/events`, {

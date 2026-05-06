@@ -1,35 +1,44 @@
 import type { EntitlementResult } from "@arcenpay/sdk";
 
-function readEnv(key: string): string | undefined {
-  if (typeof process === "undefined") return undefined;
-  return process.env[key];
-}
-
+/** 
+ * Resolves the dashboard base URL.
+ * 
+ * Schematic-style: the publishableKey determines the routing.
+ * In development, defaults to localhost:3000 (local dashboard).
+ * In production, always uses https://dashboard.arcenpay.xyz.
+ * Override with NEXT_PUBLIC_ARCENPAY_BASE_URL for staging environments.
+ */
 export function resolveDashboardBaseUrl(explicit?: string): string {
-  return (
-    explicit ??
-    readEnv("NEXT_PUBLIC_ARCEN_BASE_URL") ??
-    readEnv("NEXT_PUBLIC_ARCENPAY_BASE_URL") ??
-    "https://dashboard.arcenpay.xyz"
-  );
+  if (explicit) return explicit.replace(/\/$/, "");
+  // Read env override (for staging/custom deployments)
+  const envOverride = typeof process !== "undefined"
+    ? process.env.NEXT_PUBLIC_ARCENPAY_BASE_URL
+    : undefined;
+  if (envOverride) return envOverride.replace(/\/$/, "");
+  // Default: localhost in dev, production URL otherwise
+  return typeof process !== "undefined" && process.env.NODE_ENV !== "production"
+    ? "http://localhost:3000"
+    : "https://dashboard.arcenpay.xyz";
 }
 
-export function resolveOptionalDashboardBaseUrl(explicit?: string): string | null {
-  return (
-    explicit ??
-    readEnv("NEXT_PUBLIC_ARCEN_BASE_URL") ??
-    readEnv("NEXT_PUBLIC_ARCENPAY_BASE_URL") ??
-    null
-  );
+export function resolveOptionalDashboardBaseUrl(
+  explicit?: string,
+): string | null {
+  return explicit ? explicit.replace(/\/$/, "") : null;
 }
 
 export function resolveActivationEndpoint(explicit?: string): string | null {
   if (explicit) return explicit;
   const baseUrl = resolveOptionalDashboardBaseUrl();
-  return baseUrl ? `${baseUrl.replace(/\/$/, "")}/api/v1/subscriptions/activate` : null;
+  return baseUrl
+    ? `${baseUrl.replace(/\/$/, "")}/api/v1/subscriptions/activate`
+    : null;
 }
 
-export function createPaymentLinkCheckoutUrl(slug: string, baseUrl?: string): string {
+export function createPaymentLinkCheckoutUrl(
+  slug: string,
+  baseUrl?: string,
+): string {
   const resolvedBaseUrl = resolveDashboardBaseUrl(baseUrl);
   return `${resolvedBaseUrl.replace(/\/$/, "")}/pay/${encodeURIComponent(slug)}`;
 }

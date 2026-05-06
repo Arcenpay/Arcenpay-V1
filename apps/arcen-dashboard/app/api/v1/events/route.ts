@@ -23,23 +23,23 @@ import { Prisma } from "@/src/generated/prisma/client";
 
 import { corsHeaders } from "@/lib/cors";
 
-function jsonWithCors(body: unknown, init?: ResponseInit) {
+function jsonWithCors(body: unknown, req: NextRequest, init?: ResponseInit) {
   const headers = new Headers(init?.headers);
-  for (const [key, value] of Object.entries(corsHeaders())) {
+  for (const [key, value] of Object.entries(corsHeaders(req.headers.get("origin")))) {
     headers.set(key, value);
   }
   return NextResponse.json(body, { ...init, headers });
 }
 
-function withCors(response: NextResponse) {
-  for (const [key, value] of Object.entries(corsHeaders())) {
+function withCors(response: NextResponse, req: NextRequest) {
+  for (const [key, value] of Object.entries(corsHeaders(req.headers.get("origin")))) {
     response.headers.set(key, value);
   }
   return response;
 }
 
-export async function OPTIONS() {
-  return new NextResponse(null, { status: 204, headers: corsHeaders() });
+export async function OPTIONS(req: NextRequest) {
+  return new NextResponse(null, { status: 204, headers: corsHeaders(req.headers.get("origin")) });
 }
 
 export async function GET(req: NextRequest) {
@@ -241,7 +241,7 @@ export async function POST(req: NextRequest) {
   if (bearerToken && !bearerToken.startsWith("api_")) {
     const accessToken = await resolveEmbedAccessToken(bearerToken);
     if (!accessToken) {
-      return jsonWithCors({ error: "Invalid or expired token" }, { status: 401 });
+      return jsonWithCors({ error: "Invalid or expired token" }, req, { status: 401 });
     }
     ctx = {
       teamId: accessToken.teamId,
@@ -251,19 +251,19 @@ export async function POST(req: NextRequest) {
     };
   } else {
     ctx = await requireAnyAuth(req);
-    if (isAnyAuthError(ctx)) return withCors(ctx);
+    if (isAnyAuthError(ctx)) return withCors(ctx, req);
   }
 
   let body: EventBody;
   try {
     body = await req.json();
   } catch {
-    return jsonWithCors({ error: "Invalid JSON body" }, { status: 400 });
+    return jsonWithCors({ error: "Invalid JSON body" }, req, { status: 400 });
   }
 
   if (!body.event_type || !["track", "identify"].includes(body.event_type)) {
     return jsonWithCors(
-      { error: "event_type must be 'track' or 'identify'" },
+      { error: "event_type must be 'track' or 'identify'" }, req,
       { status: 400 },
     );
   }
@@ -272,31 +272,31 @@ export async function POST(req: NextRequest) {
   if (body.event_type === "track") {
     const tb = body as TrackEventBody;
     if (tb.name && tb.name.length > 64) {
-      return jsonWithCors({ error: "name too long" }, { status: 400 });
+      return jsonWithCors({ error: "name too long" }, req, { status: 400 });
     }
     if (tb.company?.wallet && !/^0x[0-9a-fA-F]{40}$/.test(tb.company.wallet)) {
-      return jsonWithCors({ error: "Invalid wallet address format" }, { status: 400 });
+      return jsonWithCors({ error: "Invalid wallet address format" }, req, { status: 400 });
     }
     if (tb.company?.email) {
       if (tb.company.email.length > 254) {
-        return jsonWithCors({ error: "email too long" }, { status: 400 });
+        return jsonWithCors({ error: "email too long" }, req, { status: 400 });
       }
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(tb.company.email)) {
-        return jsonWithCors({ error: "Invalid email format" }, { status: 400 });
+        return jsonWithCors({ error: "Invalid email format" }, req, { status: 400 });
       }
     }
     if (tb.company?.id && tb.company.id.length > 64) {
-      return jsonWithCors({ error: "company id too long" }, { status: 400 });
+      return jsonWithCors({ error: "company id too long" }, req, { status: 400 });
     }
     if (tb.traits !== undefined && (typeof tb.traits !== "object" || tb.traits === null || Array.isArray(tb.traits))) {
-      return jsonWithCors({ error: "traits must be a plain object" }, { status: 400 });
+      return jsonWithCors({ error: "traits must be a plain object" }, req, { status: 400 });
     }
     if (
       tb.idempotencyKey !== undefined &&
       (typeof tb.idempotencyKey !== "string" || tb.idempotencyKey.length > 128)
     ) {
       return jsonWithCors(
-        { error: "idempotencyKey must be a string up to 128 characters" },
+        { error: "idempotencyKey must be a string up to 128 characters" }, req,
         { status: 400 },
       );
     }
@@ -305,35 +305,35 @@ export async function POST(req: NextRequest) {
   if (body.event_type === "identify") {
     const ib = body as IdentifyEventBody;
     if (ib.company?.wallet && !/^0x[0-9a-fA-F]{40}$/.test(ib.company.wallet)) {
-      return jsonWithCors({ error: "Invalid wallet address format" }, { status: 400 });
+      return jsonWithCors({ error: "Invalid wallet address format" }, req, { status: 400 });
     }
     if (ib.company?.email) {
       if (ib.company.email.length > 254) {
-        return jsonWithCors({ error: "email too long" }, { status: 400 });
+        return jsonWithCors({ error: "email too long" }, req, { status: 400 });
       }
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(ib.company.email)) {
-        return jsonWithCors({ error: "Invalid email format" }, { status: 400 });
+        return jsonWithCors({ error: "Invalid email format" }, req, { status: 400 });
       }
     }
     if (ib.company?.name && ib.company.name.length > 128) {
-      return jsonWithCors({ error: "company name too long" }, { status: 400 });
+      return jsonWithCors({ error: "company name too long" }, req, { status: 400 });
     }
     if (ib.company?.id && ib.company.id.length > 64) {
-      return jsonWithCors({ error: "company id too long" }, { status: 400 });
+      return jsonWithCors({ error: "company id too long" }, req, { status: 400 });
     }
     if (ib.user?.email) {
       if (ib.user.email.length > 254) {
-        return jsonWithCors({ error: "email too long" }, { status: 400 });
+        return jsonWithCors({ error: "email too long" }, req, { status: 400 });
       }
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(ib.user.email)) {
-        return jsonWithCors({ error: "Invalid email format" }, { status: 400 });
+        return jsonWithCors({ error: "Invalid email format" }, req, { status: 400 });
       }
     }
     if (ib.user?.wallet && !/^0x[0-9a-fA-F]{40}$/.test(ib.user.wallet)) {
-      return jsonWithCors({ error: "Invalid wallet address format" }, { status: 400 });
+      return jsonWithCors({ error: "Invalid wallet address format" }, req, { status: 400 });
     }
     if (ib.traits !== undefined && (typeof ib.traits !== "object" || ib.traits === null || Array.isArray(ib.traits))) {
-      return jsonWithCors({ error: "traits must be a plain object" }, { status: 400 });
+      return jsonWithCors({ error: "traits must be a plain object" }, req, { status: 400 });
     }
   }
 
@@ -367,13 +367,13 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return jsonWithCors({ ok: true, data: { companyId, userId } });
+    return jsonWithCors({ ok: true, data: { companyId, userId } }, req);
   }
 
   // ── track ────────────────────────────────────────────────────
   const b = body as TrackEventBody;
   if (!b.name) {
-    return jsonWithCors({ error: "name is required for track events" }, { status: 400 });
+    return jsonWithCors({ error: "name is required for track events" }, req, { status: 400 });
   }
 
   const companyResult = b.company ? await upsertCompany(teamId, b.company) : null;
@@ -413,5 +413,5 @@ export async function POST(req: NextRequest) {
     invalidateFlagCache(`${teamId}:`);
   }
 
-  return jsonWithCors({ ok: true, data: { companyId, userId } });
+  return jsonWithCors({ ok: true, data: { companyId, userId } }, req);
 }
