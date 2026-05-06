@@ -2,14 +2,17 @@ name: SDK CI
 
 on:
   push:
+    branches: [main]
     paths:
-      - 'packages/sdk-*/**'
+      - "packages/sdk-*/**"
   pull_request:
+    branches: [main]
     paths:
-      - 'packages/sdk-*/**'
+      - "packages/sdk-*/**"
 
 jobs:
-  build:
+  sdk:
+    name: Build, Typecheck & Test
     runs-on: ubuntu-latest
 
     steps:
@@ -24,17 +27,19 @@ jobs:
         run: npm ci
 
       - name: TypeScript check
-        run: npx turbo run typecheck --filter='./packages/sdk-*'
+        run: npx turbo run typecheck --filter="./packages/sdk-*"
 
       - name: Build all SDKs
-        run: npx turbo run build --filter='./packages/sdk-*'
+        run: npx turbo run build --filter="./packages/sdk-*"
 
       - name: Run tests
-        run: npx turbo run test --filter='./packages/sdk-*'
+        run: npx turbo run test --filter="./packages/sdk-*"
 
-      - name: Check bundle size
+      - name: Check bundle sizes
         run: |
-          du -sh packages/sdk-core/dist/
-          du -sh packages/sdk-react/dist/
-          du -sh packages/sdk-node/dist/
-          du -sh packages/sdk-agent/dist/
+          echo "=== SDK Bundle Sizes ==="
+          for pkg in sdk-core sdk-node sdk-react sdk-agent; do
+            if [ -d "packages/$pkg/dist" ]; then
+              echo "$pkg: $(du -sh packages/$pkg/dist/ | cut -f1)"
+            fi
+          done

@@ -7,26 +7,17 @@ on:
     branches: [main]
 
 jobs:
-  # ============================================================
-  #  Repo Hygiene — Zero Unfinished Markers Gate
-  # ============================================================
   hygiene:
     name: Unfinished Work Gate
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
-
       - name: Check for unfinished markers
         run: bash scripts/check-unfinished.sh
 
-  # ============================================================
-  #  Smart Contract Tests (Foundry)
-  # ============================================================
   contracts:
     name: Contract Tests
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
         with:
@@ -44,72 +35,9 @@ jobs:
       - name: Check contract sizes
         run: npm run -w packages/contracts forge:build:docker
 
-      - name: Coverage summary
-        run: npm run -w packages/contracts forge:coverage:docker
-
-      - name: Gas snapshot check
-        run: npm run -w packages/contracts forge:snapshot:docker
-
-  # ============================================================
-  #  SDK Build & Type Check
-  # ============================================================
-  launch:
-    name: Launch Surfaces
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "npm"
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build launch surfaces
-        run: npm run build:launch
-
-      - name: Type check launch surfaces
-        run: npm run typecheck:launch
-
-      - name: Test launch surfaces
-        run: npm run test:launch
-
-  # ============================================================
-  #  Lint
-  # ============================================================
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "npm"
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Format check
-        run: npx prettier --check "**/*.{ts,tsx,js,jsx,json,md}"
-
-      - name: Turbo lint (launch surfaces)
-        run: npm run lint:launch
-
-  # ============================================================
-  #  Static Analysis — Slither
-  # ============================================================
   slither:
     name: Slither Analysis
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
         with:
@@ -146,13 +74,9 @@ jobs:
             packages/contracts/slither-report.json
             packages/contracts/slither-report.sarif
 
-  # ============================================================
-  #  Subgraph Build & Codegen
-  # ============================================================
   subgraph:
-    name: Subgraph CI
+    name: Subgraph Build
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
 

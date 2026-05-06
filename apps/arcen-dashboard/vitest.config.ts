@@ -1,6 +1,8 @@
 import path from "node:path";
 import { defineConfig } from "vitest/config";
 
+const isCI = !!process.env.CI;
+
 export default defineConfig({
   resolve: {
     alias: {
@@ -20,6 +22,8 @@ export default defineConfig({
       "tests/e2e/**",
       "node_modules/**",
       ".next/**",
+      // Skip tests that require a real database connection in CI
+      ...(isCI ? ["lib/__tests__/db.test.ts"] : []),
     ],
   },
 });

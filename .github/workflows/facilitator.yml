@@ -2,14 +2,21 @@ name: Facilitator CI
 
 on:
   push:
+    branches: [main]
     paths:
-      - 'apps/facilitator/**'
+      - "apps/facilitator/**"
+      - "packages/sdk-core/**"
+      - "packages/sdk-node/**"
   pull_request:
+    branches: [main]
     paths:
-      - 'apps/facilitator/**'
+      - "apps/facilitator/**"
+      - "packages/sdk-core/**"
+      - "packages/sdk-node/**"
 
 jobs:
   build:
+    name: Typecheck, Test & Build
     runs-on: ubuntu-latest
 
     steps:
@@ -23,21 +30,22 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build dependencies
-        run: npx turbo run build --filter='./packages/*'
+      - name: Build SDK dependencies
+        run: npx turbo run build --filter="./packages/sdk-core" --filter="./packages/sdk-node"
 
       - name: TypeScript check
         run: cd apps/facilitator && npx tsc --noEmit
 
       - name: Run tests
-        run: cd apps/facilitator && npm run test --if-present || echo "No tests configured"
+        run: cd apps/facilitator && npm run test --if-present || echo "No test script configured"
 
       - name: Build facilitator
         run: cd apps/facilitator && npm run build
 
   docker:
+    name: Docker Build
     needs: build
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == "refs/heads/main"
     runs-on: ubuntu-latest
 
     steps:
