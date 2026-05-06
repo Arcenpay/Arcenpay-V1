@@ -4,12 +4,8 @@ import { requirePermission, isErrorResponse } from "@/lib/api-auth";
 import { sendInvoiceEmail } from "@/lib/email";
 import { writeAuditEvent } from "@/lib/audit";
 import { ensureInvoicePdfForTeam } from "@/lib/invoice-documents";
-import { rateLimit, applyRateLimitHeaders } from "@/lib/rate-limit";
+import { invoiceResendProtect } from "@/lib/arcjet";
 import { deliverWebhook } from "@/lib/deliver-webhook";
-
-// 3 resends per invoice per hour — prevents accidental email flooding
-const RESEND_LIMIT = 3;
-const RESEND_WINDOW_MS = 60 * 60 * 1000;
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -19,15 +15,14 @@ export async function POST(request: NextRequest, context: Params) {
 
   const { id } = await context.params;
 
-  const rl = rateLimit(`resend:${id}`, RESEND_LIMIT, RESEND_WINDOW_MS);
-  if (!rl.ok) {
-    const res = NextResponse.json(
+  const decision = await invoiceResendProtect.protect(request, { invoiceId: id });
+  if (decision.isDenied()) {
+    return NextResponse.json(
       { error: "This invoice has been resent too many times recently. Please wait before retrying." },
       { status: 429 },
     );
-    applyRateLimitHeaders(res.headers, rl, RESEND_LIMIT);
-    return res;
   }
+
   const invoice = await db.invoice.findFirst({
     where: { id, teamId: auth.team.teamId },
     include: { deliveries: { orderBy: { createdAt: "desc" }, take: 1 } },

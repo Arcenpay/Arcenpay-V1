@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { authEmailStartProtect } from "@/lib/arcjet";
 import {
   EMAIL_AUTH_PURPOSE_LOGIN,
   EMAIL_AUTH_RESEND_COOLDOWN_MS,
@@ -9,24 +10,12 @@ import {
   issueEmailAuthCode,
   normalizeEmail,
 } from "@/lib/auth-flow";
-import { applyRateLimitHeaders, rateLimit } from "@/lib/rate-limit";
 
 const Schema = z.object({
   email: z.string().email(),
   walletAddress: z.string().regex(/^0x[0-9a-fA-F]{40}$/).optional(),
   inviteToken: z.string().min(1).optional(),
 });
-
-const EMAIL_START_LIMIT = 5;
-const EMAIL_START_WINDOW_MS = 10 * 60 * 1000;
-
-function getRequestIp(request: NextRequest): string {
-  return (
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    request.headers.get("x-real-ip") ||
-    "unknown"
-  );
-}
 
 function buildRetryHeaders(retryAtIso: string): HeadersInit {
   const retryAfterSeconds = Math.max(
@@ -52,6 +41,18 @@ export async function POST(request: NextRequest) {
   }
 
   const email = normalizeEmail(parsed.data.email);
+
+  // Arcjet rate limit: 5 req/10min per IP + per email
+  const decision = await authEmailStartProtect.protect(request, { email });
+  if (decision.isDenied()) {
+    if (decision.reason.isBot()) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    return NextResponse.json(
+      { error: "Too many verification attempts. Please wait and try again." },
+      { status: 429 },
+    );
+  }
 
   if (parsed.data.walletAddress) {
     const conflict = await findWalletConflict(parsed.data.walletAddress, email);
@@ -79,6 +80,7 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  // Resend cooldown (separate from rate limiting — prevents immediate re-send of same code)
   const latestActive = await getLatestActiveEmailCode(email, EMAIL_AUTH_PURPOSE_LOGIN);
   if (
     latestActive &&
@@ -97,31 +99,6 @@ export async function POST(request: NextRequest) {
         headers: buildRetryHeaders(retryAt.toISOString()),
       },
     );
-  }
-
-  const ip = getRequestIp(request);
-  const ipRate = rateLimit(`auth-email-start:ip:${ip}`, EMAIL_START_LIMIT, EMAIL_START_WINDOW_MS);
-  const emailRate = rateLimit(
-    `auth-email-start:email:${email}`,
-    EMAIL_START_LIMIT,
-    EMAIL_START_WINDOW_MS,
-  );
-
-  if (!ipRate.ok || !emailRate.ok) {
-    const limited = ipRate.ok ? emailRate : ipRate;
-    const retryAtIso = new Date(limited.resetAt).toISOString();
-    const response = NextResponse.json(
-      {
-        error: "Too many verification attempts. Please wait and try again.",
-        retryAt: retryAtIso,
-      },
-      {
-        status: 429,
-        headers: buildRetryHeaders(retryAtIso),
-      },
-    );
-    applyRateLimitHeaders(response.headers, limited, EMAIL_START_LIMIT);
-    return response;
   }
 
   const issued = await issueEmailAuthCode({
@@ -146,12 +123,10 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const response = NextResponse.json({
+  return NextResponse.json({
     ok: true,
     expiresAt: issued.expiresAt.toISOString(),
     retryAt: issued.retryAt.toISOString(),
     ...(process.env.NODE_ENV !== "production" ? { debugCode: issued.code } : {}),
   });
-  applyRateLimitHeaders(response.headers, ipRate, EMAIL_START_LIMIT);
-  return response;
 }

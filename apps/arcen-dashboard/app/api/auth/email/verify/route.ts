@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { authEmailVerifyProtect } from "@/lib/arcjet";
 import {
   EMAIL_AUTH_MAX_ATTEMPTS,
   EMAIL_AUTH_PURPOSE_LOGIN,
@@ -21,6 +22,14 @@ const Schema = z.object({
 });
 
 export async function POST(request: NextRequest) {
+  const decision = await authEmailVerifyProtect.protect(request);
+  if (decision.isDenied()) {
+    if (decision.reason.isBot()) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
+
   const body = await request.json().catch(() => null);
   const parsed = Schema.safeParse(body);
   if (!parsed.success) {

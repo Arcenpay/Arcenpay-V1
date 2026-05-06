@@ -10,7 +10,7 @@
 import { createHash, randomBytes } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { rateLimit, applyRateLimitHeaders } from "@/lib/rate-limit";
+import { aj, fixedWindow } from "@/lib/arcjet";
 
 export type ApiKeyContext = {
   teamId: string;
@@ -43,10 +43,19 @@ function extractBearerToken(req: NextRequest): string | null {
   const auth = req.headers.get("authorization") ?? req.headers.get("x-api-key");
   if (!auth) return null;
   if (auth.startsWith("Bearer ")) return auth.slice(7).trim();
-  // Also accept raw key without Bearer prefix
   if (auth.startsWith("api_")) return auth.trim();
   return null;
 }
+
+/** Per-API-key rate limit — 500 req/min per key */
+const apiKeyProtect = aj.withRule(
+  fixedWindow({
+    mode: "LIVE",
+    characteristics: ["apikey"],
+    window: "60s",
+    max: 500,
+  }),
+);
 
 // ─── Main auth function ───────────────────────────────────────────────────────
 
@@ -86,20 +95,12 @@ export async function requireApiKey(
     );
   }
 
-  // Apply per-key rate limiting
-  const rl = options.rateLimit ?? { limit: 500, windowMs: 60_000 };
-  const result = rateLimit(`apikey:${apiKey.id}`, rl.limit, rl.windowMs);
-
-  if (!result.ok) {
-    const headers = new Headers();
-    applyRateLimitHeaders(headers, result, rl.limit);
-    headers.set(
-      "Retry-After",
-      String(Math.ceil((result.resetAt - Date.now()) / 1000)),
-    );
+  // Apply per-key rate limiting via Arcjet
+  const decision = await apiKeyProtect.protect(req, { apikey: apiKey.id });
+  if (decision.isDenied()) {
     return NextResponse.json(
       { error: "Rate limit exceeded" },
-      { status: 429, headers },
+      { status: 429 },
     );
   }
 
