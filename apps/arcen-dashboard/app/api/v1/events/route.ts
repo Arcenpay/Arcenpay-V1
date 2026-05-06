@@ -17,6 +17,7 @@ import { invalidateUsageCache } from "@/lib/event-aggregator";
 import { invalidateFlagCache } from "@/lib/flag-cache";
 import { resolveEmbedAccessToken } from "@/lib/embed-access-token";
 import { touchEntityActivity } from "@/lib/activity";
+import { resolveEntitlementResult } from "@/lib/entitlements";
 import { Prisma } from "@/src/generated/prisma/client";
 
 // ─── GET: list events for dashboard UI (Clerk session auth) ──────────────────
@@ -393,6 +394,35 @@ export async function POST(req: NextRequest) {
         }
       : {}),
   };
+
+  // ── Entitlement enforcement: reject track events that would exceed limits ──
+  // Prevents bypassing the /usage/consume endpoint by directly tracking events.
+  if (companyId) {
+    // Invalidate caches first so resolveEntitlementResult uses fresh data
+    invalidateUsageCache(teamId, companyId, b.name);
+    const entitlement = await resolveEntitlementResult({
+      teamId,
+      companyKeys: {
+        id: companyId,
+        wallet: b.company?.wallet ?? undefined,
+      },
+      featureKey: b.name,
+    });
+    // Block if: metered AND exceeded, OR not enabled at all
+    if (
+      entitlement &&
+      ((entitlement.allocation !== null && entitlement.exceeded) ||
+        !entitlement.enabled)
+    ) {
+      return jsonWithCors(
+        { error: entitlement.exceeded
+          ? `Usage limit reached for "${b.name}". Upgrade to continue.`
+          : `Feature "${b.name}" is not available on your current plan.` },
+        req,
+        { status: 429 },
+      );
+    }
+  }
 
   await db.arcenEvent.create({
     data: {

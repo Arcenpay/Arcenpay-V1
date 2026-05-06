@@ -14,6 +14,13 @@ export async function POST(req: NextRequest) {
       company: { wallet: body.wallet, id: `company-${body.wallet.slice(2, 10)}` },
     });
 
+    if (result.exceeded || !result.consumed) {
+      return NextResponse.json(
+        { error: `Usage limit reached for "${body.featureKey}"` },
+        { status: 429 },
+      );
+    }
+
     return NextResponse.json(result);
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "Failed" }, { status: 500 });

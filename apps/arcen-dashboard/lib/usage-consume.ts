@@ -176,10 +176,8 @@ export async function consumeMeteredEntitlement(
           }
         }
 
-        if (!baseEntitlement.enabled) {
-          return { consumed: false, duplicate: false };
-        }
-
+        // Enforcement: fresh database count inside the transaction.
+        // Do NOT use the cached baseEntitlement.enabled — it can be stale (up to 30s).
         if (baseEntitlement.allocation !== null) {
           const currentUsage = await tx.arcenEvent.count({
             where: {
@@ -194,6 +192,10 @@ export async function consumeMeteredEntitlement(
           if (currentUsage >= baseEntitlement.allocation) {
             return { consumed: false, duplicate: false };
           }
+        } else if (!baseEntitlement.enabled) {
+          // Feature is disabled for a non-allocation reason (e.g. plan doesn't include it).
+          // Since there's no allocation to count against, we trust the enabled flag.
+          return { consumed: false, duplicate: false };
         }
 
         await tx.arcenEvent.create({
