@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { buildSIWEMessage } from "./auth";
+import { buildSIWEMessage } from "..\/auth";
 
 // ── buildSIWEMessage ──────────────────────────────────────────
 describe("buildSIWEMessage", () => {
@@ -70,7 +70,7 @@ vi.mock("@/lib/db", () => {
 });
 
 describe("DB-backed nonce (nonce.server.ts)", async () => {
-  const { generateNonce, consumeNonce } = await import("./nonce.server");
+  const { generateNonce, consumeNonce } = await import("../nonce.server");
 
   beforeEach(() => {
     vi.clearAllMocks();

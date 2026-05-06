@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   normalizeBillingPeriod,
   resolvePlanAmountMicros,
-} from "./catalog-billing";
+} from "..\/catalog-billing";
 
 describe("catalog billing helpers", () => {
   it("treats yearly aliases as annual billing", () => {

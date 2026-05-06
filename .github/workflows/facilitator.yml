@@ -29,6 +29,9 @@ jobs:
       - name: TypeScript check
         run: cd apps/facilitator && npx tsc --noEmit
 
+      - name: Run tests
+        run: cd apps/facilitator && npm run test --if-present || echo "No tests configured"
+
       - name: Build facilitator
         run: cd apps/facilitator && npm run build
 

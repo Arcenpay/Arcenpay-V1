@@ -1,19 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { resolveEntitlementResults } from "./entitlements";
-import { aggregateUsage } from "./event-aggregator";
-import { resolveCompany, resolveUser } from "./flag-engine";
-import { db } from "./db";
+import { resolveEntitlementResults } from "..\/entitlements";
+import { aggregateUsage } from "..\/event-aggregator";
+import { resolveCompany, resolveUser } from "..\/flag-engine";
+import { db } from "..\/db";
 
-vi.mock("./event-aggregator", () => ({
+vi.mock("../event-aggregator", () => ({
   aggregateUsage: vi.fn(),
 }));
 
-vi.mock("./flag-engine", () => ({
+vi.mock("../flag-engine", () => ({
   resolveCompany: vi.fn(),
   resolveUser: vi.fn(),
 }));
 
-vi.mock("./db", () => ({
+vi.mock("../db", () => ({
   db: {
     catalogPlan: {
       findFirst: vi.fn(),

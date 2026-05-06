@@ -1,5 +1,5 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
-import { issueEmailAuthCode } from "./auth-flow";
+import { issueEmailAuthCode } from "..\/auth-flow";
 import { db } from "@/lib/db";
 import { isEmailDeliveryConfigured, sendEmailAuthCode } from "@/lib/email";
 

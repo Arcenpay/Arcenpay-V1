@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   normalizeComponentDesign,
   normalizeComponentStyling,
-} from "./component-design";
+} from "..\/component-design";
 
 describe("component design normalization", () => {
   it("maps dashboard styling objects into the SDK design shape", () => {
