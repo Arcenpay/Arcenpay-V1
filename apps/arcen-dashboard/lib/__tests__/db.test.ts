@@ -99,7 +99,7 @@ describe("db reconnect handling", () => {
     clientQueue.push(firstClient, secondClient);
     poolQueue.push(firstPool, secondPool);
 
-    const { withPrismaReconnect } = await import("./db");
+    const { withPrismaReconnect } = await import("../db");
     const record = await withPrismaReconnect((client) =>
       client.authSession.findUnique({ where: { tokenHash: "hash" } }),
     );
@@ -128,7 +128,7 @@ describe("db reconnect handling", () => {
     clientQueue.push(firstClient, secondClient);
     poolQueue.push(firstPool, secondPool);
 
-    const { db } = await import("./db");
+    const { db } = await import("../db");
     const record = await db.authSession.findUnique({
       where: { tokenHash: "hash-2" },
     });
@@ -162,7 +162,7 @@ describe("db reconnect handling", () => {
     clientQueue.push(firstClient, secondClient, thirdClient);
     poolQueue.push(firstPool, secondPool, thirdPool);
 
-    const { withPrismaReconnect } = await import("./db");
+    const { withPrismaReconnect } = await import("../db");
     const record = await withPrismaReconnect((client) =>
       client.authSession.findUnique({ where: { tokenHash: "hash-3" } }),
     );

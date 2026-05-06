@@ -23,7 +23,7 @@ describe("Invoice download token — tamper resistance", () => {
   }) => boolean;
 
   beforeAll(async () => {
-    const mod = await import("./invoice-documents");
+    const mod = await import("../invoice-documents");
     createInvoiceDownloadUrl = mod.createInvoiceDownloadUrl;
     verifyInvoiceDownloadToken = mod.verifyInvoiceDownloadToken;
   });
@@ -80,7 +80,7 @@ describe("Rate limiter", () => {
   beforeEach(async () => {
     vi.resetModules();
     vi.useFakeTimers();
-    const mod = await import("./rate-limit");
+    const mod = await import("../rate-limit");
     rateLimit = mod.rateLimit;
   });
 
@@ -115,10 +115,10 @@ describe("Rate limiter", () => {
 // ── 3. Invoice tax field validation ──────────────────────────
 
 describe("Invoice billing address — US validation", () => {
-  let billingAddressSchema: (typeof import("./invoice-tax"))["billingAddressSchema"];
+  let billingAddressSchema: (typeof import("../invoice-tax"))["billingAddressSchema"];
 
   beforeAll(async () => {
-    billingAddressSchema = (await import("./invoice-tax")).billingAddressSchema;
+    billingAddressSchema = (await import("../invoice-tax")).billingAddressSchema;
   });
 
   it("accepts a valid US address with EIN", () => {
@@ -143,10 +143,10 @@ describe("Invoice billing address — US validation", () => {
 });
 
 describe("Invoice billing address — India validation", () => {
-  let billingAddressSchema: (typeof import("./invoice-tax"))["billingAddressSchema"];
+  let billingAddressSchema: (typeof import("../invoice-tax"))["billingAddressSchema"];
 
   beforeAll(async () => {
-    billingAddressSchema = (await import("./invoice-tax")).billingAddressSchema;
+    billingAddressSchema = (await import("../invoice-tax")).billingAddressSchema;
   });
 
   it("accepts a valid Indian address with GSTIN", () => {

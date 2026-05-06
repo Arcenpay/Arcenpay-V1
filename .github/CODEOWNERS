@@ -1,0 +1,35 @@
+# Code Owners
+
+# Each line is a file pattern followed by one or more owners.
+# The last matching pattern takes precedence.
+# Order is important; the last matching pattern has the most precedence.
+
+# Root configuration
+* @arcenpay/engineering
+
+# Smart contracts
+packages/contracts/** @arcenpay/engineering
+
+# SDK packages
+packages/sdk-core/** @arcenpay/engineering
+packages/sdk-node/** @arcenpay/engineering
+packages/sdk-react/** @arcenpay/engineering
+packages/sdk-agent/** @arcenpay/engineering
+
+# Dashboard
+apps/arcen-dashboard/** @arcenpay/engineering
+
+# Facilitator
+apps/facilitator/** @arcenpay/engineering
+
+# Circuits
+circuits/** @arcenpay/engineering
+
+# Infrastructure / CI
+.github/** @arcenpay/engineering
+docker-compose.yml @arcenpay/engineering
+turbo.json @arcenpay/engineering
+
+# Documentation
+docs/** @arcenpay/engineering
+*.md @arcenpay/engineering

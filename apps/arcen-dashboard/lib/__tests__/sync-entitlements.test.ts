@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { syncEntitlementsToFlagRules } from "./sync-entitlements";
-import { db } from "./db";
+import { syncEntitlementsToFlagRules } from "..\/sync-entitlements";
+import { db } from "..\/db";
 
 // Mock db
-vi.mock("./db", () => ({
+vi.mock("../db", () => ({
   db: {
     catalogFeatureFlag: {
       upsert: vi.fn(),

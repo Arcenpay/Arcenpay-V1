@@ -24,7 +24,7 @@ vi.mock("@arcenpay/sdk", () => ({
   })),
 }));
 
-import { BillingKeeper } from "./keeper";
+import { BillingKeeper } from "../src/services/keeper";
 
 describe("BillingKeeper", () => {
   beforeEach(() => {

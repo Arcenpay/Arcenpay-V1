@@ -2,38 +2,38 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   consumeMeteredEntitlement,
   ConsumeEntitlementError,
-} from "./usage-consume";
-import { resolveCompany, resolveUser } from "./flag-engine";
-import { resolveEntitlementResult } from "./entitlements";
-import { touchEntityActivity } from "./activity";
-import { invalidateUsageCache } from "./event-aggregator";
-import { invalidateFlagCache } from "./flag-cache";
-import { db } from "./db";
+} from "..\/usage-consume";
+import { resolveCompany, resolveUser } from "..\/flag-engine";
+import { resolveEntitlementResult } from "..\/entitlements";
+import { touchEntityActivity } from "..\/activity";
+import { invalidateUsageCache } from "..\/event-aggregator";
+import { invalidateFlagCache } from "..\/flag-cache";
+import { db } from "..\/db";
 
 type TransactionMock = Pick<typeof db, "arcenEvent">;
 
-vi.mock("./flag-engine", () => ({
+vi.mock("../flag-engine", () => ({
   resolveCompany: vi.fn(),
   resolveUser: vi.fn(),
 }));
 
-vi.mock("./entitlements", () => ({
+vi.mock("../entitlements", () => ({
   resolveEntitlementResult: vi.fn(),
 }));
 
-vi.mock("./activity", () => ({
+vi.mock("../activity", () => ({
   touchEntityActivity: vi.fn(),
 }));
 
-vi.mock("./event-aggregator", () => ({
+vi.mock("../event-aggregator", () => ({
   invalidateUsageCache: vi.fn(),
 }));
 
-vi.mock("./flag-cache", () => ({
+vi.mock("../flag-cache", () => ({
   invalidateFlagCache: vi.fn(),
 }));
 
-vi.mock("./db", () => ({
+vi.mock("../db", () => ({
   db: {
     catalogFeatureFlag: {
       findFirst: vi.fn(),

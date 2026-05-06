@@ -3,6 +3,9 @@ node_modules/
 .pnp
 .pnp.js
 
+# Additional MD and docs
+docs/
+
 # Build outputs
 dist/
 .next/
@@ -28,9 +31,14 @@ packages/contracts/out/
 # IDE
 .vscode/settings.json
 .idea/
+.claude/
 *.swp
 *.swo
 *~
+
+# AI agent artifacts
+skills-lock.json
+.agents/
 
 # OS
 .DS_Store

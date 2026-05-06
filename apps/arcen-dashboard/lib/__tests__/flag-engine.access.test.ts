@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { resolveCompany } from "./flag-engine";
+import { resolveCompany } from "..\/flag-engine";
 import { db } from "@/lib/db";
 import { getContractAddresses } from "@arcenpay/sdk";
 import { createPublicClient } from "viem";
