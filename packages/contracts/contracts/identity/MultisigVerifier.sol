@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 /// @title MultisigVerifier
 /// @notice Experimental/frozen contract. Preserved for future work and not part of the current launch runtime.
 /// @notice EIP-1271 compatible signature verifier for Safe/Gnosis multisig wallets
-/// @dev Allows the SubscriptionRegistry and CheckoutModal to accept signatures
+/// @dev Allows the SubscriptionRegistry and related billing flows to accept signatures
 ///   from smart contract wallets (Safe, Argent, etc.) in addition to EOAs.
 contract MultisigVerifier is Ownable {
     /// @notice EIP-1271 magic value for valid signatures

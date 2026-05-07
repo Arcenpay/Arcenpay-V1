@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArcenEmbed, CheckoutModal, useArcenPay } from "@arcenpay/react";
+import { ArcenEmbed, useArcenPay } from "@arcenpay/react";
 import { useWallet } from "../useWallet";
 import styles from "./page.module.css";
 
