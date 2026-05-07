@@ -1,112 +1,75 @@
 # ArcenPay
 
-**Web3 Entitlement Layer** — On-chain subscription billing, feature entitlement gating, and usage-based settlement for SaaS providers.
+ArcenPay is a monorepo for dashboard-managed billing, embedded customer billing surfaces, hosted payment links, entitlement-aware product access, and optional x402-style agent payments.
 
----
+## What ships here
 
-## Architecture
+- `apps/arcen-dashboard`: provider control plane for plans, add-ons, credits, companies, components, invoices, payments, flags, and webhooks.
+- `apps/arcen-demo`: demo app showing the public React and Node SDK surface.
+- `apps/docs`: the developer documentation site.
+- `apps/facilitator`: runtime bridge for renewals, webhook fan-out, event processing, and advanced protocol flows.
+- `packages/sdk-react`: browser SDK with `ArcenPayProvider`, `ArcenEmbed`, hooks, and payment-link helpers.
+- `packages/sdk-node`: server SDK with `ArcenClient`, webhook verification, activation, and advanced runtime services.
+- `packages/sdk-agent`: autonomous payment SDK for bots and agent workloads.
+- `packages/sdk-core`: shared types, ABIs, addresses, and low-level helpers.
+- `packages/contracts`, `subgraph`, `circuits`: contract, indexing, and proof-related infrastructure.
 
-ArcenPay is a monorepo (Turborepo + npm workspaces) containing the provider dashboard, runtime bridge, smart contracts, zk-SNARK circuits, and SDKs.
+## Quick start
 
-```
-fervent-buck/
-├── apps/
-│   ├── arcen-dashboard/   # Provider control plane (Next.js 16 + Prisma + PostgreSQL)
-│   ├── facilitator/        # Runtime bridge — x402 validator, event watcher, billing keeper
-│   ├── arcen-demo/         # Integration demo consuming the SDKs
-│   └── docs/               # Protocol documentation site
-├── packages/
-│   ├── sdk-core/           # Shared types, ABIs, chain config, contract addresses
-│   ├── sdk-node/           # Server SDK — x402 middleware, billing services, tableland
-│   ├── sdk-react/          # React SDK — embeddable billing components, hooks
-│   ├── sdk-agent/          # AI agent x402 client SDK
-│   └── contracts/          # Solidity smart contracts (Hardhat + Foundry)
-├── circuits/               # Circom zk-SNARK circuits (Groth16 usage proofs)
-├── subgraph/               # The Graph indexer for on-chain analytics
-├── scripts/                # Deployment, verification, and utility scripts
-└── docs/                   # Product wiki, runbooks, architecture decisions
-```
+Prerequisites:
 
-### Two Billing Lanes
+- Node.js 20+
+- npm 10+
+- Docker
 
-| Lane | Flow | Use Case |
-|------|------|----------|
-| **Subscription** | Wallet → smart account → autopay → USDC approve → mint NFT → periodic renewals | Human SaaS customers |
-| **Usage-based** | Agent funds vault → API returns 402 → signs EIP-712 → validate → log usage → aggregate → ZK prove → settle | AI agents / paid APIs |
-
----
-
-## Quick Start
-
-### Prerequisites
-- Node.js >= 20.0.0
-- PostgreSQL 16 + Redis 7 (via Docker)
-- npm 10.x
-
-### Setup
+Setup:
 
 ```bash
-# 1. Clone and install
-git clone <repo-url> && cd fervent-buck
-cp .env.example .env    # Fill in required values
+cp .env.example .env
 npm ci
-
-# 2. Start infrastructure
-docker compose up -d    # PostgreSQL + Redis
-
-# 3. Generate Prisma client + build SDKs
+docker compose up -d
 npm run build
-
-# 4. Run the dashboard
-npm run dev:dashboard   # http://localhost:3000
-
-# 5. Run the facilitator (in another terminal)
-npm run dev:facilitator # http://localhost:3402
-
-# 6. Run the demo app
-npm run dev:demo        # http://localhost:3001
 ```
 
-### Core Commands
+Run the main apps:
 
-| Command | Purpose |
-|---------|---------|
-| `npm run dev` | Start all apps in Turbo TUI |
-| `npm run build` | Build all packages + apps |
-| `npm run test` | Run all tests |
-| `npm run typecheck` | Type-check all packages + apps |
-| `npm run lint` | Lint all packages + apps |
-| `npm run clean` | Clean build outputs |
-| `npm run format` | Format with Prettier |
+```bash
+npm run dev:dashboard   # http://localhost:3000
+npm run dev:demo        # http://localhost:3001
+npm run dev:docs        # http://localhost:3003
+npm run dev:facilitator
+```
 
----
+## Core commands
 
-## Environment Configuration
+| Command             | Purpose                               |
+| ------------------- | ------------------------------------- |
+| `npm run dev`       | Run workspace dev tasks through Turbo |
+| `npm run build`     | Build packages and apps               |
+| `npm run test`      | Run workspace tests                   |
+| `npm run typecheck` | Run TypeScript checks                 |
+| `npm run lint`      | Run workspace lint tasks              |
+| `npm run clean`     | Remove build outputs                  |
+| `npm run format`    | Format source files                   |
 
-See [`.env.example`](.env.example) for all required and optional variables. Key variables:
+## Main integration path
 
-| Variable | Purpose |
-|----------|---------|
-| `DATABASE_URL` | PostgreSQL connection string |
-| `NEXT_PUBLIC_CHAIN_ID` | Default chain (84532 = Base Sepolia) |
-| `FACILITATOR_SECRET` | Shared secret for dashboard ↔ facilitator auth |
-| `ACCESS_TOKEN_SECRET` | JWT signing key for embed tokens |
-| `SIWE_JWT_SECRET` | Session signing key |
-| `CORS_ORIGINS` | Comma-separated allowed origins |
-| `REDIS_URL` | Redis connection (required for production) |
+The standard product integration path today is:
 
----
+1. Configure plans, components, payment links, and webhooks in `apps/arcen-dashboard`.
+2. Use `@arcenpay/react` in the browser for `ArcenPayProvider`, `identify()`, and `ArcenEmbed`.
+3. Use `@arcenpay/node` on the server for access checks, access tokens, company APIs, subscription activation, and webhook verification.
+4. Use `@arcenpay/agent` only if you need autonomous x402-style payments for bots or agents.
 
-## Documentation
+## Docs
 
-- [Product Wiki](docs/WIKI.md) — Full feature reference
-- [Operations Runbook](docs/OPERATIONS_RUNBOOK.md) — Deployment and monitoring
-- [Incident Runbook](docs/INCIDENT_RUNBOOK.md) — On-call procedures
-- [GA Migration Notes](docs/MIGRATION_GA.md) — Production launch checklist
-- [Testnet Integration Checklist](docs/testnet-integration-checklist.md)
-- [PlanFactory Ownership Runbook](docs/plan-factory-ownership-runbook.md)
-
----
+- Public docs source: `apps/docs`
+- Demo integration source: `apps/arcen-demo`
+- SDK READMEs:
+  - `packages/sdk-react/README.md`
+  - `packages/sdk-node/README.md`
+  - `packages/sdk-agent/README.md`
+  - `packages/sdk-core/README.md`
 
 ## License
 

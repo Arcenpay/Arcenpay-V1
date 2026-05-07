@@ -2,7 +2,7 @@
   "name": "@arcenpay/docs",
   "version": "0.0.1",
   "private": true,
-  "description": "MEAP Protocol Documentation — ArcenPay",
+  "description": "ArcenPay developer documentation",
   "scripts": {
     "dev": "next dev --port 3003",
     "build": "next build",

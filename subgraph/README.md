@@ -1,6 +1,6 @@
 # ArcenPay Subgraph
 
-Indexes MEAP + ZKVUB contract events for dashboard analytics.
+Indexes ArcenPay contract events for dashboard analytics and downstream protocol state.
 
 ## Commands
 
@@ -9,43 +9,33 @@ Indexes MEAP + ZKVUB contract events for dashboard analytics.
 - `npm --prefix subgraph run sync:sepolia`
 - `npm --prefix subgraph run codegen`
 - `npm --prefix subgraph run build`
-- `npm --prefix subgraph run deploy:studio` (default studio slug: `meap-sepolia`)
-- `npm --prefix subgraph run deploy:studio:subscription-registry` (custom slug)
+- `npm --prefix subgraph run deploy:studio`
+- `npm --prefix subgraph run deploy:studio:subscription-registry`
 
-## Address Sync
+## Address sync
 
-The sync script updates `subgraph.yaml` using contract deployment output:
+The sync script updates `subgraph.yaml` from deployment output:
 
 ```bash
 npm --prefix subgraph run sync:sepolia
 ```
 
-To use a custom file/network:
+Custom deployment or network:
 
 ```bash
 node subgraph/scripts/sync-addresses.mjs --deployment ../packages/contracts/deployments/sepolia-latest.json --network sepolia
 ```
 
-To sync a non-default subgraph manifest file:
+Custom manifest file:
 
 ```bash
 node subgraph/scripts/sync-addresses.mjs --deployment ../packages/contracts/deployments/sepolia-latest.json --network base-sepolia --config subgraph.base-sepolia.yaml
 ```
 
-## Graph Studio Deploy
-
-Authenticate once:
+## Graph Studio deploy
 
 ```bash
 graph auth <GRAPH_STUDIO_DEPLOY_KEY>
-```
-
-Then deploy:
-
-```bash
 npm --prefix subgraph run build
 npm --prefix subgraph run deploy:studio:subscription-registry
 ```
-
-If your CLI version does not support `--studio`, these scripts already use
-the Studio node URL with non-interactive version labels.

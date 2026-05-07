@@ -1,86 +1,74 @@
-'use client';
-import { useState } from 'react';
-import DocImagePlaceholder from '../../_components/DocImagePlaceholder';
-
-function CodeBlock({ lang, code }: { lang: string; code: string }) {
-  const [copied, setCopied] = useState(false);
-  return (
-    <div className="docs-codeblock">
-      <div className="docs-codeblock-header">
-        <span className="docs-codeblock-lang">{lang}</span>
-        <button className="docs-codeblock-copy" onClick={() => { navigator.clipboard.writeText(code); setCopied(true); setTimeout(() => setCopied(false), 2000); }}>
-          {copied ? '✓ Copied' : 'Copy'}
-        </button>
-      </div>
-      <pre><code>{code}</code></pre>
-    </div>
-  );
-}
+import {
+  DocsCodeBlock,
+  DocsPage,
+  DocsSection,
+} from "../../_components/DocsPrimitives";
 
 export default function CustomerPortalPage() {
   return (
-    <div className="flex items-start justify-center gap-[18px] flex-1 px-4 lg:px-0">
-      <article className="flex-1 max-w-[860px] min-w-0 py-10 px-4 lg:px-[60px] pb-24">
-        <div className="text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground mb-3">Core Features</div>
-        <div className="flex items-center justify-between gap-4 mb-3.5"><h1>Customer Portal</h1></div>
-
-        <p className="text-[16.5px] text-muted-foreground leading-relaxed mb-7 max-w-[740px]" id="customer-portal">
-          A customer portal gives people a self-serve place to review billing,
-          download invoices, and understand what plan or add-ons they currently have.
-        </p>
-
-        <DocImagePlaceholder
-          title="Customer Portal Screenshot"
-          description="Add a screenshot here of the finished billing portal inside your app so developers can see the target user experience."
-          heightClassName="h-80"
-        />
-
-        <h2 id="building-blocks">Recommended building blocks</h2>
+    <DocsPage
+      eyebrow="Features"
+      title="Customer portal"
+      summary="A customer portal gives people a self-serve place to manage their plan, view invoices, understand payment state, and review usage or entitlement context. In the current platform, that portal is usually a published ArcenEmbed component."
+      toc={[
+        { href: "#surface", label: "Portal surface" },
+        { href: "#embed", label: "Embed" },
+        { href: "#summary", label: "Access summary" },
+        { href: "#paynow", label: "Pay-now actions" },
+      ]}
+    >
+      <DocsSection id="surface" title="What the portal can include">
         <ul className="pl-5 mb-[18px] space-y-[7px]">
-          <li className="text-[15px] text-muted-foreground leading-relaxed"><strong>BillingHistory:</strong> show past subscription and payment activity.</li>
-          <li className="text-[15px] text-muted-foreground leading-relaxed"><strong>InvoiceList:</strong> let customers review and download invoices.</li>
-          <li className="text-[15px] text-muted-foreground leading-relaxed"><strong>CheckoutModal:</strong> let customers start or upgrade recurring plans.</li>
-          <li className="text-[15px] text-muted-foreground leading-relaxed"><strong>Hosted payment links:</strong> collect one-time balances or invoice payments.</li>
+          <li className="text-[15px] text-muted-foreground leading-relaxed">
+            Current plan, renewal state, and self-serve cancellation.
+          </li>
+          <li className="text-[15px] text-muted-foreground leading-relaxed">
+            Available plans or upgrade paths.
+          </li>
+          <li className="text-[15px] text-muted-foreground leading-relaxed">
+            Invoice history, payment status, and hosted pay-now links.
+          </li>
+          <li className="text-[15px] text-muted-foreground leading-relaxed">
+            Usage or entitlement blocks tied to the current company.
+          </li>
         </ul>
+      </DocsSection>
 
-        <h2 id="billing-history">Billing history</h2>
-        <CodeBlock lang="tsx" code={`import { BillingHistory, InvoiceList } from '@arcenpay/react';
+      <DocsSection id="embed" title="Render the portal">
+        <DocsCodeBlock
+          lang="tsx"
+          code={`import { ArcenEmbed } from "@arcenpay/react";
 
-function BillingCenter() {
-  return (
-    <div>
-      <BillingHistory />
-      <InvoiceList providerUrl="https://api.yourapp.com" />
-    </div>
-  );
-}`} />
+export function BillingCenter() {
+  return <ArcenEmbed mode="modal" initialView="portal" />;
+}`}
+        />
+      </DocsSection>
 
-        <h2 id="entitlement-status">Current access state</h2>
-        <CodeBlock lang="tsx" code={`import { useEntitlement } from '@arcenpay/react';
+      <DocsSection id="summary" title="Show the current access state elsewhere in the app">
+        <DocsCodeBlock
+          lang="tsx"
+          code={`import { useEntitlement } from "@arcenpay/react";
 
 function CurrentPlan({ walletAddress }: { walletAddress: string }) {
   const { planTier, isSubscribed } = useEntitlement(walletAddress);
 
-  return <p>{isSubscribed ? 'Active plan: ' + planTier : 'No active subscription'}</p>;
-}`} />
+  return (
+    <p>{isSubscribed ? \`Active plan: \${planTier}\` : "No active subscription"}</p>
+  );
+}`}
+        />
+      </DocsSection>
 
-        <h2 id="upgrades">Upgrade and pay-now actions</h2>
-        <p className="text-[15px] text-muted-foreground leading-relaxed mb-[15px]">
-          Use <code>CheckoutModal</code> for recurring upgrades and hosted payment-link URLs
-          when you need a one-time collection path.
-        </p>
-      </article>
+      <DocsSection id="paynow" title="Add one-time pay-now actions">
+        <DocsCodeBlock
+          lang="tsx"
+          code={`import { createPaymentLinkCheckoutUrl } from "@arcenpay/react";
 
-      <nav className="hidden xl:block w-[232px] shrink-0 sticky top-14 h-[calc(100vh-56px)] overflow-y-auto py-8 pr-5 pl-1.5">
-        <div className="text-[10.5px] font-bold uppercase tracking-[0.09em] text-muted-foreground mb-3.5">On this page</div>
-        <ul className="border-l-[1.5px] border-border flex flex-col gap-0.5 py-1">
-          <li className="toc-item active"><a className="block text-[12.5px] text-foreground font-semibold py-1 pl-[13px] -ml-[1.5px] border-l-2 border-foreground" href="#customer-portal">Customer Portal</a></li>
-          <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#building-blocks">Building blocks</a></li>
-          <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#billing-history">Billing history</a></li>
-          <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#entitlement-status">Current access</a></li>
-          <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#upgrades">Upgrade actions</a></li>
-        </ul>
-      </nav>
-    </div>
+const url = createPaymentLinkCheckoutUrl(paymentLink.slug);
+window.location.assign(url);`}
+        />
+      </DocsSection>
+    </DocsPage>
   );
 }

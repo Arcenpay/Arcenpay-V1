@@ -1,125 +1,129 @@
-'use client';
-import { useState } from 'react';
-import DocImagePlaceholder from '../../_components/DocImagePlaceholder';
-
-function CodeBlock({ lang, code }: { lang: string; code: string }) {
-  const [copied, setCopied] = useState(false);
-  return (
-    <div className="docs-codeblock">
-      <div className="docs-codeblock-header">
-        <span className="docs-codeblock-lang">{lang}</span>
-        <button className="docs-codeblock-copy" onClick={() => { navigator.clipboard.writeText(code); setCopied(true); setTimeout(() => setCopied(false), 2000); }}>
-          {copied ? '✓ Copied' : 'Copy'}
-        </button>
-      </div>
-      <pre><code>{code}</code></pre>
-    </div>
-  );
-}
+import {
+  DocsCodeBlock,
+  DocsPage,
+  DocsSection,
+} from "../../_components/DocsPrimitives";
 
 export default function NodeSDKPage() {
   return (
-    <div className="flex items-start justify-center gap-[18px] flex-1 px-4 lg:px-0">
-      <article className="flex-1 max-w-[860px] min-w-0 py-10 px-4 lg:px-[60px] pb-24">
-        <div className="text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground mb-3">Integrate</div>
-        <div className="flex items-center justify-between gap-4 mb-3.5"><h1>Node.js SDK</h1></div>
+    <DocsPage
+      eyebrow="Integrate"
+      title="Node.js SDK"
+      summary="Use @arcenpay/node for every ArcenPay action that should stay on trusted infrastructure: API-key auth, access-token minting, company APIs, subscription activation, access checks, usage consumption, and signed webhook verification."
+      toc={[
+        { href: "#install", label: "Install" },
+        { href: "#client", label: "Client" },
+        { href: "#identify", label: "Access tokens" },
+        { href: "#checks", label: "Checks and usage" },
+        { href: "#companies", label: "Company APIs" },
+        { href: "#activation", label: "Activation" },
+        { href: "#webhooks", label: "Webhooks" },
+      ]}
+    >
+      <DocsSection id="install" title="Install">
+        <DocsCodeBlock lang="bash" code={`npm install @arcenpay/node`} />
+      </DocsSection>
 
-        <p className="text-[16.5px] text-muted-foreground leading-relaxed mb-7 max-w-[740px]" id="node-sdk">
-          <code>@arcenpay/node</code> is the server-side SDK for ArcenPay. It
-          should own every action that uses your API key or makes billing
-          decisions on behalf of your app.
-        </p>
-
-        <h2 id="installation">Installation</h2>
-        <CodeBlock lang="bash" code={`npm install @arcenpay/node`} />
-
-        <h2 id="client">Create the client</h2>
-        <CodeBlock lang="typescript" code={`import { ArcenClient } from '@arcenpay/node';
+      <DocsSection id="client" title="Create the client">
+        <DocsCodeBlock
+          lang="ts"
+          code={`import { ArcenClient } from "@arcenpay/node";
 
 const client = new ArcenClient({
   apiKey: process.env.ARCENPAY_API_KEY!,
   baseUrl: process.env.ARCENPAY_BASE_URL,
-});`} />
+});`}
+        />
+      </DocsSection>
 
-        <h2 id="identify">Mint a short-lived access token</h2>
-        <CodeBlock lang="typescript" code={`const session = await client.identify({
-  company: { id: 'company_123', name: 'Acme' },
-  user: { id: 'user_123', email: 'owner@acme.com' },
+      <DocsSection id="identify" title="Mint a short-lived access token">
+        <DocsCodeBlock
+          lang="ts"
+          code={`const session = await client.identify({
+  company: { id: "company_123", wallet: "0xabc...", name: "Acme" },
+  user: { id: "user_123", wallet: "0xabc..." },
   expiresIn: 3600,
 });
 
-return { token: session.token };`} />
-
-        <h2 id="entitlements">Check access</h2>
-        <CodeBlock lang="typescript" code={`const entitlement = await client.checkEntitlement(
-  'analytics_export',
-  { id: 'company_123' },
-);
-
-if (!entitlement.enabled) {
-  throw new Error('Upgrade required');
-}`} />
-
-        <h2 id="activation">Activate a subscription</h2>
-        <CodeBlock lang="typescript" code={`const result = await client.activateSubscription({
-  planId: 'starter-monthly',
-  paymentAccount: '0xabc...',
-  company: { id: 'company_123' },
-  subscriberEmail: 'owner@acme.com',
-});`} />
-
-        <DocImagePlaceholder
-          title="Backend Flow Screenshot or Diagram"
-          description="Add a visual here that shows your token route, subscription activation route, and webhook route inside your backend or API router structure."
-          heightClassName="h-64"
+console.log(session.token);
+console.log(session.expiresAt);`}
         />
+      </DocsSection>
 
-        <h2 id="webhooks">Verify webhook signatures</h2>
-        <CodeBlock lang="typescript" code={`import { verifyWebhookSignature } from '@arcenpay/node';
+      <DocsSection id="checks" title="Run access checks and usage actions">
+        <DocsCodeBlock
+          lang="ts"
+          code={`const flag = await client.checkFlag("scan", { id: "company_123" });
+const entitlement = await client.checkEntitlement("scan", { id: "company_123" });
+const consumed = await client.consumeEntitlement({
+  featureKey: "scan",
+  company: { id: "company_123" },
+  idempotencyKey: "scan-req-1",
+});
 
-const signature = String(req.headers['x-meap-signature'] ?? '');
+await client.track({
+  name: "scan_started",
+  company: { id: "company_123" },
+  traits: { source: "api" },
+});`}
+        />
+      </DocsSection>
 
-const isValid = verifyWebhookSignature(
-  rawRequestBody,
-  signature,
-  process.env.ARCENPAY_WEBHOOK_SECRET!,
-);
+      <DocsSection id="companies" title="Work with companies on the server">
+        <DocsCodeBlock
+          lang="ts"
+          code={`const companies = await client.listCompanies({ limit: 20 });
+const company = await client.getCompany("cm_company_123");
 
-if (!isValid) {
-  throw new Error('Invalid webhook signature');
-}`} />
+await client.createCompany({
+  id: "company_456",
+  name: "Northwind",
+  wallet: "0xdef...",
+});
 
-        <h2 id="types">Types</h2>
-        <CodeBlock lang="typescript" code={`import type {
-  IdentifyResult,
-  EntitlementResult,
-  ConsumeEntitlementResult,
-  FlagResult,
-} from '@arcenpay/node';`} />
+await client.updateCompany("cm_company_123", {
+  activePlanId: "starter",
+});`}
+        />
+      </DocsSection>
 
-        <div className="docs-callout-warning mb-5">
-          <span className="docs-callout-icon">🔒</span>
-          <div>
-            Keep <code>ARCENPAY_API_KEY</code> on the server only. The browser
-            should receive short-lived access tokens, never your workspace API
-            key.
-          </div>
-        </div>
-      </article>
+      <DocsSection id="activation" title="Activate a subscription">
+        <DocsCodeBlock
+          lang="ts"
+          code={`const result = await client.activateSubscription({
+  planId: "starter",
+  paymentAccount: "0xabc...",
+  company: { id: "company_123", wallet: "0xabc..." },
+  subscriberEmail: "owner@acme.com",
+});
 
-      <nav className="hidden xl:block w-[232px] shrink-0 sticky top-14 h-[calc(100vh-56px)] overflow-y-auto py-8 pr-5 pl-1.5">
-        <div className="text-[10.5px] font-bold uppercase tracking-[0.09em] text-muted-foreground mb-3.5">On this page</div>
-        <ul className="border-l-[1.5px] border-border flex flex-col gap-0.5 py-1">
-          <li className="toc-item active"><a className="block text-[12.5px] text-foreground font-semibold py-1 pl-[13px] -ml-[1.5px] border-l-2 border-foreground" href="#node-sdk">Node.js SDK</a></li>
-          <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#installation">Installation</a></li>
-          <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#client">Client</a></li>
-          <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#identify">Identify</a></li>
-          <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#entitlements">Entitlements</a></li>
-          <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#activation">Activation</a></li>
-          <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#webhooks">Webhooks</a></li>
-          <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#types">Types</a></li>
-        </ul>
-      </nav>
-    </div>
+console.log(result.txHash);`}
+        />
+      </DocsSection>
+
+      <DocsSection id="webhooks" title="Verify webhook signatures">
+        <DocsCodeBlock
+          lang="ts"
+          code={`import { verifyWebhookSignature } from "@arcenpay/node";
+
+const rawBody = await req.text();
+const signatureHeader = req.headers.get("x-meap-signature") ?? "";
+const signature =
+  signatureHeader.startsWith("sha256=")
+    ? signatureHeader.slice("sha256=".length)
+    : signatureHeader;
+
+if (!verifyWebhookSignature(rawBody, signature, process.env.ARCENPAY_WEBHOOK_SECRET!)) {
+  throw new Error("Invalid webhook signature");
+}`}
+        />
+        <p className="text-[15px] text-muted-foreground leading-relaxed mt-[15px] mb-0">
+          The package also exports advanced optional services such as
+          <code> x402Middleware</code>, <code>WebhookService</code>,
+          <code>BillingKeeper</code>, and proof or settlement helpers for teams
+          that want lower-level runtime control.
+        </p>
+      </DocsSection>
+    </DocsPage>
   );
 }
