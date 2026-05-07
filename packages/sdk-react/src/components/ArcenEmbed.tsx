@@ -48,6 +48,12 @@ import {
   sendSmartAccountTransaction,
   updateAutopayConfig,
 } from "../lib/zerodev";
+import type { SubscriptionCancellationIntent } from "../lib/subscription-lifecycle";
+import {
+  buildCancellationFeedback,
+  buildCancellationRequestBody,
+  buildPlanChangeSuccessMessage,
+} from "../lib/subscription-lifecycle";
 import {
   encodeAbiParameters,
   encodeFunctionData,
@@ -97,6 +103,11 @@ type PlanChangeConfirmation = {
   paymentTxHash?: string;
 };
 
+type CancellationConfirmation = {
+  intent: SubscriptionCancellationIntent;
+  txHash?: string;
+};
+
 type PlanChangeProrationSummary = {
   currency: string;
   currentPlanName: string;
@@ -122,7 +133,7 @@ type PlanChangePreviewResponse = {
   error?: string;
 };
 
-const AUTOPAY_START_TIME_BUFFER_SECONDS = 5;
+const AUTOPAY_START_TIME_BUFFER_SECONDS = 20;
 
 interface PortalState {
   data: ComponentRenderData | null;
@@ -1309,6 +1320,13 @@ async function readAutopayInitialized(
   })) as boolean;
 }
 
+async function readChainTimestampSeconds(chainId: number): Promise<bigint> {
+  const chain = getChain(chainId);
+  const publicClient = createPublicClient({ chain, transport: http() });
+  const latestBlock = await publicClient.getBlock({ blockTag: "latest" });
+  return latestBlock.timestamp;
+}
+
 function encodeAutopayInstallData(params: {
   merchant: `0x${string}`;
   maxAmount: bigint;
@@ -1356,8 +1374,17 @@ async function submitWalletTransaction(params: {
     value: params.value ?? 0n,
   });
 
-  await publicClient.waitForTransactionReceipt({ hash: txHash });
+  const receipt = await publicClient.waitForTransactionReceipt({
+    hash: txHash,
+  });
+  if (receipt.status !== "success") {
+    throw new Error("Wallet transaction did not complete successfully.");
+  }
   return { txHash };
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 async function readWalletSubscriptionTokenId(
@@ -4431,10 +4458,11 @@ function PaymentContent({
     if (!chainId) {
       throw new Error("Missing payment chain for autopay setup.");
     }
+    const paymentChainId = chainId;
 
     const billingPaymentAccount = await ensureBillingSmartAccount();
 
-    const targetPlan = await readOnChainPlan(chainId, onChainPlanId);
+    const targetPlan = await readOnChainPlan(paymentChainId, onChainPlanId);
     if (!targetPlan?.active) {
       throw new Error("The selected on-chain plan is not active anymore.");
     }
@@ -4448,7 +4476,7 @@ function PaymentContent({
       );
     }
 
-    const contracts = getContractAddresses(chainId);
+    const contracts = getContractAddresses(paymentChainId);
     const autopayAddress = contracts.autopayModule as `0x${string}`;
     const tokenAddress = targetPlan.acceptedToken as `0x${string}`;
     const chargeAmount = BigInt(targetPlan.price ?? 0n);
@@ -4456,39 +4484,115 @@ function PaymentContent({
       throw new Error("The selected on-chain plan has no billable amount.");
     }
 
-    const nextConfig = {
-      merchant: targetPlan.provider as `0x${string}`,
-      maxAmount: chargeAmount,
-      token: tokenAddress,
-      interval: Number(targetPlan.billingInterval),
-      // Give the install transaction a small buffer so onInstall() does not
-      // revert with "start in past" by the time it is mined.
-      startTime: BigInt(
-        Math.floor(Date.now() / 1000) + AUTOPAY_START_TIME_BUFFER_SECONDS,
-      ),
-      planId: BigInt(onChainPlanId),
-      maxTotalAmount: 0n,
-    };
+    async function buildNextConfig() {
+      const chainNow = await readChainTimestampSeconds(paymentChainId);
+      return {
+        merchant: targetPlan.provider as `0x${string}`,
+        maxAmount: chargeAmount,
+        token: tokenAddress,
+        interval: Number(targetPlan.billingInterval),
+        // Use chain time instead of browser time so wallet-confirmation delays
+        // and local clock skew do not immediately invalidate the install.
+        startTime: chainNow + BigInt(AUTOPAY_START_TIME_BUFFER_SECONDS),
+        planId: BigInt(onChainPlanId),
+        maxTotalAmount: 0n,
+      };
+    }
+
+    let nextConfig = await buildNextConfig();
+    const maxApprovalAmount = chargeAmount * 13n;
+
+    async function waitForAutopaySetupReadiness() {
+      const maxAttempts = 6;
+      for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+        const initialized = await readAutopayInitialized(
+          paymentChainId,
+          billingPaymentAccount,
+        );
+
+        if (initialized) {
+          const currentConfig = await readAutopayConfig(
+            paymentChainId,
+            billingPaymentAccount,
+          );
+          const configMatches =
+            String(currentConfig.merchant ?? "").toLowerCase() ===
+              nextConfig.merchant.toLowerCase() &&
+            BigInt(currentConfig.maxAmount ?? 0n) === nextConfig.maxAmount &&
+            String(currentConfig.token ?? "").toLowerCase() ===
+              nextConfig.token.toLowerCase() &&
+            Number(currentConfig.interval ?? 0) === nextConfig.interval &&
+            BigInt(currentConfig.planId ?? 0n) === nextConfig.planId;
+
+          if (configMatches) {
+            return;
+          }
+        }
+
+        if (attempt < maxAttempts - 1) {
+          await sleep(1_000);
+        }
+      }
+
+      throw new Error(
+        "Autopay setup has not finished syncing for this payment account yet. Please wait a moment and try Activate subscription again.",
+      );
+    }
 
     const isInitialized = await readAutopayInitialized(
-      chainId,
+      paymentChainId,
       billingPaymentAccount,
     );
     if (!isInitialized) {
-      const installData = encodeFunctionData({
-        abi: ERC7579AutopayModuleABI,
-        functionName: "onInstall",
-        args: [encodeAutopayInstallData(nextConfig)],
-      });
+      let installError: unknown = null;
 
-      await submitPaymentAccountTransaction({
-        to: autopayAddress,
-        data: installData,
-        smartAccountAddressOverride: billingPaymentAccount,
-      });
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        nextConfig = await buildNextConfig();
+        const installData = encodeFunctionData({
+          abi: ERC7579AutopayModuleABI,
+          functionName: "onInstall",
+          args: [encodeAutopayInstallData(nextConfig)],
+        });
+
+        try {
+          await submitPaymentAccountTransaction({
+            to: autopayAddress,
+            data: installData,
+            smartAccountAddressOverride: billingPaymentAccount,
+          });
+          installError = null;
+          break;
+        } catch (error) {
+          installError = error;
+          const message =
+            error instanceof Error ? error.message.toLowerCase() : "";
+          if (
+            message.includes("rejected") ||
+            message.includes("denied") ||
+            message.includes("cancelled")
+          ) {
+            throw error;
+          }
+
+          const initializedAfterFailure = await readAutopayInitialized(
+            paymentChainId,
+            billingPaymentAccount,
+          );
+          if (initializedAfterFailure) {
+            installError = null;
+            break;
+          }
+        }
+      }
+
+      if (installError) {
+        throw new Error(
+          "Autopay installation did not complete. Please confirm the install transaction and try Activate subscription again.",
+        );
+      }
     } else {
       const currentConfig = await readAutopayConfig(
-        chainId,
+        paymentChainId,
         billingPaymentAccount,
       );
       const configMatches =
@@ -4523,6 +4627,8 @@ function PaymentContent({
       }
     }
 
+    await waitForAutopaySetupReadiness();
+
     const approveData = encodeFunctionData({
       abi: [
         {
@@ -4537,7 +4643,7 @@ function PaymentContent({
         },
       ],
       functionName: "approve",
-      args: [autopayAddress, chargeAmount * 13n],
+      args: [autopayAddress, maxApprovalAmount],
     });
 
     await submitPaymentAccountTransaction({
@@ -4545,6 +4651,34 @@ function PaymentContent({
       data: approveData,
       smartAccountAddressOverride: billingPaymentAccount,
     });
+
+    const allowanceCheckClient = createPublicClient({
+      chain: getChain(paymentChainId),
+      transport: http(),
+    });
+    const allowance = (await allowanceCheckClient.readContract({
+      address: tokenAddress,
+      abi: [
+        {
+          type: "function",
+          name: "allowance",
+          inputs: [
+            { name: "owner", type: "address" },
+            { name: "spender", type: "address" },
+          ],
+          outputs: [{ name: "", type: "uint256" }],
+          stateMutability: "view",
+        },
+      ],
+      functionName: "allowance",
+      args: [billingPaymentAccount, autopayAddress],
+    })) as bigint;
+
+    if (allowance < chargeAmount) {
+      throw new Error(
+        "Token approval did not stick for the payment account. Please try activation again after confirming the approval transaction.",
+      );
+    }
 
     return billingPaymentAccount;
   }
@@ -5819,7 +5953,7 @@ function UnsubscribeContent({
   data: ComponentRenderData;
   processing: boolean;
   tokens: Tokens;
-  onConfirm: (txHash?: string) => void;
+  onConfirm: (confirmation: CancellationConfirmation) => void;
   onBack: () => void;
   containerWidth: number;
 }) {
@@ -5881,7 +6015,7 @@ function UnsubscribeContent({
     setTxError("");
 
     if (!requiresOnChainCancellation) {
-      onConfirm(undefined);
+      onConfirm({ intent: "scheduled" });
       return;
     }
 
@@ -5922,7 +6056,7 @@ function UnsubscribeContent({
       });
 
       setTxStatus("confirmed");
-      onConfirm(txHash);
+      onConfirm({ intent: "immediate", txHash });
     } catch (error) {
       setTxStatus("error");
       setTxError(
@@ -5985,7 +6119,7 @@ function UnsubscribeContent({
         >
           {requiresOnChainCancellation
             ? "Your paid subscription will be cancelled immediately once the on-chain transaction confirms."
-            : "Your subscription will be downgraded to the free plan immediately."}
+            : "Your current plan stays active until the end of the current billing period, then your subscription moves to Free."}
         </div>
         {requiresOnChainCancellation && (
           <div
@@ -6168,7 +6302,7 @@ function UnsubscribeContent({
               ? "Cancelling…"
               : requiresOnChainCancellation
                 ? "Cancel on-chain subscription"
-                : "Cancel subscription"}
+                : "Schedule cancellation"}
         </button>
         {needsWalletClient && (
           <div
@@ -6758,16 +6892,13 @@ export function ArcenEmbed({
           typeof effectiveAt === "string" ? formatDateLabel(effectiveAt) : null;
         dispatch({
           type: "GOTO_SUCCESS",
-          successMsg:
-            mode === "next_renewal_on_chain"
-              ? `Plan change scheduled.${selectedPlan?.name ? ` ${selectedPlan.name} will take effect` : " The new plan will take effect"}${effectiveAtLabel ? ` on ${effectiveAtLabel}` : " on the next renewal"}.`
-              : mode === "immediate_prorated_upgrade"
-                ? `Plan upgraded.${prorationAmountDue ? ` ${formatUsdFromDecimalString(prorationAmountDue)} was charged for the remaining term.` : ""}`
-                : mode === "immediate_on_chain" && walletCreditCreated > 0
-                  ? `Plan changed. $${walletCreditCreated.toFixed(2)} wallet credit created.`
-                  : mode === "immediate_on_chain"
-                    ? "Plan changed on-chain."
-                    : "Plan activated!",
+          successMsg: buildPlanChangeSuccessMessage({
+            mode,
+            selectedPlanName: selectedPlan?.name ?? null,
+            effectiveAtLabel,
+            prorationAmountDue,
+            walletCreditCreated,
+          }),
           txHash: successTxHash,
         });
       } catch (e: unknown) {
@@ -6815,26 +6946,40 @@ export function ArcenEmbed({
   );
 
   const handleUnsubscribe = useCallback(
-    async (txHash?: string) => {
+    async (confirmation: CancellationConfirmation) => {
       dispatch({ type: "PROCESSING_START" });
       try {
         const unsubController = new AbortController();
-        await callApi(
+        const response = await callApi(
           "/api/v1/companies/unsubscribe",
-          txHash ? { txHash } : {},
+          buildCancellationRequestBody(confirmation),
           unsubController.signal,
         );
         await fetchData();
-        if (txHash) {
+        const mode = String(
+          (response as { data?: { mode?: string } })?.data?.mode ?? "",
+        );
+        const effectiveAt =
+          (response as { data?: { effectiveAt?: string } })?.data
+            ?.effectiveAt ?? null;
+        const effectiveAtLabel =
+          typeof effectiveAt === "string" ? formatDateLabel(effectiveAt) : null;
+        const feedback = buildCancellationFeedback({
+          intent: confirmation.intent,
+          mode,
+          effectiveAtLabel,
+        });
+
+        if (feedback.successMsg) {
           dispatch({
             type: "GOTO_SUCCESS",
-            successMsg: "Subscription cancelled on-chain.",
-            txHash,
+            successMsg: feedback.successMsg,
+            txHash: confirmation.txHash,
           });
         } else {
           dispatch({
             type: "GOTO_PORTAL",
-            flashMsg: "Subscription cancelled. You are now on the Free plan.",
+            flashMsg: feedback.flashMsg,
           });
         }
       } catch (e: unknown) {
@@ -6912,11 +7057,41 @@ export function ArcenEmbed({
   // Guards: missing token or component ID — show setup guidance
   if (!resolvedToken && !mockData) {
     return (
-      <div className={className} style={{ fontFamily: "system-ui, sans-serif", padding: 32, textAlign: "center", ...style }}>
+      <div
+        className={className}
+        style={{
+          fontFamily: "system-ui, sans-serif",
+          padding: 32,
+          textAlign: "center",
+          ...style,
+        }}
+      >
         <div style={{ fontSize: 28, marginBottom: 8 }}>🔑</div>
-        <div style={{ fontWeight: 700, color: "#111827", marginBottom: 4 }}>Access token required</div>
+        <div style={{ fontWeight: 700, color: "#111827", marginBottom: 4 }}>
+          Access token required
+        </div>
         <div style={{ fontSize: 13, color: "#6b7280" }}>
-          Pass an <code style={{ background: "#f3f4f6", padding: "2px 5px", borderRadius: 4 }}>accessToken</code> prop to <code style={{ background: "#f3f4f6", padding: "2px 5px", borderRadius: 4 }}>ArcenEmbed</code>.
+          Pass an{" "}
+          <code
+            style={{
+              background: "#f3f4f6",
+              padding: "2px 5px",
+              borderRadius: 4,
+            }}
+          >
+            accessToken
+          </code>{" "}
+          prop to{" "}
+          <code
+            style={{
+              background: "#f3f4f6",
+              padding: "2px 5px",
+              borderRadius: 4,
+            }}
+          >
+            ArcenEmbed
+          </code>
+          .
         </div>
       </div>
     );
@@ -6924,11 +7099,41 @@ export function ArcenEmbed({
 
   if (!resolvedId && !mockData) {
     return (
-      <div className={className} style={{ fontFamily: "system-ui, sans-serif", padding: 32, textAlign: "center", ...style }}>
+      <div
+        className={className}
+        style={{
+          fontFamily: "system-ui, sans-serif",
+          padding: 32,
+          textAlign: "center",
+          ...style,
+        }}
+      >
         <div style={{ fontSize: 28, marginBottom: 8 }}>🧩</div>
-        <div style={{ fontWeight: 700, color: "#111827", marginBottom: 4 }}>Component ID required</div>
+        <div style={{ fontWeight: 700, color: "#111827", marginBottom: 4 }}>
+          Component ID required
+        </div>
         <div style={{ fontSize: 13, color: "#6b7280" }}>
-          Pass a <code style={{ background: "#f3f4f6", padding: "2px 5px", borderRadius: 4 }}>componentId</code> prop to <code style={{ background: "#f3f4f6", padding: "2px 5px", borderRadius: 4 }}>ArcenEmbed</code>.
+          Pass a{" "}
+          <code
+            style={{
+              background: "#f3f4f6",
+              padding: "2px 5px",
+              borderRadius: 4,
+            }}
+          >
+            componentId
+          </code>{" "}
+          prop to{" "}
+          <code
+            style={{
+              background: "#f3f4f6",
+              padding: "2px 5px",
+              borderRadius: 4,
+            }}
+          >
+            ArcenEmbed
+          </code>
+          .
         </div>
       </div>
     );
@@ -7112,7 +7317,7 @@ export function ArcenEmbed({
               processing={processing}
               tokens={tokens}
               containerWidth={effectiveContainerWidth}
-              onConfirm={(txHash) => handleUnsubscribe(txHash)}
+              onConfirm={(confirmation) => handleUnsubscribe(confirmation)}
               onBack={() => dispatch({ type: "GOTO_PORTAL" })}
             />
           )}
@@ -7207,7 +7412,7 @@ export function ArcenEmbed({
                   processing={processing}
                   tokens={tokens}
                   containerWidth={effectiveContainerWidth}
-                  onConfirm={(txHash) => handleUnsubscribe(txHash)}
+                  onConfirm={(confirmation) => handleUnsubscribe(confirmation)}
                   onBack={() => dispatch({ type: "GOTO_PORTAL" })}
                 />
               )}

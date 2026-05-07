@@ -40,10 +40,7 @@ import { db } from "@/lib/db";
 import { getRpcUrl } from "@/lib/config";
 import { DEFAULT_CHAIN_ID } from "@/lib/default-chain";
 import { requireAnyAuth, isAnyAuthError } from "@/lib/require-any-auth";
-import {
-  resolveCompany,
-  type CompanyKeys,
-} from "@/lib/flag-engine";
+import { resolveCompany, type CompanyKeys } from "@/lib/flag-engine";
 import { resolveEmbedAccessToken } from "@/lib/embed-access-token";
 import { getSession } from "@/lib/auth.server";
 import { resolveDashboardSessionIdentityDefaults } from "@/lib/dashboard-session-identity";
@@ -55,10 +52,9 @@ import {
 } from "@/lib/billing-recovery";
 import { upsertSubscriptionLedgerState } from "@/lib/billing-ledger";
 
-const addressSchema = z.string().refine(
-  (value) => isAddress(value),
-  "Must be a valid EVM address",
-);
+const addressSchema = z
+  .string()
+  .refine((value) => isAddress(value), "Must be a valid EVM address");
 
 const companySchema = z
   .object({
@@ -161,6 +157,81 @@ function formatTokenAmount(
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+type AutopayActivationSnapshot = {
+  isInitialized: boolean;
+  config: {
+    merchant?: string;
+    maxAmount?: bigint;
+    startTime?: bigint;
+    planId?: bigint;
+  } | null;
+};
+
+async function readAutopayActivationSnapshot(params: {
+  publicClient: ReturnType<typeof createPublicClient>;
+  autopayAddress: `0x${string}`;
+  paymentAccount: `0x${string}`;
+}): Promise<AutopayActivationSnapshot> {
+  const isInitialized = (await params.publicClient.readContract({
+    address: params.autopayAddress,
+    abi: ERC7579AutopayModuleABI,
+    functionName: "isInitialized",
+    args: [params.paymentAccount],
+  })) as boolean;
+
+  if (!isInitialized) {
+    return { isInitialized: false, config: null };
+  }
+
+  const config = (await params.publicClient.readContract({
+    address: params.autopayAddress,
+    abi: ERC7579AutopayModuleABI,
+    functionName: "getConfig",
+    args: [params.paymentAccount],
+  })) as {
+    merchant?: string;
+    maxAmount?: bigint;
+    startTime?: bigint;
+    planId?: bigint;
+  };
+
+  return { isInitialized: true, config };
+}
+
+async function waitForAutopayActivationSnapshot(params: {
+  publicClient: ReturnType<typeof createPublicClient>;
+  autopayAddress: `0x${string}`;
+  paymentAccount: `0x${string}`;
+  expectedPlanId: bigint;
+  expectedMerchant: string;
+}): Promise<AutopayActivationSnapshot> {
+  const attempts = 6;
+  let latest: AutopayActivationSnapshot = {
+    isInitialized: false,
+    config: null,
+  };
+
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    latest = await readAutopayActivationSnapshot(params);
+
+    const configPlanId = BigInt(latest.config?.planId ?? 0n);
+    const configMerchant = String(latest.config?.merchant ?? "").toLowerCase();
+    if (
+      latest.isInitialized &&
+      configPlanId === params.expectedPlanId &&
+      configMerchant === params.expectedMerchant
+    ) {
+      return latest;
+    }
+
+    if (attempt < attempts - 1) {
+      await sleep(750);
+    }
+  }
+
+  return latest;
 }
 
 function requiredConfirmations(): number {
@@ -269,7 +340,7 @@ async function upsertCompanyForActivation(
       email: keys.email ?? null,
       walletAddress: keys.wallet?.toLowerCase() ?? null,
       externalId: keys.id ?? null,
-      traits: ((keys.traits ?? {}) as unknown) as Prisma.InputJsonValue,
+      traits: (keys.traits ?? {}) as unknown as Prisma.InputJsonValue,
     },
     select: { id: true },
   });
@@ -316,15 +387,17 @@ export async function OPTIONS() {
 
 export async function POST(req: NextRequest) {
   const authHeader = req.headers.get("authorization") ?? "";
-  const bearerToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
+  const bearerToken = authHeader.startsWith("Bearer ")
+    ? authHeader.slice(7)
+    : "";
 
   let teamId: string;
-  let embedTokenContext:
-    | Awaited<ReturnType<typeof resolveEmbedAccessToken>>
-    | null = null;
-  let sessionDefaults:
-    | Awaited<ReturnType<typeof resolveDashboardSessionIdentityDefaults>>
-    | null = null;
+  let embedTokenContext: Awaited<
+    ReturnType<typeof resolveEmbedAccessToken>
+  > | null = null;
+  let sessionDefaults: Awaited<
+    ReturnType<typeof resolveDashboardSessionIdentityDefaults>
+  > | null = null;
   if (bearerToken && !bearerToken.startsWith("api_")) {
     embedTokenContext = await resolveEmbedAccessToken(bearerToken);
     if (!embedTokenContext) {
@@ -373,17 +446,26 @@ export async function POST(req: NextRequest) {
   }
 
   const onChainPlanId = BigInt(parsed.data.planId);
-  const paymentAccount = parsed.data.paymentAccount.toLowerCase() as `0x${string}`;
+  const paymentAccount =
+    parsed.data.paymentAccount.toLowerCase() as `0x${string}`;
   const activationCompanyInput = {
     ...parsed.data.company,
     ...(sessionDefaults && {
-      name: parsed.data.company.name ?? sessionDefaults.companyName ?? undefined,
-      email: parsed.data.company.email ?? sessionDefaults.companyEmail ?? undefined,
-      wallet: parsed.data.company.wallet ?? sessionDefaults.walletAddress ?? undefined,
+      name:
+        parsed.data.company.name ?? sessionDefaults.companyName ?? undefined,
+      email:
+        parsed.data.company.email ?? sessionDefaults.companyEmail ?? undefined,
+      wallet:
+        parsed.data.company.wallet ??
+        sessionDefaults.walletAddress ??
+        undefined,
     }),
   };
 
-  const company = await upsertCompanyForActivation(teamId, activationCompanyInput);
+  const company = await upsertCompanyForActivation(
+    teamId,
+    activationCompanyInput,
+  );
 
   const catalogPlan = await db.catalogPlan.findFirst({
     where: {
@@ -397,7 +479,10 @@ export async function POST(req: NextRequest) {
 
   if (!catalogPlan) {
     return NextResponse.json(
-      { error: "Published team plan not found for the supplied on-chain planId." },
+      {
+        error:
+          "Published team plan not found for the supplied on-chain planId.",
+      },
       { status: 404, headers: corsHeaders() },
     );
   }
@@ -440,7 +525,9 @@ export async function POST(req: NextRequest) {
     planFactoryAddress === zeroAddress
   ) {
     return NextResponse.json(
-      { error: `Subscription contracts are not configured for chain ${chainId}.` },
+      {
+        error: `Subscription contracts are not configured for chain ${chainId}.`,
+      },
       { status: 503, headers: corsHeaders() },
     );
   }
@@ -505,12 +592,14 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const isInitialized = (await publicClient.readContract({
-    address: autopayAddress,
-    abi: ERC7579AutopayModuleABI,
-    functionName: "isInitialized",
-    args: [paymentAccount],
-  })) as boolean;
+  const autopaySnapshot = await waitForAutopayActivationSnapshot({
+    publicClient,
+    autopayAddress,
+    paymentAccount,
+    expectedPlanId: onChainPlanId,
+    expectedMerchant: signerAccount.address.toLowerCase(),
+  });
+  const isInitialized = autopaySnapshot.isInitialized;
 
   if (!isInitialized) {
     return NextResponse.json(
@@ -522,24 +611,13 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const autopayConfig = (await publicClient.readContract({
-    address: autopayAddress,
-    abi: ERC7579AutopayModuleABI,
-    functionName: "getConfig",
-    args: [paymentAccount],
-  })) as {
-    merchant?: string;
-    maxAmount?: bigint;
-    startTime?: bigint;
-    planId?: bigint;
-  };
+  const autopayConfig = autopaySnapshot.config;
 
   const configPlanId = BigInt(autopayConfig?.planId ?? 0n);
   if (configPlanId !== onChainPlanId) {
     return NextResponse.json(
       {
-        error:
-          `Autopay config mismatch. Payment account is configured for on-chain plan ${configPlanId.toString()}, not ${onChainPlanId.toString()}.`,
+        error: `Autopay config mismatch. Payment account is configured for on-chain plan ${configPlanId.toString()}, not ${onChainPlanId.toString()}.`,
       },
       { status: 409, headers: corsHeaders() },
     );
@@ -565,12 +643,13 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const acceptedTokenAddress =
-    isAddress(String(onChainPlan?.acceptedToken ?? catalogPlan.acceptedToken ?? ""))
-      ? (String(
-          onChainPlan?.acceptedToken ?? catalogPlan.acceptedToken,
-        ).toLowerCase() as `0x${string}`)
-      : null;
+  const acceptedTokenAddress = isAddress(
+    String(onChainPlan?.acceptedToken ?? catalogPlan.acceptedToken ?? ""),
+  )
+    ? (String(
+        onChainPlan?.acceptedToken ?? catalogPlan.acceptedToken,
+      ).toLowerCase() as `0x${string}`)
+    : null;
 
   if (!acceptedTokenAddress) {
     return NextResponse.json(
@@ -636,15 +715,15 @@ export async function POST(req: NextRequest) {
   }
 
   const startTime = Number(autopayConfig?.startTime ?? 0n);
-  const nowSeconds = Math.floor(Date.now() / 1000);
+  const latestBlock = await publicClient.getBlock({ blockTag: "latest" });
+  const nowSeconds = Number(latestBlock.timestamp);
   if (startTime > nowSeconds) {
     const waitSeconds = startTime - nowSeconds;
 
-    if (waitSeconds > 15) {
+    if (waitSeconds > 45) {
       return NextResponse.json(
         {
-          error:
-            `Autopay cannot start yet. The configured start time is ${new Date(startTime * 1000).toISOString()}.`,
+          error: `Autopay cannot start yet. The configured start time is ${new Date(startTime * 1000).toISOString()}.`,
         },
         { status: 409, headers: corsHeaders() },
       );
@@ -829,9 +908,8 @@ export async function POST(req: NextRequest) {
       );
     });
 
-    let tokenId =
-      ((latestBillingLog?.args as { tokenId?: bigint } | undefined)?.tokenId ??
-        0n) as bigint;
+    let tokenId = ((latestBillingLog?.args as { tokenId?: bigint } | undefined)
+      ?.tokenId ?? 0n) as bigint;
 
     const mintedLogs = parseEventLogs({
       abi: SubscriptionRegistryABI,
@@ -913,9 +991,7 @@ export async function POST(req: NextRequest) {
     const subscriberEmail = await resolveBillingRecipientEmail({
       teamId,
       explicitEmail:
-        parsed.data.subscriberEmail ??
-        sessionDefaults?.userEmail ??
-        null,
+        parsed.data.subscriberEmail ?? sessionDefaults?.userEmail ?? null,
       accessTokenUserId: embedTokenContext?.userId ?? null,
       accessTokenCompanyId: embedTokenContext?.companyId ?? null,
       companyId: company.id,
@@ -987,7 +1063,9 @@ export async function POST(req: NextRequest) {
     );
   } catch (error) {
     const message =
-      error instanceof Error ? error.message : "Failed to activate subscription.";
+      error instanceof Error
+        ? error.message
+        : "Failed to activate subscription.";
     const normalized = normalizeActivationError(message);
     return NextResponse.json(
       { error: normalized.error },

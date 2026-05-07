@@ -9,9 +9,11 @@ export default function CheckoutPage() {
     <DocsPage
       eyebrow="Features"
       title="Checkout patterns"
-      summary="ArcenPay currently exposes two main checkout paths: recurring subscription flows inside ArcenEmbed and hosted payment links for one-time collections such as invoice pay-now actions, setup fees, or standalone add-ons."
+      summary="ArcenPay exposes recurring subscription flows inside ArcenEmbed and hosted payment links for one-time collections. For subscriptions, buying, upgrading, downgrading, and cancelling are separate but related flows."
       toc={[
         { href: "#subscription", label: "Recurring checkout" },
+        { href: "#plan-changes", label: "Upgrades and downgrades" },
+        { href: "#cancellation", label: "Cancellation" },
         { href: "#hosted", label: "Hosted payment links" },
         { href: "#activation", label: "Server activation" },
         { href: "#choose", label: "Choose a flow" },
@@ -30,6 +32,73 @@ export default function CheckoutPage() {
 export function PricingDialog() {
   return <ArcenEmbed mode="modal" initialView="checkout" />;
 }`}
+        />
+      </DocsSection>
+
+      <DocsSection id="plan-changes" title="Upgrades and downgrades">
+        <ul className="pl-5 mb-[18px] space-y-[7px]">
+          <li className="text-[15px] text-muted-foreground leading-relaxed">
+            Buying a higher plan is not treated the same as a downgrade. Paid
+            upgrades can be immediate and prorated.
+          </li>
+          <li className="text-[15px] text-muted-foreground leading-relaxed">
+            The upgrade path supports a preview mode first, then an
+            authoritative on-chain change once required transaction hashes are available.
+          </li>
+          <li className="text-[15px] text-muted-foreground leading-relaxed">
+            Lower-plan changes usually stay pending until the next renewal
+            boundary instead of removing access immediately.
+          </li>
+        </ul>
+
+        <DocsCodeBlock
+          lang="ts"
+          code={`// preview an immediate paid upgrade
+await fetch("/api/v1/companies/plan", {
+  method: "POST",
+  body: JSON.stringify({
+    planId: "plan_pro",
+    previewOnly: true,
+  }),
+});
+
+// finalize a verified paid upgrade
+await fetch("/api/v1/companies/plan", {
+  method: "POST",
+  body: JSON.stringify({
+    planId: "plan_pro",
+    autopayConfigTxHash: "0x...",
+    paymentTxHash: "0x...",
+    accessChangeTxHash: "0x...",
+  }),
+});`}
+        />
+      </DocsSection>
+
+      <DocsSection id="cancellation" title="Cancellation behavior">
+        <p className="text-[15px] text-muted-foreground leading-relaxed mb-[15px]">
+          Self-serve cancellation has two modes: a scheduled period-end
+          cancellation that preserves current access until the term ends, and an
+          explicit immediate on-chain cancellation.
+        </p>
+        <DocsCodeBlock
+          lang="ts"
+          code={`// default: keep paid access until period end
+await fetch("/api/v1/companies/unsubscribe", {
+  method: "POST",
+  body: JSON.stringify({
+    autopayControlTxHash: "0x...",
+  }),
+});
+
+// explicit immediate cancellation
+await fetch("/api/v1/companies/unsubscribe", {
+  method: "POST",
+  body: JSON.stringify({
+    immediate: true,
+    cancellationTxHash: "0x...",
+  }),
+});`}
         />
       </DocsSection>
 
@@ -87,8 +156,16 @@ window.location.assign(url);`}
               <td>Published ArcenEmbed checkout</td>
             </tr>
             <tr>
-              <td>Plan upgrade or self-serve billing</td>
-              <td>Published ArcenEmbed portal</td>
+              <td>Plan upgrade</td>
+              <td>Published ArcenEmbed portal plus plan-change verification</td>
+            </tr>
+            <tr>
+              <td>Plan downgrade</td>
+              <td>Published ArcenEmbed portal with next-renewal scheduling</td>
+            </tr>
+            <tr>
+              <td>Cancellation</td>
+              <td>Published ArcenEmbed portal with period-end or immediate cancellation flow</td>
             </tr>
             <tr>
               <td>Invoice pay-now</td>

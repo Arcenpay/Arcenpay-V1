@@ -9,7 +9,7 @@ export default function ApiSubscriptionsPage() {
     <DocsPage
       eyebrow="API Reference"
       title="Billing and subscription APIs"
-      summary="The current public billing API surface focuses on access checks, usage consumption, subscription activation, company plan changes, and unsubscribe flows rather than a generic list-all-subscriptions REST resource."
+      summary="The current public billing API surface focuses on access checks, usage consumption, new subscription activation, plan changes, and unsubscribe flows rather than a generic list-all-subscriptions REST resource."
       toc={[
         { href: "#checks", label: "Checks" },
         { href: "#usage", label: "Usage consume" },
@@ -67,6 +67,73 @@ export default function ApiSubscriptionsPage() {
           lang="bash"
           code={`POST /api/v1/companies/plan
 POST /api/v1/companies/unsubscribe`}
+        />
+
+        <p className="text-[15px] text-muted-foreground leading-relaxed mt-[15px] mb-[15px]">
+          These endpoints cover the rest of the subscription lifecycle after the
+          initial purchase.
+        </p>
+
+        <table className="docs-table">
+          <thead>
+            <tr>
+              <th>Operation</th>
+              <th>Endpoint</th>
+              <th>Typical mode</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Upgrade preview</td>
+              <td><code>POST /api/v1/companies/plan</code> with <code>previewOnly: true</code></td>
+              <td><code>immediate_prorated_upgrade_preview</code></td>
+            </tr>
+            <tr>
+              <td>Immediate paid upgrade</td>
+              <td><code>POST /api/v1/companies/plan</code> with verified plan-change tx hashes</td>
+              <td><code>immediate_prorated_upgrade</code></td>
+            </tr>
+            <tr>
+              <td>Scheduled downgrade</td>
+              <td><code>POST /api/v1/companies/plan</code></td>
+              <td><code>next_renewal_on_chain</code></td>
+            </tr>
+            <tr>
+              <td>Cancel at period end</td>
+              <td><code>POST /api/v1/companies/unsubscribe</code></td>
+              <td><code>cancel_at_period_end</code></td>
+            </tr>
+            <tr>
+              <td>Immediate cancellation</td>
+              <td><code>POST /api/v1/companies/unsubscribe</code> with <code>immediate: true</code></td>
+              <td><code>cancelled_on_chain</code></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <DocsCodeBlock
+          lang="json"
+          code={`{
+  "planId": "plan_pro",
+  "previewOnly": true
+}`}
+        />
+
+        <DocsCodeBlock
+          lang="json"
+          code={`{
+  "planId": "plan_pro",
+  "autopayConfigTxHash": "0x...",
+  "paymentTxHash": "0x...",
+  "accessChangeTxHash": "0x..."
+}`}
+        />
+
+        <DocsCodeBlock
+          lang="json"
+          code={`{
+  "autopayControlTxHash": "0x..."
+}`}
         />
       </DocsSection>
     </DocsPage>
