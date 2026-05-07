@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createHmac, timingSafeEqual } from "crypto";
+import { verifyWebhookSignature } from "@arcenpay/node";
 
 /**
  * POST /api/webhook
@@ -32,16 +32,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing signature" }, { status: 401 });
     }
 
-    const hmac = createHmac("sha256", secret);
-    const expected = hmac.update(rawBody).digest("hex");
-
     try {
-      const sigBuf = Buffer.from(sigHex, "hex");
-      const expBuf = Buffer.from(expected, "hex");
-      if (sigBuf.length !== expBuf.length || !timingSafeEqual(sigBuf, expBuf)) {
+      if (!verifyWebhookSignature(rawBody, sigHex, secret)) {
         console.warn("[webhook] ❌ Signature mismatch — rejected.");
         console.debug("[webhook] Headers:", Object.fromEntries(req.headers));
-        console.debug("[webhook] Expected sig (sha256):", expected);
         console.debug("[webhook] Received sig (hex part):", sigHex);
         return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
       }

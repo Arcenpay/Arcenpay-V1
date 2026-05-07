@@ -2,7 +2,7 @@
 
 import React, { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { useEntitlement } from '../hooks/useEntitlement';
-import { useMEAP } from '../providers/MEAPProvider';
+import { useArcenPay } from '../providers/ArcenPayProvider';
 import {
   getLitNodeClient,
   getCachedSessionSigs,
@@ -60,7 +60,7 @@ export function FeatureFlagGuard({
   onDecryptionSuccess,
   onDecryptionError,
 }: FeatureFlagGuardProps) {
-  const { config } = useMEAP();
+  const { config } = useArcenPay();
   const { features, isSubscribed, isLoading } = useEntitlement(walletAddress, featureKey);
   const [decrypting, setDecrypting] = useState(false);
   const [decryptPassed, setDecryptPassed] = useState(false);
@@ -69,14 +69,12 @@ export function FeatureFlagGuard({
   const resolvedDecryptEndpoint = useMemo(() => {
     const raw =
       decryptEndpoint ||
-      config.litConfig?.decryptEndpoint ||
       (config.tablelandConfig?.providerUrl
         ? `${config.tablelandConfig.providerUrl.replace(/\/$/, '')}/api/lit/decrypt`
         : null);
     if (!raw) return null;
     return resolveDecryptEndpoint(raw, walletAddress, featureKey);
   }, [
-    config.litConfig?.decryptEndpoint,
     config.tablelandConfig?.providerUrl,
     decryptEndpoint,
     featureKey,

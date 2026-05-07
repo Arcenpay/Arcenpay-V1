@@ -40,22 +40,36 @@ function SkeletonBox({ h, flex }: { h: number; flex?: number }) {
 }
 
 function BillingContent() {
-  const arcen = useArcenPay();
+  const { identify, session } = useArcenPay();
   const { address, connecting } = useWallet();
-  const [identified, setIdentified] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const identified =
+    !!address &&
+    !!session.token &&
+    session.company?.wallet?.toLowerCase() === address.toLowerCase();
+
   useEffect(() => {
-    if (connecting || !address) return;
+    if (connecting) return;
+    if (!address) {
+      setLoading(false);
+      setError(null);
+      return;
+    }
+    if (identified) {
+      setLoading(false);
+      setError(null);
+      return;
+    }
     const wallet = address; // narrow type
     let cancelled = false;
     async function init() {
+      setLoading(true);
       try {
-        await arcen.identify({
+        await identify({
           company: { id: `company-${wallet.slice(2, 10)}`, wallet },
         });
-        if (!cancelled) setIdentified(true);
       } catch (e) {
         if (!cancelled)
           setError(e instanceof Error ? e.message : "Failed to load");
@@ -67,7 +81,7 @@ function BillingContent() {
     return () => {
       cancelled = true;
     };
-  }, [arcen, address, connecting]);
+  }, [address, connecting, identified, identify]);
 
   if (loading) return <Skeleton />;
 

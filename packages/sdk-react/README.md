@@ -11,8 +11,7 @@ npm install @arcenpay/react
 ```
 
 Common UI-facing ArcenPay types are exported from `@arcenpay/react`, so most
-frontend integrations do not need to install or import `@arcenpay/sdk`
-directly.
+frontend integrations only need `@arcenpay/react`.
 
 ## Quick Start (5 minutes)
 
@@ -25,9 +24,10 @@ import { ArcenPayProvider } from "@arcenpay/react";
 export default function Layout({ children }) {
   return (
     <ArcenPayProvider
-      chainId={84532}                                    // Base Sepolia
-      walletConnectProjectId="your-walletconnect-id"    // from cloud.walletconnect.com
-      token="short-lived-access-token-from-your-backend"
+      publishableKey="pk_..."
+      componentId="your-component-id"
+      chainId={84532}
+      walletConnectProjectId="your-walletconnect-id"
     >
       {children}
     </ArcenPayProvider>
@@ -51,13 +51,13 @@ export function BillingPage() {
 
 ```tsx
 import {
-  useEntitlementCheck,
   useEntitlement,
   useConsumeEntitlement,
+  useFlag,
 } from "@arcenpay/react";
 
 function MyComponent({ walletAddress }: { walletAddress: string }) {
-  const { enabled, loading } = useEntitlementCheck("advanced_analytics");
+  const enabled = useFlag("advanced_analytics");
   const { consume } = useConsumeEntitlement();
   const { planTier, isSubscribed } = useEntitlement(walletAddress);
 
@@ -69,7 +69,6 @@ function MyComponent({ walletAddress }: { walletAddress: string }) {
     }
   }
 
-  if (loading) return <Spinner />;
   if (!enabled) return <UpgradePrompt />;
   return (
     <AnalyticsDashboard
@@ -190,34 +189,6 @@ if (!result.consumed) {
 }
 ```
 
-## Utilities
-
-### `deploySmartAccount(config)`
-
-Deploy a ZeroDev ERC-4337 smart account for a user (required for autopay).
-
-```typescript
-import { deploySmartAccount } from "@arcenpay/react/zerodev";
-
-const { address, client } = await deploySmartAccount({
-  signer,       // viem WalletClient
-  chainId: 84532,
-});
-```
-
-### `revokeAutopayModule(config)`
-
-Uninstall the autopay module (cancel subscription).
-
-```typescript
-import { revokeAutopayModule } from "@arcenpay/react/zerodev";
-
-await revokeAutopayModule({
-  smartAccountAddress: "0x...",
-  chainId: 84532,
-});
-```
-
 ## Custom UI Components
 
 You can use your own UI and only use the hooks/data layer:
@@ -249,6 +220,12 @@ NEXT_PUBLIC_FACILITATOR_URL=https://facilitator.yourapp.com
 NEXT_PUBLIC_ARCENPAY_PUBLISHABLE_KEY=pk_...
 NEXT_PUBLIC_ARCENPAY_COMPONENT_ID=your-component-id
 ```
+
+## Package Boundary
+
+For frontend integrations, use `@arcenpay/react` only. The package re-exports
+the public React types you need, so consumers should not need `@arcenpay/sdk`
+or internal ArcenPay package paths.
 
 ---
 

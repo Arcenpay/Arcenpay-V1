@@ -11,8 +11,7 @@ npm install @arcenpay/node
 ```
 
 All public Node SDK input and result types are exported from
-`@arcenpay/node`, so normal backend integrations do not need to install or
-import `@arcenpay/sdk` directly.
+`@arcenpay/node`, so backend integrations only need `@arcenpay/node`.
 
 ## Quick Start
 
@@ -200,14 +199,6 @@ const flags = await tableland.getFeatureFlags("0xCustomerWallet");
 | `InMemoryNonceStore` | In-memory nonce store (dev) |
 | `RedisNonceStore` | Redis-backed nonce store (production) |
 
-## Tableland Subpath Import
-
-For serverless or edge environments where you only need Tableland:
-
-```typescript
-import { TablelandService } from "@arcenpay/node/tableland";
-```
-
 ## x402 Request Context
 
 After the middleware runs successfully, the payment context is available on `req.meapPayment`:
@@ -237,6 +228,12 @@ RESEND_API_KEY=re_...
 TABLELAND_PRIVATE_KEY=0x...
 WEBHOOK_SECRET=your-webhook-secret
 ```
+
+## Package Boundary
+
+For backend integrations, use `@arcenpay/node` only. Public client classes,
+helpers, middleware, and types are exported there, so consumers should not need
+`@arcenpay/sdk` or internal ArcenPay package paths.
 
 ---
 

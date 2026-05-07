@@ -1,8 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Transpile workspace SDK packages from source.
+  // Consumers only integrate the public React package on the frontend.
   // @arcenpay/node is intentionally excluded — it's server-only and pre-built.
-  transpilePackages: ["@arcenpay/react", "@arcenpay/sdk"],
+  transpilePackages: ["@arcenpay/react"],
 
   // Keep server-only packages external (required at runtime, not bundled).
   serverExternalPackages: [

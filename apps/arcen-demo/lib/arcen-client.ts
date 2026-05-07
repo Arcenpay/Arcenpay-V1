@@ -55,10 +55,11 @@ export interface DemoArcenClient {
 }
 
 let _client: DemoArcenClient | null = null;
+let _rawClient: ArcenClient | null = null;
 const DEFAULT_DEMO_COMPANY_ID = "arcen-demo-company";
 
-export function getArcenClient(): DemoArcenClient {
-  if (_client) return _client;
+export function getRawArcenClient(): ArcenClient {
+  if (_rawClient) return _rawClient;
 
   const apiKey = process.env.ARCENPAY_API_KEY;
   if (!apiKey) {
@@ -67,10 +68,17 @@ export function getArcenClient(): DemoArcenClient {
     );
   }
 
-  const rawClient = new ArcenClient({
+  _rawClient = new ArcenClient({
     apiKey,
     baseUrl: process.env.ARCENPAY_BASE_URL ?? "http://localhost:3000",
   });
+
+  return _rawClient;
+}
+
+export function getArcenClient(): DemoArcenClient {
+  if (_client) return _client;
+  const rawClient = getRawArcenClient();
 
   const client: DemoArcenClient = {
     identify: (input) => rawClient.identify(input as never),

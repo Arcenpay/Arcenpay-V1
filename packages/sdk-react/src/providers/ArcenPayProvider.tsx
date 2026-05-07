@@ -16,6 +16,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type {
   ContractAddresses,
   NetworkConfig,
+  PlanTier,
 } from "@arcenpay/sdk";
 import {
   getChainEnvironment,
@@ -30,6 +31,7 @@ import {
 
 export interface ArcenPayContextValue {
   session: ArcenSessionValue;
+  identify: ArcenSessionValue["identify"];
   config: ArcenPayConfig;
   contracts: ContractAddresses;
   network: NetworkConfig;
@@ -45,6 +47,9 @@ export interface ArcenPayConfig {
     providerUrl?: string;
     featureFlagsEndpoint?: string;
   };
+  tierFeatureFallback?: Partial<
+    Record<PlanTier, Record<string, boolean | string | number>>
+  >;
 }
 
 export interface ArcenSessionValue {
@@ -127,6 +132,8 @@ const ArcenPayContext = createContext<ArcenPayContextValue | null>(null);
 
 export interface ArcenPayProviderProps {
   children: ReactNode;
+  /** Optional config overrides for advanced/custom integrations. */
+  config?: Partial<ArcenPayConfig>;
   /**
    * API key from the ArcenPay dashboard (Settings → API Keys).
    * This is the ONLY required prop. Everything else is auto-detected.
@@ -150,6 +157,7 @@ export interface ArcenPayProviderProps {
 export function ArcenPayProvider(props: ArcenPayProviderProps) {
   const {
     children,
+    config: userConfig,
     publishableKey: pkProp,
     chainId: chainIdProp,
     baseUrl: baseUrlProp,
@@ -329,21 +337,27 @@ export function ArcenPayProvider(props: ArcenPayProviderProps) {
 
     const config: ArcenPayConfig = {
       network,
-      litNetwork,
+      litNetwork: userConfig?.litNetwork ?? litNetwork,
       tablelandConfig: {
-        providerUrl: manifest.services.facilitatorUrl,
+        providerUrl:
+          userConfig?.tablelandConfig?.providerUrl ??
+          manifest.services.facilitatorUrl,
+        featureFlagsEndpoint:
+          userConfig?.tablelandConfig?.featureFlagsEndpoint,
       },
+      tierFeatureFallback: userConfig?.tierFeatureFallback,
     };
 
     return {
       session,
+      identify: session.identify,
       config,
       contracts,
       network,
       isTestnet: manifest.isTestnet,
       componentId,
     };
-  }, [chainId, session, componentId]);
+  }, [chainId, session, componentId, userConfig]);
 
   return (
     <WagmiProvider config={wagmiConfig}>
@@ -371,5 +385,5 @@ export function useArcenPay(): ArcenPayContextValue & { identify: ArcenSessionVa
   if (!context) {
     throw new Error("useArcenPay() must be used within an <ArcenPayProvider>");
   }
-  return { ...context, identify: context.session.identify };
+  return context;
 }
