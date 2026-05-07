@@ -1,45 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  getArcenClient,
-  getDemoCompanyKeys,
-  getDemoUserIdentity,
-} from "@/lib/arcen-client";
+import { getArcenClient } from "@/lib/arcen-client";
 
-/**
- * POST /api/track
- * Body: { name: string, traits?: Record<string, unknown> }
- *
- * Tracks a usage event for the current company via ArcenClient.
- */
 export async function POST(req: NextRequest) {
   try {
     const body = (await req.json()) as {
       name?: string;
+      wallet?: string;
       traits?: Record<string, unknown>;
       idempotencyKey?: string;
     };
-    if (!body.name) {
-      return NextResponse.json({ error: "Missing event name" }, { status: 400 });
+    if (!body.name || !body.wallet) {
+      return NextResponse.json({ error: "Missing name or wallet" }, { status: 400 });
     }
 
     const client = getArcenClient();
-    const companyKeys = getDemoCompanyKeys();
-    const user = getDemoUserIdentity();
-
     await client.track({
       name: body.name,
-      company: companyKeys,
-      user: {
-        id: user.id,
-        wallet: user.wallet,
-      },
+      company: { wallet: body.wallet, id: `company-${body.wallet.slice(2, 10)}` },
       traits: body.traits,
       idempotencyKey: body.idempotencyKey,
     });
 
     return NextResponse.json({ ok: true });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Failed to track event";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: err instanceof Error ? err.message : "Failed" }, { status: 500 });
   }
 }

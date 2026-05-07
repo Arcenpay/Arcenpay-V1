@@ -1,62 +1,51 @@
 // ============================================================
-//  @arcenpay/react — Main Entry Point
+//  @arcenpay/react — Public API
 // ============================================================
 
-// Provider
-export { MEAPProvider, useMEAP, ArcenPayProvider, useArcenPay, useArcenSession, useArcenIdentify } from './providers/MEAPProvider';
-export type { MEAPContextValue, MEAPProviderProps, ArcenPayContextValue, ArcenPayProviderProps, ArcenSessionContextValue, ArcenIdentifyInput, ArcenIdentifyResult } from './providers/MEAPProvider';
+// Provider — the single entry point
+export { ArcenPayProvider, useArcenPay } from "./providers/ArcenPayProvider";
+export type {
+  ArcenPayProviderProps,
+  ArcenPayContextValue,
+  ArcenSessionValue,
+  ArcenCompanyIdentity,
+  ArcenUserIdentity,
+  ArcenIdentifyInput,
+} from "./providers/ArcenPayProvider";
 
-// Components
-export { PricingTable } from './components/PricingTable';
-export { CheckoutModal } from './components/CheckoutModal';
+// Components — the two you need
+export { ArcenEmbed, ArcenpayEmbed } from "./components/ArcenEmbed";
+export type { ArcenEmbedProps, ArcenpayEmbedProps } from "./components/ArcenEmbed";
+export { FeatureFlagGuard } from "./components/FeatureFlagGuard";
+export { TemplateRenderer } from "./components/TemplateRenderer";
+export type { TemplateRendererProps, TemplateBlock } from "./components/TemplateRenderer";
+
+// Legacy components — deprecated, use ArcenEmbed instead
+export { CheckoutModal } from "./components/CheckoutModal";
 export type {
   CheckoutModalProps,
   CheckoutResult,
   CheckoutErrorCode,
-  SmartAccountDeploymentInput,
-  SmartAccountDeploymentResult,
-} from './components/CheckoutModal';
+} from "./components/CheckoutModal";
 export {
   CHECKOUT_ERROR_CODES,
   CheckoutFlowError,
-} from './components/CheckoutModal';
-export { SubscriptionStatus } from './components/SubscriptionStatus';
-export { FeatureFlagGuard } from './components/FeatureFlagGuard';
-export { UsageDashboard } from './components/UsageDashboard';
-export { BillingHistory } from './components/BillingHistory';
-export { TemplateRenderer } from './components/TemplateRenderer';
-export type { TemplateRendererProps, TemplateBlock } from './components/TemplateRenderer';
-export { InvoiceList } from './components/InvoiceList';
-export type { InvoiceListProps } from './components/InvoiceList';
-export { ArcenEmbed, ArcenpayEmbed } from './components/ArcenEmbed';
-export type { ArcenEmbedProps, ArcenpayEmbedProps } from './components/ArcenEmbed';
-export { renderElement, getDesignTokens } from './components/ArcenEmbed';
-export type { Tokens } from './components/ArcenEmbed';
+} from "./components/CheckoutModal";
 
-// Hooks
-export { useEntitlement } from './hooks/useEntitlement';
+// Utility called once for convenience
+export { renderElement, getDesignTokens } from "./components/ArcenEmbed";
+export type { Tokens } from "./components/ArcenEmbed";
+
+// Hooks — for programmatic usage beyond embed components
+export { useFlag, useFlags } from "./hooks/useFlag";
+export { useEntitlement } from "./hooks/useEntitlement";
 export {
   ENTITLEMENT_ERROR_CODES,
   EntitlementError,
-} from './hooks/useEntitlement';
-export type { EntitlementErrorCode } from './hooks/useEntitlement';
+} from "./hooks/useEntitlement";
+export type { EntitlementErrorCode } from "./hooks/useEntitlement";
+export { useConsumeEntitlement } from "./hooks/useConsumeEntitlement";
+export { useTrack } from "./hooks/useTrack";
+export type { TrackEventInput } from "./hooks/useTrack";
 
-export { useEntitlementCheck } from './hooks/useEntitlementCheck';
-export type { UseEntitlementCheckReturn, UseEntitlementCheckOptions } from './hooks/useEntitlementCheck';
-
-export { useFlag, useFlags } from './hooks/useFlag';
-export type { UseFlagOptions, UseFlagResult } from './hooks/useFlag';
-
-export { useCompanyEntitlements } from './hooks/useCompanyEntitlements';
-export type { UseCompanyEntitlementsOptions, UseCompanyEntitlementsReturn } from './hooks/useCompanyEntitlements';
-
-export { useTrack } from './hooks/useTrack';
-export type { TrackOptions, TrackEventInput, UseTrackResult } from './hooks/useTrack';
-export { useConsumeEntitlement } from './hooks/useConsumeEntitlement';
-export type {
-  ConsumeEntitlementInput as ReactConsumeEntitlementInput,
-  UseConsumeEntitlementOptions,
-  UseConsumeEntitlementResult,
-} from './hooks/useConsumeEntitlement';
-
-export { createPaymentLinkCheckoutUrl } from './lib/api';
+export { createPaymentLinkCheckoutUrl } from "./lib/api";

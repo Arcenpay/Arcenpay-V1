@@ -1,83 +1,37 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import type {
-  ArcenCompanyKeys,
-  ArcenUserKeys,
-  ConsumeEntitlementResult,
-} from "@arcenpay/sdk";
-import { useArcenSession } from "../providers/MEAPProvider";
+import type { ConsumeEntitlementResult } from "@arcenpay/sdk";
+import { useArcenPay } from "../providers/ArcenPayProvider";
 import { resolveDashboardBaseUrl } from "../lib/api";
 
-export interface ConsumeEntitlementInput {
-  featureKey: string;
-  company?: ArcenCompanyKeys;
-  user?: ArcenUserKeys;
-  traits?: Record<string, unknown>;
-  idempotencyKey?: string;
-}
-
-export interface UseConsumeEntitlementOptions {
-  baseUrl?: string;
-  apiKey?: string;
-}
-
-export interface UseConsumeEntitlementResult {
-  consume: (
-    input: string | ConsumeEntitlementInput,
-    signal?: AbortSignal,
-  ) => Promise<ConsumeEntitlementResult>;
+/**
+ * Consume a metered entitlement (e.g., "api-calls").
+ * Company context comes from ArcenPayProvider.
+ *
+ * @example
+ * const { consume } = useConsumeEntitlement();
+ * const result = await consume("api-calls");
+ * // result = { enabled: true, consumed: true, usage: 5, limit: 100 }
+ */
+export function useConsumeEntitlement(): {
+  consume: (featureKey: string) => Promise<ConsumeEntitlementResult>;
   loading: boolean;
   error: string | null;
-}
+} {
+  const arcen = useArcenPay();
+  const { session } = arcen;
+  const baseUrl = resolveDashboardBaseUrl();
 
-export function useConsumeEntitlement(
-  options: UseConsumeEntitlementOptions = {},
-): UseConsumeEntitlementResult {
-  const session = useArcenSession();
-  const baseUrl = resolveDashboardBaseUrl(options.baseUrl);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const consume = useCallback(
-    async (input: string | ConsumeEntitlementInput, signal?: AbortSignal) => {
-      const normalized =
-        typeof input === "string" ? { featureKey: input } : input;
-
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-      };
-
-      if (session.token) {
-        headers.Authorization = `Bearer ${session.token}`;
-      } else if (options.apiKey) {
-        headers.Authorization = `Bearer ${options.apiKey}`;
-      } else if (!normalized.company) {
+    async (featureKey: string) => {
+      if (!session.token) {
         throw new Error(
-          "consume() requires a session token or explicit company keys",
+          "No active session. Call arcen.identify() inside <ArcenPayProvider> first.",
         );
-      }
-
-      if (!session.token && normalized.company) {
-        const companyKeyParts: string[] = [];
-        if (normalized.company.id) companyKeyParts.push(`id=${normalized.company.id}`);
-        if (normalized.company.wallet) companyKeyParts.push(`wallet=${normalized.company.wallet}`);
-        if (normalized.company.email) companyKeyParts.push(`email=${normalized.company.email}`);
-        if (companyKeyParts.length > 0) {
-          headers["X-Arcen-Company-Keys"] = companyKeyParts.join(",");
-        }
-      }
-
-      if (!session.token && normalized.user) {
-        const userKeyParts: string[] = [];
-        if (normalized.user.id) userKeyParts.push(`id=${normalized.user.id}`);
-        if (normalized.user.clerkUserId) {
-          userKeyParts.push(`clerk_user_id=${normalized.user.clerkUserId}`);
-        }
-        if (normalized.user.wallet) userKeyParts.push(`wallet=${normalized.user.wallet}`);
-        if (userKeyParts.length > 0) {
-          headers["X-Arcen-User-Keys"] = userKeyParts.join(",");
-        }
       }
 
       setLoading(true);
@@ -86,15 +40,11 @@ export function useConsumeEntitlement(
       try {
         const response = await fetch(`${baseUrl}/api/v1/usage/consume`, {
           method: "POST",
-          headers,
-          signal,
-          body: JSON.stringify({
-            featureKey: normalized.featureKey,
-            traits: normalized.traits,
-            ...(normalized.idempotencyKey
-              ? { idempotencyKey: normalized.idempotencyKey }
-              : {}),
-          }),
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.token}`,
+          },
+          body: JSON.stringify({ featureKey }),
         });
 
         const json = (await response.json()) as
@@ -102,7 +52,9 @@ export function useConsumeEntitlement(
           | { error?: string };
 
         if (!response.ok) {
-          throw new Error((json as { error?: string }).error ?? `HTTP ${response.status}`);
+          throw new Error(
+            (json as { error?: string }).error ?? `HTTP ${response.status}`,
+          );
         }
 
         return json as ConsumeEntitlementResult;
@@ -115,7 +67,7 @@ export function useConsumeEntitlement(
         setLoading(false);
       }
     },
-    [baseUrl, options.apiKey, session.token],
+    [baseUrl, session.token],
   );
 
   return { consume, loading, error };

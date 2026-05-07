@@ -65,6 +65,25 @@ describe("syncEntitlementsToFlagRules", () => {
     }));
   });
 
+  it("adds a usage condition for numeric plan entitlements", async () => {
+    (db.catalogFeatureFlag.upsert as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "flag_1" });
+    (db.flagRule.create as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "rule_1" });
+
+    await syncEntitlementsToFlagRules("team_1", "plan_1", [
+      { featureName: "Scan", featureKey: "scan", type: "NUMERIC", value: 300, enabled: true },
+    ]);
+
+    expect(db.flagRuleCondition.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        criteriaType: "usage",
+        operator: "is_less_than",
+        metricKey: "scan",
+        metricValue: 300,
+        metricPeriod: "monthly",
+      }),
+    }));
+  });
+
   it("deletes existing plan rules before recreating them", async () => {
     (db.catalogFeatureFlag.upsert as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "flag_1" });
     (db.flagRule.create as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "rule_1" });

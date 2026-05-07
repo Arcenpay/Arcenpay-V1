@@ -9,7 +9,7 @@
  * <ArcenEmbed
  *   accessToken={token}
  *   componentId="cmn_xxx"
- *   baseUrl="https://dashboard.arcenpay.xyz"
+ *   baseUrl="http://localhost:3000"
  * />
  */
 "use client";
@@ -59,24 +59,22 @@ import {
   parseAbiParameters,
   type WalletClient,
 } from "viem";
-
-// ─── Types ────────────────────────────────────────────────────────────────────
+import { resolveDashboardBaseUrl } from "../lib/api";
+import { useArcenPay } from "../providers/ArcenPayProvider";
 
 export interface ArcenEmbedProps {
-  accessToken: string;
+  /** Short-lived access token. When omitted, auto-reads from NEXT_PUBLIC_ARCENPAY_ACCESS_TOKEN env var. */
+  accessToken?: string;
+  /** Component ID from the dashboard. Reads NEXT_PUBLIC_ARCENPAY_COMPONENT_ID env var by default. */
   componentId?: string;
+  /** @deprecated Use componentId */
   id?: string;
-  baseUrl?: string;
   className?: string;
   style?: React.CSSProperties;
   mockData?: ComponentRenderData;
-  /** Start the embed on a specific view instead of portal */
   initialView?: PortalView;
-  /** Called whenever the embed navigates to a new view */
   onViewChange?: (view: PortalView) => void;
-  /** Called whenever the user successfully switches to a new plan */
   onPlanChange?: (planId: string) => void;
-  /** Display mode: "modal" opens checkout/payment/unsubscribe/success in a full-screen overlay, "inline" keeps them inline */
   mode?: "inline" | "modal";
 }
 
@@ -162,10 +160,12 @@ function isEnvEnabled(value: string | undefined, defaultValue = true): boolean {
   return defaultValue;
 }
 
-const PORTAL_SELF_SERVE_PLAN_CHANGES_ENABLED =
-  isEnvEnabled(process.env.NEXT_PUBLIC_ARCENPAY_ENABLE_PORTAL_PLAN_CHANGES);
-const PORTAL_SELF_SERVE_CANCELLATION_ENABLED =
-  isEnvEnabled(process.env.NEXT_PUBLIC_ARCENPAY_ENABLE_PORTAL_CANCELLATION);
+const PORTAL_SELF_SERVE_PLAN_CHANGES_ENABLED = isEnvEnabled(
+  process.env.NEXT_PUBLIC_ARCENPAY_ENABLE_PORTAL_PLAN_CHANGES,
+);
+const PORTAL_SELF_SERVE_CANCELLATION_ENABLED = isEnvEnabled(
+  process.env.NEXT_PUBLIC_ARCENPAY_ENABLE_PORTAL_CANCELLATION,
+);
 
 const initialState: PortalState = {
   data: null,
@@ -250,14 +250,18 @@ export function getDesignTokens(design: ComponentDesign) {
   const size =
     typeof design.fontSize === "number"
       ? design.fontSize
-      : Number.isNaN(parsedSize) ? 14 : parsedSize;
+      : Number.isNaN(parsedSize)
+        ? 14
+        : parsedSize;
   const textColor = design.fontColor ?? "#111827";
   const bg = design.backgroundColor ?? "#ffffff";
   const parsedRadius = parseFloat(String(design.borderRadius ?? "8"));
   const radius =
     typeof design.borderRadius === "number"
       ? design.borderRadius
-      : Number.isNaN(parsedRadius) ? 8 : parsedRadius;
+      : Number.isNaN(parsedRadius)
+        ? 8
+        : parsedRadius;
   const cardStyle =
     ((design as Record<string, unknown>).cardStyle as string | undefined) ??
     "minimal";
@@ -343,9 +347,7 @@ function intervalLabel(billingInterval: number): string {
   return "";
 }
 
-function billingPeriodUnit(
-  billingPeriod: "monthly" | "annual",
-): "mo" | "yr" {
+function billingPeriodUnit(billingPeriod: "monthly" | "annual"): "mo" | "yr" {
   return billingPeriod === "annual" ? "yr" : "mo";
 }
 
@@ -378,8 +380,13 @@ function parseDecimalToAtomicUnits(value: string, decimals = 6): bigint {
   }
 
   const [whole, fraction = ""] = normalized.split(".");
-  const paddedFraction = `${fraction}${"0".repeat(decimals)}`.slice(0, decimals);
-  return BigInt(whole) * 10n ** BigInt(decimals) + BigInt(paddedFraction || "0");
+  const paddedFraction = `${fraction}${"0".repeat(decimals)}`.slice(
+    0,
+    decimals,
+  );
+  return (
+    BigInt(whole) * 10n ** BigInt(decimals) + BigInt(paddedFraction || "0")
+  );
 }
 
 function formatUsdFromDecimalString(value: string): string {
@@ -501,10 +508,11 @@ function getActivePlanBooleanFeatures(
   const matchedPlan = activePlanId
     ? data.plans.find((plan) => plan.id === activePlanId)
     : null;
-  const metadataSource =
-    ((matchedPlan as { metadata?: unknown } | null | undefined)?.metadata ??
-      (data.activePlan as { metadata?: unknown } | null | undefined)?.metadata ??
-      null) as Record<string, unknown> | null;
+  const metadataSource = ((
+    matchedPlan as { metadata?: unknown } | null | undefined
+  )?.metadata ??
+    (data.activePlan as { metadata?: unknown } | null | undefined)?.metadata ??
+    null) as Record<string, unknown> | null;
 
   if (metadataSource && typeof metadataSource === "object") {
     const rawEntitlements = Array.isArray(metadataSource.entitlements)
@@ -513,7 +521,9 @@ function getActivePlanBooleanFeatures(
 
     return rawEntitlements
       .filter(
-        (entry): entry is {
+        (
+          entry,
+        ): entry is {
           featureKey: string;
           featureName?: string;
           type?: string;
@@ -521,14 +531,13 @@ function getActivePlanBooleanFeatures(
         } =>
           Boolean(
             entry &&
-              typeof entry === "object" &&
-              typeof (entry as { featureKey?: unknown }).featureKey === "string",
+            typeof entry === "object" &&
+            typeof (entry as { featureKey?: unknown }).featureKey === "string",
           ),
       )
       .filter(
         (entry) =>
-          entry.enabled === true &&
-          (!entry.type || entry.type === "BOOLEAN"),
+          entry.enabled === true && (!entry.type || entry.type === "BOOLEAN"),
       )
       .map((entry) => ({
         featureKey: entry.featureKey,
@@ -996,14 +1005,24 @@ function getPlanDisplayPrice(
 }
 
 function getWindowEthereum():
-  | { request: (args: { method: string; params?: unknown[] }) => Promise<unknown> }
+  | {
+      request: (args: {
+        method: string;
+        params?: unknown[];
+      }) => Promise<unknown>;
+    }
   | undefined {
   if (typeof window === "undefined") return undefined;
-  return (window as unknown as {
-    ethereum?: {
-      request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
-    };
-  }).ethereum;
+  return (
+    window as unknown as {
+      ethereum?: {
+        request: (args: {
+          method: string;
+          params?: unknown[];
+        }) => Promise<unknown>;
+      };
+    }
+  ).ethereum;
 }
 
 const WALLET_CONNECT_TIMEOUT_MS = 20_000;
@@ -1100,7 +1119,9 @@ function createBrowserWalletClient(params: {
   }) as WalletClient;
 }
 
-async function getCurrentWalletChainId(walletClient: WalletClient): Promise<number | null> {
+async function getCurrentWalletChainId(
+  walletClient: WalletClient,
+): Promise<number | null> {
   try {
     const chainId = await walletClient.getChainId();
     return Number.isFinite(chainId) ? chainId : null;
@@ -1186,7 +1207,9 @@ async function ensureWalletOnTargetChain(
     }
 
     if (code === 4001 || message.includes("user rejected")) {
-      throw new Error(`Switch to ${targetChain.name} in your wallet to continue.`);
+      throw new Error(
+        `Switch to ${targetChain.name} in your wallet to continue.`,
+      );
     }
 
     throw new Error(
@@ -2485,7 +2508,12 @@ function PortalContent({
   const isMerged = designSections === "merged";
 
   // In separate mode with columns >= 2, use grid for left/right split
-  const useGrid = !isMerged && !isNarrowPortal && designColumns >= 2 && hasLeftCard && hasRightCol;
+  const useGrid =
+    !isMerged &&
+    !isNarrowPortal &&
+    designColumns >= 2 &&
+    hasLeftCard &&
+    hasRightCol;
 
   // For columns=1 (single column), stack everything vertically even when separate
   const singleColumn = !isMerged && (isNarrowPortal || designColumns === 1);
@@ -3318,18 +3346,18 @@ function CheckoutContent({
     : false;
   const isAuthoritativeOnChainPlanChange = Boolean(
     selectedPlan?.onChainPlanId &&
-      currentPlan?.onChainPlanId &&
-      !isCurrentPlanSelected,
+    currentPlan?.onChainPlanId &&
+    !isCurrentPlanSelected,
   );
   const requiresHostedActivation = Boolean(
     selectedPlan?.onChainPlanId &&
-      !currentPlan?.onChainPlanId &&
-      !isCurrentPlanSelected,
+    !currentPlan?.onChainPlanId &&
+    !isCurrentPlanSelected,
   );
   const isCancellationRequiredFirst = Boolean(
     currentPlan?.onChainPlanId &&
-      !selectedPlan?.onChainPlanId &&
-      !isCurrentPlanSelected,
+    !selectedPlan?.onChainPlanId &&
+    !isCurrentPlanSelected,
   );
   const couponsSupported = !(
     isAuthoritativeOnChainPlanChange ||
@@ -3411,12 +3439,10 @@ function CheckoutContent({
         const d = await res.json();
         const nextQuote: AppliedCouponQuote = {
           code: String(d.code ?? coupon.trim().toUpperCase()),
-          description:
-            typeof d.description === "string" ? d.description : null,
+          description: typeof d.description === "string" ? d.description : null,
           discount: Number(d.discount ?? 0),
           planId: String(d.planId ?? selectedPlanId),
-          billingPeriod:
-            d.billingPeriod === "annual" ? "annual" : "monthly",
+          billingPeriod: d.billingPeriod === "annual" ? "annual" : "monthly",
           baseAmountMicros: Number(d.baseAmountMicros ?? 0),
           discountedAmountMicros: Number(d.discountedAmountMicros ?? 0),
         };
@@ -3577,7 +3603,13 @@ function CheckoutContent({
                 whiteSpace: "nowrap",
               }}
             >
-              {isMobile ? (period === "monthly" ? "Monthly" : "Yearly") : (period === "monthly" ? "Billed monthly" : "Billed yearly")}
+              {isMobile
+                ? period === "monthly"
+                  ? "Monthly"
+                  : "Yearly"
+                : period === "monthly"
+                  ? "Billed monthly"
+                  : "Billed yearly"}
               {period === "annual" && hasAnyAnnualPrice && (
                 <span
                   style={{
@@ -3752,7 +3784,9 @@ function CheckoutContent({
                       width: "100%",
                       padding: "11px 0",
                       borderRadius: tokens.radius / 1.5,
-                      background: isSelected ? `${tokens.primary}14` : tokens.primary,
+                      background: isSelected
+                        ? `${tokens.primary}14`
+                        : tokens.primary,
                       color: isSelected
                         ? tokens.primary
                         : isLightColor(tokens.primary)
@@ -3890,7 +3924,8 @@ function CheckoutContent({
                         setCouponError("");
                       }}
                       onKeyDown={(e: React.KeyboardEvent) => {
-                        if (e.key === "Enter" && couponsSupported) applyCoupon();
+                        if (e.key === "Enter" && couponsSupported)
+                          applyCoupon();
                       }}
                       placeholder="Coupon code"
                       disabled={!couponsSupported}
@@ -3909,7 +3944,9 @@ function CheckoutContent({
                     />
                     <button
                       onClick={applyCoupon}
-                      disabled={couponLoading || !coupon.trim() || !couponsSupported}
+                      disabled={
+                        couponLoading || !coupon.trim() || !couponsSupported
+                      }
                       style={{
                         padding: "6px 12px",
                         borderRadius: 6,
@@ -3922,8 +3959,7 @@ function CheckoutContent({
                         fontSize: tokens.size - 1,
                         fontWeight: 500,
                         color: tokens.textColor,
-                        opacity:
-                          couponLoading || !couponsSupported ? 0.6 : 1,
+                        opacity: couponLoading || !couponsSupported ? 0.6 : 1,
                       }}
                     >
                       {couponLoading ? "…" : "Apply"}
@@ -3989,7 +4025,9 @@ function CheckoutContent({
               <div
                 style={{
                   fontSize: tokens.size - 2,
-                  color: hasInvalidCustomerEmail ? "#dc2626" : tokens.mutedColor,
+                  color: hasInvalidCustomerEmail
+                    ? "#dc2626"
+                    : tokens.mutedColor,
                   marginTop: 4,
                   lineHeight: 1.5,
                 }}
@@ -4024,8 +4062,7 @@ function CheckoutContent({
                   color: tokens.textColor,
                 }}
               >
-                ${discountedPrice.toFixed(2)}/
-                {billingPeriodUnit(billingPeriod)}
+                ${discountedPrice.toFixed(2)}/{billingPeriodUnit(billingPeriod)}
               </span>
             </div>
             <div
@@ -4047,7 +4084,8 @@ function CheckoutContent({
                   color: tokens.textColor,
                 }}
               >
-                ${isCurrentPlanSelected ? "0.00" : immediateAmountDue.toFixed(2)}
+                $
+                {isCurrentPlanSelected ? "0.00" : immediateAmountDue.toFixed(2)}
               </span>
             </div>
 
@@ -4214,7 +4252,8 @@ function PaymentContent({
   const [planChangePreview, setPlanChangePreview] =
     useState<PlanChangeProrationSummary | null>(null);
   const [planChangePreviewError, setPlanChangePreviewError] = useState("");
-  const [planChangePreviewLoading, setPlanChangePreviewLoading] = useState(false);
+  const [planChangePreviewLoading, setPlanChangePreviewLoading] =
+    useState(false);
 
   const basePrice = getPlanDisplayPrice(selectedPlan, billingPeriod);
   const activePlanPrice = getPlanDisplayPrice(activePlan, billingPeriod);
@@ -4239,16 +4278,15 @@ function PaymentContent({
       : null;
   const smartAccountAddress =
     provisionedSmartAccountAddress ?? serverSmartAccountAddress;
-  const zeroDevProjectId =
-    process.env.NEXT_PUBLIC_ZERODEV_PROJECT_ID ?? null;
+  const zeroDevProjectId = process.env.NEXT_PUBLIC_ZERODEV_PROJECT_ID ?? null;
   const selectedOnChainPlanId = selectedPlan?.onChainPlanId ?? null;
   const activeOnChainPlanId = activePlan?.onChainPlanId ?? null;
   const isOnChainPlanChange = Boolean(
     selectedPlan &&
-      activePlan &&
-      selectedPlan.id !== activePlan.id &&
-      selectedOnChainPlanId &&
-      activeOnChainPlanId,
+    activePlan &&
+    selectedPlan.id !== activePlan.id &&
+    selectedOnChainPlanId &&
+    activeOnChainPlanId,
   );
   const requiresHostedActivation = Boolean(
     selectedOnChainPlanId && !activeOnChainPlanId,
@@ -4313,8 +4351,8 @@ function PaymentContent({
 
     const requiresSmartAccountExecution = Boolean(
       effectiveSmartAccountAddress &&
-        finalAddress &&
-        effectiveSmartAccountAddress.toLowerCase() !== finalAddress.toLowerCase(),
+      finalAddress &&
+      effectiveSmartAccountAddress.toLowerCase() !== finalAddress.toLowerCase(),
     );
 
     if (requiresSmartAccountExecution) {
@@ -4354,7 +4392,12 @@ function PaymentContent({
       return smartAccountAddress as `0x${string}`;
     }
 
-    if (!chainId || !resolvedWalletClient || !zeroDevProjectId || !finalAddress) {
+    if (
+      !chainId ||
+      !resolvedWalletClient ||
+      !zeroDevProjectId ||
+      !finalAddress
+    ) {
       throw new Error(
         "A connected Base Sepolia wallet and NEXT_PUBLIC_ZERODEV_PROJECT_ID are required before activation.",
       );
@@ -4400,7 +4443,9 @@ function PaymentContent({
       !targetPlan.acceptedToken ||
       typeof targetPlan.billingInterval !== "number"
     ) {
-      throw new Error("The selected on-chain plan is missing billing metadata.");
+      throw new Error(
+        "The selected on-chain plan is missing billing metadata.",
+      );
     }
 
     const contracts = getContractAddresses(chainId);
@@ -4504,7 +4549,9 @@ function PaymentContent({
     return billingPaymentAccount;
   }
 
-  async function fetchImmediateUpgradePreview(signal?: AbortSignal): Promise<PlanChangeProrationSummary> {
+  async function fetchImmediateUpgradePreview(
+    signal?: AbortSignal,
+  ): Promise<PlanChangeProrationSummary> {
     if (!selectedPlanId) {
       throw new Error("Select a destination plan before continuing.");
     }
@@ -4520,13 +4567,13 @@ function PaymentContent({
         planId: selectedPlanId,
         billingPeriod,
         previewOnly: true,
-        ...(hasCustomerEmail
-          ? { customerEmail: normalizedCustomerEmail }
-          : {}),
+        ...(hasCustomerEmail ? { customerEmail: normalizedCustomerEmail } : {}),
       }),
     });
 
-    const json = (await res.json().catch(() => ({}))) as PlanChangePreviewResponse;
+    const json = (await res
+      .json()
+      .catch(() => ({}))) as PlanChangePreviewResponse;
     if (!res.ok) {
       throw new Error(json.error ?? `HTTP ${res.status}`);
     }
@@ -4622,8 +4669,9 @@ function PaymentContent({
 
       setTxStatus("approving");
       try {
-        const readyPaymentAccount =
-          await ensureAutopayReadyForActivation(selectedOnChainPlanId);
+        const readyPaymentAccount = await ensureAutopayReadyForActivation(
+          selectedOnChainPlanId,
+        );
         const company =
           (data.company as Record<string, unknown> | null | undefined) ?? null;
         const body = {
@@ -4693,7 +4741,9 @@ function PaymentContent({
 
     if (!chainId || !smartAccountAddress || !selectedOnChainPlanId) {
       setTxStatus("error");
-      setTxError("Missing on-chain subscription metadata for this plan change.");
+      setTxError(
+        "Missing on-chain subscription metadata for this plan change.",
+      );
       return;
     }
 
@@ -4718,7 +4768,9 @@ function PaymentContent({
         throw new Error("The selected on-chain plan is not active anymore.");
       }
       if (!targetPlan.provider || !targetPlan.acceptedToken) {
-        throw new Error("The selected on-chain plan is missing billing metadata.");
+        throw new Error(
+          "The selected on-chain plan is missing billing metadata.",
+        );
       }
 
       let preview = planChangePreview;
@@ -5163,7 +5215,9 @@ function PaymentContent({
                       >
                         <span>Due now</span>
                         <span>
-                          {formatUsdFromDecimalString(planChangePreview.amountDue)}
+                          {formatUsdFromDecimalString(
+                            planChangePreview.amountDue,
+                          )}
                         </span>
                       </div>
                     </div>
@@ -5176,19 +5230,20 @@ function PaymentContent({
                       processing ||
                       txStatus === "approving" ||
                       (isImmediateOnChainUpgrade &&
-                        (planChangePreviewLoading || Boolean(planChangePreviewError)))
+                        (planChangePreviewLoading ||
+                          Boolean(planChangePreviewError)))
                     }
                     onClick={handlePay}
                   >
                     {planChangePreviewLoading && isImmediateOnChainUpgrade
                       ? "Calculating upgrade…"
                       : txStatus === "approving"
-                      ? "Confirm in wallet…"
-                      : processing
-                        ? "Processing…"
-                        : isImmediateOnChainUpgrade
-                          ? "Confirm prorated upgrade"
-                          : "Authorize plan change"}
+                        ? "Confirm in wallet…"
+                        : processing
+                          ? "Processing…"
+                          : isImmediateOnChainUpgrade
+                            ? "Confirm prorated upgrade"
+                            : "Authorize plan change"}
                   </PrimaryButton>
 
                   <div
@@ -5295,7 +5350,9 @@ function PaymentContent({
                 <div
                   style={{
                     fontSize: tokens.size - 2,
-                    color: hasInvalidCustomerEmail ? "#dc2626" : tokens.mutedColor,
+                    color: hasInvalidCustomerEmail
+                      ? "#dc2626"
+                      : tokens.mutedColor,
                     marginTop: 4,
                     lineHeight: 1.5,
                   }}
@@ -5508,7 +5565,7 @@ function PaymentContent({
                     color: tokens.mutedColor,
                     lineHeight: 1.6,
                   }}
-                  >
+                >
                   {price === 0
                     ? "This is a free plan. Click below to activate it — no payment needed."
                     : hasUnsupportedPaidFlow
@@ -5722,17 +5779,18 @@ function PaymentContent({
                   </span>
                 </div>
 
-                {price > 0 && (isOnChainPlanChange || requiresHostedActivation) && (
-                  <div
-                    style={{
-                      fontSize: 11,
-                      color: tokens.mutedColor,
-                      marginTop: 6,
-                    }}
-                  >
-                    On-chain subscription flow · EVM
-                  </div>
-                )}
+                {price > 0 &&
+                  (isOnChainPlanChange || requiresHostedActivation) && (
+                    <div
+                      style={{
+                        fontSize: 11,
+                        color: tokens.mutedColor,
+                        marginTop: 6,
+                      }}
+                    >
+                      On-chain subscription flow · EVM
+                    </div>
+                  )}
               </>
             ) : (
               <div
@@ -5785,8 +5843,7 @@ function UnsubscribeContent({
     typeof paymentMethod?.walletAddress === "string"
       ? paymentMethod.walletAddress
       : null;
-  const zeroDevProjectId =
-    process.env.NEXT_PUBLIC_ZERODEV_PROJECT_ID ?? null;
+  const zeroDevProjectId = process.env.NEXT_PUBLIC_ZERODEV_PROJECT_ID ?? null;
   const finalAddress = address || localAddress;
   const finalConnected = isConnected || !!localAddress;
   const resolvedWalletClient =
@@ -6122,8 +6179,9 @@ function UnsubscribeContent({
               lineHeight: 1.5,
             }}
           >
-            This embed needs a wallet client and `NEXT_PUBLIC_ZERODEV_PROJECT_ID`
-            to submit the cancellation transaction.
+            This embed needs a wallet client and
+            `NEXT_PUBLIC_ZERODEV_PROJECT_ID` to submit the cancellation
+            transaction.
           </div>
         )}
       </div>
@@ -6190,22 +6248,23 @@ function FullScreenModal({
           }
         }
       `}</style>
-      <div
-        className={`${idRef.current}-overlay`}
-        onClick={onClose}
-      >
+      <div className={`${idRef.current}-overlay`} onClick={onClose}>
         <div
           ref={contentRef}
           className={`${idRef.current}-inner`}
           onClick={(e) => e.stopPropagation()}
         >
-          <div style={{ flex: 1, overflowY: "auto", minHeight: 0, padding: 24 }}>
+          <div
+            style={{ flex: 1, overflowY: "auto", minHeight: 0, padding: 24 }}
+          >
             {children}
           </div>
         </div>
       </div>
     </>,
-    typeof document !== "undefined" ? document.body : (undefined as unknown as HTMLElement),
+    typeof document !== "undefined"
+      ? document.body
+      : (undefined as unknown as HTMLElement),
   );
 }
 
@@ -6444,7 +6503,6 @@ export function ArcenEmbed({
   accessToken,
   componentId,
   id,
-  baseUrl = "",
   className,
   style,
   mockData,
@@ -6453,7 +6511,35 @@ export function ArcenEmbed({
   onPlanChange,
   mode = "modal",
 }: ArcenEmbedProps) {
-  const resolvedId = componentId ?? id ?? "";
+  // Try to read token and componentId from Provider context
+  let providerToken: string | null = null;
+  let providerCid: string | null = null;
+  try {
+    const arcen = useArcenPay();
+    providerToken = arcen.session.token;
+    providerCid = arcen.componentId;
+  } catch {
+    // Provider not available — fall through
+  }
+
+  const resolvedId =
+    componentId ??
+    providerCid ??
+    id ??
+    (typeof process !== "undefined"
+      ? (process.env.NEXT_PUBLIC_ARCENPAY_COMPONENT_ID ?? "")
+      : "");
+
+  // baseUrl is always resolved internally — never exposed to the user
+  const resolvedBaseUrl = resolveDashboardBaseUrl();
+
+  // Resolve accessToken: prop > env var > provider context
+  const resolvedToken =
+    accessToken ??
+    providerToken ??
+    (typeof process !== "undefined"
+      ? (process.env.NEXT_PUBLIC_ARCENPAY_ACCESS_TOKEN ?? "")
+      : "");
 
   // All hooks must run unconditionally before any early returns
   const [state, dispatch] = useReducer(
@@ -6465,8 +6551,8 @@ export function ArcenEmbed({
     null,
   );
   const [customerEmail, setCustomerEmail] = useState("");
-  const tokenRef = useRef(accessToken);
-  const baseRef = useRef(baseUrl);
+  const tokenRef = useRef(resolvedToken);
+  const baseRef = useRef(resolvedBaseUrl);
   const abortRef = useRef<AbortController | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const containerWidth = useContainerWidth(containerRef);
@@ -6491,7 +6577,7 @@ export function ArcenEmbed({
   }, [state.view]);
 
   const effectiveContainerWidth =
-    mode === "modal" ? (modalContentWidth || 360) : containerWidth;
+    mode === "modal" ? modalContentWidth || 360 : containerWidth;
 
   const isInline = mode === "inline";
 
@@ -6501,37 +6587,40 @@ export function ArcenEmbed({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.view]);
   useEffect(() => {
-    tokenRef.current = accessToken;
-    baseRef.current = baseUrl;
-  }, [accessToken, baseUrl]);
+    tokenRef.current = accessToken ?? resolvedToken;
+    baseRef.current = resolvedBaseUrl;
+  }, [accessToken, resolvedToken, resolvedBaseUrl]);
 
-  const fetchData = useCallback(async (signal?: AbortSignal) => {
-    dispatch({ type: "FETCH_START" });
-    try {
-      const res = await fetch(
-        `${baseRef.current}/api/v1/components/${resolvedId}/render`,
-        {
-          signal,
-          headers: { Authorization: `Bearer ${tokenRef.current}` },
-        },
-      );
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(
-          ((err as Record<string, unknown>).error as string) ??
-            `HTTP ${res.status}`,
+  const fetchData = useCallback(
+    async (signal?: AbortSignal) => {
+      dispatch({ type: "FETCH_START" });
+      try {
+        const res = await fetch(
+          `${baseRef.current}/api/v1/components/${resolvedId}/render`,
+          {
+            signal,
+            headers: { Authorization: `Bearer ${tokenRef.current}` },
+          },
         );
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(
+            ((err as Record<string, unknown>).error as string) ??
+              `HTTP ${res.status}`,
+          );
+        }
+        const json = await res.json();
+        dispatch({ type: "FETCH_OK", data: json.data as ComponentRenderData });
+      } catch (e: unknown) {
+        if (e instanceof DOMException && e.name === "AbortError") return;
+        dispatch({
+          type: "FETCH_ERR",
+          error: e instanceof Error ? e.message : "Failed to load component",
+        });
       }
-      const json = await res.json();
-      dispatch({ type: "FETCH_OK", data: json.data as ComponentRenderData });
-    } catch (e: unknown) {
-      if (e instanceof DOMException && e.name === "AbortError") return;
-      dispatch({
-        type: "FETCH_ERR",
-        error: e instanceof Error ? e.message : "Failed to load component",
-      });
-    }
-  }, [resolvedId]);
+    },
+    [resolvedId],
+  );
 
   useEffect(() => {
     if (mockData) {
@@ -6569,7 +6658,8 @@ export function ArcenEmbed({
   }, [state.billingPeriod, state.selectedPlanId]);
 
   useEffect(() => {
-    const company = (state.data?.company as Record<string, unknown> | null) ?? null;
+    const company =
+      (state.data?.company as Record<string, unknown> | null) ?? null;
     const nextEmail =
       typeof company?.email === "string"
         ? normalizeCustomerEmail(company.email)
@@ -6580,7 +6670,11 @@ export function ArcenEmbed({
   }, [state.data]);
 
   const callApi = useCallback(
-    async (path: string, body?: Record<string, unknown>, signal?: AbortSignal) => {
+    async (
+      path: string,
+      body?: Record<string, unknown>,
+      signal?: AbortSignal,
+    ) => {
       const res = await fetch(`${baseRef.current}${path}`, {
         method: "POST",
         signal,
@@ -6658,8 +6752,8 @@ export function ArcenEmbed({
           (response as { data?: { proration?: { amountDue?: string } } })?.data
             ?.proration?.amountDue ?? null;
         const effectiveAt =
-          (response as { data?: { effectiveAt?: string } })?.data?.effectiveAt ??
-          null;
+          (response as { data?: { effectiveAt?: string } })?.data
+            ?.effectiveAt ?? null;
         const effectiveAtLabel =
           typeof effectiveAt === "string" ? formatDateLabel(effectiveAt) : null;
         dispatch({
@@ -6669,11 +6763,11 @@ export function ArcenEmbed({
               ? `Plan change scheduled.${selectedPlan?.name ? ` ${selectedPlan.name} will take effect` : " The new plan will take effect"}${effectiveAtLabel ? ` on ${effectiveAtLabel}` : " on the next renewal"}.`
               : mode === "immediate_prorated_upgrade"
                 ? `Plan upgraded.${prorationAmountDue ? ` ${formatUsdFromDecimalString(prorationAmountDue)} was charged for the remaining term.` : ""}`
-              : mode === "immediate_on_chain" && walletCreditCreated > 0
-              ? `Plan changed. $${walletCreditCreated.toFixed(2)} wallet credit created.`
-              : mode === "immediate_on_chain"
-                ? "Plan changed on-chain."
-                : "Plan activated!",
+                : mode === "immediate_on_chain" && walletCreditCreated > 0
+                  ? `Plan changed. $${walletCreditCreated.toFixed(2)} wallet credit created.`
+                  : mode === "immediate_on_chain"
+                    ? "Plan changed on-chain."
+                    : "Plan activated!",
           txHash: successTxHash,
         });
       } catch (e: unknown) {
@@ -6720,34 +6814,41 @@ export function ArcenEmbed({
     [fetchData, onPlanChange, state.data, state.selectedPlanId],
   );
 
-  const handleUnsubscribe = useCallback(async (txHash?: string) => {
-    dispatch({ type: "PROCESSING_START" });
-    try {
-      const unsubController = new AbortController();
-      await callApi("/api/v1/companies/unsubscribe", txHash ? { txHash } : {}, unsubController.signal);
-      await fetchData();
-      if (txHash) {
+  const handleUnsubscribe = useCallback(
+    async (txHash?: string) => {
+      dispatch({ type: "PROCESSING_START" });
+      try {
+        const unsubController = new AbortController();
+        await callApi(
+          "/api/v1/companies/unsubscribe",
+          txHash ? { txHash } : {},
+          unsubController.signal,
+        );
+        await fetchData();
+        if (txHash) {
+          dispatch({
+            type: "GOTO_SUCCESS",
+            successMsg: "Subscription cancelled on-chain.",
+            txHash,
+          });
+        } else {
+          dispatch({
+            type: "GOTO_PORTAL",
+            flashMsg: "Subscription cancelled. You are now on the Free plan.",
+          });
+        }
+      } catch (e: unknown) {
+        if (e instanceof DOMException && e.name === "AbortError") return;
+        const msg =
+          e instanceof Error ? e.message : "Failed to cancel subscription";
         dispatch({
-          type: "GOTO_SUCCESS",
-          successMsg: "Subscription cancelled on-chain.",
-          txHash,
-        });
-      } else {
-        dispatch({
-          type: "GOTO_PORTAL",
-          flashMsg: "Subscription cancelled. You are now on the Free plan.",
+          type: msg === "__TOKEN_EXPIRED__" ? "FETCH_ERR" : "PROCESSING_ERR",
+          error: msg === "__TOKEN_EXPIRED__" ? "__TOKEN_EXPIRED__" : msg,
         });
       }
-    } catch (e: unknown) {
-      if (e instanceof DOMException && e.name === "AbortError") return;
-      const msg =
-        e instanceof Error ? e.message : "Failed to cancel subscription";
-      dispatch({
-        type: msg === "__TOKEN_EXPIRED__" ? "FETCH_ERR" : "PROCESSING_ERR",
-        error: msg === "__TOKEN_EXPIRED__" ? "__TOKEN_EXPIRED__" : msg,
-      });
-    }
-  }, [callApi, fetchData]);
+    },
+    [callApi, fetchData],
+  );
 
   const {
     data,
@@ -6763,10 +6864,7 @@ export function ArcenEmbed({
   } = state;
 
   useEffect(() => {
-    if (
-      view === "unsubscribe" &&
-      !PORTAL_SELF_SERVE_CANCELLATION_ENABLED
-    ) {
+    if (view === "unsubscribe" && !PORTAL_SELF_SERVE_CANCELLATION_ENABLED) {
       dispatch({
         type: "GOTO_PORTAL",
         flashMsg:
@@ -6785,87 +6883,7 @@ export function ArcenEmbed({
     dispatch({ type: "OPEN_UNSUBSCRIBE" });
   }, []);
 
-  // Guard: missing required props — rendered after all hooks to comply with Rules of Hooks
-  if (!accessToken) {
-    return (
-      <div
-        style={{
-          fontFamily: "system-ui, sans-serif",
-          padding: 32,
-          textAlign: "center",
-        }}
-      >
-        <div style={{ fontSize: 28, marginBottom: 8 }}>🔑</div>
-        <div style={{ fontWeight: 700, color: "#111827", marginBottom: 4 }}>
-          Access token required
-        </div>
-        <div style={{ fontSize: 13, color: "#6b7280" }}>
-          Pass an{" "}
-          <code
-            style={{
-              background: "#f3f4f6",
-              padding: "2px 5px",
-              borderRadius: 4,
-            }}
-          >
-            accessToken
-          </code>{" "}
-          prop to{" "}
-          <code
-            style={{
-              background: "#f3f4f6",
-              padding: "2px 5px",
-              borderRadius: 4,
-            }}
-          >
-            ArcenEmbed
-          </code>
-          .
-        </div>
-      </div>
-    );
-  }
-
-  if (!resolvedId && !mockData) {
-    return (
-      <div
-        style={{
-          fontFamily: "system-ui, sans-serif",
-          padding: 32,
-          textAlign: "center",
-        }}
-      >
-        <div style={{ fontSize: 28, marginBottom: 8 }}>🧩</div>
-        <div style={{ fontWeight: 700, color: "#111827", marginBottom: 4 }}>
-          Component ID required
-        </div>
-        <div style={{ fontSize: 13, color: "#6b7280" }}>
-          Pass a{" "}
-          <code
-            style={{
-              background: "#f3f4f6",
-              padding: "2px 5px",
-              borderRadius: 4,
-            }}
-          >
-            componentId
-          </code>{" "}
-          prop to{" "}
-          <code
-            style={{
-              background: "#f3f4f6",
-              padding: "2px 5px",
-              borderRadius: 4,
-            }}
-          >
-            ArcenEmbed
-          </code>
-          .
-        </div>
-      </div>
-    );
-  }
-
+  // Guard: loading — show skeleton first
   if (loading) {
     return (
       <div
@@ -6887,6 +6905,31 @@ export function ArcenEmbed({
           ))}
         </div>
         <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }`}</style>
+      </div>
+    );
+  }
+
+  // Guards: missing token or component ID — show setup guidance
+  if (!resolvedToken && !mockData) {
+    return (
+      <div className={className} style={{ fontFamily: "system-ui, sans-serif", padding: 32, textAlign: "center", ...style }}>
+        <div style={{ fontSize: 28, marginBottom: 8 }}>🔑</div>
+        <div style={{ fontWeight: 700, color: "#111827", marginBottom: 4 }}>Access token required</div>
+        <div style={{ fontSize: 13, color: "#6b7280" }}>
+          Pass an <code style={{ background: "#f3f4f6", padding: "2px 5px", borderRadius: 4 }}>accessToken</code> prop to <code style={{ background: "#f3f4f6", padding: "2px 5px", borderRadius: 4 }}>ArcenEmbed</code>.
+        </div>
+      </div>
+    );
+  }
+
+  if (!resolvedId && !mockData) {
+    return (
+      <div className={className} style={{ fontFamily: "system-ui, sans-serif", padding: 32, textAlign: "center", ...style }}>
+        <div style={{ fontSize: 28, marginBottom: 8 }}>🧩</div>
+        <div style={{ fontWeight: 700, color: "#111827", marginBottom: 4 }}>Component ID required</div>
+        <div style={{ fontSize: 13, color: "#6b7280" }}>
+          Pass a <code style={{ background: "#f3f4f6", padding: "2px 5px", borderRadius: 4 }}>componentId</code> prop to <code style={{ background: "#f3f4f6", padding: "2px 5px", borderRadius: 4 }}>ArcenEmbed</code>.
+        </div>
       </div>
     );
   }
@@ -7023,7 +7066,9 @@ export function ArcenEmbed({
               tokens={tokens}
               customerEmail={customerEmail}
               containerWidth={effectiveContainerWidth}
-              onSelectPlan={(planId) => dispatch({ type: "SELECT_PLAN", planId })}
+              onSelectPlan={(planId) =>
+                dispatch({ type: "SELECT_PLAN", planId })
+              }
               onBillingPeriodChange={(p) =>
                 dispatch({ type: "SET_BILLING_PERIOD", period: p })
               }
@@ -7114,14 +7159,17 @@ export function ArcenEmbed({
                   tokens={tokens}
                   customerEmail={customerEmail}
                   containerWidth={effectiveContainerWidth}
-                  onSelectPlan={(planId) => dispatch({ type: "SELECT_PLAN", planId })}
+                  onSelectPlan={(planId) =>
+                    dispatch({ type: "SELECT_PLAN", planId })
+                  }
                   onBillingPeriodChange={(p) =>
                     dispatch({ type: "SET_BILLING_PERIOD", period: p })
                   }
                   onCustomerEmailChange={setCustomerEmail}
                   onCouponQuoteChange={setCouponQuote}
                   onSubscribeClose={() => {
-                    const targetId = selectedPlanId ?? data.activePlan?.id ?? "";
+                    const targetId =
+                      selectedPlanId ?? data.activePlan?.id ?? "";
                     if (targetId && targetId !== data.activePlan?.id) {
                       handleSwitchPlan(targetId);
                     } else {
@@ -7146,7 +7194,8 @@ export function ArcenEmbed({
                   containerWidth={effectiveContainerWidth}
                   onCustomerEmailChange={setCustomerEmail}
                   onConfirm={(txHash) => {
-                    if (selectedPlanId) handleSwitchPlan(selectedPlanId, txHash);
+                    if (selectedPlanId)
+                      handleSwitchPlan(selectedPlanId, txHash);
                   }}
                   onActivationComplete={handleActivateSubscription}
                   onBack={() => dispatch({ type: "OPEN_CHECKOUT" })}
@@ -7191,7 +7240,7 @@ export function ArcenEmbed({
  * <ArcenpayEmbed
  *   accessToken={tokenFromBackend}
  *   id="cmn_xxx"
- *   baseUrl="https://dashboard.arcenpay.xyz"
+ *   baseUrl="http://localhost:3000"
  * />
  */
 export const ArcenpayEmbed = ArcenEmbed;

@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requirePermission, isErrorResponse } from "@/lib/api-auth";
 import { db } from "@/lib/db";
+import { loadPublishedPlanEntitlementsByFeatureKey } from "@/lib/catalog-entitlements";
 
 export async function GET(_req: NextRequest) {
   const ctx = await requirePermission("catalog:read");
@@ -13,18 +14,71 @@ export async function GET(_req: NextRequest) {
 
   const { team } = ctx;
 
-  const flags = await db.catalogFeatureFlag.findMany({
-    where: { teamId: team.teamId },
-    include: {
-      rules: {
-        orderBy: { priority: "asc" },
-        include: { conditions: true },
+  const [flags, planEntitlementsByFeatureKey] = await Promise.all([
+    db.catalogFeatureFlag.findMany({
+      where: { teamId: team.teamId },
+      include: {
+        rules: {
+          orderBy: { priority: "asc" },
+          include: { conditions: true },
+        },
       },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+      orderBy: { createdAt: "desc" },
+    }),
+    loadPublishedPlanEntitlementsByFeatureKey(team.teamId),
+  ]);
 
-  return NextResponse.json({ data: flags });
+  const data = flags.map((flag) => ({
+    ...flag,
+    rules: flag.rules.filter(
+      (rule) =>
+        rule.source !== "plan" &&
+        !rule.conditions.some((condition) => condition.criteriaType === "base_plan"),
+    ),
+    linkedPlans: (planEntitlementsByFeatureKey.get(flag.featureKey) ?? []).map(
+      ({ id, name, tier }) => ({ id, name, tier }),
+    ),
+    planEntitlements: planEntitlementsByFeatureKey.get(flag.featureKey) ?? [],
+    planRules: (planEntitlementsByFeatureKey.get(flag.featureKey) ?? []).map((planEntitlement) => ({
+      id: `plan-rule-${flag.featureKey}-${planEntitlement.id}`,
+      priority: 100,
+      value: true,
+      source: "plan",
+      sourceId: planEntitlement.id,
+      conditions: [
+        {
+          id: `plan-condition-${flag.featureKey}-${planEntitlement.id}`,
+          ruleId: `plan-rule-${flag.featureKey}-${planEntitlement.id}`,
+          criteriaType: "base_plan",
+          operator: "is_one_of",
+          values: [planEntitlement.id],
+          metricKey: null,
+          metricValue: null,
+          metricPeriod: null,
+          traitKey: null,
+          zktlsProviderId: null,
+        },
+        ...(planEntitlement.type === "NUMERIC" && typeof planEntitlement.value === "number"
+          ? [
+              {
+                id: `usage-condition-${flag.featureKey}-${planEntitlement.id}`,
+                ruleId: `plan-rule-${flag.featureKey}-${planEntitlement.id}`,
+                criteriaType: "usage",
+                operator: "is_less_than",
+                values: [],
+                metricKey: flag.eventKey ?? flag.featureKey,
+                metricValue: Number(planEntitlement.value),
+                metricPeriod: "monthly",
+                traitKey: null,
+                zktlsProviderId: null,
+              },
+            ]
+          : []),
+      ],
+    })),
+  }));
+
+  return NextResponse.json({ data });
 }
 
 export async function POST(req: NextRequest) {

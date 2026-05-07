@@ -47,10 +47,10 @@ function extractBearerToken(req: NextRequest): string | null {
   return null;
 }
 
-/** Per-API-key rate limit — 500 req/min per key */
+/** Per-API-key rate limit — LIVE in production, DRY_RUN in development */
 const apiKeyProtect = aj.withRule(
   fixedWindow({
-    mode: "LIVE",
+    mode: process.env.NODE_ENV === "production" ? "LIVE" : "DRY_RUN",
     characteristics: ["apikey"],
     window: "60s",
     max: 500,
@@ -96,12 +96,14 @@ export async function requireApiKey(
   }
 
   // Apply per-key rate limiting via Arcjet
-  const decision = await apiKeyProtect.protect(req, { apikey: apiKey.id });
-  if (decision.isDenied()) {
-    return NextResponse.json(
-      { error: "Rate limit exceeded" },
-      { status: 429 },
-    );
+  if (process.env.ARCJET_KEY) {
+    const decision = await apiKeyProtect.protect(req, { apikey: apiKey.id });
+    if (decision.isDenied()) {
+      return NextResponse.json(
+        { error: "Rate limit exceeded" },
+        { status: 429 },
+      );
+    }
   }
 
   // Update lastUsedAt in background

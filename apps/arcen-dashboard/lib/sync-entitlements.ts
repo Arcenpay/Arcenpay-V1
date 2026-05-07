@@ -12,6 +12,7 @@ export interface PlanEntitlement {
   featureKey: string;
   type: "BOOLEAN" | "NUMERIC" | "UNLIMITED";
   value: boolean | number | null;
+  valueUnit?: string | null;
   enabled: boolean;
 }
 
@@ -82,5 +83,19 @@ export async function syncEntitlementsToFlagRules(
         values: [planId],
       },
     });
+
+    if (entitlement.type === "NUMERIC" && typeof entitlement.value === "number") {
+      await db.flagRuleCondition.create({
+        data: {
+          ruleId: rule.id,
+          criteriaType: "usage",
+          operator: "is_less_than",
+          values: [],
+          metricKey: entitlement.featureKey,
+          metricValue: Number(entitlement.value),
+          metricPeriod: "monthly",
+        },
+      });
+    }
   }
 }

@@ -7,6 +7,7 @@ import {
   type CompanyKeys,
   type UserKeys,
 } from "@/lib/flag-engine";
+import { listMetadataEntitlements } from "@/lib/catalog-entitlements";
 
 interface EntitlementEntry {
   featureName?: string;
@@ -59,16 +60,9 @@ export interface ResolvedEntitlementResults {
 }
 
 function listEntitlements(metadata: unknown): EntitlementEntry[] {
-  if (!metadata || typeof metadata !== "object") return [];
-
-  const meta = metadata as Record<string, unknown>;
-  if (!Array.isArray(meta.entitlements)) return [];
-
-  return meta.entitlements.filter((entry): entry is EntitlementEntry => {
-    if (!entry || typeof entry !== "object") return false;
+  return listMetadataEntitlements(metadata).filter((entry): entry is EntitlementEntry => {
     const candidate = entry as Partial<EntitlementEntry>;
     return (
-      typeof candidate.featureKey === "string" &&
       typeof candidate.type === "string" &&
       typeof candidate.enabled === "boolean"
     );
@@ -137,6 +131,11 @@ async function evaluateLoadedFlag(
   },
 ): Promise<{ enabled: boolean; reason: string }> {
   const { company, overrides } = context;
+  const manualRules = flag.rules.filter(
+    (rule) =>
+      rule.source !== "plan" &&
+      !rule.conditions.some((condition) => condition.criteriaType === "base_plan"),
+  );
 
   if (company) {
     const override = overrides.get(flag.featureKey);
@@ -148,7 +147,7 @@ async function evaluateLoadedFlag(
     }
   }
 
-  for (const rule of flag.rules) {
+  for (const rule of manualRules) {
     const conditionResults = await Promise.all(
       rule.conditions.map(async (cond) => {
         const values = Array.isArray(cond.values)
@@ -385,14 +384,32 @@ export async function resolveEntitlementResults(
         user,
         overrides,
       });
-      const shouldSuppressDefaultFlag =
-        hasCatalogAssignment &&
-        !metadataEntitlement &&
+      const isFallbackRule =
         evaluated.reason === "Default rule (no targeting rule matched)";
-      const enabled = shouldSuppressDefaultFlag ? false : evaluated.enabled;
-      const reason = shouldSuppressDefaultFlag
-        ? "Not included in the current plan"
-        : evaluated.reason;
+
+      let enabled: boolean;
+      let reason: string;
+
+      // Rule priority: 1. Metadata entitlements > 2. Explicit global flag rules > 3. Suppress default > 4. Flag default
+      if (metadataEntitlement) {
+        // Plan/add-on metadata is the canonical source for catalog-based access.
+        enabled = metadataEntitlement.enabled && metadataEnabled(metadataEntitlement);
+        reason = enabled
+          ? `Entitled by ${metadataEntitlement.source}`
+          : `Entitlement disabled on ${metadataEntitlement.source}${metadataEntitlement.sourceId ? ` (${metadataEntitlement.sourceId})` : ""}`;
+      } else if (!isFallbackRule) {
+        // No catalog entitlement resolved this feature, so global flag rules can decide.
+        enabled = evaluated.enabled;
+        reason = evaluated.reason;
+      } else if (hasCatalogAssignment) {
+        // Company is on a plan but no metadata or rules match — suppress the default
+        enabled = false;
+        reason = "Not included in the current plan";
+      } else {
+        // No plan context — use flag default
+        enabled = evaluated.enabled;
+        reason = evaluated.reason;
+      }
 
       const isMetered =
         flag.featureType === "event_based" ||

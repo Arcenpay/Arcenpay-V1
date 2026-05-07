@@ -386,3 +386,94 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ─── Secondary button ───────────────────────────────── */
+
+.btnSecondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 18px;
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.10));
+  border-radius: var(--radius, 10px);
+  background: var(--surface, rgba(255, 255, 255, 0.04));
+  color: var(--text, #e5e7eb);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btnSecondary:hover {
+  border-color: var(--accent, #63c4eb);
+  color: var(--accent, #63c4eb);
+}
+
+/* ─── Stat card good/bad variants ─────────────────────── */
+
+.statGood { color: #16a34a; }
+.statBad { color: #dc2626; }
+
+/* ─── Feature flag grid ────────────────────────────────── */
+
+.flagGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.flagCard {
+  padding: 14px;
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  border-radius: var(--radius, 10px);
+  background: var(--surface, rgba(255, 255, 255, 0.04));
+}
+
+.flagName {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.flagBadge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.flagEnabled {
+  background: rgba(22, 163, 74, 0.12);
+  color: #16a34a;
+}
+
+.flagDisabled {
+  background: rgba(220, 38, 38, 0.12);
+  color: #dc2626;
+}
+
+.flagReason {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--text-muted, #9ca3af);
+}
+
+.flagUsage {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--text-muted, #9ca3af);
+}
+
+/* ─── Empty state ──────────────────────────────────────── */
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  color: var(--text-muted, #9ca3af);
+  font-size: 14px;
+}

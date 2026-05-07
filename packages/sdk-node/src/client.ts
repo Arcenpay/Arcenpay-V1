@@ -15,7 +15,7 @@ import type {
   EntitlementResult,
   ConsumeEntitlementResult,
   IdentifyResult,
-} from '@arcenpay/sdk';
+} from "@arcenpay/sdk";
 
 export interface ArcenClientConfig {
   apiKey: string;
@@ -32,7 +32,10 @@ export interface TrackEventInput {
 }
 
 export interface IdentifyInput {
-  company?: ArcenCompanyKeys & { name?: string; traits?: Record<string, unknown> };
+  company?: ArcenCompanyKeys & {
+    name?: string;
+    traits?: Record<string, unknown>;
+  };
   user?: ArcenUserKeys & { name?: string; email?: string };
   expiresIn?: number;
 }
@@ -40,7 +43,10 @@ export interface IdentifyInput {
 export interface ActivateSubscriptionInput {
   planId: string | number | bigint;
   paymentAccount: string;
-  company: ArcenCompanyKeys & { name?: string; traits?: Record<string, unknown> };
+  company: ArcenCompanyKeys & {
+    name?: string;
+    traits?: Record<string, unknown>;
+  };
   subscriberEmail?: string;
 }
 
@@ -72,19 +78,28 @@ export class ArcenClient {
   private readonly apiKey: string;
   private readonly baseUrl: string;
   private readonly timeoutMs: number;
-  private session: { token: string; companyId: string; userId?: string } | null = null;
+  private session: {
+    token: string;
+    companyId: string;
+    userId?: string;
+  } | null = null;
 
   constructor(config: ArcenClientConfig) {
-    if (!config.apiKey.startsWith('api_')) {
+    if (!config.apiKey.startsWith("api_")) {
       throw new Error('ArcenClient: apiKey must start with "api_"');
     }
     this.apiKey = config.apiKey;
-    this.baseUrl = (config.baseUrl ?? 'https://dashboard.arcenpay.xyz').replace(/\/$/, '');
+    this.baseUrl = (config.baseUrl ?? "http://localhost:3000").replace(
+      /\/$/,
+      "",
+    );
     this.timeoutMs = config.timeoutMs ?? 10_000;
   }
 
   private buildAuthHeader(): string {
-    return this.session ? `Bearer ${this.session.token}` : `Bearer ${this.apiKey}`;
+    return this.session
+      ? `Bearer ${this.session.token}`
+      : `Bearer ${this.apiKey}`;
   }
 
   private async request<T>(
@@ -106,24 +121,30 @@ export class ArcenClient {
     }
 
     const headers: Record<string, string> = {
-      Authorization: options.useApiKey ? `Bearer ${this.apiKey}` : this.buildAuthHeader(),
-      'Content-Type': 'application/json',
+      Authorization: options.useApiKey
+        ? `Bearer ${this.apiKey}`
+        : this.buildAuthHeader(),
+      "Content-Type": "application/json",
     };
 
     if (!this.session || options.useApiKey) {
       if (options.companyKeys) {
         const parts: string[] = [];
         if (options.companyKeys.id) parts.push(`id=${options.companyKeys.id}`);
-        if (options.companyKeys.wallet) parts.push(`wallet=${options.companyKeys.wallet}`);
-        if (options.companyKeys.email) parts.push(`email=${options.companyKeys.email}`);
-        if (parts.length > 0) headers['X-Arcen-Company-Keys'] = parts.join(',');
+        if (options.companyKeys.wallet)
+          parts.push(`wallet=${options.companyKeys.wallet}`);
+        if (options.companyKeys.email)
+          parts.push(`email=${options.companyKeys.email}`);
+        if (parts.length > 0) headers["X-Arcen-Company-Keys"] = parts.join(",");
       }
       if (options.userKeys) {
         const parts: string[] = [];
         if (options.userKeys.id) parts.push(`id=${options.userKeys.id}`);
-        if (options.userKeys.clerkUserId) parts.push(`clerk_user_id=${options.userKeys.clerkUserId}`);
-        if (options.userKeys.wallet) parts.push(`wallet=${options.userKeys.wallet}`);
-        if (parts.length > 0) headers['X-Arcen-User-Keys'] = parts.join(',');
+        if (options.userKeys.clerkUserId)
+          parts.push(`clerk_user_id=${options.userKeys.clerkUserId}`);
+        if (options.userKeys.wallet)
+          parts.push(`wallet=${options.userKeys.wallet}`);
+        if (parts.length > 0) headers["X-Arcen-User-Keys"] = parts.join(",");
       }
     }
 
@@ -134,13 +155,14 @@ export class ArcenClient {
       const res = await fetch(url.toString(), {
         method,
         headers,
-        body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+        body:
+          options.body !== undefined ? JSON.stringify(options.body) : undefined,
         signal: controller.signal,
       });
 
       let json: (T & { error?: string }) | undefined;
       try {
-        json = await res.json() as T & { error?: string };
+        json = (await res.json()) as T & { error?: string };
       } catch {
         throw new ArcenApiError(
           `Invalid JSON response from ${method} ${path}`,
@@ -149,20 +171,20 @@ export class ArcenClient {
       }
 
       if (!res.ok) {
-        throw new ArcenApiError(
-          json.error ?? `HTTP ${res.status}`,
-          res.status,
-        );
+        throw new ArcenApiError(json.error ?? `HTTP ${res.status}`, res.status);
       }
 
       return json;
     } catch (err) {
       if (err instanceof ArcenApiError) throw err;
-      if (err instanceof DOMException && err.name === 'AbortError') {
-        throw new ArcenApiError(`Request timed out after ${this.timeoutMs}ms`, 408);
+      if (err instanceof DOMException && err.name === "AbortError") {
+        throw new ArcenApiError(
+          `Request timed out after ${this.timeoutMs}ms`,
+          408,
+        );
       }
       throw new ArcenApiError(
-        err instanceof Error ? err.message : 'Network request failed',
+        err instanceof Error ? err.message : "Network request failed",
         0,
       );
     } finally {
@@ -172,19 +194,21 @@ export class ArcenClient {
 
   async identify(input: IdentifyInput): Promise<IdentifyResult> {
     const res = await this.request<{ data: AccessTokenApiResponse }>(
-      'POST',
-      '/api/v1/access-tokens',
+      "POST",
+      "/api/v1/access-tokens",
       {
         useApiKey: true,
         body: {
           company: input.company,
-          user: input.user ? {
-            id: input.user.id,
-            clerk_user_id: input.user.clerkUserId,
-            wallet: input.user.wallet,
-            name: input.user.name,
-            email: input.user.email,
-          } : undefined,
+          user: input.user
+            ? {
+                id: input.user.id,
+                clerk_user_id: input.user.clerkUserId,
+                wallet: input.user.wallet,
+                name: input.user.name,
+                email: input.user.email,
+              }
+            : undefined,
           expires_in: input.expiresIn ?? 3600,
         },
       },
@@ -206,11 +230,12 @@ export class ArcenClient {
   }
 
   async track(event: string | TrackEventInput): Promise<void> {
-    const input: TrackEventInput = typeof event === 'string' ? { name: event } : event;
-    await this.request('POST', '/api/v1/events', {
+    const input: TrackEventInput =
+      typeof event === "string" ? { name: event } : event;
+    await this.request("POST", "/api/v1/events", {
       useApiKey: this.session === null,
       body: {
-        event_type: 'track',
+        event_type: "track",
         name: input.name,
         ...(input.company ? { company: input.company } : {}),
         ...(input.user ? { user: input.user } : {}),
@@ -226,11 +251,11 @@ export class ArcenClient {
     input: string | ConsumeEntitlementInput,
   ): Promise<ConsumeEntitlementResult> {
     const normalized: ConsumeEntitlementInput =
-      typeof input === 'string' ? { featureKey: input } : input;
+      typeof input === "string" ? { featureKey: input } : input;
 
     return this.request<ConsumeEntitlementResult>(
-      'POST',
-      '/api/v1/usage/consume',
+      "POST",
+      "/api/v1/usage/consume",
       {
         useApiKey: this.session === null,
         companyKeys: normalized.company,
@@ -246,20 +271,28 @@ export class ArcenClient {
     );
   }
 
-  async checkFlag(key: string, companyKeys?: ArcenCompanyKeys, userKeys?: ArcenUserKeys): Promise<FlagResult> {
-    return this.request<FlagResult>(
-      'GET',
-      '/api/v1/check',
-      { query: { key }, companyKeys, userKeys },
-    );
+  async checkFlag(
+    key: string,
+    companyKeys?: ArcenCompanyKeys,
+    userKeys?: ArcenUserKeys,
+  ): Promise<FlagResult> {
+    return this.request<FlagResult>("GET", "/api/v1/check", {
+      query: { key },
+      companyKeys,
+      userKeys,
+    });
   }
 
-  async checkEntitlement(key: string, companyKeys?: ArcenCompanyKeys, userKeys?: ArcenUserKeys): Promise<EntitlementResult> {
-    return this.request<EntitlementResult>(
-      'GET',
-      '/api/v1/check',
-      { query: { key }, companyKeys, userKeys },
-    );
+  async checkEntitlement(
+    key: string,
+    companyKeys?: ArcenCompanyKeys,
+    userKeys?: ArcenUserKeys,
+  ): Promise<EntitlementResult> {
+    return this.request<EntitlementResult>("GET", "/api/v1/check", {
+      query: { key },
+      companyKeys,
+      userKeys,
+    });
   }
 
   async checkFlags(
@@ -273,7 +306,9 @@ export class ArcenClient {
     return Object.fromEntries(results.map((r) => [r.key, r]));
   }
 
-  async listCompanies(options: { limit?: number; search?: string; cursor?: string } = {}): Promise<{
+  async listCompanies(
+    options: { limit?: number; search?: string; cursor?: string } = {},
+  ): Promise<{
     data: ArcenCompany[];
     count: number;
     nextCursor?: string;
@@ -282,11 +317,13 @@ export class ArcenClient {
     if (options.limit) query.limit = String(options.limit);
     if (options.search) query.search = options.search;
     if (options.cursor) query.cursor = options.cursor;
-    return this.request('GET', '/api/v1/companies', { useApiKey: true, query });
+    return this.request("GET", "/api/v1/companies", { useApiKey: true, query });
   }
 
-  async getCompany(id: string): Promise<{ data: ArcenCompany & { entitlements: unknown[] } }> {
-    return this.request('GET', `/api/v1/companies/${id}`, { useApiKey: true });
+  async getCompany(
+    id: string,
+  ): Promise<{ data: ArcenCompany & { entitlements: unknown[] } }> {
+    return this.request("GET", `/api/v1/companies/${id}`, { useApiKey: true });
   }
 
   async createCompany(data: {
@@ -296,18 +333,33 @@ export class ArcenClient {
     id?: string;
     traits?: Record<string, unknown>;
   }): Promise<{ data: ArcenCompany }> {
-    return this.request('POST', '/api/v1/companies', { useApiKey: true, body: data });
+    return this.request("POST", "/api/v1/companies", {
+      useApiKey: true,
+      body: data,
+    });
   }
 
   async updateCompany(
     id: string,
-    data: { name?: string; traits?: Record<string, unknown>; activePlanId?: string | null },
+    data: {
+      name?: string;
+      traits?: Record<string, unknown>;
+      activePlanId?: string | null;
+    },
   ): Promise<{ data: ArcenCompany }> {
-    return this.request('PATCH', `/api/v1/companies/${id}`, { useApiKey: true, body: data });
+    return this.request("PATCH", `/api/v1/companies/${id}`, {
+      useApiKey: true,
+      body: data,
+    });
   }
 
-  async setCompanyOverride(companyId: string, featureKey: string, value: boolean, reason?: string): Promise<void> {
-    await this.request('POST', `/api/v1/companies/${companyId}/overrides`, {
+  async setCompanyOverride(
+    companyId: string,
+    featureKey: string,
+    value: boolean,
+    reason?: string,
+  ): Promise<void> {
+    await this.request("POST", `/api/v1/companies/${companyId}/overrides`, {
       useApiKey: true,
       body: { featureKey, value, reason },
     });
@@ -317,13 +369,13 @@ export class ArcenClient {
     input: ActivateSubscriptionInput,
   ): Promise<ActivateSubscriptionResult> {
     const res = await this.request<{ data: ActivateSubscriptionResult }>(
-      'POST',
-      '/api/v1/subscriptions/activate',
+      "POST",
+      "/api/v1/subscriptions/activate",
       {
         useApiKey: true,
         body: {
           planId:
-            typeof input.planId === 'bigint'
+            typeof input.planId === "bigint"
               ? input.planId.toString()
               : String(input.planId),
           paymentAccount: input.paymentAccount,
@@ -345,17 +397,19 @@ export class ArcenClient {
     expiresIn = 3600,
   ): Promise<EmbedAccessTokenResponse> {
     const res = await this.request<{ data: AccessTokenApiResponse }>(
-      'POST',
-      '/api/v1/access-tokens',
+      "POST",
+      "/api/v1/access-tokens",
       {
         useApiKey: true,
         body: {
           company: companyKeys,
-          user: userKeys ? {
-            id: userKeys.id,
-            clerk_user_id: userKeys.clerkUserId,
-            wallet: userKeys.wallet,
-          } : undefined,
+          user: userKeys
+            ? {
+                id: userKeys.id,
+                clerk_user_id: userKeys.clerkUserId,
+                wallet: userKeys.wallet,
+              }
+            : undefined,
           expires_in: expiresIn,
         },
       },
@@ -368,8 +422,11 @@ export class ArcenClient {
 }
 
 export class ArcenApiError extends Error {
-  constructor(message: string, public readonly statusCode: number) {
+  constructor(
+    message: string,
+    public readonly statusCode: number,
+  ) {
     super(message);
-    this.name = 'ArcenApiError';
+    this.name = "ArcenApiError";
   }
 }

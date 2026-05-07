@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     }
 
     const baseUrl = (
-      process.env.ARCENPAY_BASE_URL ?? "https://dashboard.arcenpay.xyz"
+      process.env.ARCENPAY_BASE_URL ?? "http://localhost:3000"
     ).replace(/\/$/, "");
 
     const response = await fetch(`${baseUrl}/api/v1/subscriptions/activate`, {

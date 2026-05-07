@@ -192,4 +192,43 @@ describe("resolveEntitlementResults", () => {
       }),
     ]);
   });
+
+  it("ignores stale base-plan rules when the active plan metadata no longer grants the feature", async () => {
+    (db.catalogFeatureFlag.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([
+      {
+        featureKey: "api_access",
+        featureType: "boolean",
+        defaultValue: false,
+        eventKey: null,
+        rules: [
+          {
+            priority: 100,
+            value: true,
+            source: "plan",
+            conditions: [
+              {
+                criteriaType: "base_plan",
+                operator: "is_one_of",
+                values: ["plan_old"],
+              },
+            ],
+          },
+        ],
+      },
+    ]);
+
+    const result = await resolveEntitlementResults({
+      teamId: "team_1",
+      companyKeys: { internalId: "company_1" },
+      featureKeys: ["api_access"],
+    });
+
+    expect(result.entitlements).toEqual([
+      expect.objectContaining({
+        key: "api_access",
+        enabled: false,
+        reason: "Not included in the current plan",
+      }),
+    ]);
+  });
 });
