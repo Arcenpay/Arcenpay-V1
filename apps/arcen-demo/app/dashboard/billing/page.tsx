@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { ArcenEmbed, useArcenPay } from "@arcenpay/react";
+import { ArcenEmbed } from "@arcenpay/react";
 import { useWallet } from "../useWallet";
+import { useDemoArcenSession } from "../useDemoArcenSession";
 import styles from "./page.module.css";
 
 function Skeleton() {
@@ -40,48 +40,11 @@ function SkeletonBox({ h, flex }: { h: number; flex?: number }) {
 }
 
 function BillingContent() {
-  const { identify, session } = useArcenPay();
   const { address, connecting } = useWallet();
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  const identified =
-    !!address &&
-    !!session.token &&
-    session.company?.wallet?.toLowerCase() === address.toLowerCase();
-
-  useEffect(() => {
-    if (connecting) return;
-    if (!address) {
-      setLoading(false);
-      setError(null);
-      return;
-    }
-    if (identified) {
-      setLoading(false);
-      setError(null);
-      return;
-    }
-    const wallet = address; // narrow type
-    let cancelled = false;
-    async function init() {
-      setLoading(true);
-      try {
-        await identify({
-          company: { id: `company-${wallet.slice(2, 10)}`, wallet },
-        });
-      } catch (e) {
-        if (!cancelled)
-          setError(e instanceof Error ? e.message : "Failed to load");
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-    init();
-    return () => {
-      cancelled = true;
-    };
-  }, [address, connecting, identified, identify]);
+  const { identified, loading, error } = useDemoArcenSession(address, {
+    companyName: "ArcenPay Demo Studio",
+    userName: "Billing Customer",
+  });
 
   if (loading) return <Skeleton />;
 
@@ -116,7 +79,6 @@ function BillingContent() {
       <div className={styles.embedContainer}>
         <ArcenEmbed className={styles.embed} mode="modal" />
       </div>
-
     </div>
   );
 }

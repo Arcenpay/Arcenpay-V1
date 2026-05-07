@@ -1,7 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { useConsumeEntitlement, useFlags, useTrack } from "@arcenpay/react";
+import { useWallet } from "../useWallet";
+import { useDemoArcenSession } from "../useDemoArcenSession";
 import styles from "./page.module.css";
 
 const MOCK_RESULT = `Invoice #INV-2024-0032
@@ -11,98 +14,97 @@ Vendor:   Acme Corp
 Status:   Due`;
 
 interface CompanyData {
-  usage: {
+  flags: {
     scan: {
+      value: boolean;
+      reason: string;
       allocation: number | null;
       usage: number;
       exceeded: boolean;
     } | null;
   };
-  flags: {
-    scan:
-      | {
-          value: boolean;
-          reason: string;
-        }
-      | null;
-  };
 }
 
 export default function ScanPage() {
+  const { address } = useWallet();
+  const { identified, loading: sessionLoading } = useDemoArcenSession(address, {
+    companyName: "ArcenPay Demo Studio",
+    userName: "Scan Operator",
+  });
+  const { consume, loading: consumeLoading } = useConsumeEntitlement();
+  const { track } = useTrack();
+  const flagMap = useFlags(["scan"]);
+
   const [step, setStep] = useState<"idle" | "scanning" | "done">("idle");
   const [result, setResult] = useState<string | null>(null);
   const [trackMsg, setTrackMsg] = useState<string | null>(null);
   const [company, setCompany] = useState<CompanyData | null>(null);
 
-  async function loadCompany() {
+  const loadCompany = useCallback(async () => {
+    if (!address || !identified) return;
+
     try {
-      const response = await fetch("/api/company", { cache: "no-store" });
+      const response = await fetch(`/api/company?wallet=${address}`, {
+        cache: "no-store",
+      });
+      if (!response.ok) return;
       const data = (await response.json()) as CompanyData;
       setCompany(data);
     } catch {
-      // ignore demo fetch failures
+      // Ignore demo fetch failures and keep the scan experience usable.
     }
-  }
+  }, [address, identified]);
 
   useEffect(() => {
+    if (!identified) return;
     void loadCompany();
-  }, []);
+  }, [identified, loadCompany]);
 
   async function handleScan() {
-    if (company?.flags.scan?.value === false) {
-      setTrackMsg(company.flags.scan.reason ?? "Scan limit reached");
+    if (!identified) {
+      setTrackMsg("Waiting for ArcenPay session setup. Try again in a moment.");
+      return;
+    }
+
+    if (flagMap.scan === false) {
+      setTrackMsg(company?.flags.scan?.reason ?? "Scan limit reached");
       return;
     }
 
     setStep("scanning");
     setResult(null);
+    setTrackMsg(null);
 
     try {
-      const idempotencyKey =
-        typeof crypto !== "undefined" && "randomUUID" in crypto
-          ? crypto.randomUUID()
-          : `scan-${Date.now()}`;
+      const consumeResult = await consume("scan");
 
-      const res = await fetch("/api/consume", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          featureKey: "scan",
-          traits: { source: "scan-page", format: "pdf" },
-          idempotencyKey,
-        }),
+      await track("scan", {
+        source: "scan-page",
+        format: "pdf",
+        consumed: true,
       });
-      const consumeResult = (await res.json()) as {
-        consumed?: boolean;
-        reason?: string;
-        error?: string;
-      };
 
-      if (!res.ok || !consumeResult.consumed) {
-        setStep("idle");
-        setTrackMsg(
-          consumeResult.error ??
-            consumeResult.reason ??
-            "Could not consume scan entitlement",
-        );
-        setTimeout(() => setTrackMsg(null), 4500);
-        await loadCompany();
-        return;
-      }
-    } catch {
-      setStep("idle");
-      setTrackMsg("Could not track event");
+      await new Promise((resolve) => setTimeout(resolve, 1600));
+
+      setResult(MOCK_RESULT);
+      setStep("done");
+      setTrackMsg(
+        consumeResult.allocation != null
+          ? `Consumed via useConsumeEntitlement() and tracked via useTrack() · ${consumeResult.usage} / ${consumeResult.allocation} used`
+          : `Consumed via useConsumeEntitlement() and tracked via useTrack() · ${consumeResult.usage} used`,
+      );
+      await loadCompany();
       setTimeout(() => setTrackMsg(null), 4500);
-      return;
+    } catch (error) {
+      setStep("idle");
+      setTrackMsg(
+        error instanceof Error
+          ? error.message
+          : "Could not consume scan entitlement",
+      );
+      setTimeout(() => setTrackMsg(null), 4500);
+      await loadCompany();
     }
-
-    await new Promise((r) => setTimeout(r, 1600));
-
-    setResult(MOCK_RESULT);
-    setStep("done");
-    setTrackMsg("Usage consumed via ArcenClient.consumeEntitlement()");
-    await loadCompany();
-    setTimeout(() => setTrackMsg(null), 4500);
   }
 
   function handleReset() {
@@ -110,11 +112,15 @@ export default function ScanPage() {
     setResult(null);
   }
 
+  const scanUsage = company?.flags.scan ?? null;
+
   return (
     <div className={styles.root}>
       <div className={styles.header}>
         <h1 className={styles.title}>New Scan</h1>
-        <p className={styles.subtitle}>Upload a document to extract data using AI.</p>
+        <p className={styles.subtitle}>
+          Upload a document to extract data using AI.
+        </p>
       </div>
 
       <div className={styles.scanArea}>
@@ -124,18 +130,32 @@ export default function ScanPage() {
               <div className={styles.dropIcon}>◈</div>
             </div>
             <div className={styles.dropTitle}>Drop your document here</div>
-            <p className={styles.dropDesc}>Supports PDF, PNG, JPG, TIFF · up to 50 MB</p>
+            <p className={styles.dropDesc}>
+              Supports PDF, PNG, JPG, TIFF · up to 50 MB
+            </p>
             <div className={styles.dropOr}>or</div>
             <button
-              onClick={handleScan}
+              onClick={() => void handleScan()}
               className={styles.btnPrimary}
-              disabled={company?.flags.scan?.value === false}
+              disabled={
+                !identified || sessionLoading || consumeLoading || !flagMap.scan
+              }
             >
-              Simulate Scan
+              {sessionLoading
+                ? "Preparing session…"
+                : consumeLoading
+                  ? "Consuming…"
+                  : "Simulate Scan"}
             </button>
             <p className={styles.dropNote}>
-              Demo mode: simulates a scan and consumes usage via ArcenPay
+              Demo mode: simulates a scan and uses ArcenPay React SDK hooks
+              directly
             </p>
+            {scanUsage?.allocation != null && (
+              <p className={styles.dropNote}>
+                Current usage: {scanUsage.usage} / {scanUsage.allocation}
+              </p>
+            )}
             {trackMsg && <p className={styles.dropNote}>{trackMsg}</p>}
           </div>
         )}
@@ -144,7 +164,9 @@ export default function ScanPage() {
           <div className={styles.scanning}>
             <div className={styles.scanSpinner} />
             <div className={styles.scanningText}>Scanning document…</div>
-            <div className={styles.scanningSubtext}>AI extraction in progress</div>
+            <div className={styles.scanningSubtext}>
+              AI extraction in progress
+            </div>
           </div>
         )}
 
@@ -178,10 +200,10 @@ export default function ScanPage() {
       <div className={styles.infoBox}>
         <div className={styles.infoTitle}>How usage tracking works</div>
         <p className={styles.infoDesc}>
-          Every scan calls <code>/api/consume</code> on your backend, which calls{" "}
-          <code>ArcenClient.consumeEntitlement({"scan"})</code>. ArcenPay denies the
-          request when the plan limit is exhausted, so the scan never runs past
-          the server-side quota.
+          This demo page now calls <code>useConsumeEntitlement()</code> to
+          enforce scan quota and <code>useTrack()</code> to record the product
+          event. The browser no longer proxies those actions through custom demo
+          API routes.
         </p>
       </div>
     </div>
