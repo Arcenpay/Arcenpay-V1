@@ -1,10 +1,10 @@
 import { ArcenClient } from "@arcenpay/node";
 import type {
+  IdentifyResult,
   EntitlementResult,
   FlagResult,
   ConsumeEntitlementResult,
-  IdentifyResult,
-} from "@arcenpay/sdk";
+} from "@arcenpay/node";
 
 // Singleton ArcenClient for server-side usage
 // Initialized lazily so missing env vars only throw at runtime, not build time.

@@ -7,8 +7,12 @@ Use this in your Express/Fastify/Next.js API routes to gate endpoints with on-ch
 ## Installation
 
 ```bash
-npm install @arcenpay/node @arcenpay/sdk viem
+npm install @arcenpay/node
 ```
+
+All public Node SDK input and result types are exported from
+`@arcenpay/node`, so normal backend integrations do not need to install or
+import `@arcenpay/sdk` directly.
 
 ## Quick Start
 

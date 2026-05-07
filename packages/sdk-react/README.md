@@ -7,14 +7,12 @@ Add a complete USDC subscription billing flow to your React app in minutes. No p
 ## Installation
 
 ```bash
-npm install @arcenpay/react @arcenpay/sdk wagmi viem @tanstack/react-query
+npm install @arcenpay/react
 ```
 
-If you use the optional ZeroDev smart-account helpers, also install:
-
-```bash
-npm install @zerodev/sdk @zerodev/ecdsa-validator
-```
+Common UI-facing ArcenPay types are exported from `@arcenpay/react`, so most
+frontend integrations do not need to install or import `@arcenpay/sdk`
+directly.
 
 ## Quick Start (5 minutes)
 
@@ -94,13 +92,11 @@ import {
   useEntitlement,
   useConsumeEntitlement,
 } from "@arcenpay/react";
-import { useAccount } from "wagmi";
 
-function MyComponent() {
-  const { address } = useAccount();
+function MyComponent({ walletAddress }: { walletAddress: string }) {
   const { enabled, loading } = useEntitlementCheck("advanced_analytics");
   const { consume } = useConsumeEntitlement();
-  const { planTier, isSubscribed } = useEntitlement(address);
+  const { planTier, isSubscribed } = useEntitlement(walletAddress);
 
   async function handleScan() {
     const result = await consume("scan");
@@ -240,8 +236,6 @@ with this precedence:
 3. `tierFeatureFallback`
 
 ```tsx
-const { address } = useAccount();
-
 const {
   planTier,      // "starter" | "pro" | "enterprise"
   expiresAt,     // bigint (unix timestamp)
@@ -249,7 +243,7 @@ const {
   features,      // resolved feature map
   isLoading,     // boolean
   error,         // Error | null
-} = useEntitlement(address, "advanced_analytics");
+} = useEntitlement("0xabc...", "advanced_analytics");
 ```
 
 ### `useEntitlementCheck(featureKey)`
@@ -328,24 +322,20 @@ await revokeAutopayModule({
 You can use your own UI and only use the hooks/data layer:
 
 ```tsx
-import { useArcenPay } from "@arcenpay/react";
-import { useReadContract } from "wagmi";
-import { PlanFactoryABI } from "@arcenpay/sdk";
+import { useEntitlementCheck, useConsumeEntitlement } from "@arcenpay/react";
 
-function MyCustomPricingTable() {
-  const { contracts, network } = useArcenPay();
+function MyCustomUpgradePrompt() {
+  const { enabled, loading } = useEntitlementCheck("advanced_analytics");
+  const { consume } = useConsumeEntitlement();
 
-  // Read plans directly from the contract
-  const { data: planIds } = useReadContract({
-    address: contracts.planFactory as `0x${string}`,
-    abi: PlanFactoryABI,
-    functionName: "getProviderPlans",
-    args: ["0xYourProviderAddress"],
-    chainId: network.chainId,
-  });
+  if (loading) return null;
+  if (!enabled) return <UpgradeCTA />;
 
-  // Build your own UI with planIds...
-  return <YourDesign planIds={planIds} />;
+  return (
+    <button onClick={() => consume("scan")}>
+      Run premium action
+    </button>
+  );
 }
 ```
 

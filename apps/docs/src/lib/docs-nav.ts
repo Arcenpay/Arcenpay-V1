@@ -17,7 +17,7 @@ export const DOCS_NAV_GROUPS: DocsNavGroup[] = [
     label: "Start Here",
     items: [
       { label: "Introduction", href: "/", description: "Product overview and docs map" },
-      { label: "Base Sepolia Quickstart", href: "/quickstart", description: "Set up plans, access tokens, and live billing flows" },
+      { label: "Platform Quickstart", href: "/quickstart", description: "Set up plans, access tokens, embeds, and live billing flows" },
       { label: "Architecture", href: "/architecture", description: "Understand dashboard, SDK, API, and chain responsibilities" },
       { label: "Webhooks", href: "/webhooks", description: "Sync subscriptions, invoices, and usage events" },
     ],
@@ -36,10 +36,10 @@ export const DOCS_NAV_GROUPS: DocsNavGroup[] = [
     id: "sdk-frameworks",
     label: "SDKs & Frameworks",
     items: [
-      { label: "SDK Overview", href: "/sdk-reference", description: "React, Node, and agent package map" },
+      { label: "SDK Overview", href: "/sdk-reference", description: "Main React and Node integration path" },
       { label: "React SDK", href: "/sdk-reference/react", description: "Checkout, embeds, entitlement hooks, and UI surfaces" },
       { label: "Node.js SDK", href: "/sdk-reference/node", description: "Backend identify, billing, and webhook verification" },
-      { label: "Agent SDK", href: "/sdk-reference/agent", description: "Autonomous x402 payments with session funding and top-ups" },
+      { label: "Agent SDK", href: "/sdk-reference/agent", description: "Optional autonomous x402 payment product surface" },
       { label: "Next.js Integration", href: "/frameworks/nextjs", description: "App router integration flow" },
       { label: "Express Integration", href: "/frameworks/express", description: "Server-side auth and webhook handling" },
     ],

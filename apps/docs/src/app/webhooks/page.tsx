@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import DocImagePlaceholder from '../_components/DocImagePlaceholder';
 
 function CodeBlock({ lang, code }: { lang: string; code: string }) {
   const [copied, setCopied] = useState(false);
@@ -24,72 +25,63 @@ export default function WebhooksPage() {
         <div className="flex items-center justify-between gap-4 mb-3.5"><h1>Webhooks</h1></div>
 
         <p className="text-[16.5px] text-muted-foreground leading-relaxed mb-7 max-w-[740px]" id="webhooks">
-          Webhooks let your app react to subscription, invoice, and hosted
-          payment activity without polling the dashboard.
+          Webhooks keep your app in sync with ArcenPay billing activity. Use
+          them to react to subscription changes, invoice state updates, and
+          other customer billing events without polling the dashboard.
         </p>
 
-        <h2 id="overview">How webhooks work</h2>
-        <p className="text-[15px] text-muted-foreground leading-relaxed mb-[15px]">
-          When ArcenPay records a billing event, it sends a signed JSON payload
-          to the endpoint you configured in the dashboard.
-        </p>
-
-        <h2 id="setup">Configuring endpoints</h2>
+        <h2 id="setup">Dashboard setup</h2>
         <div className="docs-steps">
           <div className="docs-step">
             <div className="docs-step-num">1</div>
             <div className="docs-step-body">
               <div className="docs-step-title">Add your endpoint URL</div>
-              <p className="docs-step-desc">Go to Dashboard → Settings → Notifications and add your public webhook endpoint.</p>
+              <p className="docs-step-desc">Register the public webhook endpoint in your ArcenPay dashboard settings.</p>
             </div>
           </div>
           <div className="docs-step">
             <div className="docs-step-num">2</div>
             <div className="docs-step-body">
-              <div className="docs-step-title">Select the events you care about</div>
-              <p className="docs-step-desc">Start with subscription, invoice, and payment-link activity relevant to your app.</p>
+              <div className="docs-step-title">Store the signing secret</div>
+              <p className="docs-step-desc">Save the generated <code>whsec_...</code> value on your server as <code>ARCENPAY_WEBHOOK_SECRET</code>.</p>
             </div>
           </div>
           <div className="docs-step">
             <div className="docs-step-num">3</div>
             <div className="docs-step-body">
-              <div className="docs-step-title">Store the signing secret</div>
-              <p className="docs-step-desc">Save the generated <code>whsec_...</code> secret in your server environment.</p>
+              <div className="docs-step-title">Verify every request</div>
+              <p className="docs-step-desc">Reject any webhook whose signature does not match the raw request body.</p>
             </div>
           </div>
         </div>
 
-        <h2 id="event-types">Common event types</h2>
+        <DocImagePlaceholder
+          title="Webhook Configuration Screen"
+          description="Add a screenshot here of the dashboard webhook settings screen, including the endpoint form and where the signing secret is shown."
+          heightClassName="h-72"
+        />
+
+        <h2 id="events">Common event types</h2>
         <table className="docs-table">
           <thead><tr><th>Event type</th><th>Description</th></tr></thead>
           <tbody>
-            <tr><td><code>company.plan.changed</code></td><td>A customer moved to a different plan.</td></tr>
-            <tr><td><code>company.plan.cancelled</code></td><td>A customer's recurring plan was cancelled.</td></tr>
-            <tr><td><code>invoice.issued</code></td><td>An invoice was created.</td></tr>
-            <tr><td><code>invoice.delivery_failed</code></td><td>An invoice email could not be delivered.</td></tr>
-            <tr><td><code>invoice.paid</code></td><td>An invoice was confirmed as paid.</td></tr>
+            <tr><td><code>company.plan.changed</code></td><td>A customer changed plans.</td></tr>
+            <tr><td><code>company.plan.cancelled</code></td><td>A recurring billing relationship was cancelled.</td></tr>
+            <tr><td><code>invoice.issued</code></td><td>A new invoice was created.</td></tr>
+            <tr><td><code>invoice.paid</code></td><td>An invoice was marked paid.</td></tr>
+            <tr><td><code>invoice.delivery_failed</code></td><td>Invoice delivery failed and may need operator attention.</td></tr>
           </tbody>
         </table>
 
-        <h2 id="payload">Payload example</h2>
-        <CodeBlock lang="json" code={`{
-  "id": "evt_123456789",
-  "event": "invoice.paid",
-  "created": "2026-05-03T11:42:00.000Z",
-  "data": {
-    "invoiceId": "inv_123",
-    "invoiceNumber": "INV-1007",
-    "customerEmail": "owner@acme.com",
-    "status": "PAID"
-  }
-}`} />
-
-        <h2 id="security">Verify signatures</h2>
+        <h2 id="verify">Signature verification</h2>
         <CodeBlock lang="typescript" code={`import { verifyWebhookSignature } from '@arcenpay/node';
 
+const rawBody = await req.text();
+const signature = String(req.headers['x-meap-signature'] ?? '');
+
 const isValid = verifyWebhookSignature(
-  rawRequestBody,
-  String(req.headers['x-meap-signature']),
+  rawBody,
+  signature,
   process.env.ARCENPAY_WEBHOOK_SECRET!,
 );
 
@@ -99,9 +91,9 @@ if (!isValid) {
 
         <h2 id="best-practices">Best practices</h2>
         <ul className="pl-5 mb-[18px] space-y-[7px]">
-          <li className="text-[15px] text-muted-foreground leading-relaxed"><strong>Verify every request:</strong> Always validate the webhook signature before processing.</li>
-          <li className="text-[15px] text-muted-foreground leading-relaxed"><strong>Handle retries safely:</strong> Use the event <code>id</code> as your idempotency key.</li>
-          <li className="text-[15px] text-muted-foreground leading-relaxed"><strong>Acknowledge quickly:</strong> Return <code>200 OK</code> before running long background work.</li>
+          <li className="text-[15px] text-muted-foreground leading-relaxed"><strong>Verify before parsing business meaning:</strong> treat the raw request body plus signature as the source of truth.</li>
+          <li className="text-[15px] text-muted-foreground leading-relaxed"><strong>Use idempotency:</strong> store event ids so retried deliveries do not duplicate work.</li>
+          <li className="text-[15px] text-muted-foreground leading-relaxed"><strong>Acknowledge quickly:</strong> return success fast, then continue longer work asynchronously when possible.</li>
         </ul>
       </article>
 
@@ -109,11 +101,10 @@ if (!isValid) {
         <div className="text-[10.5px] font-bold uppercase tracking-[0.09em] text-muted-foreground mb-3.5">On this page</div>
         <ul className="border-l-[1.5px] border-border flex flex-col gap-0.5 py-1">
           <li className="toc-item active"><a className="block text-[12.5px] text-foreground font-semibold py-1 pl-[13px] -ml-[1.5px] border-l-2 border-foreground" href="#webhooks">Webhooks</a></li>
-          <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#overview">Overview</a></li>
           <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#setup">Setup</a></li>
-          <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#event-types">Event types</a></li>
-          <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#payload">Payload</a></li>
-          <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#security">Security</a></li>
+          <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#events">Events</a></li>
+          <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#verify">Verify</a></li>
+          <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#best-practices">Best practices</a></li>
         </ul>
       </nav>
     </div>

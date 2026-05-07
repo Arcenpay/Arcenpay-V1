@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import DocImagePlaceholder from '../../_components/DocImagePlaceholder';
 
 function CodeBlock({ lang, code }: { lang: string; code: string }) {
   const [copied, setCopied] = useState(false);
@@ -24,148 +25,82 @@ export default function ReactSDKPage() {
         <div className="flex items-center justify-between gap-4 mb-3.5"><h1>React SDK</h1></div>
 
         <p className="text-[16.5px] text-muted-foreground leading-relaxed mb-7 max-w-[740px]" id="react-sdk">
-          <code>@arcenpay/react</code> is the main customer-facing SDK. Use it
-          for recurring subscription checkout, hosted payment-link redirects,
-          embedded billing surfaces, feature-flag checks, usage tracking, and
-          entitlement-aware UI.
+          <code>@arcenpay/react</code> is the main customer-facing SDK for
+          ArcenPay. Use it for checkout, embedded billing portals, entitlement
+          checks in UI, usage-aware screens, and dashboard-managed billing
+          surfaces.
         </p>
 
         <h2 id="installation">Installation</h2>
-        <CodeBlock lang="bash" code={`npm install @arcenpay/react @arcenpay/sdk wagmi viem @tanstack/react-query`} />
+        <CodeBlock lang="bash" code={`npm install @arcenpay/react`} />
 
         <h2 id="setup">Setup</h2>
         <p className="text-[15px] text-muted-foreground leading-relaxed mb-[15px]">
-          Wrap your application in <code>ArcenPayProvider</code> and pass a
-          short-lived access token from your backend.
+          The normal pattern is: mint a short-lived access token on your
+          backend, then pass that token into <code>ArcenPayProvider</code>.
         </p>
         <CodeBlock lang="tsx" code={`import { ArcenPayProvider } from '@arcenpay/react';
 
 function App({ accessToken }: { accessToken: string }) {
   return (
-    <ArcenPayProvider
-      chainId={84532}
-      walletConnectProjectId={process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID}
-      token={accessToken}
-    >
+    <ArcenPayProvider token={accessToken}>
       <YourAppContent />
     </ArcenPayProvider>
   );
 }`} />
 
-        <h2 id="components">Core components</h2>
+        <DocImagePlaceholder
+          title="React SDK in a Real App"
+          description="Add a screenshot here that shows the billing route inside your app shell, not just the isolated component."
+          heightClassName="h-72"
+        />
 
-        <h3>PricingTable</h3>
-        <p className="text-[15px] text-muted-foreground leading-relaxed mb-[15px]">Render published plans and let the customer choose which subscription to start.</p>
-        <CodeBlock lang="tsx" code={`<PricingTable
-  providerAddress="0xYourTreasuryWallet"
-  onSelectPlan={(planId) => setSelectedPlan(planId)}
+        <h2 id="embeds">Embedded billing portal</h2>
+        <p className="text-[15px] text-muted-foreground leading-relaxed mb-[15px]">
+          ArcenEmbed renders a published dashboard component for the current
+          customer context. This is the fastest way to ship a self-serve billing
+          area.
+        </p>
+        <CodeBlock lang="tsx" code={`import { ArcenEmbed } from '@arcenpay/react';
+
+<ArcenEmbed
+  accessToken={embedToken}
+  componentId="cmp_123"
+  initialView="portal"
 />`} />
 
-        <h3>CheckoutModal</h3>
-        <p className="text-[15px] text-muted-foreground leading-relaxed mb-[15px]">Open recurring subscription checkout for a selected plan.</p>
-        <CodeBlock lang="tsx" code={`<CheckoutModal
+        <h2 id="checkout">Recurring checkout</h2>
+        <CodeBlock lang="tsx" code={`import { CheckoutModal } from '@arcenpay/react';
+
+<CheckoutModal
   planId={1n}
   isOpen={showCheckout}
   onClose={() => setShowCheckout(false)}
-  activationEndpoint="/api/v1/subscriptions/activate"
+  activationEndpoint="/api/request-subscription"
 />`} />
 
-        <h3>InvoiceList</h3>
-        <p className="text-[15px] text-muted-foreground leading-relaxed mb-[15px]">Display customer-facing billing history and invoice downloads.</p>
-        <CodeBlock lang="tsx" code={`<InvoiceList providerUrl="https://api.yourapp.com" />`} />
+        <h2 id="hooks">Useful hooks</h2>
+        <CodeBlock lang="tsx" code={`import {
+  useEntitlementCheck,
+  useConsumeEntitlement,
+  useTrack,
+} from '@arcenpay/react';
 
-        <h2 id="embedded-components">Embedded components</h2>
+const { enabled } = useEntitlementCheck('analytics_export');
+const { consume } = useConsumeEntitlement();
+const { track } = useTrack();`} />
+
+        <h2 id="types">Types</h2>
         <p className="text-[15px] text-muted-foreground leading-relaxed mb-[15px]">
-          Use <code>ArcenEmbed</code> when you want a branded, self-serve
-          billing surface backed by a dashboard-managed component definition and
-          a short-lived embed access token.
+          If you need React-side ArcenPay types, import them from
+          <code> @arcenpay/react </code>
+          directly.
         </p>
-        <CodeBlock lang="tsx" code={`<ArcenEmbed
-  accessToken={embedToken}
-  componentId="cmp_123"
-  baseUrl="https://dashboard.arcenpay.xyz"
-  initialView="portal"
-  onPlanChange={(planId) => console.log('switched', planId)}
-/>`} />
-
-        <p className="text-[15px] text-muted-foreground leading-relaxed mb-[15px]">
-          For lightweight template-driven surfaces, use
-          <code>TemplateRenderer</code> with saved JSON blocks.
-        </p>
-        <CodeBlock lang="tsx" code={`<TemplateRenderer
-  name="starter-plan"
-  blocks={[
-    { type: 'heading', content: 'Starter' },
-    { type: 'price', amount: '$19', interval: '/month' },
-    { type: 'feature-list', items: ['1 seat', 'Usage dashboard'] },
-    { type: 'cta', content: 'Start trial', href: '/signup' },
-  ]}
-/>`} />
-
-        <h2 id="hooks">Public hooks</h2>
-
-        <h3>useEntitlementCheck</h3>
-        <p className="text-[15px] text-muted-foreground leading-relaxed mb-[15px]">Check whether a feature is enabled for the current customer context.</p>
-        <CodeBlock lang="tsx" code={`const { enabled, loading } = useEntitlementCheck('analytics_export');
-
-if (loading) return null;
-if (!enabled) return <UpgradePrompt />;
-return <ExportButton />;`} />
-
-        <h3>useEntitlement</h3>
-        <p className="text-[15px] text-muted-foreground leading-relaxed mb-[15px]">Read the current wallet's plan tier, subscription state, and resolved features.</p>
-        <CodeBlock lang="tsx" code={`const { planTier, isSubscribed, features } = useEntitlement(address);
-
-if (!isSubscribed) return <UpgradePrompt />;
-return <Dashboard tier={planTier} features={features} />;`} />
-
-        <h3>useConsumeEntitlement</h3>
-        <p className="text-[15px] text-muted-foreground leading-relaxed mb-[15px]">Track usage-based consumption for a feature or metered capability.</p>
-        <CodeBlock lang="tsx" code={`const { consume } = useConsumeEntitlement();
-
-const result = await consume('scan');
-if (!result.consumed) {
-  alert(result.reason);
-}`} />
-
-        <h3>useFlag / useFlags</h3>
-        <p className="text-[15px] text-muted-foreground leading-relaxed mb-[15px]">Resolve dashboard-managed feature flags for a company or user.</p>
-        <CodeBlock lang="tsx" code={`const exportFlag = useFlag(
-  'analytics_export',
-  { id: 'company_123' },
-  { wallet: address }
-);
-
-const { flags } = useFlags(
-  ['analytics_export', 'team_collaboration'],
-  { id: 'company_123' }
-);`} />
-
-        <h3>useCompanyEntitlements</h3>
-        <p className="text-[15px] text-muted-foreground leading-relaxed mb-[15px]">Read the full entitlement map in one request when you need limits and allocations together.</p>
-        <CodeBlock lang="tsx" code={`const { entitlements, loading } = useCompanyEntitlements(
-  { id: 'company_123' }
-);`} />
-
-        <h3>useTrack</h3>
-        <p className="text-[15px] text-muted-foreground leading-relaxed mb-[15px]">Send product usage events into ArcenPay when your pricing depends on tracked activity.</p>
-        <CodeBlock lang="tsx" code={`const { track } = useTrack();
-
-await track({
-  event: 'document.scan.completed',
-  featureKey: 'scan',
-  quantity: 1,
-});`} />
-
-        <h2 id="hosted-payments">Hosted payment links</h2>
-        <p className="text-[15px] text-muted-foreground leading-relaxed mb-[15px]">
-          Use the helper below when you already created a payment link in the dashboard
-          and want to send the customer into the hosted one-time checkout.
-        </p>
-        <CodeBlock lang="tsx" code={`import { createPaymentLinkCheckoutUrl } from '@arcenpay/react';
-
-const url = createPaymentLinkCheckoutUrl(paymentLink.slug);
-window.location.assign(url);`} />
+        <CodeBlock lang="ts" code={`import type {
+  ComponentRenderData,
+  InvoiceSummary,
+  EntitlementResult,
+} from '@arcenpay/react';`} />
       </article>
 
       <nav className="hidden xl:block w-[232px] shrink-0 sticky top-14 h-[calc(100vh-56px)] overflow-y-auto py-8 pr-5 pl-1.5">
@@ -174,10 +109,10 @@ window.location.assign(url);`} />
           <li className="toc-item active"><a className="block text-[12.5px] text-foreground font-semibold py-1 pl-[13px] -ml-[1.5px] border-l-2 border-foreground" href="#react-sdk">React SDK</a></li>
           <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#installation">Installation</a></li>
           <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#setup">Setup</a></li>
-          <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#components">Components</a></li>
-          <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#embedded-components">Embedded components</a></li>
+          <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#embeds">Embeds</a></li>
+          <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#checkout">Checkout</a></li>
           <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#hooks">Hooks</a></li>
-          <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#hosted-payments">Hosted payments</a></li>
+          <li className="toc-item"><a className="block text-[12.5px] text-muted-foreground hover:text-foreground py-1 pl-[13px] -ml-[1.5px] border-l-2 border-transparent transition-colors" href="#types">Types</a></li>
         </ul>
       </nav>
     </div>

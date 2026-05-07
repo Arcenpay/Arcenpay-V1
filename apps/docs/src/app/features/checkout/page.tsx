@@ -1,3 +1,5 @@
+import DocImagePlaceholder from "../../_components/DocImagePlaceholder";
+
 export default function CheckoutPage() {
   return (
     <div className="flex items-start justify-center gap-[18px] flex-1 px-4 lg:px-0">
@@ -10,6 +12,12 @@ export default function CheckoutPage() {
           for plans, and a hosted one-time Base Sepolia USDC flow for add-ons,
           invoice payments, and custom charges.
         </p>
+
+        <DocImagePlaceholder
+          title="Checkout Entry Point Screenshot"
+          description="Add a screenshot here that shows where users enter checkout from your pricing page or billing settings page."
+          heightClassName="h-72"
+        />
 
         <h2 id="subscription-checkout">Subscription checkout</h2>
         <p className="text-[15px] text-muted-foreground leading-relaxed mb-[15px]">

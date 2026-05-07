@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArcenEmbed, useArcenPay } from "@arcenpay/react";
+import { ArcenEmbed, CheckoutModal, useArcenPay } from "@arcenpay/react";
 import { useWallet } from "../useWallet";
 import styles from "./page.module.css";
 
@@ -26,7 +26,16 @@ function Skeleton() {
 
 function SkeletonBox({ h, flex }: { h: number; flex?: number }) {
   return (
-    <div style={{ flex, height: h, background: "var(--surface-secondary, #e5e7eb)", borderRadius: 10, animation: "shimmer 1.5s ease-in-out infinite", marginBottom: 16 }} />
+    <div
+      style={{
+        flex,
+        height: h,
+        background: "var(--surface-secondary, #e5e7eb)",
+        borderRadius: 10,
+        animation: "shimmer 1.5s ease-in-out infinite",
+        marginBottom: 16,
+      }}
+    />
   );
 }
 
@@ -48,13 +57,16 @@ function BillingContent() {
         });
         if (!cancelled) setIdentified(true);
       } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load");
+        if (!cancelled)
+          setError(e instanceof Error ? e.message : "Failed to load");
       } finally {
         if (!cancelled) setLoading(false);
       }
     }
     init();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [arcen, address, connecting]);
 
   if (loading) return <Skeleton />;
@@ -64,7 +76,18 @@ function BillingContent() {
       <div className={styles.root}>
         <div className={styles.embedLoading}>
           <h2 className={styles.embedTitle}>Billing Portal</h2>
-          <div style={{ padding: "12px 16px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, color: "#b91c1c", fontSize: 13, maxWidth: 500, margin: "16px auto 0" }}>
+          <div
+            style={{
+              padding: "12px 16px",
+              background: "#fef2f2",
+              border: "1px solid #fecaca",
+              borderRadius: 8,
+              color: "#b91c1c",
+              fontSize: 13,
+              maxWidth: 500,
+              margin: "16px auto 0",
+            }}
+          >
             <strong>Error:</strong> {error}
           </div>
         </div>
@@ -77,8 +100,9 @@ function BillingContent() {
   return (
     <div className={styles.root}>
       <div className={styles.embedContainer}>
-        <ArcenEmbed className={styles.embed} />
+        <ArcenEmbed className={styles.embed} mode="modal" />
       </div>
+
     </div>
   );
 }

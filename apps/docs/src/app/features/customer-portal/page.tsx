@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import DocImagePlaceholder from '../../_components/DocImagePlaceholder';
 
 function CodeBlock({ lang, code }: { lang: string; code: string }) {
   const [copied, setCopied] = useState(false);
@@ -28,6 +29,12 @@ export default function CustomerPortalPage() {
           download invoices, and understand what plan or add-ons they currently have.
         </p>
 
+        <DocImagePlaceholder
+          title="Customer Portal Screenshot"
+          description="Add a screenshot here of the finished billing portal inside your app so developers can see the target user experience."
+          heightClassName="h-80"
+        />
+
         <h2 id="building-blocks">Recommended building blocks</h2>
         <ul className="pl-5 mb-[18px] space-y-[7px]">
           <li className="text-[15px] text-muted-foreground leading-relaxed"><strong>BillingHistory:</strong> show past subscription and payment activity.</li>
@@ -50,11 +57,9 @@ function BillingCenter() {
 
         <h2 id="entitlement-status">Current access state</h2>
         <CodeBlock lang="tsx" code={`import { useEntitlement } from '@arcenpay/react';
-import { useAccount } from 'wagmi';
 
-function CurrentPlan() {
-  const { address } = useAccount();
-  const { planTier, isSubscribed } = useEntitlement(address);
+function CurrentPlan({ walletAddress }: { walletAddress: string }) {
+  const { planTier, isSubscribed } = useEntitlement(walletAddress);
 
   return <p>{isSubscribed ? 'Active plan: ' + planTier : 'No active subscription'}</p>;
 }`} />

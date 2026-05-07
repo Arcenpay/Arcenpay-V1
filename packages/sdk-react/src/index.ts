@@ -49,3 +49,18 @@ export { useTrack } from "./hooks/useTrack";
 export type { TrackEventInput } from "./hooks/useTrack";
 
 export { createPaymentLinkCheckoutUrl } from "./lib/api";
+
+// Shared public types — re-exported so app developers do not need @arcenpay/sdk
+export type {
+  ArcenCompanyKeys,
+  ArcenUserKeys,
+  FlagResult,
+  EntitlementResult,
+  ConsumeEntitlementResult,
+  IdentifyResult,
+  Plan,
+  InvoiceSummary,
+  ComponentRenderData,
+  ComponentElement,
+  ComponentDesign,
+} from "@arcenpay/sdk";
