@@ -16,9 +16,9 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useArcenSession } from "../providers/MEAPProvider";
 import type { EntitlementResult } from "@arcenpay/sdk";
 import { resolveDashboardBaseUrl } from "../lib/api";
+import { useArcenPay } from "../providers/ArcenPayProvider";
 
 export interface UseCompanyEntitlementsOptions {
   /** Base URL for the ArcenPay dashboard API (defaults to production) */
@@ -55,7 +55,7 @@ const cache = new Map<
 export function useCompanyEntitlements(
   options: UseCompanyEntitlementsOptions = {},
 ): UseCompanyEntitlementsReturn {
-  const session = useArcenSession();
+  const { session } = useArcenPay();
   const cacheTtlMs = options.cacheTtlMs ?? 30_000;
 
   const baseUrl = resolveDashboardBaseUrl(options.baseUrl);

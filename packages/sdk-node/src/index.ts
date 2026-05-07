@@ -12,6 +12,16 @@ export type {
   ActivateSubscriptionInput,
   ActivateSubscriptionResult,
 } from "./client";
+export type {
+  ArcenCompanyKeys,
+  ArcenUserKeys,
+  ArcenCompany,
+  ArcenUser,
+  FlagResult,
+  EntitlementResult,
+  ConsumeEntitlementResult,
+  IdentifyResult,
+} from "@arcenpay/sdk";
 
 // Middleware
 export { x402Middleware } from "./middleware/x402";

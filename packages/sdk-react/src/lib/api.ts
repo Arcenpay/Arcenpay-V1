@@ -27,36 +27,12 @@ export function resolveOptionalDashboardBaseUrl(
   return explicit ? explicit.replace(/\/$/, "") : null;
 }
 
-export function resolveActivationEndpoint(explicit?: string): string | null {
-  if (explicit) return explicit;
-  const baseUrl = resolveOptionalDashboardBaseUrl();
-  return baseUrl
-    ? `${baseUrl.replace(/\/$/, "")}/api/v1/subscriptions/activate`
-    : null;
-}
-
 export function createPaymentLinkCheckoutUrl(
   slug: string,
   baseUrl?: string,
 ): string {
   const resolvedBaseUrl = resolveDashboardBaseUrl(baseUrl);
   return `${resolvedBaseUrl.replace(/\/$/, "")}/pay/${encodeURIComponent(slug)}`;
-}
-
-export function mergeActivationHeaders(
-  activationHeaders: Record<string, string> | undefined,
-  token: string | null,
-): Record<string, string> {
-  const merged: Record<string, string> = {
-    "Content-Type": "application/json",
-    ...(activationHeaders ?? {}),
-  };
-
-  if (token && !merged.Authorization && !merged.authorization) {
-    merged.Authorization = `Bearer ${token}`;
-  }
-
-  return merged;
 }
 
 export function entitlementsToFeatures(

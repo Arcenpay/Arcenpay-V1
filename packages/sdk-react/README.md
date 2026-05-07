@@ -7,14 +7,11 @@ Add a complete USDC subscription billing flow to your React app in minutes. No p
 ## Installation
 
 ```bash
-npm install @arcenpay/react @arcenpay/sdk wagmi viem @tanstack/react-query
+npm install @arcenpay/react
 ```
 
-If you use the optional ZeroDev smart-account helpers, also install:
-
-```bash
-npm install @zerodev/sdk @zerodev/ecdsa-validator
-```
+Common UI-facing ArcenPay types are exported from `@arcenpay/react`, so most
+frontend integrations only need `@arcenpay/react`.
 
 ## Quick Start (5 minutes)
 
@@ -27,9 +24,10 @@ import { ArcenPayProvider } from "@arcenpay/react";
 export default function Layout({ children }) {
   return (
     <ArcenPayProvider
-      chainId={84532}                                    // Base Sepolia
-      walletConnectProjectId="your-walletconnect-id"    // from cloud.walletconnect.com
-      token="short-lived-access-token-from-your-backend"
+      publishableKey="pk_..."
+      componentId="your-component-id"
+      chainId={84532}
+      walletConnectProjectId="your-walletconnect-id"
     >
       {children}
     </ArcenPayProvider>
@@ -37,51 +35,14 @@ export default function Layout({ children }) {
 }
 ```
 
-### 2. Show a pricing table
+### 2. Render the billing portal
 
 ```tsx
-import { PricingTable, CheckoutModal } from "@arcenpay/react";
-import { useState } from "react";
+import { ArcenEmbed } from "@arcenpay/react";
 
-export function PricingPage() {
-  const [selectedPlan, setSelectedPlan] = useState<bigint | null>(null);
-
+export function BillingPage() {
   return (
-    <>
-      <PricingTable
-        providerAddress="0xYourTreasuryWallet"
-        onSelectPlan={setSelectedPlan}
-      />
-
-      {selectedPlan && (
-        <CheckoutModal
-          planId={selectedPlan}
-          requestSubscription={async ({ planId, paymentAccount, subscriberEmail }) => {
-            const response = await fetch("/api/request-subscription", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                planId: planId.toString(),
-                paymentAccount,
-                subscriberEmail,
-              }),
-            });
-
-            const result = await response.json();
-            if (!response.ok) {
-              throw new Error(result.error ?? "Activation failed");
-            }
-
-            return result;
-          }}
-          onSuccess={(tokenId) => {
-            console.log("Subscribed!", tokenId.toString());
-            setSelectedPlan(null);
-          }}
-          onClose={() => setSelectedPlan(null)}
-        />
-      )}
-    </>
+    <ArcenEmbed componentId="your-component-id" />
   );
 }
 ```
@@ -90,17 +51,15 @@ export function PricingPage() {
 
 ```tsx
 import {
-  useEntitlementCheck,
   useEntitlement,
   useConsumeEntitlement,
+  useFlag,
 } from "@arcenpay/react";
-import { useAccount } from "wagmi";
 
-function MyComponent() {
-  const { address } = useAccount();
-  const { enabled, loading } = useEntitlementCheck("advanced_analytics");
+function MyComponent({ walletAddress }: { walletAddress: string }) {
+  const enabled = useFlag("advanced_analytics");
   const { consume } = useConsumeEntitlement();
-  const { planTier, isSubscribed } = useEntitlement(address);
+  const { planTier, isSubscribed } = useEntitlement(walletAddress);
 
   async function handleScan() {
     const result = await consume("scan");
@@ -110,7 +69,6 @@ function MyComponent() {
     }
   }
 
-  if (loading) return <Spinner />;
   if (!enabled) return <UpgradePrompt />;
   return (
     <AnalyticsDashboard
@@ -130,84 +88,13 @@ Root provider. Must wrap your entire app.
 
 ```tsx
 <ArcenPayProvider
-  chainId={84532}                         // Chain ID (default: 84532 Base Sepolia)
-  walletConnectProjectId="..."            // From cloud.walletconnect.com
-  config={{
-    // Optional: override defaults
-    tablelandConfig: {
-      featureFlagsEndpoint: "https://api.yourapp.com/api/entitlements/{wallet}/flags",
-    },
-    tierFeatureFallback: {
-      starter: { api_calls: 1000, webhooks: false },
-      pro:     { api_calls: 10000, webhooks: true },
-    },
-  }}
+  publishableKey="pk_..."
+  componentId="your-component-id"
+  chainId={84532}
+  walletConnectProjectId="..."
 >
   {children}
 </ArcenPayProvider>
-```
-
-### `<PricingTable />`
-
-Fetches plans from PlanFactory contract and displays them.
-
-```tsx
-<PricingTable
-  providerAddress="0x..."      // Your wallet that receives payment
-  planIds={[1n, 2n, 3n]}       // Or pass explicit plan IDs
-  onSelectPlan={(planId) => {}}
-  theme="dark"                  // "dark" | "light"
-  className="my-pricing"
-/>
-```
-
-### `<CheckoutModal />`
-
-Full subscription checkout flow: connect wallet → deploy smart account → install autopay → request backend activation.
-
-```tsx
-<CheckoutModal
-  planId={1n}
-  activationEndpoint="https://dashboard.yourapp.com/api/v1/subscriptions/activate"
-  onSuccess={(tokenId) => {
-    // tokenId — ERC-721 subscription token ID
-  }}
-  onClose={() => {}}
-/>
-```
-
-If you already have a provider backend, you can keep using `requestSubscription`.
-If not, `CheckoutModal` can call the ArcenPay dashboard activation endpoint
-directly when `activationEndpoint` or `NEXT_PUBLIC_ARCEN_BASE_URL` /
-`NEXT_PUBLIC_ARCENPAY_BASE_URL` is configured.
-
-Do not pass a secret API key to `ArcenPayProvider` in the browser.
-Mint short-lived access tokens on your backend and pass `token`, or provide
-an `identify` callback that calls your own backend endpoint.
-
-### `<SubscriptionStatus />`
-
-Shows current plan, expiry date, and USDC badge.
-
-```tsx
-<SubscriptionStatus />
-```
-
-### `<UsageDashboard />`
-
-Displays metered usage for the current session.
-
-```tsx
-<UsageDashboard planId={1n} />
-```
-
-### `<BillingHistory />` / `<InvoiceList />`
-
-Customer-facing billing history and invoice download.
-
-```tsx
-<BillingHistory />
-<InvoiceList providerUrl="https://api.yourapp.com" />
 ```
 
 ### `<ArcenEmbed />`
@@ -215,10 +102,25 @@ Customer-facing billing history and invoice download.
 Render a published ArcenPay embed component (from the dashboard component builder).
 
 ```tsx
-<ArcenEmbed
-  componentId="your-component-id"
-  providerUrl="https://api.yourapp.com"
-/>
+<ArcenEmbed componentId="your-component-id" />
+```
+
+### `<FeatureFlagGuard />`
+
+Show or hide UI behind an entitlement check.
+
+```tsx
+<FeatureFlagGuard featureKey="advanced_analytics" walletAddress={address}>
+  <PremiumAnalytics />
+</FeatureFlagGuard>
+```
+
+### `<TemplateRenderer />`
+
+Render saved template blocks when you are building custom component experiences.
+
+```tsx
+<TemplateRenderer name="upgrade-card" blocks={blocks} />
 ```
 
 ## Hooks
@@ -240,8 +142,6 @@ with this precedence:
 3. `tierFeatureFallback`
 
 ```tsx
-const { address } = useAccount();
-
 const {
   planTier,      // "starter" | "pro" | "enterprise"
   expiresAt,     // bigint (unix timestamp)
@@ -249,22 +149,16 @@ const {
   features,      // resolved feature map
   isLoading,     // boolean
   error,         // Error | null
-} = useEntitlement(address, "advanced_analytics");
+} = useEntitlement("0xabc...", "advanced_analytics");
 ```
 
-### `useEntitlementCheck(featureKey)`
+### `useFlag(featureKey)` / `useFlags(featureKeys)`
 
-Check a single company-aware entitlement through the dashboard API.
+Check one or many dashboard-managed feature flags.
 
 ```tsx
-const {
-  enabled,
-  allocation,
-  usage,
-  exceeded,
-  loading,
-  error,
-} = useEntitlementCheck("api_calls");
+const analyticsEnabled = useFlag("advanced_analytics");
+const flags = useFlags(["advanced_analytics", "priority_support"]);
 ```
 
 ### `useTrack()`
@@ -295,57 +189,24 @@ if (!result.consumed) {
 }
 ```
 
-## Utilities
-
-### `deploySmartAccount(config)`
-
-Deploy a ZeroDev ERC-4337 smart account for a user (required for autopay).
-
-```typescript
-import { deploySmartAccount } from "@arcenpay/react/zerodev";
-
-const { address, client } = await deploySmartAccount({
-  signer,       // viem WalletClient
-  chainId: 84532,
-});
-```
-
-### `revokeAutopayModule(config)`
-
-Uninstall the autopay module (cancel subscription).
-
-```typescript
-import { revokeAutopayModule } from "@arcenpay/react/zerodev";
-
-await revokeAutopayModule({
-  smartAccountAddress: "0x...",
-  chainId: 84532,
-});
-```
-
 ## Custom UI Components
 
 You can use your own UI and only use the hooks/data layer:
 
 ```tsx
-import { useArcenPay } from "@arcenpay/react";
-import { useReadContract } from "wagmi";
-import { PlanFactoryABI } from "@arcenpay/sdk";
+import { useFlag, useConsumeEntitlement } from "@arcenpay/react";
 
-function MyCustomPricingTable() {
-  const { contracts, network } = useArcenPay();
+function MyCustomUpgradePrompt() {
+  const enabled = useFlag("advanced_analytics");
+  const { consume } = useConsumeEntitlement();
 
-  // Read plans directly from the contract
-  const { data: planIds } = useReadContract({
-    address: contracts.planFactory as `0x${string}`,
-    abi: PlanFactoryABI,
-    functionName: "getProviderPlans",
-    args: ["0xYourProviderAddress"],
-    chainId: network.chainId,
-  });
+  if (!enabled) return <UpgradeCTA />;
 
-  // Build your own UI with planIds...
-  return <YourDesign planIds={planIds} />;
+  return (
+    <button onClick={() => consume("scan")}>
+      Run premium action
+    </button>
+  );
 }
 ```
 
@@ -356,7 +217,15 @@ NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your-project-id
 NEXT_PUBLIC_RPC_URL_84532=https://sepolia.base.org
 NEXT_PUBLIC_ARCEN_BASE_URL=https://dashboard.yourapp.com
 NEXT_PUBLIC_FACILITATOR_URL=https://facilitator.yourapp.com
+NEXT_PUBLIC_ARCENPAY_PUBLISHABLE_KEY=pk_...
+NEXT_PUBLIC_ARCENPAY_COMPONENT_ID=your-component-id
 ```
+
+## Package Boundary
+
+For frontend integrations, use `@arcenpay/react` only. The package re-exports
+the public React types you need, so consumers should not need `@arcenpay/sdk`
+or internal ArcenPay package paths.
 
 ---
 

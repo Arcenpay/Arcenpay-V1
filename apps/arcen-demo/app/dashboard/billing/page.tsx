@@ -26,36 +26,62 @@ function Skeleton() {
 
 function SkeletonBox({ h, flex }: { h: number; flex?: number }) {
   return (
-    <div style={{ flex, height: h, background: "var(--surface-secondary, #e5e7eb)", borderRadius: 10, animation: "shimmer 1.5s ease-in-out infinite", marginBottom: 16 }} />
+    <div
+      style={{
+        flex,
+        height: h,
+        background: "var(--surface-secondary, #e5e7eb)",
+        borderRadius: 10,
+        animation: "shimmer 1.5s ease-in-out infinite",
+        marginBottom: 16,
+      }}
+    />
   );
 }
 
 function BillingContent() {
-  const arcen = useArcenPay();
+  const { identify, session } = useArcenPay();
   const { address, connecting } = useWallet();
-  const [identified, setIdentified] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const identified =
+    !!address &&
+    !!session.token &&
+    session.company?.wallet?.toLowerCase() === address.toLowerCase();
+
   useEffect(() => {
-    if (connecting || !address) return;
+    if (connecting) return;
+    if (!address) {
+      setLoading(false);
+      setError(null);
+      return;
+    }
+    if (identified) {
+      setLoading(false);
+      setError(null);
+      return;
+    }
     const wallet = address; // narrow type
     let cancelled = false;
     async function init() {
+      setLoading(true);
       try {
-        await arcen.identify({
+        await identify({
           company: { id: `company-${wallet.slice(2, 10)}`, wallet },
         });
-        if (!cancelled) setIdentified(true);
       } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load");
+        if (!cancelled)
+          setError(e instanceof Error ? e.message : "Failed to load");
       } finally {
         if (!cancelled) setLoading(false);
       }
     }
     init();
-    return () => { cancelled = true; };
-  }, [arcen, address, connecting]);
+    return () => {
+      cancelled = true;
+    };
+  }, [address, connecting, identified, identify]);
 
   if (loading) return <Skeleton />;
 
@@ -64,7 +90,18 @@ function BillingContent() {
       <div className={styles.root}>
         <div className={styles.embedLoading}>
           <h2 className={styles.embedTitle}>Billing Portal</h2>
-          <div style={{ padding: "12px 16px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, color: "#b91c1c", fontSize: 13, maxWidth: 500, margin: "16px auto 0" }}>
+          <div
+            style={{
+              padding: "12px 16px",
+              background: "#fef2f2",
+              border: "1px solid #fecaca",
+              borderRadius: 8,
+              color: "#b91c1c",
+              fontSize: 13,
+              maxWidth: 500,
+              margin: "16px auto 0",
+            }}
+          >
             <strong>Error:</strong> {error}
           </div>
         </div>
@@ -77,8 +114,9 @@ function BillingContent() {
   return (
     <div className={styles.root}>
       <div className={styles.embedContainer}>
-        <ArcenEmbed className={styles.embed} />
+        <ArcenEmbed className={styles.embed} mode="modal" />
       </div>
+
     </div>
   );
 }

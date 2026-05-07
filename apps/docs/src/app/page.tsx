@@ -1,4 +1,5 @@
 import Link from "next/link";
+import DocImagePlaceholder from "./_components/DocImagePlaceholder";
 
 export default function OverviewPage() {
   return (
@@ -17,10 +18,10 @@ export default function OverviewPage() {
             payments with ArcenPay.
           </h1>
           <p className="text-[16.5px] text-muted-foreground leading-relaxed mb-0 max-w-[740px]">
-            These docs focus on the supported product surface: dashboard-managed
-            billing, Base Sepolia checkout, embedded components, public SDKs,
-            and server-side APIs for access control, billing, and x402-backed
-            agent flows.
+            These docs cover the supported ArcenPay platform surface:
+            dashboard-managed plans and billing surfaces, embedded customer
+            portal experiences, recurring checkout, short-lived access tokens,
+            and backend verification through the React and Node SDKs.
           </p>
 
           <div className="flex items-center gap-2.5 flex-wrap mt-[18px]">
@@ -38,6 +39,12 @@ export default function OverviewPage() {
             </Link>
           </div>
         </section>
+
+        <DocImagePlaceholder
+          title="Homepage or Dashboard Product Tour"
+          description="Add a product screenshot here that shows the dashboard, published plans, or the embedded billing portal so new developers immediately understand what ArcenPay looks like in practice."
+          heightClassName="h-72"
+        />
 
         <div className="docs-callout-info mb-5">
           <span className="docs-callout-icon">i</span>
@@ -57,31 +64,31 @@ export default function OverviewPage() {
           {[
             {
               step: "Step 1",
-              title: "Configure your workspace",
-              desc: "Link your workspace wallet, publish plans, and create hosted payment links from the dashboard.",
+              title: "Set up billing in the dashboard",
+              desc: "Connect the wallet that receives funds, create plans, configure customer portal components, and publish your billing setup.",
               href: "/quickstart",
               link: "Quickstart →",
             },
             {
               step: "Step 2",
-              title: "Embed billing surfaces",
-              desc: "Use the React SDK for recurring checkout, hosted payment links, or ArcenEmbed customer portal experiences.",
+              title: "Render billing in your app",
+              desc: "Use the React SDK for checkout, embedded portal surfaces, billing history, and entitlement-aware UI.",
               href: "/features/embedded-components",
               link: "Embedded components →",
             },
             {
               step: "Step 3",
-              title: "Verify access on your backend",
-              desc: "Use the Node SDK and API endpoints to verify entitlements, activate subscriptions, and keep business logic server-side.",
+              title: "Handle secure actions on the server",
+              desc: "Use the Node SDK to issue short-lived access tokens, activate subscriptions, check entitlements, and verify webhooks.",
               href: "/sdk-reference/node",
               link: "Node SDK →",
             },
             {
               step: "Step 4",
-              title: "Automate programmatic payments",
-              desc: "Use the agent SDK when you need autonomous x402 settlement, session funding, and tracked usage.",
-              href: "/sdk-reference/agent",
-              link: "Agent SDK →",
+              title: "Keep your product in sync",
+              desc: "Use webhooks to react to subscription changes, invoice activity, and payment events without polling.",
+              href: "/webhooks",
+              link: "Webhooks →",
             },
           ].map((card) => (
             <div
@@ -118,20 +125,20 @@ export default function OverviewPage() {
             Recurring subscription checkout for paid plans.
           </li>
           <li className="text-[15px] text-muted-foreground leading-relaxed">
-            Hosted Base Sepolia USDC payment links for one-time charges and
-            invoice pay-now flows.
+            Dashboard-managed customer billing portals with plan management,
+            invoices, payment methods, and usage blocks.
           </li>
           <li className="text-[15px] text-muted-foreground leading-relaxed">
-            Embedded customer billing surfaces with plan management, invoice
-            history, usage blocks, and branded portal UI.
+            Hosted or embedded billing entry points for upgrades, onboarding,
+            and account management.
           </li>
           <li className="text-[15px] text-muted-foreground leading-relaxed">
-            Server-side feature gating and entitlement checks using the SDKs and
-            APIs.
+            Server-side access-token minting, entitlement checks, and secure
+            billing actions using the Node SDK.
           </li>
           <li className="text-[15px] text-muted-foreground leading-relaxed">
-            Agent-to-service payments with session funding, auto-topups, and
-            x402 payment negotiation.
+            Feature flags, usage tracking, and metered entitlements tied to a
+            company or user context.
           </li>
         </ul>
 
@@ -139,16 +146,15 @@ export default function OverviewPage() {
           id="install"
           className="text-2xl font-bold tracking-[-0.03em] mt-[42px] mb-3.5"
         >
-          Install the SDKs
+          Install the Main SDKs
         </h2>
         <div className="docs-codeblock">
           <div className="docs-codeblock-header">
             <span className="docs-codeblock-lang">bash</span>
           </div>
           <pre>
-            <code>{`npm install @arcenpay/react @arcenpay/sdk wagmi viem @tanstack/react-query
-npm install @arcenpay/node
-npm install @arcenpay/agent`}</code>
+            <code>{`npm install @arcenpay/react
+npm install @arcenpay/node`}</code>
           </pre>
         </div>
 
@@ -156,7 +162,7 @@ npm install @arcenpay/agent`}</code>
           id="minimum-env"
           className="text-2xl font-bold tracking-[-0.03em] mt-[42px] mb-3.5"
         >
-          Suggested environment variables
+          Common environment variables
         </h2>
         <div className="docs-codeblock">
           <div className="docs-codeblock-header">
@@ -164,10 +170,10 @@ npm install @arcenpay/agent`}</code>
           </div>
           <pre>
             <code>{`NEXT_PUBLIC_ARCENPAY_BASE_URL=https://dashboard.arcenpay.xyz
-NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your_walletconnect_project_id
 ARCENPAY_API_KEY=api_live_xxxxxxxxx
 ARCENPAY_WEBHOOK_SECRET=whsec_xxxxxxxxx
-BASE_SEPOLIA_RPC_URL=https://sepolia.base.org`}</code>
+NEXT_PUBLIC_ARCENPAY_COMPONENT_ID=cmp_xxxxxxxxx
+NEXT_PUBLIC_CHAIN_ID=84532`}</code>
           </pre>
         </div>
       </article>

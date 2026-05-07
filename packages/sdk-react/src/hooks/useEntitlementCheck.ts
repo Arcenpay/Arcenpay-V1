@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useArcenSession } from "../providers/MEAPProvider";
 import type { EntitlementResult } from "@arcenpay/sdk";
 import { resolveDashboardBaseUrl } from "../lib/api";
+import { useArcenPay } from "../providers/ArcenPayProvider";
 
 export interface UseEntitlementCheckOptions {
   baseUrl?: string;
@@ -26,7 +26,7 @@ export function useEntitlementCheck(
   featureKey: string,
   options: UseEntitlementCheckOptions = {},
 ): UseEntitlementCheckReturn {
-  const session = useArcenSession();
+  const { session } = useArcenPay();
   const cacheTtlMs = options.cacheTtlMs ?? 30_000;
 
   const baseUrl = resolveDashboardBaseUrl(options.baseUrl);

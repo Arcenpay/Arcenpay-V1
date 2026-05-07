@@ -2488,7 +2488,7 @@ const { data } = await res.json();
   const editorContent = (
     <div className="fixed inset-0 z-[9999] bg-background flex flex-col">
       {/* Header */}
-      <div className="h-14 border-b border-border flex items-center px-3 md:px-6 bg-background/80 backdrop-blur-sm shrink-0 gap-2 md:gap-4">
+      <div className="h-14 border-b border-border flex justify-between items-center px-3 md:px-6 bg-background/80 backdrop-blur-sm shrink-0 gap-2 md:gap-4">
         <div className="flex items-center gap-2 md:gap-4 shrink-0">
           <Button
             variant="ghost"

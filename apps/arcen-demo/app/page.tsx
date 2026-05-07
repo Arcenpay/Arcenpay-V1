@@ -22,11 +22,13 @@ export default function LandingPage() {
             <>
               <span className={styles.navLink} style={{ opacity: 0.7, fontSize: 13 }}>{shortAddr}</span>
               <Link href="/dashboard" className={styles.navLink} onClick={() => setMenuOpen(false)}>Dashboard</Link>
+              <Link href="/dashboard/sdk" className={styles.navLink} onClick={() => setMenuOpen(false)}>SDK Showcase</Link>
               <Link href="/dashboard/billing" className={styles.btnPrimary} onClick={() => setMenuOpen(false)}>Billing →</Link>
             </>
           ) : (
             <>
               <Link href="/dashboard" className={styles.navLink} onClick={() => setMenuOpen(false)}>Dashboard</Link>
+              <Link href="/dashboard/sdk" className={styles.navLink} onClick={() => setMenuOpen(false)}>SDK Showcase</Link>
               <button className={styles.btnPrimary} onClick={connect}>Connect Wallet</button>
             </>
           )}
@@ -37,9 +39,9 @@ export default function LandingPage() {
       </nav>
 
       <section className={styles.hero}>
-        <h1 className={styles.heroTitle}>AI-Powered Document Scanning</h1>
+        <h1 className={styles.heroTitle}>ArcenPay Demo Studio</h1>
         <p className={styles.heroSub}>
-          ScanBot uses ArcenPay for Web3-native subscription billing. Connect your wallet, pick a plan, and start scanning.
+          Explore the public React and Node SDKs in one demo app. See the embed, hooks, entitlements, payment links, server-side client methods, webhooks, and protocol helpers all working together.
         </p>
         <div className={styles.heroCta}>
           {isConnected ? (
@@ -51,70 +53,70 @@ export default function LandingPage() {
               Connect Wallet to Start
             </button>
           )}
-          <Link href="/dashboard/billing" className={styles.btnSecondary} style={{ fontSize: 16, padding: "14px 32px" }}>
-            View Plans
+          <Link href="/dashboard/sdk" className={styles.btnSecondary} style={{ fontSize: 16, padding: "14px 32px" }}>
+            Explore SDK Showcase
           </Link>
         </div>
       </section>
 
       <section className={styles.features}>
-        <h2 className={styles.sectionTitle}>Why ScanBot?</h2>
+        <h2 className={styles.sectionTitle}>What this demo covers</h2>
         <div className={styles.featureGrid}>
           <div className={styles.featureCard}>
             <div className={styles.featureIcon}>📄</div>
-            <h3 className={styles.featureTitle}>Smart OCR</h3>
-            <p className={styles.featureDesc}>AI-powered text extraction from any document. Upload PDFs, images, or screenshots.</p>
+            <h3 className={styles.featureTitle}>React SDK</h3>
+            <p className={styles.featureDesc}>Preview `ArcenEmbed`, exercise hooks, test feature gates, and inspect builder helpers in a live browser session.</p>
           </div>
           <div className={styles.featureCard}>
             <div className={styles.featureIcon}>🔒</div>
-            <h3 className={styles.featureTitle}>Web3 Billing</h3>
-            <p className={styles.featureDesc}>Subscribe with USDC on-chain. No credit cards. Powered by ArcenPay.</p>
+            <h3 className={styles.featureTitle}>Node SDK</h3>
+            <p className={styles.featureDesc}>Run `ArcenClient` methods, verify webhooks, inspect protocol events, and understand the backend service surface.</p>
           </div>
           <div className={styles.featureCard}>
             <div className={styles.featureIcon}>📊</div>
-            <h3 className={styles.featureTitle}>Usage Tracking</h3>
-            <p className={styles.featureDesc}>Real-time metered usage. Track every scan against your plan limits.</p>
+            <h3 className={styles.featureTitle}>Managed Billing UI</h3>
+            <p className={styles.featureDesc}>Jump from the showcase into the full billing portal to see what an end-user integration looks like.</p>
           </div>
         </div>
       </section>
 
       <section className={styles.pricing}>
-        <h2 className={styles.sectionTitle}>Simple Pricing</h2>
-        <p className={styles.sectionSub}>Choose a plan that fits your scanning volume. All plans billed monthly in USDC.</p>
+        <h2 className={styles.sectionTitle}>Suggested demo path</h2>
+        <p className={styles.sectionSub}>Walk through the SDK from high level to hands-on: learn the surface, try the managed UI, then inspect backend actions.</p>
         <div className={styles.pricingGrid}>
           <div className={styles.pricingCard}>
-            <h3 className={styles.pricingName}>Starter</h3>
-            <div className={styles.pricingPrice}>$9<span className={styles.pricingPer}>/mo</span></div>
+            <h3 className={styles.pricingName}>1. Read the Overview</h3>
+            <div className={styles.pricingPrice}>Start<span className={styles.pricingPer}> here</span></div>
             <ul className={styles.pricingFeatures}>
-              <li className={styles.pricingFeature}>100 scans / month</li>
-              <li className={styles.pricingFeature}>PDF export</li>
-              <li className={styles.pricingFeature}>Email support</li>
+              <li className={styles.pricingFeature}>Understand the platform</li>
+              <li className={styles.pricingFeature}>Connect your wallet</li>
+              <li className={styles.pricingFeature}>See current plan state</li>
             </ul>
           </div>
           <div className={`${styles.pricingCard} ${styles.pricingFeatured}`}>
-            <h3 className={styles.pricingName}>Pro</h3>
-            <div className={styles.pricingPrice}>$29<span className={styles.pricingPer}>/mo</span></div>
+            <h3 className={styles.pricingName}>2. Open SDK Showcase</h3>
+            <div className={styles.pricingPrice}>Try<span className={styles.pricingPer}> live APIs</span></div>
             <ul className={styles.pricingFeatures}>
-              <li className={styles.pricingFeature}>1,000 scans / month</li>
-              <li className={styles.pricingFeature}>PDF + CSV export</li>
-              <li className={styles.pricingFeature}>API access</li>
-              <li className={styles.pricingFeature}>Priority support</li>
+              <li className={styles.pricingFeature}>React hooks and embed</li>
+              <li className={styles.pricingFeature}>Node client methods</li>
+              <li className={styles.pricingFeature}>Webhook and event helpers</li>
+              <li className={styles.pricingFeature}>Infra service map</li>
             </ul>
           </div>
           <div className={styles.pricingCard}>
-            <h3 className={styles.pricingName}>Enterprise</h3>
-            <div className={styles.pricingPrice}>$99<span className={styles.pricingPer}>/mo</span></div>
+            <h3 className={styles.pricingName}>3. Enter Billing Portal</h3>
+            <div className={styles.pricingPrice}>View<span className={styles.pricingPer}> end-user UX</span></div>
             <ul className={styles.pricingFeatures}>
-              <li className={styles.pricingFeature}>Unlimited scans</li>
-              <li className={styles.pricingFeature}>All exports</li>
-              <li className={styles.pricingFeature}>Full API access</li>
-              <li className={styles.pricingFeature}>Dedicated support</li>
+              <li className={styles.pricingFeature}>Managed billing portal</li>
+              <li className={styles.pricingFeature}>Plan changes</li>
+              <li className={styles.pricingFeature}>Invoices and payment state</li>
+              <li className={styles.pricingFeature}>Embed-ready UX</li>
             </ul>
           </div>
         </div>
         <div style={{ textAlign: "center", marginTop: 24 }}>
-          <Link href="/dashboard/billing" className={styles.btnPrimary}>
-            View Plans & Subscribe →
+          <Link href="/dashboard/sdk" className={styles.btnPrimary}>
+            Open the SDK Showcase →
           </Link>
         </div>
       </section>

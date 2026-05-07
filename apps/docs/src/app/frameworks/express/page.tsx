@@ -29,7 +29,7 @@ export default function ExpressPage() {
         </p>
 
         <h2 id="setup">Project setup</h2>
-        <CodeBlock lang="bash" code={`npm install express @arcenpay/node`} />
+        <CodeBlock lang="bash" code={`npm install @arcenpay/node`} />
 
         <h2 id="client">Create the Arcen client</h2>
         <CodeBlock lang="typescript" code={`import { ArcenClient } from '@arcenpay/node';

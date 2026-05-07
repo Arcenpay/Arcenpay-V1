@@ -13,24 +13,12 @@ export type {
   ArcenIdentifyInput,
 } from "./providers/ArcenPayProvider";
 
-// Components — the two you need
+// Components — the main embed surface
 export { ArcenEmbed, ArcenpayEmbed } from "./components/ArcenEmbed";
 export type { ArcenEmbedProps, ArcenpayEmbedProps } from "./components/ArcenEmbed";
 export { FeatureFlagGuard } from "./components/FeatureFlagGuard";
 export { TemplateRenderer } from "./components/TemplateRenderer";
 export type { TemplateRendererProps, TemplateBlock } from "./components/TemplateRenderer";
-
-// Legacy components — deprecated, use ArcenEmbed instead
-export { CheckoutModal } from "./components/CheckoutModal";
-export type {
-  CheckoutModalProps,
-  CheckoutResult,
-  CheckoutErrorCode,
-} from "./components/CheckoutModal";
-export {
-  CHECKOUT_ERROR_CODES,
-  CheckoutFlowError,
-} from "./components/CheckoutModal";
 
 // Utility called once for convenience
 export { renderElement, getDesignTokens } from "./components/ArcenEmbed";
@@ -49,3 +37,18 @@ export { useTrack } from "./hooks/useTrack";
 export type { TrackEventInput } from "./hooks/useTrack";
 
 export { createPaymentLinkCheckoutUrl } from "./lib/api";
+
+// Shared public types — re-exported so app developers do not need @arcenpay/sdk
+export type {
+  ArcenCompanyKeys,
+  ArcenUserKeys,
+  FlagResult,
+  EntitlementResult,
+  ConsumeEntitlementResult,
+  IdentifyResult,
+  Plan,
+  InvoiceSummary,
+  ComponentRenderData,
+  ComponentElement,
+  ComponentDesign,
+} from "@arcenpay/sdk";

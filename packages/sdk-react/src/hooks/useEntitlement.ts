@@ -7,7 +7,7 @@ import {
   SubscriptionRegistryABI,
   getContractAddresses,
 } from '@arcenpay/sdk';
-import { useMEAP } from '../providers/MEAPProvider';
+import { useArcenPay } from '../providers/ArcenPayProvider';
 import { useCompanyEntitlements } from './useCompanyEntitlements';
 import { entitlementsToFeatures } from '../lib/api';
 
@@ -84,7 +84,7 @@ export function useEntitlement(
   featureKey?: string,
 ): UseEntitlementReturn {
   const ONCHAIN_STALE_AFTER_MS = 30_000;
-  const { network, config } = useMEAP();
+  const { network, config } = useArcenPay();
   const contracts = getContractAddresses(network.chainId);
   const registryAddress = contracts.subscriptionRegistry as `0x${string}`;
   const lastBlockRefetchAt = useRef(0);

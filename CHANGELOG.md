@@ -15,7 +15,7 @@ All notable changes to ArcenPay are documented here.
 - EIP-712 x402 payment validation with anti-replay
 - Subscription minting via ZeroDev smart accounts + AutopayModule
 - Agent session vault with ZK usage proof settlement
-- Embeddable billing components (`ArcenEmbed`, `CheckoutModal`, `PricingTable`)
+- Embeddable billing UI via `ArcenEmbed`
 - The Graph subgraph for on-chain analytics
 - Circom zk-SNARK circuits for usage billing proofs
 - Catalog management: plans, add-ons, credits, coupons
