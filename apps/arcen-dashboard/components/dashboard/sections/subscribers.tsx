@@ -1,314 +1,469 @@
 "use client";
 
-import { useState } from "react";
-import { cn } from "@/lib/utils";
+import { useCallback, useEffect, useState } from "react";
 import {
-    Search,
-    ArrowUpDown,
-    Users,
-    Download,
-    Copy,
-    Check,
-    AlertCircle,
-    RefreshCw,
+  Users,
+  Search,
+  RefreshCw,
+  Plus,
+  Mail,
+  Wallet,
+  Building2,
+  Copy,
+  Check,
+  UserRound,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useAccount } from "wagmi";
-import { useQuery } from "@apollo/client";
-import { GET_PROVIDER_PLANS, GET_SUBSCRIBERS } from "@/lib/graphql";
-import { truncateAddress, formatRelativeTime, formatAbsoluteTime } from "@/lib/format";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
-    Tooltip,
-    TooltipContent,
-    TooltipProvider,
-    TooltipTrigger,
-} from "@/components/ui/tooltip";
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { formatRelativeTime } from "@/lib/format";
 
-interface GqlSubscription {
+interface UserRecord {
+  id: string;
+  name: string | null;
+  email: string | null;
+  walletAddress: string | null;
+  clerkUserId: string | null;
+  externalId: string | null;
+  companyId: string;
+  createdAt: string;
+  lastSeenAt: string;
+  company?: {
     id: string;
-    subscriber: string;
-    plan: { id: string; name: string; tier: string; price: string };
-    expiration: string;
-    isActive: boolean;
-    mintedAt: string;
-    amountPaid: string;
-    txHash: string;
+    name: string;
+    email: string | null;
+    walletAddress: string | null;
+  };
 }
 
-type SubscriberStatus = "active" | "expiring" | "expired";
-
-function getStatus(expiresAt: number): SubscriberStatus {
-    const now = Date.now() / 1000;
-    if (expiresAt < now) return "expired";
-    if (expiresAt - now < 7 * 86400) return "expiring";
-    return "active";
+interface CompanyOption {
+  id: string;
+  name: string;
 }
 
-function StatusBadge({ status }: { status: SubscriberStatus }) {
-    const map = {
-        active: "bg-success/10 text-success border-success/20",
-        expiring: "bg-warning/10 text-warning border-warning/20",
-        expired: "bg-secondary text-muted-foreground",
-    } as const;
-    return (
-        <Badge variant="secondary" className={cn("text-xs capitalize", map[status])}>
-            {status}
-        </Badge>
-    );
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+
+  return (
+    <button
+      type="button"
+      onClick={(event) => {
+        event.stopPropagation();
+        void navigator.clipboard.writeText(text);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+      }}
+      className="text-muted-foreground hover:text-foreground transition-colors"
+    >
+      {copied ? (
+        <Check className="h-3 w-3 text-emerald-500" />
+      ) : (
+        <Copy className="h-3 w-3" />
+      )}
+    </button>
+  );
 }
 
-function SkeletonRow() {
-    return (
-        <tr className="border-b border-border">
-            {Array.from({ length: 5 }).map((_, i) => (
-                <td key={i} className="py-3 px-4">
-                    <div className="h-4 bg-secondary/80 rounded animate-pulse w-24" />
-                </td>
-            ))}
-        </tr>
-    );
+function CreateUserSheet({
+  open,
+  onOpenChange,
+  onCreated,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onCreated: () => void;
+}) {
+  const [companies, setCompanies] = useState<CompanyOption[]>([]);
+  const [loadingCompanies, setLoadingCompanies] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [error, setError] = useState("");
+  const [form, setForm] = useState({
+    companyId: "",
+    name: "",
+    email: "",
+    wallet: "",
+    externalId: "",
+    clerkUserId: "",
+  });
+
+  const reset = useCallback(() => {
+    setForm({
+      companyId: "",
+      name: "",
+      email: "",
+      wallet: "",
+      externalId: "",
+      clerkUserId: "",
+    });
+    setError("");
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+
+    let cancelled = false;
+
+    async function loadCompanies() {
+      setLoadingCompanies(true);
+      try {
+        const res = await fetch("/api/v1/companies?limit=100", { cache: "no-store" });
+        if (!res.ok) return;
+
+        const data = (await res.json()) as {
+          data?: Array<{ id: string; name: string }>;
+        };
+        if (!cancelled) {
+          setCompanies(data.data?.map((company) => ({
+            id: company.id,
+            name: company.name,
+          })) ?? []);
+        }
+      } finally {
+        if (!cancelled) setLoadingCompanies(false);
+      }
+    }
+
+    void loadCompanies();
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
+
+  async function handleCreate() {
+    if (!form.companyId) return;
+
+    setCreating(true);
+    setError("");
+    try {
+      const res = await fetch("/api/v1/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          companyId: form.companyId,
+          name: form.name || undefined,
+          email: form.email || undefined,
+          wallet: form.wallet || undefined,
+          id: form.externalId || undefined,
+          clerk_user_id: form.clerkUserId || undefined,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as { error?: string };
+        setError(data.error ?? "Failed to create user");
+        return;
+      }
+
+      reset();
+      onOpenChange(false);
+      onCreated();
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  return (
+    <Sheet
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) reset();
+        onOpenChange(nextOpen);
+      }}
+    >
+      <SheetContent side="right" className="sm:max-w-md flex flex-col p-0">
+        <SheetHeader className="px-6 pt-6 pb-4 border-b border-border/60">
+          <SheetTitle>Add User</SheetTitle>
+          <SheetDescription>
+            Users are optional in the identity graph, but helpful for tracking who triggered usage within a company.
+          </SheetDescription>
+        </SheetHeader>
+
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+          <div className="space-y-1.5">
+            <Label>Company</Label>
+            <Select
+              value={form.companyId}
+              onValueChange={(companyId) => setForm((current) => ({ ...current, companyId }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={loadingCompanies ? "Loading companies..." : "Select company"} />
+              </SelectTrigger>
+              <SelectContent>
+                {companies.map((company) => (
+                  <SelectItem key={company.id} value={company.id}>
+                    {company.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="user-name">Name</Label>
+            <Input
+              id="user-name"
+              value={form.name}
+              onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
+              placeholder="Jane Doe"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="user-email">Email</Label>
+            <Input
+              id="user-email"
+              type="email"
+              value={form.email}
+              onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
+              placeholder="jane@acme.com"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="user-wallet">Wallet Address</Label>
+            <Input
+              id="user-wallet"
+              value={form.wallet}
+              onChange={(event) => setForm((current) => ({ ...current, wallet: event.target.value }))}
+              placeholder="0x..."
+              className="font-mono text-xs"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="user-external-id">External ID</Label>
+            <Input
+              id="user-external-id"
+              value={form.externalId}
+              onChange={(event) => setForm((current) => ({ ...current, externalId: event.target.value }))}
+              placeholder="user_123"
+              className="font-mono text-xs"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="user-clerk-id">Clerk User ID</Label>
+            <Input
+              id="user-clerk-id"
+              value={form.clerkUserId}
+              onChange={(event) => setForm((current) => ({ ...current, clerkUserId: event.target.value }))}
+              placeholder="user_2abc..."
+              className="font-mono text-xs"
+            />
+          </div>
+
+          {error && (
+            <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+              {error}
+            </div>
+          )}
+        </div>
+
+        <SheetFooter className="px-6 py-4 border-t border-border/60 flex-row gap-2">
+          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)} className="flex-1">
+            Cancel
+          </Button>
+          <Button size="sm" onClick={() => void handleCreate()} disabled={creating || !form.companyId} className="flex-1">
+            {creating ? (
+              <>
+                <RefreshCw className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                Creating…
+              </>
+            ) : (
+              "Add User"
+            )}
+          </Button>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
+  );
 }
 
 export function SubscribersSection() {
-    const { address, isConnected } = useAccount();
-    const [searchQuery, setSearchQuery] = useState("");
-    const [selectedFilter, setSelectedFilter] = useState<string>("all");
-    const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
+  const [users, setUsers] = useState<UserRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [showCreate, setShowCreate] = useState(false);
 
-    // Fetch provider's plan IDs first
-    const { data: plansData } = useQuery(GET_PROVIDER_PLANS, {
-        variables: { provider: address?.toLowerCase() },
-        skip: !isConnected || !address,
-    });
+  const fetchUsers = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (search.trim()) params.set("search", search.trim());
 
-    const planIds: string[] = (plansData?.plans ?? []).map((p: { id: string }) => p.id);
+      const res = await fetch(`/api/v1/users?${params.toString()}`, {
+        cache: "no-store",
+      });
+      if (!res.ok) return;
 
-    // Fetch subscribers for those plans
-    const {
-        data: subsData,
-        loading,
-        error,
-        refetch,
-    } = useQuery(GET_SUBSCRIBERS, {
-        variables: { provider: address?.toLowerCase(), planIds },
-        skip: !isConnected || !address || planIds.length === 0,
-    });
+      const data = (await res.json()) as { data?: UserRecord[] };
+      setUsers(data.data ?? []);
+    } finally {
+      setLoading(false);
+    }
+  }, [search]);
 
-    const allSubs: GqlSubscription[] = subsData?.subscriptions ?? [];
+  useEffect(() => {
+    void fetchUsers();
+  }, [fetchUsers]);
 
-    // Filter
-    const filtered = allSubs.filter((s) => {
-        const expiresAt = parseInt(s.expiration);
-        const status = getStatus(expiresAt);
-
-        const matchesSearch =
-            s.subscriber.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesFilter =
-            selectedFilter === "all" || status === selectedFilter;
-        return matchesSearch && matchesFilter;
-    });
-
-    const handleCopyAddress = (addr: string) => {
-        navigator.clipboard.writeText(addr);
-        setCopiedAddress(addr);
-        setTimeout(() => setCopiedAddress(null), 2000);
-    };
-
-    const handleExportCSV = () => {
-        const rows = [
-            ["Wallet", "Plan", "Tier", "ExpiresAt", "Status", "AmountPaid", "TxHash"],
-            ...filtered.map((s) => {
-                const expiresAt = parseInt(s.expiration);
-                return [
-                    s.subscriber,
-                    s.plan.name,
-                    s.plan.tier,
-                    new Date(expiresAt * 1000).toISOString(),
-                    getStatus(expiresAt),
-                    s.amountPaid,
-                    s.txHash,
-                ];
-            }),
-        ];
-        const csv = rows.map((r) => r.join(",")).join("\n");
-        const blob = new Blob([csv], { type: "text/csv" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "subscribers.csv";
-        a.click();
-        URL.revokeObjectURL(url);
-    };
-
-    return (
-        <TooltipProvider>
-        <div className="space-y-6">
-            {/* Header */}
-            <div>
-                <p className="text-sm text-muted-foreground">View and manage all your subscribers</p>
-            </div>
-
-            {/* Filters and search */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                        <input
-                            type="text"
-                            placeholder="Search by wallet address..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-72 h-9 pl-9 pr-4 rounded-lg bg-secondary border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/20 focus:border-accent transition-all duration-200"
-                        />
-                    </div>
-                    <div className="flex items-center gap-2">
-                        {["all", "active", "expiring", "expired"].map((filter) => (
-                            <button
-                                key={filter}
-                                onClick={() => setSelectedFilter(filter)}
-                                className={cn(
-                                    "px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200",
-                                    selectedFilter === filter
-                                        ? "bg-accent text-accent-foreground"
-                                        : "bg-secondary text-muted-foreground hover:text-foreground"
-                                )}
-                            >
-                                {filter.charAt(0).toUpperCase() + filter.slice(1)}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-                <button
-                    onClick={handleExportCSV}
-                    disabled={filtered.length === 0}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-secondary text-sm text-muted-foreground hover:text-foreground transition-colors duration-200 disabled:opacity-50"
-                >
-                    <Download className="w-4 h-4" />
-                    Export CSV
-                </button>
-            </div>
-
-            {/* Error */}
-            {error && (
-                <div className="flex items-center gap-3 p-4 rounded-xl bg-destructive/5 border border-destructive/20">
-                    <AlertCircle className="w-4 h-4 text-destructive shrink-0" />
-                    <p className="text-sm text-muted-foreground flex-1">Failed to load subscribers: {error.message}</p>
-                    <Button variant="ghost" size="sm" onClick={() => refetch()} className="shrink-0">
-                        <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
-                        Retry
-                    </Button>
-                </div>
-            )}
-
-            {/* Table */}
-            <div className="bg-card border border-border rounded-xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="overflow-x-auto">
-                    <table className="w-full">
-                        <thead>
-                            <tr className="border-b border-border bg-secondary/50">
-                                <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                                    <button className="flex items-center gap-1 hover:text-foreground transition-colors">
-                                        Wallet Address
-                                        <ArrowUpDown className="w-3 h-3" />
-                                    </button>
-                                </th>
-                                <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Plan Tier</th>
-                                <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                                    <button className="flex items-center gap-1 hover:text-foreground transition-colors">
-                                        Expires At
-                                        <ArrowUpDown className="w-3 h-3" />
-                                    </button>
-                                </th>
-                                <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
-                                <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Token ID</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {loading && Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)}
-                            {!loading && filtered.map((sub, index) => {
-                                const expiresAt = parseInt(sub.expiration);
-                                const status = getStatus(expiresAt);
-                                return (
-                                    <tr
-                                        key={sub.id}
-                                        className="border-b border-border last:border-0 hover:bg-secondary/20 transition-colors animate-in fade-in slide-in-from-left-2"
-                                        style={{ animationDelay: `${index * 40}ms`, animationFillMode: "both" }}
-                                    >
-                                        <td className="py-3 px-4">
-                                            <div className="flex items-center gap-2">
-                                                <code className="text-xs font-mono text-foreground">
-                                                    {truncateAddress(sub.subscriber)}
-                                                </code>
-                                                <button
-                                                    onClick={() => handleCopyAddress(sub.subscriber)}
-                                                    className="text-muted-foreground hover:text-foreground transition-colors"
-                                                    title="Copy address"
-                                                >
-                                                    {copiedAddress === sub.subscriber ? (
-                                                        <Check className="w-3 h-3 text-success" />
-                                                    ) : (
-                                                        <Copy className="w-3 h-3" />
-                                                    )}
-                                                </button>
-                                            </div>
-                                        </td>
-                                        <td className="py-3 px-4">
-                                            <Badge variant="secondary" className="text-xs">
-                                                {sub.plan.tier}
-                                            </Badge>
-                                        </td>
-                                        <td className="py-3 px-4">
-                                            <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                    <span className="text-sm text-muted-foreground cursor-default">
-                                                        {formatRelativeTime(expiresAt)}
-                                                    </span>
-                                                </TooltipTrigger>
-                                                <TooltipContent>
-                                                    <p className="text-xs">{formatAbsoluteTime(expiresAt)}</p>
-                                                </TooltipContent>
-                                            </Tooltip>
-                                        </td>
-                                        <td className="py-3 px-4">
-                                            <StatusBadge status={status} />
-                                        </td>
-                                        <td className="py-3 px-4">
-                                            <code className="text-xs text-muted-foreground font-mono">#{sub.id}</code>
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
-                </div>
-
-                {/* Empty state */}
-                {!loading && !error && filtered.length === 0 && (
-                    <div className="flex flex-col items-center justify-center py-16 text-center">
-                        <div className="w-14 h-14 rounded-xl bg-secondary flex items-center justify-center mb-4">
-                            <Users className="w-7 h-7 text-muted-foreground" />
-                        </div>
-                        <p className="text-sm font-medium text-foreground mb-1">
-                            {!isConnected ? "Connect your wallet" : "No subscribers yet"}
-                        </p>
-                        <p className="text-xs text-muted-foreground max-w-[320px]">
-                            {!isConnected
-                                ? "Connect to see your subscribers from The Graph"
-                                : "Subscribers will appear here once users mint subscription NFTs to your plans via the CheckoutModal"}
-                        </p>
-                    </div>
-                )}
-
-                {/* Pagination footer */}
-                <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-secondary/30">
-                    <span className="text-sm text-muted-foreground">
-                        Showing {filtered.length} subscriber{filtered.length !== 1 ? "s" : ""}
-                        {allSubs.length !== filtered.length && ` (${allSubs.length} total)`}
-                    </span>
-                </div>
-            </div>
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Users</h1>
+          <p className="text-muted-foreground text-sm mt-0.5">
+            Identified end users linked to companies through identify and track events.
+          </p>
         </div>
-        </TooltipProvider>
-    );
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={fetchUsers} disabled={loading}>
+            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            <span className="ml-1.5 hidden sm:inline">Refresh</span>
+          </Button>
+          <Button size="sm" onClick={() => setShowCreate(true)}>
+            <Plus className="h-4 w-4 mr-1.5" /> Add User
+          </Button>
+        </div>
+      </div>
+
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+        <Input
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Search by name, email, wallet, or company…"
+          className="pl-9"
+        />
+      </div>
+
+      {loading ? (
+        <div className="space-y-2">
+          {[...Array(4)].map((_, index) => (
+            <div key={index} className="h-14 rounded-lg bg-muted/40 animate-pulse" />
+          ))}
+        </div>
+      ) : users.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-border bg-muted/20 p-14 text-center space-y-3">
+          <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto">
+            <Users className="h-6 w-6 text-primary" />
+          </div>
+          <div>
+            <p className="font-medium">{search ? "No users match your search" : "No users identified yet"}</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              {search
+                ? "Try a different search term."
+                : "Users appear here when your app sends identify or track calls with user keys like email, wallet, Clerk ID, or an internal user ID."}
+            </p>
+          </div>
+          {!search && (
+            <Button size="sm" onClick={() => setShowCreate(true)}>
+              <Plus className="h-4 w-4 mr-1.5" /> Add User
+            </Button>
+          )}
+        </div>
+      ) : (
+        <div className="rounded-xl border border-border overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-muted/40 border-b border-border/60">
+                <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">User</th>
+                <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide hidden lg:table-cell">Email</th>
+                <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide hidden xl:table-cell">Wallet</th>
+                <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Company</th>
+                <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide hidden sm:table-cell">Last Seen</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border/40">
+              {users.map((user) => {
+                const displayName = user.name || user.email || user.walletAddress || user.externalId || "Unknown";
+                const identityMode = user.walletAddress ? "Wallet" : user.email ? "Email" : "Named";
+
+                return (
+                  <tr key={user.id} className="hover:bg-muted/20 transition-colors">
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                          <UserRound className="h-4 w-4 text-primary" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-medium truncate">{displayName}</span>
+                            <Badge variant="outline" className="text-[11px]">
+                              {identityMode}
+                            </Badge>
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-2 flex-wrap">
+                            {user.clerkUserId && <span>Clerk</span>}
+                            {user.externalId && (
+                              <code className="font-mono">{user.externalId}</code>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 hidden lg:table-cell">
+                      {user.email ? (
+                        <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                          <Mail className="h-3.5 w-3.5" />
+                          {user.email}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground/40 text-xs">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 hidden xl:table-cell">
+                      {user.walletAddress ? (
+                        <span className="flex items-center gap-1.5 font-mono text-xs text-muted-foreground">
+                          <Wallet className="h-3.5 w-3.5" />
+                          {user.walletAddress.slice(0, 8)}…{user.walletAddress.slice(-6)}
+                          <CopyButton text={user.walletAddress} />
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground/40 text-xs">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+                        <div>
+                          <div className="text-sm font-medium text-foreground">
+                            {user.company?.name ?? "Unknown company"}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {user.company?.email ?? user.company?.walletAddress ?? user.companyId}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 hidden sm:table-cell text-xs text-muted-foreground">
+                      {formatRelativeTime(new Date(user.lastSeenAt).getTime() / 1000)}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <CreateUserSheet open={showCreate} onOpenChange={setShowCreate} onCreated={fetchUsers} />
+    </div>
+  );
 }

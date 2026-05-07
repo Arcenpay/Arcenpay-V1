@@ -209,6 +209,7 @@ async function upsertUserForToken(
         ...(externalId ? { id: externalId } : {}),
         ...(wallet ? { wallet } : {}),
         ...(clerkUserId ? { clerkUserId } : {}),
+        ...(email ? { email } : {}),
       });
       if (resolved) return { id: resolved.id, created: false };
     }
@@ -381,7 +382,8 @@ export async function POST(req: NextRequest) {
     companyId &&
     (userInput.id ||
       (userInput as Record<string, unknown>).clerk_user_id ||
-      userInput.wallet)
+      userInput.wallet ||
+      userInput.email)
   ) {
     const userResult = await upsertUserForToken(teamId, companyId, userInput);
     userId = userResult.id;

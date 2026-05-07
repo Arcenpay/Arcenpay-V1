@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
 import {
   Table,
   TableBody,
@@ -4228,20 +4229,33 @@ function AddEntitlementDialog({
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Load features from catalog when dialog opens
+  const featRef = useRef(currentEntitlements);
+  featRef.current = currentEntitlements;
+
   useEffect(() => {
     if (!open) return;
     setFeaturesLoading(true);
     fetch("/api/v1/features")
       .then((r) => r.ok ? r.json() : { features: [] })
-      .then((d: { features?: CatalogFeatureDef[] }) => setCatalogFeatures(d.features ?? []))
+      .then((d: { features?: CatalogFeatureDef[] }) => {
+        const added = featRef.current ?? [];
+        const addedKeys = new Set(added.map((e) => e.featureKey.toLowerCase()));
+        // Filter out features already added to this plan
+        setCatalogFeatures(
+          (d.features ?? []).filter(
+            (feat) => !addedKeys.has(feat.featureKey.toLowerCase()),
+          ),
+        );
+      })
       .catch(() => setCatalogFeatures([]))
       .finally(() => setFeaturesLoading(false));
   }, [open]);
 
   function selectFeature(feat: CatalogFeatureDef) {
     setSelectedFeature(feat);
-    const type: "BOOLEAN" | "NUMERIC" | "UNLIMITED" =
-      feat.featureType === "event" ? "NUMERIC" : "BOOLEAN";
+    // Boolean features → BOOLEAN entitlement; trait/event features → NUMERIC
+    const isBool = feat.featureType === "boolean";
+    const type: "BOOLEAN" | "NUMERIC" | "UNLIMITED" = isBool ? "BOOLEAN" : "NUMERIC";
     setForm({
       featureName: feat.name,
       featureKey: feat.featureKey,
@@ -4252,6 +4266,9 @@ function AddEntitlementDialog({
     });
     setErrors({});
   }
+
+  // ─── Helper to check if a feature is boolean ────────────────────────────
+  const isBooleanFeature = selectedFeature?.featureType === "boolean";
 
   function clearFeature() {
     setSelectedFeature(null);
@@ -4366,7 +4383,7 @@ function AddEntitlementDialog({
                       <SelectItem key={f.id} value={f.id}>
                         <div className="flex items-center gap-2 py-0.5">
                           <div className="w-5 h-5 rounded bg-secondary border border-border flex items-center justify-center shrink-0">
-                            {f.featureType === "event" ? (
+                            {f.featureType !== "boolean" ? (
                               <Hash className="w-3 h-3 text-violet-500" />
                             ) : (
                               <ToggleLeft className="w-3 h-3 text-blue-500" />
@@ -4395,7 +4412,7 @@ function AddEntitlementDialog({
               {/* Feature info pill */}
               <div className="flex items-center gap-2 p-3 rounded-lg bg-secondary/50 border border-border">
                 <div className="w-8 h-8 rounded-lg bg-card border border-border flex items-center justify-center shrink-0">
-                  {selectedFeature.featureType === "event" ? (
+                  {selectedFeature.featureType !== "boolean" ? (
                     <Hash className="w-4 h-4 text-violet-500" />
                   ) : (
                     <ToggleLeft className="w-4 h-4 text-blue-500" />
@@ -4418,7 +4435,13 @@ function AddEntitlementDialog({
               <div className="space-y-2">
                 <Label className="text-sm font-medium">Entitlement type</Label>
                 <div className="space-y-2">
-                  {(["BOOLEAN", "NUMERIC", "UNLIMITED"] as const).map((t) => (
+                  {(["BOOLEAN", "NUMERIC", "UNLIMITED"] as const)
+                    .filter((t) => {
+                      // Lock type to feature's kind: boolean → only BOOLEAN, trait/event → NUMERIC/UNLIMITED
+                      if (isBooleanFeature) return t === "BOOLEAN";
+                      return t === "NUMERIC" || t === "UNLIMITED";
+                    })
+                    .map((t) => (
                     <button
                       key={t}
                       type="button"
@@ -5400,6 +5423,7 @@ function PlanDetailView({
   onBack: () => void;
   onUpdated: () => void;
 }) {
+  const router = useRouter();
   const [detailTab, setDetailTab] = useState<
     "entitlements" | "companies" | "billing"
   >("entitlements");
@@ -5520,6 +5544,13 @@ function PlanDetailView({
     navigator.clipboard.writeText(plan.id);
     setCopiedId(true);
     setTimeout(() => setCopiedId(false), 2000);
+  }
+
+  function openEntitlementInFlags(featureKey: string) {
+    router.push(
+      `/?section=feature-flags&flag=${encodeURIComponent(featureKey)}&planId=${encodeURIComponent(plan.id)}&editPlan=1`,
+      { scroll: false },
+    );
   }
 
   const isFree = parseFloat(plan.price) === 0;
@@ -5833,6 +5864,11 @@ function PlanDetailView({
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
+                                  <DropdownMenuItem
+                                    onClick={() => openEntitlementInFlags(ent.featureKey)}
+                                  >
+                                    Edit in Flags
+                                  </DropdownMenuItem>
                                   <DropdownMenuItem
                                     onClick={() => toggleEntitlement(ent.featureKey, !ent.enabled)}
                                     disabled={toggling === ent.featureKey}

@@ -37,6 +37,7 @@ export async function GET(req: NextRequest) {
               { name: { contains: search, mode: "insensitive" } },
               { email: { contains: search, mode: "insensitive" } },
               { walletAddress: { contains: search, mode: "insensitive" } },
+              { company: { name: { contains: search, mode: "insensitive" } } },
             ],
           }
         : {}),
@@ -54,6 +55,14 @@ export async function GET(req: NextRequest) {
       companyId: true,
       createdAt: true,
       lastSeenAt: true,
+      company: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          walletAddress: true,
+        },
+      },
     },
   });
 

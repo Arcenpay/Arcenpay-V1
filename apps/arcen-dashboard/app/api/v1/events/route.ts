@@ -102,6 +102,7 @@ interface UserInput {
   id?: string;
   clerk_user_id?: string;
   wallet?: string;
+  email?: string;
 }
 
 interface TrackEventBody {
@@ -149,9 +150,17 @@ async function upsertCompany(
       ...(existing.traits as Record<string, unknown>),
       ...(traits ?? {}),
     };
+    const updates: Prisma.ArcenCompanyUpdateInput = {
+      traits: mergedTraits as unknown as Prisma.InputJsonValue,
+      lastSeenAt: new Date(),
+      ...(input.name ? { name: input.name } : {}),
+      ...(walletAddress ? { walletAddress } : {}),
+      ...(input.email ? { email: input.email } : {}),
+      ...(input.id ? { externalId: input.id } : {}),
+    };
     await db.arcenCompany.update({
       where: { id: existing.id },
-      data: { traits: mergedTraits as unknown as Prisma.InputJsonValue, lastSeenAt: new Date() },
+      data: updates,
     });
     return { id: existing.id, created: false };
   }
@@ -178,7 +187,7 @@ async function upsertUser(
   input: UserInput & { name?: string; email?: string },
   traits?: Record<string, unknown>,
 ): Promise<{ id: string; created: boolean } | null> {
-  if (!input.id && !input.clerk_user_id && !input.wallet) return null;
+  if (!input.id && !input.clerk_user_id && !input.wallet && !input.email) return null;
 
   const walletAddress = input.wallet?.toLowerCase();
 
@@ -186,6 +195,7 @@ async function upsertUser(
   if (input.id) where.push({ teamId, externalId: input.id });
   if (input.clerk_user_id) where.push({ teamId, clerkUserId: input.clerk_user_id });
   if (walletAddress) where.push({ teamId, walletAddress });
+  if (input.email) where.push({ teamId, email: input.email });
 
   const existing = await db.arcenUser.findFirst({
     where: { OR: where },
@@ -200,10 +210,14 @@ async function upsertUser(
     await db.arcenUser.update({
       where: { id: existing.id },
       data: {
+        companyId,
         traits: mergedTraits as unknown as Prisma.InputJsonValue,
         lastSeenAt: new Date(),
         ...(input.name ? { name: input.name } : {}),
         ...(input.email ? { email: input.email } : {}),
+        ...(walletAddress ? { walletAddress } : {}),
+        ...(input.clerk_user_id ? { clerkUserId: input.clerk_user_id } : {}),
+        ...(input.id ? { externalId: input.id } : {}),
       },
     });
     return { id: existing.id, created: false };
@@ -288,6 +302,17 @@ export async function POST(req: NextRequest) {
     }
     if (tb.company?.id && tb.company.id.length > 64) {
       return jsonWithCors({ error: "company id too long" }, req, { status: 400 });
+    }
+    if (tb.user?.wallet && !/^0x[0-9a-fA-F]{40}$/.test(tb.user.wallet)) {
+      return jsonWithCors({ error: "Invalid wallet address format" }, req, { status: 400 });
+    }
+    if (tb.user?.email) {
+      if (tb.user.email.length > 254) {
+        return jsonWithCors({ error: "email too long" }, req, { status: 400 });
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(tb.user.email)) {
+        return jsonWithCors({ error: "Invalid email format" }, req, { status: 400 });
+      }
     }
     if (tb.traits !== undefined && (typeof tb.traits !== "object" || tb.traits === null || Array.isArray(tb.traits))) {
       return jsonWithCors({ error: "traits must be a plain object" }, req, { status: 400 });

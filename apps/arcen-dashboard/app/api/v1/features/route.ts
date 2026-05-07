@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requirePermission, isErrorResponse } from "@/lib/api-auth";
 import { db } from "@/lib/db";
+import { loadPublishedPlanLinksByFeatureKey } from "@/lib/catalog-entitlements";
 
 function toUiFeatureType(
   featureType: string | null | undefined,
@@ -44,19 +45,22 @@ export async function GET(request: NextRequest) {
 
   const teamId = auth.team.teamId;
 
-  const flags = await db.catalogFeatureFlag.findMany({
-    where: { teamId },
-    orderBy: { createdAt: "desc" },
-    select: {
-      id: true,
-      name: true,
-      featureKey: true,
-      featureType: true,
-      eventKey: true,
-      description: true,
-      createdAt: true,
-    },
-  });
+  const [flags, linkedPlansByFeatureKey] = await Promise.all([
+    db.catalogFeatureFlag.findMany({
+      where: { teamId },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        name: true,
+        featureKey: true,
+        featureType: true,
+        eventKey: true,
+        description: true,
+        createdAt: true,
+      },
+    }),
+    loadPublishedPlanLinksByFeatureKey(teamId),
+  ]);
 
   const features = flags.map((f) => ({
     id: f.id,
@@ -66,7 +70,7 @@ export async function GET(request: NextRequest) {
     eventKey: f.eventKey ?? null,
     traitKey: null, // not stored in schema; reserved for future use
     description: f.description ?? null,
-    linkedPlans: [] as string[],
+    linkedPlans: (linkedPlansByFeatureKey.get(f.featureKey) ?? []).map((plan) => plan.name),
     createdAt: f.createdAt.toISOString(),
   }));
 

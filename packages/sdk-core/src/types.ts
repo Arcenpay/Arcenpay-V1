@@ -510,6 +510,8 @@ export interface ArcenUserKeys {
   clerkUserId?: string;
   /** Wallet address */
   wallet?: string;
+  /** User email address */
+  email?: string;
 }
 
 /** A company entity in the entitlement system */

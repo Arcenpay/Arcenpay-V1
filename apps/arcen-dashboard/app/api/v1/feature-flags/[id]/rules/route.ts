@@ -27,6 +27,14 @@ interface RuleInput {
   conditions: ConditionInput[];
 }
 
+function containsPlanCriteria(conditions: ConditionInput[] | undefined): boolean {
+  return (conditions ?? []).some((condition) => condition.criteriaType === "base_plan");
+}
+
+function hasInvalidRulePayload(rules: RuleInput[] | undefined): boolean {
+  return (rules ?? []).some((rule) => containsPlanCriteria(rule.conditions));
+}
+
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
@@ -91,12 +99,22 @@ export async function POST(
       return NextResponse.json({ error: "metricValue must be a finite number >= 0" }, { status: 400 });
     }
   }
+  if (containsPlanCriteria(body.conditions)) {
+    return NextResponse.json(
+      {
+        error:
+          "Base plan targeting is managed from Plan Catalog entitlements and cannot be created in Flags.",
+      },
+      { status: 400 },
+    );
+  }
 
   const rule = await db.flagRule.create({
     data: {
       flagId: flag.id,
       priority: body.priority,
       value: body.value,
+      source: "manual",
       conditions: {
         create: (body.conditions ?? []).map((c) => ({
           criteriaType: c.criteriaType,
@@ -159,16 +177,34 @@ export async function PUT(
       }
     }
   }
+  if (hasInvalidRulePayload(body.rules)) {
+    return NextResponse.json(
+      {
+        error:
+          "Base plan targeting is managed from Plan Catalog entitlements and cannot be edited in Flags.",
+      },
+      { status: 400 },
+    );
+  }
 
-  // Delete existing rules and recreate (transactional replace)
+  // Replace only editable manual rules. Plan-derived rows are preserved because
+  // plan access is owned by Plan Catalog.
   await db.$transaction([
-    db.flagRule.deleteMany({ where: { flagId: flag.id } }),
+    db.flagRule.deleteMany({
+      where: {
+        flagId: flag.id,
+        NOT: {
+          source: "plan",
+        },
+      },
+    }),
     ...body.rules.map((rule, i) =>
       db.flagRule.create({
         data: {
           flagId: flag.id,
           priority: rule.priority ?? i,
           value: rule.value,
+          source: "manual",
           conditions: {
             create: (rule.conditions ?? []).map((c) => ({
               criteriaType: c.criteriaType,

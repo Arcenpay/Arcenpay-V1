@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Flag, Plus, RefreshCw, Trash2, GripVertical, Check, X,
   Zap, Shield, ChevronRight, Settings2, Info, ArrowLeft,
-  MoreHorizontal, Copy, Building2,
+  MoreHorizontal, Copy, Building2, Pencil,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -17,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -37,6 +39,8 @@ interface FlagRule {
   id: string;
   priority: number;
   value: boolean;
+  source?: string | null;
+  sourceId?: string | null;
   conditions: FlagCondition[];
 }
 
@@ -49,6 +53,9 @@ interface FeatureFlag {
   eventKey: string | null;
   defaultValue: boolean;
   createdAt: string;
+  linkedPlans: CatalogPlanOption[];
+  planEntitlements: PlanEntitlementSummary[];
+  planRules: FlagRule[];
   rules: FlagRule[];
 }
 
@@ -72,10 +79,26 @@ interface CompanyOption {
   name: string;
 }
 
+interface CatalogPlanOption {
+  id: string;
+  name: string;
+  tier: string;
+}
+
+interface PlanEntitlementSummary extends CatalogPlanOption {
+  type: "BOOLEAN" | "NUMERIC" | "UNLIMITED";
+  value: boolean | number | null;
+  valueUnit?: string | null;
+}
+
+interface CatalogAddOnOption {
+  id: string;
+  name: string;
+}
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const CRITERIA_TYPES = [
-  { value: "base_plan",     label: "Base Plan" },
+const MANUAL_CRITERIA_TYPES = [
   { value: "add_on",        label: "Add-On" },
   { value: "usage",         label: "Usage (Event Count)" },
   { value: "company_trait", label: "Company Trait" },
@@ -92,32 +115,61 @@ const OPERATORS_BY_CRITERIA: Record<string, { value: string; label: string }[]> 
   zktls_claim:   [{ value: "exists", label: "proof exists" }],
 };
 
-// ─── ConditionEditor ──────────────────────────────────────────────────────────
+function isPlanManagedRule(rule: Pick<FlagRule, "source" | "conditions">) {
+  return (
+    rule.source === "plan" ||
+    rule.conditions.some((condition) => condition.criteriaType === "base_plan")
+  );
+}
 
-interface CatalogPlanOption { id: string; name: string; tier: string; }
-interface CatalogAddOnOption { id: string; name: string; }
+const CRITERIA_LABELS: Record<string, string> = {
+  base_plan: "Base Plan",
+  add_on: "Add-On",
+  usage: "Usage",
+  company_trait: "Company Trait",
+  user_trait: "User Trait",
+  zktls_claim: "zkTLS Claim",
+};
+
+function formatConditionValueSummary(condition: Pick<
+  FlagCondition,
+  "criteriaType" | "operator" | "values" | "metricKey" | "metricValue" | "metricPeriod" | "traitKey" | "zktlsProviderId"
+>) {
+  switch (condition.criteriaType) {
+    case "base_plan":
+    case "add_on":
+      return (Array.isArray(condition.values) ? condition.values : [])
+        .filter((value) => typeof value === "string" && value.length > 0)
+        .join(", ");
+    case "usage":
+      return [condition.metricKey, condition.operator === "is_less_than" ? "<" : condition.operator, condition.metricValue, condition.metricPeriod]
+        .filter((value) => value !== null && value !== undefined && value !== "")
+        .join(" · ");
+    case "company_trait":
+    case "user_trait":
+      return [condition.traitKey, ...(Array.isArray(condition.values) ? condition.values : [])]
+        .filter((value) => typeof value === "string" && value.length > 0)
+        .join(" · ");
+    case "zktls_claim":
+      return condition.zktlsProviderId ?? "Proof exists";
+    default:
+      return "";
+  }
+}
+
+// ─── ConditionEditor ──────────────────────────────────────────────────────────
 
 function ConditionEditor({ condition, onChange, onDelete }: {
   condition: Partial<FlagCondition>;
   onChange: (c: Partial<FlagCondition>) => void;
   onDelete: () => void;
 }) {
-  const type = condition.criteriaType ?? "base_plan";
+  const type = condition.criteriaType ?? "company_trait";
   const ops  = OPERATORS_BY_CRITERIA[type] ?? [];
 
-  const [plans, setPlans] = useState<CatalogPlanOption[]>([]);
   const [addOns, setAddOns] = useState<CatalogAddOnOption[]>([]);
 
   useEffect(() => {
-    if (type === "base_plan") {
-      fetch("/api/catalog/plans?status=PUBLISHED")
-        .then((r) => r.json())
-        .then((d) => {
-          const items = (d?.data ?? d?.plans ?? []) as CatalogPlanOption[];
-          setPlans(items);
-        })
-        .catch(() => {});
-    }
     if (type === "add_on") {
       fetch("/api/catalog/add-ons")
         .then((r) => r.json())
@@ -149,7 +201,7 @@ function ConditionEditor({ condition, onChange, onDelete }: {
           onChange={(e) => onChange({ ...condition, criteriaType: e.target.value, operator: OPERATORS_BY_CRITERIA[e.target.value]?.[0]?.value ?? "equals" })}
           className={selectCls}
         >
-          {CRITERIA_TYPES.map((ct) => <option key={ct.value} value={ct.value}>{ct.label}</option>)}
+          {MANUAL_CRITERIA_TYPES.map((ct) => <option key={ct.value} value={ct.value}>{ct.label}</option>)}
         </select>
 
         {/* Operator */}
@@ -204,40 +256,6 @@ function ConditionEditor({ condition, onChange, onDelete }: {
             className="col-span-2 h-8 text-xs border border-border rounded-md px-2 bg-background focus:outline-none focus:ring-1 focus:ring-ring font-mono" />
         )}
 
-        {/* Plan picker */}
-        {type === "base_plan" && (
-          <div className="col-span-2 space-y-1">
-            {plans.length === 0 ? (
-              <p className="text-xs text-muted-foreground italic">No published plans found</p>
-            ) : (
-              <div className="flex flex-wrap gap-1.5">
-                {plans.map((p) => {
-                  const selected = selectedValues.includes(p.id);
-                  return (
-                    <button
-                      key={p.id}
-                      type="button"
-                      onClick={() => toggleOption(p.id)}
-                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium border transition-colors ${
-                        selected
-                          ? "bg-primary text-primary-foreground border-primary"
-                          : "bg-background border-border text-muted-foreground hover:border-primary/60"
-                      }`}
-                    >
-                      {selected && <Check className="w-3 h-3" />}
-                      {p.name}
-                      <span className="opacity-60">· {p.tier}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-            {selectedValues.length === 0 && (
-              <p className="text-xs text-destructive/70">Select at least one plan</p>
-            )}
-          </div>
-        )}
-
         {/* Add-on picker */}
         {type === "add_on" && (
           <div className="col-span-2 space-y-1">
@@ -287,7 +305,7 @@ function RuleEditor({ rule, index, onChange, onDelete }: {
   const addCondition = () => {
     onChange({
       ...rule,
-      conditions: [...rule.conditions, { criteriaType: "base_plan", operator: "is_one_of", values: [] }] as unknown as FlagCondition[],
+      conditions: [...rule.conditions, { criteriaType: "company_trait", operator: "equals", values: [] }] as unknown as FlagCondition[],
     });
   };
 
@@ -337,6 +355,380 @@ function RuleEditor({ rule, index, onChange, onDelete }: {
           className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1.5 rounded-md hover:bg-muted/50 border border-dashed border-border/60 w-full justify-center">
           <Plus className="h-3 w-3" /> Add Condition
         </button>
+      </div>
+    </div>
+  );
+}
+
+function formatPlanEntitlementValue(
+  planEntitlement: PlanEntitlementSummary,
+  fallbackUnitLabel: string,
+) {
+  if (planEntitlement.type === "BOOLEAN") {
+    return "Enabled";
+  }
+
+  if (planEntitlement.type === "UNLIMITED") {
+    return "Unlimited";
+  }
+
+  return `${planEntitlement.value ?? "—"} ${
+    planEntitlement.valueUnit || fallbackUnitLabel
+  } per month`;
+}
+
+function EditPlanEntitlementSheet({
+  flag,
+  planEntitlement,
+  open,
+  onOpenChange,
+  onSaved,
+}: {
+  flag: FeatureFlag;
+  planEntitlement: PlanEntitlementSummary | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSaved: () => void;
+}) {
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [form, setForm] = useState({
+    type: "BOOLEAN" as "BOOLEAN" | "NUMERIC" | "UNLIMITED",
+    value: "",
+    valueUnit: "",
+    enabled: true,
+  });
+
+  useEffect(() => {
+    if (!open || !planEntitlement) return;
+
+    setForm({
+      type: planEntitlement.type,
+      value:
+        planEntitlement.type === "NUMERIC" && typeof planEntitlement.value === "number"
+          ? String(planEntitlement.value)
+          : "",
+      valueUnit: planEntitlement.valueUnit ?? flag.eventKey ?? flag.featureKey,
+      enabled: true,
+    });
+    setErrors({});
+  }, [flag.eventKey, flag.featureKey, open, planEntitlement]);
+
+  async function handleSave() {
+    if (!planEntitlement) return;
+
+    const nextErrors: Record<string, string> = {};
+    if (form.type === "NUMERIC") {
+      const nextValue = Number(form.value);
+      if (form.value === "" || Number.isNaN(nextValue) || nextValue < 0) {
+        nextErrors.value = "Enter a valid monthly limit";
+      }
+    }
+
+    if (Object.keys(nextErrors).length > 0) {
+      setErrors(nextErrors);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const value =
+        form.type === "BOOLEAN"
+          ? form.enabled
+          : form.type === "NUMERIC"
+            ? Number(form.value)
+            : null;
+
+      const res = await fetch(`/api/catalog/plans/${planEntitlement.id}/entitlements`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          featureKey: flag.featureKey,
+          featureName: flag.name,
+          type: form.type,
+          value,
+          valueUnit: form.type === "NUMERIC" ? form.valueUnit || null : null,
+          enabled: form.enabled,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as { error?: string };
+        setErrors({ _global: data.error || "Failed to update entitlement" });
+        return;
+      }
+
+      onOpenChange(false);
+      onSaved();
+      toast.success(`Updated ${planEntitlement.name}`);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const planSupportsUsage = flag.featureType !== "boolean";
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="right" className="sm:max-w-lg flex flex-col p-0">
+        <SheetHeader className="px-6 pt-6 pb-4 border-b border-border/60">
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            Plan Entitlement
+          </p>
+          <div className="flex items-center gap-2 mt-0.5">
+            <SheetTitle className="text-lg font-semibold">{planEntitlement?.name ?? "Plan"}</SheetTitle>
+            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+            <span className="text-lg text-muted-foreground font-normal">{flag.name}</span>
+          </div>
+          <SheetDescription>
+            This saves back to Plan Catalog and refreshes the live rule shown in Flags.
+          </SheetDescription>
+        </SheetHeader>
+
+        {planEntitlement && (
+          <>
+            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+              <div className="rounded-xl border border-border bg-secondary/20 p-4 space-y-2">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">{planEntitlement.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {planEntitlement.tier} plan · {flag.featureKey}
+                    </p>
+                  </div>
+                  <Badge variant="outline" className="text-xs">
+                    Synced
+                  </Badge>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Add or remove plan access from Plan Catalog. Use this view to update the linked entitlement settings in one place.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Entitlement type</Label>
+                <div className="grid grid-cols-1 gap-2">
+                  {(["BOOLEAN", "NUMERIC", "UNLIMITED"] as const)
+                    .filter((type) => {
+                      if (!planSupportsUsage) return type === "BOOLEAN";
+                      return type === "NUMERIC" || type === "UNLIMITED";
+                    })
+                    .map((type) => (
+                      <button
+                        key={type}
+                        type="button"
+                        onClick={() =>
+                          setForm((current) => ({
+                            ...current,
+                            type,
+                            value: type === "NUMERIC" ? current.value : "",
+                          }))
+                        }
+                        className={`flex items-center gap-3 px-3 py-3 rounded-lg border text-sm transition-all text-left ${
+                          form.type === type
+                            ? "bg-accent/5 border-accent text-foreground"
+                            : "bg-secondary border-border text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        <div
+                          className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                            form.type === type ? "bg-accent/10" : "bg-card border border-border"
+                          }`}
+                        >
+                          {type === "BOOLEAN" ? (
+                            <Flag className={`w-4 h-4 ${form.type === type ? "text-accent" : "text-muted-foreground"}`} />
+                          ) : type === "NUMERIC" ? (
+                            <Zap className={`w-4 h-4 ${form.type === type ? "text-accent" : "text-muted-foreground"}`} />
+                          ) : (
+                            <Shield className={`w-4 h-4 ${form.type === type ? "text-accent" : "text-muted-foreground"}`} />
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-medium leading-none">
+                            {type === "BOOLEAN" ? "Boolean access" : type === "NUMERIC" ? "Usage limit" : "Unlimited"}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {type === "BOOLEAN"
+                              ? "Simple on or off access"
+                              : type === "NUMERIC"
+                                ? "Monthly allowance enforced during evaluation"
+                                : "No cap for this plan"}
+                          </p>
+                        </div>
+                        {form.type === type && <Check className="w-4 h-4 text-accent shrink-0" />}
+                      </button>
+                    ))}
+                </div>
+              </div>
+
+              {form.type === "NUMERIC" && (
+                <div className="space-y-3 p-4 rounded-lg bg-secondary/30 border border-border">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Monthly limit</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      value={form.value}
+                      onChange={(event) =>
+                        setForm((current) => ({ ...current, value: event.target.value }))
+                      }
+                      placeholder="e.g. 300"
+                      className="bg-background border-border"
+                    />
+                    {errors.value && <p className="text-xs text-destructive">{errors.value}</p>}
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Unit label</Label>
+                    <Input
+                      value={form.valueUnit}
+                      onChange={(event) =>
+                        setForm((current) => ({ ...current, valueUnit: event.target.value }))
+                      }
+                      placeholder={flag.eventKey ?? flag.featureKey}
+                      className="bg-background border-border"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      This renders and evaluates as {form.value || "0"} {form.valueUnit || flag.eventKey || flag.featureKey} per month.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-center justify-between p-4 rounded-lg bg-secondary/30 border border-border">
+                <div>
+                  <p className="text-sm font-medium">Enabled</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Turn this entitlement on or off for the selected plan
+                  </p>
+                </div>
+                <Switch
+                  checked={form.enabled}
+                  onCheckedChange={(enabled) => setForm((current) => ({ ...current, enabled }))}
+                />
+              </div>
+
+              {errors._global && (
+                <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+                  {errors._global}
+                </div>
+              )}
+            </div>
+
+            <SheetFooter className="px-6 py-4 border-t border-border/60 flex-row gap-2">
+              <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
+                Cancel
+              </Button>
+              <Button onClick={() => void handleSave()} disabled={loading} className="flex-1">
+                {loading ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    Saving…
+                  </>
+                ) : (
+                  "Save entitlement"
+                )}
+              </Button>
+            </SheetFooter>
+          </>
+        )}
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+function ReadOnlyRuleCard({
+  rule,
+  index,
+  planEntitlement,
+  fallbackUnitLabel,
+  highlighted,
+  onEdit,
+}: {
+  rule: FlagRule;
+  index: number;
+  planEntitlement?: PlanEntitlementSummary;
+  fallbackUnitLabel: string;
+  highlighted?: boolean;
+  onEdit: () => void;
+}) {
+  return (
+    <div
+      className={`border rounded-xl bg-card shadow-sm overflow-hidden transition-all ${
+        highlighted ? "border-accent ring-2 ring-accent/15" : "border-border"
+      }`}
+    >
+      <div className="flex items-center justify-between px-4 py-2.5 bg-muted/30 border-b border-border/60 gap-3">
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+            Rule {index + 1}
+          </span>
+          <Badge variant="outline" className="text-[11px]">
+            Synced from Plan Catalog
+          </Badge>
+          <span className="text-xs text-muted-foreground">
+            This plan-linked rule stays in sync with the catalog entitlement.
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge className="text-xs bg-emerald-500/15 text-emerald-600 border-emerald-500/30 dark:text-emerald-400">
+            Active
+          </Badge>
+          <Button variant="outline" size="sm" className="h-8 gap-1.5" onClick={onEdit}>
+            <Pencil className="w-3.5 h-3.5" />
+            Edit
+          </Button>
+        </div>
+      </div>
+
+      <div className="p-3 space-y-3">
+        <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Linked Plan
+            </p>
+            {planEntitlement ? (
+              <div className="flex items-center gap-2 mt-1">
+                <Badge variant="secondary" className="text-xs">
+                  {planEntitlement.name}
+                  <span className="ml-1 opacity-60">· {planEntitlement.tier}</span>
+                </Badge>
+              </div>
+            ) : (
+              <Badge variant="secondary" className="text-xs mt-1">
+                Unknown plan
+              </Badge>
+            )}
+          </div>
+          {planEntitlement && (
+            <div className="text-left sm:text-right">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Entitlement Value
+              </p>
+              <p className="text-sm font-medium text-foreground mt-1">
+                {formatPlanEntitlementValue(planEntitlement, fallbackUnitLabel)}
+              </p>
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          {rule.conditions.map((condition, conditionIndex) => (
+            <div
+              key={`${rule.id}-condition-${conditionIndex}`}
+              className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2"
+            >
+              <p className="text-xs font-medium text-foreground">
+                {CRITERIA_LABELS[condition.criteriaType] ?? condition.criteriaType}
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {OPERATORS_BY_CRITERIA[condition.criteriaType]?.find(
+                  (operator) => operator.value === condition.operator,
+                )?.label ?? condition.operator}
+                {formatConditionValueSummary(condition) ? ` · ${formatConditionValueSummary(condition)}` : ""}
+              </p>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -616,16 +1008,21 @@ function FlagDetailView({
   flag,
   onBack,
   onSaved,
+  focusedPlanId,
+  onPlanEditorHandled,
 }: {
   flag: FeatureFlag;
   onBack: () => void;
   onSaved: () => void;
+  focusedPlanId?: string | null;
+  onPlanEditorHandled?: () => void;
 }) {
   const [detailTab, setDetailTab] = useState<"rules" | "companies">("rules");
   const [rules, setRules] = useState<(Partial<FlagRule> & { conditions: Partial<FlagCondition>[] })[]>([]);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [copiedKey, setCopiedKey] = useState(false);
+  const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
   const [overrides, setOverrides] = useState<CompanyOverrideRow[]>([]);
   const [overridesLoading, setOverridesLoading] = useState(false);
   const [companies, setCompanies] = useState<CompanyOption[]>([]);
@@ -644,6 +1041,16 @@ function FlagDetailView({
   useEffect(() => {
     setRules(flag.rules.map((r) => ({ ...r })));
   }, [flag]);
+
+  useEffect(() => {
+    if (!focusedPlanId) return;
+    if (!flag.planEntitlements.some((planEntitlement) => planEntitlement.id === focusedPlanId)) {
+      return;
+    }
+
+    setEditingPlanId(focusedPlanId);
+    onPlanEditorHandled?.();
+  }, [flag.planEntitlements, focusedPlanId, onPlanEditorHandled]);
 
   useEffect(() => {
     if (detailTab !== "companies") return;
@@ -688,16 +1095,32 @@ function FlagDetailView({
   }, [detailTab, flag.id]);
 
   const saveRules = async () => {
+    const editableRules = rules.filter(
+      (rule): rule is Partial<FlagRule> & { conditions: Partial<FlagCondition>[] } =>
+        !isPlanManagedRule({
+          source: rule.source ?? null,
+          conditions: (rule.conditions ?? []) as FlagCondition[],
+        }),
+    );
+
     setSaving(true);
     try {
       const res = await fetch(`/api/v1/feature-flags/${flag.id}/rules`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rules: rules.map((r, i) => ({ ...r, priority: i })) }),
+        body: JSON.stringify({
+          rules: editableRules.map((rule, index) => ({
+            ...rule,
+            priority: rule.priority ?? index,
+          })),
+        }),
       });
       if (res.ok) {
         setSaved(true);
         setTimeout(() => { setSaved(false); onSaved(); }, 1500);
+      } else {
+        const data = (await res.json().catch(() => ({}))) as { error?: string };
+        toast.error(data.error ?? "Failed to save rules");
       }
     } finally {
       setSaving(false);
@@ -762,6 +1185,18 @@ function FlagDetailView({
   }
 
   const DETAIL_TABS = ["rules", "companies"] as const;
+  const planEntitlementsById = new Map(
+    (flag.planEntitlements ?? []).map((planEntitlement) => [planEntitlement.id, planEntitlement]),
+  );
+  const planRules = flag.planRules ?? [];
+  const editableRules = rules.filter((rule) =>
+    !isPlanManagedRule({
+      source: rule.source ?? null,
+      conditions: (rule.conditions ?? []) as FlagCondition[],
+    }),
+  );
+  const totalRuleCount = planRules.length + editableRules.length;
+  const fallbackUnitLabel = flag.eventKey ?? flag.featureKey;
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -857,9 +1292,9 @@ function FlagDetailView({
               }`}
             >
               {tab}
-              {tab === "rules" && rules.length > 0 && (
+              {tab === "rules" && totalRuleCount > 0 && (
                 <span className="ml-2 text-xs bg-secondary rounded-full px-1.5 py-0.5">
-                  {rules.length}
+                  {totalRuleCount}
                 </span>
               )}
             </button>
@@ -870,19 +1305,75 @@ function FlagDetailView({
       {/* Rules tab */}
       {detailTab === "rules" && (
         <div className="space-y-3">
-          {rules.map((rule, i) => (
-            <RuleEditor
-              key={i}
-              rule={rule}
-              index={i}
-              onChange={(updated) => {
-                const next = [...rules];
-                next[i] = updated;
-                setRules(next);
-              }}
-              onDelete={() => setRules(rules.filter((_, idx) => idx !== i))}
-            />
-          ))}
+          <div className="rounded-xl border border-border bg-muted/20 px-4 py-3">
+            <p className="text-sm font-medium text-foreground">
+              Plan-linked access stays synced here
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Add or remove plan access from Plan Catalog. Edit the linked entitlement here when you need to adjust the live rule for a specific plan.
+            </p>
+          </div>
+
+          {planRules.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-foreground">Plan entitlement rules</h3>
+                <Badge variant="outline" className="text-xs">
+                  {planRules.length}
+                </Badge>
+              </div>
+              {planRules.map((rule, index) => (
+                <ReadOnlyRuleCard
+                  key={rule.id}
+                  rule={rule}
+                  index={index}
+                  planEntitlement={rule.sourceId ? planEntitlementsById.get(rule.sourceId) : undefined}
+                  fallbackUnitLabel={fallbackUnitLabel}
+                  highlighted={rule.sourceId === focusedPlanId}
+                  onEdit={() => setEditingPlanId(rule.sourceId ?? null)}
+                />
+              ))}
+            </div>
+          )}
+
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-foreground">Additional flag rules</h3>
+              <Badge variant="outline" className="text-xs">
+                {editableRules.length}
+              </Badge>
+            </div>
+
+            {editableRules.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-border/60 bg-muted/10 px-4 py-8 text-center">
+                <p className="text-sm font-medium text-foreground">No additional flag rules yet</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Add manual rules here for traits, usage, add-ons, or overrides on top of your catalog setup.
+                </p>
+              </div>
+            ) : (
+              editableRules.map((rule, index) => {
+                const ruleIndex = rules.indexOf(rule);
+                return (
+                  <RuleEditor
+                    key={rule.id ?? `editable-${index}`}
+                    rule={rule}
+                    index={planRules.length + index}
+                    onChange={(updated) => {
+                      setRules((current) => {
+                        const next = [...current];
+                        next[ruleIndex] = updated;
+                        return next;
+                      });
+                    }}
+                    onDelete={() =>
+                      setRules((current) => current.filter((_, idx) => idx !== ruleIndex))
+                    }
+                  />
+                );
+              })
+            )}
+          </div>
 
           {/* Default catch-all */}
           <div className="flex items-center justify-between px-4 py-3 rounded-xl border border-dashed border-border/60 bg-muted/20">
@@ -896,11 +1387,26 @@ function FlagDetailView({
           </div>
 
           <button
-            onClick={() => setRules([...rules, { priority: rules.length, value: true, conditions: [] }])}
+            onClick={() =>
+              setRules([
+                ...rules,
+                { priority: editableRules.length, value: true, source: "manual", conditions: [] },
+              ])
+            }
             className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors px-4 py-3 rounded-xl border border-dashed border-border/50 w-full justify-center hover:bg-muted/30 hover:border-border"
           >
             <Plus className="h-4 w-4" /> Add Rule
           </button>
+
+          <EditPlanEntitlementSheet
+            flag={flag}
+            planEntitlement={editingPlanId ? planEntitlementsById.get(editingPlanId) ?? null : null}
+            open={editingPlanId !== null}
+            onOpenChange={(open) => {
+              if (!open) setEditingPlanId(null);
+            }}
+            onSaved={onSaved}
+          />
         </div>
       )}
 
@@ -1039,10 +1545,46 @@ function FlagDetailView({
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export function FeatureFlagsSection() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [flags, setFlags] = useState<FeatureFlag[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [selectedFlag, setSelectedFlag] = useState<FeatureFlag | null>(null);
+  const requestedFlagKey = searchParams.get("flag")?.trim().toLowerCase() ?? "";
+  const requestedPlanId = searchParams.get("planId");
+  const shouldAutoEditPlan = searchParams.get("editPlan") === "1";
+
+  const navigateFlagView = useCallback(
+    (
+      {
+        flagKey,
+        planId,
+        editPlan,
+      }: { flagKey?: string | null; planId?: string | null; editPlan?: boolean },
+      replace = false,
+    ) => {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("section", "feature-flags");
+
+      if (flagKey) params.set("flag", flagKey);
+      else params.delete("flag");
+
+      if (planId) params.set("planId", planId);
+      else params.delete("planId");
+
+      if (editPlan) params.set("editPlan", "1");
+      else params.delete("editPlan");
+
+      const nextUrl = `/?${params.toString()}`;
+      if (replace) {
+        router.replace(nextUrl, { scroll: false });
+      } else {
+        router.push(nextUrl, { scroll: false });
+      }
+    },
+    [router, searchParams],
+  );
 
   const fetchFlags = useCallback(async () => {
     setLoading(true);
@@ -1050,7 +1592,11 @@ export function FeatureFlagsSection() {
       const res = await fetch("/api/v1/feature-flags");
       if (res.ok) {
         const data = await res.json() as { data: FeatureFlag[] };
-        setFlags(data.data);
+        const nextFlags = data.data ?? [];
+        setFlags(nextFlags);
+        setSelectedFlag((current) =>
+          current ? nextFlags.find((flag) => flag.id === current.id) ?? null : current,
+        );
       }
     } finally {
       setLoading(false);
@@ -1059,15 +1605,36 @@ export function FeatureFlagsSection() {
 
   useEffect(() => { fetchFlags(); }, [fetchFlags]);
 
+  useEffect(() => {
+    if (!requestedFlagKey) {
+      setSelectedFlag((current) => (current ? null : current));
+      return;
+    }
+
+    const matchedFlag = flags.find(
+      (flag) => flag.featureKey.toLowerCase() === requestedFlagKey,
+    );
+
+    if (matchedFlag && matchedFlag.id !== selectedFlag?.id) {
+      setSelectedFlag(matchedFlag);
+    }
+  }, [flags, requestedFlagKey, selectedFlag?.id]);
+
   // Flag detail view (inline navigation)
   if (selectedFlag) {
     return (
       <FlagDetailView
         flag={selectedFlag}
-        onBack={() => setSelectedFlag(null)}
+        focusedPlanId={shouldAutoEditPlan ? requestedPlanId : null}
+        onPlanEditorHandled={() =>
+          navigateFlagView({ flagKey: selectedFlag.featureKey }, true)
+        }
+        onBack={() => {
+          setSelectedFlag(null);
+          navigateFlagView({}, true);
+        }}
         onSaved={() => {
-          fetchFlags();
-          // Keep the flag selected but refresh its data
+          void fetchFlags();
         }}
       />
     );
@@ -1080,7 +1647,7 @@ export function FeatureFlagsSection() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Feature Flags</h1>
           <p className="text-muted-foreground text-sm mt-0.5">
-            IF plan + usage + trait conditions match → SERVE True.
+            Use flags for traits, usage, add-ons, and overrides. Plan entitlements sync here from Plan Catalog.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -1127,10 +1694,15 @@ export function FeatureFlagsSection() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border/40">
-              {flags.map((f) => (
+              {flags.map((f) => {
+                const totalRules = (f.planRules?.length ?? 0) + f.rules.length;
+                return (
                 <tr
                   key={f.id}
-                  onClick={() => setSelectedFlag(f)}
+                  onClick={() => {
+                    setSelectedFlag(f);
+                    navigateFlagView({ flagKey: f.featureKey });
+                  }}
                   className="hover:bg-muted/30 cursor-pointer transition-colors group"
                 >
                   <td className="px-4 py-3">
@@ -1144,7 +1716,7 @@ export function FeatureFlagsSection() {
                   <td className="px-4 py-3">
                     <span className="inline-flex items-center gap-1 text-sm">
                       <Settings2 className="h-3.5 w-3.5 text-muted-foreground" />
-                      <span className="text-muted-foreground">{f.rules.length}</span>
+                      <span className="text-muted-foreground">{totalRules}</span>
                     </span>
                   </td>
                   <td className="px-4 py-3">
@@ -1159,7 +1731,8 @@ export function FeatureFlagsSection() {
                     <ChevronRight className="h-4 w-4 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors" />
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>

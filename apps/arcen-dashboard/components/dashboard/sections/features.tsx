@@ -113,14 +113,17 @@ function FeatureDetailView({
   feature,
   onBack,
   onDelete,
+  onUpdate,
 }: {
   feature: Feature;
   onBack: () => void;
   onDelete: (id: string) => void;
+  onUpdate: (feature: Feature) => void;
 }) {
   const meta = getFeatureTypeMeta(feature.featureType);
   const Icon = meta.icon;
   const [copied, setCopied] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
 
   const copyKey = () => {
     void navigator.clipboard.writeText(feature.featureKey);
@@ -146,6 +149,10 @@ function FeatureDetailView({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => setShowEdit(true)}>
+              <Pencil className="w-3.5 h-3.5 mr-2" />
+              Edit Feature
+            </DropdownMenuItem>
             <DropdownMenuItem
               className="text-destructive focus:text-destructive"
               onClick={() => {
@@ -277,15 +284,23 @@ function FeatureDetailView({
         <Info className="w-4 h-4 text-accent shrink-0 mt-0.5" />
         <div>
           <p className="text-sm font-medium text-foreground">
-            Link this feature to a Flag for rule-based evaluation
+            Plan entitlements are managed in Plan Catalog
           </p>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Go to <strong>Flags</strong> and create a flag using the key{" "}
-            <code className="font-mono">{feature.featureKey}</code> to define
-            who gets access based on plan, usage, or traits.
+            Linked plans shown here are read-only. Add or update access for{" "}
+            <code className="font-mono">{feature.featureKey}</code> from{" "}
+            <strong>Plan Catalog</strong>, then use <strong>Flags</strong> only
+            for non-plan targeting like usage, traits, and overrides.
           </p>
         </div>
       </div>
+
+      <EditFeatureSheet
+        feature={feature}
+        open={showEdit}
+        onOpenChange={setShowEdit}
+        onUpdated={onUpdate}
+      />
     </div>
   );
 }
@@ -565,6 +580,186 @@ function CreateFeatureSheet({
   );
 }
 
+function EditFeatureSheet({
+  feature,
+  open,
+  onOpenChange,
+  onUpdated,
+}: {
+  feature: Feature;
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  onUpdated: (feature: Feature) => void;
+}) {
+  const [form, setForm] = useState({
+    name: feature.name,
+    description: feature.description ?? "",
+    featureType: feature.featureType === "event" ? "event" : "boolean",
+    eventKey: feature.eventKey ?? "",
+  });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!open) return;
+    setForm({
+      name: feature.name,
+      description: feature.description ?? "",
+      featureType: feature.featureType === "event" ? "event" : "boolean",
+      eventKey: feature.eventKey ?? "",
+    });
+    setError("");
+  }, [feature, open]);
+
+  const handleSubmit = async () => {
+    if (!form.name.trim()) {
+      setError("Feature name is required");
+      return;
+    }
+    if (form.featureType === "event" && !form.eventKey.trim()) {
+      setError("Event key is required for event-based features");
+      return;
+    }
+
+    setSaving(true);
+    setError("");
+
+    try {
+      const res = await fetch(`/api/v1/features/${feature.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: form.name,
+          description: form.description || null,
+          featureType: form.featureType,
+          eventKey: form.featureType === "event" ? form.eventKey : null,
+        }),
+      });
+
+      if (res.ok) {
+        const data = (await res.json()) as { feature: Feature };
+        onUpdated({
+          ...data.feature,
+          linkedPlans: feature.linkedPlans,
+        });
+        toast.success(`Feature "${form.name}" updated`);
+        onOpenChange(false);
+      } else {
+        const data = (await res.json().catch(() => ({}))) as { error?: string };
+        setError(data.error ?? "Could not update feature");
+      }
+    } catch {
+      setError("Network error — feature was not updated");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent className="w-full sm:max-w-[420px] flex flex-col gap-0 p-0">
+        <SheetHeader className="px-6 py-5 border-b border-border">
+          <SheetTitle>Edit feature</SheetTitle>
+          <SheetDescription>
+            Update this feature without changing its plan entitlements
+          </SheetDescription>
+        </SheetHeader>
+
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+          <div className="space-y-2">
+            <Label>Type</Label>
+            <div className="grid grid-cols-2 gap-2">
+              {(["boolean", "event"] as const).map((type) => {
+                const typeMeta = FEATURE_TYPE_META[type];
+                const TypeIcon = typeMeta.icon;
+                const isSelected = form.featureType === type;
+                return (
+                  <button
+                    key={type}
+                    onClick={() =>
+                      setForm((p) => ({
+                        ...p,
+                        featureType: type,
+                        eventKey: type === "event" ? p.eventKey : "",
+                      }))
+                    }
+                    className={cn(
+                      "flex flex-col items-center gap-1.5 p-3 rounded-xl border text-xs font-medium transition-all duration-150",
+                      isSelected
+                        ? "bg-accent/10 border-accent text-foreground"
+                        : "bg-secondary border-border text-muted-foreground hover:text-foreground hover:border-border/80",
+                    )}
+                  >
+                    <TypeIcon className={cn("w-5 h-5", isSelected ? typeMeta.color : "")} />
+                    {typeMeta.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="edit-feat-name">Feature name</Label>
+            <Input
+              id="edit-feat-name"
+              value={form.name}
+              onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+              className="bg-secondary border-border"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="edit-feat-desc">Description</Label>
+            <Textarea
+              id="edit-feat-desc"
+              value={form.description}
+              onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
+              className="bg-secondary border-border resize-none text-sm"
+              rows={2}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Feature key</Label>
+            <Input value={feature.featureKey} disabled className="bg-secondary border-border font-mono" />
+            <p className="text-xs text-muted-foreground">
+              Feature keys stay stable because flags, SDK checks, and entitlements depend on them.
+            </p>
+          </div>
+
+          {form.featureType === "event" && (
+            <div className="space-y-2">
+              <Label htmlFor="edit-feat-event-key">Event key</Label>
+              <Input
+                id="edit-feat-event-key"
+                value={form.eventKey}
+                onChange={(e) =>
+                  setForm((p) => ({
+                    ...p,
+                    eventKey: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "_"),
+                  }))
+                }
+                className="bg-secondary border-border font-mono"
+              />
+            </div>
+          )}
+
+          {error && <p className="text-sm text-destructive">{error}</p>}
+        </div>
+
+        <SheetFooter className="px-6 py-4 border-t border-border flex-row justify-end gap-2">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button onClick={handleSubmit} disabled={saving}>
+            {saving ? "Saving..." : "Save changes"}
+          </Button>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
 // ─── Main FeaturesSection ─────────────────────────────────────────────────────
 
 export function FeaturesSection() {
@@ -627,6 +822,14 @@ export function FeaturesSection() {
         feature={selectedFeature}
         onBack={() => setSelectedFeature(null)}
         onDelete={handleDelete}
+        onUpdate={(updatedFeature) => {
+          setFeatures((prev) =>
+            prev.map((feature) =>
+              feature.id === updatedFeature.id ? updatedFeature : feature,
+            ),
+          );
+          setSelectedFeature(updatedFeature);
+        }}
       />
     );
   }

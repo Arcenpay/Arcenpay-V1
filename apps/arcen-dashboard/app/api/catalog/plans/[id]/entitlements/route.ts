@@ -6,13 +6,14 @@ import { writeAuditEvent } from "@/lib/audit";
 import { syncEntitlementsToFlagRules, type PlanEntitlement } from "@/lib/sync-entitlements";
 
 // Entitlements are stored as JSON in CatalogPlan.metadata under the key "entitlements"
-// Shape: { featureName: string, featureKey: string, type: "BOOLEAN" | "NUMERIC" | "UNLIMITED", value: boolean | number | null, enabled: boolean }[]
+// Shape: { featureName: string, featureKey: string, type: "BOOLEAN" | "NUMERIC" | "UNLIMITED", value: boolean | number | null, valueUnit?: string | null, enabled: boolean }[]
 
 const entitlementSchema = z.object({
     featureName: z.string().min(1),
     featureKey: z.string().min(1).regex(/^[a-z0-9_\-]+$/i),
     type: z.enum(["BOOLEAN", "NUMERIC", "UNLIMITED"]).default("BOOLEAN"),
     value: z.union([z.boolean(), z.number(), z.null()]).optional(),
+    valueUnit: z.string().trim().nullable().optional(),
     enabled: z.boolean().default(true),
 });
 
@@ -132,6 +133,7 @@ export async function PUT(
         featureName: z.string().min(1).optional(),
         type: z.enum(["BOOLEAN", "NUMERIC", "UNLIMITED"]).optional(),
         value: z.union([z.boolean(), z.number(), z.null()]).optional(),
+        valueUnit: z.string().trim().nullable().optional(),
         enabled: z.boolean().optional(),
     }).safeParse(body);
 
