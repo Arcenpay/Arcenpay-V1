@@ -106,11 +106,15 @@ export {
 } from "./runtime-profile";
 export type { RuntimeChainProfile } from "./runtime-profile";
 export {
-  ARCENPAY_LOCAL_APP_URL,
-  ARCENPAY_PRODUCTION_APP_URL,
+  ARCENPAY_API_URL,
+  ARCENPAY_APP_URL,
   resolveArcenPayBaseUrl,
+  resolveArcenPayAppUrl,
 } from "./app-origin";
-export type { ResolveArcenPayBaseUrlOptions } from "./app-origin";
+export type {
+  ResolveArcenPayAppUrlOptions,
+  ResolveArcenPayBaseUrlOptions,
+} from "./app-origin";
 
 // ABIs
 export {

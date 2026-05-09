@@ -92,8 +92,7 @@ describe("ArcenClient", () => {
       );
     });
 
-    it("defaults to the production hosted app URL when no baseUrl is provided", async () => {
-      process.env.NODE_ENV = "production";
+    it("defaults to the fixed local API URL when no baseUrl is provided", async () => {
       client = new ArcenClient({ apiKey: API_KEY });
       mockFetch.mockResolvedValueOnce(
         mockResponse({ key: "feature", enabled: true, reason: "default" }),
@@ -102,7 +101,7 @@ describe("ArcenClient", () => {
       await client.checkFlag("feature");
 
       expect(mockFetch.mock.calls[0]?.[0]).toContain(
-        "https://app.arcenpay.com/api/v1/check?key=feature",
+        "http://localhost:3300/api/v1/check?key=feature",
       );
     });
   });

@@ -2,7 +2,6 @@
 
 import type { ReactNode } from "react";
 import { ArcenPayProvider } from "@arcenpay/react";
-import { resolveDemoArcenPayBaseUrl } from "@/lib/arcenpay-origin";
 
 export function Providers({ children }: { children: ReactNode }) {
   const chainId =
@@ -13,7 +12,6 @@ export function Providers({ children }: { children: ReactNode }) {
 
   return (
     <ArcenPayProvider
-      baseUrl={resolveDemoArcenPayBaseUrl()}
       chainId={chainId}
       componentId={process.env.NEXT_PUBLIC_ARCENPAY_COMPONENT_ID}
       publishableKey={process.env.NEXT_PUBLIC_ARCENPAY_PUBLISHABLE_KEY}

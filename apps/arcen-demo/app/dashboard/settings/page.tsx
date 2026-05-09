@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { resolveDemoArcenPayBaseUrl } from "@/lib/arcenpay-origin";
+import { resolveDemoArcenPayDashboardUrl } from "@/lib/arcenpay-origin";
 import styles from "./page.module.css";
 
 interface Config {
@@ -15,7 +15,7 @@ interface Config {
 export default function SettingsPage() {
   const [config, setConfig] = useState<Config | null>(null);
   const [copied, setCopied] = useState(false);
-  const dashboardUrl = config?.baseUrl ?? resolveDemoArcenPayBaseUrl();
+  const dashboardUrl = config?.baseUrl ?? resolveDemoArcenPayDashboardUrl();
 
   useEffect(() => {
     fetch("/api/config")
@@ -96,7 +96,7 @@ export default function SettingsPage() {
             label="Dashboard URL"
             status={config?.baseUrl ? "connected" : "missing"}
             value={config?.baseUrl ?? "Not set"}
-            envVar="NEXT_PUBLIC_ARCENPAY_BASE_URL"
+            envVar="SDK default"
           />
           <StatusItem
             label="Component ID"
@@ -215,16 +215,6 @@ export default function SettingsPage() {
             <span className={styles.envRequired}>Required</span>
             <span className={styles.envDesc}>
               Server-side API key used by demo API routes and the Node SDK
-            </span>
-          </div>
-          <div className={styles.envRow}>
-            <code className={styles.envKey}>NEXT_PUBLIC_ARCENPAY_BASE_URL</code>
-            <span className={styles.envOptional}>Optional</span>
-            <span className={styles.envDesc}>
-              Override the hosted app origin for the demo. Defaults to{" "}
-              <code>https://app.arcenpay.com</code>. Set this to{" "}
-              <code>http://localhost:3000</code> only when running the dashboard
-              locally.
             </span>
           </div>
           <div className={styles.envRow}>

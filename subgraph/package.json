@@ -1,8 +1,8 @@
 {
-  "name": "@meap/subgraph",
+  "name": "@arcenpay/subgraph",
   "version": "0.0.1",
   "private": true,
-  "description": "The Graph indexer for MEAP + ZKVUB",
+  "description": "The Graph indexer for ArcenPay + ZKVUB",
   "scripts": {
     "prepare:abis": "node scripts/sync-abis.mjs",
     "sync:sepolia": "node scripts/sync-addresses.mjs --deployment ../packages/contracts/deployments/sepolia-latest.json --network sepolia",
@@ -13,11 +13,11 @@
     "build:base-sepolia": "graph codegen --config subgraph.base-sepolia.yaml && graph build --config subgraph.base-sepolia.yaml",
     "lint": "echo \"No subgraph lint configured\"",
     "test": "echo \"No subgraph tests implemented yet\"",
-    "deploy:studio": "graph deploy meap-sepolia --node https://api.studio.thegraph.com/deploy/ -l \"$(date +%Y%m%d%H%M%S)\"",
+    "deploy:studio": "graph deploy arcenpay-sepolia --node https://api.studio.thegraph.com/deploy/ -l \"$(date +%Y%m%d%H%M%S)\"",
     "deploy:studio:subscription-registry": "graph deploy subscription-registry --node https://api.studio.thegraph.com/deploy/ -l \"$(date +%Y%m%d%H%M%S)\"",
-    "deploy:studio:base-sepolia": "graph deploy meap-base-sepolia subgraph.base-sepolia.yaml --node https://api.studio.thegraph.com/deploy/ -l \"$(date +%Y%m%d%H%M%S)\"",
-    "deploy:hosted": "graph deploy --node https://api.thegraph.com/deploy/ @meap/meap-sepolia",
-    "deploy:hosted:base-sepolia": "graph deploy --node https://api.thegraph.com/deploy/ @meap/meap-base-sepolia --config subgraph.base-sepolia.yaml"
+    "deploy:studio:base-sepolia": "graph deploy arcenpay-base-sepolia subgraph.base-sepolia.yaml --node https://api.studio.thegraph.com/deploy/ -l \"$(date +%Y%m%d%H%M%S)\"",
+    "deploy:hosted": "graph deploy --node https://api.thegraph.com/deploy/ @arcenpay/arcenpay-sepolia",
+    "deploy:hosted:base-sepolia": "graph deploy --node https://api.thegraph.com/deploy/ @arcenpay/arcenpay-base-sepolia --config subgraph.base-sepolia.yaml"
   },
   "devDependencies": {
     "@graphprotocol/graph-cli": "^0.98.1",

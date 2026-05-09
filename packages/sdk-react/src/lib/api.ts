@@ -1,15 +1,17 @@
 import type { EntitlementResult } from "../sdk";
-import { resolveArcenPayBaseUrl } from "../sdk";
+import { resolveArcenPayAppUrl, resolveArcenPayBaseUrl } from "../sdk";
 
 /**
- * Resolves the dashboard base URL.
+ * Resolves the API base URL used by the React SDK.
  *
- * In development, defaults to localhost:3000.
- * In production, defaults to https://app.arcenpay.com.
- * Override with NEXT_PUBLIC_ARCENPAY_BASE_URL for staging environments.
+ * Defaults to the fixed SDK API URL.
  */
 export function resolveDashboardBaseUrl(explicit?: string): string {
   return resolveArcenPayBaseUrl({ explicit });
+}
+
+export function resolveAppBaseUrl(explicit?: string): string {
+  return resolveArcenPayAppUrl({ explicit });
 }
 
 export function resolveOptionalDashboardBaseUrl(
@@ -22,7 +24,7 @@ export function createPaymentLinkCheckoutUrl(
   slug: string,
   baseUrl?: string,
 ): string {
-  const resolvedBaseUrl = resolveDashboardBaseUrl(baseUrl);
+  const resolvedBaseUrl = resolveAppBaseUrl(baseUrl);
   return `${resolvedBaseUrl.replace(/\/$/, "")}/pay/${encodeURIComponent(slug)}`;
 }
 

@@ -108,8 +108,8 @@ ARCENPAY_API_KEY=api_xxxxxxxxx
 ARCENPAY_WEBHOOK_SECRET=whsec_xxxxxxxxx
 ```
 
-`ARCENPAY_BASE_URL` is optional. The SDK defaults to `http://localhost:3000`
-outside production and `https://app.arcenpay.com` in production.
+The SDK uses a fixed default API URL of `http://localhost:3300`. Change the SDK
+constant manually when promoting to production.
 
 ## Boundary
 

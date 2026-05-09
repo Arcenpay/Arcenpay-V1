@@ -22,6 +22,16 @@ export type {
   ConsumeEntitlementResult,
   IdentifyResult,
 } from "./sdk";
+export {
+  ARCENPAY_API_URL,
+  ARCENPAY_APP_URL,
+  resolveArcenPayAppUrl,
+  resolveArcenPayBaseUrl,
+} from "./sdk";
+export type {
+  ResolveArcenPayAppUrlOptions,
+  ResolveArcenPayBaseUrlOptions,
+} from "./sdk";
 
 // Middleware
 export { x402Middleware } from "./middleware/x402";

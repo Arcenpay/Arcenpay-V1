@@ -5,7 +5,6 @@ import type {
   FlagResult,
   ConsumeEntitlementResult,
 } from "@arcenpay/node";
-import { resolveDemoArcenPayBaseUrl } from "./arcenpay-origin";
 
 // Singleton ArcenClient for server-side usage
 // Initialized lazily so missing env vars only throw at runtime, not build time.
@@ -71,7 +70,6 @@ export function getRawArcenClient(): ArcenClient {
 
   _rawClient = new ArcenClient({
     apiKey,
-    baseUrl: resolveDemoArcenPayBaseUrl(),
   });
 
   return _rawClient;
@@ -134,35 +132,15 @@ export function getDemoUserIdentity() {
 }
 
 export async function ensureDemoIdentity(): Promise<void> {
-  const apiKey = process.env.ARCENPAY_API_KEY;
-  if (!apiKey) {
+  if (!process.env.ARCENPAY_API_KEY) {
     throw new Error(
       "ARCENPAY_API_KEY is not set. Copy .env.local.example → .env.local and add your key.",
     );
   }
 
-  const baseUrl = resolveDemoArcenPayBaseUrl();
-
-  const response = await fetch(`${baseUrl}/api/v1/events`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      event_type: "identify",
-      company: getDemoCompanyIdentity(),
-      user: getDemoUserIdentity(),
-    }),
+  await getRawArcenClient().identify({
+    company: getDemoCompanyIdentity(),
+    user: getDemoUserIdentity(),
+    expiresIn: 3600,
   });
-
-  if (!response.ok) {
-    const body = (await response.json().catch(() => null)) as {
-      error?: string;
-    } | null;
-    throw new Error(
-      body?.error ??
-        `Failed to identify demo company/user (${response.status})`,
-    );
-  }
 }

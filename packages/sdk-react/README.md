@@ -113,9 +113,8 @@ NEXT_PUBLIC_CHAIN_ID=84532
 NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=xxxxxxxxx
 ```
 
-`NEXT_PUBLIC_ARCENPAY_BASE_URL` is optional. The SDK defaults to
-`http://localhost:3000` outside production and `https://app.arcenpay.com` in
-production.
+The SDK uses a fixed default API URL of `http://localhost:3300`. Change the SDK
+constant manually when promoting to production.
 
 ## Boundary
 

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { resolveDemoArcenPayBaseUrl } from "@/lib/arcenpay-origin";
+import { resolveDemoArcenPayDashboardUrl } from "@/lib/arcenpay-origin";
 
 /**
  * GET /api/config
@@ -9,7 +9,7 @@ import { resolveDemoArcenPayBaseUrl } from "@/lib/arcenpay-origin";
 export async function GET() {
   return NextResponse.json({
     componentId: process.env.NEXT_PUBLIC_ARCENPAY_COMPONENT_ID ?? "",
-    baseUrl: resolveDemoArcenPayBaseUrl(),
+    baseUrl: resolveDemoArcenPayDashboardUrl(),
     demoCompanyWallet:
       process.env.DEMO_COMPANY_WALLET ??
       "0x0000000000000000000000000000000000000001",
