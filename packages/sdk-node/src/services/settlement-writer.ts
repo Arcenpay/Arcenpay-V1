@@ -3,15 +3,21 @@
 //  Executes on-chain session settlements for validated x402 payments
 // ============================================================
 
-import { createPublicClient, createWalletClient, http, isAddress, type Hex } from 'viem';
-import { privateKeyToAccount } from 'viem/accounts';
-import { sepolia, baseSepolia, base } from 'viem/chains';
+import {
+  createPublicClient,
+  createWalletClient,
+  http,
+  isAddress,
+  type Hex,
+} from "viem";
+import { privateKeyToAccount } from "viem/accounts";
+import { sepolia, baseSepolia, base } from "viem/chains";
 import {
   DEFAULT_CHAIN_ID,
   SessionVaultABI,
   FeeCollectorABI,
   getContractAddresses,
-} from '@arcenpay/sdk';
+} from "../sdk";
 
 const CHAIN_MAP: Record<number, any> = {
   11155111: sepolia,
@@ -71,13 +77,25 @@ function normalizeSession(raw: unknown): SessionState {
       }
     | undefined;
 
-  const agent = (value?.agent ?? value?.[0] ?? '0x0000000000000000000000000000000000000000') as `0x${string}`;
-  const token = (value?.token ?? value?.[1] ?? '0x0000000000000000000000000000000000000000') as `0x${string}`;
-  const balance = BigInt((value?.balance ?? value?.[2] ?? 0n) as bigint | number | string);
-  const totalFunded = BigInt((value?.totalFunded ?? value?.[3] ?? 0n) as bigint | number | string);
-  const totalSettled = BigInt((value?.totalSettled ?? value?.[4] ?? 0n) as bigint | number | string);
+  const agent = (value?.agent ??
+    value?.[0] ??
+    "0x0000000000000000000000000000000000000000") as `0x${string}`;
+  const token = (value?.token ??
+    value?.[1] ??
+    "0x0000000000000000000000000000000000000000") as `0x${string}`;
+  const balance = BigInt(
+    (value?.balance ?? value?.[2] ?? 0n) as bigint | number | string,
+  );
+  const totalFunded = BigInt(
+    (value?.totalFunded ?? value?.[3] ?? 0n) as bigint | number | string,
+  );
+  const totalSettled = BigInt(
+    (value?.totalSettled ?? value?.[4] ?? 0n) as bigint | number | string,
+  );
   const active = Boolean(value?.active ?? value?.[5] ?? false);
-  const createdAt = BigInt((value?.createdAt ?? value?.[6] ?? 0n) as bigint | number | string);
+  const createdAt = BigInt(
+    (value?.createdAt ?? value?.[6] ?? 0n) as bigint | number | string,
+  );
 
   return {
     agent,
@@ -111,19 +129,24 @@ export class SettlementWriterService {
     const chain = CHAIN_MAP[this.chainId] || baseSepolia;
     const contracts = getContractAddresses(this.chainId);
 
-    this.sessionVaultAddress = (config.sessionVaultAddress || contracts.sessionVault) as `0x${string}`;
-    this.feeCollectorAddress = (config.feeCollectorAddress || contracts.feeCollector) as `0x${string}`;
+    this.sessionVaultAddress = (config.sessionVaultAddress ||
+      contracts.sessionVault) as `0x${string}`;
+    this.feeCollectorAddress = (config.feeCollectorAddress ||
+      contracts.feeCollector) as `0x${string}`;
 
     const account = privateKeyToAccount(config.privateKey);
     this.signerAddress = account.address;
-    this.providerAddress = (config.providerAddress || account.address) as `0x${string}`;
+    this.providerAddress = (config.providerAddress ||
+      account.address) as `0x${string}`;
     this.waitForReceipt = config.waitForReceipt ?? true;
 
     if (!isAddress(this.sessionVaultAddress)) {
-      throw new Error('Invalid SessionVault address for SettlementWriterService');
+      throw new Error(
+        "Invalid SessionVault address for SettlementWriterService",
+      );
     }
     if (!isAddress(this.providerAddress)) {
-      throw new Error('Invalid provider address for SettlementWriterService');
+      throw new Error("Invalid provider address for SettlementWriterService");
     }
 
     this.publicClient = createPublicClient({
@@ -146,14 +169,16 @@ export class SettlementWriterService {
     return this.sessionVaultAddress;
   }
 
-  async isSignerAuthorized(address: `0x${string}` = this.signerAddress): Promise<boolean> {
+  async isSignerAuthorized(
+    address: `0x${string}` = this.signerAddress,
+  ): Promise<boolean> {
     if (!isAddress(address)) {
       return false;
     }
     const authorized = await this.publicClient.readContract({
       address: this.sessionVaultAddress,
       abi: SessionVaultABI,
-      functionName: 'authorizedSettlers',
+      functionName: "authorizedSettlers",
       args: [address],
     });
     return Boolean(authorized);
@@ -163,7 +188,7 @@ export class SettlementWriterService {
     const rawSession = await this.publicClient.readContract({
       address: this.sessionVaultAddress,
       abi: SessionVaultABI,
-      functionName: 'getSession',
+      functionName: "getSession",
       args: [sessionId],
     });
     return normalizeSession(rawSession);
@@ -181,12 +206,12 @@ export class SettlementWriterService {
     const sessionIds = (await this.publicClient.readContract({
       address: this.sessionVaultAddress,
       abi: SessionVaultABI,
-      functionName: 'getAgentSessions',
+      functionName: "getAgentSessions",
       args: [signer],
     })) as Hex[];
 
     if (!sessionIds.length) {
-      throw new Error('No billing session found for signer');
+      throw new Error("No billing session found for signer");
     }
 
     for (let idx = sessionIds.length - 1; idx >= 0; idx -= 1) {
@@ -197,25 +222,30 @@ export class SettlementWriterService {
       }
     }
 
-    throw new Error('No active billing session found for signer');
+    throw new Error("No active billing session found for signer");
   }
 
-  async settleForSigner(input: SettleForSignerInput): Promise<SettlementWriteResult> {
+  async settleForSigner(
+    input: SettleForSignerInput,
+  ): Promise<SettlementWriteResult> {
     if (!isAddress(input.signer)) {
-      throw new Error('Invalid signer address for settlement');
+      throw new Error("Invalid signer address for settlement");
     }
     if (input.amount <= 0n) {
-      throw new Error('Settlement amount must be greater than zero');
+      throw new Error("Settlement amount must be greater than zero");
     }
 
-    const resolvedSessionId = await this.resolveSessionId(input.sessionIdHint, input.signer);
+    const resolvedSessionId = await this.resolveSessionId(
+      input.sessionIdHint,
+      input.signer,
+    );
     const session = await this.getSession(resolvedSessionId);
 
     if (!session.active) {
-      throw new Error('Session is not active');
+      throw new Error("Session is not active");
     }
     if (session.agent.toLowerCase() !== input.signer.toLowerCase()) {
-      throw new Error('Session owner does not match payment signer');
+      throw new Error("Session owner does not match payment signer");
     }
     if (session.balance < input.amount) {
       throw new Error(
@@ -223,15 +253,16 @@ export class SettlementWriterService {
       );
     }
 
-    const providerAddress = (input.providerAddress || this.providerAddress) as `0x${string}`;
+    const providerAddress = (input.providerAddress ||
+      this.providerAddress) as `0x${string}`;
     if (!isAddress(providerAddress)) {
-      throw new Error('Invalid settlement provider address');
+      throw new Error("Invalid settlement provider address");
     }
 
     const txHash = (await this.walletClient.writeContract({
       address: this.sessionVaultAddress,
       abi: SessionVaultABI,
-      functionName: 'settle',
+      functionName: "settle",
       args: [resolvedSessionId, input.amount, providerAddress],
     })) as `0x${string}`;
 
@@ -245,16 +276,21 @@ export class SettlementWriterService {
         const feeTxHash = (await this.walletClient.writeContract({
           address: this.feeCollectorAddress,
           abi: FeeCollectorABI,
-          functionName: 'collectSettlementFeeFor',
+          functionName: "collectSettlementFeeFor",
           args: [input.amount, providerAddress],
         })) as `0x${string}`;
 
         if (this.waitForReceipt) {
-          await this.publicClient.waitForTransactionReceipt({ hash: feeTxHash });
+          await this.publicClient.waitForTransactionReceipt({
+            hash: feeTxHash,
+          });
         }
       } catch (err) {
         // Fee collection failure should not revert the settlement
-        console.warn('[SettlementWriter] Fee collection failed (non-fatal):', err);
+        console.warn(
+          "[SettlementWriter] Fee collection failed (non-fatal):",
+          err,
+        );
       }
     }
 

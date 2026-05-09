@@ -33,7 +33,7 @@ export default function ScanPage() {
   });
   const { consume, loading: consumeLoading } = useConsumeEntitlement();
   const { track } = useTrack();
-  const flagMap = useFlags(["scan"]);
+  const flagMap = useFlags(identified ? ["scan"] : []);
 
   const [step, setStep] = useState<"idle" | "scanning" | "done">("idle");
   const [result, setResult] = useState<string | null>(null);
@@ -78,10 +78,10 @@ export default function ScanPage() {
     try {
       const consumeResult = await consume("scan");
 
-      await track("scan", {
+      await track("document_scanned", {
         source: "scan-page",
         format: "pdf",
-        consumed: true,
+        meteredFeature: "scan",
       });
 
       await new Promise((resolve) => setTimeout(resolve, 1600));
@@ -90,8 +90,8 @@ export default function ScanPage() {
       setStep("done");
       setTrackMsg(
         consumeResult.allocation != null
-          ? `Consumed via useConsumeEntitlement() and tracked via useTrack() · ${consumeResult.usage} / ${consumeResult.allocation} used`
-          : `Consumed via useConsumeEntitlement() and tracked via useTrack() · ${consumeResult.usage} used`,
+          ? `Consumed via useConsumeEntitlement() and recorded analytics via useTrack() · ${consumeResult.usage} / ${consumeResult.allocation} used`
+          : `Consumed via useConsumeEntitlement() and recorded analytics via useTrack() · ${consumeResult.usage} used`,
       );
       await loadCompany();
       setTimeout(() => setTrackMsg(null), 4500);
@@ -201,9 +201,9 @@ export default function ScanPage() {
         <div className={styles.infoTitle}>How usage tracking works</div>
         <p className={styles.infoDesc}>
           This demo page now calls <code>useConsumeEntitlement()</code> to
-          enforce scan quota and <code>useTrack()</code> to record the product
-          event. The browser no longer proxies those actions through custom demo
-          API routes.
+          enforce scan quota and <code>useTrack()</code> to record a separate
+          analytics event. The browser no longer proxies those actions through
+          custom demo API routes.
         </p>
       </div>
     </div>

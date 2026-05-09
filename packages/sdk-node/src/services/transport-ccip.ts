@@ -7,7 +7,7 @@
 import { createPublicClient, createWalletClient, http, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { sepolia, baseSepolia, base } from "viem/chains";
-import { DEFAULT_CHAIN_ID } from "@arcenpay/sdk";
+import { DEFAULT_CHAIN_ID } from "../sdk";
 
 const CHAIN_MAP: Record<number, any> = {
   11155111: sepolia,
@@ -250,7 +250,10 @@ export class CCIPTransport {
         address: this.config.routerAddress,
         abi: CCIP_ROUTER_ABI,
         functionName: "getFee",
-        args: [destSelector, this.buildMessage(payload, destinationAddressOverride)],
+        args: [
+          destSelector,
+          this.buildMessage(payload, destinationAddressOverride),
+        ],
       })) as bigint;
     } catch {
       return 5_000_000_000_000_000n; // 0.005 ETH fallback

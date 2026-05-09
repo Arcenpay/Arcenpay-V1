@@ -17,7 +17,6 @@ import { ArcenClient } from "@arcenpay/node";
 
 const client = new ArcenClient({
   apiKey: process.env.ARCENPAY_API_KEY!,
-  baseUrl: process.env.ARCENPAY_BASE_URL,
 });
 ```
 
@@ -62,7 +61,7 @@ Verify webhook signatures:
 import { verifyWebhookSignature } from "@arcenpay/node";
 
 const rawBody = await req.text();
-const signatureHeader = req.headers.get("x-meap-signature") ?? "";
+const signatureHeader = req.headers.get("x-arcenpay-signature") ?? "";
 const signature = signatureHeader.startsWith("sha256=")
   ? signatureHeader.slice("sha256=".length)
   : signatureHeader;
@@ -106,9 +105,11 @@ The package also exposes advanced optional services:
 
 ```bash
 ARCENPAY_API_KEY=api_xxxxxxxxx
-ARCENPAY_BASE_URL=https://dashboard.arcenpay.xyz
 ARCENPAY_WEBHOOK_SECRET=whsec_xxxxxxxxx
 ```
+
+The SDK uses a fixed default API URL of `http://localhost:3300`. Change the SDK
+constant manually when promoting to production.
 
 ## Boundary
 

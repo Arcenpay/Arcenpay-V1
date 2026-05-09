@@ -3,7 +3,7 @@ services:
     build:
       context: ../..
       dockerfile: apps/facilitator/Dockerfile
-    container_name: meap-facilitator
+    container_name: arcenpay-facilitator
     ports:
       - '3402:3402'
     environment:
@@ -29,7 +29,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: meap-facilitator-redis
+    container_name: arcenpay-facilitator-redis
     restart: unless-stopped
     ports:
       - '6379:6379'

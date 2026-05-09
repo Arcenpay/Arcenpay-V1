@@ -706,7 +706,7 @@ export function SessionsSection() {
               The ERC-4626 yield vault is optional. To enable it, deploy{" "}
               <code className="font-mono">YieldSessionVault.sol</code> and set{" "}
               <code className="font-mono">
-                MEAP_CONTRACT_{chainId}_yieldSessionVault
+                ARCENPAY_CONTRACT_{chainId}_yieldSessionVault
               </code>{" "}
               in your environment.
             </p>
@@ -774,7 +774,7 @@ export function SessionsSection() {
             </code>
             {" · "}Set{" "}
             <code className="font-mono">
-              MEAP_CONTRACT_{chainId}_yieldSessionVault
+              ARCENPAY_CONTRACT_{chainId}_yieldSessionVault
             </code>{" "}
             to configure
           </p>

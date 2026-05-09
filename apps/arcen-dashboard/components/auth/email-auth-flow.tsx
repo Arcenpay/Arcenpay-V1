@@ -233,7 +233,7 @@ export function EmailAuthFlow({ inviteToken }: EmailAuthFlowProps) {
               alt="ArcenPay"
               width={168}
               height={40}
-              className="h-10 w-auto object-contain"
+              className="object-contain"
               priority
             />
           </div>

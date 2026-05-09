@@ -1,24 +1,17 @@
-import type { EntitlementResult } from "@arcenpay/sdk";
+import type { EntitlementResult } from "../sdk";
+import { resolveArcenPayAppUrl, resolveArcenPayBaseUrl } from "../sdk";
 
-/** 
- * Resolves the dashboard base URL.
- * 
- * Schematic-style: the publishableKey determines the routing.
- * In development, defaults to localhost:3000 (local dashboard).
- * In production, always uses https://dashboard.arcenpay.xyz.
- * Override with NEXT_PUBLIC_ARCENPAY_BASE_URL for staging environments.
+/**
+ * Resolves the API base URL used by the React SDK.
+ *
+ * Defaults to the fixed SDK API URL.
  */
 export function resolveDashboardBaseUrl(explicit?: string): string {
-  if (explicit) return explicit.replace(/\/$/, "");
-  // Read env override (for staging/custom deployments)
-  const envOverride = typeof process !== "undefined"
-    ? process.env.NEXT_PUBLIC_ARCENPAY_BASE_URL
-    : undefined;
-  if (envOverride) return envOverride.replace(/\/$/, "");
-  // Default: localhost in dev, production URL otherwise
-  return typeof process !== "undefined" && process.env.NODE_ENV !== "production"
-    ? "http://localhost:3000"
-    : "https://dashboard.arcenpay.xyz";
+  return resolveArcenPayBaseUrl({ explicit });
+}
+
+export function resolveAppBaseUrl(explicit?: string): string {
+  return resolveArcenPayAppUrl({ explicit });
 }
 
 export function resolveOptionalDashboardBaseUrl(
@@ -31,7 +24,7 @@ export function createPaymentLinkCheckoutUrl(
   slug: string,
   baseUrl?: string,
 ): string {
-  const resolvedBaseUrl = resolveDashboardBaseUrl(baseUrl);
+  const resolvedBaseUrl = resolveAppBaseUrl(baseUrl);
   return `${resolvedBaseUrl.replace(/\/$/, "")}/pay/${encodeURIComponent(slug)}`;
 }
 

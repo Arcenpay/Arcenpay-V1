@@ -436,7 +436,7 @@ function SessionsTab() {
 //  Quickstart Tab
 // ─────────────────────────────────────────────
 function QuickstartTab() {
-  const installCode = `npm install @arcenpay/agent @arcenpay/sdk viem`;
+  const installCode = `npm install @arcenpay/agent viem`;
 
   const nodeCode = `import { ArcenPayAgent } from "@arcenpay/agent";
 

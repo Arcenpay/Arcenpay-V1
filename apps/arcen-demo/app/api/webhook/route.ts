@@ -8,7 +8,7 @@ import { verifyWebhookSignature } from "@arcenpay/node";
  * under Settings → Webhooks.
  *
  * Signature format (sent by ArcenPay):
- *   X-MEAP-Signature: sha256=<hmac-hex>
+ *   X-ArcenPay-Signature: sha256=<hmac-hex>
  *   X-MEAP-Event:     <event-type>
  *   X-MEAP-Timestamp: <unix-seconds>
  *
@@ -21,14 +21,14 @@ export async function POST(req: NextRequest) {
   // ── Signature verification ─────────────────────────────────────────────────
   const secret = process.env.ARCENPAY_WEBHOOK_SECRET ?? "";
   if (secret) {
-    // ArcenPay sends: X-MEAP-Signature: sha256=<hex>
-    const sigHeader = req.headers.get("x-meap-signature") ?? "";
+    // ArcenPay sends: X-ArcenPay-Signature: sha256=<hex>
+    const sigHeader = req.headers.get("x-arcenpay-signature") ?? "";
     const sigHex = sigHeader.startsWith("sha256=")
       ? sigHeader.slice("sha256=".length)
       : sigHeader;
 
     if (!sigHex) {
-      console.warn("[webhook] ❌ Missing X-MEAP-Signature header — rejected.");
+      console.warn("[webhook] ❌ Missing X-ArcenPay-Signature header — rejected.");
       return NextResponse.json({ error: "Missing signature" }, { status: 401 });
     }
 

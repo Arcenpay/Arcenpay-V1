@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import type { EntitlementResult } from "@arcenpay/sdk";
+import type { EntitlementResult } from "../sdk";
 import { resolveDashboardBaseUrl } from "../lib/api";
 import { useArcenPay } from "../providers/ArcenPayProvider";
 
@@ -20,16 +20,19 @@ export interface UseEntitlementCheckReturn extends Partial<EntitlementResult> {
   refetch: () => void;
 }
 
-const cache = new Map<string, { result: EntitlementResult; expiresAt: number }>();
+const cache = new Map<
+  string,
+  { result: EntitlementResult; expiresAt: number }
+>();
 
 export function useEntitlementCheck(
   featureKey: string,
   options: UseEntitlementCheckOptions = {},
 ): UseEntitlementCheckReturn {
-  const { session } = useArcenPay();
+  const { session, baseUrl: providerBaseUrl } = useArcenPay();
   const cacheTtlMs = options.cacheTtlMs ?? 30_000;
 
-  const baseUrl = resolveDashboardBaseUrl(options.baseUrl);
+  const baseUrl = resolveDashboardBaseUrl(options.baseUrl ?? providerBaseUrl);
 
   const [result, setResult] = useState<EntitlementResult | null>(null);
   const [loading, setLoading] = useState(true);
@@ -38,9 +41,8 @@ export function useEntitlementCheck(
 
   const fetchEntitlement = useCallback(async () => {
     if (!session.token) {
-      setError(
-        "useEntitlementCheck() requires an Arcen session token. Pass `token` to ArcenPayProvider or supply an identify callback.",
-      );
+      setResult(null);
+      setError(null);
       setLoading(false);
       return;
     }
@@ -75,7 +77,9 @@ export function useEntitlementCheck(
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error((json as { error?: string }).error ?? `HTTP ${res.status}`);
+        throw new Error(
+          (json as { error?: string }).error ?? `HTTP ${res.status}`,
+        );
       }
 
       const json = (await res.json()) as EntitlementResult;

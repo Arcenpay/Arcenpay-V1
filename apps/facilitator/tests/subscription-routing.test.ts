@@ -42,7 +42,7 @@ function createRouteState(
 test("keeps token routing isolated per team", async () => {
   const storage = createMemoryStorage();
   const store = createSubscriptionRouteStore({
-    keyPrefix: "meap",
+    keyPrefix: "arcenpay",
     maxAgeMs: 60_000,
     storage,
     now: () => 10_000,
@@ -86,7 +86,7 @@ test("keeps token routing isolated per team", async () => {
 test("recovers token routing from persisted storage after restart", async () => {
   const storage = createMemoryStorage();
   const firstStore = createSubscriptionRouteStore({
-    keyPrefix: "meap",
+    keyPrefix: "arcenpay",
     maxAgeMs: 60_000,
     storage,
     now: () => 10_000,
@@ -102,7 +102,7 @@ test("recovers token routing from persisted storage after restart", async () => 
   );
 
   const restartedStore = createSubscriptionRouteStore({
-    keyPrefix: "meap",
+    keyPrefix: "arcenpay",
     maxAgeMs: 60_000,
     storage,
     now: () => 10_000,
@@ -124,7 +124,7 @@ test("evicts stale persisted routing state before it can be reused", async () =>
   const storage = createMemoryStorage();
   const tokenId = "token-stale";
   storage.backingStore.set(
-    getSubscriptionRouteStateKey("meap", tokenId),
+    getSubscriptionRouteStateKey("arcenpay", tokenId),
     JSON.stringify(
       createRouteState({
         teamId: "team-stale",
@@ -134,7 +134,7 @@ test("evicts stale persisted routing state before it can be reused", async () =>
   );
 
   const store = createSubscriptionRouteStore({
-    keyPrefix: "meap",
+    keyPrefix: "arcenpay",
     maxAgeMs: 1_000,
     storage,
     now: () => 5_000,
@@ -144,7 +144,7 @@ test("evicts stale persisted routing state before it can be reused", async () =>
 
   assert.equal(recovered, null);
   assert.equal(
-    storage.backingStore.has(getSubscriptionRouteStateKey("meap", tokenId)),
+    storage.backingStore.has(getSubscriptionRouteStateKey("arcenpay", tokenId)),
     false,
   );
 });

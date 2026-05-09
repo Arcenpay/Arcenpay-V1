@@ -1,15 +1,20 @@
-'use client';
+"use client";
 
-import { useReadContracts, useWatchBlockNumber, useWatchContractEvent } from 'wagmi';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { EntitlementFreshness, EntitlementSources, PlanTier } from '@arcenpay/sdk';
 import {
-  SubscriptionRegistryABI,
-  getContractAddresses,
-} from '@arcenpay/sdk';
-import { useArcenPay } from '../providers/ArcenPayProvider';
-import { useCompanyEntitlements } from './useCompanyEntitlements';
-import { entitlementsToFeatures } from '../lib/api';
+  useReadContracts,
+  useWatchBlockNumber,
+  useWatchContractEvent,
+} from "wagmi";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type {
+  EntitlementFreshness,
+  EntitlementSources,
+  PlanTier,
+} from "../sdk";
+import { SubscriptionRegistryABI, getContractAddresses } from "../sdk";
+import { useArcenPay } from "../providers/ArcenPayProvider";
+import { useCompanyEntitlements } from "./useCompanyEntitlements";
+import { entitlementsToFeatures } from "../lib/api";
 
 // ============================================================
 //  useEntitlement — Hook for entitlement state
@@ -100,7 +105,9 @@ export function useEntitlement(
   const [tablelandFeatures, setTablelandFeatures] = useState<
     Record<string, boolean | string | number>
   >({});
-  const [tablelandUpdatedAt, setTablelandUpdatedAt] = useState<number | null>(null);
+  const [tablelandUpdatedAt, setTablelandUpdatedAt] = useState<number | null>(
+    null,
+  );
   const [tablelandLoading, setTablelandLoading] = useState(false);
   const [tablelandError, setTablelandError] = useState<Error | null>(null);
   const walletInvalid =
@@ -111,15 +118,19 @@ export function useEntitlement(
 
     const explicit = config.tablelandConfig?.featureFlagsEndpoint;
     if (explicit) {
-      return explicit.includes('{wallet}')
-        ? explicit.replace('{wallet}', walletAddress.toLowerCase())
+      return explicit.includes("{wallet}")
+        ? explicit.replace("{wallet}", walletAddress.toLowerCase())
         : explicit;
     }
 
     const providerUrl = config.tablelandConfig?.providerUrl;
     if (!providerUrl) return null;
-    return `${providerUrl.replace(/\/$/, '')}/api/entitlements/${walletAddress.toLowerCase()}/flags`;
-  }, [config.tablelandConfig?.featureFlagsEndpoint, config.tablelandConfig?.providerUrl, walletAddress]);
+    return `${providerUrl.replace(/\/$/, "")}/api/entitlements/${walletAddress.toLowerCase()}/flags`;
+  }, [
+    config.tablelandConfig?.featureFlagsEndpoint,
+    config.tablelandConfig?.providerUrl,
+    walletAddress,
+  ]);
 
   const sequenceRef = useRef(0);
 
@@ -137,9 +148,9 @@ export function useEntitlement(
 
     try {
       const response = await fetch(tablelandFeatureFlagsUrl, {
-        method: 'GET',
-        headers: { Accept: 'application/json' },
-        cache: 'no-store',
+        method: "GET",
+        headers: { Accept: "application/json" },
+        cache: "no-store",
       });
 
       if (!response.ok) {
@@ -154,7 +165,7 @@ export function useEntitlement(
       };
 
       if (!data.ok) {
-        throw new Error(data.error || 'Feature flags request failed.');
+        throw new Error(data.error || "Feature flags request failed.");
       }
 
       if (sequenceRef.current !== seq) return;
@@ -164,7 +175,9 @@ export function useEntitlement(
       if (sequenceRef.current !== seq) return;
       setTablelandFeatures({});
       setTablelandUpdatedAt(null);
-      setTablelandError(err instanceof Error ? err : new Error('Feature flags fetch failed.'));
+      setTablelandError(
+        err instanceof Error ? err : new Error("Feature flags fetch failed."),
+      );
     } finally {
       if (sequenceRef.current === seq) {
         setTablelandLoading(false);
@@ -187,14 +200,14 @@ export function useEntitlement(
       {
         address: registryAddress,
         abi: SubscriptionRegistryABI,
-        functionName: 'getWalletSubscription',
+        functionName: "getWalletSubscription",
         args: [walletAddress as `0x${string}`],
         chainId: network.chainId,
       },
       {
         address: registryAddress,
         abi: SubscriptionRegistryABI,
-        functionName: 'hasActiveSubscription',
+        functionName: "hasActiveSubscription",
         args: [walletAddress as `0x${string}`],
         chainId: network.chainId,
       },
@@ -210,9 +223,7 @@ export function useEntitlement(
     | boolean
     | undefined;
   const hasToken =
-    tokenId !== undefined &&
-    tokenId > 0n &&
-    hasActiveSubscription === true;
+    tokenId !== undefined && tokenId > 0n && hasActiveSubscription === true;
 
   // Step 2: If we have a tokenId, batch-read isValid, expiresAt, getPlanFeatures
   const {
@@ -225,21 +236,21 @@ export function useEntitlement(
       {
         address: registryAddress,
         abi: SubscriptionRegistryABI,
-        functionName: 'isValid',
+        functionName: "isValid",
         args: [tokenId!],
         chainId: network.chainId,
       },
       {
         address: registryAddress,
         abi: SubscriptionRegistryABI,
-        functionName: 'expiresAt',
+        functionName: "expiresAt",
         args: [tokenId!],
         chainId: network.chainId,
       },
       {
         address: registryAddress,
         abi: SubscriptionRegistryABI,
-        functionName: 'getPlanFeatures',
+        functionName: "getPlanFeatures",
         args: [tokenId!],
         chainId: network.chainId,
       },
@@ -252,18 +263,26 @@ export function useEntitlement(
 
   const isValid = subscriptionData?.[0]?.result as boolean | undefined;
   const expiresAt = subscriptionData?.[1]?.result as bigint | undefined;
-  const planFeatures = subscriptionData?.[2]?.result as [bigint, string] | undefined;
+  const planFeatures = subscriptionData?.[2]?.result as
+    | [bigint, string]
+    | undefined;
 
   const planTier = planFeatures?.[1] as PlanTier | undefined;
 
   // Build features map from plan tier. Uses provider-supplied `tierFeatureFallback`
-  // from MEAPProvider config when Tableland is not configured, falling back to an
+  // from ArcenPayProvider config when Tableland is not configured, falling back to an
   // empty map so custom provider feature keys are never silently replaced.
-  const onChainTierFeatures = useMemo<Record<string, boolean | string | number>>(() => {
+  const onChainTierFeatures = useMemo<
+    Record<string, boolean | string | number>
+  >(() => {
     if (!planTier) return {};
     const fallback = config.tierFeatureFallback;
     if (fallback) {
-      return (fallback[planTier] as Record<string, boolean | string | number> | undefined) ?? {};
+      return (
+        (fallback[planTier] as
+          | Record<string, boolean | string | number>
+          | undefined) ?? {}
+      );
     }
     return {};
   }, [planTier, config.tierFeatureFallback]);
@@ -290,7 +309,7 @@ export function useEntitlement(
   useWatchContractEvent({
     address: registryAddress,
     abi: SubscriptionRegistryABI,
-    eventName: 'SubscriptionMinted',
+    eventName: "SubscriptionMinted",
     args: walletAddress
       ? ({ subscriber: walletAddress as `0x${string}` } as const)
       : undefined,
@@ -306,7 +325,7 @@ export function useEntitlement(
   useWatchContractEvent({
     address: registryAddress,
     abi: SubscriptionRegistryABI,
-    eventName: 'SubscriptionRenewed',
+    eventName: "SubscriptionRenewed",
     args: hasToken ? ({ tokenId: tokenId! } as const) : undefined,
     onLogs: () => {
       refetchSub();
@@ -319,7 +338,7 @@ export function useEntitlement(
   useWatchContractEvent({
     address: registryAddress,
     abi: SubscriptionRegistryABI,
-    eventName: 'SubscriptionCancelled',
+    eventName: "SubscriptionCancelled",
     args: hasToken ? ({ tokenId: tokenId! } as const) : undefined,
     onLogs: () => {
       refetchTokenId();
@@ -334,7 +353,7 @@ export function useEntitlement(
   useWatchContractEvent({
     address: registryAddress,
     abi: SubscriptionRegistryABI,
-    eventName: 'Transfer',
+    eventName: "Transfer",
     args: walletAddress
       ? ({ to: walletAddress as `0x${string}` } as const)
       : undefined,
@@ -350,7 +369,7 @@ export function useEntitlement(
   useWatchContractEvent({
     address: registryAddress,
     abi: SubscriptionRegistryABI,
-    eventName: 'Transfer',
+    eventName: "Transfer",
     args: walletAddress
       ? ({ from: walletAddress as `0x${string}` } as const)
       : undefined,
@@ -383,7 +402,13 @@ export function useEntitlement(
     if (hasToken) refetchSub();
     void refetchTableland();
     void refetchDashboardEntitlements();
-  }, [refetchTokenId, refetchSub, hasToken, refetchTableland, refetchDashboardEntitlements]);
+  }, [
+    refetchTokenId,
+    refetchSub,
+    hasToken,
+    refetchTableland,
+    refetchDashboardEntitlements,
+  ]);
 
   const isLoading =
     tokenIdLoading ||
@@ -391,15 +416,17 @@ export function useEntitlement(
     dashboardLoading ||
     (Boolean(tablelandFeatureFlagsUrl) && tablelandLoading);
 
-  const tokenError = (tokenIdResult?.[0] as { error?: unknown } | undefined)?.error;
-  const subscriptionError = (subscriptionData as Array<{ error?: unknown }> | undefined)
-    ?.find((entry) => entry?.error)?.error;
+  const tokenError = (tokenIdResult?.[0] as { error?: unknown } | undefined)
+    ?.error;
+  const subscriptionError = (
+    subscriptionData as Array<{ error?: unknown }> | undefined
+  )?.find((entry) => entry?.error)?.error;
   const error = tokenError
-      ? new EntitlementError(
-          ENTITLEMENT_ERROR_CODES.ONCHAIN_READ_FAILED,
-          String(tokenError),
-          tokenError,
-        )
+    ? new EntitlementError(
+        ENTITLEMENT_ERROR_CODES.ONCHAIN_READ_FAILED,
+        String(tokenError),
+        tokenError,
+      )
     : subscriptionError
       ? new EntitlementError(
           ENTITLEMENT_ERROR_CODES.ONCHAIN_READ_FAILED,
@@ -418,12 +445,12 @@ export function useEntitlement(
               dashboardError,
               dashboardError,
             )
-        : walletInvalid
-          ? new EntitlementError(
-              ENTITLEMENT_ERROR_CODES.INVALID_WALLET_ADDRESS,
-              "Wallet address is invalid.",
-            )
-          : null;
+          : walletInvalid
+            ? new EntitlementError(
+                ENTITLEMENT_ERROR_CODES.INVALID_WALLET_ADDRESS,
+                "Wallet address is invalid.",
+              )
+            : null;
 
   const onChainLastUpdatedAt =
     tokenIdUpdatedAt || subscriptionUpdatedAt
@@ -436,7 +463,9 @@ export function useEntitlement(
       lastUpdatedAt: onChainLastUpdatedAt,
     },
     tableland: {
-      enabled: Boolean(tablelandFeatureFlagsUrl) || Object.keys(dashboardEntitlements).length > 0,
+      enabled:
+        Boolean(tablelandFeatureFlagsUrl) ||
+        Object.keys(dashboardEntitlements).length > 0,
       lastUpdatedAt:
         Math.max(tablelandUpdatedAt || 0, dashboardUpdatedAt || 0) || null,
     },

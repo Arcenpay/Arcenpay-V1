@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import React from 'react';
+import React from "react";
 
 export type TemplateBlock = {
-  type: 'heading' | 'text' | 'price' | 'feature-list' | 'cta';
+  type: "heading" | "text" | "price" | "feature-list" | "cta";
   content?: string;
   amount?: string;
   interval?: string;
@@ -24,18 +24,21 @@ export interface TemplateRendererProps {
 export function TemplateRenderer({
   name,
   blocks,
-  className = '',
+  className = "",
 }: TemplateRendererProps) {
   return (
-    <div className={`arcenpay-template-renderer ${className}`} data-template-name={name}>
+    <div
+      className={`arcenpay-template-renderer ${className}`}
+      data-template-name={name}
+    >
       {blocks.map((block, index) => {
-        if (block.type === 'heading') {
+        if (block.type === "heading") {
           return <h2 key={`${block.type}-${index}`}>{block.content}</h2>;
         }
-        if (block.type === 'text') {
+        if (block.type === "text") {
           return <p key={`${block.type}-${index}`}>{block.content}</p>;
         }
-        if (block.type === 'price') {
+        if (block.type === "price") {
           return (
             <p key={`${block.type}-${index}`}>
               <strong>{block.amount}</strong>
@@ -43,7 +46,7 @@ export function TemplateRenderer({
             </p>
           );
         }
-        if (block.type === 'feature-list') {
+        if (block.type === "feature-list") {
           return (
             <ul key={`${block.type}-${index}`}>
               {(block.items || []).map((item) => (
@@ -52,10 +55,10 @@ export function TemplateRenderer({
             </ul>
           );
         }
-        if (block.type === 'cta') {
+        if (block.type === "cta") {
           return (
-            <a key={`${block.type}-${index}`} href={block.href || '#'}>
-              {block.content || 'Continue'}
+            <a key={`${block.type}-${index}`} href={block.href || "#"}>
+              {block.content || "Continue"}
             </a>
           );
         }

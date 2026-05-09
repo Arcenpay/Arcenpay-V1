@@ -1,13 +1,13 @@
-'use client';
+"use client";
 
-import React, { type ReactNode, useEffect, useMemo, useState } from 'react';
-import { useEntitlement } from '../hooks/useEntitlement';
-import { useArcenPay } from '../providers/ArcenPayProvider';
+import React, { type ReactNode, useEffect, useMemo, useState } from "react";
+import { useEntitlement } from "../hooks/useEntitlement";
+import { useArcenPay } from "../providers/ArcenPayProvider";
 import {
   getLitNodeClient,
   getCachedSessionSigs,
   cacheSessionSigs,
-} from '../lib/lit-client';
+} from "../lib/lit-client";
 
 interface FeatureFlagGuardProps {
   featureKey: string;
@@ -36,8 +36,8 @@ export function resolveDecryptEndpoint(
 ): string | null {
   if (!endpointTemplate) return null;
   return endpointTemplate
-    .replace('{wallet}', walletAddress.toLowerCase())
-    .replace('{feature}', featureKey);
+    .replace("{wallet}", walletAddress.toLowerCase())
+    .replace("{feature}", featureKey);
 }
 
 export function hasEntitlementFeature(
@@ -53,7 +53,7 @@ export function FeatureFlagGuard({
   walletAddress,
   children,
   fallback = null,
-  className = '',
+  className = "",
   requireDecryption = false,
   decryptEndpoint,
   decryptPayload,
@@ -61,7 +61,10 @@ export function FeatureFlagGuard({
   onDecryptionError,
 }: FeatureFlagGuardProps) {
   const { config } = useArcenPay();
-  const { features, isSubscribed, isLoading } = useEntitlement(walletAddress, featureKey);
+  const { features, isSubscribed, isLoading } = useEntitlement(
+    walletAddress,
+    featureKey,
+  );
   const [decrypting, setDecrypting] = useState(false);
   const [decryptPassed, setDecryptPassed] = useState(false);
   const [decryptError, setDecryptError] = useState<Error | null>(null);
@@ -70,7 +73,7 @@ export function FeatureFlagGuard({
     const raw =
       decryptEndpoint ||
       (config.tablelandConfig?.providerUrl
-        ? `${config.tablelandConfig.providerUrl.replace(/\/$/, '')}/api/lit/decrypt`
+        ? `${config.tablelandConfig.providerUrl.replace(/\/$/, "")}/api/lit/decrypt`
         : null);
     if (!raw) return null;
     return resolveDecryptEndpoint(raw, walletAddress, featureKey);
@@ -105,10 +108,10 @@ export function FeatureFlagGuard({
         if (resolvedDecryptEndpoint) {
           // ── Path A: HTTP proxy ────────────────────────────────────────────
           const response = await fetch(resolvedDecryptEndpoint, {
-            method: 'POST',
+            method: "POST",
             headers: {
-              'Content-Type': 'application/json',
-              Accept: 'application/json',
+              "Content-Type": "application/json",
+              Accept: "application/json",
             },
             body: JSON.stringify({
               walletAddress,
@@ -126,7 +129,7 @@ export function FeatureFlagGuard({
             error?: string;
           };
           if (payload.ok !== true) {
-            throw new Error(payload.error || 'Decrypt request failed.');
+            throw new Error(payload.error || "Decrypt request failed.");
           }
 
           if (cancelled) return;
@@ -134,29 +137,33 @@ export function FeatureFlagGuard({
           onDecryptionSuccess?.(payload);
         } else {
           // ── Path B: Direct Lit Protocol SDK ──────────────────────────────
-          const litNetwork = (config.litNetwork as 'habanero' | 'manzano') ?? 'habanero';
+          const litNetwork =
+            (config.litNetwork as "habanero" | "manzano") ?? "habanero";
           const client = await getLitNodeClient(litNetwork);
 
           // Retrieve or create session signatures (24h cache)
           let sessionSigs = getCachedSessionSigs();
           if (!sessionSigs) {
-            const authHelpers = await import('@lit-protocol/auth-helpers');
+            const authHelpers = await import("@lit-protocol/auth-helpers");
             // generateAuthSig is the supported API in newer versions
             const generateAuthSig =
-              (authHelpers as any).generateAuthSig ?? (authHelpers as any).checkAndSignAuthMessage;
+              (authHelpers as any).generateAuthSig ??
+              (authHelpers as any).checkAndSignAuthMessage;
 
             if (!generateAuthSig) {
               throw new Error(
-                '[FeatureFlagGuard] Install @lit-protocol/auth-helpers to use direct Lit SDK mode.',
+                "[FeatureFlagGuard] Install @lit-protocol/auth-helpers to use direct Lit SDK mode.",
               );
             }
 
-            const authSig = await generateAuthSig({ chain: 'ethereum' });
+            const authSig = await generateAuthSig({ chain: "ethereum" });
 
             sessionSigs = await client.getSessionSigs({
-              chain: 'ethereum',
+              chain: "ethereum",
               authNeededCallback: async (_params: unknown) => authSig,
-              expiration: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+              expiration: new Date(
+                Date.now() + 24 * 60 * 60 * 1000,
+              ).toISOString(),
               resourceAbilityRequests: [],
             });
             cacheSessionSigs(sessionSigs);
@@ -165,13 +172,13 @@ export function FeatureFlagGuard({
           // Access Control Condition: wallet address must match
           const accessControlConditions = [
             {
-              contractAddress: '',
-              standardContractType: '',
-              chain: 'ethereum',
-              method: '',
-              parameters: [':userAddress'],
+              contractAddress: "",
+              standardContractType: "",
+              chain: "ethereum",
+              method: "",
+              parameters: [":userAddress"],
               returnValueTest: {
-                comparator: '=',
+                comparator: "=",
                 value: walletAddress.toLowerCase(),
               },
             },
@@ -179,20 +186,22 @@ export function FeatureFlagGuard({
 
           await client.getEncryptionKey({
             accessControlConditions,
-            toDecrypt: features[`${featureKey}_ciphertext`] as string | undefined,
-            chain: 'ethereum',
+            toDecrypt: features[`${featureKey}_ciphertext`] as
+              | string
+              | undefined,
+            chain: "ethereum",
             authSig: null,
             sessionSigs,
           });
 
           if (cancelled) return;
           setDecryptPassed(true);
-          onDecryptionSuccess?.({ ok: true, via: 'lit-sdk' });
+          onDecryptionSuccess?.({ ok: true, via: "lit-sdk" });
         }
       } catch (err) {
         if (cancelled) return;
         const normalized =
-          err instanceof Error ? err : new Error('Decrypt request failed.');
+          err instanceof Error ? err : new Error("Decrypt request failed.");
         setDecryptPassed(false);
         setDecryptError(normalized);
         onDecryptionError?.(normalized);

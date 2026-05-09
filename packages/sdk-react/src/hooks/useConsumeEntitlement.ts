@@ -1,9 +1,8 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import type { ConsumeEntitlementResult } from "@arcenpay/sdk";
+import type { ConsumeEntitlementResult } from "../sdk";
 import { useArcenPay } from "../providers/ArcenPayProvider";
-import { resolveDashboardBaseUrl } from "../lib/api";
 
 /**
  * Consume a metered entitlement (e.g., "api-calls").
@@ -20,8 +19,7 @@ export function useConsumeEntitlement(): {
   error: string | null;
 } {
   const arcen = useArcenPay();
-  const { session } = arcen;
-  const baseUrl = resolveDashboardBaseUrl();
+  const { session, baseUrl } = arcen;
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

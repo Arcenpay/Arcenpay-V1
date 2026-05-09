@@ -10,15 +10,16 @@ import {
   getDemoCompanyIdentity,
   getDemoCompanyKeys,
   getDemoUserIdentity,
-  getRawArcenClient,
+  getDemoNodeClient,
 } from "@/lib/arcen-client";
+import { resolveArcenPayBaseUrl } from "@arcenpay/node";
 
 const FEATURE_KEYS = ["scan", "api-access", "export-pdf"] as const;
 
 function getNodeStatus() {
   return {
     hasApiKey: !!process.env.ARCENPAY_API_KEY,
-    baseUrl: process.env.ARCENPAY_BASE_URL ?? "http://localhost:3000",
+    baseUrl: resolveArcenPayBaseUrl(),
     componentId: process.env.NEXT_PUBLIC_ARCENPAY_COMPONENT_ID ?? "",
     company: getDemoCompanyIdentity(),
     user: getDemoUserIdentity(),
@@ -26,7 +27,7 @@ function getNodeStatus() {
 }
 
 async function buildLiveSnapshot() {
-  const client = getRawArcenClient();
+  const client = getDemoNodeClient();
   const company = getDemoCompanyKeys();
   const user = getDemoUserIdentity();
 
@@ -45,12 +46,12 @@ async function buildLiveSnapshot() {
 
   const accessToken = await client.createAccessToken(company, user, 1800);
 
-  const companyDetails =
-    identify.companyId
-      ? await client.getCompany(identify.companyId).catch((error) => ({
-          error: error instanceof Error ? error.message : "Failed to load company",
-        }))
-      : null;
+  const companyDetails = identify.companyId
+    ? await client.getCompany(identify.companyId).catch((error) => ({
+        error:
+          error instanceof Error ? error.message : "Failed to load company",
+      }))
+    : null;
 
   const rawPayload = JSON.stringify({
     event: "subscription.renewed",
@@ -93,7 +94,10 @@ async function buildLiveSnapshot() {
     flag:
       flag.status === "fulfilled"
         ? flag.value
-        : { error: flag.reason instanceof Error ? flag.reason.message : "Failed" },
+        : {
+            error:
+              flag.reason instanceof Error ? flag.reason.message : "Failed",
+          },
     entitlement:
       entitlement.status === "fulfilled"
         ? entitlement.value
@@ -106,7 +110,10 @@ async function buildLiveSnapshot() {
     flags:
       flags.status === "fulfilled"
         ? flags.value
-        : { error: flags.reason instanceof Error ? flags.reason.message : "Failed" },
+        : {
+            error:
+              flags.reason instanceof Error ? flags.reason.message : "Failed",
+          },
     companies:
       companies.status === "fulfilled"
         ? {
@@ -149,7 +156,10 @@ export async function GET() {
       {
         ok: false,
         status: getNodeStatus(),
-        error: error instanceof Error ? error.message : "Failed to load Node showcase",
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to load Node showcase",
       },
       { status: 500 },
     );
@@ -164,7 +174,7 @@ export async function POST(req: NextRequest) {
     body = {};
   }
 
-  const client = getRawArcenClient();
+  const client = getDemoNodeClient();
   const company = getDemoCompanyKeys();
   const user = getDemoUserIdentity();
 
@@ -241,7 +251,10 @@ export async function POST(req: NextRequest) {
       {
         ok: false,
         action: body.action ?? null,
-        error: error instanceof Error ? error.message : "Node showcase action failed",
+        error:
+          error instanceof Error
+            ? error.message
+            : "Node showcase action failed",
       },
       { status: 500 },
     );

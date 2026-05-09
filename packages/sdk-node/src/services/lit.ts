@@ -2,19 +2,19 @@
 //  @arcenpay/node — Lit Protocol Access Control Integration
 // ============================================================
 
-import { LIT_NETWORK } from '@lit-protocol/constants';
-import { decryptToString, encryptString } from '@lit-protocol/encryption';
-import { LitNodeClient } from '@lit-protocol/lit-node-client';
-import type { PlanTier } from '@arcenpay/sdk';
+import { LIT_NETWORK } from "@lit-protocol/constants";
+import { decryptToString, encryptString } from "@lit-protocol/encryption";
+import { LitNodeClient } from "@lit-protocol/lit-node-client";
+import type { PlanTier } from "../sdk";
 
 export interface LitAccessCondition {
   contractAddress: string;
-  standardContractType: 'ERC721' | 'ERC1155' | 'Custom';
+  standardContractType: "ERC721" | "ERC1155" | "Custom";
   chain: string;
   method: string;
   parameters: string[];
   returnValueTest: {
-    comparator: '>' | '<' | '=' | '>=' | '<=';
+    comparator: ">" | "<" | "=" | ">=" | "<=";
     value: string;
   };
 }
@@ -24,12 +24,7 @@ export interface LitConfig {
    * Supported Lit network aliases.
    * Legacy names are kept for backwards compatibility with older env files.
    */
-  network:
-    | 'manzano'
-    | 'habanero'
-    | 'datil-dev'
-    | 'datil-test'
-    | 'datil';
+  network: "manzano" | "habanero" | "datil-dev" | "datil-test" | "datil";
   /** SubscriptionRegistry contract address */
   registryAddress: string;
   /** Chain name used in ACC conditions (e.g., 'baseSepolia', 'base', 'sepolia') */
@@ -52,13 +47,13 @@ export class LitProtocolService {
   async connect(): Promise<void> {
     const litNetwork = (() => {
       switch (this.config.network) {
-        case 'habanero':
-        case 'datil':
+        case "habanero":
+        case "datil":
           return LIT_NETWORK.Datil;
-        case 'datil-test':
-        case 'manzano':
+        case "datil-test":
+        case "manzano":
           return LIT_NETWORK.DatilTest;
-        case 'datil-dev':
+        case "datil-dev":
         default:
           return LIT_NETWORK.DatilDev;
       }
@@ -77,13 +72,13 @@ export class LitProtocolService {
     return [
       {
         contractAddress: this.config.registryAddress,
-        standardContractType: 'Custom',
+        standardContractType: "Custom",
         chain: this.config.chain,
-        method: 'hasActiveSubscription',
-        parameters: [':userAddress'],
+        method: "hasActiveSubscription",
+        parameters: [":userAddress"],
         returnValueTest: {
-          comparator: '=',
-          value: 'true',
+          comparator: "=",
+          value: "true",
         },
       },
     ];
@@ -96,23 +91,23 @@ export class LitProtocolService {
     return [
       {
         contractAddress: this.config.registryAddress,
-        standardContractType: 'Custom',
+        standardContractType: "Custom",
         chain: this.config.chain,
-        method: 'hasActiveSubscription',
-        parameters: [':userAddress'],
+        method: "hasActiveSubscription",
+        parameters: [":userAddress"],
         returnValueTest: {
-          comparator: '=',
-          value: 'true',
+          comparator: "=",
+          value: "true",
         },
       },
       {
         contractAddress: this.config.registryAddress,
-        standardContractType: 'Custom',
+        standardContractType: "Custom",
         chain: this.config.chain,
-        method: 'getWalletSubscription',
-        parameters: [':userAddress'],
+        method: "getWalletSubscription",
+        parameters: [":userAddress"],
         returnValueTest: {
-          comparator: '>=',
+          comparator: ">=",
           value: String(minValue > 0 ? 1 : 0),
         },
       },
@@ -150,7 +145,7 @@ export class LitProtocolService {
 
     if (!auth?.authSig && !auth?.sessionSigs) {
       throw new Error(
-        '[LitProtocol] Missing auth input. Provide authSig or sessionSigs for decryption.',
+        "[LitProtocol] Missing auth input. Provide authSig or sessionSigs for decryption.",
       );
     }
 
@@ -174,12 +169,12 @@ export class LitProtocolService {
       await this.litClient.disconnect();
       this.litClient = null;
     }
-    console.log('[LitProtocol] Disconnected');
+    console.log("[LitProtocol] Disconnected");
   }
 
   private ensureConnected(): void {
     if (!this.litClient) {
-      throw new Error('[LitProtocol] Not connected. Call connect() first.');
+      throw new Error("[LitProtocol] Not connected. Call connect() first.");
     }
   }
 }

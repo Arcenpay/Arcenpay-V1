@@ -10,7 +10,7 @@ All notable changes to ArcenPay are documented here.
 - Provider dashboard (Next.js 16 + Prisma + PostgreSQL)
 - Facilitator runtime bridge (Express + x402 middleware + event watchers)
 - 7 Solidity smart contracts deployed to Sepolia + Base Sepolia
-- 4 SDK packages: `sdk-core`, `sdk-node`, `sdk-react`, `sdk-agent`
+- 3 public SDK packages: `sdk-node`, `sdk-react`, `sdk-agent`, plus the private internal core
 - Email magic-link authentication with wallet linking
 - EIP-712 x402 payment validation with anti-replay
 - Subscription minting via ZeroDev smart accounts + AutopayModule

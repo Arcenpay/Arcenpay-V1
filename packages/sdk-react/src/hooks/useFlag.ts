@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import type { ArcenCompanyKeys, ArcenUserKeys } from "@arcenpay/sdk";
+import type { ArcenCompanyKeys, ArcenUserKeys } from "../sdk";
 import { useArcenPay } from "../providers/ArcenPayProvider";
-import { resolveDashboardBaseUrl } from "../lib/api";
 
 // ─── Module-level cache ──────────────────────────────────────────────────────
 
@@ -35,13 +34,11 @@ export function useFlag(
   userKeys?: ArcenUserKeys,
 ): boolean {
   const arcen = useArcenPay();
-  const { session } = arcen;
+  const { session, baseUrl } = arcen;
 
   const company = companyKeys ?? session.company ?? undefined;
   const user = userKeys ?? session.user ?? undefined;
   const token = session.token;
-  const baseUrl = resolveDashboardBaseUrl();
-
   const cacheKey = `${featureKey}:${JSON.stringify(company ?? {})}:${JSON.stringify(user ?? {})}`;
 
   const [enabled, setEnabled] = useState<boolean>(() => {
@@ -53,6 +50,9 @@ export function useFlag(
 
   useEffect(() => {
     if (!featureKey) return;
+    if (!token) {
+      return;
+    }
 
     const cached = flagCache.get(cacheKey);
     if (cached && Date.now() < cached.expiresAt) {
@@ -72,7 +72,19 @@ export function useFlag(
       headers,
       signal: ctrl.signal,
     })
-      .then((res) => res.json())
+      .then(async (res) => {
+        const json = (await res.json().catch(() => ({}))) as {
+          enabled?: boolean;
+          reason?: string;
+          error?: string;
+        };
+
+        if (!res.ok) {
+          throw new Error(json.error ?? `HTTP ${res.status}`);
+        }
+
+        return json;
+      })
       .then((json: { enabled?: boolean; reason?: string }) => {
         const value = json.enabled ?? false;
         flagCache.set(cacheKey, {
@@ -116,18 +128,17 @@ export function useFlags(
   userKeys?: ArcenUserKeys,
 ): Record<string, boolean> {
   const arcen = useArcenPay();
-  const { session } = arcen;
+  const { session, baseUrl } = arcen;
 
   const company = companyKeys ?? session.company ?? undefined;
   const user = userKeys ?? session.user ?? undefined;
   const token = session.token;
-  const baseUrl = resolveDashboardBaseUrl();
-
   const [flags, setFlags] = useState<Record<string, boolean>>({});
   const controllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     if (featureKeys.length === 0) return;
+    if (!token) return;
 
     const ctrl = new AbortController();
     controllerRef.current = ctrl;
@@ -143,9 +154,24 @@ export function useFlags(
           headers,
           signal: ctrl.signal,
         })
-          .then((r) => r.json() as Promise<{ enabled?: boolean }>)
-          .then((json) => [key, json.enabled ?? false] as [string, boolean])
-          .catch(() => [key, false] as [string, boolean]),
+          .then(async (response) => {
+            const json = (await response.json().catch(() => ({}))) as {
+              enabled?: boolean;
+              error?: string;
+            };
+
+            if (!response.ok) {
+              throw new Error(json.error ?? `HTTP ${response.status}`);
+            }
+
+            return [key, json.enabled ?? false] as [string, boolean];
+          })
+          .catch((error) => {
+            if (!(error instanceof DOMException && error.name === "AbortError")) {
+              console.error(`[useFlags] ${key}`, error);
+            }
+            return [key, false] as [string, boolean];
+          }),
       ),
     ).then((results) => {
       setFlags(Object.fromEntries(results));

@@ -11,7 +11,7 @@ ArcenPay is a monorepo for dashboard-managed billing, embedded customer billing 
 - `packages/sdk-react`: browser SDK with `ArcenPayProvider`, `ArcenEmbed`, hooks, and payment-link helpers.
 - `packages/sdk-node`: server SDK with `ArcenClient`, webhook verification, activation, and advanced runtime services.
 - `packages/sdk-agent`: autonomous payment SDK for bots and agent workloads.
-- `packages/sdk-core`: shared types, ABIs, addresses, and low-level helpers.
+- `packages/internal-core`: private shared source used to build internal runtime helpers.
 - `packages/contracts`, `subgraph`, `circuits`: contract, indexing, and proof-related infrastructure.
 
 ## Quick start
@@ -69,7 +69,6 @@ The standard product integration path today is:
   - `packages/sdk-react/README.md`
   - `packages/sdk-node/README.md`
   - `packages/sdk-agent/README.md`
-  - `packages/sdk-core/README.md`
 
 ## License
 

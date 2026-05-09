@@ -19,6 +19,8 @@
     "src"
   ],
   "scripts": {
+    "prebuild": "npm run build --workspace=@arcenpay/internal-core",
+    "pretypecheck": "npm run build --workspace=@arcenpay/internal-core",
     "build": "tsup src/index.ts --format cjs,esm --dts --dts-resolve --sourcemap",
     "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
     "test": "vitest run",
@@ -27,7 +29,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@arcenpay/sdk": "0.0.1",
+    "@arcenpay/internal-core": "0.0.2",
     "viem": "^2.21.0"
   },
   "devDependencies": {

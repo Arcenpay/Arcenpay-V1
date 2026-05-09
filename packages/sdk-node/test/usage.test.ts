@@ -69,14 +69,17 @@ describe("UsageService proof modes", () => {
   });
 
   it("rejects mismatched proof artifact versions in strict mode", () => {
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "meap-usage-"));
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "arcenpay-usage-"));
     const proveScriptPath = path.join(tmpDir, "prove.js");
     const wasmPath = path.join(tmpDir, "UsageBilling.wasm");
     const zkeyPath = path.join(tmpDir, "circuit_final.zkey");
     const verificationKeyPath = path.join(tmpDir, "verification_key.json");
     const artifactManifestPath = path.join(tmpDir, "artifact-manifest.json");
 
-    fs.writeFileSync(proveScriptPath, "export async function prove(){ return { proof: {}, publicSignals: [] }; }");
+    fs.writeFileSync(
+      proveScriptPath,
+      "export async function prove(){ return { proof: {}, publicSignals: [] }; }",
+    );
     fs.writeFileSync(wasmPath, "");
     fs.writeFileSync(zkeyPath, "");
     fs.writeFileSync(

@@ -62,7 +62,7 @@ const GATEWAY_URL =
   process.env.TABLELAND_GATEWAY_URL ??
   'https://testnets.tableland.network';
 
-// Table schema — mirrors TablelandEntitlement in packages/sdk-core/src/types.ts
+// Table schema — mirrors TablelandEntitlement in packages/internal-core/src/types.ts
 const TABLE_PREFIX = 'arcenpay_entitlements';
 const CREATE_SCHEMA = `
   wallet_address text,

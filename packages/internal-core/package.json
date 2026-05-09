@@ -1,0 +1,65 @@
+{
+  "name": "@arcenpay/internal-core",
+  "version": "0.0.2",
+  "private": true,
+  "description": "Private shared runtime for ArcenPay internal services",
+  "license": "UNLICENSED",
+  "homepage": "https://app.arcenpay.com",
+  "keywords": [
+    "arcenpay",
+    "web3",
+    "subscriptions",
+    "billing",
+    "base",
+    "internal"
+  ],
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "typings": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "default": "./dist/index.mjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --clean --format cjs,esm --dts --dts-resolve",
+    "dev": "tsup src/index.ts --clean --format cjs,esm --dts --watch",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "devDependencies": {
+    "tsup": "^8.3.0",
+    "typescript": "^5.7.0",
+    "vitest": "^4.0.18"
+  },
+  "dependencies": {
+    "viem": "^2.21.0"
+  },
+  "peerDependencies": {
+    "@zerodev/sdk": ">=5.0.0",
+    "@zerodev/ecdsa-validator": ">=5.0.0",
+    "permissionless": ">=0.2.0"
+  },
+  "peerDependenciesMeta": {
+    "@zerodev/sdk": {
+      "optional": true
+    },
+    "@zerodev/ecdsa-validator": {
+      "optional": true
+    },
+    "permissionless": {
+      "optional": true
+    }
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

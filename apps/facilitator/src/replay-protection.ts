@@ -1,5 +1,5 @@
 // ============================================================
-//  MEAP Facilitator — x402 Replay Protection
+//  ArcenPay Facilitator — x402 Replay Protection
 //
 //  Prevents replaying of x402 payment headers within a
 //  configurable time window by tracking payment IDs in a

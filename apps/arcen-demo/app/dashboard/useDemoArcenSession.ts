@@ -14,6 +14,7 @@ export function useDemoArcenSession(
 ) {
   const { identify, session } = useArcenPay();
   const identifiedWalletRef = useRef<string | null>(null);
+  const identifyingWalletRef = useRef<string | null>(null);
   const [status, setStatus] = useState<"idle" | "loading" | "ready" | "error">(
     "idle",
   );
@@ -35,14 +36,21 @@ export function useDemoArcenSession(
 
     if (identified) {
       identifiedWalletRef.current = normalizedAddress;
+      identifyingWalletRef.current = null;
       setStatus("ready");
       setError(null);
       return;
     }
 
-    if (identifiedWalletRef.current === normalizedAddress) return;
+    if (
+      identifiedWalletRef.current === normalizedAddress ||
+      identifyingWalletRef.current === normalizedAddress
+    ) {
+      return;
+    }
 
     let cancelled = false;
+    identifyingWalletRef.current = normalizedAddress;
     setStatus("loading");
     setError(null);
 
@@ -61,10 +69,12 @@ export function useDemoArcenSession(
       .then(() => {
         if (cancelled) return;
         identifiedWalletRef.current = normalizedAddress;
+        identifyingWalletRef.current = null;
         setStatus("ready");
       })
       .catch((cause) => {
         if (cancelled) return;
+        identifyingWalletRef.current = null;
         setStatus("error");
         setError(
           cause instanceof Error

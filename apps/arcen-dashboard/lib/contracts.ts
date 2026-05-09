@@ -1,6 +1,6 @@
 // ============================================================
 //  Dashboard — Contract helpers
-//  Re-exports @arcenpay/sdk ABIs + addresses; exposes a hook
+//  Re-exports @arcenpay/internal-core ABIs + addresses; exposes a hook
 //  that resolves addresses for the currently connected chain.
 // ============================================================
 
@@ -15,7 +15,7 @@ import {
   ERC7579AutopayModuleABI,
   YieldSessionVaultABI,
   TOKENS,
-} from "@arcenpay/sdk";
+} from "@arcenpay/internal-core";
 import {
   BASE_SEPOLIA_CHAIN_ID,
   DEFAULT_CHAIN_ID,

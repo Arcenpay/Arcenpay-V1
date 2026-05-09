@@ -3,11 +3,11 @@
 //  CRUD operations for feature flags stored in Tableland
 // ============================================================
 
-import { Database } from '@tableland/sdk';
-import type { PlanTier, TablelandEntitlement } from '@arcenpay/sdk';
+import { Database } from "@tableland/sdk";
+import type { PlanTier, TablelandEntitlement } from "../sdk";
 // Tableland SDK requires a full ethers Signer — ethers is an explicit dependency.
 // Viem is used everywhere else; this is the one place ethers is intentional.
-import { JsonRpcProvider, Wallet } from 'ethers';
+import { JsonRpcProvider, Wallet } from "ethers";
 
 export interface TablelandConfig {
   /** Tableland table name (e.g., meap_feature_flags_84532_123) */
@@ -22,7 +22,10 @@ export interface TablelandConfig {
   gatewayUrl?: string;
 }
 
-type TierFlagsMatrix = Record<string, Record<string, boolean | string | number>>;
+type TierFlagsMatrix = Record<
+  string,
+  Record<string, boolean | string | number>
+>;
 
 export class TablelandService {
   private config: TablelandConfig;
@@ -53,23 +56,30 @@ export class TablelandService {
 
     this.initialized = true;
     console.log(
-      `[Tableland] Initialized table=${this.config.tableName} mode=${this.dbWrite ? 'read-write' : 'read-only'}`,
+      `[Tableland] Initialized table=${this.config.tableName} mode=${this.dbWrite ? "read-write" : "read-only"}`,
     );
   }
 
-  async getFeatureFlags(walletAddress: string): Promise<Record<string, boolean | string | number>> {
+  async getFeatureFlags(
+    walletAddress: string,
+  ): Promise<Record<string, boolean | string | number>> {
     this.ensureInitialized();
     const normalized = walletAddress.toLowerCase();
 
     try {
       const statement = `SELECT feature_flags FROM ${this.config.tableName} WHERE wallet_address = ? LIMIT 1`;
-      const response = await this.dbRead!.prepare(statement).bind(normalized).all();
+      const response = await this.dbRead!.prepare(statement)
+        .bind(normalized)
+        .all();
       const row = (response.results as Array<{ feature_flags?: string }>)[0];
       if (!row?.feature_flags) return {};
-      const parsed = JSON.parse(row.feature_flags) as Record<string, boolean | string | number>;
+      const parsed = JSON.parse(row.feature_flags) as Record<
+        string,
+        boolean | string | number
+      >;
       return parsed ?? {};
     } catch (err) {
-      console.error('[Tableland] getFeatureFlags error:', err);
+      console.error("[Tableland] getFeatureFlags error:", err);
       return {};
     }
   }
@@ -85,8 +95,9 @@ export class TablelandService {
 
     const now = Math.floor(Date.now() / 1000);
     const nftTokenId = metadata.nft_token_id ?? 0;
-    const planTier = metadata.plan_tier ?? 'starter';
-    const apiRateLimit = metadata.api_rate_limit ?? this.defaultRateLimitForTier(planTier);
+    const planTier = metadata.plan_tier ?? "starter";
+    const apiRateLimit =
+      metadata.api_rate_limit ?? this.defaultRateLimitForTier(planTier);
     const billingInterval = metadata.billing_interval ?? 2_592_000;
     const lastRenewed = metadata.last_renewed ?? now;
     const expiresAt = metadata.expires_at ?? 0;
@@ -108,8 +119,7 @@ export class TablelandService {
           chain_id = excluded.chain_id
       `;
 
-      await this.dbWrite!
-        .prepare(statement)
+      await this.dbWrite!.prepare(statement)
         .bind(
           normalized,
           nftTokenId,
@@ -125,7 +135,7 @@ export class TablelandService {
 
       return true;
     } catch (err) {
-      console.error('[Tableland] setFeatureFlags error:', err);
+      console.error("[Tableland] setFeatureFlags error:", err);
       return false;
     }
   }
@@ -136,10 +146,12 @@ export class TablelandService {
 
     try {
       const statement = `DELETE FROM ${this.config.tableName} WHERE wallet_address = ?`;
-      await this.dbWrite!.prepare(statement).bind(walletAddress.toLowerCase()).run();
+      await this.dbWrite!.prepare(statement)
+        .bind(walletAddress.toLowerCase())
+        .run();
       return true;
     } catch (err) {
-      console.error('[Tableland] revokeEntitlement error:', err);
+      console.error("[Tableland] revokeEntitlement error:", err);
       return false;
     }
   }
@@ -153,14 +165,24 @@ export class TablelandService {
       await this.dbWrite!.prepare(statement).bind(tokenId).run();
       return true;
     } catch (err) {
-      console.error('[Tableland] revokeEntitlementByTokenId error:', err);
+      console.error("[Tableland] revokeEntitlementByTokenId error:", err);
       return false;
     }
   }
 
   async updateEntitlementByTokenId(
     tokenId: number,
-    updates: Partial<Pick<TablelandEntitlement, 'feature_flags' | 'plan_tier' | 'expires_at' | 'last_renewed' | 'api_rate_limit' | 'billing_interval'>>,
+    updates: Partial<
+      Pick<
+        TablelandEntitlement,
+        | "feature_flags"
+        | "plan_tier"
+        | "expires_at"
+        | "last_renewed"
+        | "api_rate_limit"
+        | "billing_interval"
+      >
+    >,
   ): Promise<boolean> {
     this.ensureInitialized();
     this.ensureWritable();
@@ -169,39 +191,41 @@ export class TablelandService {
     const values: Array<string | number> = [];
 
     if (updates.feature_flags) {
-      assignments.push('feature_flags = ?');
+      assignments.push("feature_flags = ?");
       values.push(JSON.stringify(updates.feature_flags));
     }
     if (updates.plan_tier) {
-      assignments.push('plan_tier = ?');
+      assignments.push("plan_tier = ?");
       values.push(updates.plan_tier);
     }
     if (updates.expires_at !== undefined) {
-      assignments.push('expires_at = ?');
+      assignments.push("expires_at = ?");
       values.push(updates.expires_at);
     }
     if (updates.last_renewed !== undefined) {
-      assignments.push('last_renewed = ?');
+      assignments.push("last_renewed = ?");
       values.push(updates.last_renewed);
     }
     if (updates.api_rate_limit !== undefined) {
-      assignments.push('api_rate_limit = ?');
+      assignments.push("api_rate_limit = ?");
       values.push(updates.api_rate_limit);
     }
     if (updates.billing_interval !== undefined) {
-      assignments.push('billing_interval = ?');
+      assignments.push("billing_interval = ?");
       values.push(updates.billing_interval);
     }
 
     if (assignments.length === 0) return true;
 
     try {
-      const statement = `UPDATE ${this.config.tableName} SET ${assignments.join(', ')} WHERE nft_token_id = ?`;
+      const statement = `UPDATE ${this.config.tableName} SET ${assignments.join(", ")} WHERE nft_token_id = ?`;
       values.push(tokenId);
-      await this.dbWrite!.prepare(statement).bind(...values).run();
+      await this.dbWrite!.prepare(statement)
+        .bind(...values)
+        .run();
       return true;
     } catch (err) {
-      console.error('[Tableland] updateEntitlementByTokenId error:', err);
+      console.error("[Tableland] updateEntitlementByTokenId error:", err);
       return false;
     }
   }
@@ -212,16 +236,24 @@ export class TablelandService {
 
     try {
       const statement = `SELECT * FROM ${this.config.tableName} LIMIT ?`;
-      const response = await this.dbRead!.prepare(statement).bind(safeLimit).all();
+      const response = await this.dbRead!.prepare(statement)
+        .bind(safeLimit)
+        .all();
       const rows = (response.results || []) as Array<Record<string, unknown>>;
       return rows.map((row) => ({
-        wallet_address: String(row.wallet_address || ''),
+        wallet_address: String(row.wallet_address || ""),
         nft_token_id: Number(row.nft_token_id || 0),
-        plan_tier: String(row.plan_tier || 'starter'),
+        plan_tier: String(row.plan_tier || "starter"),
         feature_flags:
-          typeof row.feature_flags === 'string'
-            ? (JSON.parse(row.feature_flags) as Record<string, boolean | string | number>)
-            : ((row.feature_flags || {}) as Record<string, boolean | string | number>),
+          typeof row.feature_flags === "string"
+            ? (JSON.parse(row.feature_flags) as Record<
+                string,
+                boolean | string | number
+              >)
+            : ((row.feature_flags || {}) as Record<
+                string,
+                boolean | string | number
+              >),
         api_rate_limit: Number(row.api_rate_limit || 0),
         billing_interval: Number(row.billing_interval || 0),
         last_renewed: Number(row.last_renewed || 0),
@@ -229,7 +261,7 @@ export class TablelandService {
         chain_id: Number(row.chain_id || this.config.chainId),
       }));
     } catch (err) {
-      console.error('[Tableland] listEntitlements error:', err);
+      console.error("[Tableland] listEntitlements error:", err);
       return [];
     }
   }
@@ -257,7 +289,7 @@ export class TablelandService {
 
   async listTierFeatureFlags(
     providerAddress: string,
-    tiers: string[] = ['starter', 'pro', 'enterprise'],
+    tiers: string[] = ["starter", "pro", "enterprise"],
   ): Promise<TierFlagsMatrix> {
     const matrix: TierFlagsMatrix = {};
     for (const tier of tiers) {
@@ -291,21 +323,23 @@ export class TablelandService {
   }
 
   private defaultRateLimitForTier(tier: string): number {
-    if (tier === 'enterprise') return 10000;
-    if (tier === 'pro') return 5000;
+    if (tier === "enterprise") return 10000;
+    if (tier === "pro") return 5000;
     return 1000;
   }
 
   private ensureInitialized(): void {
     if (!this.initialized || !this.dbRead) {
-      throw new Error('[Tableland] Service not initialized. Call initialize() first.');
+      throw new Error(
+        "[Tableland] Service not initialized. Call initialize() first.",
+      );
     }
   }
 
   private ensureWritable(): void {
     if (!this.dbWrite) {
       throw new Error(
-        '[Tableland] Write requested without signer. Set TABLELAND_PRIVATE_KEY + TABLELAND_RPC_URL.',
+        "[Tableland] Write requested without signer. Set TABLELAND_PRIVATE_KEY + TABLELAND_RPC_URL.",
       );
     }
   }

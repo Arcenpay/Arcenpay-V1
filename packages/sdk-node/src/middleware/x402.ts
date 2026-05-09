@@ -9,14 +9,14 @@ import type {
   X402Response,
   X402RejectionReason,
   X402VerifiedPaymentContext,
-} from "@arcenpay/sdk";
+} from "../sdk";
 import type { NonceStore } from "../services/nonce-store";
 import {
   X402_VERSION,
   X402_SCHEME,
   SessionVaultABI,
   getChainEnvironment,
-} from "@arcenpay/sdk";
+} from "../sdk";
 import {
   createPublicClient,
   http,
@@ -85,7 +85,7 @@ export interface X402MiddlewareOptions {
 
 // EIP-712 domain and types for x402 Payment signature
 const PAYMENT_DOMAIN = {
-  name: "MEAP x402 Payment",
+  name: "ArcenPay x402 Payment",
   version: "1",
 } as const;
 
@@ -177,7 +177,7 @@ function sendRejection(
   message: string,
   details?: Record<string, unknown>,
 ) {
-  res.setHeader("x-meap-rejection-reason", reason);
+  res.setHeader("x-arcenpay-rejection-reason", reason);
   res.status(402).json({
     ok: false,
     rejectionReason: reason,
@@ -194,7 +194,7 @@ function sendRejection(
  * 2. Verify EIP-712 typed data signature → recover signer
  * 3. Verify signer matches payment.from
  * 4. Check SessionVault.getAgentBalance(signer) >= maxAmountRequired
- * 5. Return 402 on failure, attach req.meapPayment on success
+ * 5. Return 402 on failure, attach req.arcenpayPayment on success
  */
 export function x402Middleware(options: X402MiddlewareOptions) {
   const {
@@ -253,7 +253,9 @@ export function x402Middleware(options: X402MiddlewareOptions) {
   const chain = CHAIN_MAP[chainId] || sepolia;
   const publicClient = createPublicClient({
     chain,
-    transport: http(rpcUrl || chainEnv.services.rpcUrl || chain.rpcUrls.default.http[0]),
+    transport: http(
+      rpcUrl || chainEnv.services.rpcUrl || chain.rpcUrls.default.http[0],
+    ),
   });
 
   return async (req: Request, res: Response, next: NextFunction) => {
@@ -528,7 +530,7 @@ export function x402Middleware(options: X402MiddlewareOptions) {
             res,
             "SETTLEMENT_FAILED",
             err?.message ||
-            "Payment verification succeeded but settlement failed",
+              "Payment verification succeeded but settlement failed",
           );
           return;
         }
@@ -549,8 +551,8 @@ export function x402Middleware(options: X402MiddlewareOptions) {
         rejectionReason: null,
       };
       (
-        req as Request & { meapPayment?: X402VerifiedPaymentContext }
-      ).meapPayment = verifiedContext;
+        req as Request & { arcenpayPayment?: X402VerifiedPaymentContext }
+      ).arcenpayPayment = verifiedContext;
 
       next();
     } catch (error: any) {

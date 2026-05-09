@@ -12,12 +12,12 @@ import { WagmiProvider, createConfig, http } from "wagmi";
 import { sepolia, baseSepolia, base } from "wagmi/chains";
 import { injected, walletConnect } from "wagmi/connectors";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import type { MEAPConfig, ContractAddresses, NetworkConfig } from "@arcenpay/sdk";
+import type { MEAPConfig, ContractAddresses, NetworkConfig } from "../sdk";
 import {
   getChainEnvironment,
   DEFAULT_CHAIN_ID,
   validateChainEnvironment,
-} from "@arcenpay/sdk";
+} from "../sdk";
 
 // ============================================================
 //  MEAPProvider / ArcenPayProvider — Root Context Provider
@@ -44,7 +44,7 @@ export interface ArcenSessionContextValue {
   userId: string | null;
   isReady: boolean;
   identify: (input: ArcenIdentifyInput) => Promise<ArcenIdentifyResult>;
-} 
+}
 
 export interface ArcenIdentifyInput {
   company?: {
@@ -100,8 +100,20 @@ export interface MEAPProviderProps {
   apiKey?: string;
   token?: string;
   identify?: (input: ArcenIdentifyInput) => Promise<ArcenIdentifyResult>;
-  company?: { id?: string; wallet?: string; email?: string; name?: string; traits?: Record<string, unknown> };
-  user?: { id?: string; clerkUserId?: string; wallet?: string; email?: string; name?: string };
+  company?: {
+    id?: string;
+    wallet?: string;
+    email?: string;
+    name?: string;
+    traits?: Record<string, unknown>;
+  };
+  user?: {
+    id?: string;
+    clerkUserId?: string;
+    wallet?: string;
+    email?: string;
+    name?: string;
+  };
 }
 
 /** @alias MEAPProviderProps */
@@ -180,7 +192,13 @@ export function MEAPProvider(props: MEAPProviderProps) {
     },
   });
 
-  const { apiKey, token: tokenProp, identify: identifyProp, company, user } = props;
+  const {
+    apiKey,
+    token: tokenProp,
+    identify: identifyProp,
+    company,
+    user,
+  } = props;
   const companyFingerprint = JSON.stringify(company ?? null);
   const userFingerprint = JSON.stringify(user ?? null);
 
@@ -236,8 +254,17 @@ export function MEAPProvider(props: MEAPProviderProps) {
       company,
       user,
       expiresIn: 3600,
-    }).catch((err) => console.error("[ArcenPayProvider] identify failed:", err));
-  }, [apiKey, identifyProp, tokenProp, companyFingerprint, userFingerprint, identify]);
+    }).catch((err) =>
+      console.error("[ArcenPayProvider] identify failed:", err),
+    );
+  }, [
+    apiKey,
+    identifyProp,
+    tokenProp,
+    companyFingerprint,
+    userFingerprint,
+    identify,
+  ]);
 
   useEffect(() => {
     setSessionCtx((current) => ({
@@ -247,7 +274,10 @@ export function MEAPProvider(props: MEAPProviderProps) {
   }, [identify]);
 
   const contextValue = useMemo<MEAPContextValue>(() => {
-    if (typeof process !== "undefined" && process.env.NODE_ENV === "production") {
+    if (
+      typeof process !== "undefined" &&
+      process.env.NODE_ENV === "production"
+    ) {
       validateChainEnvironment(chainId, {
         production: true,
         requiredServices: ["rpcUrl"],

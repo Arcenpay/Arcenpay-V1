@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { getDemoCompanyKeys } from "@/lib/arcen-client";
+import { getDemoCompanyKeys, getDemoNodeClient } from "@/lib/arcen-client";
 
 const bodySchema = z.object({
   planId: z.union([z.string().trim().min(1), z.number().int().positive()]),
@@ -34,42 +34,13 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const apiKey = process.env.ARCENPAY_API_KEY;
-    if (!apiKey) {
-      throw new Error("ARCENPAY_API_KEY is not set.");
-    }
-
-    const baseUrl = (
-      process.env.ARCENPAY_BASE_URL ?? "http://localhost:3000"
-    ).replace(/\/$/, "");
-
-    const response = await fetch(`${baseUrl}/api/v1/subscriptions/activate`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        planId: parsed.data.planId,
-        paymentAccount: parsed.data.paymentAccount,
-        subscriberEmail: parsed.data.subscriberEmail,
-        company: getDemoCompanyKeys(),
-      }),
+    const result = await getDemoNodeClient().activateSubscription({
+      planId: parsed.data.planId,
+      paymentAccount: parsed.data.paymentAccount,
+      subscriberEmail: parsed.data.subscriberEmail,
+      company: getDemoCompanyKeys(),
     });
-
-    const result = (await response.json().catch(() => ({}))) as {
-      data?: unknown;
-      error?: string;
-    };
-
-    if (!response.ok) {
-      return NextResponse.json(
-        { error: result.error ?? "Activation request failed" },
-        { status: response.status },
-      );
-    }
-
-    return NextResponse.json(result.data ?? result);
+    return NextResponse.json(result);
   } catch (error) {
     const message =
       error instanceof Error

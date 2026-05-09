@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ARCENPAY_APP_URL } from "@arcenpay/react";
 import styles from "./page.module.css";
 
 interface Config {
@@ -8,12 +9,13 @@ interface Config {
   baseUrl: string;
   demoCompanyWallet: string;
   hasApiKey: boolean;
+  hasPublishableKey: boolean;
 }
 
 export default function SettingsPage() {
   const [config, setConfig] = useState<Config | null>(null);
   const [copied, setCopied] = useState(false);
-  const dashboardUrl = config?.baseUrl ?? "http://localhost:3000";
+  const dashboardUrl = config?.baseUrl ?? ARCENPAY_APP_URL;
 
   useEffect(() => {
     fetch("/api/config")
@@ -79,6 +81,12 @@ export default function SettingsPage() {
         <h2 className={styles.sectionTitle}>Connection Status</h2>
         <div className={styles.statusGrid}>
           <StatusItem
+            label="Publishable Key"
+            status={config?.hasPublishableKey ? "connected" : "missing"}
+            value={config?.hasPublishableKey ? "Configured" : "Not set"}
+            envVar="NEXT_PUBLIC_ARCENPAY_PUBLISHABLE_KEY"
+          />
+          <StatusItem
             label="API Key"
             status={config?.hasApiKey ? "connected" : "missing"}
             value={config?.hasApiKey ? "Configured (hidden)" : "Not set"}
@@ -88,7 +96,7 @@ export default function SettingsPage() {
             label="Dashboard URL"
             status={config?.baseUrl ? "connected" : "missing"}
             value={config?.baseUrl ?? "Not set"}
-            envVar="ARCENPAY_BASE_URL"
+            envVar="SDK default"
           />
           <StatusItem
             label="Component ID"
@@ -193,17 +201,20 @@ export default function SettingsPage() {
         <h2 className={styles.sectionTitle}>Environment Variables</h2>
         <div className={styles.envTable}>
           <div className={styles.envRow}>
-            <code className={styles.envKey}>ARCENPAY_API_KEY</code>
+            <code className={styles.envKey}>
+              NEXT_PUBLIC_ARCENPAY_PUBLISHABLE_KEY
+            </code>
             <span className={styles.envRequired}>Required</span>
             <span className={styles.envDesc}>
-              Your ArcenPay API key (starts with <code>api_</code>)
+              Public browser key used by <code>@arcenpay/react</code> for
+              identify, flags, and entitlements
             </span>
           </div>
           <div className={styles.envRow}>
-            <code className={styles.envKey}>ARCENPAY_BASE_URL</code>
-            <span className={styles.envOptional}>Optional</span>
+            <code className={styles.envKey}>ARCENPAY_API_KEY</code>
+            <span className={styles.envRequired}>Required</span>
             <span className={styles.envDesc}>
-              Dashboard URL. Default: <code>http://localhost:3000</code>
+              Server-side API key used by demo API routes and the Node SDK
             </span>
           </div>
           <div className={styles.envRow}>

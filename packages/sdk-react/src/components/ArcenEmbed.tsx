@@ -9,7 +9,6 @@
  * <ArcenEmbed
  *   accessToken={token}
  *   componentId="cmn_xxx"
- *   baseUrl="http://localhost:3000"
  * />
  */
 "use client";
@@ -32,7 +31,7 @@ import type {
   ComponentInvoiceSummary,
   ComponentPaymentMethod,
   ComponentSubscriptionTransition,
-} from "@arcenpay/sdk";
+} from "../sdk";
 import {
   ERC7579AutopayModuleABI,
   getBlockExplorerUrl,
@@ -40,9 +39,8 @@ import {
   getContractAddresses,
   PlanFactoryABI,
   SubscriptionRegistryABI,
-} from "@arcenpay/sdk";
+} from "../sdk";
 import {
-  cancelSubscription,
   deploySmartAccount,
   isRecoverableSmartAccountFundingError,
   sendSmartAccountTransaction,
@@ -54,6 +52,10 @@ import {
   buildCancellationRequestBody,
   buildPlanChangeSuccessMessage,
 } from "../lib/subscription-lifecycle";
+import {
+  isCurrentBillingSelection,
+  resolveActiveBillingPeriod,
+} from "../lib/billing-period";
 import {
   encodeAbiParameters,
   encodeFunctionData,
@@ -202,6 +204,10 @@ function reducer(state: PortalState, action: PortalAction): PortalState {
         loading: false,
         data: action.data,
         view: "portal",
+        billingPeriod: resolveActiveBillingPeriod({
+          billingPeriod: action.data.billingPeriod,
+          activePlan: action.data.activePlan,
+        }),
         processing: false,
         flashMsg: null,
       };
@@ -212,6 +218,10 @@ function reducer(state: PortalState, action: PortalAction): PortalState {
         ...state,
         view: "checkout",
         selectedPlanId: state.data?.activePlan?.id ?? null,
+        billingPeriod: resolveActiveBillingPeriod({
+          billingPeriod: state.data?.billingPeriod,
+          activePlan: state.data?.activePlan,
+        }),
       };
     case "OPEN_UNSUBSCRIBE":
       return { ...state, view: "unsubscribe" };
@@ -498,6 +508,16 @@ function getSubscriptionTransition(
 ): ComponentSubscriptionTransition | null {
   const transition = data.subscriptionTransition;
   if (!transition || typeof transition !== "object") return null;
+  return transition;
+}
+
+function getScheduledCancellationTransition(
+  data: ComponentRenderData,
+): ComponentSubscriptionTransition | null {
+  const transition = getSubscriptionTransition(data);
+  if (transition?.mode !== "cancel_at_period_end") {
+    return null;
+  }
   return transition;
 }
 
@@ -1320,6 +1340,21 @@ async function readAutopayInitialized(
   })) as boolean;
 }
 
+async function readAutopayPaused(
+  chainId: number,
+  paymentAccount: string,
+): Promise<boolean> {
+  const chain = getChain(chainId);
+  const contracts = getContractAddresses(chainId);
+  const publicClient = createPublicClient({ chain, transport: http() });
+  return (await publicClient.readContract({
+    address: contracts.autopayModule as `0x${string}`,
+    abi: ERC7579AutopayModuleABI,
+    functionName: "isAccountPaused",
+    args: [paymentAccount as `0x${string}`],
+  })) as boolean;
+}
+
 async function readChainTimestampSeconds(chainId: number): Promise<bigint> {
   const chain = getChain(chainId);
   const publicClient = createPublicClient({ chain, transport: http() });
@@ -1387,30 +1422,6 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function readWalletSubscriptionTokenId(
-  chainId: number,
-  paymentAccount: string,
-): Promise<bigint> {
-  const chain = getChain(chainId);
-  const contracts = getContractAddresses(chainId);
-  const publicClient = createPublicClient({ chain, transport: http() });
-  const hasActiveSubscription = (await publicClient.readContract({
-    address: contracts.subscriptionRegistry as `0x${string}`,
-    abi: SubscriptionRegistryABI,
-    functionName: "hasActiveSubscription",
-    args: [paymentAccount as `0x${string}`],
-  })) as boolean;
-
-  if (!hasActiveSubscription) return 0n;
-
-  return (await publicClient.readContract({
-    address: contracts.subscriptionRegistry as `0x${string}`,
-    abi: SubscriptionRegistryABI,
-    functionName: "getWalletSubscription",
-    args: [paymentAccount as `0x${string}`],
-  })) as bigint;
-}
-
 // ─── Responsive container width hook ─────────────────────────────────────────
 
 function useContainerWidth(
@@ -1440,6 +1451,7 @@ export function renderElement(
   tokens: Tokens,
   onChangePlan: () => void,
   onUnsubscribe: () => void,
+  onResumeSubscription: () => void,
   allowPlanChanges = true,
   allowCancellation = true,
 ): React.ReactNode {
@@ -1761,10 +1773,50 @@ export function renderElement(
 
     case "plansTable": {
       const pendingTransition = getSubscriptionTransition(data);
+      const scheduledCancellation = getScheduledCancellationTransition(data);
       return (
         <div key={index} style={{ marginBottom: 24 }}>
           <SectionHeading tokens={tokens}>Available Plans</SectionHeading>
-          {pendingTransition?.targetPlanName ? (
+          {scheduledCancellation ? (
+            <div
+              style={{
+                marginBottom: 12,
+                padding: "12px 14px",
+                borderRadius: tokens.radius / 1.5,
+                background: "#fff7ed",
+                border: "1px solid #fdba74",
+                color: "#9a3412",
+                fontSize: tokens.size - 2,
+                lineHeight: 1.6,
+              }}
+            >
+              Cancellation scheduled: your current plan stays active until{" "}
+              <strong>
+                {formatDateLabel(scheduledCancellation.effectiveAt) ??
+                  "the end of the current billing period"}
+              </strong>
+              . After that, the subscription moves to Free.
+              {allowPlanChanges ? (
+                <div style={{ marginTop: 10 }}>
+                  <button
+                    onClick={onResumeSubscription}
+                    style={{
+                      padding: "6px 10px",
+                      background: "#fff",
+                      color: "#9a3412",
+                      border: "1px solid #fdba74",
+                      borderRadius: tokens.radius / 1.5,
+                      cursor: "pointer",
+                      fontSize: tokens.size - 2,
+                      fontWeight: 700,
+                    }}
+                  >
+                    Keep subscription active
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          ) : pendingTransition?.targetPlanName ? (
             <div
               style={{
                 marginBottom: 12,
@@ -1885,6 +1937,7 @@ export function renderElement(
     case "nextBillDue": {
       const plan = data.activePlan;
       const pendingTransition = getSubscriptionTransition(data);
+      const scheduledCancellation = getScheduledCancellationTransition(data);
       const priceVal = plan ? parseFloat(String(plan.price)) : 0;
       const nextBillingLabel = formatDateLabel(data.nextBillingAt);
       const nextBillingRelative = formatRelativeDate(data.nextBillingAt);
@@ -1914,7 +1967,28 @@ export function renderElement(
             </div>
           ) : (
             <div>
-              {pendingTransition?.targetPlanName ? (
+              {scheduledCancellation ? (
+                <div
+                  style={{
+                    marginBottom: 12,
+                    padding: "10px 12px",
+                    borderRadius: tokens.radius / 1.5,
+                    background: "#fff7ed",
+                    border: "1px solid #fdba74",
+                    color: "#9a3412",
+                    fontSize: tokens.size - 2,
+                    lineHeight: 1.6,
+                  }}
+                >
+                  Cancellation scheduled. Your current plan will stay active
+                  until{" "}
+                  <strong>
+                    {formatDateLabel(scheduledCancellation.effectiveAt) ??
+                      "the end of the current billing period"}
+                  </strong>
+                  .
+                </div>
+              ) : pendingTransition?.targetPlanName ? (
                 <div
                   style={{
                     marginBottom: 12,
@@ -2182,6 +2256,7 @@ export function renderElement(
       const plan = data.activePlan;
       const isPaidPlan = plan && parseFloat(String(plan.price)) > 0;
       if (!isPaidPlan || !allowCancellation) return null;
+      if (getScheduledCancellationTransition(data)) return null;
       // Rendered inside left card by PortalContent — standalone fallback:
       return (
         <div key={index} style={{ marginBottom: 12 }}>
@@ -2466,6 +2541,7 @@ function PortalContent({
   flashMsg,
   onChangePlan,
   onUnsubscribe,
+  onResumeSubscription,
   allowPlanChanges,
   allowCancellation,
   containerWidth,
@@ -2475,6 +2551,7 @@ function PortalContent({
   flashMsg: string | null;
   onChangePlan: () => void;
   onUnsubscribe: () => void;
+  onResumeSubscription: () => void;
   allowPlanChanges: boolean;
   allowCancellation: boolean;
   containerWidth: number;
@@ -2504,6 +2581,10 @@ function PortalContent({
   const plan = data.activePlan;
   const isPaid = plan ? parseFloat(String(plan.price)) > 0 : false;
   const price = plan ? parseFloat(String(plan.price)) : 0;
+  const scheduledCancellation = getScheduledCancellationTransition(data);
+  const scheduledCancellationDate = formatDateLabel(
+    scheduledCancellation?.effectiveAt ?? null,
+  );
 
   const boolFeats = getActivePlanBooleanFeatures(data);
 
@@ -2575,6 +2656,63 @@ function PortalContent({
         </div>
       ) : null}
 
+      {scheduledCancellation ? (
+        <div
+          style={{
+            background: "#fff7ed",
+            color: "#9a3412",
+            padding: "14px 16px",
+            borderRadius: 10,
+            marginBottom: 16,
+            border: "1px solid #fdba74",
+          }}
+        >
+          <div
+            style={{
+              fontSize: tokens.size - 1,
+              fontWeight: 700,
+              marginBottom: 4,
+            }}
+          >
+            Cancellation scheduled
+          </div>
+          <div
+            style={{
+              fontSize: tokens.size - 1,
+              lineHeight: 1.6,
+            }}
+          >
+            Your current plan stays active until{" "}
+            <strong>
+              {scheduledCancellationDate ??
+                "the end of the current billing period"}
+            </strong>
+            . Future renewals are turned off unless you reactivate the
+            subscription before then.
+          </div>
+          {allowPlanChanges ? (
+            <div style={{ marginTop: 12 }}>
+              <button
+                onClick={onResumeSubscription}
+                style={{
+                  padding: "8px 12px",
+                  borderRadius: 8,
+                  border: "1px solid #fdba74",
+                  background: "#fff",
+                  color: "#9a3412",
+                  cursor: "pointer",
+                  fontSize: tokens.size - 1,
+                  fontWeight: 700,
+                  fontFamily: tokens.font,
+                }}
+              >
+                Keep subscription active
+              </button>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
       {/* Custom / full-width elements (text, button, plansTable) */}
       {customEls.map((el, i) =>
         renderElement(
@@ -2584,6 +2722,7 @@ function PortalContent({
           tokens,
           onChangePlan,
           onUnsubscribe,
+          onResumeSubscription,
           allowPlanChanges,
           allowCancellation,
         ),
@@ -2767,11 +2906,12 @@ function PortalContent({
                 responsiveTokens,
                 onChangePlan,
                 onUnsubscribe,
+                onResumeSubscription,
                 allowPlanChanges,
                 allowCancellation,
               ),
             )}
-            {hasUnsubscribe && isPaid && (
+            {hasUnsubscribe && isPaid && !scheduledCancellation && (
               <>
                 {divider}
                 <div style={{ padding: "14px 24px" }}>
@@ -2964,7 +3104,7 @@ function PortalContent({
                     </div>
                   </>
                 )}
-                {hasUnsubscribe && isPaid && (
+                {hasUnsubscribe && isPaid && !scheduledCancellation && (
                   <>
                     {divider}
                     <div style={{ padding: "14px 24px" }}>
@@ -2995,6 +3135,7 @@ function PortalContent({
                 responsiveTokens,
                 onChangePlan,
                 onUnsubscribe,
+                onResumeSubscription,
                 allowPlanChanges,
                 allowCancellation,
               ),
@@ -3229,7 +3370,7 @@ function PortalContent({
                 )}
 
                 {/* Unsubscribe link at bottom of left card */}
-                {hasUnsubscribe && isPaid && (
+                {hasUnsubscribe && isPaid && !scheduledCancellation && (
                   <>
                     {divider}
                     <div style={{ padding: "14px 24px" }}>
@@ -3266,6 +3407,7 @@ function PortalContent({
                     tokens,
                     onChangePlan,
                     onUnsubscribe,
+                    onResumeSubscription,
                     allowPlanChanges,
                     allowCancellation,
                   ),
@@ -3363,11 +3505,25 @@ function CheckoutContent({
 
   const currentPlan = data.activePlan;
   const currentPlanId = currentPlan?.id;
+  const scheduledCancellation = getScheduledCancellationTransition(data);
+  const currentBillingPeriod = resolveActiveBillingPeriod({
+    billingPeriod: data.billingPeriod,
+    activePlan: currentPlan,
+  });
   const selectedPlan = data.plans.find(
     (p: ComponentPlanSummary) => p.id === selectedPlanId,
   );
-  const isCurrentPlanSelected =
-    selectedPlanId === currentPlanId || !selectedPlanId;
+  const isCurrentPlanSelected = isCurrentBillingSelection({
+    activePlanId: currentPlanId,
+    selectedPlanId,
+    activeBillingPeriod: currentBillingPeriod,
+    selectedBillingPeriod: billingPeriod,
+  });
+  const isScheduledCancellationResume = Boolean(
+    scheduledCancellation &&
+    selectedPlan?.onChainPlanId &&
+    isCurrentPlanSelected,
+  );
   const isFreePlanSelected = selectedPlan
     ? parseFloat(String(selectedPlan.price)) === 0
     : false;
@@ -3392,7 +3548,9 @@ function CheckoutContent({
     isCancellationRequiredFirst
   );
   const needsPayment =
-    selectedPlanId && !isCurrentPlanSelected && !isFreePlanSelected;
+    selectedPlanId &&
+    (!isCurrentPlanSelected || isScheduledCancellationResume) &&
+    !isFreePlanSelected;
 
   // Compute displayed price based on billing period
   const getDisplayPrice = (plan: ComponentPlanSummary) => {
@@ -4117,7 +4275,7 @@ function CheckoutContent({
             </div>
 
             {/* CTA */}
-            {isCurrentPlanSelected ? (
+            {isCurrentPlanSelected && !isScheduledCancellationResume ? (
               <button
                 onClick={onBack}
                 style={{
@@ -4158,13 +4316,15 @@ function CheckoutContent({
                   (requiresHostedActivation && !hasCustomerEmail)
                 }
               >
-                {isAuthoritativeOnChainPlanChange
-                  ? "Next: Confirm plan change"
-                  : requiresHostedActivation
-                    ? "Next: Activation instructions"
-                    : isCancellationRequiredFirst
-                      ? "Next: Cancellation instructions"
-                      : "Next: Payment"}
+                {isScheduledCancellationResume
+                  ? "Next: Keep subscription active"
+                  : isAuthoritativeOnChainPlanChange
+                    ? "Next: Confirm plan change"
+                    : requiresHostedActivation
+                      ? "Next: Activation instructions"
+                      : isCancellationRequiredFirst
+                        ? "Next: Cancellation instructions"
+                        : "Next: Payment"}
               </button>
             ) : (
               <button
@@ -4188,7 +4348,21 @@ function CheckoutContent({
             )}
 
             {/* Billing fine print */}
-            {selectedPlan && !isCurrentPlanSelected && discountedPrice > 0 && (
+            {isScheduledCancellationResume ? (
+              <div
+                style={{
+                  fontSize: 11,
+                  color: tokens.mutedColor,
+                  marginTop: 10,
+                  lineHeight: 1.5,
+                }}
+              >
+                No charge is due today. This will re-enable future renewals for
+                your current subscription before the scheduled end date.
+              </div>
+            ) : selectedPlan &&
+              !isCurrentPlanSelected &&
+              discountedPrice > 0 ? (
               <div
                 style={{
                   fontSize: 11,
@@ -4202,7 +4376,7 @@ function CheckoutContent({
                 {billingPeriodWord(billingPeriod)} while the subscription
                 remains active.
               </div>
-            )}
+            ) : null}
           </div>
 
           {/* Next bill info */}
@@ -4258,6 +4432,7 @@ function PaymentContent({
   onActivationComplete: (result: {
     txHash?: string;
     pending?: boolean;
+    successMsg?: string;
   }) => Promise<void> | void;
   onBack: () => void;
   containerWidth: number;
@@ -4266,6 +4441,7 @@ function PaymentContent({
     (p: ComponentPlanSummary) => p.id === selectedPlanId,
   );
   const activePlan = data.activePlan;
+  const scheduledCancellation = getScheduledCancellationTransition(data);
   const { address, isConnected } = useSafeAccount();
   const { walletClient: wagmiWalletClient } = useSafeWalletClient();
   const [localAddress, setLocalAddress] = useState<string | null>(null);
@@ -4308,6 +4484,20 @@ function PaymentContent({
   const zeroDevProjectId = process.env.NEXT_PUBLIC_ZERODEV_PROJECT_ID ?? null;
   const selectedOnChainPlanId = selectedPlan?.onChainPlanId ?? null;
   const activeOnChainPlanId = activePlan?.onChainPlanId ?? null;
+  const isCurrentPlanSelected = isCurrentBillingSelection({
+    activePlanId: activePlan?.id ?? null,
+    selectedPlanId,
+    activeBillingPeriod: resolveActiveBillingPeriod({
+      billingPeriod: data.billingPeriod,
+      activePlan,
+    }),
+    selectedBillingPeriod: billingPeriod,
+  });
+  const isScheduledCancellationResume = Boolean(
+    scheduledCancellation &&
+    selectedPlan?.onChainPlanId &&
+    isCurrentPlanSelected,
+  );
   const isOnChainPlanChange = Boolean(
     selectedPlan &&
     activePlan &&
@@ -4318,8 +4508,10 @@ function PaymentContent({
   const requiresHostedActivation = Boolean(
     selectedOnChainPlanId && !activeOnChainPlanId,
   );
+  const requiresResumeActivation = Boolean(isScheduledCancellationResume);
   const hasUnsupportedPaidFlow =
     price > 0 &&
+    !requiresResumeActivation &&
     !isOnChainPlanChange &&
     !requiresHostedActivation &&
     selectedPlan?.id !== activePlan?.id;
@@ -4511,6 +4703,10 @@ function PaymentContent({
         );
 
         if (initialized) {
+          const isPaused = await readAutopayPaused(
+            paymentChainId,
+            billingPaymentAccount,
+          );
           const currentConfig = await readAutopayConfig(
             paymentChainId,
             billingPaymentAccount,
@@ -4524,7 +4720,7 @@ function PaymentContent({
             Number(currentConfig.interval ?? 0) === nextConfig.interval &&
             BigInt(currentConfig.planId ?? 0n) === nextConfig.planId;
 
-          if (configMatches) {
+          if (configMatches && !isPaused) {
             return;
           }
         }
@@ -4622,6 +4818,32 @@ function PaymentContent({
         await submitPaymentAccountTransaction({
           to: autopayAddress,
           data: updateData,
+          smartAccountAddressOverride: billingPaymentAccount,
+        });
+      }
+
+      const isPaused = await readAutopayPaused(
+        paymentChainId,
+        billingPaymentAccount,
+      );
+      if (isPaused) {
+        const unpauseData = encodeFunctionData({
+          abi: [
+            {
+              type: "function",
+              name: "unpauseAccount",
+              inputs: [],
+              outputs: [],
+              stateMutability: "nonpayable",
+            },
+          ],
+          functionName: "unpauseAccount",
+          args: [],
+        });
+
+        await submitPaymentAccountTransaction({
+          to: autopayAddress,
+          data: unpauseData,
           smartAccountAddressOverride: billingPaymentAccount,
         });
       }
@@ -4776,10 +4998,14 @@ function PaymentContent({
       return;
     }
 
-    if (requiresHostedActivation) {
+    if (requiresResumeActivation || requiresHostedActivation) {
       if (!selectedOnChainPlanId || !selectedPlan) {
         setTxStatus("error");
-        setTxError("Missing on-chain plan metadata for activation.");
+        setTxError(
+          requiresResumeActivation
+            ? "Missing on-chain plan metadata for subscription reactivation."
+            : "Missing on-chain plan metadata for activation.",
+        );
         return;
       }
 
@@ -4791,11 +5017,15 @@ function PaymentContent({
 
       if (hasInvalidCustomerEmail) {
         setTxStatus("error");
-        setTxError("Enter a valid billing email before activating.");
+        setTxError(
+          requiresResumeActivation
+            ? "Enter a valid billing email before continuing."
+            : "Enter a valid billing email before activating.",
+        );
         return;
       }
 
-      if (!hasCustomerEmail) {
+      if (requiresHostedActivation && !hasCustomerEmail) {
         setTxStatus("error");
         setTxError("Enter a billing email before activating.");
         return;
@@ -4852,10 +5082,18 @@ function PaymentContent({
         await onActivationComplete({
           txHash: json.data?.txHash,
           pending: res.status === 202,
+          successMsg: requiresResumeActivation
+            ? "Subscription will continue. Future renewals are active again."
+            : undefined,
         });
       } catch (err: unknown) {
         setTxStatus("error");
-        const msg = err instanceof Error ? err.message : "Activation failed";
+        const msg =
+          err instanceof Error
+            ? err.message
+            : requiresResumeActivation
+              ? "Subscription reactivation failed"
+              : "Activation failed";
         if (msg.includes("rejected") || msg.includes("denied")) {
           setTxError("Transaction cancelled");
         } else {
@@ -5395,7 +5633,7 @@ function PaymentContent({
                 </div>
               )}
             </Card>
-          ) : requiresHostedActivation ? (
+          ) : requiresResumeActivation || requiresHostedActivation ? (
             <Card tokens={tokens} style={{ marginBottom: 0 }}>
               <div
                 style={{
@@ -5427,10 +5665,14 @@ function PaymentContent({
                       color: tokens.textColor,
                     }}
                   >
-                    Activate subscription
+                    {requiresResumeActivation
+                      ? "Keep subscription active"
+                      : "Activate subscription"}
                   </div>
                   <div style={{ fontSize: 11, color: tokens.mutedColor }}>
-                    First bill + autopay setup
+                    {requiresResumeActivation
+                      ? "Restore future renewals"
+                      : "First bill + autopay setup"}
                   </div>
                 </div>
               </div>
@@ -5447,10 +5689,9 @@ function PaymentContent({
                   lineHeight: 1.6,
                 }}
               >
-                This portal can activate the subscription directly from your
-                app. Connect the customer wallet, confirm the payment account,
-                and we will create the subscription on-chain for the selected
-                plan.
+                {requiresResumeActivation
+                  ? "This subscription is already active through the current billing period, but future renewals are turned off. Connect the customer wallet, confirm the payment account again, and we will restore autopay for the current plan."
+                  : "This portal can activate the subscription directly from your app. Connect the customer wallet, confirm the payment account, and we will create the subscription on-chain for the selected plan."}
               </div>
 
               <div style={{ marginBottom: 16 }}>
@@ -5493,7 +5734,9 @@ function PaymentContent({
                 >
                   {hasInvalidCustomerEmail
                     ? "Enter a valid email address so the subscription can be tied to the correct customer."
-                    : "Billing email is required for paid activations so ArcenPay can send invoices, receipts, and lifecycle notices."}
+                    : requiresResumeActivation
+                      ? "You can keep the existing billing email, or update it before future renewals resume."
+                      : "Billing email is required for paid activations so ArcenPay can send invoices, receipts, and lifecycle notices."}
                 </div>
               </div>
 
@@ -5617,15 +5860,19 @@ function PaymentContent({
                       processing ||
                       txStatus === "approving" ||
                       hasInvalidCustomerEmail ||
-                      !hasCustomerEmail
+                      (requiresHostedActivation && !hasCustomerEmail)
                     }
                     onClick={handlePay}
                   >
                     {txStatus === "approving"
-                      ? "Activating subscription…"
+                      ? requiresResumeActivation
+                        ? "Restoring renewals…"
+                        : "Activating subscription…"
                       : processing
                         ? "Processing…"
-                        : "Activate subscription"}
+                        : requiresResumeActivation
+                          ? "Keep subscription active"
+                          : "Activate subscription"}
                   </PrimaryButton>
                 </div>
               )}
@@ -5958,6 +6205,7 @@ function UnsubscribeContent({
   containerWidth: number;
 }) {
   const activePlan = data.activePlan;
+  const scheduledCancellation = getScheduledCancellationTransition(data);
   const price = activePlan ? parseFloat(String(activePlan.price)) : 0;
   const activePlanPeriod = activePlan
     ? intervalLabel(Number(activePlan.billingInterval)).replace("/", "") || "mo"
@@ -5991,10 +6239,18 @@ function UnsubscribeContent({
   const requiresOnChainCancellation = Boolean(
     activePlan?.onChainPlanId && smartAccountAddress && price > 0,
   );
+  const requiresSmartAccountCancellationExecution = Boolean(
+    requiresOnChainCancellation &&
+    smartAccountAddress &&
+    finalAddress &&
+    smartAccountAddress.toLowerCase() !== finalAddress.toLowerCase(),
+  );
   const needsWallet =
     requiresOnChainCancellation && (!finalConnected || !finalAddress);
   const needsWalletClient =
-    requiresOnChainCancellation && (!resolvedWalletClient || !zeroDevProjectId);
+    requiresOnChainCancellation &&
+    (!resolvedWalletClient ||
+      (requiresSmartAccountCancellationExecution && !zeroDevProjectId));
 
   async function connectWindowEthereum() {
     setTxError("");
@@ -6025,10 +6281,15 @@ function UnsubscribeContent({
       return;
     }
 
-    if (!resolvedWalletClient || !zeroDevProjectId) {
+    if (
+      !resolvedWalletClient ||
+      (requiresSmartAccountCancellationExecution && !zeroDevProjectId)
+    ) {
       setTxStatus("error");
       setTxError(
-        "A wallet client and NEXT_PUBLIC_ZERODEV_PROJECT_ID are required for on-chain cancellation.",
+        requiresSmartAccountCancellationExecution
+          ? "A wallet client and NEXT_PUBLIC_ZERODEV_PROJECT_ID are required for on-chain cancellation."
+          : "A wallet client is required for on-chain cancellation.",
       );
       return;
     }
@@ -6037,32 +6298,83 @@ function UnsubscribeContent({
     try {
       await ensureWalletOnTargetChain(resolvedWalletClient, chainId);
 
-      const tokenId = await readWalletSubscriptionTokenId(
+      const contracts = getContractAddresses(chainId);
+      const autopayAddress = contracts.autopayModule as
+        | `0x${string}`
+        | undefined;
+      if (!autopayAddress) {
+        throw new Error("Autopay module is not configured for this chain.");
+      }
+
+      const isInitialized = await readAutopayInitialized(
         chainId,
         smartAccountAddress,
       );
-      if (tokenId <= 0n) {
-        throw new Error(
-          "No active on-chain subscription token was found for this payment account.",
-        );
+      const isPaused = isInitialized
+        ? await readAutopayPaused(chainId, smartAccountAddress)
+        : false;
+
+      if (!isInitialized || isPaused) {
+        setTxStatus("confirmed");
+        onConfirm({ intent: "scheduled" });
+        return;
       }
 
-      const { txHash } = await cancelSubscription({
-        projectId: zeroDevProjectId,
-        chainId,
-        walletClient: resolvedWalletClient,
-        smartAccountAddress: smartAccountAddress as `0x${string}`,
-        tokenId,
+      const pauseData = encodeFunctionData({
+        abi: [
+          {
+            type: "function",
+            name: "pauseAccount",
+            inputs: [],
+            outputs: [],
+            stateMutability: "nonpayable",
+          },
+        ],
+        functionName: "pauseAccount",
+        args: [],
       });
 
+      let txHash: `0x${string}` | undefined;
+      if (requiresSmartAccountCancellationExecution) {
+        if (!zeroDevProjectId) {
+          throw new Error(
+            "Smart-account cancellation requires NEXT_PUBLIC_ZERODEV_PROJECT_ID.",
+          );
+        }
+
+        const result = await sendSmartAccountTransaction({
+          projectId: zeroDevProjectId,
+          chainId,
+          walletClient: resolvedWalletClient,
+          smartAccountAddress: smartAccountAddress as `0x${string}`,
+          to: autopayAddress,
+          data: pauseData,
+        });
+        txHash = result.txHash;
+      } else {
+        if (!finalAddress) {
+          throw new Error("Connect the customer wallet before continuing.");
+        }
+
+        const result = await submitWalletTransaction({
+          chainId,
+          walletClient: resolvedWalletClient,
+          account: finalAddress as `0x${string}`,
+          to: autopayAddress,
+          data: pauseData,
+        });
+        txHash = result.txHash;
+      }
+
       setTxStatus("confirmed");
-      onConfirm({ intent: "immediate", txHash });
+      onConfirm({
+        intent: "scheduled",
+        txHash,
+      });
     } catch (error) {
       setTxStatus("error");
       setTxError(
-        error instanceof Error
-          ? error.message
-          : "Cancellation transaction failed.",
+        error instanceof Error ? error.message : "Autopay shutdown failed.",
       );
     }
   }
@@ -6107,7 +6419,9 @@ function UnsubscribeContent({
             marginBottom: 8,
           }}
         >
-          Cancel subscription
+          {scheduledCancellation
+            ? "Cancellation already scheduled"
+            : "Cancel subscription"}
         </div>
         <div
           style={{
@@ -6117,9 +6431,14 @@ function UnsubscribeContent({
             marginBottom: 24,
           }}
         >
-          {requiresOnChainCancellation
-            ? "Your paid subscription will be cancelled immediately once the on-chain transaction confirms."
-            : "Your current plan stays active until the end of the current billing period, then your subscription moves to Free."}
+          {scheduledCancellation
+            ? `Your current plan already stays active until ${
+                formatDateLabel(scheduledCancellation.effectiveAt) ??
+                "the end of the current billing period"
+              }. You do not need to submit another cancellation transaction.`
+            : requiresOnChainCancellation
+              ? "We will stop future autopay now. Your current plan stays active until the end of the current billing period, then your subscription moves to Free."
+              : "Your current plan stays active until the end of the current billing period, then your subscription moves to Free."}
         </div>
         {requiresOnChainCancellation && (
           <div
@@ -6134,9 +6453,9 @@ function UnsubscribeContent({
               marginBottom: 20,
             }}
           >
-            Paid on-chain cancellations are immediate in the current protocol.
-            This flow verifies the real cancellation transaction before your
-            dashboard access is downgraded.
+            This flow pauses future autopay for the subscription payment account
+            right away, then schedules the actual plan downgrade for the current
+            billing period end.
           </div>
         )}
         <div
@@ -6182,7 +6501,7 @@ function UnsubscribeContent({
               }}
             >
               Connect the wallet that controls your subscription smart account
-              before cancelling.
+              before stopping future autopay.
             </div>
             <PrimaryButton
               tokens={tokens}
@@ -6282,7 +6601,12 @@ function UnsubscribeContent({
         <div style={{ flex: 1 }} />
         <button
           onClick={handleConfirm}
-          disabled={processing || txStatus === "approving" || needsWalletClient}
+          disabled={
+            processing ||
+            txStatus === "approving" ||
+            needsWalletClient ||
+            Boolean(scheduledCancellation)
+          }
           style={{
             width: "100%",
             padding: "12px 0",
@@ -6300,9 +6624,11 @@ function UnsubscribeContent({
             ? "Confirm in wallet…"
             : processing
               ? "Cancelling…"
-              : requiresOnChainCancellation
-                ? "Cancel on-chain subscription"
-                : "Schedule cancellation"}
+              : scheduledCancellation
+                ? "Cancellation already scheduled"
+                : requiresOnChainCancellation
+                  ? "Stop autopay and cancel at period end"
+                  : "Schedule cancellation"}
         </button>
         {needsWalletClient && (
           <div
@@ -6313,9 +6639,9 @@ function UnsubscribeContent({
               lineHeight: 1.5,
             }}
           >
-            This embed needs a wallet client and
-            `NEXT_PUBLIC_ZERODEV_PROJECT_ID` to submit the cancellation
-            transaction.
+            {requiresSmartAccountCancellationExecution
+              ? "This embed needs a wallet client and `NEXT_PUBLIC_ZERODEV_PROJECT_ID` to submit the smart-account autopay shutdown transaction."
+              : "This embed needs a wallet client to submit the autopay shutdown transaction."}
           </div>
         )}
       </div>
@@ -6430,18 +6756,16 @@ function SuccessContent({
   const [countdown, setCountdown] = useState(5);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setCountdown((c) => {
-        if (c <= 1) {
-          clearInterval(interval);
-          onDone();
-          return 0;
-        }
-        return c - 1;
-      });
+    const interval = window.setInterval(() => {
+      setCountdown((current) => Math.max(current - 1, 0));
     }, 1000);
-    return () => clearInterval(interval);
-  }, [onDone]);
+    return () => window.clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    if (countdown !== 0) return;
+    onDone();
+  }, [countdown, onDone]);
 
   const price = selectedPlan ? parseFloat(String(selectedPlan.price)) : 0;
   const showAmountPaid =
@@ -6648,10 +6972,12 @@ export function ArcenEmbed({
   // Try to read token and componentId from Provider context
   let providerToken: string | null = null;
   let providerCid: string | null = null;
+  let providerBaseUrl: string | null = null;
   try {
     const arcen = useArcenPay();
     providerToken = arcen.session.token;
     providerCid = arcen.componentId;
+    providerBaseUrl = arcen.baseUrl;
   } catch {
     // Provider not available — fall through
   }
@@ -6665,7 +6991,7 @@ export function ArcenEmbed({
       : "");
 
   // baseUrl is always resolved internally — never exposed to the user
-  const resolvedBaseUrl = resolveDashboardBaseUrl();
+  const resolvedBaseUrl = resolveDashboardBaseUrl(providerBaseUrl ?? undefined);
 
   // Resolve accessToken: prop > env var > provider context
   const resolvedToken =
@@ -6922,7 +7248,11 @@ export function ArcenEmbed({
   );
 
   const handleActivateSubscription = useCallback(
-    async (result: { txHash?: string; pending?: boolean }) => {
+    async (result: {
+      txHash?: string;
+      pending?: boolean;
+      successMsg?: string;
+    }) => {
       const selectedPlan = state.data?.plans.find(
         (plan: ComponentPlanSummary) => plan.id === state.selectedPlanId,
       );
@@ -6936,9 +7266,11 @@ export function ArcenEmbed({
 
       dispatch({
         type: "GOTO_SUCCESS",
-        successMsg: result.pending
-          ? "Subscription activation submitted. We’re finalizing the on-chain billing state now."
-          : "Subscription activated!",
+        successMsg:
+          result.successMsg ??
+          (result.pending
+            ? "Subscription activation submitted. We’re finalizing the on-chain billing state now."
+            : "Subscription activated!"),
         txHash: result.txHash,
       });
     },
@@ -6962,12 +7294,17 @@ export function ArcenEmbed({
         const effectiveAt =
           (response as { data?: { effectiveAt?: string } })?.data
             ?.effectiveAt ?? null;
+        const pendingVerification = Boolean(
+          (response as { data?: { pendingVerification?: boolean } })?.data
+            ?.pendingVerification,
+        );
         const effectiveAtLabel =
           typeof effectiveAt === "string" ? formatDateLabel(effectiveAt) : null;
         const feedback = buildCancellationFeedback({
           intent: confirmation.intent,
           mode,
           effectiveAtLabel,
+          pendingVerification,
         });
 
         if (feedback.successMsg) {
@@ -7027,6 +7364,25 @@ export function ArcenEmbed({
     if (!PORTAL_SELF_SERVE_CANCELLATION_ENABLED) return;
     dispatch({ type: "OPEN_UNSUBSCRIBE" });
   }, []);
+
+  const handleResumeSubscription = useCallback(() => {
+    if (
+      !PORTAL_SELF_SERVE_PLAN_CHANGES_ENABLED ||
+      !state.data?.activePlan?.id
+    ) {
+      return;
+    }
+
+    dispatch({ type: "SELECT_PLAN", planId: state.data.activePlan.id });
+    dispatch({
+      type: "SET_BILLING_PERIOD",
+      period: resolveActiveBillingPeriod({
+        billingPeriod: state.data.billingPeriod,
+        activePlan: state.data.activePlan,
+      }),
+    });
+    dispatch({ type: "OPEN_PAYMENT" });
+  }, [state.data]);
 
   // Guard: loading — show skeleton first
   if (loading) {
@@ -7254,6 +7610,7 @@ export function ArcenEmbed({
               flashMsg={flashMsg}
               onChangePlan={handleOpenCheckout}
               onUnsubscribe={handleOpenUnsubscribe}
+              onResumeSubscription={handleResumeSubscription}
               allowPlanChanges={PORTAL_SELF_SERVE_PLAN_CHANGES_ENABLED}
               allowCancellation={PORTAL_SELF_SERVE_CANCELLATION_ENABLED}
               containerWidth={effectiveContainerWidth}
@@ -7342,6 +7699,7 @@ export function ArcenEmbed({
             flashMsg={flashMsg}
             onChangePlan={handleOpenCheckout}
             onUnsubscribe={handleOpenUnsubscribe}
+            onResumeSubscription={handleResumeSubscription}
             allowPlanChanges={PORTAL_SELF_SERVE_PLAN_CHANGES_ENABLED}
             allowCancellation={PORTAL_SELF_SERVE_CANCELLATION_ENABLED}
             containerWidth={containerWidth}
@@ -7445,7 +7803,6 @@ export function ArcenEmbed({
  * <ArcenpayEmbed
  *   accessToken={tokenFromBackend}
  *   id="cmn_xxx"
- *   baseUrl="http://localhost:3000"
  * />
  */
 export const ArcenpayEmbed = ArcenEmbed;

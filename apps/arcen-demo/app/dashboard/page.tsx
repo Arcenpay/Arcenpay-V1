@@ -47,8 +47,10 @@ export default function DashboardPage() {
     companyName: "ArcenPay Demo Studio",
     userName: "Dashboard Operator",
   });
-  const { planTier, isSubscribed } = useEntitlement(address ?? undefined);
-  const flagMap = useFlags([...FLAG_KEYS]);
+  const { planTier, isSubscribed } = useEntitlement(
+    identified ? (address ?? undefined) : undefined,
+  );
+  const flagMap = useFlags(identified ? [...FLAG_KEYS] : []);
   const { track } = useTrack();
   const { consume, loading: consumeLoading } = useConsumeEntitlement();
 
@@ -102,12 +104,12 @@ export default function DashboardPage() {
     setTrackMsg(null);
 
     try {
-      await track("scan", {
+      await track("dashboard_scan_cta_clicked", {
         source: "dashboard",
         surface: "usage-tracking-card",
       });
       setTrackMsg({
-        text: "Tracked `scan` through useTrack()",
+        text: "Tracked analytics event through useTrack()",
         error: false,
       });
     } catch (error) {

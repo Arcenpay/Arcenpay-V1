@@ -170,10 +170,21 @@ export default function SdkShowcasePage() {
   const [nodeError, setNodeError] = useState<string | null>(null);
   const [nodeActionResult, setNodeActionResult] = useState<NodeActionResponse | null>(null);
   const [nodeActionBusy, setNodeActionBusy] = useState<string | null>(null);
+  const normalizedAddress = address?.toLowerCase() ?? null;
+  const identified =
+    !!normalizedAddress &&
+    !!session.token &&
+    session.company?.wallet?.toLowerCase() === normalizedAddress;
+  const identifyingWalletRef = useRef<string | null>(null);
 
-  const scanFlag = useFlag("scan");
-  const flagMap = useFlags(["scan", "api-access", "export-pdf"]);
-  const entitlement = useEntitlement(address ?? undefined, "scan");
+  const scanFlag = useFlag(identified ? "scan" : "");
+  const flagMap = useFlags(
+    identified ? ["scan", "api-access", "export-pdf"] : [],
+  );
+  const entitlement = useEntitlement(
+    identified ? (address ?? undefined) : undefined,
+    "scan",
+  );
   const { consume, loading: consumeLoading } = useConsumeEntitlement();
   const { track } = useTrack();
 
@@ -187,17 +198,24 @@ export default function SdkShowcasePage() {
 
     if (
       session.token &&
-      session.company?.wallet?.toLowerCase() === address.toLowerCase()
+      session.company?.wallet?.toLowerCase() === normalizedAddress
     ) {
-      identifiedWalletRef.current = address.toLowerCase();
+      identifiedWalletRef.current = normalizedAddress;
+      identifyingWalletRef.current = null;
       setIdentifyState("ready");
       setIdentifyError(null);
       return;
     }
 
-    if (identifiedWalletRef.current === address.toLowerCase()) return;
+    if (
+      identifiedWalletRef.current === normalizedAddress ||
+      identifyingWalletRef.current === normalizedAddress
+    ) {
+      return;
+    }
 
     let cancelled = false;
+    identifyingWalletRef.current = normalizedAddress;
     setIdentifyState("loading");
     setIdentifyError(null);
 
@@ -215,11 +233,13 @@ export default function SdkShowcasePage() {
       })
       .then(() => {
         if (cancelled) return;
-        identifiedWalletRef.current = address.toLowerCase();
+        identifiedWalletRef.current = normalizedAddress;
+        identifyingWalletRef.current = null;
         setIdentifyState("ready");
       })
       .catch((error) => {
         if (cancelled) return;
+        identifyingWalletRef.current = null;
         setIdentifyState("error");
         setIdentifyError(
           error instanceof Error ? error.message : "Failed to identify demo company",
@@ -229,7 +249,7 @@ export default function SdkShowcasePage() {
     return () => {
       cancelled = true;
     };
-  }, [address, identify, session.company?.wallet, session.token]);
+  }, [address, identify, normalizedAddress, session.company?.wallet, session.token]);
 
   useEffect(() => {
     let cancelled = false;
@@ -363,6 +383,7 @@ export default function SdkShowcasePage() {
         index,
         builderData,
         builderTokens,
+        () => undefined,
         () => undefined,
         () => undefined,
         false,

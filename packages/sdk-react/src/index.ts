@@ -15,10 +15,16 @@ export type {
 
 // Components — the main embed surface
 export { ArcenEmbed, ArcenpayEmbed } from "./components/ArcenEmbed";
-export type { ArcenEmbedProps, ArcenpayEmbedProps } from "./components/ArcenEmbed";
+export type {
+  ArcenEmbedProps,
+  ArcenpayEmbedProps,
+} from "./components/ArcenEmbed";
 export { FeatureFlagGuard } from "./components/FeatureFlagGuard";
 export { TemplateRenderer } from "./components/TemplateRenderer";
-export type { TemplateRendererProps, TemplateBlock } from "./components/TemplateRenderer";
+export type {
+  TemplateRendererProps,
+  TemplateBlock,
+} from "./components/TemplateRenderer";
 
 // Utility called once for convenience
 export { renderElement, getDesignTokens } from "./components/ArcenEmbed";
@@ -37,8 +43,18 @@ export { useTrack } from "./hooks/useTrack";
 export type { TrackEventInput } from "./hooks/useTrack";
 
 export { createPaymentLinkCheckoutUrl } from "./lib/api";
+export {
+  ARCENPAY_API_URL,
+  ARCENPAY_APP_URL,
+  resolveArcenPayAppUrl,
+  resolveArcenPayBaseUrl,
+} from "./sdk";
+export type {
+  ResolveArcenPayAppUrlOptions,
+  ResolveArcenPayBaseUrlOptions,
+} from "./sdk";
 
-// Shared public types — re-exported so app developers do not need @arcenpay/sdk
+// Shared public types — re-exported so app developers only need this package
 export type {
   ArcenCompanyKeys,
   ArcenUserKeys,
@@ -51,4 +67,4 @@ export type {
   ComponentRenderData,
   ComponentElement,
   ComponentDesign,
-} from "@arcenpay/sdk";
+} from "./sdk";

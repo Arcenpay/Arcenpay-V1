@@ -87,7 +87,7 @@ import {
   getChainLabel,
 } from "@/lib/default-chain";
 import { toast } from "sonner";
-import { PlanFactoryABI } from "@arcenpay/sdk";
+import { PlanFactoryABI } from "@arcenpay/internal-core";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
