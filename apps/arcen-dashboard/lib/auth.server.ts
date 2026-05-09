@@ -3,7 +3,6 @@
 //  Calls the ArcenPay Backend API (no direct DB access).
 // ============================================================
 
-import { createHmac } from "node:crypto";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { BACKEND_URL } from "@/lib/config";
@@ -87,11 +86,6 @@ export async function clearSession(): Promise<void> {
   await fetch(`${BACKEND_URL}/api/v1/auth/logout`, { method: "POST" });
   const store = await cookies();
   store.delete("arcen_session");
-}
-
-export function hashOpaqueToken(value: string): string {
-  const secret = process.env.SIWE_JWT_SECRET || "dev_siwe_jwt_secret_not_for_production";
-  return createHmac("sha256", secret).update(value).digest("hex");
 }
 
 export type ClerkSession = DashboardSession;

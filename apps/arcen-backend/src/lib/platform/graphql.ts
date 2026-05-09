@@ -10,8 +10,9 @@
 //      matters more than speed.
 // ============================================================
 
-import { ApolloClient, InMemoryCache, HttpLink, gql } from "@apollo/client";
+import { ApolloClient, InMemoryCache, HttpLink, gql } from "@apollo/client/index.js";
 import { GRAPH_URL } from "../../config.js";
+import { SUBGRAPH_REQUIRED } from "./launch-flags.js";
 
 export const apolloClient = new ApolloClient({
   link: new HttpLink({ uri: GRAPH_URL || undefined }),
@@ -182,7 +183,9 @@ export interface SubgraphHealth {
  */
 export async function checkSubgraphHealth(): Promise<SubgraphHealth> {
   if (!GRAPH_URL) {
-    return { healthy: false, lagSeconds: null, latestBlock: null, error: "GRAPH_URL not configured" };
+    return SUBGRAPH_REQUIRED
+      ? { healthy: false, lagSeconds: null, latestBlock: null, error: "GRAPH_URL not configured" }
+      : { healthy: true, lagSeconds: null, latestBlock: null };
   }
 
   try {

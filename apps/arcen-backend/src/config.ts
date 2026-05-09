@@ -12,7 +12,8 @@
 //    let it reach a production runtime
 // ============================================================
 
-import * as MEAPCore from "@arcenpay/internal-core";
+import "./load-env.js";
+import * as ArcenPayCore from "@arcenpay/internal-core";
 import { DEFAULT_CHAIN_ID } from "./lib/platform/default-chain.js";
 import { SUBGRAPH_REQUIRED } from "./lib/platform/launch-flags.js";
 
@@ -32,7 +33,7 @@ function resolveDefaultChainEnvironment() {
 const DEFAULT_CHAIN_ENV = resolveDefaultChainEnvironment();
 
 function getChainEnvironmentCompat(chainId: number) {
-  const maybe = (MEAPCore as unknown as {
+  const maybe = (ArcenPayCore as unknown as {
     getChainEnvironment?: (id: number) => {
       services: { rpcUrl: string; subgraphUrl?: string; facilitatorUrl?: string };
     };
@@ -43,12 +44,12 @@ function getChainEnvironmentCompat(chainId: number) {
 
   // Backward compatibility for stale @arcenpay/internal-core dist builds that don't yet
   // export getChainEnvironment.
-  const chain = MEAPCore.getChain(chainId);
+  const chain = ArcenPayCore.getChain(chainId);
   return {
     chainId,
     chainName: chain.name,
     isTestnet: Boolean(chain.testnet),
-    contracts: MEAPCore.getContractAddresses(chainId),
+    contracts: ArcenPayCore.getContractAddresses(chainId),
     services: {
       rpcUrl: chain.rpcUrls.default.http[0] || "",
       subgraphUrl: "",
@@ -65,6 +66,14 @@ function requireInProd(name: string, value: string | undefined): string {
     );
   }
   return value ?? "";
+}
+
+function getEnvValue(keys: string[]): string | undefined {
+  for (const key of keys) {
+    const value = process.env[key]?.trim();
+    if (value) return value;
+  }
+  return undefined;
 }
 
 // ── Backend API ──────────────────────────────────────────────────────────────
@@ -120,10 +129,12 @@ export const APP_URL: string = (() => {
  */
 export const GRAPH_URL: string = (() => {
   const val =
-    process.env[`GRAPH_URL_${DEFAULT_CHAIN_ID}`] ||
-    process.env.GRAPH_URL ||
-    process.env[`MEAP_SUBGRAPH_URL_${DEFAULT_CHAIN_ID}`] ||
-    process.env.MEAP_SUBGRAPH_URL ||
+    getEnvValue([
+      `ARCENPAY_SUBGRAPH_URL_${DEFAULT_CHAIN_ID}`,
+      `GRAPH_URL_${DEFAULT_CHAIN_ID}`,
+      "ARCENPAY_SUBGRAPH_URL",
+      "GRAPH_URL",
+    ]) ||
     DEFAULT_CHAIN_ENV.services.subgraphUrl;
   if (!val) {
     if (isProd && SUBGRAPH_REQUIRED) {
@@ -131,11 +142,6 @@ export const GRAPH_URL: string = (() => {
         "[config] GRAPH_URL must be set in production.",
       );
     }
-    console.warn(
-      SUBGRAPH_REQUIRED
-        ? "[config] GRAPH_URL is not set. Subgraph queries will fail."
-        : "[config] GRAPH_URL is not set. Subgraph-backed analytics will be unavailable.",
-    );
     return "";
   }
   if (isProd && SUBGRAPH_REQUIRED && val.includes("/placeholder/")) {
@@ -149,21 +155,23 @@ export const GRAPH_URL: string = (() => {
 /**
  * Resolves subgraph URL for a specific chain ID.
  * Resolution order:
+ *   ARCENPAY_SUBGRAPH_URL_<chainId>
  *   GRAPH_URL_<chainId>
- *   MEAP_SUBGRAPH_URL_<chainId>
+ *   ARCENPAY_SUBGRAPH_URL
  *   GRAPH_URL
- *   MEAP_SUBGRAPH_URL
  *   chain manifest subgraphUrl
  */
 export function getGraphUrl(chainId: number): string {
-  const specific =
-    process.env[`GRAPH_URL_${chainId}`] ||
-    process.env[`MEAP_SUBGRAPH_URL_${chainId}`];
+  const specific = getEnvValue([
+    `ARCENPAY_SUBGRAPH_URL_${chainId}`,
+    `GRAPH_URL_${chainId}`,
+  ]);
   if (specific) return specific;
 
-  const global =
-    process.env.GRAPH_URL ||
-    process.env.MEAP_SUBGRAPH_URL;
+  const global = getEnvValue([
+    "ARCENPAY_SUBGRAPH_URL",
+    "GRAPH_URL",
+  ]);
   if (global) return global;
 
   try {
