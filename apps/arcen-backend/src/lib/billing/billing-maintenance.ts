@@ -4,6 +4,9 @@ import { processPendingBillingRecoveryTasks } from "./billing-recovery.js";
 import { db } from "../../db.js";
 import { resolvePublishedFreePlan } from "../catalog/catalog-billing.js";
 import { toPrismaJson } from "../../utils/prisma-json.js";
+import { recordBillingAdjustment } from "./billing-adjustments.js";
+import { deliverWebhook } from "../webhooks/deliver-webhook.js";
+import { computeProrationQuote } from "./billing-proration.js";
 
 function asRecord(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
@@ -28,6 +31,27 @@ function deriveBillingPeriodFromInterval(
     : "monthly";
 }
 
+function priceToNumber(price: unknown): number {
+  if (price === null || price === undefined) return 0;
+  const numeric = Number(price);
+  return Number.isFinite(numeric) ? numeric : 0;
+}
+
+function resolvePlanAmountMicros(
+  plan: { price: unknown; annualPrice?: unknown },
+  billingPeriod: "monthly" | "annual",
+): number {
+  const annualMicros = Math.round(priceToNumber(plan.annualPrice) * 1_000_000);
+  if (billingPeriod === "annual" && annualMicros > 0) {
+    return annualMicros;
+  }
+  return Math.round(priceToNumber(plan.price) * 1_000_000);
+}
+
+function microsToAmount(value: number): number {
+  return value / 1_000_000;
+}
+
 export async function applyScheduledSubscriptionTransitions(input: {
   teamId: string;
   limit?: number;
@@ -38,6 +62,10 @@ export async function applyScheduledSubscriptionTransitions(input: {
     where: {
       teamId: input.teamId,
       currentPeriodEnd: { lte: now },
+      OR: [
+        { cancelAtPeriodEnd: true },
+        { currentPeriodEnd: { lte: now } },
+      ],
     },
     orderBy: { currentPeriodEnd: "asc" },
     take: input.limit ?? 100,
@@ -45,8 +73,10 @@ export async function applyScheduledSubscriptionTransitions(input: {
       id: true,
       companyId: true,
       walletAddress: true,
+      currentPeriodStart: true,
       currentPeriodEnd: true,
       onChainTokenId: true,
+      cancelAtPeriodEnd: true,
       company: {
         select: {
           id: true,
@@ -59,7 +89,7 @@ export async function applyScheduledSubscriptionTransitions(input: {
 
   const results: Array<{
     companyId: string;
-    action: "downgrade_applied" | "cancel_applied" | "skipped";
+    action: "downgrade_applied" | "cancel_applied" | "stale_next_renewal" | "skipped";
     targetPlanId?: string | null;
     reason?: string;
   }> = [];
@@ -69,6 +99,35 @@ export async function applyScheduledSubscriptionTransitions(input: {
     const transition = asRecord(traits.subscriptionTransition);
     const mode =
       typeof transition.mode === "string" ? transition.mode : null;
+
+    if (mode === "next_renewal_on_chain") {
+      const transitionRequestedAtRaw =
+        typeof transition.requestedAt === "string"
+          ? transition.requestedAt
+          : null;
+      const requestedAt = transitionRequestedAtRaw
+        ? new Date(transitionRequestedAtRaw)
+        : null;
+      const stalenessHours = requestedAt
+        ? (now.getTime() - requestedAt.getTime()) / (1000 * 60 * 60)
+        : 0;
+
+      const nextTraits = { ...traits };
+      delete nextTraits.subscriptionTransition;
+
+      await db.arcenCompany.update({
+        where: { id: state.companyId },
+        data: { traits: toPrismaJson(nextTraits) },
+      });
+
+      results.push({
+        companyId: state.companyId,
+        action: "stale_next_renewal",
+        reason: `on_chain_renewal_not_detected_staleness_hours:${Math.round(stalenessHours)}`,
+        targetPlanId: state.company.activePlanId,
+      });
+      continue;
+    }
 
     if (mode !== "period_end_downgrade" && mode !== "cancel_at_period_end") {
       results.push({
@@ -104,7 +163,7 @@ export async function applyScheduledSubscriptionTransitions(input: {
         status: "PUBLISHED",
         active: true,
       },
-      select: { id: true, onChainPlanId: true, billingInterval: true },
+      select: { id: true, name: true, onChainPlanId: true, billingInterval: true, price: true, annualPrice: true },
     });
 
     if (!targetPlan) {
@@ -116,11 +175,31 @@ export async function applyScheduledSubscriptionTransitions(input: {
       continue;
     }
 
-    const nextTraits = { ...traits };
-    delete nextTraits.subscriptionTransition;
-    nextTraits.billingPeriod =
+    const [previousPlan, subscriptionStateForAdjustment] = await Promise.all([
+      state.company.activePlanId
+        ? db.catalogPlan.findFirst({
+            where: { id: state.company.activePlanId, teamId: input.teamId },
+            select: { id: true, name: true, price: true, annualPrice: true, billingInterval: true },
+          })
+        : null,
+      db.subscriptionState.findUnique({
+        where: { id: state.id },
+        select: { id: true },
+      }),
+    ]);
+
+    const targetBillingPeriod =
       normalizeBillingPeriod(transition.targetBillingPeriod) ??
       deriveBillingPeriodFromInterval(targetPlan.billingInterval);
+
+    const currentBillingPeriod =
+      normalizeBillingPeriod(
+        (transition as Record<string, unknown>).previousBillingPeriod,
+      ) ?? deriveBillingPeriodFromInterval(previousPlan?.billingInterval);
+
+    const nextTraits = { ...traits };
+    delete nextTraits.subscriptionTransition;
+    nextTraits.billingPeriod = targetBillingPeriod;
     nextTraits.subscriptionSyncMeta = {
       event:
         mode === "cancel_at_period_end"
@@ -130,6 +209,43 @@ export async function applyScheduledSubscriptionTransitions(input: {
       previousPlanId: state.company.activePlanId ?? null,
       targetPlanId,
     };
+
+    if (previousPlan && state.currentPeriodStart && state.currentPeriodEnd) {
+      const currentAmountMicros = resolvePlanAmountMicros(previousPlan, currentBillingPeriod);
+      const targetAmountMicros = resolvePlanAmountMicros(targetPlan, targetBillingPeriod);
+
+      const quote = computeProrationQuote({
+        currentAmountMicros: BigInt(currentAmountMicros),
+        targetAmountMicros: BigInt(targetAmountMicros),
+        currentPeriodStart: state.currentPeriodStart,
+        currentPeriodEnd: state.currentPeriodEnd,
+        effectiveAt: now,
+      });
+
+      if (quote.deltaMicros < 0n) {
+        const creditAmount = microsToAmount(Number(-quote.deltaMicros));
+        await recordBillingAdjustment({
+          teamId: input.teamId,
+          companyId: state.companyId,
+          subscriptionStateId: subscriptionStateForAdjustment?.id ?? null,
+          kind: "DOWNGRADE_PRORATION_CREDIT",
+          amount: creditAmount,
+          fromCatalogPlanId: state.company.activePlanId ?? null,
+          toCatalogPlanId: targetPlan.id,
+          periodStartedAt: state.currentPeriodStart,
+          periodEndsAt: state.currentPeriodEnd,
+          effectiveAt: now,
+          postedAt: now,
+          metadata: {
+            source: "billing-maintenance",
+            transitionMode: mode,
+            currentBillingPeriod,
+            targetBillingPeriod,
+            remainingRatio: quote.remainingRatio,
+          },
+        });
+      }
+    }
 
     await db.arcenCompany.update({
       where: { id: state.companyId },
@@ -163,6 +279,33 @@ export async function applyScheduledSubscriptionTransitions(input: {
       },
     });
 
+    deliverWebhook(input.teamId, "company.plan.changed", {
+      companyId: state.companyId,
+      planId: targetPlan.id,
+      planName: targetPlan.name,
+      billingPeriod: targetBillingPeriod,
+      previousPlanId: state.company.activePlanId ?? null,
+      mode:
+        mode === "cancel_at_period_end"
+          ? "cancellation_completed"
+          : "downgrade_completed",
+      scheduled: false,
+      effectiveAt: now.toISOString(),
+      source: "billing-maintenance",
+    }).catch(() => {});
+
+    if (mode === "cancel_at_period_end") {
+      deliverWebhook(input.teamId, "company.plan.cancelled", {
+        companyId: state.companyId,
+        previousPlanId: state.company.activePlanId ?? null,
+        fallbackPlanId: targetPlan.id,
+        mode: "cancellation_completed",
+        scheduled: false,
+        effectiveAt: now.toISOString(),
+        source: "billing-maintenance",
+      }).catch(() => {});
+    }
+
     results.push({
       companyId: state.companyId,
       action:
@@ -175,8 +318,9 @@ export async function applyScheduledSubscriptionTransitions(input: {
 
   return {
     scanned: states.length,
-    applied: results.filter((result) => result.action !== "skipped").length,
+    applied: results.filter((result) => result.action !== "skipped" && result.action !== "stale_next_renewal").length,
     skipped: results.filter((result) => result.action === "skipped").length,
+    staleNextRenewal: results.filter((result) => result.action === "stale_next_renewal").length,
     results,
   };
 }

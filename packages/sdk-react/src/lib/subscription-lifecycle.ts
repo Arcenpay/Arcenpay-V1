@@ -3,6 +3,8 @@ export type SubscriptionCancellationIntent = "scheduled";
 type PlanChangeSuccessMessageInput = {
   mode?: string | null;
   selectedPlanName?: string | null;
+  targetBillingPeriod?: string | null;
+  previousBillingPeriod?: string | null;
   effectiveAtLabel?: string | null;
   prorationAmountDue?: string | null;
   walletCreditCreated?: number;
@@ -20,21 +22,41 @@ type CancellationFeedbackInput = {
   pendingVerification?: boolean;
 };
 
+function billingPeriodLabel(period: string | null | undefined): string {
+  if (period === "annual" || period === "yearly") return "Annual";
+  return "Monthly";
+}
+
 export function buildPlanChangeSuccessMessage(
   input: PlanChangeSuccessMessageInput,
 ): string {
   const mode = input.mode ?? "";
+  const targetBillingPeriodDisplay = billingPeriodLabel(input.targetBillingPeriod);
+  const previousBillingPeriodDisplay = billingPeriodLabel(input.previousBillingPeriod);
 
   if (
     mode === "next_renewal_on_chain" ||
     mode === "period_end" ||
     mode === "period_end_downgrade"
   ) {
+    if (
+      input.targetBillingPeriod &&
+      input.previousBillingPeriod &&
+      input.targetBillingPeriod !== input.previousBillingPeriod
+    ) {
+      return `Plan change scheduled.${input.selectedPlanName ? ` ${input.selectedPlanName}` : ""} ${targetBillingPeriodDisplay} billing will take effect${input.effectiveAtLabel ? ` on ${input.effectiveAtLabel}` : " on the next renewal"}.`;
+    }
     return `Plan change scheduled.${input.selectedPlanName ? ` ${input.selectedPlanName} will take effect` : " The new plan will take effect"}${input.effectiveAtLabel ? ` on ${input.effectiveAtLabel}` : " on the next renewal"}.`;
   }
 
   if (mode === "immediate_prorated_upgrade") {
-    return `Plan upgraded.${input.prorationAmountDue ? ` $${Number(input.prorationAmountDue).toFixed(2)} was charged for the remaining term.` : ""}`;
+    const billingChangeNote =
+      input.targetBillingPeriod &&
+      input.previousBillingPeriod &&
+      input.targetBillingPeriod !== input.previousBillingPeriod
+        ? ` Billing changed to ${targetBillingPeriodDisplay}.`
+        : "";
+    return `Plan upgraded.${input.prorationAmountDue ? ` $${Number(input.prorationAmountDue).toFixed(2)} was charged for the remaining term.` : ""}${billingChangeNote}`;
   }
 
   if (mode === "immediate_on_chain" && (input.walletCreditCreated ?? 0) > 0) {
@@ -78,6 +100,20 @@ export function buildCancellationFeedback(input: CancellationFeedbackInput): {
 
   if (mode === "already_free") {
     return { flashMsg: "You are already on the Free plan." };
+  }
+
+  if (mode === "cancellation_completed") {
+    return {
+      flashMsg: "Your subscription has been cancelled and you have been moved to the Free plan.",
+    };
+  }
+
+  if (mode === "downgrade_completed") {
+    return {
+      flashMsg: input.effectiveAtLabel
+        ? `Your plan has been downgraded as of ${input.effectiveAtLabel}.`
+        : "Your plan has been downgraded.",
+    };
   }
 
   return {
