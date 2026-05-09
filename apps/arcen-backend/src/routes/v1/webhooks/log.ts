@@ -58,7 +58,7 @@ export async function getWebhookLog(c: Context) {
       throw new Error(`Facilitator returned ${response.status}`);
     }
 
-    const data = await response.json();
+    const data = await response.json() as Record<string, unknown>;
     const entries = Array.isArray(data.entries)
       ? data.entries
       : Array.isArray(data.log)

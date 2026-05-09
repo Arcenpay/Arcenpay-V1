@@ -451,7 +451,7 @@ export async function POST(c: Context) {
       if (session) {
         sessionDefaults = await resolveDashboardSessionIdentityDefaults(
           teamId,
-          session.clerkUserId,
+          (session as any).clerkUserId,
         );
       }
     }
@@ -1124,7 +1124,7 @@ export async function POST(c: Context) {
     const normalized = normalizeActivationError(message);
     return c.json(
       { error: normalized.error },
-      normalized.status,
+      normalized.status as any,
       corsHeaders(origin),
     );
   }

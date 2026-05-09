@@ -29,7 +29,7 @@ export async function confirmCheckout(c: Context) {
     senderWallet: parsed.data.senderWallet,
   });
   if (!result.ok) {
-    return c.json({ error: result.error }, result.status);
+    return c.json({ error: result.error }, result.status as any);
   }
 
   return c.json({ checkoutSession: result.session, payment: result.payment ?? null });

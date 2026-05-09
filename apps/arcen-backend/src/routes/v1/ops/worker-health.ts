@@ -1,5 +1,5 @@
 import type { Context } from "hono";
-import { resolveSession } from "../../../lib/auth/auth.server.js";
+import { resolveSession } from "../../../middleware/auth.js";
 import { FACILITATOR_URL, FACILITATOR_SECRET } from "../../../config.js";
 import { checkSubgraphHealth } from "../../../lib/platform/graphql.js";
 

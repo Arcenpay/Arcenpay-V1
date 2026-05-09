@@ -1,5 +1,5 @@
 import type { Context } from "hono";
-import { resolveSession } from "../../../lib/auth/auth.server.js";
+import { resolveSession } from "../../../middleware/auth.js";
 import { FACILITATOR_URL, FACILITATOR_SECRET } from "../../../config.js";
 
 export async function getActiveProofs(c: Context) {
@@ -28,7 +28,7 @@ export async function getActiveProofs(c: Context) {
       });
     }
 
-    const payload = await upstream.json();
+    const payload = await upstream.json() as { count?: number; jobs?: unknown };
     const jobs = Array.isArray(payload.jobs) ? payload.jobs : [];
     return c.json({
       count: Number(payload.count) || jobs.length,

@@ -223,13 +223,20 @@ export async function POST(c: Context) {
             if (!control) {
               return c.json(
                 { error: verification.error },
-              verification.status as any,
-              corsHeaders(origin),
-            );
+                verification.status as any,
+                corsHeaders(origin),
+              );
+            }
+
+            pendingVerification = true;
+            autopayControl = {
+              control,
+              txHash: normalizedAutopayTxHash,
+            };
           } else {
             return c.json(
               { error: verification.error },
-              verification.status,
+              verification.status as any,
               corsHeaders(origin),
             );
           }

@@ -120,7 +120,7 @@ export async function POST(c: Context) {
   if (!verification.ok) {
     return c.json(
       { error: verification.error },
-      verification.status,
+      verification.status as any,
     );
   }
 

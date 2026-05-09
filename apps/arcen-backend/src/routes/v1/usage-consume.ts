@@ -8,8 +8,8 @@ import {
 } from "../../lib/billing/usage-consume.js";
 import { corsHeaders } from "../../middleware/cors.js";
 
-function jsonWithCors(c: Context, body: unknown, status = 200) {
-  return c.json(body, status, corsHeaders(c.req.header("origin")));
+function jsonWithCors(c: Context, body: unknown, status = 200 as any) {
+  return c.json(body, status as any, corsHeaders(c.req.header("origin")));
 }
 
 function parseKeyHeader(header: string | null): Record<string, string> {
@@ -93,8 +93,8 @@ export async function POST(c: Context) {
 
     teamId = ctx.teamId;
 
-    const rawCompanyKeys = parseKeyHeader(c.req.header("x-arcen-company-keys"));
-    const rawUserKeys = parseKeyHeader(c.req.header("x-arcen-user-keys"));
+    const rawCompanyKeys = parseKeyHeader(c.req.header("x-arcen-company-keys") ?? null);
+    const rawUserKeys = parseKeyHeader(c.req.header("x-arcen-user-keys") ?? null);
 
     companyKeys = {
       id: rawCompanyKeys.id,

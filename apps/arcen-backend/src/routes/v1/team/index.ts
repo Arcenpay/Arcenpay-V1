@@ -4,7 +4,7 @@ import { z } from "zod";
 import { getSessionFromCtx } from "../../../lib/auth/auth.server.js";
 import { resolveTeamContext } from "../../../lib/auth/team-session.js";
 import { db } from "../../../db.js";
-import { slugify } from "../../../lib/auth/auth.server.js";
+import { slugify } from "../../../lib/auth/auth.js";
 import { writeAuditEvent } from "../../../lib/platform/audit.js";
 import { normalizeEnvironmentMode } from "../../../lib/platform/default-chain.js";
 import { removeMember } from "./members.js";

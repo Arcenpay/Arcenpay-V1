@@ -1,4 +1,4 @@
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { requireFacilitatorAuth } from "../../../middleware/auth.js";
 import { getAgentConfigs } from "./agent-configs.js";
 import { runBillingMaintenance } from "../../../lib/billing/billing-maintenance.js";
@@ -7,9 +7,13 @@ import { resolvePlan } from "./catalog-resolve-plan.js";
 import { syncSubscription } from "./companies-sync-subscription.js";
 import { createPreviewToken } from "./preview-token.js";
 
+async function runMaintenance(c: Context) {
+  return c.json(await runBillingMaintenance({ teamId: c.get("apiKeyTeamId") ?? (c.get("team") as any)?.teamId ?? "", now: new Date() }));
+}
+
 export const internalRoutes = new Hono()
   .get("/agent/configs", requireFacilitatorAuth(), getAgentConfigs)
-  .post("/billing/maintenance", requireFacilitatorAuth(), runBillingMaintenance)
+  .post("/billing/maintenance", requireFacilitatorAuth(), runMaintenance)
   .post("/billing/maintenance/all", requireFacilitatorAuth(), runMaintenanceAll)
   .get("/catalog/resolve-plan", requireFacilitatorAuth(), resolvePlan)
   .patch("/companies/sync-subscription", requireFacilitatorAuth(), syncSubscription)

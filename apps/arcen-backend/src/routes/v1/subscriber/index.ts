@@ -7,7 +7,7 @@ async function registerEmail(c: Context) {
   const body = await c.req.json() .catch(() => ({}));
   const { email } = body as { email?: string };
   if (!email) return c.json({ ok: false, error: "email required", code: "BAD_REQUEST" }, 400 as any);
-  await sendEmailAuthCode({ to: email, code: "000000" });
+  await sendEmailAuthCode(email, "000000");
   return c.json({ ok: true, data: { sent: true } });
 }
 
