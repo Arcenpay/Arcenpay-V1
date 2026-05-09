@@ -50,7 +50,7 @@ const DEFAULT_RETRY_DELAYS = [1000, 5000, 30000, 300000, 1800000]; // 1s, 5s, 30
  *   { event: 'subscription.renewed', timestamp, data: { tokenId, address, planId, amount, txHash } }
  *
  * Signing:
- *   HMAC-SHA256(JSON.stringify(payload), signingSecret) → X-MEAP-Signature header
+ *   HMAC-SHA256(JSON.stringify(payload), signingSecret) → X-ArcenPay-Signature header
  */
 export class WebhookService {
   private config: Required<Omit<WebhookConfig, "onDelivery">> &
@@ -101,9 +101,9 @@ export class WebhookService {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-MEAP-Signature": signature,
-          "X-MEAP-Delivery": id,
-          "User-Agent": "MEAP-Webhook/1.0",
+          "X-ArcenPay-Signature": signature,
+          "X-ArcenPay-Delivery": id,
+          "User-Agent": "ArcenPay-Webhook/1.0",
         },
         body,
         signal: AbortSignal.timeout(10000),
@@ -219,7 +219,7 @@ export class WebhookService {
    *
    * app.post('/webhooks/meap', (req, res) => {
    *   const raw = JSON.stringify(req.body);
-   *   const sig = req.headers['x-meap-signature'] as string;
+   *   const sig = req.headers['x-arcenpay-signature'] as string;
    *   if (!verifyWebhookSignature(raw, sig, process.env.MEAP_WEBHOOK_SECRET!)) {
    *     return res.status(401).json({ error: 'Invalid signature' });
    *   }
@@ -247,11 +247,11 @@ export class WebhookService {
 }
 
 /**
- * Standalone helper for verifying incoming MEAP webhook signatures.
+ * Standalone helper for verifying incoming ArcenPay webhook signatures.
  * Equivalent to `WebhookService.verifySignature()` — exported for tree-shaking convenience.
  *
  * @param body      - Raw request body string (before any JSON.parse)
- * @param signature - Value from the `X-MEAP-Signature` request header
+ * @param signature - Value from the `X-ArcenPay-Signature` request header
  * @param secret    - Shared HMAC signing secret configured on the provider's webhook endpoint
  */
 export function verifyWebhookSignature(

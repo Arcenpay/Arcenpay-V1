@@ -2,7 +2,7 @@
 //  @arcenpay/node — Billing Automation Keeper
 //  Polls for expired subscriptions and triggers automated
 //  renewal via ERC-7579 AutopayModule.execute()
-//  PRD MEAP-004 — Automated Renewal Execution
+//  PRD ARCENPAY-004 — Automated Renewal Execution
 // ============================================================
 
 import { createPublicClient, createWalletClient, http } from "viem";
@@ -57,7 +57,7 @@ interface RenewalResult {
  *   3. Call execute() on the module to trigger the payment pull
  *   4. Log results and emit renewal events
  *
- * PRD MEAP-004 — Automated Renewal Execution
+ * PRD ARCENPAY-004 — Automated Renewal Execution
  */
 export class BillingKeeper {
   private readonly chainId: number;

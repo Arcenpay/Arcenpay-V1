@@ -270,7 +270,7 @@ export function useEntitlement(
   const planTier = planFeatures?.[1] as PlanTier | undefined;
 
   // Build features map from plan tier. Uses provider-supplied `tierFeatureFallback`
-  // from MEAPProvider config when Tableland is not configured, falling back to an
+  // from ArcenPayProvider config when Tableland is not configured, falling back to an
   // empty map so custom provider feature keys are never silently replaced.
   const onChainTierFeatures = useMemo<
     Record<string, boolean | string | number>

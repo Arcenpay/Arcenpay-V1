@@ -6,11 +6,7 @@ const PUBLIC_PATHS = [
   /^\/sign-in(?:\/.*)?$/,
   /^\/sign-up(?:\/.*)?$/,
   /^\/invite(?:\/.*)?$/,
-  /^\/api\/auth\/email\/start$/,
-  /^\/api\/auth\/email\/verify$/,
-  /^\/api\/auth\/session$/,
-  /^\/api\/auth\/logout$/,
-  /^\/api\/v1\/.*/,
+  /^\/api\/.*/,              // All API calls go to backend (backend handles its own auth)
 ];
 
 function isPublicRoute(pathname: string): boolean {

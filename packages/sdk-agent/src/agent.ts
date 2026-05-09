@@ -71,7 +71,7 @@ export interface FetchOptions extends RequestInit {
 
 // ─── EIP-712 Constants ────────────────────────────────────────────
 
-const PAYMENT_DOMAIN_NAME = 'MEAP x402 Payment';
+const PAYMENT_DOMAIN_NAME = 'ArcenPay x402 Payment';
 const PAYMENT_DOMAIN_VERSION = '1';
 
 const PAYMENT_TYPES = {
@@ -111,12 +111,12 @@ const BALANCE_RETRY_BASE_MS = 500;
 function parseHumanUsdcAmount(value: string, field: string): bigint {
   const trimmed = value.trim();
   if (!trimmed) {
-    throw new Error(`[MEAPAgent] ${field} must be a non-empty USDC amount`);
+    throw new Error(`[ArcenPayAgent] ${field} must be a non-empty USDC amount`);
   }
   try {
     return parseUnits(trimmed, 6);
   } catch {
-    throw new Error(`[MEAPAgent] ${field} must be a valid USDC amount like "0.01"`);
+    throw new Error(`[ArcenPayAgent] ${field} must be a valid USDC amount like "0.01"`);
   }
 }
 
@@ -124,7 +124,7 @@ function parsePriceLimit(value: string | bigint, field: string): bigint {
   if (typeof value === 'bigint') return value;
   const trimmed = value.trim();
   if (!trimmed) {
-    throw new Error(`[MEAPAgent] ${field} must be a non-empty price limit`);
+    throw new Error(`[ArcenPayAgent] ${field} must be a non-empty price limit`);
   }
   if (trimmed.includes('.')) {
     return parseHumanUsdcAmount(trimmed, field);
@@ -133,7 +133,7 @@ function parsePriceLimit(value: string | bigint, field: string): bigint {
     return BigInt(trimmed);
   } catch {
     throw new Error(
-      `[MEAPAgent] ${field} must be a decimal USDC string like "0.01" or an atomic-unit bigint/integer string`,
+      `[ArcenPayAgent] ${field} must be a decimal USDC string like "0.01" or an atomic-unit bigint/integer string`,
     );
   }
 }
@@ -226,10 +226,10 @@ export class MEAPAgent {
       this.sessionId = state.sessionId;
       this.totalSpent = BigInt(state.totalSpent);
       console.log(
-        `[MEAPAgent] Restored state: nonce=${this.nonce}, sessionId=${this.sessionId?.slice(0, 10)}…, totalSpent=${formatUsdc(this.totalSpent)}`,
+        `[ArcenPayAgent] Restored state: nonce=${this.nonce}, sessionId=${this.sessionId?.slice(0, 10)}…, totalSpent=${formatUsdc(this.totalSpent)}`,
       );
     } catch (err) {
-      console.warn('[MEAPAgent] Failed to restore persisted state, starting fresh:', err);
+      console.warn('[ArcenPayAgent] Failed to restore persisted state, starting fresh:', err);
     }
   }
 
@@ -244,7 +244,7 @@ export class MEAPAgent {
     try {
       await this.store.set(PERSISTENCE_KEY, JSON.stringify(state));
     } catch (err) {
-      console.warn('[MEAPAgent] Failed to persist state:', err);
+      console.warn('[ArcenPayAgent] Failed to persist state:', err);
     }
   }
 
@@ -294,7 +294,7 @@ export class MEAPAgent {
       args: [vaultAddress, amountAtomic],
     } as any);
 
-    console.log(`[MEAPAgent] USDC approve tx: ${approveHash}`);
+    console.log(`[ArcenPayAgent] USDC approve tx: ${approveHash}`);
     await this.publicClient.waitForTransactionReceipt({ hash: approveHash });
 
     // Step 2: Call SessionVault.fundSession()
@@ -307,7 +307,7 @@ export class MEAPAgent {
       args: [amountAtomic, usdcAddress],
     } as any);
 
-    console.log(`[MEAPAgent] Fund session tx: ${fundHash}`);
+    console.log(`[ArcenPayAgent] Fund session tx: ${fundHash}`);
     const receipt = await this.publicClient.waitForTransactionReceipt({ hash: fundHash });
 
     let sessionId: string | null = null;
@@ -329,14 +329,14 @@ export class MEAPAgent {
 
     if (!sessionId) {
       throw new Error(
-        '[MEAPAgent] fundSession() succeeded on-chain but SessionFunded event could not be decoded',
+        '[ArcenPayAgent] fundSession() succeeded on-chain but SessionFunded event could not be decoded',
       );
     }
 
     this.sessionId = sessionId;
     await this.persist();
 
-    console.log(`[MEAPAgent] Session funded: ${amount} USDC → ${this.sessionId}`);
+    console.log(`[ArcenPayAgent] Session funded: ${amount} USDC → ${this.sessionId}`);
     return this.sessionId;
   }
 
@@ -359,7 +359,7 @@ export class MEAPAgent {
 
     // Step 3: Parse x402 response
     const x402Response: X402Response = await response.json();
-    console.log(`[MEAPAgent] Received 402: ${x402Response.error}`);
+    console.log(`[ArcenPayAgent] Received 402: ${x402Response.error}`);
 
     // Step 4: Evaluate payment options
     const paymentOption = x402Response.accepts[0];
@@ -404,7 +404,7 @@ export class MEAPAgent {
       const toppedUp = await this.tryAutoTopUp(requiredAmount - balance, url);
       if (!toppedUp) {
         throw new Error(
-          `[MEAPAgent] Insufficient session balance: have ${formatUsdc(balance)}, need ${formatUsdc(requiredAmount)}. ` +
+          `[ArcenPayAgent] Insufficient session balance: have ${formatUsdc(balance)}, need ${formatUsdc(requiredAmount)}. ` +
           `Call fundSession() to top up before retrying.`,
         );
       }
@@ -430,11 +430,11 @@ export class MEAPAgent {
       this.totalSpent += requiredAmount;
       this.dailySpent += requiredAmount;
       console.log(
-        `[MEAPAgent] Payment settled with nonce ${paymentNonce}. Total spent: ${formatUsdc(this.totalSpent)}, next nonce: ${this.nonce}`,
+        `[ArcenPayAgent] Payment settled with nonce ${paymentNonce}. Total spent: ${formatUsdc(this.totalSpent)}, next nonce: ${this.nonce}`,
       );
     } else {
       console.warn(
-        `[MEAPAgent] Paid request returned non-2xx (${paidResponse.status}). ` +
+        `[ArcenPayAgent] Paid request returned non-2xx (${paidResponse.status}). ` +
         `A fresh nonce will be used on the next attempt.`,
       );
     }
@@ -469,7 +469,7 @@ export class MEAPAgent {
         if (attempt < BALANCE_RETRY_MAX - 1) {
           const delay = BALANCE_RETRY_BASE_MS * Math.pow(2, attempt);
           console.warn(
-            `[MEAPAgent] Balance query attempt ${attempt + 1}/${BALANCE_RETRY_MAX} failed, retrying in ${delay}ms…`,
+            `[ArcenPayAgent] Balance query attempt ${attempt + 1}/${BALANCE_RETRY_MAX} failed, retrying in ${delay}ms…`,
           );
           await sleep(delay);
         }
@@ -477,7 +477,7 @@ export class MEAPAgent {
     }
 
     throw new Error(
-      `[MEAPAgent] Balance query failed after ${BALANCE_RETRY_MAX} attempts: ${lastError}`,
+      `[ArcenPayAgent] Balance query failed after ${BALANCE_RETRY_MAX} attempts: ${lastError}`,
     );
   }
 
@@ -526,7 +526,7 @@ export class MEAPAgent {
       args: [vaultAddress, amountAtomic],
     } as any);
 
-    console.log(`[MEAPAgent] Top-up approve tx: ${approveHash}`);
+    console.log(`[ArcenPayAgent] Top-up approve tx: ${approveHash}`);
     await this.publicClient.waitForTransactionReceipt({ hash: approveHash });
 
     // Top up
@@ -539,10 +539,10 @@ export class MEAPAgent {
       args: [sessionId as `0x${string}`, amountAtomic],
     } as any);
 
-    console.log(`[MEAPAgent] Top-up tx: ${topUpHash}`);
+    console.log(`[ArcenPayAgent] Top-up tx: ${topUpHash}`);
     await this.publicClient.waitForTransactionReceipt({ hash: topUpHash });
 
-    console.log(`[MEAPAgent] Session ${sessionId.slice(0, 10)}… topped up with ${amount} USDC`);
+    console.log(`[ArcenPayAgent] Session ${sessionId.slice(0, 10)}… topped up with ${amount} USDC`);
   }
 
   /**
@@ -554,7 +554,7 @@ export class MEAPAgent {
     const enabled = providers.filter((p) => p.enabled);
 
     if (enabled.length === 0) {
-      console.warn('[MEAPAgent] No dispatch providers configured. Top-up requires manual intervention.');
+      console.warn('[ArcenPayAgent] No dispatch providers configured. Top-up requires manual intervention.');
       return [];
     }
 
@@ -580,9 +580,9 @@ export class MEAPAgent {
       try {
         await this.sendProviderNotification(provider, topUpRequest);
         requests.push(topUpRequest);
-        console.log(`[MEAPAgent] Dispatch request sent via ${provider.type}: ${amount} USDC`);
+        console.log(`[ArcenPayAgent] Dispatch request sent via ${provider.type}: ${amount} USDC`);
       } catch (err) {
-        console.error(`[MEAPAgent] Failed to send dispatch via ${provider.type}:`, err);
+        console.error(`[ArcenPayAgent] Failed to send dispatch via ${provider.type}:`, err);
       }
     }
 
@@ -695,11 +695,11 @@ export class MEAPAgent {
         if (!target) {
           throw new Error('Email address not configured on provider');
         }
-        console.log(`[MEAPAgent] Dispatch email to ${target}: Top-up ${request.amount} USDC for agent ${request.agentAddress}`);
+        console.log(`[ArcenPayAgent] Dispatch email to ${target}: Top-up ${request.amount} USDC for agent ${request.agentAddress}`);
         break;
       }
       default:
-        console.warn(`[MEAPAgent] Unsupported provider type: ${provider.type}`);
+        console.warn(`[ArcenPayAgent] Unsupported provider type: ${provider.type}`);
     }
   }
 
@@ -723,7 +723,7 @@ export class MEAPAgent {
     }
 
     if (!this.sessionId) {
-      console.warn('[MEAPAgent] Cannot auto-topup: no active session');
+      console.warn('[ArcenPayAgent] Cannot auto-topup: no active session');
       return false;
     }
 
@@ -741,13 +741,13 @@ export class MEAPAgent {
     if (mode === 'auto') {
       // Auto mode: top up immediately without user approval
       const amountUsdc = formatUnits(cappedAmount, 6);
-      console.log(`[MEAPAgent] Auto-topping up ${amountUsdc} USDC…`);
+      console.log(`[ArcenPayAgent] Auto-topping up ${amountUsdc} USDC…`);
       try {
         await this.topUpSession(this.sessionId, amountUsdc);
-        console.log(`[MEAPAgent] Auto-topup complete: ${amountUsdc} USDC`);
+        console.log(`[ArcenPayAgent] Auto-topup complete: ${amountUsdc} USDC`);
         return true;
       } catch (err) {
-        console.error('[MEAPAgent] Auto-topup failed:', err);
+        console.error('[ArcenPayAgent] Auto-topup failed:', err);
         return false;
       }
     }
@@ -755,14 +755,14 @@ export class MEAPAgent {
     if (mode === 'dispatch') {
       // Dispatch mode: send approval request to user
       const amountUsdc = formatUnits(cappedAmount, 6);
-      console.log(`[MEAPAgent] Dispatching top-up request for ${amountUsdc} USDC…`);
+      console.log(`[ArcenPayAgent] Dispatching top-up request for ${amountUsdc} USDC…`);
       const requests = await this.sendDispatchRequest(
         cappedAmount.toString(),
         `Agent needs ${formatUsdc(deficit)} USDC for resource: ${resource}`,
       );
 
       if (requests.length === 0) {
-        console.error('[MEAPAgent] Dispatch failed: no providers responded');
+        console.error('[ArcenPayAgent] Dispatch failed: no providers responded');
         return false;
       }
 
@@ -779,10 +779,10 @@ export class MEAPAgent {
             if (resolved && resolved.status === 'approved') {
               try {
                 await this.topUpSession(this.sessionId!, amountUsdc);
-                console.log(`[MEAPAgent] Dispatch top-up approved and complete: ${amountUsdc} USDC`);
+                console.log(`[ArcenPayAgent] Dispatch top-up approved and complete: ${amountUsdc} USDC`);
                 return true;
               } catch (err) {
-                console.error('[MEAPAgent] Dispatch top-up failed after approval:', err);
+                console.error('[ArcenPayAgent] Dispatch top-up failed after approval:', err);
                 return false;
               }
             }
@@ -790,7 +790,7 @@ export class MEAPAgent {
         }
       }
 
-      console.warn(`[MEAPAgent] Dispatch request timed out after ${timeoutMs / 1000}s`);
+      console.warn(`[ArcenPayAgent] Dispatch request timed out after ${timeoutMs / 1000}s`);
       return false;
     }
 
@@ -869,13 +869,13 @@ export class MEAPAgent {
   /** Updates auto-topup configuration at runtime */
   updateAutoTopUp(config: Partial<AutoTopUpConfig>): void {
     this.config.autoTopUp = { ...(this.config.autoTopUp ?? { mode: 'off' as const, dailyLimit: '0', perTxnLimit: '0', threshold: '0' }), ...config };
-    console.log('[MEAPAgent] Auto-topup config updated:', this.config.autoTopUp);
+    console.log('[ArcenPayAgent] Auto-topup config updated:', this.config.autoTopUp);
   }
 
   /** Updates dispatch configuration at runtime */
   updateDispatch(config: Partial<DispatchConfig>): void {
     this.config.dispatch = { ...(this.config.dispatch ?? { enabled: false, providers: [], cooldownSeconds: 120, maxRetries: 3 }), ...config };
-    console.log('[MEAPAgent] Dispatch config updated');
+    console.log('[ArcenPayAgent] Dispatch config updated');
   }
 
   // ─── EIP-712 Payment Construction ────────────────────────

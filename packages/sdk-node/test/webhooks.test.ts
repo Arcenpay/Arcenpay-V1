@@ -89,7 +89,7 @@ describe("WebhookService", () => {
       expect(url).toBe(testConfig.url);
       expect(options.method).toBe("POST");
       expect(options.headers["Content-Type"]).toBe("application/json");
-      expect(options.headers["X-MEAP-Signature"]).toBeTruthy();
+      expect(options.headers["X-ArcenPay-Signature"]).toBeTruthy();
 
       const body = JSON.parse(options.body);
       expect(body.event).toBe("subscription.minted");

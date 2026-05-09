@@ -1,7 +1,7 @@
 // ============================================================
 //  @arcenpay/react — ZeroDev Smart Account Integration
 //  ERC-7579 Kernel account provisioning with AutopayModule
-//  PRD MEAP-001 — Smart Account Provisioning
+//  PRD ARCENPAY-001 — Smart Account Provisioning
 // ============================================================
 
 import {
@@ -273,7 +273,7 @@ async function createKernelExecutionContext(config: {
  *   3. Create a Kernel account client with ZeroDev paymaster for gas sponsorship
  *   4. Install the AutopayModule as an execution module on the Kernel
  *
- * PRD MEAP-001 — This enables recurring subscription payments to be
+ * PRD ARCENPAY-001 — This enables recurring subscription payments to be
  * pulled automatically by the BillingKeeper.
  */
 export async function deploySmartAccount(

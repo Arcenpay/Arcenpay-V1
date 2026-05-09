@@ -174,7 +174,7 @@ export interface SubgraphHealth {
 }
 
 /**
- * Checks The Graph indexing health for the MEAP subgraph.
+ * Checks The Graph indexing health for the ArcenPay subgraph.
  * Uses the Graph Node status API (`_meta` field).
  *
  * A lag > 60s is considered degraded; > 300s is considered unhealthy.

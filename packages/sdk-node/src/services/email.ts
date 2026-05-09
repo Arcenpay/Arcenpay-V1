@@ -202,7 +202,7 @@ export class EmailService {
           ${body}
         </div>
         <div style="text-align:center;margin-top:24px;font-size:12px;color:#999">
-          <p>${this.brandName} — MEAP + ZKVUB Protocol</p>
+          <p>${this.brandName} — ArcenPay + ZKVUB Protocol</p>
           <p>Powered by on-chain entitlements</p>
         </div>
       </body>

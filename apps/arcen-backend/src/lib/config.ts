@@ -114,7 +114,7 @@ export const APP_URL: string = (() => {
 // ── Subgraph ──────────────────────────────────────────────────────────────────
 
 /**
- * The Graph studio URL for the MEAP subgraph.
+ * The Graph studio URL for the ArcenPay subgraph.
  * Optional for Base Sepolia MVP launch; can be made mandatory with
  * ARCENPAY_REQUIRE_SUBGRAPH=true.
  */

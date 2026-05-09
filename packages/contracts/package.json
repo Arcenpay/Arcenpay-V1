@@ -2,7 +2,7 @@
   "name": "@arcenpay/contracts",
   "version": "0.0.1",
   "private": true,
-  "description": "MEAP + ZKVUB Protocol Smart Contracts",
+  "description": "ArcenPay + ZKVUB Protocol Smart Contracts",
   "scripts": {
     "build": "HARDHAT_DISABLE_TELEMETRY_PROMPT=true hardhat compile",
     "test": "npm run test:forge:auto",

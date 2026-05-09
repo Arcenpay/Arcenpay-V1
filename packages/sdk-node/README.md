@@ -61,7 +61,7 @@ Verify webhook signatures:
 import { verifyWebhookSignature } from "@arcenpay/node";
 
 const rawBody = await req.text();
-const signatureHeader = req.headers.get("x-meap-signature") ?? "";
+const signatureHeader = req.headers.get("x-arcenpay-signature") ?? "";
 const signature = signatureHeader.startsWith("sha256=")
   ? signatureHeader.slice("sha256=".length)
   : signatureHeader;

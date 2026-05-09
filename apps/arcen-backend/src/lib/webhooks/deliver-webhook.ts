@@ -93,15 +93,15 @@ export async function sendWebhookDelivery(
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     "User-Agent": "ArcenPay-Webhook/1.0",
-    "X-MEAP-Event": input.eventName,
-    "X-MEAP-Timestamp": String(timestamp),
+    "X-ArcenPay-Event": input.eventName,
+    "X-ArcenPay-Timestamp": String(timestamp),
   };
 
   if (target.signingSecret) {
     const sig = createHmac("sha256", target.signingSecret)
       .update(payload)
       .digest("hex");
-    headers["X-MEAP-Signature"] = `sha256=${sig}`;
+    headers["X-ArcenPay-Signature"] = `sha256=${sig}`;
   }
 
   const deliveryId = randomBytes(12).toString("hex");

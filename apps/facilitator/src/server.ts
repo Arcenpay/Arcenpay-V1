@@ -1,5 +1,5 @@
 // ============================================================
-//  MEAP Facilitator Node — Entry Point
+//  ArcenPay Facilitator Node — Entry Point
 //  Validates x402 payments, watches on-chain events,
 //  and delivers notifications to providers
 // ============================================================
@@ -143,7 +143,7 @@ const PROOF_ARTIFACT_MANIFEST_PATH =
   path.resolve(process.cwd(), "circuits", "artifact-manifest.json");
 const PROOF_SIGNER_PRIVATE_KEY =
   process.env.PROOF_SIGNER_PRIVATE_KEY || process.env.PRIVATE_KEY;
-const REDIS_PREFIX = process.env.REDIS_PREFIX || "meap";
+const REDIS_PREFIX = process.env.REDIS_PREFIX || "arcenpay";
 const FACILITATOR_SECRET = (process.env.FACILITATOR_SECRET || "").trim();
 const DASHBOARD_URL = (process.env.DASHBOARD_URL || "").replace(/\/$/, "");
 const DASHBOARD_PLAN_RESOLVER_PATH = "/api/internal/catalog/resolve-plan";
@@ -649,7 +649,7 @@ let redisReady: Promise<void> | null = null;
 if (process.env.REDIS_URL) {
   redisUsageStore = new RedisUsageStore({
     url: process.env.REDIS_URL,
-    keyPrefix: process.env.REDIS_PREFIX || "meap",
+    keyPrefix: process.env.REDIS_PREFIX || "arcenpay",
     ttlSeconds: Number(process.env.REDIS_USAGE_TTL_SECONDS || 7 * 24 * 60 * 60),
   });
   redisReady = redisUsageStore
@@ -2471,7 +2471,7 @@ app.get("/health", async (_req, res) => {
 
   res.json({
     status: "ok",
-    service: "meap-facilitator",
+    service: "arcenpay-facilitator",
     version: "0.1.0",
     profile: FACILITATOR_PROFILE,
     chainId: CHAIN_ID,
@@ -2604,7 +2604,7 @@ app.get("/health", async (_req, res) => {
 
 app.get("/info", (_req, res) => {
   res.json({
-    protocol: "MEAP + ZKVUB",
+    protocol: "ArcenPay + ZKVUB",
     version: "0.1.0",
     x402Version: "1",
     supportedNetworks: ["base-sepolia", "base-mainnet"],
@@ -2633,7 +2633,7 @@ app.use(
 
       if (res.statusCode === 402) {
         const rejectionReason = String(
-          res.getHeader("x-meap-rejection-reason") || "unknown",
+          res.getHeader("x-arcenpay-rejection-reason") || "unknown",
         );
         x402ValidationErrorsTotal.inc({ reason: rejectionReason });
       }
@@ -2656,7 +2656,7 @@ app.use(
       const paymentId = X402ReplayProtection.paymentIdFromHeader(rawHeader);
       if (replayProtection.checkAndRecord(paymentId)) {
         x402ReplayRejections.inc();
-        res.setHeader("x-meap-rejection-reason", "replay_detected");
+        res.setHeader("x-arcenpay-rejection-reason", "replay_detected");
         return res.status(402).json({
           error:
             "Payment replay detected. Each x-payment header may only be used once.",
@@ -3761,7 +3761,7 @@ app.get("/api/email/templates", (_req, res) => {
   ];
   res.json({
     configured: !!emailService,
-    brandName: process.env.BRAND_NAME || "MEAP",
+    brandName: process.env.BRAND_NAME || "ArcenPay",
     templates,
   });
 });

@@ -2,7 +2,7 @@
   "name": "@arcenpay/facilitator",
   "version": "0.0.1",
   "private": true,
-  "description": "MEAP Facilitator Node — x402 payment validation and on-chain submission",
+  "description": "ArcenPay Facilitator Node — x402 payment validation and on-chain submission",
   "scripts": {
     "prebuild": "npm run build --workspace=@arcenpay/internal-core",
     "pretypecheck": "npm run build --workspace=@arcenpay/internal-core",

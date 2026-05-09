@@ -66,8 +66,8 @@ async function main() {
   // 3) SubscriptionRegistry
   const SubscriptionRegistry = await ethers.getContractFactory("SubscriptionRegistry");
   const registry = await SubscriptionRegistry.deploy(
-    "MEAP Subscription",
-    "MEAP-SUB",
+    "ArcenPay Subscription",
+    "ARCENPAY-SUB",
     planFactoryAddr,
   );
   await registry.waitForDeployment();

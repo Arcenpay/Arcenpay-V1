@@ -36,7 +36,7 @@ export class RedisUsageStore {
 
   constructor(config: RedisUsageStoreConfig) {
     this.config = {
-      keyPrefix: "meap",
+      keyPrefix: "arcenpay",
       ttlSeconds: 7 * 24 * 60 * 60,
       ...config,
     };

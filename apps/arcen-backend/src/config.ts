@@ -100,48 +100,47 @@ export const FACILITATOR_URL: string = (() => {
 // ── Application base URL ──────────────────────────────────────────────────────
 
 /**
- * Public-facing base URL of the dashboard (used in emails and signed download URLs).
+ * Public-facing base URL of the app (used in emails and signed download URLs).
  * Required in production.
- * Resolves from: NEXT_PUBLIC_APP_URL → NEXTAUTH_URL → VERCEL_URL (auto-prefixed with https://)
+ * Resolves from: APP_URL → DASHBOARD_URL
  */
 export const APP_URL: string = (() => {
   const val =
-    process.env.NEXT_PUBLIC_APP_URL ||
-    process.env.NEXTAUTH_URL ||
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined);
-  return requireInProd("NEXT_PUBLIC_APP_URL / NEXTAUTH_URL", val) || "http://localhost:3000";
+    process.env.APP_URL ||
+    process.env.DASHBOARD_URL;
+  return requireInProd("APP_URL", val) || "http://localhost:3000";
 })();
 
 // ── Subgraph ──────────────────────────────────────────────────────────────────
 
 /**
- * The Graph studio URL for the MEAP subgraph.
+ * The Graph studio URL for the ArcenPay subgraph.
  * Optional for Base Sepolia MVP launch; can be made mandatory with
  * ARCENPAY_REQUIRE_SUBGRAPH=true.
  */
 export const GRAPH_URL: string = (() => {
   const val =
-    process.env[`NEXT_PUBLIC_GRAPH_URL_${DEFAULT_CHAIN_ID}`] ||
-    process.env.NEXT_PUBLIC_GRAPH_URL ||
+    process.env[`GRAPH_URL_${DEFAULT_CHAIN_ID}`] ||
+    process.env.GRAPH_URL ||
     process.env[`MEAP_SUBGRAPH_URL_${DEFAULT_CHAIN_ID}`] ||
     process.env.MEAP_SUBGRAPH_URL ||
     DEFAULT_CHAIN_ENV.services.subgraphUrl;
   if (!val) {
     if (isProd && SUBGRAPH_REQUIRED) {
       throw new Error(
-        "[config] NEXT_PUBLIC_GRAPH_URL must be set in production.",
+        "[config] GRAPH_URL must be set in production.",
       );
     }
     console.warn(
       SUBGRAPH_REQUIRED
-        ? "[config] NEXT_PUBLIC_GRAPH_URL is not set. Subgraph queries will fail."
-        : "[config] NEXT_PUBLIC_GRAPH_URL is not set. Subgraph-backed analytics will be unavailable.",
+        ? "[config] GRAPH_URL is not set. Subgraph queries will fail."
+        : "[config] GRAPH_URL is not set. Subgraph-backed analytics will be unavailable.",
     );
     return "";
   }
   if (isProd && SUBGRAPH_REQUIRED && val.includes("/placeholder/")) {
     throw new Error(
-      "[config] NEXT_PUBLIC_GRAPH_URL contains a placeholder — set a real subgraph URL.",
+      "[config] GRAPH_URL contains a placeholder — set a real subgraph URL.",
     );
   }
   return val;
@@ -150,20 +149,20 @@ export const GRAPH_URL: string = (() => {
 /**
  * Resolves subgraph URL for a specific chain ID.
  * Resolution order:
- *   NEXT_PUBLIC_GRAPH_URL_<chainId>
+ *   GRAPH_URL_<chainId>
  *   MEAP_SUBGRAPH_URL_<chainId>
- *   NEXT_PUBLIC_GRAPH_URL
+ *   GRAPH_URL
  *   MEAP_SUBGRAPH_URL
  *   chain manifest subgraphUrl
  */
 export function getGraphUrl(chainId: number): string {
   const specific =
-    process.env[`NEXT_PUBLIC_GRAPH_URL_${chainId}`] ||
+    process.env[`GRAPH_URL_${chainId}`] ||
     process.env[`MEAP_SUBGRAPH_URL_${chainId}`];
   if (specific) return specific;
 
   const global =
-    process.env.NEXT_PUBLIC_GRAPH_URL ||
+    process.env.GRAPH_URL ||
     process.env.MEAP_SUBGRAPH_URL;
   if (global) return global;
 

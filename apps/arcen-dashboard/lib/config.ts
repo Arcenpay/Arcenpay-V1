@@ -14,7 +14,16 @@
 
 import * as MEAPCore from "@arcenpay/internal-core";
 import { DEFAULT_CHAIN_ID } from "@/lib/default-chain";
-import { SUBGRAPH_REQUIRED } from "@/lib/launch-flags";
+
+function isEnabled(value: string | undefined, defaultValue = false): boolean {
+  const normalized = (value || "").trim().toLowerCase();
+  if (!normalized) return defaultValue;
+  return ["1", "true", "yes", "on"].includes(normalized);
+}
+
+const SUBGRAPH_REQUIRED = isEnabled(
+  process.env.ARCENPAY_REQUIRE_SUBGRAPH ?? process.env.NEXT_PUBLIC_ARCENPAY_REQUIRE_SUBGRAPH,
+);
 
 const isProd =
   process.env.NODE_ENV === "production" &&
@@ -114,7 +123,7 @@ export const APP_URL: string = (() => {
 // ── Subgraph ──────────────────────────────────────────────────────────────────
 
 /**
- * The Graph studio URL for the MEAP subgraph.
+ * The Graph studio URL for the ArcenPay subgraph.
  * Optional for Base Sepolia MVP launch; can be made mandatory with
  * ARCENPAY_REQUIRE_SUBGRAPH=true.
  */

@@ -1,5 +1,5 @@
 // ============================================================
-//  MEAP Facilitator — Durable Job Queue
+//  ArcenPay Facilitator — Durable Job Queue
 //
 //  Provides Redis-backed job queues with:
 //  - Idempotency deduplication (per key, TTL'd)
@@ -76,7 +76,7 @@ export class DurableJobQueue {
 
   constructor(options?: { redis?: IRedisQueue; keyPrefix?: string }) {
     this.redis = options?.redis ?? null;
-    this.keyPrefix = options?.keyPrefix ?? "meap:queue";
+    this.keyPrefix = options?.keyPrefix ?? "arcenpay:queue";
   }
 
   /** Attach or replace the Redis client (e.g. after async connection). */

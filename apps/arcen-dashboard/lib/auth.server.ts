@@ -1,19 +1,16 @@
 // ============================================================
 //  Dashboard — Server-only auth helpers
-//  Cookie-backed sessions stored in Prisma.
+//  Calls the ArcenPay Backend API (no direct DB access).
 // ============================================================
 
-import { createHmac, randomBytes } from "node:crypto";
+import { createHmac } from "node:crypto";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { withPrismaReconnect } from "@/lib/db";
-import { SIWE_JWT_SECRET } from "@/lib/config";
-import { AUTH_COOKIE_NAME, AUTH_SESSION_TTL_MS } from "@/lib/auth-constants";
+import { BACKEND_URL } from "@/lib/config";
 
 export type DashboardSession = {
   sessionId: string;
   userId: string;
-  // Compatibility alias for legacy code paths that still expect this field.
   clerkUserId: string;
   email: string | null;
   currentTeamId: string | null;
@@ -21,83 +18,33 @@ export type DashboardSession = {
   expiresAt: Date;
 };
 
-function hashAuthValue(value: string): string {
-  return createHmac("sha256", SIWE_JWT_SECRET).update(value).digest("hex");
-}
-
-function buildCookieOptions(expiresAt: Date) {
-  return {
-    httpOnly: true,
-    sameSite: "lax" as const,
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    expires: expiresAt,
-  };
-}
-
-async function readSessionToken(): Promise<string | null> {
+async function callBackend<T>(path: string, options: RequestInit = {}): Promise<T | null> {
   const store = await cookies();
-  return store.get(AUTH_COOKIE_NAME)?.value?.trim() || null;
+  const token = store.get("arcen_session")?.value;
+  const headers: Record<string, string> = { ...(options.headers as Record<string, string> ?? {}) };
+  if (token) headers.cookie = `arcen_session=${token}`;
+
+  const res = await fetch(`${BACKEND_URL}${path}`, { ...options, headers, cache: "no-store" });
+  if (!res.ok) return null;
+  const data = await res.json();
+  return data.data ?? data;
 }
 
 export async function getSession(): Promise<DashboardSession | null> {
-  const token = await readSessionToken();
+  const store = await cookies();
+  const token = store.get("arcen_session")?.value;
   if (!token) return null;
 
-  const now = new Date();
-  const tokenHash = hashAuthValue(token);
-  const record = await withPrismaReconnect((client) =>
-    client.authSession.findUnique({
-      where: { tokenHash },
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            currentTeamId: true,
-            walletAddress: true,
-          },
-        },
-      },
-    }),
-  );
+  const data = await callBackend<{
+    authenticated: boolean; userId?: string; email?: string | null;
+    walletAddress?: string | null; currentTeamId?: string | null;
+  }>("/api/v1/auth/session");
 
-  if (!record || record.revokedAt || record.expiresAt <= now) {
-    return null;
-  }
-
-  const staleAfter = 6 * 60 * 60 * 1000;
-  if (now.getTime() - record.lastSeenAt.getTime() > staleAfter) {
-    const expiresAt = new Date(now.getTime() + AUTH_SESSION_TTL_MS);
-    await withPrismaReconnect((client) =>
-      client.authSession.update({
-        where: { id: record.id },
-        data: {
-          lastSeenAt: now,
-          expiresAt,
-        },
-      }),
-    );
-
-    return {
-      sessionId: record.id,
-      userId: record.user.id,
-      clerkUserId: record.user.id,
-      email: record.user.email ?? null,
-      currentTeamId: record.user.currentTeamId ?? null,
-      walletAddress: record.user.walletAddress ?? null,
-      expiresAt,
-    };
-  }
-
+  if (!data || !data.authenticated) return null;
   return {
-    sessionId: record.id,
-    userId: record.user.id,
-    clerkUserId: record.user.id,
-    email: record.user.email ?? null,
-    currentTeamId: record.user.currentTeamId ?? null,
-    walletAddress: record.user.walletAddress ?? null,
-    expiresAt: record.expiresAt,
+    sessionId: "", userId: data.userId ?? "", clerkUserId: data.userId ?? "",
+    email: data.email ?? null, currentTeamId: data.currentTeamId ?? null,
+    walletAddress: data.walletAddress ?? null, expiresAt: new Date(),
   };
 }
 
@@ -108,101 +55,44 @@ export async function requirePageSession(next = "/login"): Promise<DashboardSess
 }
 
 export async function createSession(userId: string): Promise<DashboardSession> {
-  const token = randomBytes(32).toString("base64url");
-  const expiresAt = new Date(Date.now() + AUTH_SESSION_TTL_MS);
-
-  const [store, user, record] = await Promise.all([
-    cookies(),
-    withPrismaReconnect((client) =>
-      client.user.findUnique({
-        where: { id: userId },
-        select: {
-          id: true,
-          email: true,
-          currentTeamId: true,
-          walletAddress: true,
-        },
-      }),
-    ),
-    withPrismaReconnect((client) =>
-      client.authSession.create({
-        data: {
-          userId,
-          tokenHash: hashAuthValue(token),
-          expiresAt,
-        },
-      }),
-    ),
-  ]);
-
-  if (!user) {
-    throw new Error(`User ${userId} not found`);
+  const res = await fetch(`${BACKEND_URL}/api/v1/auth/session`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ userId }),
+  });
+  if (!res.ok) throw new Error("Failed to create session");
+  const setCookie = res.headers.get("set-cookie");
+  if (setCookie) {
+    const store = await cookies();
+    const match = setCookie.match(/arcen_session=([^;]+)/);
+    if (match) store.set("arcen_session", match[1], {
+      httpOnly: true, sameSite: "lax",
+      secure: process.env.NODE_ENV === "production", path: "/", maxAge: 30 * 24 * 60 * 60,
+    });
   }
-
-  store.set(AUTH_COOKIE_NAME, token, buildCookieOptions(expiresAt));
-
-  return {
-    sessionId: record.id,
-    userId: user.id,
-    clerkUserId: user.id,
-    email: user.email ?? null,
-    currentTeamId: user.currentTeamId ?? null,
-    walletAddress: user.walletAddress ?? null,
-    expiresAt,
-  };
+  const data = await res.json();
+  const session = data.data ?? data;
+  return { sessionId: session.sessionId ?? "", userId: session.userId ?? "", clerkUserId: session.userId ?? "", email: session.email ?? null, currentTeamId: session.currentTeamId ?? null, walletAddress: session.walletAddress ?? null, expiresAt: new Date(session.expiresAt ?? Date.now()) };
 }
 
-export async function refreshSession(sessionId: string): Promise<void> {
-  const now = new Date();
-  const expiresAt = new Date(now.getTime() + AUTH_SESSION_TTL_MS);
-  await withPrismaReconnect((client) =>
-    client.authSession.update({
-      where: { id: sessionId },
-      data: {
-        lastSeenAt: now,
-        expiresAt,
-      },
-    }),
-  );
-
+export async function refreshSession(_sessionId: string): Promise<void> {
   const store = await cookies();
-  const token = store.get(AUTH_COOKIE_NAME)?.value;
-  if (token) {
-    store.set(AUTH_COOKIE_NAME, token, buildCookieOptions(expiresAt));
-  }
+  const token = store.get("arcen_session")?.value;
+  if (token) store.set("arcen_session", token, {
+    httpOnly: true, sameSite: "lax",
+    secure: process.env.NODE_ENV === "production", path: "/", maxAge: 30 * 24 * 60 * 60,
+  });
 }
 
 export async function clearSession(): Promise<void> {
+  await fetch(`${BACKEND_URL}/api/v1/auth/logout`, { method: "POST" });
   const store = await cookies();
-  const token = store.get(AUTH_COOKIE_NAME)?.value;
-  if (token) {
-    const tokenHash = hashAuthValue(token);
-    await withPrismaReconnect((client) =>
-      client.authSession.updateMany({
-        where: {
-          tokenHash,
-          revokedAt: null,
-        },
-        data: {
-          revokedAt: new Date(),
-        },
-      }),
-    );
-  }
-
-  store.delete(AUTH_COOKIE_NAME);
-}
-
-export async function getDbUser(userId: string) {
-  return withPrismaReconnect((client) =>
-    client.user.findUnique({ where: { id: userId } }),
-  );
+  store.delete("arcen_session");
 }
 
 export function hashOpaqueToken(value: string): string {
-  return hashAuthValue(value);
+  const secret = process.env.SIWE_JWT_SECRET || "dev_siwe_jwt_secret_not_for_production";
+  return createHmac("sha256", secret).update(value).digest("hex");
 }
 
-// SessionPayload alias for older imports.
 export type ClerkSession = DashboardSession;
 export type SessionPayload = DashboardSession;

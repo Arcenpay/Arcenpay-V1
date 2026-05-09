@@ -100,7 +100,7 @@ export class RedisNonceStore implements NonceStore {
   private readonly redis: RedisLike;
   private readonly prefix: string;
 
-  constructor(redis: RedisLike, prefix = "meap:nonce:") {
+  constructor(redis: RedisLike, prefix = "arcenpay:nonce:") {
     this.redis = redis;
     this.prefix = prefix;
   }
