@@ -66,6 +66,13 @@ function requireInProd(name: string, value: string | undefined): string {
   return value ?? "";
 }
 
+// ── Backend API ──────────────────────────────────────────────────────────────
+
+export const BACKEND_URL: string = (() => {
+  const val = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.BACKEND_URL;
+  return requireInProd("BACKEND_URL", val) || "http://localhost:3300";
+})();
+
 // ── Facilitator ───────────────────────────────────────────────────────────────
 
 /**

@@ -28,6 +28,7 @@
     "@hookform/resolvers": "^3.10.0",
     "@arcenpay/internal-core": "*",
     "@arcenpay/react": "*",
+    "@arcenpay/shared-types": "*",
     "@prisma/adapter-pg": "^7.4.2",
     "@prisma/client": "^7.4.2",
     "@radix-ui/react-accordion": "1.2.2",

@@ -1,0 +1,51 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/arcen-backend/**"
+      - "packages/internal-core/**"
+      - "packages/shared-types/**"
+  pull_request:
+    branches: [main]
+    paths:
+      - "apps/arcen-backend/**"
+      - "packages/internal-core/**"
+      - "packages/shared-types/**"
+
+jobs:
+  backend:
+    name: Typecheck, Lint & Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/arcen-backend
+    env:
+      SIWE_JWT_SECRET: ci-dev-secret
+      DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        working-directory: .
+        run: npm ci
+
+      - name: Build internal-core dependency
+        run: npm run prebuild
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: TypeScript check
+        run: npx tsc --noEmit
+
+      - name: Run tests
+        run: CI=true npx vitest run
