@@ -44,11 +44,15 @@ function getZeroDevChainLabel(chainId: number): string {
 }
 
 function resolveZeroDevUrls(params: {
-  projectId: string;
+  projectId?: string;
   chainId: number;
   bundlerUrl?: string;
   paymasterUrl?: string;
 }) {
+  if (params.bundlerUrl && params.paymasterUrl) {
+    return { bundlerUrl: params.bundlerUrl, paymasterUrl: params.paymasterUrl, hasConfiguredUrls: true };
+  }
+
   const specificUnified =
     process.env[`NEXT_PUBLIC_ZERODEV_RPC_${params.chainId}`];
   const specificBundler =
@@ -58,7 +62,9 @@ function resolveZeroDevUrls(params: {
   const genericUnified = process.env.NEXT_PUBLIC_ZERODEV_RPC;
   const genericBundler = process.env.NEXT_PUBLIC_ZERODEV_BUNDLER_RPC;
   const genericPaymaster = process.env.NEXT_PUBLIC_ZERODEV_PAYMASTER_RPC;
-  const defaultUnifiedV3 = `https://rpc.zerodev.app/api/v3/${params.projectId}/chain/${params.chainId}`;
+  const defaultUnifiedV3 = params.projectId
+    ? `https://rpc.zerodev.app/api/v3/${params.projectId}/chain/${params.chainId}`
+    : "";
   const hasConfiguredUrls = !!(
     params.bundlerUrl ||
     params.paymasterUrl ||
@@ -78,7 +84,9 @@ function resolveZeroDevUrls(params: {
       genericUnified ||
       genericBundler ||
       defaultUnifiedV3 ||
-      `https://rpc.zerodev.app/api/v2/bundler/${params.projectId}`,
+      (params.projectId
+        ? `https://rpc.zerodev.app/api/v2/bundler/${params.projectId}`
+        : ""),
     paymasterUrl:
       params.paymasterUrl ||
       specificUnified ||
@@ -86,7 +94,9 @@ function resolveZeroDevUrls(params: {
       genericUnified ||
       genericPaymaster ||
       defaultUnifiedV3 ||
-      `https://rpc.zerodev.app/api/v2/paymaster/${params.projectId}`,
+      (params.projectId
+        ? `https://rpc.zerodev.app/api/v2/paymaster/${params.projectId}`
+        : ""),
     hasConfiguredUrls,
   };
 }
@@ -94,7 +104,7 @@ function resolveZeroDevUrls(params: {
 function normalizeZeroDevError(
   error: unknown,
   params: {
-    projectId: string;
+    projectId?: string;
     chainId: number;
     bundlerUrl?: string;
     paymasterUrl?: string;
@@ -107,11 +117,11 @@ function normalizeZeroDevError(
 
   if (message.includes("ChainId not found")) {
     const nextStep = usingDefaultUrls
-      ? `Enable ${chainLabel} for ZeroDev project ${params.projectId}, or set NEXT_PUBLIC_ZERODEV_BUNDLER_RPC_${params.chainId} and NEXT_PUBLIC_ZERODEV_PAYMASTER_RPC_${params.chainId} to chain-specific endpoints.`
-      : `The configured ZeroDev endpoint does not recognize ${chainLabel} for project ${params.projectId}. Verify the project supports chain ${params.chainId} or replace the override URLs. Bundler URL: ${params.bundlerUrl ?? "n/a"}. Paymaster URL: ${params.paymasterUrl ?? "n/a"}.`;
+      ? `Enable ${chainLabel} for ZeroDev project ${params.projectId ?? "(unknown)"}, or set bundler/paymaster URLs directly.`
+      : `The configured ZeroDev endpoint does not recognize ${chainLabel} for project ${params.projectId ?? "(unknown)"}. Verify the project supports chain ${params.chainId} or replace the override URLs. Bundler URL: ${params.bundlerUrl ?? "n/a"}. Paymaster URL: ${params.paymasterUrl ?? "n/a"}.`;
 
     return new Error(
-      `ZeroDev project ${params.projectId} is not configured for ${chainLabel} (chain ${params.chainId}). ${nextStep}`,
+      `ZeroDev project ${params.projectId ?? "(unknown)"} is not configured for ${chainLabel} (chain ${params.chainId}). ${nextStep}`,
     );
   }
 
@@ -131,29 +141,22 @@ export function isRecoverableSmartAccountFundingError(error: unknown): boolean {
 }
 
 export interface DeploySmartAccountConfig {
-  /** ZeroDev project ID (from dashboard.zerodev.app) */
-  projectId: string;
-  /** Chain ID */
+  /** (Deprecated) ZeroDev project ID — prefer bundlerUrl + paymasterUrl via ArcenPay context. */
+  projectId?: string;
   chainId: number;
-  /** The user's wallet client (e.g., from wagmi) */
   walletClient: WalletClient;
-  /** Optional: bundler URL override */
   bundlerUrl?: string;
-  /** Optional: paymaster URL override */
   paymasterUrl?: string;
 }
 
 export interface SmartAccountResult {
-  /** The Kernel smart account address */
   smartAccountAddress: `0x${string}`;
-  /** Transaction hash of the module installation */
   installTxHash?: `0x${string}`;
-  /** Whether the account was already deployed */
   alreadyDeployed: boolean;
 }
 
 export interface RevokeAutopayConfig {
-  projectId: string;
+  projectId?: string;
   chainId: number;
   walletClient: WalletClient;
   smartAccountAddress: `0x${string}`;
@@ -162,7 +165,7 @@ export interface RevokeAutopayConfig {
 }
 
 export interface SmartAccountTransactionConfig {
-  projectId: string;
+  projectId?: string;
   chainId: number;
   walletClient: WalletClient;
   to: `0x${string}`;
@@ -174,7 +177,7 @@ export interface SmartAccountTransactionConfig {
 }
 
 export interface UpdateAutopayConfigInput {
-  projectId: string;
+  projectId?: string;
   chainId: number;
   walletClient: WalletClient;
   smartAccountAddress: `0x${string}`;
@@ -190,7 +193,7 @@ export interface UpdateAutopayConfigInput {
 }
 
 export interface CancelSubscriptionInput {
-  projectId: string;
+  projectId?: string;
   chainId: number;
   walletClient: WalletClient;
   smartAccountAddress: `0x${string}`;
@@ -200,7 +203,7 @@ export interface CancelSubscriptionInput {
 }
 
 async function createKernelExecutionContext(config: {
-  projectId: string;
+  projectId?: string;
   chainId: number;
   walletClient: WalletClient;
   bundlerUrl?: string;

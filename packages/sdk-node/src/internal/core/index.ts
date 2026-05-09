@@ -154,10 +154,6 @@ export {
 } from "./errors";
 export type { MEAPErrorCode, ArcenPayErrorCode } from "./errors";
 
-// Smart Account helpers (ZeroDev ERC-7579)
-export { createSmartAccount } from "./accounts";
-export type { SmartAccountInput, SmartAccountResult } from "./accounts";
-
 // Chain helpers
 export { getChain, getBlockExplorerUrl } from "./chains";
 

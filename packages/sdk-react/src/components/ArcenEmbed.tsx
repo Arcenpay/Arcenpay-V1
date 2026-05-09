@@ -36,6 +36,7 @@ import {
   ERC7579AutopayModuleABI,
   getBlockExplorerUrl,
   getChain,
+  getConfiguredRuntimeChainId,
   getContractAddresses,
   PlanFactoryABI,
   SubscriptionRegistryABI,
@@ -4822,6 +4823,7 @@ function PaymentContent({
   onActivationComplete,
   onBack,
   containerWidth,
+  zeroDevConfig,
 }: {
   data: ComponentRenderData;
   selectedPlanId: string | null;
@@ -4841,6 +4843,7 @@ function PaymentContent({
   }) => Promise<void> | void;
   onBack: () => void;
   containerWidth: number;
+  zeroDevConfig?: { bundlerUrl: string; paymasterUrl: string; isReady: boolean } | null;
 }) {
   const selectedPlan = data.plans.find(
     (p: ComponentPlanSummary) => p.id === selectedPlanId,
@@ -4879,14 +4882,14 @@ function PaymentContent({
   const hasInvalidCustomerEmail =
     hasCustomerEmail && !isValidCustomerEmail(normalizedCustomerEmail);
   const paymentMethod = data.paymentMethod as ComponentPaymentMethod | null;
-  const chainId = paymentMethod?.chainId ?? null;
+  const chainId = paymentMethod?.chainId ?? getConfiguredRuntimeChainId();
   const serverSmartAccountAddress =
     typeof paymentMethod?.walletAddress === "string"
       ? paymentMethod.walletAddress
       : null;
   const smartAccountAddress =
     provisionedSmartAccountAddress ?? serverSmartAccountAddress;
-  const zeroDevProjectId = process.env.NEXT_PUBLIC_ZERODEV_PROJECT_ID ?? null;
+  const zeroDevProjectId = zeroDevConfig?.bundlerUrl ? undefined : (process.env.NEXT_PUBLIC_ZERODEV_PROJECT_ID ?? undefined);
   const selectedOnChainPlanId = selectedPlan?.onChainPlanId ?? null;
   const activeOnChainPlanId = activePlan?.onChainPlanId ?? null;
   const isCurrentPlanSelected = isCurrentBillingSelection({
@@ -4980,9 +4983,9 @@ function PaymentContent({
     );
 
     if (requiresSmartAccountExecution) {
-      if (!zeroDevProjectId || !effectiveSmartAccountAddress) {
+      if ((!zeroDevProjectId && !zeroDevConfig?.isReady) || !effectiveSmartAccountAddress) {
         throw new Error(
-          "Smart-account autopay setup requires NEXT_PUBLIC_ZERODEV_PROJECT_ID.",
+          "Smart-account autopay setup requires ZeroDev configuration.",
         );
       }
 
@@ -4990,6 +4993,8 @@ function PaymentContent({
 
       return sendSmartAccountTransaction({
         projectId: zeroDevProjectId,
+        bundlerUrl: zeroDevConfig?.bundlerUrl,
+        paymasterUrl: zeroDevConfig?.paymasterUrl,
         chainId,
         walletClient: resolvedWalletClient,
         smartAccountAddress: effectiveSmartAccountAddress as `0x${string}`,
@@ -5019,11 +5024,11 @@ function PaymentContent({
     if (
       !chainId ||
       !resolvedWalletClient ||
-      !zeroDevProjectId ||
+      (!zeroDevProjectId && !zeroDevConfig?.isReady) ||
       !finalAddress
     ) {
       throw new Error(
-        "A connected Base Sepolia wallet and NEXT_PUBLIC_ZERODEV_PROJECT_ID are required before activation.",
+        "A connected Base Sepolia wallet and ZeroDev config are required before activation.",
       );
     }
 
@@ -5032,6 +5037,8 @@ function PaymentContent({
     try {
       const result = await deploySmartAccount({
         projectId: zeroDevProjectId,
+        bundlerUrl: zeroDevConfig?.bundlerUrl,
+        paymasterUrl: zeroDevConfig?.paymasterUrl,
         chainId,
         walletClient: resolvedWalletClient,
       });
@@ -5524,10 +5531,9 @@ function PaymentContent({
       return;
     }
 
-    if (!resolvedWalletClient || !zeroDevProjectId) {
-      setTxStatus("error");
-      setTxError(
-        "A wallet client and NEXT_PUBLIC_ZERODEV_PROJECT_ID are required for authoritative on-chain plan changes.",
+    if (!resolvedWalletClient || (!zeroDevProjectId && !zeroDevConfig?.isReady)) {
+      throw new Error(
+        "A wallet client and ZeroDev config are required for authoritative on-chain plan changes.",
       );
       return;
     }
@@ -5558,6 +5564,8 @@ function PaymentContent({
 
       const { txHash: autopayTxHash } = await updateAutopayConfig({
         projectId: zeroDevProjectId,
+        bundlerUrl: zeroDevConfig?.bundlerUrl,
+        paymasterUrl: zeroDevConfig?.paymasterUrl,
         chainId,
         walletClient: resolvedWalletClient,
         smartAccountAddress: smartAccountAddress as `0x${string}`,
@@ -5629,7 +5637,7 @@ function PaymentContent({
     (isOnChainPlanChange || requiresHostedActivation) &&
     (!finalConnected || !finalAddress);
   const needsWalletClient =
-    isOnChainPlanChange && (!resolvedWalletClient || !zeroDevProjectId);
+    isOnChainPlanChange && (!resolvedWalletClient || (!zeroDevProjectId && !zeroDevConfig?.isReady));
   const hasWindowEth =
     typeof window !== "undefined" &&
     !!(window as unknown as { ethereum?: unknown }).ethereum;
@@ -5802,7 +5810,7 @@ function PaymentContent({
                   }}
                 >
                   This embed needs a wallet client and
-                  `NEXT_PUBLIC_ZERODEV_PROJECT_ID` to send smart-account plan
+                  ZeroDev config to send smart-account plan
                   change transactions.
                 </div>
               ) : (
@@ -6554,6 +6562,7 @@ function UnsubscribeContent({
   onConfirm,
   onBack,
   containerWidth,
+  zeroDevConfig,
 }: {
   data: ComponentRenderData;
   processing: boolean;
@@ -6561,6 +6570,7 @@ function UnsubscribeContent({
   onConfirm: (confirmation: CancellationConfirmation) => void;
   onBack: () => void;
   containerWidth: number;
+  zeroDevConfig?: { bundlerUrl: string; paymasterUrl: string; isReady: boolean } | null;
 }) {
   const activePlan = data.activePlan;
   const scheduledCancellation = getScheduledCancellationTransition(data);
@@ -6578,12 +6588,12 @@ function UnsubscribeContent({
   >("idle");
   const [txError, setTxError] = useState("");
   const paymentMethod = data.paymentMethod as ComponentPaymentMethod | null;
-  const chainId = paymentMethod?.chainId ?? null;
+  const chainId = paymentMethod?.chainId ?? getConfiguredRuntimeChainId();
   const smartAccountAddress =
     typeof paymentMethod?.walletAddress === "string"
       ? paymentMethod.walletAddress
       : null;
-  const zeroDevProjectId = process.env.NEXT_PUBLIC_ZERODEV_PROJECT_ID ?? null;
+  const zeroDevProjectId = zeroDevConfig?.bundlerUrl ? undefined : (process.env.NEXT_PUBLIC_ZERODEV_PROJECT_ID ?? undefined);
   const finalAddress = address || localAddress;
   const finalConnected = isConnected || !!localAddress;
   const resolvedWalletClient =
@@ -6608,7 +6618,7 @@ function UnsubscribeContent({
   const needsWalletClient =
     requiresOnChainCancellation &&
     (!resolvedWalletClient ||
-      (requiresSmartAccountCancellationExecution && !zeroDevProjectId));
+      (requiresSmartAccountCancellationExecution && !zeroDevProjectId && !zeroDevConfig?.isReady));
 
   async function connectWindowEthereum(walletKind?: WalletKind) {
     setTxError("");
@@ -6641,12 +6651,12 @@ function UnsubscribeContent({
 
     if (
       !resolvedWalletClient ||
-      (requiresSmartAccountCancellationExecution && !zeroDevProjectId)
+      (requiresSmartAccountCancellationExecution && !zeroDevProjectId && !zeroDevConfig?.isReady)
     ) {
       setTxStatus("error");
       setTxError(
         requiresSmartAccountCancellationExecution
-          ? "A wallet client and NEXT_PUBLIC_ZERODEV_PROJECT_ID are required for on-chain cancellation."
+          ? "A wallet client and ZeroDev config are required for on-chain cancellation."
           : "A wallet client is required for on-chain cancellation.",
       );
       return;
@@ -6694,14 +6704,16 @@ function UnsubscribeContent({
 
       let txHash: `0x${string}` | undefined;
       if (requiresSmartAccountCancellationExecution) {
-        if (!zeroDevProjectId) {
+        if ((!zeroDevProjectId && !zeroDevConfig?.isReady)) {
           throw new Error(
-            "Smart-account cancellation requires NEXT_PUBLIC_ZERODEV_PROJECT_ID.",
+            "Smart-account cancellation requires ZeroDev configuration.",
           );
         }
 
         const result = await sendSmartAccountTransaction({
           projectId: zeroDevProjectId,
+        bundlerUrl: zeroDevConfig?.bundlerUrl,
+        paymasterUrl: zeroDevConfig?.paymasterUrl,
           chainId,
           walletClient: resolvedWalletClient,
           smartAccountAddress: smartAccountAddress as `0x${string}`,
@@ -7002,7 +7014,7 @@ function UnsubscribeContent({
             }}
           >
             {requiresSmartAccountCancellationExecution
-              ? "This embed needs a wallet client and `NEXT_PUBLIC_ZERODEV_PROJECT_ID` to submit the smart-account autopay shutdown transaction."
+              ? "This embed needs a wallet client and ZeroDev config to submit the smart-account autopay shutdown transaction."
               : "This embed needs a wallet client to submit the autopay shutdown transaction."}
           </div>
         )}
@@ -7335,11 +7347,13 @@ export function ArcenEmbed({
   let providerToken: string | null = null;
   let providerCid: string | null = null;
   let providerBaseUrl: string | null = null;
+  let providerZeroDev: { bundlerUrl: string; paymasterUrl: string; isReady: boolean } | null = null;
   try {
     const arcen = useArcenPay();
     providerToken = arcen.session.token;
     providerCid = arcen.componentId;
     providerBaseUrl = arcen.baseUrl;
+    providerZeroDev = arcen.zeroDev;
   } catch {
     // Provider not available — fall through
   }
@@ -8022,6 +8036,7 @@ export function ArcenEmbed({
               tokens={tokens}
               customerEmail={customerEmail}
               containerWidth={effectiveContainerWidth}
+              zeroDevConfig={providerZeroDev}
               onCustomerEmailChange={setCustomerEmail}
               onConfirm={(txHash) => {
                 if (selectedPlanId) handleSwitchPlan(selectedPlanId, txHash);
@@ -8036,6 +8051,7 @@ export function ArcenEmbed({
               processing={processing}
               tokens={tokens}
               containerWidth={effectiveContainerWidth}
+              zeroDevConfig={providerZeroDev}
               onConfirm={(confirmation) => handleUnsubscribe(confirmation)}
               onBack={() => dispatch({ type: "GOTO_PORTAL" })}
             />
@@ -8117,6 +8133,7 @@ export function ArcenEmbed({
                   tokens={tokens}
                   customerEmail={customerEmail}
                   containerWidth={effectiveContainerWidth}
+                  zeroDevConfig={providerZeroDev}
                   onCustomerEmailChange={setCustomerEmail}
                   onConfirm={(txHash) => {
                     if (selectedPlanId)
@@ -8132,6 +8149,7 @@ export function ArcenEmbed({
                   processing={processing}
                   tokens={tokens}
                   containerWidth={effectiveContainerWidth}
+                  zeroDevConfig={providerZeroDev}
                   onConfirm={(confirmation) => handleUnsubscribe(confirmation)}
                   onBack={() => dispatch({ type: "GOTO_PORTAL" })}
                 />

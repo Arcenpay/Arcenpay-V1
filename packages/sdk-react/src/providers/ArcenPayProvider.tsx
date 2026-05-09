@@ -35,6 +35,17 @@ export interface ArcenPayContextValue {
   isTestnet: boolean;
   /** Resolved component ID for ArcenEmbed. */
   componentId: string;
+  /** ZeroDev smart-account infrastructure config (fetched from ArcenPay backend). */
+  zeroDev: ZeroDevInfra;
+}
+
+export interface ZeroDevInfra {
+  /** Bundler RPC URL for ERC-4337 user ops. */
+  bundlerUrl: string;
+  /** Paymaster RPC URL for gas sponsorship. */
+  paymasterUrl: string;
+  /** True while the config is still loading from the backend. */
+  isReady: boolean;
 }
 
 export interface ArcenPayConfig {
@@ -313,6 +324,37 @@ export function ArcenPayProvider(props: ArcenPayProviderProps) {
     }));
   }, [identify]);
 
+  // ── ZeroDev infra config ───────────────────────────────────────────────
+  const [zeroDev, setZeroDev] = useState<ZeroDevInfra>({
+    bundlerUrl: "",
+    paymasterUrl: "",
+    isReady: false,
+  });
+
+  useEffect(() => {
+    if (!baseUrl || !chainId) return;
+
+    let cancelled = false;
+    fetch(`${baseUrl}/api/v1/public/zerodev-config?chainId=${chainId}`)
+      .then(async (res) => {
+        if (!res.ok) return;
+        const body = (await res.json()) as {
+          data?: { bundlerUrl?: string; paymasterUrl?: string };
+        };
+        if (cancelled) return;
+        if (body.data?.bundlerUrl && body.data?.paymasterUrl) {
+          setZeroDev({
+            bundlerUrl: body.data.bundlerUrl,
+            paymasterUrl: body.data.paymasterUrl,
+            isReady: true,
+          });
+        }
+      })
+      .catch(() => {});
+
+    return () => { cancelled = true; };
+  }, [baseUrl, chainId]);
+
   // ── Protocol context ───────────────────────────────────────────────────
   const contextValue = useMemo<ArcenPayContextValue>(() => {
     if (
@@ -361,8 +403,9 @@ export function ArcenPayProvider(props: ArcenPayProviderProps) {
       network,
       isTestnet: manifest.isTestnet,
       componentId,
+      zeroDev,
     };
-  }, [baseUrl, chainId, session, componentId, userConfig]);
+  }, [baseUrl, chainId, session, componentId, userConfig, zeroDev]);
 
   return (
     <WagmiProvider config={wagmiConfig}>
