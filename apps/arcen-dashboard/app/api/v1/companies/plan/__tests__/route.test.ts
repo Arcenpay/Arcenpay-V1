@@ -62,7 +62,9 @@ vi.mock("@/lib/embed-access-token", () => ({
 
 vi.mock("@/lib/catalog-billing", () => ({
   incrementCouponRedemption: vi.fn(),
-  normalizeBillingPeriod: vi.fn(() => "monthly"),
+  normalizeBillingPeriod: vi.fn((value?: string | null) =>
+    value === "annual" || value === "yearly" ? "annual" : "monthly",
+  ),
   normalizeCouponCode: vi.fn(() => null),
   resolveCouponQuote: vi.fn(() =>
     Promise.resolve({
@@ -331,5 +333,35 @@ describe("POST /api/v1/companies/plan", () => {
         lastEvent: "subscription.plan_change_pending",
       }),
     );
+  });
+
+  it("does not treat a same-plan cadence change as no-op", async () => {
+    (db.arcenCompany.findUnique as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      id: COMPANY_ID,
+      activePlanId: "plan_current",
+      traits: { billingPeriod: "monthly" },
+      walletAddress: "0x1111111111111111111111111111111111111111",
+      email: "buyer@example.com",
+      subscriptionState: {
+        id: "sub_state_1",
+        walletAddress: "0x1111111111111111111111111111111111111111",
+        currentPeriodStart: new Date("2026-04-01T00:00:00.000Z"),
+        currentPeriodEnd: new Date("2026-05-01T00:00:00.000Z"),
+        onChainTokenId: "42",
+        metadata: { billingPeriod: "monthly" },
+      },
+    });
+
+    const res = await POST(
+      makeRequest({
+        planId: "plan_current",
+        billingPeriod: "annual",
+      }),
+    );
+    const json = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(json.data?.mode).not.toBe("no_change");
+    expect(json.error).toContain("AutopayModule.updateConfig");
   });
 });

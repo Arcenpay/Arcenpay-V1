@@ -15,7 +15,8 @@ import type {
   EntitlementResult,
   ConsumeEntitlementResult,
   IdentifyResult,
-} from "@arcenpay/sdk";
+} from "./sdk";
+import { resolveArcenPayBaseUrl } from "./sdk";
 
 export interface ArcenClientConfig {
   apiKey: string;
@@ -89,10 +90,7 @@ export class ArcenClient {
       throw new Error('ArcenClient: apiKey must start with "api_"');
     }
     this.apiKey = config.apiKey;
-    this.baseUrl = (config.baseUrl ?? "http://localhost:3000").replace(
-      /\/$/,
-      "",
-    );
+    this.baseUrl = resolveArcenPayBaseUrl({ explicit: config.baseUrl });
     this.timeoutMs = config.timeoutMs ?? 10_000;
   }
 

@@ -5,31 +5,31 @@
 // ============================================================
 
 import {
-    createKernelAccount,
-    createKernelAccountClient,
-    createZeroDevPaymasterClient,
-    constants as zeroDevConstants,
+  createKernelAccount,
+  createKernelAccountClient,
+  createZeroDevPaymasterClient,
+  constants as zeroDevConstants,
 } from "@zerodev/sdk";
 import { signerToEcdsaValidator } from "@zerodev/ecdsa-validator";
 import {
-    createPublicClient,
-    http,
-    type WalletClient,
-    type PublicClient,
-    encodeFunctionData,
+  createPublicClient,
+  http,
+  type WalletClient,
+  type PublicClient,
+  encodeFunctionData,
 } from "viem";
 import { sepolia, baseSepolia, base } from "viem/chains";
 import {
-    getContractAddresses,
-    ERC7579AutopayModuleABI,
-    SubscriptionRegistryABI,
-} from "@arcenpay/sdk";
+  getContractAddresses,
+  ERC7579AutopayModuleABI,
+  SubscriptionRegistryABI,
+} from "../sdk";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const CHAIN_MAP: Record<number, any> = {
-    11155111: sepolia,
-    84532: baseSepolia,
-    8453: base,
+  11155111: sepolia,
+  84532: baseSepolia,
+  8453: base,
 };
 
 const ENTRY_POINT = zeroDevConstants.getEntryPoint("0.7");
@@ -37,228 +37,231 @@ const ENTRY_POINT_ADDRESS = ENTRY_POINT.address;
 const KERNEL_VERSION = zeroDevConstants.KERNEL_V3_1;
 
 function getZeroDevChainLabel(chainId: number): string {
-    if (chainId === 84532) return "Base Sepolia";
-    if (chainId === 8453) return "Base";
-    if (chainId === 11155111) return "Sepolia";
-    return `Chain ${chainId}`;
+  if (chainId === 84532) return "Base Sepolia";
+  if (chainId === 8453) return "Base";
+  if (chainId === 11155111) return "Sepolia";
+  return `Chain ${chainId}`;
 }
 
 function resolveZeroDevUrls(params: {
-    projectId: string;
-    chainId: number;
-    bundlerUrl?: string;
-    paymasterUrl?: string;
+  projectId: string;
+  chainId: number;
+  bundlerUrl?: string;
+  paymasterUrl?: string;
 }) {
-    const specificUnified =
-        process.env[`NEXT_PUBLIC_ZERODEV_RPC_${params.chainId}`];
-    const specificBundler =
-        process.env[`NEXT_PUBLIC_ZERODEV_BUNDLER_RPC_${params.chainId}`];
-    const specificPaymaster =
-        process.env[`NEXT_PUBLIC_ZERODEV_PAYMASTER_RPC_${params.chainId}`];
-    const genericUnified = process.env.NEXT_PUBLIC_ZERODEV_RPC;
-    const genericBundler = process.env.NEXT_PUBLIC_ZERODEV_BUNDLER_RPC;
-    const genericPaymaster = process.env.NEXT_PUBLIC_ZERODEV_PAYMASTER_RPC;
-    const defaultUnifiedV3 =
-        `https://rpc.zerodev.app/api/v3/${params.projectId}/chain/${params.chainId}`;
-    const hasConfiguredUrls = !!(
-        params.bundlerUrl ||
-        params.paymasterUrl ||
-        specificUnified ||
-        specificBundler ||
-        specificPaymaster ||
-        genericUnified ||
-        genericBundler ||
-        genericPaymaster
-    );
+  const specificUnified =
+    process.env[`NEXT_PUBLIC_ZERODEV_RPC_${params.chainId}`];
+  const specificBundler =
+    process.env[`NEXT_PUBLIC_ZERODEV_BUNDLER_RPC_${params.chainId}`];
+  const specificPaymaster =
+    process.env[`NEXT_PUBLIC_ZERODEV_PAYMASTER_RPC_${params.chainId}`];
+  const genericUnified = process.env.NEXT_PUBLIC_ZERODEV_RPC;
+  const genericBundler = process.env.NEXT_PUBLIC_ZERODEV_BUNDLER_RPC;
+  const genericPaymaster = process.env.NEXT_PUBLIC_ZERODEV_PAYMASTER_RPC;
+  const defaultUnifiedV3 = `https://rpc.zerodev.app/api/v3/${params.projectId}/chain/${params.chainId}`;
+  const hasConfiguredUrls = !!(
+    params.bundlerUrl ||
+    params.paymasterUrl ||
+    specificUnified ||
+    specificBundler ||
+    specificPaymaster ||
+    genericUnified ||
+    genericBundler ||
+    genericPaymaster
+  );
 
-    return {
-        bundlerUrl:
-            params.bundlerUrl ||
-            specificUnified ||
-            specificBundler ||
-            genericUnified ||
-            genericBundler ||
-            defaultUnifiedV3 ||
-            `https://rpc.zerodev.app/api/v2/bundler/${params.projectId}`,
-        paymasterUrl:
-            params.paymasterUrl ||
-            specificUnified ||
-            specificPaymaster ||
-            genericUnified ||
-            genericPaymaster ||
-            defaultUnifiedV3 ||
-            `https://rpc.zerodev.app/api/v2/paymaster/${params.projectId}`,
-        hasConfiguredUrls,
-    };
+  return {
+    bundlerUrl:
+      params.bundlerUrl ||
+      specificUnified ||
+      specificBundler ||
+      genericUnified ||
+      genericBundler ||
+      defaultUnifiedV3 ||
+      `https://rpc.zerodev.app/api/v2/bundler/${params.projectId}`,
+    paymasterUrl:
+      params.paymasterUrl ||
+      specificUnified ||
+      specificPaymaster ||
+      genericUnified ||
+      genericPaymaster ||
+      defaultUnifiedV3 ||
+      `https://rpc.zerodev.app/api/v2/paymaster/${params.projectId}`,
+    hasConfiguredUrls,
+  };
 }
 
 function normalizeZeroDevError(
-    error: unknown,
-    params: {
-        projectId: string;
-        chainId: number;
-        bundlerUrl?: string;
-        paymasterUrl?: string;
-        hasConfiguredUrls?: boolean;
-    },
+  error: unknown,
+  params: {
+    projectId: string;
+    chainId: number;
+    bundlerUrl?: string;
+    paymasterUrl?: string;
+    hasConfiguredUrls?: boolean;
+  },
 ): Error {
-    const message = error instanceof Error ? error.message : String(error ?? "");
-    const chainLabel = getZeroDevChainLabel(params.chainId);
-    const usingDefaultUrls = !params.hasConfiguredUrls;
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  const chainLabel = getZeroDevChainLabel(params.chainId);
+  const usingDefaultUrls = !params.hasConfiguredUrls;
 
-    if (message.includes("ChainId not found")) {
-        const nextStep = usingDefaultUrls
-            ? `Enable ${chainLabel} for ZeroDev project ${params.projectId}, or set NEXT_PUBLIC_ZERODEV_BUNDLER_RPC_${params.chainId} and NEXT_PUBLIC_ZERODEV_PAYMASTER_RPC_${params.chainId} to chain-specific endpoints.`
-            : `The configured ZeroDev endpoint does not recognize ${chainLabel} for project ${params.projectId}. Verify the project supports chain ${params.chainId} or replace the override URLs. Bundler URL: ${params.bundlerUrl ?? "n/a"}. Paymaster URL: ${params.paymasterUrl ?? "n/a"}.`;
+  if (message.includes("ChainId not found")) {
+    const nextStep = usingDefaultUrls
+      ? `Enable ${chainLabel} for ZeroDev project ${params.projectId}, or set NEXT_PUBLIC_ZERODEV_BUNDLER_RPC_${params.chainId} and NEXT_PUBLIC_ZERODEV_PAYMASTER_RPC_${params.chainId} to chain-specific endpoints.`
+      : `The configured ZeroDev endpoint does not recognize ${chainLabel} for project ${params.projectId}. Verify the project supports chain ${params.chainId} or replace the override URLs. Bundler URL: ${params.bundlerUrl ?? "n/a"}. Paymaster URL: ${params.paymasterUrl ?? "n/a"}.`;
 
-        return new Error(
-            `ZeroDev project ${params.projectId} is not configured for ${chainLabel} (chain ${params.chainId}). ${nextStep}`,
-        );
-    }
+    return new Error(
+      `ZeroDev project ${params.projectId} is not configured for ${chainLabel} (chain ${params.chainId}). ${nextStep}`,
+    );
+  }
 
-    return error instanceof Error ? error : new Error(message);
+  return error instanceof Error ? error : new Error(message);
 }
 
 export function isRecoverableSmartAccountFundingError(error: unknown): boolean {
-    const message = error instanceof Error ? error.message : String(error ?? "");
-    const lower = message.toLowerCase();
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  const lower = message.toLowerCase();
 
-    return (
-        lower.includes("smart account does not have sufficient funds") ||
-        lower.includes("sufficient funds to execute the user operation") ||
-        lower.includes("insufficient funds") ||
-        (lower.includes("user operation") && lower.includes("paymaster"))
-    );
+  return (
+    lower.includes("smart account does not have sufficient funds") ||
+    lower.includes("sufficient funds to execute the user operation") ||
+    lower.includes("insufficient funds") ||
+    (lower.includes("user operation") && lower.includes("paymaster"))
+  );
 }
 
 export interface DeploySmartAccountConfig {
-    /** ZeroDev project ID (from dashboard.zerodev.app) */
-    projectId: string;
-    /** Chain ID */
-    chainId: number;
-    /** The user's wallet client (e.g., from wagmi) */
-    walletClient: WalletClient;
-    /** Optional: bundler URL override */
-    bundlerUrl?: string;
-    /** Optional: paymaster URL override */
-    paymasterUrl?: string;
+  /** ZeroDev project ID (from dashboard.zerodev.app) */
+  projectId: string;
+  /** Chain ID */
+  chainId: number;
+  /** The user's wallet client (e.g., from wagmi) */
+  walletClient: WalletClient;
+  /** Optional: bundler URL override */
+  bundlerUrl?: string;
+  /** Optional: paymaster URL override */
+  paymasterUrl?: string;
 }
 
 export interface SmartAccountResult {
-    /** The Kernel smart account address */
-    smartAccountAddress: `0x${string}`;
-    /** Transaction hash of the module installation */
-    installTxHash?: `0x${string}`;
-    /** Whether the account was already deployed */
-    alreadyDeployed: boolean;
+  /** The Kernel smart account address */
+  smartAccountAddress: `0x${string}`;
+  /** Transaction hash of the module installation */
+  installTxHash?: `0x${string}`;
+  /** Whether the account was already deployed */
+  alreadyDeployed: boolean;
 }
 
 export interface RevokeAutopayConfig {
-    projectId: string;
-    chainId: number;
-    walletClient: WalletClient;
-    smartAccountAddress: `0x${string}`;
-    bundlerUrl?: string;
-    paymasterUrl?: string;
+  projectId: string;
+  chainId: number;
+  walletClient: WalletClient;
+  smartAccountAddress: `0x${string}`;
+  bundlerUrl?: string;
+  paymasterUrl?: string;
 }
 
 export interface SmartAccountTransactionConfig {
-    projectId: string;
-    chainId: number;
-    walletClient: WalletClient;
-    to: `0x${string}`;
-    data: `0x${string}`;
-    value?: bigint;
-    smartAccountAddress?: `0x${string}`;
-    bundlerUrl?: string;
-    paymasterUrl?: string;
+  projectId: string;
+  chainId: number;
+  walletClient: WalletClient;
+  to: `0x${string}`;
+  data: `0x${string}`;
+  value?: bigint;
+  smartAccountAddress?: `0x${string}`;
+  bundlerUrl?: string;
+  paymasterUrl?: string;
 }
 
 export interface UpdateAutopayConfigInput {
-    projectId: string;
-    chainId: number;
-    walletClient: WalletClient;
-    smartAccountAddress: `0x${string}`;
-    merchant: `0x${string}`;
-    maxAmount: bigint;
-    token: `0x${string}`;
-    interval: number;
-    startTime: bigint;
-    planId: bigint;
-    maxTotalAmount?: bigint;
-    bundlerUrl?: string;
-    paymasterUrl?: string;
+  projectId: string;
+  chainId: number;
+  walletClient: WalletClient;
+  smartAccountAddress: `0x${string}`;
+  merchant: `0x${string}`;
+  maxAmount: bigint;
+  token: `0x${string}`;
+  interval: number;
+  startTime: bigint;
+  planId: bigint;
+  maxTotalAmount?: bigint;
+  bundlerUrl?: string;
+  paymasterUrl?: string;
 }
 
 export interface CancelSubscriptionInput {
-    projectId: string;
-    chainId: number;
-    walletClient: WalletClient;
-    smartAccountAddress: `0x${string}`;
-    tokenId: bigint;
-    bundlerUrl?: string;
-    paymasterUrl?: string;
+  projectId: string;
+  chainId: number;
+  walletClient: WalletClient;
+  smartAccountAddress: `0x${string}`;
+  tokenId: bigint;
+  bundlerUrl?: string;
+  paymasterUrl?: string;
 }
 
 async function createKernelExecutionContext(config: {
-    projectId: string;
-    chainId: number;
-    walletClient: WalletClient;
-    bundlerUrl?: string;
-    paymasterUrl?: string;
+  projectId: string;
+  chainId: number;
+  walletClient: WalletClient;
+  bundlerUrl?: string;
+  paymasterUrl?: string;
 }) {
-    const chain = CHAIN_MAP[config.chainId] || baseSepolia;
-    const { bundlerUrl, paymasterUrl, hasConfiguredUrls } = resolveZeroDevUrls({
-        projectId: config.projectId,
-        chainId: config.chainId,
-        bundlerUrl: config.bundlerUrl,
-        paymasterUrl: config.paymasterUrl,
-    });
+  const chain = CHAIN_MAP[config.chainId] || baseSepolia;
+  const { bundlerUrl, paymasterUrl, hasConfiguredUrls } = resolveZeroDevUrls({
+    projectId: config.projectId,
+    chainId: config.chainId,
+    bundlerUrl: config.bundlerUrl,
+    paymasterUrl: config.paymasterUrl,
+  });
 
-    const publicClient = createPublicClient({
-        chain,
-        transport: http(),
-    }) as PublicClient;
+  const publicClient = createPublicClient({
+    chain,
+    transport: http(),
+  }) as PublicClient;
 
-    const ecdsaValidator = await signerToEcdsaValidator(publicClient, {
-        signer: config.walletClient as any,
-        entryPoint: ENTRY_POINT as any,
-        kernelVersion: KERNEL_VERSION,
-    });
+  const ecdsaValidator = await signerToEcdsaValidator(publicClient, {
+    signer: config.walletClient as any,
+    entryPoint: ENTRY_POINT as any,
+    kernelVersion: KERNEL_VERSION,
+  });
 
-    const kernelAccount = await createKernelAccount(publicClient, {
-        plugins: { sudo: ecdsaValidator },
-        entryPoint: ENTRY_POINT as any,
-        kernelVersion: KERNEL_VERSION,
-    } as any);
+  const kernelAccount = await createKernelAccount(publicClient, {
+    plugins: { sudo: ecdsaValidator },
+    entryPoint: ENTRY_POINT as any,
+    kernelVersion: KERNEL_VERSION,
+  } as any);
 
-    const paymasterClient = createZeroDevPaymasterClient({
-        chain,
-        transport: http(paymasterUrl),
-    } as any);
+  const paymasterClient = createZeroDevPaymasterClient({
+    chain,
+    transport: http(paymasterUrl),
+  } as any);
 
-    const kernelClient = createKernelAccountClient({
-        account: kernelAccount,
-        chain,
-        bundlerTransport: http(bundlerUrl),
-        middleware: {
-            sponsorUserOperation: async ({ userOperation }: { userOperation: any }) => {
-                return (paymasterClient as any).sponsorUserOperation({
-                    userOperation,
-                    entryPoint: ENTRY_POINT_ADDRESS,
-                });
-            },
-        },
-    } as any);
+  const kernelClient = createKernelAccountClient({
+    account: kernelAccount,
+    chain,
+    bundlerTransport: http(bundlerUrl),
+    middleware: {
+      sponsorUserOperation: async ({
+        userOperation,
+      }: {
+        userOperation: any;
+      }) => {
+        return (paymasterClient as any).sponsorUserOperation({
+          userOperation,
+          entryPoint: ENTRY_POINT_ADDRESS,
+        });
+      },
+    },
+  } as any);
 
-    return {
-        publicClient,
-        kernelAccount,
-        kernelClient,
-        bundlerUrl,
-        paymasterUrl,
-        hasConfiguredUrls,
-    };
+  return {
+    publicClient,
+    kernelAccount,
+    kernelClient,
+    bundlerUrl,
+    paymasterUrl,
+    hasConfiguredUrls,
+  };
 }
 
 /**
@@ -274,156 +277,163 @@ async function createKernelExecutionContext(config: {
  * pulled automatically by the BillingKeeper.
  */
 export async function deploySmartAccount(
-    config: DeploySmartAccountConfig,
+  config: DeploySmartAccountConfig,
 ): Promise<SmartAccountResult> {
-    const chain = CHAIN_MAP[config.chainId] || baseSepolia;
-    const contracts = getContractAddresses(config.chainId);
+  const chain = CHAIN_MAP[config.chainId] || baseSepolia;
+  const contracts = getContractAddresses(config.chainId);
 
-    const { bundlerUrl, paymasterUrl, hasConfiguredUrls } = resolveZeroDevUrls({
-        projectId: config.projectId,
-        chainId: config.chainId,
-        bundlerUrl: config.bundlerUrl,
-        paymasterUrl: config.paymasterUrl,
-    });
+  const { bundlerUrl, paymasterUrl, hasConfiguredUrls } = resolveZeroDevUrls({
+    projectId: config.projectId,
+    chainId: config.chainId,
+    bundlerUrl: config.bundlerUrl,
+    paymasterUrl: config.paymasterUrl,
+  });
 
-    const publicClient = createPublicClient({
-        chain,
-        transport: http(),
-    }) as PublicClient;
+  const publicClient = createPublicClient({
+    chain,
+    transport: http(),
+  }) as PublicClient;
 
-    // Step 1: Create ECDSA validator from user's wallet
-    const ecdsaValidator = await signerToEcdsaValidator(publicClient, {
-        signer: config.walletClient as any,
-        entryPoint: ENTRY_POINT as any,
-        kernelVersion: KERNEL_VERSION,
-    });
+  // Step 1: Create ECDSA validator from user's wallet
+  const ecdsaValidator = await signerToEcdsaValidator(publicClient, {
+    signer: config.walletClient as any,
+    entryPoint: ENTRY_POINT as any,
+    kernelVersion: KERNEL_VERSION,
+  });
 
-    // Step 2: Create Kernel account
-    const kernelAccount = await createKernelAccount(publicClient, {
-        plugins: {
-            sudo: ecdsaValidator,
-        },
-        entryPoint: ENTRY_POINT as any,
-        kernelVersion: KERNEL_VERSION,
-    } as any);
+  // Step 2: Create Kernel account
+  const kernelAccount = await createKernelAccount(publicClient, {
+    plugins: {
+      sudo: ecdsaValidator,
+    },
+    entryPoint: ENTRY_POINT as any,
+    kernelVersion: KERNEL_VERSION,
+  } as any);
 
-    const smartAccountAddress = kernelAccount.address;
+  const smartAccountAddress = kernelAccount.address;
 
-    // Check if already deployed
-    const code = await publicClient.getCode({ address: smartAccountAddress });
-    const alreadyDeployed = !!code && code !== "0x";
+  // Check if already deployed
+  const code = await publicClient.getCode({ address: smartAccountAddress });
+  const alreadyDeployed = !!code && code !== "0x";
 
-    // Step 3: Create Kernel account client with paymaster
-    const paymasterClient = createZeroDevPaymasterClient({
-        chain,
-        transport: http(paymasterUrl),
-    } as any);
+  // Step 3: Create Kernel account client with paymaster
+  const paymasterClient = createZeroDevPaymasterClient({
+    chain,
+    transport: http(paymasterUrl),
+  } as any);
 
-    const kernelClient = createKernelAccountClient({
-        account: kernelAccount,
-        chain,
-        bundlerTransport: http(bundlerUrl),
-        middleware: {
-            sponsorUserOperation: async ({ userOperation }: { userOperation: any }) => {
-                return (paymasterClient as any).sponsorUserOperation({
-                    userOperation,
-                    entryPoint: ENTRY_POINT_ADDRESS,
-                });
-            },
-        },
-    } as any);
+  const kernelClient = createKernelAccountClient({
+    account: kernelAccount,
+    chain,
+    bundlerTransport: http(bundlerUrl),
+    middleware: {
+      sponsorUserOperation: async ({
+        userOperation,
+      }: {
+        userOperation: any;
+      }) => {
+        return (paymasterClient as any).sponsorUserOperation({
+          userOperation,
+          entryPoint: ENTRY_POINT_ADDRESS,
+        });
+      },
+    },
+  } as any);
 
-    // Step 4: Install AutopayModule if not already installed
-    let installTxHash: `0x${string}` | undefined;
+  // Step 4: Install AutopayModule if not already installed
+  let installTxHash: `0x${string}` | undefined;
 
-    if (contracts.autopayModule) {
-        try {
-            const initialized = await publicClient.readContract({
-                address: contracts.autopayModule as `0x${string}`,
-                abi: ERC7579AutopayModuleABI,
-                functionName: "isInitialized",
-                args: [smartAccountAddress],
-            }) as boolean;
+  if (contracts.autopayModule) {
+    try {
+      const initialized = (await publicClient.readContract({
+        address: contracts.autopayModule as `0x${string}`,
+        abi: ERC7579AutopayModuleABI,
+        functionName: "isInitialized",
+        args: [smartAccountAddress],
+      })) as boolean;
 
-            if (initialized) {
-                console.log(
-                    `[ZeroDev] AutopayModule already initialized for ${smartAccountAddress}`,
-                );
-                return {
-                    smartAccountAddress,
-                    installTxHash,
-                    alreadyDeployed,
-                };
-            }
+      if (initialized) {
+        console.log(
+          `[ZeroDev] AutopayModule already initialized for ${smartAccountAddress}`,
+        );
+        return {
+          smartAccountAddress,
+          installTxHash,
+          alreadyDeployed,
+        };
+      }
 
-            // Encode the module installation call
-            // ERC-7579 defines installModule(uint256 moduleType, address module, bytes initData)
-            const installData = encodeFunctionData({
-                abi: [
-                    {
-                        type: "function",
-                        name: "installModule",
-                        inputs: [
-                            { name: "moduleType", type: "uint256" },
-                            { name: "module", type: "address" },
-                            { name: "initData", type: "bytes" },
-                        ],
-                        outputs: [],
-                        stateMutability: "nonpayable",
-                    },
-                ],
-                functionName: "installModule",
-                args: [
-                    2n, // Module type 2 = Executor
-                    contracts.autopayModule as `0x${string}`,
-                    "0x" as `0x${string}`, // Empty init data
-                ],
-            });
+      // Encode the module installation call
+      // ERC-7579 defines installModule(uint256 moduleType, address module, bytes initData)
+      const installData = encodeFunctionData({
+        abi: [
+          {
+            type: "function",
+            name: "installModule",
+            inputs: [
+              { name: "moduleType", type: "uint256" },
+              { name: "module", type: "address" },
+              { name: "initData", type: "bytes" },
+            ],
+            outputs: [],
+            stateMutability: "nonpayable",
+          },
+        ],
+        functionName: "installModule",
+        args: [
+          2n, // Module type 2 = Executor
+          contracts.autopayModule as `0x${string}`,
+          "0x" as `0x${string}`, // Empty init data
+        ],
+      });
 
-            installTxHash = await (kernelClient as any).sendTransaction({
-                to: smartAccountAddress,
-                data: installData,
-                value: 0n,
-            });
+      installTxHash = await (kernelClient as any).sendTransaction({
+        to: smartAccountAddress,
+        data: installData,
+        value: 0n,
+      });
 
-            console.log(
-                `[ZeroDev] AutopayModule installed on ${smartAccountAddress} — tx: ${installTxHash}`,
-            );
-        } catch (err: any) {
-            // Module might already be installed
-            if (
-                err?.message?.includes("already installed") ||
-                err?.message?.includes("AlreadyInitialized")
-            ) {
-                console.log(
-                    `[ZeroDev] AutopayModule already installed on ${smartAccountAddress}`,
-                );
-            } else {
-                const normalizedError = normalizeZeroDevError(err, {
-                    projectId: config.projectId,
-                    chainId: config.chainId,
-                    bundlerUrl,
-                    paymasterUrl,
-                    hasConfiguredUrls,
-                });
-                if (isRecoverableSmartAccountFundingError(normalizedError)) {
-                    console.warn(
-                        "[ZeroDev] Module installation needs prefund or sponsorship; callers may fall back to the connected wallet:",
-                        normalizedError.message,
-                    );
-                } else {
-                    console.error("[ZeroDev] Module installation failed:", normalizedError.message);
-                }
-                throw normalizedError;
-            }
+      console.log(
+        `[ZeroDev] AutopayModule installed on ${smartAccountAddress} — tx: ${installTxHash}`,
+      );
+    } catch (err: any) {
+      // Module might already be installed
+      if (
+        err?.message?.includes("already installed") ||
+        err?.message?.includes("AlreadyInitialized")
+      ) {
+        console.log(
+          `[ZeroDev] AutopayModule already installed on ${smartAccountAddress}`,
+        );
+      } else {
+        const normalizedError = normalizeZeroDevError(err, {
+          projectId: config.projectId,
+          chainId: config.chainId,
+          bundlerUrl,
+          paymasterUrl,
+          hasConfiguredUrls,
+        });
+        if (isRecoverableSmartAccountFundingError(normalizedError)) {
+          console.warn(
+            "[ZeroDev] Module installation needs prefund or sponsorship; callers may fall back to the connected wallet:",
+            normalizedError.message,
+          );
+        } else {
+          console.error(
+            "[ZeroDev] Module installation failed:",
+            normalizedError.message,
+          );
         }
+        throw normalizedError;
+      }
     }
+  }
 
-    return {
-        smartAccountAddress,
-        installTxHash,
-        alreadyDeployed,
-    };
+  return {
+    smartAccountAddress,
+    installTxHash,
+    alreadyDeployed,
+  };
 }
 
 /**
@@ -431,78 +441,78 @@ export async function deploySmartAccount(
  * This calls module `onUninstall(0x)` through the smart account executor.
  */
 export async function revokeAutopayModule(
-    config: RevokeAutopayConfig,
+  config: RevokeAutopayConfig,
 ): Promise<{ txHash?: `0x${string}`; alreadyRevoked: boolean }> {
-    const chain = CHAIN_MAP[config.chainId] || baseSepolia;
-    const contracts = getContractAddresses(config.chainId);
+  const chain = CHAIN_MAP[config.chainId] || baseSepolia;
+  const contracts = getContractAddresses(config.chainId);
 
-    if (!contracts.autopayModule) {
-        throw new Error("Autopay module address not configured for this chain.");
-    }
+  if (!contracts.autopayModule) {
+    throw new Error("Autopay module address not configured for this chain.");
+  }
 
-    const { bundlerUrl, paymasterUrl, hasConfiguredUrls } = resolveZeroDevUrls({
-        projectId: config.projectId,
-        chainId: config.chainId,
-        bundlerUrl: config.bundlerUrl,
-        paymasterUrl: config.paymasterUrl,
+  const { bundlerUrl, paymasterUrl, hasConfiguredUrls } = resolveZeroDevUrls({
+    projectId: config.projectId,
+    chainId: config.chainId,
+    bundlerUrl: config.bundlerUrl,
+    paymasterUrl: config.paymasterUrl,
+  });
+
+  const publicClient = createPublicClient({
+    chain,
+    transport: http(),
+  }) as PublicClient;
+
+  const initialized = (await publicClient.readContract({
+    address: contracts.autopayModule as `0x${string}`,
+    abi: ERC7579AutopayModuleABI,
+    functionName: "isInitialized",
+    args: [config.smartAccountAddress],
+  })) as boolean;
+
+  if (!initialized) {
+    return { alreadyRevoked: true };
+  }
+
+  const { kernelAccount, kernelClient } = await createKernelExecutionContext({
+    projectId: config.projectId,
+    chainId: config.chainId,
+    walletClient: config.walletClient,
+    bundlerUrl,
+    paymasterUrl,
+  });
+
+  if (
+    kernelAccount.address.toLowerCase() !==
+    config.smartAccountAddress.toLowerCase()
+  ) {
+    throw new Error(
+      `Kernel account mismatch. Expected ${config.smartAccountAddress}, got ${kernelAccount.address}.`,
+    );
+  }
+
+  const revokeData = encodeFunctionData({
+    abi: ERC7579AutopayModuleABI,
+    functionName: "onUninstall",
+    args: ["0x"],
+  });
+
+  try {
+    const txHash = await (kernelClient as any).sendTransaction({
+      to: contracts.autopayModule as `0x${string}`,
+      data: revokeData,
+      value: 0n,
     });
 
-    const publicClient = createPublicClient({
-        chain,
-        transport: http(),
-    }) as PublicClient;
-
-    const initialized = await publicClient.readContract({
-        address: contracts.autopayModule as `0x${string}`,
-        abi: ERC7579AutopayModuleABI,
-        functionName: "isInitialized",
-        args: [config.smartAccountAddress],
-    }) as boolean;
-
-    if (!initialized) {
-        return { alreadyRevoked: true };
-    }
-
-    const { kernelAccount, kernelClient } = await createKernelExecutionContext({
-        projectId: config.projectId,
-        chainId: config.chainId,
-        walletClient: config.walletClient,
-        bundlerUrl,
-        paymasterUrl,
+    return { txHash, alreadyRevoked: false };
+  } catch (error) {
+    throw normalizeZeroDevError(error, {
+      projectId: config.projectId,
+      chainId: config.chainId,
+      bundlerUrl,
+      paymasterUrl,
+      hasConfiguredUrls,
     });
-
-    if (
-        kernelAccount.address.toLowerCase() !==
-        config.smartAccountAddress.toLowerCase()
-    ) {
-        throw new Error(
-            `Kernel account mismatch. Expected ${config.smartAccountAddress}, got ${kernelAccount.address}.`,
-        );
-    }
-
-    const revokeData = encodeFunctionData({
-        abi: ERC7579AutopayModuleABI,
-        functionName: "onUninstall",
-        args: ["0x"],
-    });
-
-    try {
-        const txHash = await (kernelClient as any).sendTransaction({
-            to: contracts.autopayModule as `0x${string}`,
-            data: revokeData,
-            value: 0n,
-        });
-
-        return { txHash, alreadyRevoked: false };
-    } catch (error) {
-        throw normalizeZeroDevError(error, {
-            projectId: config.projectId,
-            chainId: config.chainId,
-            bundlerUrl,
-            paymasterUrl,
-            hasConfiguredUrls,
-        });
-    }
+  }
 }
 
 /**
@@ -511,126 +521,126 @@ export async function revokeAutopayModule(
  * originating from the smart account rather than the owner EOA.
  */
 export async function sendSmartAccountTransaction(
-    config: SmartAccountTransactionConfig,
+  config: SmartAccountTransactionConfig,
 ): Promise<{
-    smartAccountAddress: `0x${string}`;
-    txHash: `0x${string}`;
+  smartAccountAddress: `0x${string}`;
+  txHash: `0x${string}`;
 }> {
-    const {
-        publicClient,
-        kernelAccount,
-        kernelClient,
-        bundlerUrl,
-        paymasterUrl,
-        hasConfiguredUrls,
-    } = await createKernelExecutionContext({
-        projectId: config.projectId,
-        chainId: config.chainId,
-        walletClient: config.walletClient,
-        bundlerUrl: config.bundlerUrl,
-        paymasterUrl: config.paymasterUrl,
+  const {
+    publicClient,
+    kernelAccount,
+    kernelClient,
+    bundlerUrl,
+    paymasterUrl,
+    hasConfiguredUrls,
+  } = await createKernelExecutionContext({
+    projectId: config.projectId,
+    chainId: config.chainId,
+    walletClient: config.walletClient,
+    bundlerUrl: config.bundlerUrl,
+    paymasterUrl: config.paymasterUrl,
+  });
+
+  if (
+    config.smartAccountAddress &&
+    kernelAccount.address.toLowerCase() !==
+      config.smartAccountAddress.toLowerCase()
+  ) {
+    throw new Error(
+      `Kernel account mismatch. Expected ${config.smartAccountAddress}, got ${kernelAccount.address}.`,
+    );
+  }
+
+  try {
+    const txHash = await (kernelClient as any).sendTransaction({
+      to: config.to,
+      data: config.data,
+      value: config.value ?? 0n,
     });
 
-    if (
-        config.smartAccountAddress &&
-        kernelAccount.address.toLowerCase() !==
-            config.smartAccountAddress.toLowerCase()
-    ) {
-        throw new Error(
-            `Kernel account mismatch. Expected ${config.smartAccountAddress}, got ${kernelAccount.address}.`,
-        );
-    }
+    await publicClient.waitForTransactionReceipt({ hash: txHash });
 
-    try {
-        const txHash = await (kernelClient as any).sendTransaction({
-            to: config.to,
-            data: config.data,
-            value: config.value ?? 0n,
-        });
-
-        await publicClient.waitForTransactionReceipt({ hash: txHash });
-
-        return {
-            smartAccountAddress: kernelAccount.address,
-            txHash,
-        };
-    } catch (error) {
-        throw normalizeZeroDevError(error, {
-            projectId: config.projectId,
-            chainId: config.chainId,
-            bundlerUrl,
-            paymasterUrl,
-            hasConfiguredUrls,
-        });
-    }
+    return {
+      smartAccountAddress: kernelAccount.address,
+      txHash,
+    };
+  } catch (error) {
+    throw normalizeZeroDevError(error, {
+      projectId: config.projectId,
+      chainId: config.chainId,
+      bundlerUrl,
+      paymasterUrl,
+      hasConfiguredUrls,
+    });
+  }
 }
 
 export async function updateAutopayConfig(
-    config: UpdateAutopayConfigInput,
+  config: UpdateAutopayConfigInput,
 ): Promise<{
-    smartAccountAddress: `0x${string}`;
-    txHash: `0x${string}`;
+  smartAccountAddress: `0x${string}`;
+  txHash: `0x${string}`;
 }> {
-    const contracts = getContractAddresses(config.chainId);
-    if (!contracts.autopayModule) {
-        throw new Error("Autopay module address is not configured for this chain.");
-    }
+  const contracts = getContractAddresses(config.chainId);
+  if (!contracts.autopayModule) {
+    throw new Error("Autopay module address is not configured for this chain.");
+  }
 
-    const data = encodeFunctionData({
-        abi: ERC7579AutopayModuleABI as any,
-        functionName: "updateConfig",
-        args: [
-            {
-                merchant: config.merchant,
-                maxAmount: config.maxAmount,
-                token: config.token,
-                interval: config.interval,
-                startTime: config.startTime,
-                planId: config.planId,
-                maxTotalAmount: config.maxTotalAmount ?? 0n,
-            },
-        ],
-    });
+  const data = encodeFunctionData({
+    abi: ERC7579AutopayModuleABI as any,
+    functionName: "updateConfig",
+    args: [
+      {
+        merchant: config.merchant,
+        maxAmount: config.maxAmount,
+        token: config.token,
+        interval: config.interval,
+        startTime: config.startTime,
+        planId: config.planId,
+        maxTotalAmount: config.maxTotalAmount ?? 0n,
+      },
+    ],
+  });
 
-    return sendSmartAccountTransaction({
-        projectId: config.projectId,
-        chainId: config.chainId,
-        walletClient: config.walletClient,
-        smartAccountAddress: config.smartAccountAddress,
-        to: contracts.autopayModule as `0x${string}`,
-        data,
-        bundlerUrl: config.bundlerUrl,
-        paymasterUrl: config.paymasterUrl,
-    });
+  return sendSmartAccountTransaction({
+    projectId: config.projectId,
+    chainId: config.chainId,
+    walletClient: config.walletClient,
+    smartAccountAddress: config.smartAccountAddress,
+    to: contracts.autopayModule as `0x${string}`,
+    data,
+    bundlerUrl: config.bundlerUrl,
+    paymasterUrl: config.paymasterUrl,
+  });
 }
 
 export async function cancelSubscription(
-    config: CancelSubscriptionInput,
+  config: CancelSubscriptionInput,
 ): Promise<{
-    smartAccountAddress: `0x${string}`;
-    txHash: `0x${string}`;
+  smartAccountAddress: `0x${string}`;
+  txHash: `0x${string}`;
 }> {
-    const contracts = getContractAddresses(config.chainId);
-    if (!contracts.subscriptionRegistry) {
-        throw new Error(
-            "Subscription registry address is not configured for this chain.",
-        );
-    }
+  const contracts = getContractAddresses(config.chainId);
+  if (!contracts.subscriptionRegistry) {
+    throw new Error(
+      "Subscription registry address is not configured for this chain.",
+    );
+  }
 
-    const data = encodeFunctionData({
-        abi: SubscriptionRegistryABI as any,
-        functionName: "cancelSubscription",
-        args: [config.tokenId],
-    });
+  const data = encodeFunctionData({
+    abi: SubscriptionRegistryABI as any,
+    functionName: "cancelSubscription",
+    args: [config.tokenId],
+  });
 
-    return sendSmartAccountTransaction({
-        projectId: config.projectId,
-        chainId: config.chainId,
-        walletClient: config.walletClient,
-        smartAccountAddress: config.smartAccountAddress,
-        to: contracts.subscriptionRegistry as `0x${string}`,
-        data,
-        bundlerUrl: config.bundlerUrl,
-        paymasterUrl: config.paymasterUrl,
-    });
+  return sendSmartAccountTransaction({
+    projectId: config.projectId,
+    chainId: config.chainId,
+    walletClient: config.walletClient,
+    smartAccountAddress: config.smartAccountAddress,
+    to: contracts.subscriptionRegistry as `0x${string}`,
+    data,
+    bundlerUrl: config.bundlerUrl,
+    paymasterUrl: config.paymasterUrl,
+  });
 }

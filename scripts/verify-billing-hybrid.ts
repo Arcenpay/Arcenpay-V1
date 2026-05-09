@@ -257,7 +257,7 @@ async function createChainClients(rpcUrl: string, chainId: number) {
   const { createPublicClient, http, parseAbi } = await import("viem");
   const chains = await import("viem/chains");
   const { getContractAddresses } =
-    await import("../packages/sdk-core/src/index.ts");
+    await import("../packages/internal-core/src/index.ts");
 
   const chain =
     chainId === 11155111

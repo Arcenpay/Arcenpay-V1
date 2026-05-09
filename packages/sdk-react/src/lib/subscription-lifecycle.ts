@@ -1,4 +1,4 @@
-export type SubscriptionCancellationIntent = "scheduled" | "immediate";
+export type SubscriptionCancellationIntent = "scheduled";
 
 type PlanChangeSuccessMessageInput = {
   mode?: string | null;
@@ -17,6 +17,7 @@ type CancellationFeedbackInput = {
   intent: SubscriptionCancellationIntent;
   mode?: string | null;
   effectiveAtLabel?: string | null;
+  pendingVerification?: boolean;
 };
 
 export function buildPlanChangeSuccessMessage(
@@ -52,13 +53,6 @@ export function buildCancellationRequestBody(
 ): Record<string, unknown> {
   if (!input.txHash) return {};
 
-  if (input.intent === "immediate") {
-    return {
-      immediate: true,
-      cancellationTxHash: input.txHash,
-    };
-  }
-
   return {
     autopayControlTxHash: input.txHash,
   };
@@ -70,24 +64,20 @@ export function buildCancellationFeedback(input: CancellationFeedbackInput): {
 } {
   const mode = input.mode ?? "";
 
-  if (mode === "cancelled_on_chain") {
-    return { successMsg: "Subscription cancelled on-chain." };
-  }
-
   if (mode === "cancel_at_period_end") {
     return {
-      flashMsg: input.effectiveAtLabel
-        ? `Cancellation scheduled. Your current plan stays active until ${input.effectiveAtLabel}.`
-        : "Cancellation scheduled. Your current plan stays active until the end of the current billing period.",
+      flashMsg: input.pendingVerification
+        ? input.effectiveAtLabel
+          ? `Cancellation submitted. Autopay is shutting down and your current plan stays active until ${input.effectiveAtLabel}.`
+          : "Cancellation submitted. Autopay is shutting down and your current plan stays active until the end of the current billing period."
+        : input.effectiveAtLabel
+          ? `Cancellation scheduled. Your current plan stays active until ${input.effectiveAtLabel}.`
+          : "Cancellation scheduled. Your current plan stays active until the end of the current billing period.",
     };
   }
 
   if (mode === "already_free") {
     return { flashMsg: "You are already on the Free plan." };
-  }
-
-  if (input.intent === "immediate") {
-    return { successMsg: "Subscription cancelled on-chain." };
   }
 
   return {

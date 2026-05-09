@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getDemoCompanyKeys } from "@/lib/arcen-client";
+import { resolveDemoArcenPayBaseUrl } from "@/lib/arcenpay-origin";
 
 const bodySchema = z.object({
   planId: z.union([z.string().trim().min(1), z.number().int().positive()]),
@@ -39,9 +40,7 @@ export async function POST(req: NextRequest) {
       throw new Error("ARCENPAY_API_KEY is not set.");
     }
 
-    const baseUrl = (
-      process.env.ARCENPAY_BASE_URL ?? "http://localhost:3000"
-    ).replace(/\/$/, "");
+    const baseUrl = resolveDemoArcenPayBaseUrl();
 
     const response = await fetch(`${baseUrl}/api/v1/subscriptions/activate`, {
       method: "POST",

@@ -17,8 +17,8 @@ import {
 } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { sepolia, baseSepolia, base } from 'viem/chains';
-import type { X402Response, X402PaymentHeader } from '@arcenpay/sdk';
-import { X402_VERSION, X402_SCHEME, SessionVaultABI, getContractAddresses, TOKENS } from '@arcenpay/sdk';
+import type { X402Response, X402PaymentHeader } from '@arcenpay/internal-core';
+import { X402_VERSION, X402_SCHEME, SessionVaultABI, getContractAddresses, TOKENS } from '@arcenpay/internal-core';
 import type {
   AutoTopUpConfig,
   DispatchConfig,
@@ -27,7 +27,7 @@ import type {
   TopUpRequest,
   PersistentAgentState,
   PersistentStore,
-} from '@arcenpay/sdk';
+} from '@arcenpay/internal-core';
 
 // ─── Re-exported types ───────────────────────────────────────────
 export type {
@@ -39,7 +39,7 @@ export type {
   TopUpRequest,
   PersistentAgentState,
   PersistentStore,
-} from '@arcenpay/sdk';
+} from '@arcenpay/internal-core';
 
 // ─── Config ───────────────────────────────────────────────────────
 

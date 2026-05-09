@@ -3,7 +3,9 @@ import { normalizeResourceUrl } from "../src/middleware/x402";
 
 describe("x402 resource normalization", () => {
   it("normalizes valid URLs to origin+path+query", () => {
-    const value = normalizeResourceUrl("https://api.example.com/premium/data?x=1");
+    const value = normalizeResourceUrl(
+      "https://api.example.com/premium/data?x=1",
+    );
     expect(value).toBe("https://api.example.com/premium/data?x=1");
   });
 
@@ -13,7 +15,9 @@ describe("x402 resource normalization", () => {
   });
 
   it("removes hash fragments from canonical resource comparison", () => {
-    const value = normalizeResourceUrl("https://api.example.com/premium/data?x=1#ignore");
+    const value = normalizeResourceUrl(
+      "https://api.example.com/premium/data?x=1#ignore",
+    );
     expect(value).toBe("https://api.example.com/premium/data?x=1");
   });
 });

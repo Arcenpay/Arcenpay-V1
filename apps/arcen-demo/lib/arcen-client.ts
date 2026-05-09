@@ -5,6 +5,7 @@ import type {
   FlagResult,
   ConsumeEntitlementResult,
 } from "@arcenpay/node";
+import { resolveDemoArcenPayBaseUrl } from "./arcenpay-origin";
 
 // Singleton ArcenClient for server-side usage
 // Initialized lazily so missing env vars only throw at runtime, not build time.
@@ -70,7 +71,7 @@ export function getRawArcenClient(): ArcenClient {
 
   _rawClient = new ArcenClient({
     apiKey,
-    baseUrl: process.env.ARCENPAY_BASE_URL ?? "http://localhost:3000",
+    baseUrl: resolveDemoArcenPayBaseUrl(),
   });
 
   return _rawClient;
@@ -140,9 +141,7 @@ export async function ensureDemoIdentity(): Promise<void> {
     );
   }
 
-  const baseUrl = (
-    process.env.ARCENPAY_BASE_URL ?? "http://localhost:3000"
-  ).replace(/\/$/, "");
+  const baseUrl = resolveDemoArcenPayBaseUrl();
 
   const response = await fetch(`${baseUrl}/api/v1/events`, {
     method: "POST",

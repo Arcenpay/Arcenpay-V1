@@ -75,7 +75,7 @@ import {
   validateChainEnvironment,
   type PlanTier,
   type X402VerifiedPaymentContext,
-} from "@arcenpay/sdk";
+} from "@arcenpay/internal-core";
 import {
   createPublicClient,
   encodeAbiParameters,

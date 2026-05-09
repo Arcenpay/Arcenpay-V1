@@ -9,14 +9,14 @@ import type {
   X402Response,
   X402RejectionReason,
   X402VerifiedPaymentContext,
-} from "@arcenpay/sdk";
+} from "../sdk";
 import type { NonceStore } from "../services/nonce-store";
 import {
   X402_VERSION,
   X402_SCHEME,
   SessionVaultABI,
   getChainEnvironment,
-} from "@arcenpay/sdk";
+} from "../sdk";
 import {
   createPublicClient,
   http,
@@ -253,7 +253,9 @@ export function x402Middleware(options: X402MiddlewareOptions) {
   const chain = CHAIN_MAP[chainId] || sepolia;
   const publicClient = createPublicClient({
     chain,
-    transport: http(rpcUrl || chainEnv.services.rpcUrl || chain.rpcUrls.default.http[0]),
+    transport: http(
+      rpcUrl || chainEnv.services.rpcUrl || chain.rpcUrls.default.http[0],
+    ),
   });
 
   return async (req: Request, res: Response, next: NextFunction) => {
@@ -528,7 +530,7 @@ export function x402Middleware(options: X402MiddlewareOptions) {
             res,
             "SETTLEMENT_FAILED",
             err?.message ||
-            "Payment verification succeeded but settlement failed",
+              "Payment verification succeeded but settlement failed",
           );
           return;
         }

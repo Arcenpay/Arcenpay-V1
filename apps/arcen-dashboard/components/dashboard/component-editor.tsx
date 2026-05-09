@@ -3,8 +3,8 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { ArcenEmbed, renderElement, getDesignTokens } from "@arcenpay/react";
-import type { ComponentRenderData, ComponentDesign } from "@arcenpay/sdk";
-import type { ComponentElement as SdkComponentElement } from "@arcenpay/sdk";
+import type { ComponentRenderData, ComponentDesign } from "@arcenpay/internal-core";
+import type { ComponentElement as SdkComponentElement } from "@arcenpay/internal-core";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -302,6 +302,7 @@ function ElementPreview({
       fullData,
       tokens,
       onChangePlan ?? (() => {}),
+      () => {},
       () => {},
     );
     return result ? (
@@ -1898,7 +1899,7 @@ const { data } = await res.json();
   };
 
   const generateInstallCode = () => {
-    return `npm install @arcenpay/react @arcenpay/sdk wagmi viem`;
+    return `npm install @arcenpay/react wagmi viem`;
   };
 
   const handleSave = () => {

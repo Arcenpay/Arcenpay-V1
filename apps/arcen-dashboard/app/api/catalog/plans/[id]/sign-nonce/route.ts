@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createPublicClient, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { requirePermission, isErrorResponse } from "@/lib/api-auth";
-import { getChain, getContractAddresses } from "@arcenpay/sdk";
+import { getChain, getContractAddresses } from "@arcenpay/internal-core";
 import { getRpcUrl } from "@/lib/config";
 import { DEFAULT_CHAIN_ID } from "@/lib/default-chain";
 import { isAddress } from "viem";

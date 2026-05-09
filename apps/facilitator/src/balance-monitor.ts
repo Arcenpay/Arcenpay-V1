@@ -6,7 +6,7 @@
 
 import type { PublicClient } from "viem";
 import { formatUnits } from "viem";
-import { SessionVaultABI } from "@arcenpay/sdk";
+import { SessionVaultABI } from "@arcenpay/internal-core";
 
 interface AgentConfig {
   teamId: string;

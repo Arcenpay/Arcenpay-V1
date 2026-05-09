@@ -25,6 +25,24 @@ function asRecord(value: unknown): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
+function normalizeBillingPeriod(
+  value: unknown,
+): "monthly" | "annual" | null {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "annual" || normalized === "yearly") return "annual";
+  if (normalized === "monthly" || normalized === "month") return "monthly";
+  return null;
+}
+
+function deriveBillingPeriodFromInterval(
+  billingInterval: unknown,
+): "monthly" | "annual" {
+  return typeof billingInterval === "number" && billingInterval >= 31_536_000
+    ? "annual"
+    : "monthly";
+}
+
 const bodySchema = z.object({
   teamId: z.string().min(1),
   wallet: z.string().regex(/^0x[0-9a-fA-F]{40}$/i),
@@ -167,6 +185,7 @@ export async function PATCH(req: NextRequest) {
 
     const nextTraits = { ...traits };
     delete nextTraits.subscriptionTransition;
+    delete nextTraits.billingPeriod;
     nextTraits.subscriptionSyncMeta = nextSyncMeta;
 
     await db.arcenCompany.update({
@@ -205,7 +224,7 @@ export async function PATCH(req: NextRequest) {
   // minted | renewed | plan_changed — resolve the on-chain plan to our internal plan
   const plan = await db.catalogPlan.findFirst({
     where: { onChainPlanId, teamId: company.teamId },
-    select: { id: true },
+    select: { id: true, billingInterval: true },
   });
 
   if (!plan) {
@@ -220,6 +239,10 @@ export async function PATCH(req: NextRequest) {
 
   const nextTraits = { ...traits };
   delete nextTraits.subscriptionTransition;
+  nextTraits.billingPeriod =
+    normalizeBillingPeriod(
+      asRecord(traits.subscriptionTransition).targetBillingPeriod,
+    ) ?? deriveBillingPeriodFromInterval(plan.billingInterval);
   nextTraits.subscriptionSyncMeta = nextSyncMeta;
 
   await db.arcenCompany.update({

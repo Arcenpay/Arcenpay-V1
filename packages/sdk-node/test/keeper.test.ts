@@ -14,7 +14,7 @@ const accountMocks = vi.hoisted(() => ({
 
 vi.mock("viem", () => viemMocks);
 vi.mock("viem/accounts", () => accountMocks);
-vi.mock("@arcenpay/sdk", () => ({
+vi.mock("../src/sdk", () => ({
   DEFAULT_CHAIN_ID: 84532,
   SubscriptionRegistryABI: [],
   ERC7579AutopayModuleABI: [],
@@ -32,22 +32,27 @@ describe("BillingKeeper", () => {
   });
 
   it("scans all enumerable subscription tokens instead of relying on recent mint logs", async () => {
-    const readContract = vi.fn(async ({ functionName, args }: {
-      functionName: string;
-      args?: unknown[];
-    }) => {
-      if (functionName === "totalSupply") return 3n;
-      if (functionName === "tokenByIndex") {
-        return [11n, 12n, 13n][Number(args?.[0] ?? 0)];
-      }
-      if (functionName === "expiresAt") {
-        const tokenId = args?.[0] as bigint;
-        if (tokenId === 11n) return 90n;
-        if (tokenId === 12n) return 150n;
-        return 260n;
-      }
-      throw new Error(`Unexpected function ${functionName}`);
-    });
+    const readContract = vi.fn(
+      async ({
+        functionName,
+        args,
+      }: {
+        functionName: string;
+        args?: unknown[];
+      }) => {
+        if (functionName === "totalSupply") return 3n;
+        if (functionName === "tokenByIndex") {
+          return [11n, 12n, 13n][Number(args?.[0] ?? 0)];
+        }
+        if (functionName === "expiresAt") {
+          const tokenId = args?.[0] as bigint;
+          if (tokenId === 11n) return 90n;
+          if (tokenId === 12n) return 150n;
+          return 260n;
+        }
+        throw new Error(`Unexpected function ${functionName}`);
+      },
+    );
 
     viemMocks.createPublicClient.mockReturnValue({
       readContract,

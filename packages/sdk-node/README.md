@@ -17,7 +17,6 @@ import { ArcenClient } from "@arcenpay/node";
 
 const client = new ArcenClient({
   apiKey: process.env.ARCENPAY_API_KEY!,
-  baseUrl: process.env.ARCENPAY_BASE_URL,
 });
 ```
 
@@ -106,9 +105,11 @@ The package also exposes advanced optional services:
 
 ```bash
 ARCENPAY_API_KEY=api_xxxxxxxxx
-ARCENPAY_BASE_URL=https://dashboard.arcenpay.xyz
 ARCENPAY_WEBHOOK_SECRET=whsec_xxxxxxxxx
 ```
+
+`ARCENPAY_BASE_URL` is optional. The SDK defaults to `http://localhost:3000`
+outside production and `https://app.arcenpay.com` in production.
 
 ## Boundary
 

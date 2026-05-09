@@ -1,4 +1,4 @@
-import type { EntitlementResult } from "@arcenpay/sdk";
+import type { EntitlementResult } from "@arcenpay/internal-core";
 import { db } from "@/lib/db";
 import { aggregateUsage } from "@/lib/event-aggregator";
 import {

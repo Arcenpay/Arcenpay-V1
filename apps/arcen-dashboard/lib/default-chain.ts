@@ -1,4 +1,4 @@
-import { getChain, getConfiguredRuntimeChainId } from "@arcenpay/sdk";
+import { getChain, getConfiguredRuntimeChainId } from "@arcenpay/internal-core";
 
 export const SEPOLIA_CHAIN_ID = 11155111 as const;
 export const BASE_SEPOLIA_CHAIN_ID = 84532 as const;

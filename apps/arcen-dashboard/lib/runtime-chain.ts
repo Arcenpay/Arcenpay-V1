@@ -1,6 +1,6 @@
 import {
   getPrimaryRuntimeChainProfile,
-} from "@arcenpay/sdk";
+} from "@arcenpay/internal-core";
 
 export const RUNTIME_CHAIN_PROFILE = getPrimaryRuntimeChainProfile();
 export const RUNTIME_CHAIN_ID = RUNTIME_CHAIN_PROFILE.chainId;

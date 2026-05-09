@@ -3,7 +3,7 @@
 //  Persistent usage log storage for x402/settlement pipelines
 // ============================================================
 
-import { createClient, type RedisClientType } from 'redis';
+import { createClient, type RedisClientType } from "redis";
 
 export interface RedisUsageStoreConfig {
   url: string;
@@ -36,14 +36,14 @@ export class RedisUsageStore {
 
   constructor(config: RedisUsageStoreConfig) {
     this.config = {
-      keyPrefix: 'meap',
+      keyPrefix: "meap",
       ttlSeconds: 7 * 24 * 60 * 60,
       ...config,
     };
 
     this.client = createClient({ url: this.config.url });
-    this.client.on('error', (err) => {
-      console.error('[RedisUsageStore] Redis error:', err);
+    this.client.on("error", (err) => {
+      console.error("[RedisUsageStore] Redis error:", err);
     });
   }
 
@@ -70,13 +70,20 @@ export class RedisUsageStore {
     return this.client.lLen(sessionKey(this.config.keyPrefix, sessionId));
   }
 
-  async getUsageEntries(sessionId: string, limit = 100): Promise<PersistedUsageEntry[]> {
+  async getUsageEntries(
+    sessionId: string,
+    limit = 100,
+  ): Promise<PersistedUsageEntry[]> {
     if (!this.connected) {
       await this.connect();
     }
 
     const upper = Math.max(0, limit - 1);
-    const values = await this.client.lRange(sessionKey(this.config.keyPrefix, sessionId), 0, upper);
+    const values = await this.client.lRange(
+      sessionKey(this.config.keyPrefix, sessionId),
+      0,
+      upper,
+    );
     return values
       .map((value) => {
         try {
@@ -88,13 +95,23 @@ export class RedisUsageStore {
       .filter((value): value is PersistedUsageEntry => value !== null);
   }
 
-  async setLatestSettlementTx(sessionId: string, txHash: string): Promise<void> {
+  async setLatestSettlementTx(
+    sessionId: string,
+    txHash: string,
+  ): Promise<void> {
     if (!this.connected) {
       await this.connect();
     }
 
-    await this.client.hSet(settlementKey(this.config.keyPrefix), sessionId, txHash);
-    await this.client.expire(settlementKey(this.config.keyPrefix), this.config.ttlSeconds);
+    await this.client.hSet(
+      settlementKey(this.config.keyPrefix),
+      sessionId,
+      txHash,
+    );
+    await this.client.expire(
+      settlementKey(this.config.keyPrefix),
+      this.config.ttlSeconds,
+    );
   }
 
   async getLatestSettlementTx(sessionId: string): Promise<string | null> {
@@ -102,7 +119,10 @@ export class RedisUsageStore {
       await this.connect();
     }
 
-    const txHash = await this.client.hGet(settlementKey(this.config.keyPrefix), sessionId);
+    const txHash = await this.client.hGet(
+      settlementKey(this.config.keyPrefix),
+      sessionId,
+    );
     return txHash ?? null;
   }
 

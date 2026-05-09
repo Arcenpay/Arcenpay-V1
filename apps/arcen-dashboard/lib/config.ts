@@ -12,7 +12,7 @@
 //    let it reach a production runtime
 // ============================================================
 
-import * as MEAPCore from "@arcenpay/sdk";
+import * as MEAPCore from "@arcenpay/internal-core";
 import { DEFAULT_CHAIN_ID } from "@/lib/default-chain";
 import { SUBGRAPH_REQUIRED } from "@/lib/launch-flags";
 
@@ -40,7 +40,7 @@ function getChainEnvironmentCompat(chainId: number) {
     return maybe(chainId);
   }
 
-  // Backward compatibility for stale @arcenpay/sdk dist builds that don't yet
+  // Backward compatibility for stale @arcenpay/internal-core dist builds that don't yet
   // export getChainEnvironment.
   const chain = MEAPCore.getChain(chainId);
   return {

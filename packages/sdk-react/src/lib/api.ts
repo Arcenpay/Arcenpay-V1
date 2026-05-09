@@ -1,24 +1,15 @@
-import type { EntitlementResult } from "@arcenpay/sdk";
+import type { EntitlementResult } from "../sdk";
+import { resolveArcenPayBaseUrl } from "../sdk";
 
-/** 
+/**
  * Resolves the dashboard base URL.
- * 
- * Schematic-style: the publishableKey determines the routing.
- * In development, defaults to localhost:3000 (local dashboard).
- * In production, always uses https://dashboard.arcenpay.xyz.
+ *
+ * In development, defaults to localhost:3000.
+ * In production, defaults to https://app.arcenpay.com.
  * Override with NEXT_PUBLIC_ARCENPAY_BASE_URL for staging environments.
  */
 export function resolveDashboardBaseUrl(explicit?: string): string {
-  if (explicit) return explicit.replace(/\/$/, "");
-  // Read env override (for staging/custom deployments)
-  const envOverride = typeof process !== "undefined"
-    ? process.env.NEXT_PUBLIC_ARCENPAY_BASE_URL
-    : undefined;
-  if (envOverride) return envOverride.replace(/\/$/, "");
-  // Default: localhost in dev, production URL otherwise
-  return typeof process !== "undefined" && process.env.NODE_ENV !== "production"
-    ? "http://localhost:3000"
-    : "https://dashboard.arcenpay.xyz";
+  return resolveArcenPayBaseUrl({ explicit });
 }
 
 export function resolveOptionalDashboardBaseUrl(

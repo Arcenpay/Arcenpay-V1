@@ -4,6 +4,8 @@
   "private": true,
   "description": "MEAP Facilitator Node — x402 payment validation and on-chain submission",
   "scripts": {
+    "prebuild": "npm run build --workspace=@arcenpay/internal-core",
+    "pretypecheck": "npm run build --workspace=@arcenpay/internal-core",
     "build": "tsc",
     "dev": "tsx watch src/server.ts",
     "start": "node dist/server.js",
@@ -13,7 +15,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@arcenpay/sdk": "*",
+    "@arcenpay/internal-core": "*",
     "@arcenpay/node": "*",
     "@sentry/node": "^8.0.0",
     "cors": "^2.8.5",

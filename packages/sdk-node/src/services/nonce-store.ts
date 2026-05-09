@@ -13,17 +13,17 @@
  * a replay and must be rejected.
  */
 export interface NonceStore {
-    /**
-     * Atomically check if nonce was used and mark it used.
-     * @returns true if nonce was fresh (now marked), false if already seen (replay)
-     */
-    markUsed(key: string, ttlMs: number): Promise<boolean>;
+  /**
+   * Atomically check if nonce was used and mark it used.
+   * @returns true if nonce was fresh (now marked), false if already seen (replay)
+   */
+  markUsed(key: string, ttlMs: number): Promise<boolean>;
 
-    /** Check if nonce has been used. */
-    has(key: string): Promise<boolean>;
+  /** Check if nonce has been used. */
+  has(key: string): Promise<boolean>;
 
-    /** Stop background processes (timers etc.) */
-    stop(): void;
+  /** Stop background processes (timers etc.) */
+  stop(): void;
 }
 
 // ============================================================
@@ -32,53 +32,50 @@ export interface NonceStore {
 // ============================================================
 
 export class InMemoryNonceStore implements NonceStore {
-    private readonly seen = new Map<string, number>();
-    private readonly cleanupTimer: ReturnType<typeof setInterval>;
+  private readonly seen = new Map<string, number>();
+  private readonly cleanupTimer: ReturnType<typeof setInterval>;
 
-    constructor(cleanupIntervalMs = 60_000) {
-        this.cleanupTimer = setInterval(() => {
-            const now = Date.now();
-            for (const [key, expiresAt] of this.seen) {
-                if (now >= expiresAt) {
-                    this.seen.delete(key);
-                }
-            }
-        }, cleanupIntervalMs);
-
-        // Allow GC if middleware is discarded (for tests)
-        if (
-            typeof this.cleanupTimer === "object" &&
-            "unref" in this.cleanupTimer
-        ) {
-            this.cleanupTimer.unref();
+  constructor(cleanupIntervalMs = 60_000) {
+    this.cleanupTimer = setInterval(() => {
+      const now = Date.now();
+      for (const [key, expiresAt] of this.seen) {
+        if (now >= expiresAt) {
+          this.seen.delete(key);
         }
-    }
+      }
+    }, cleanupIntervalMs);
 
-    async markUsed(key: string, ttlMs: number): Promise<boolean> {
-        if (this.seen.has(key)) {
-            const expiresAt = this.seen.get(key)!;
-            if (Date.now() < expiresAt) {
-                return false; // Replay — nonce still valid
-            }
-            // Expired entry — treat as fresh
-        }
-        this.seen.set(key, Date.now() + ttlMs);
-        return true; // Fresh nonce
+    // Allow GC if middleware is discarded (for tests)
+    if (typeof this.cleanupTimer === "object" && "unref" in this.cleanupTimer) {
+      this.cleanupTimer.unref();
     }
+  }
 
-    async has(key: string): Promise<boolean> {
-        if (!this.seen.has(key)) return false;
-        const expiresAt = this.seen.get(key)!;
-        if (Date.now() >= expiresAt) {
-            this.seen.delete(key);
-            return false;
-        }
-        return true;
+  async markUsed(key: string, ttlMs: number): Promise<boolean> {
+    if (this.seen.has(key)) {
+      const expiresAt = this.seen.get(key)!;
+      if (Date.now() < expiresAt) {
+        return false; // Replay — nonce still valid
+      }
+      // Expired entry — treat as fresh
     }
+    this.seen.set(key, Date.now() + ttlMs);
+    return true; // Fresh nonce
+  }
 
-    stop(): void {
-        clearInterval(this.cleanupTimer);
+  async has(key: string): Promise<boolean> {
+    if (!this.seen.has(key)) return false;
+    const expiresAt = this.seen.get(key)!;
+    if (Date.now() >= expiresAt) {
+      this.seen.delete(key);
+      return false;
     }
+    return true;
+  }
+
+  stop(): void {
+    clearInterval(this.cleanupTimer);
+  }
 }
 
 // ============================================================
@@ -88,46 +85,46 @@ export class InMemoryNonceStore implements NonceStore {
 // ============================================================
 
 export interface RedisLike {
-    set(
-        key: string,
-        value: string,
-        exMode: "EX",
-        exValue: number,
-        nxMode: "NX",
-    ): Promise<string | null>;
-    get(key: string): Promise<string | null>;
-    quit(): Promise<string>;
+  set(
+    key: string,
+    value: string,
+    exMode: "EX",
+    exValue: number,
+    nxMode: "NX",
+  ): Promise<string | null>;
+  get(key: string): Promise<string | null>;
+  quit(): Promise<string>;
 }
 
 export class RedisNonceStore implements NonceStore {
-    private readonly redis: RedisLike;
-    private readonly prefix: string;
+  private readonly redis: RedisLike;
+  private readonly prefix: string;
 
-    constructor(redis: RedisLike, prefix = "meap:nonce:") {
-        this.redis = redis;
-        this.prefix = prefix;
-    }
+  constructor(redis: RedisLike, prefix = "meap:nonce:") {
+    this.redis = redis;
+    this.prefix = prefix;
+  }
 
-    async markUsed(key: string, ttlMs: number): Promise<boolean> {
-        const ttlSeconds = Math.max(1, Math.ceil(ttlMs / 1000));
-        // SET key value EX ttl NX — only sets if key does NOT exist
-        const result = await this.redis.set(
-            `${this.prefix}${key}`,
-            "1",
-            "EX",
-            ttlSeconds,
-            "NX",
-        );
-        // result is "OK" if set (fresh), null if already exists (replay)
-        return result === "OK";
-    }
+  async markUsed(key: string, ttlMs: number): Promise<boolean> {
+    const ttlSeconds = Math.max(1, Math.ceil(ttlMs / 1000));
+    // SET key value EX ttl NX — only sets if key does NOT exist
+    const result = await this.redis.set(
+      `${this.prefix}${key}`,
+      "1",
+      "EX",
+      ttlSeconds,
+      "NX",
+    );
+    // result is "OK" if set (fresh), null if already exists (replay)
+    return result === "OK";
+  }
 
-    async has(key: string): Promise<boolean> {
-        const result = await this.redis.get(`${this.prefix}${key}`);
-        return result !== null;
-    }
+  async has(key: string): Promise<boolean> {
+    const result = await this.redis.get(`${this.prefix}${key}`);
+    return result !== null;
+  }
 
-    stop(): void {
-        // Redis connection lifecycle managed externally
-    }
+  stop(): void {
+    // Redis connection lifecycle managed externally
+  }
 }

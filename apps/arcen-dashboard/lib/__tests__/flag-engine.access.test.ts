@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { resolveCompany } from "..\/flag-engine";
 import { db } from "@/lib/db";
-import { getContractAddresses } from "@arcenpay/sdk";
+import { getContractAddresses } from "@arcenpay/internal-core";
 import { createPublicClient } from "viem";
 
 const mocks = vi.hoisted(() => ({
@@ -43,7 +43,7 @@ vi.mock("@/lib/flag-cache", () => ({
   setCachedFlag: vi.fn(),
 }));
 
-vi.mock("@arcenpay/sdk", () => ({
+vi.mock("@arcenpay/internal-core", () => ({
   getContractAddresses: mocks.getContractAddresses,
   getChain: vi.fn((id: number) => ({
     id,

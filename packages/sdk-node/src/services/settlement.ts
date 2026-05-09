@@ -3,15 +3,15 @@
 //  Real viem integration for on-chain reads and event watching
 // ============================================================
 
-import { createPublicClient, http } from 'viem';
-import { sepolia, baseSepolia, base } from 'viem/chains';
-import type { BillingSettlement } from '@arcenpay/sdk';
+import { createPublicClient, http } from "viem";
+import { sepolia, baseSepolia, base } from "viem/chains";
+import type { BillingSettlement } from "../sdk";
 import {
   DEFAULT_CHAIN_ID,
   SessionVaultABI,
   ZKUsageVerifierABI,
   getContractAddresses,
-} from '@arcenpay/sdk';
+} from "../sdk";
 
 type SettlementCallback = (settlement: BillingSettlement) => void;
 
@@ -45,8 +45,10 @@ export class SettlementService {
     this.chainId = config.chainId ?? DEFAULT_CHAIN_ID;
 
     const contracts = getContractAddresses(this.chainId);
-    this.zkVerifierAddress = config.zkVerifierAddress || contracts.zkUsageVerifier;
-    this.sessionVaultAddress = config.sessionVaultAddress || contracts.sessionVault;
+    this.zkVerifierAddress =
+      config.zkVerifierAddress || contracts.zkUsageVerifier;
+    this.sessionVaultAddress =
+      config.sessionVaultAddress || contracts.sessionVault;
 
     const chain = CHAIN_MAP[this.chainId] || baseSepolia;
     this.publicClient = createPublicClient({
@@ -63,12 +65,12 @@ export class SettlementService {
       const balance = await this.publicClient.readContract({
         address: this.sessionVaultAddress as `0x${string}`,
         abi: SessionVaultABI,
-        functionName: 'getAgentBalance',
+        functionName: "getAgentBalance",
         args: [agentAddress as `0x${string}`],
       });
       return balance as bigint;
     } catch (err) {
-      console.error('[SettlementService] Balance query failed:', err);
+      console.error("[SettlementService] Balance query failed:", err);
       return 0n;
     }
   }
@@ -81,12 +83,12 @@ export class SettlementService {
       const session = await this.publicClient.readContract({
         address: this.sessionVaultAddress as `0x${string}`,
         abi: SessionVaultABI,
-        functionName: 'getSession',
+        functionName: "getSession",
         args: [sessionId as `0x${string}`],
       });
       return session;
     } catch (err) {
-      console.error('[SettlementService] Session query failed:', err);
+      console.error("[SettlementService] Session query failed:", err);
       return null;
     }
   }
@@ -94,7 +96,10 @@ export class SettlementService {
   /**
    * Subscribes to on-chain BillingSettled events
    */
-  watchSettlements(callback: SettlementCallback, intervalMs = 10000): () => void {
+  watchSettlements(
+    callback: SettlementCallback,
+    intervalMs = 10000,
+  ): () => void {
     this.watchers.push(callback);
 
     if (!this.pollInterval) {
@@ -136,15 +141,15 @@ export class SettlementService {
       const logs = await this.publicClient.getLogs({
         address: this.zkVerifierAddress as `0x${string}`,
         event: {
-          type: 'event',
-          name: 'BillingSettled',
+          type: "event",
+          name: "BillingSettled",
           inputs: [
-            { name: 'sessionId', type: 'bytes32', indexed: true },
-            { name: 'agentAddress', type: 'bytes32', indexed: true },
-            { name: 'callCount', type: 'uint256', indexed: false },
-            { name: 'settlementAmount', type: 'uint256', indexed: false },
-            { name: 'windowStart', type: 'uint64', indexed: false },
-            { name: 'windowEnd', type: 'uint64', indexed: false },
+            { name: "sessionId", type: "bytes32", indexed: true },
+            { name: "agentAddress", type: "bytes32", indexed: true },
+            { name: "callCount", type: "uint256", indexed: false },
+            { name: "settlementAmount", type: "uint256", indexed: false },
+            { name: "windowStart", type: "uint64", indexed: false },
+            { name: "windowEnd", type: "uint64", indexed: false },
           ],
         },
         fromBlock: this.lastBlock + 1n,
@@ -167,7 +172,7 @@ export class SettlementService {
 
       this.lastBlock = currentBlock;
     } catch (err) {
-      console.error('[SettlementService] Polling error:', err);
+      console.error("[SettlementService] Polling error:", err);
     }
   }
 

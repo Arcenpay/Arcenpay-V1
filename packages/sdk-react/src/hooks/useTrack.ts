@@ -1,7 +1,6 @@
 import { useCallback } from "react";
-import type { ArcenCompanyKeys, ArcenUserKeys } from "@arcenpay/sdk";
+import type { ArcenCompanyKeys, ArcenUserKeys } from "../sdk";
 import { useArcenPay } from "../providers/ArcenPayProvider";
-import { resolveDashboardBaseUrl } from "../lib/api";
 
 export interface TrackEventInput {
   name: string;
@@ -17,15 +16,18 @@ export interface TrackEventInput {
  * const { track } = useTrack();
  * track("page_view", { page: "/dashboard" });
  */
-export function useTrack(): { track: (name: string, traits?: Record<string, unknown>) => Promise<void> } {
+export function useTrack(): {
+  track: (name: string, traits?: Record<string, unknown>) => Promise<void>;
+} {
   const arcen = useArcenPay();
-  const { session } = arcen;
-  const baseUrl = resolveDashboardBaseUrl();
+  const { session, baseUrl } = arcen;
 
   const track = useCallback(
     async (name: string, traits?: Record<string, unknown>) => {
       if (!session.token) {
-        console.warn("[useTrack] Cannot track: no session. Call arcen.identify() first.");
+        console.warn(
+          "[useTrack] Cannot track: no session. Call arcen.identify() first.",
+        );
         return;
       }
 
@@ -43,7 +45,9 @@ export function useTrack(): { track: (name: string, traits?: Record<string, unkn
           }),
         });
         if (!res.ok) {
-          const err = (await res.json().catch(() => ({}))) as { error?: string };
+          const err = (await res.json().catch(() => ({}))) as {
+            error?: string;
+          };
           console.warn(`[useTrack] Failed:`, err.error);
         }
       } catch (err) {

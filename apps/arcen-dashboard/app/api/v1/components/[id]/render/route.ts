@@ -13,7 +13,7 @@ import {
   getContractAddresses,
   PlanFactoryABI,
   SubscriptionRegistryABI,
-} from "@arcenpay/sdk";
+} from "@arcenpay/internal-core";
 import { db } from "@/lib/db";
 import { resolveEntitlementResults } from "@/lib/entitlements";
 import { getRpcUrl } from "@/lib/config";
@@ -50,6 +50,24 @@ function normalizeElementType(type: string): string {
 function asRecord(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
   return value as Record<string, unknown>;
+}
+
+function normalizeBillingPeriod(
+  value: unknown,
+): "monthly" | "annual" | null {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "annual" || normalized === "yearly") return "annual";
+  if (normalized === "monthly" || normalized === "month") return "monthly";
+  return null;
+}
+
+function deriveBillingPeriodFromInterval(
+  billingInterval: unknown,
+): "monthly" | "annual" {
+  return typeof billingInterval === "number" && billingInterval >= 31_536_000
+    ? "annual"
+    : "monthly";
 }
 
 import { corsHeaders } from "@/lib/cors";
@@ -134,6 +152,7 @@ export async function GET(
   let liveOnChainPlanId: string | null = null;
   let liveOnChainTokenId: string | null = null;
   let liveCurrentPeriodEnd: string | null = null;
+  let activeBillingPeriod: "monthly" | "annual" | null = null;
 
   if (companyId) {
     const [company, user] = await Promise.all([
@@ -152,6 +171,7 @@ export async function GET(
               catalogPlanId: true,
               walletAddress: true,
               currentPeriodEnd: true,
+              metadata: true,
             },
           },
         },
@@ -220,6 +240,13 @@ export async function GET(
           },
         })) as Record<string, unknown> | null;
       }
+
+      activeBillingPeriod =
+        normalizeBillingPeriod(
+          asRecord(company.subscriptionState?.metadata).billingPeriod,
+        ) ??
+        normalizeBillingPeriod(traits.billingPeriod) ??
+        deriveBillingPeriodFromInterval(activePlan?.billingInterval);
 
       const companyKeys = {
         internalId: company.id,
@@ -570,6 +597,9 @@ export async function GET(
     }
   }
 
+  activeBillingPeriod =
+    activeBillingPeriod ?? deriveBillingPeriodFromInterval(activePlan?.billingInterval);
+
   const plansForResponse = hydratedPlans.map((plan) => ({
     id: plan.id,
     name: plan.name,
@@ -615,6 +645,7 @@ export async function GET(
         userId,
         providerWallet,
         nextBillingAt,
+        billingPeriod: activeBillingPeriod,
         paymentMethod,
         recentInvoices,
         subscriptionTransition,

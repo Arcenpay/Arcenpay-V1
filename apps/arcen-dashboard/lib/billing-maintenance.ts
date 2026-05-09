@@ -10,6 +10,24 @@ function asRecord(value: unknown): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
+function normalizeBillingPeriod(
+  value: unknown,
+): "monthly" | "annual" | null {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "annual" || normalized === "yearly") return "annual";
+  if (normalized === "monthly" || normalized === "month") return "monthly";
+  return null;
+}
+
+function deriveBillingPeriodFromInterval(
+  billingInterval: unknown,
+): "monthly" | "annual" {
+  return typeof billingInterval === "number" && billingInterval >= 31_536_000
+    ? "annual"
+    : "monthly";
+}
+
 export async function applyScheduledSubscriptionTransitions(input: {
   teamId: string;
   limit?: number;
@@ -86,7 +104,7 @@ export async function applyScheduledSubscriptionTransitions(input: {
         status: "PUBLISHED",
         active: true,
       },
-      select: { id: true, onChainPlanId: true },
+      select: { id: true, onChainPlanId: true, billingInterval: true },
     });
 
     if (!targetPlan) {
@@ -100,6 +118,9 @@ export async function applyScheduledSubscriptionTransitions(input: {
 
     const nextTraits = { ...traits };
     delete nextTraits.subscriptionTransition;
+    nextTraits.billingPeriod =
+      normalizeBillingPeriod(transition.targetBillingPeriod) ??
+      deriveBillingPeriodFromInterval(targetPlan.billingInterval);
     nextTraits.subscriptionSyncMeta = {
       event:
         mode === "cancel_at_period_end"
@@ -137,6 +158,7 @@ export async function applyScheduledSubscriptionTransitions(input: {
           previousPlanId: state.company.activePlanId ?? null,
           targetPlanId,
           transitionMode: mode,
+          billingPeriod: nextTraits.billingPeriod,
         }),
       },
     });

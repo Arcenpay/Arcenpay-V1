@@ -16,7 +16,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import type { EntitlementResult } from "@arcenpay/sdk";
+import type { EntitlementResult } from "../sdk";
 import { resolveDashboardBaseUrl } from "../lib/api";
 import { useArcenPay } from "../providers/ArcenPayProvider";
 
@@ -55,12 +55,14 @@ const cache = new Map<
 export function useCompanyEntitlements(
   options: UseCompanyEntitlementsOptions = {},
 ): UseCompanyEntitlementsReturn {
-  const { session } = useArcenPay();
+  const { session, baseUrl: providerBaseUrl } = useArcenPay();
   const cacheTtlMs = options.cacheTtlMs ?? 30_000;
 
-  const baseUrl = resolveDashboardBaseUrl(options.baseUrl);
+  const baseUrl = resolveDashboardBaseUrl(options.baseUrl ?? providerBaseUrl);
 
-  const [entitlements, setEntitlements] = useState<Record<string, EntitlementResult>>({});
+  const [entitlements, setEntitlements] = useState<
+    Record<string, EntitlementResult>
+  >({});
   const [updatedAt, setUpdatedAt] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -105,12 +107,18 @@ export function useCompanyEntitlements(
 
         if (!res.ok) {
           const json = await res.json().catch(() => ({}));
-          throw new Error((json as { error?: string }).error ?? `HTTP ${res.status}`);
+          throw new Error(
+            (json as { error?: string }).error ?? `HTTP ${res.status}`,
+          );
         }
 
         // API returns array of EntitlementResult — convert to map keyed by `key`
-        const json = (await res.json()) as EntitlementResult[] | { entitlements: EntitlementResult[] };
-        const list: EntitlementResult[] = Array.isArray(json) ? json : (json.entitlements ?? []);
+        const json = (await res.json()) as
+          | EntitlementResult[]
+          | { entitlements: EntitlementResult[] };
+        const list: EntitlementResult[] = Array.isArray(json)
+          ? json
+          : (json.entitlements ?? []);
 
         const map: Record<string, EntitlementResult> = {};
         for (const item of list) {

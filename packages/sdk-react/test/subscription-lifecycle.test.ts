@@ -16,18 +16,6 @@ describe("subscription lifecycle helpers", () => {
     ).toBe("Plan change scheduled. Starter will take effect on May 31, 2026.");
   });
 
-  it("builds the immediate cancellation request payload", () => {
-    expect(
-      buildCancellationRequestBody({
-        intent: "immediate",
-        txHash: "0xabc",
-      }),
-    ).toEqual({
-      immediate: true,
-      cancellationTxHash: "0xabc",
-    });
-  });
-
   it("builds the scheduled cancellation request payload", () => {
     expect(
       buildCancellationRequestBody({

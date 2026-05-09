@@ -34,11 +34,12 @@ import {
   getContractAddresses,
   PlanFactoryABI,
   SubscriptionRegistryABI,
-} from "@arcenpay/sdk";
+} from "@arcenpay/internal-core";
 import { Prisma } from "@/src/generated/prisma/client";
 import { db } from "@/lib/db";
 import { getRpcUrl } from "@/lib/config";
 import { DEFAULT_CHAIN_ID } from "@/lib/default-chain";
+import { toPrismaJson } from "@/lib/prisma-json";
 import { requireAnyAuth, isAnyAuthError } from "@/lib/require-any-auth";
 import { resolveCompany, type CompanyKeys } from "@/lib/flag-engine";
 import { resolveEmbedAccessToken } from "@/lib/embed-access-token";
@@ -131,6 +132,37 @@ const erc20ReadAbi = [
 ] as const;
 
 import { corsHeaders } from "@/lib/cors";
+
+function asRecord(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return value as Record<string, unknown>;
+}
+
+async function clearScheduledCancellationTransition(
+  companyId: string,
+): Promise<boolean> {
+  const company = await db.arcenCompany.findUnique({
+    where: { id: companyId },
+    select: { traits: true },
+  });
+  const currentTraits = asRecord(company?.traits);
+  const transition = asRecord(currentTraits.subscriptionTransition);
+  if (transition.mode !== "cancel_at_period_end") {
+    return false;
+  }
+
+  const nextTraits = { ...currentTraits };
+  delete nextTraits.subscriptionTransition;
+
+  await db.arcenCompany.update({
+    where: { id: companyId },
+    data: {
+      traits: toPrismaJson(nextTraits),
+    },
+  });
+
+  return true;
+}
 
 function normalizePrivateKey(raw: string | undefined): `0x${string}` | null {
   if (!raw) return null;
@@ -789,6 +821,9 @@ export async function POST(req: NextRequest) {
     });
 
     if (existingOnChainPlanId === onChainPlanId.toString()) {
+      const resumedCancellation =
+        await clearScheduledCancellationTransition(company.id);
+
       return NextResponse.json(
         {
           data: {
@@ -798,6 +833,7 @@ export async function POST(req: NextRequest) {
             paymentAccount,
             alreadyActive: true,
             reconciled: true,
+            resumedCancellation,
           },
         },
         { status: 200, headers: corsHeaders() },

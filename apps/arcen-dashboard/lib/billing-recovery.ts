@@ -231,6 +231,24 @@ export async function finalizeSubscriptionActivation(
     },
   });
 
+  const company = await db.arcenCompany.findUnique({
+    where: { id: input.payload.companyId },
+    select: { traits: true },
+  });
+  const currentTraits = asRecord(company?.traits);
+  const currentTransition = asRecord(currentTraits.subscriptionTransition);
+  if (currentTransition.mode === "cancel_at_period_end") {
+    const nextTraits = { ...currentTraits };
+    delete nextTraits.subscriptionTransition;
+
+    await db.arcenCompany.update({
+      where: { id: input.payload.companyId },
+      data: {
+        traits: toPrismaJson(nextTraits),
+      },
+    });
+  }
+
   await recordSuccessfulPayment({
     idempotencyKey: `payment:subscription.activate:${input.payload.txHash}`,
     teamId: input.teamId,

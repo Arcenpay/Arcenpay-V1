@@ -11,7 +11,7 @@ import {
   getContractAddresses,
   PlanFactoryABI,
   SubscriptionRegistryABI,
-} from "@arcenpay/sdk";
+} from "@arcenpay/internal-core";
 import { getRpcUrl } from "@/lib/config";
 import { DEFAULT_CHAIN_ID } from "@/lib/default-chain";
 

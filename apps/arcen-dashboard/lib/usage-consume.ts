@@ -1,4 +1,4 @@
-import type { EntitlementResult } from "@arcenpay/sdk";
+import type { EntitlementResult } from "@arcenpay/internal-core";
 import { Prisma } from "@/src/generated/prisma/client";
 import { db } from "@/lib/db";
 import { invalidateUsageCache } from "@/lib/event-aggregator";

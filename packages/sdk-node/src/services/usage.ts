@@ -10,12 +10,12 @@ import { pathToFileURL } from "url";
 import { createPublicClient, createWalletClient, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { sepolia, baseSepolia, base } from "viem/chains";
-import type { PublicInputs, UsageProof, BillingSettlement } from "@arcenpay/sdk";
+import type { PublicInputs, UsageProof, BillingSettlement } from "../sdk";
 import {
   DEFAULT_CHAIN_ID,
   ZKUsageVerifierABI,
   getContractAddresses,
-} from "@arcenpay/sdk";
+} from "../sdk";
 
 interface UsageLogEntry {
   sessionId: string;
@@ -146,9 +146,7 @@ export class UsageService {
         config.proveScriptPath ||
         path.join(circuitsRootDir, "scripts", "prove.js"),
       artifactVersion:
-        config.artifactVersion ||
-        process.env.MEAP_PROOF_ARTIFACT_VERSION ||
-        "",
+        config.artifactVersion || process.env.MEAP_PROOF_ARTIFACT_VERSION || "",
       artifactManifestPath:
         config.artifactManifestPath ||
         process.env.MEAP_PROOF_ARTIFACT_MANIFEST_PATH ||
@@ -256,7 +254,9 @@ export class UsageService {
 
   aggregateUsage(sessionId: string, windowEnd: number): UsageAggregation {
     const logs = this.logs.get(sessionId) || [];
-    const windowLogs = logs.filter((entry) => entry.callData.timestamp <= windowEnd);
+    const windowLogs = logs.filter(
+      (entry) => entry.callData.timestamp <= windowEnd,
+    );
     const windowStart =
       windowLogs.length > 0
         ? Math.min(...windowLogs.map((entry) => entry.callData.timestamp))
@@ -322,7 +322,13 @@ export class UsageService {
       const prover = await this.loadCircuitProver();
       proofResult = await prover.prove(circuitInput);
       publicSignals = proofResult.publicSignals;
-      this.assertPublicSignals(publicSignals, aggregation, agentAddress, sessionIdBytes32, prover);
+      this.assertPublicSignals(
+        publicSignals,
+        aggregation,
+        agentAddress,
+        sessionIdBytes32,
+        prover,
+      );
     } catch (err) {
       if (this.config.proofMode === "strict") {
         throw this.wrapProofError(err);
@@ -495,7 +501,9 @@ export class UsageService {
       this.config.zkeyPath,
       this.config.verificationKeyPath,
     ];
-    const missing = required.filter((artifactPath) => !fs.existsSync(artifactPath));
+    const missing = required.filter(
+      (artifactPath) => !fs.existsSync(artifactPath),
+    );
     if (missing.length > 0) {
       throw new UsageProofError(
         UsageProofErrorCodes.ARTIFACTS_MISSING,
@@ -546,7 +554,9 @@ export class UsageService {
       const raw = fs.readFileSync(this.config.verificationKeyPath, "utf8");
       const vkey = JSON.parse(raw) as { protocol?: string; nPublic?: number };
       if (vkey.protocol !== "groth16") {
-        throw new Error(`Unsupported protocol: ${String(vkey.protocol || "unknown")}`);
+        throw new Error(
+          `Unsupported protocol: ${String(vkey.protocol || "unknown")}`,
+        );
       }
       if (typeof vkey.nPublic === "number" && vkey.nPublic !== 7) {
         throw new Error(`Expected 7 public inputs, received ${vkey.nPublic}`);

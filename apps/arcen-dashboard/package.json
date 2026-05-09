@@ -3,6 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "prebuild": "npm run build --workspace=@arcenpay/internal-core",
+    "pretypecheck": "npm run build --workspace=@arcenpay/internal-core",
     "build": "prisma generate && next build --webpack",
     "dev": "prisma generate && next dev",
     "lint": "prisma generate && next typegen && tsc --noEmit --incremental false",
@@ -24,7 +26,7 @@
   "dependencies": {
     "@apollo/client": "^3.14.0",
     "@hookform/resolvers": "^3.10.0",
-    "@arcenpay/sdk": "*",
+    "@arcenpay/internal-core": "*",
     "@arcenpay/react": "*",
     "@prisma/adapter-pg": "^7.4.2",
     "@prisma/client": "^7.4.2",

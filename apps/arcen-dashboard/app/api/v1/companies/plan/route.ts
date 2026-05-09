@@ -46,7 +46,7 @@ import {
   getChain,
   getContractAddresses,
   SubscriptionRegistryABI,
-} from "@arcenpay/sdk";
+} from "@arcenpay/internal-core";
 import { getRpcUrl } from "@/lib/config";
 import { DEFAULT_CHAIN_ID } from "@/lib/default-chain";
 
@@ -62,7 +62,9 @@ type SubscriptionTransition = {
     | "next_renewal_on_chain";
   targetPlanId: string | null;
   targetPlanName: string | null;
+  targetBillingPeriod: "monthly" | "annual";
   previousPlanId: string | null;
+  previousBillingPeriod: "monthly" | "annual";
   requestedAt: string;
   effectiveAt: string | null;
   source: "self_service";
@@ -71,6 +73,24 @@ type SubscriptionTransition = {
 function asRecord(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
   return value as Record<string, unknown>;
+}
+
+function readStoredBillingPeriod(
+  source: unknown,
+): "monthly" | "annual" | null {
+  const billingPeriod = asRecord(source).billingPeriod;
+  return normalizeBillingPeriod(
+    typeof billingPeriod === "string" ? billingPeriod : undefined,
+  );
+}
+
+function deriveBillingPeriodFromPlan(
+  plan: { billingInterval?: number | null } | null | undefined,
+): "monthly" | "annual" {
+  return typeof plan?.billingInterval === "number" &&
+    plan.billingInterval >= 31_536_000
+    ? "annual"
+    : "monthly";
 }
 
 function readConsumedPaymentTxHashes(
@@ -500,6 +520,7 @@ export async function POST(req: NextRequest) {
       name: true,
       price: true,
       annualPrice: true,
+      billingInterval: true,
       acceptedToken: true,
       onChainPlanId: true,
       metadata: true,
@@ -526,6 +547,7 @@ export async function POST(req: NextRequest) {
           currentPeriodStart: true,
           currentPeriodEnd: true,
           onChainTokenId: true,
+          metadata: true,
         },
       },
     },
@@ -584,6 +606,7 @@ export async function POST(req: NextRequest) {
             name: true,
             price: true,
             annualPrice: true,
+            billingInterval: true,
             onChainPlanId: true,
           },
         })
@@ -600,7 +623,16 @@ export async function POST(req: NextRequest) {
   ]);
 
   const previousPlanId = company.activePlanId;
-  if (previousPlanId === plan.id) {
+  const currentBillingPeriod =
+    readStoredBillingPeriod(company.subscriptionState?.metadata) ??
+    readStoredBillingPeriod(company.traits) ??
+    deriveBillingPeriodFromPlan(currentPlan);
+  const normalizedBillingPeriod =
+    normalizeBillingPeriod(billingPeriod) ?? currentBillingPeriod;
+  if (
+    previousPlanId === plan.id &&
+    currentBillingPeriod === normalizedBillingPeriod
+  ) {
     return NextResponse.json(
       {
         data: {
@@ -614,20 +646,21 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const currentPrice = Number(currentPlan?.price ?? 0);
-  const targetPrice = Number(plan.price);
-  const isDowngrade = !!currentPlan && targetPrice < currentPrice;
-  const normalizedBillingPeriod = normalizeBillingPeriod(billingPeriod);
   const shouldScheduleDowngrade =
-    isDowngrade &&
+    !!currentPlan &&
+    resolvePlanAmountMicros(plan, normalizedBillingPeriod) <
+      resolvePlanAmountMicros(currentPlan, currentBillingPeriod) &&
     (scheduleAtPeriodEnd ?? !(catalogConfig?.downgradeImmediately ?? false));
   const currentPlanAmountMicros = currentPlan
-    ? resolvePlanAmountMicros(currentPlan, normalizedBillingPeriod)
+    ? resolvePlanAmountMicros(currentPlan, currentBillingPeriod)
     : 0;
   const targetPlanAmountMicros = resolvePlanAmountMicros(
     plan,
     normalizedBillingPeriod,
   );
+  const currentPrice = Number(currentPlanAmountMicros) / 1_000_000;
+  const targetPrice = Number(targetPlanAmountMicros) / 1_000_000;
+  const isDowngrade = !!currentPlan && targetPlanAmountMicros < currentPlanAmountMicros;
   const usesAuthoritativeOnChainPlanChange =
     Boolean(currentPlan?.onChainPlanId) || Boolean(plan.onChainPlanId);
 
@@ -1029,6 +1062,7 @@ export async function POST(req: NextRequest) {
 
             const nextTraits: Record<string, unknown> = { ...latestTraits };
             delete nextTraits.subscriptionTransition;
+            nextTraits.billingPeriod = normalizedBillingPeriod;
             nextTraits.billingVerifiedTxHashes = [
               ...latestConsumedPaymentTxHashes,
               normalizedAutopayConfigTxHash,
@@ -1064,6 +1098,8 @@ export async function POST(req: NextRequest) {
               metadata: {
                 source: "self_service",
                 mode: "immediate_prorated_upgrade",
+                billingPeriod: normalizedBillingPeriod,
+                previousBillingPeriod: currentBillingPeriod,
                 previousCatalogPlanId: previousPlanId ?? null,
                 previousOnChainPlanId: accessChange.previousOnChainPlanId,
                 proration: proration.response,
@@ -1091,6 +1127,8 @@ export async function POST(req: NextRequest) {
                 metadata: {
                   source: "self_service",
                   mode: "immediate_prorated_upgrade",
+                  billingPeriod: normalizedBillingPeriod,
+                  previousBillingPeriod: currentBillingPeriod,
                   previousPlanId: previousPlanId ?? null,
                   autopayConfigTxHash: normalizedAutopayConfigTxHash,
                   accessChangeTxHash,
@@ -1119,6 +1157,8 @@ export async function POST(req: NextRequest) {
                 metadata: {
                   source: "self_service",
                   mode: "immediate_prorated_upgrade",
+                  billingPeriod: normalizedBillingPeriod,
+                  previousBillingPeriod: currentBillingPeriod,
                   autopayConfigTxHash: normalizedAutopayConfigTxHash,
                   accessChangeTxHash,
                   proration: proration.response,
@@ -1142,6 +1182,8 @@ export async function POST(req: NextRequest) {
                 postedAt: effectiveAt,
                 metadata: {
                   source: "self_service",
+                  billingPeriod: normalizedBillingPeriod,
+                  previousBillingPeriod: currentBillingPeriod,
                   autopayConfigTxHash: normalizedAutopayConfigTxHash,
                   accessChangeTxHash,
                   paymentTxHash: normalizedPaymentTxHash,
@@ -1222,7 +1264,9 @@ export async function POST(req: NextRequest) {
       mode: "next_renewal_on_chain",
       targetPlanId: plan.id,
       targetPlanName: plan.name,
+      targetBillingPeriod: normalizedBillingPeriod,
       previousPlanId: previousPlanId ?? null,
+      previousBillingPeriod: currentBillingPeriod,
       requestedAt: new Date().toISOString(),
       effectiveAt: verification.currentPeriodEnd,
       source: "self_service",
@@ -1235,6 +1279,9 @@ export async function POST(req: NextRequest) {
 
     const nextTraits: Record<string, unknown> = {
       ...currentTraits,
+      billingPeriod: applyAccessPlanImmediately
+        ? normalizedBillingPeriod
+        : currentBillingPeriod,
       billingVerifiedTxHashes: [
         ...consumedPaymentTxHashes,
         normalizedAutopayConfigTxHash,
@@ -1270,6 +1317,11 @@ export async function POST(req: NextRequest) {
       lastSourceTxHash: normalizedAutopayConfigTxHash,
       metadata: {
         source: "self_service",
+        billingPeriod: applyAccessPlanImmediately
+          ? normalizedBillingPeriod
+          : currentBillingPeriod,
+        pendingBillingPeriod: normalizedBillingPeriod,
+        previousBillingPeriod: currentBillingPeriod,
         accessPlanAppliedImmediately: applyAccessPlanImmediately,
         pendingCatalogPlanId: plan.id,
         pendingOnChainPlanId: verification.onChainPlanId,
@@ -1379,7 +1431,9 @@ export async function POST(req: NextRequest) {
       mode: "period_end_downgrade",
       targetPlanId: plan.id,
       targetPlanName: plan.name,
+      targetBillingPeriod: normalizedBillingPeriod,
       previousPlanId: previousPlanId ?? null,
+      previousBillingPeriod: currentBillingPeriod,
       requestedAt: new Date().toISOString(),
       effectiveAt: null,
       source: "self_service",
@@ -1390,6 +1444,7 @@ export async function POST(req: NextRequest) {
       data: {
         traits: toPrismaJson({
           ...currentTraits,
+          billingPeriod: currentBillingPeriod,
           subscriptionTransition: transition,
         }),
       },
@@ -1424,6 +1479,7 @@ export async function POST(req: NextRequest) {
 
   const nextTraits = { ...currentTraits };
   delete nextTraits.subscriptionTransition;
+  nextTraits.billingPeriod = normalizedBillingPeriod;
   if (txHash) {
     const normalizedAppliedTxHash = normalizeTxHash(txHash);
     if (normalizedAppliedTxHash) {

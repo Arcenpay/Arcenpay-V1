@@ -13,16 +13,12 @@ import { WagmiProvider, createConfig, http } from "wagmi";
 import { sepolia, baseSepolia, base } from "wagmi/chains";
 import { injected, walletConnect } from "wagmi/connectors";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import type {
-  ContractAddresses,
-  NetworkConfig,
-  PlanTier,
-} from "@arcenpay/sdk";
+import type { ContractAddresses, NetworkConfig, PlanTier } from "../sdk";
 import {
   getChainEnvironment,
   DEFAULT_CHAIN_ID,
   validateChainEnvironment,
-} from "@arcenpay/sdk";
+} from "../sdk";
 
 // ============================================================
 //  ArcenPayProvider — Simplified Root Provider
@@ -32,6 +28,7 @@ import {
 export interface ArcenPayContextValue {
   session: ArcenSessionValue;
   identify: ArcenSessionValue["identify"];
+  baseUrl: string;
   config: ArcenPayConfig;
   contracts: ContractAddresses;
   network: NetworkConfig;
@@ -146,7 +143,7 @@ export interface ArcenPayProviderProps {
   componentId?: string;
   /** @deprecated Use env vars or defaults. Auto-detected from NEXT_PUBLIC_CHAIN_ID, defaults to Base Sepolia. */
   chainId?: number;
-  /** @deprecated Auto-detected. Set NEXT_PUBLIC_ARCENPAY_BASE_URL only for local development. */
+  /** @deprecated Auto-detected. Only pass for local or staging overrides. */
   baseUrl?: string;
   /** @deprecated Auto-detected. */
   walletConnectProjectId?: string;
@@ -170,9 +167,10 @@ export function ArcenPayProvider(props: ArcenPayProviderProps) {
   const chainId = chainIdProp ?? getChainId();
   const baseUrl = baseUrlProp ?? resolveDashboardBaseUrl();
   const wcProjectId = wcProp ?? getWalletConnectProjectId();
-  const componentId = cidProp ??
+  const componentId =
+    cidProp ??
     (typeof process !== "undefined"
-      ? process.env.NEXT_PUBLIC_ARCENPAY_COMPONENT_ID ?? ""
+      ? (process.env.NEXT_PUBLIC_ARCENPAY_COMPONENT_ID ?? "")
       : "");
 
   // ── Wagmi config ──────────────────────────────────────────────────────
@@ -257,7 +255,9 @@ export function ArcenPayProvider(props: ArcenPayProviderProps) {
         });
 
         if (!res.ok) {
-          const err = (await res.json().catch(() => ({}))) as { error?: string };
+          const err = (await res.json().catch(() => ({}))) as {
+            error?: string;
+          };
           throw new Error(err.error ?? `HTTP ${res.status}`);
         }
 
@@ -276,7 +276,9 @@ export function ArcenPayProvider(props: ArcenPayProviderProps) {
         });
 
         if (!tokenRes.ok) {
-          const err = (await tokenRes.json().catch(() => ({}))) as { error?: string };
+          const err = (await tokenRes.json().catch(() => ({}))) as {
+            error?: string;
+          };
           throw new Error(err.error ?? `Failed to create session token`);
         }
 
@@ -313,7 +315,10 @@ export function ArcenPayProvider(props: ArcenPayProviderProps) {
 
   // ── Protocol context ───────────────────────────────────────────────────
   const contextValue = useMemo<ArcenPayContextValue>(() => {
-    if (typeof process !== "undefined" && process.env.NODE_ENV === "production") {
+    if (
+      typeof process !== "undefined" &&
+      process.env.NODE_ENV === "production"
+    ) {
       validateChainEnvironment(chainId, {
         production: true,
         requiredServices: ["rpcUrl"],
@@ -342,8 +347,7 @@ export function ArcenPayProvider(props: ArcenPayProviderProps) {
         providerUrl:
           userConfig?.tablelandConfig?.providerUrl ??
           manifest.services.facilitatorUrl,
-        featureFlagsEndpoint:
-          userConfig?.tablelandConfig?.featureFlagsEndpoint,
+        featureFlagsEndpoint: userConfig?.tablelandConfig?.featureFlagsEndpoint,
       },
       tierFeatureFallback: userConfig?.tierFeatureFallback,
     };
@@ -351,13 +355,14 @@ export function ArcenPayProvider(props: ArcenPayProviderProps) {
     return {
       session,
       identify: session.identify,
+      baseUrl,
       config,
       contracts,
       network,
       isTestnet: manifest.isTestnet,
       componentId,
     };
-  }, [chainId, session, componentId, userConfig]);
+  }, [baseUrl, chainId, session, componentId, userConfig]);
 
   return (
     <WagmiProvider config={wagmiConfig}>
@@ -380,7 +385,9 @@ export function ArcenPayProvider(props: ArcenPayProviderProps) {
  * const { session, identify } = useArcenPay();
  * await identify({ company: { id: "company_1" } });
  */
-export function useArcenPay(): ArcenPayContextValue & { identify: ArcenSessionValue["identify"] } {
+export function useArcenPay(): ArcenPayContextValue & {
+  identify: ArcenSessionValue["identify"];
+} {
   const context = useContext(ArcenPayContext);
   if (!context) {
     throw new Error("useArcenPay() must be used within an <ArcenPayProvider>");

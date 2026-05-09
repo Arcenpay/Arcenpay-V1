@@ -12,7 +12,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createPublicClient, http, type Address } from "viem";
-import { getContractAddresses } from "@arcenpay/sdk";
+import { getContractAddresses } from "@arcenpay/internal-core";
 import { db } from "@/lib/db";
 import { requirePermission, isErrorResponse } from "@/lib/api-auth";
 import { writeAuditEvent } from "@/lib/audit";

@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import type { ArcenCompanyKeys, ArcenUserKeys } from "@arcenpay/sdk";
+import type { ArcenCompanyKeys, ArcenUserKeys } from "../sdk";
 import { useArcenPay } from "../providers/ArcenPayProvider";
-import { resolveDashboardBaseUrl } from "../lib/api";
 
 // ─── Module-level cache ──────────────────────────────────────────────────────
 
@@ -35,13 +34,11 @@ export function useFlag(
   userKeys?: ArcenUserKeys,
 ): boolean {
   const arcen = useArcenPay();
-  const { session } = arcen;
+  const { session, baseUrl } = arcen;
 
   const company = companyKeys ?? session.company ?? undefined;
   const user = userKeys ?? session.user ?? undefined;
   const token = session.token;
-  const baseUrl = resolveDashboardBaseUrl();
-
   const cacheKey = `${featureKey}:${JSON.stringify(company ?? {})}:${JSON.stringify(user ?? {})}`;
 
   const [enabled, setEnabled] = useState<boolean>(() => {
@@ -116,13 +113,11 @@ export function useFlags(
   userKeys?: ArcenUserKeys,
 ): Record<string, boolean> {
   const arcen = useArcenPay();
-  const { session } = arcen;
+  const { session, baseUrl } = arcen;
 
   const company = companyKeys ?? session.company ?? undefined;
   const user = userKeys ?? session.user ?? undefined;
   const token = session.token;
-  const baseUrl = resolveDashboardBaseUrl();
-
   const [flags, setFlags] = useState<Record<string, boolean>>({});
   const controllerRef = useRef<AbortController | null>(null);
 

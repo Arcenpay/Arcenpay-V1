@@ -5,14 +5,29 @@ import { db } from "@/lib/db";
 import { resolveEmbedAccessToken } from "@/lib/embed-access-token";
 import { resolvePublishedFreePlan } from "@/lib/catalog-billing";
 import { upsertSubscriptionLedgerState } from "@/lib/billing-ledger";
-import {
-  verifyAutopayCancellationControl,
-  verifySubscriptionCancellation,
-} from "@/lib/onchain-payment-verification";
+import { verifyAutopayCancellationControl } from "@/lib/onchain-payment-verification";
 
-vi.mock("@/lib/launch-flags", () => ({
-  SELF_SERVE_CANCELLATION_ENABLED: true,
+const viemMocks = vi.hoisted(() => ({
+  createPublicClient: vi.fn(),
+  http: vi.fn(() => ({})),
+  isAddress: vi.fn(() => true),
 }));
+
+vi.mock("viem", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("viem")>();
+  return {
+    ...actual,
+    ...viemMocks,
+  };
+});
+
+vi.mock("@/lib/launch-flags", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/launch-flags")>();
+  return {
+    ...actual,
+    SELF_SERVE_CANCELLATION_ENABLED: true,
+  };
+});
 
 vi.mock("@/lib/deliver-webhook", () => ({
   deliverWebhook: vi.fn(() => Promise.resolve()),
@@ -40,7 +55,6 @@ vi.mock("@/lib/onchain-payment-verification", () => ({
       : null,
   ),
   verifyAutopayCancellationControl: vi.fn(),
-  verifySubscriptionCancellation: vi.fn(),
 }));
 
 vi.mock("@/lib/db", () => ({
@@ -56,7 +70,6 @@ vi.mock("@/lib/db", () => ({
 const TEAM_ID = "team_1";
 const COMPANY_ID = "company_1";
 const CONTROL_TX = `0x${"d".repeat(64)}`;
-const CANCEL_TX = `0x${"e".repeat(64)}`;
 
 function makeRequest(body: Record<string, unknown>) {
   return new NextRequest("http://localhost/api/v1/companies/unsubscribe", {
@@ -108,12 +121,11 @@ function setupBaseMocks() {
     control: "PAUSED",
     controlledAt: "2026-04-25T00:00:00.000Z",
   });
-  (verifySubscriptionCancellation as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
-    ok: true,
-    txHash: CANCEL_TX,
-    tokenId: "42",
-    onChainPlanId: "1",
-    cancelledAt: "2026-04-25T00:00:00.000Z",
+  viemMocks.createPublicClient.mockReturnValue({
+    readContract: vi
+      .fn()
+      .mockResolvedValueOnce(true)
+      .mockResolvedValueOnce(true),
   });
 }
 
@@ -147,33 +159,66 @@ describe("POST /api/v1/companies/unsubscribe", () => {
         lastEvent: "subscription.cancel_scheduled",
       }),
     );
-    expect(verifySubscriptionCancellation).not.toHaveBeenCalled();
   });
 
-  it("requires explicit immediate cancellation before moving to the free plan immediately", async () => {
+  it("ignores the old immediate flag and still schedules period-end cancellation", async () => {
     const res = await POST(
       makeRequest({
         immediate: true,
-        cancellationTxHash: CANCEL_TX,
+        autopayControlTxHash: CONTROL_TX,
       }),
     );
     const json = await res.json();
 
     expect(res.status).toBe(200);
-    expect(json.data.mode).toBe("cancelled_on_chain");
+    expect(json.data.mode).toBe("cancel_at_period_end");
     expect(db.arcenCompany.update).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({ activePlanId: "plan_free" }),
+        data: expect.not.objectContaining({ activePlanId: "plan_free" }),
       }),
     );
     expect(upsertSubscriptionLedgerState).toHaveBeenCalledWith(
       expect.objectContaining({
-        status: "CANCELLED",
-        catalogPlanId: "plan_free",
-        cancelAtPeriodEnd: false,
-        lastEvent: "subscription.cancelled",
+        status: "ACTIVE",
+        catalogPlanId: "plan_paid",
+        cancelAtPeriodEnd: true,
+        lastEvent: "subscription.cancel_scheduled",
       }),
     );
-    expect(verifyAutopayCancellationControl).not.toHaveBeenCalled();
+  });
+
+  it("returns a pending scheduled cancellation when autopay is already shut down but confirmations are still settling", async () => {
+    (verifyAutopayCancellationControl as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: false,
+      status: 425,
+      error:
+        "Autopay cancellation-control transaction has 1 confirmation(s); 2 required before applying subscription changes.",
+    });
+    viemMocks.createPublicClient.mockReturnValueOnce({
+      readContract: vi
+        .fn()
+        .mockResolvedValueOnce(true)
+        .mockResolvedValueOnce(true),
+    });
+
+    const res = await POST(
+      makeRequest({
+        autopayControlTxHash: CONTROL_TX,
+      }),
+    );
+    const json = await res.json();
+
+    expect(res.status).toBe(202);
+    expect(json.data.mode).toBe("cancel_at_period_end");
+    expect(json.data.pendingVerification).toBe(true);
+    expect(upsertSubscriptionLedgerState).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: "ACTIVE",
+        cancelAtPeriodEnd: true,
+        metadata: expect.objectContaining({
+          pendingVerification: true,
+        }),
+      }),
+    );
   });
 });

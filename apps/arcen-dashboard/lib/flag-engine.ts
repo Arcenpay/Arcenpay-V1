@@ -14,7 +14,7 @@ import { db } from "@/lib/db";
 import { aggregateUsage } from "@/lib/event-aggregator";
 import { getCachedFlag, setCachedFlag } from "@/lib/flag-cache";
 import { createPublicClient, http } from "viem";
-import { getChain, getContractAddresses } from "@arcenpay/sdk";
+import { getChain, getContractAddresses } from "@arcenpay/internal-core";
 import { getRpcUrl } from "@/lib/config";
 import { DEFAULT_CHAIN_ID } from "@/lib/default-chain";
 

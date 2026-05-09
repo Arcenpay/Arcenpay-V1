@@ -111,8 +111,11 @@ NEXT_PUBLIC_ARCENPAY_PUBLISHABLE_KEY=pk_xxxxxxxxx
 NEXT_PUBLIC_ARCENPAY_COMPONENT_ID=cmp_xxxxxxxxx
 NEXT_PUBLIC_CHAIN_ID=84532
 NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=xxxxxxxxx
-NEXT_PUBLIC_ARCENPAY_BASE_URL=https://dashboard.arcenpay.xyz
 ```
+
+`NEXT_PUBLIC_ARCENPAY_BASE_URL` is optional. The SDK defaults to
+`http://localhost:3000` outside production and `https://app.arcenpay.com` in
+production.
 
 ## Boundary
 

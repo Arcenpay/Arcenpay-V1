@@ -13,7 +13,7 @@ import {
   verifyTypedData,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { PlanFactoryABI, getChain, getContractAddresses, TOKENS } from "@arcenpay/sdk";
+import { PlanFactoryABI, getChain, getContractAddresses, TOKENS } from "@arcenpay/internal-core";
 import { isAddress } from "viem";
 import { z } from "zod";
 
