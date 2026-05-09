@@ -3,8 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { useAccount } from "wagmi";
 import { ARCENPAY_APP_URL } from "@arcenpay/react";
-import { useWallet } from "./useWallet";
 import WalletChip from "./wallet-chip";
 import styles from "./layout.module.css";
 
@@ -15,7 +16,7 @@ export default function DashboardLayout({
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const pathname = usePathname();
-  const { isConnected, connecting, connect } = useWallet();
+  const { isConnected } = useAccount();
   const dashboardUrl = ARCENPAY_APP_URL;
 
   const isActive = (href: string) =>
@@ -97,32 +98,7 @@ export default function DashboardLayout({
       </aside>
 
       <main className={styles.main}>
-        {connecting ? (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              minHeight: "60vh",
-              flexDirection: "column",
-              gap: 16,
-              color: "var(--text-muted, #9ca3af)",
-            }}
-          >
-            <div
-              style={{
-                width: 36,
-                height: 36,
-                border: "3px solid var(--surface-secondary, #e5e7eb)",
-                borderTopColor: "var(--accent, #6366f1)",
-                borderRadius: "50%",
-                animation: "spin 0.8s linear infinite",
-              }}
-            />
-            <span>Connecting wallet…</span>
-            <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
-          </div>
-        ) : !isConnected ? (
+        {!isConnected ? (
           <div
             style={{
               display: "flex",
@@ -163,21 +139,25 @@ export default function DashboardLayout({
               Connect your wallet to access the ScanBot dashboard, manage your
               subscription, and track usage.
             </p>
-            <button
-              onClick={connect}
-              style={{
-                padding: "12px 28px",
-                background: "var(--accent, #6366f1)",
-                color: "#fff",
-                border: "none",
-                borderRadius: 10,
-                fontSize: 15,
-                fontWeight: 600,
-                cursor: "pointer",
-              }}
-            >
-              Connect Wallet
-            </button>
+            <ConnectButton.Custom>
+              {({ openConnectModal }) => (
+                <button
+                  onClick={openConnectModal}
+                  style={{
+                    padding: "12px 28px",
+                    background: "var(--accent, #6366f1)",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: 10,
+                    fontSize: 15,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                >
+                  Connect Wallet
+                </button>
+              )}
+            </ConnectButton.Custom>
           </div>
         ) : (
           children

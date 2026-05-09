@@ -1401,13 +1401,11 @@ type WalletKind = "metamask" | "coinbase";
 
 function openCoinbaseWalletDeepLink() {
   if (typeof window === "undefined") return;
-  const redirectUrl = encodeURIComponent(window.location.href);
-  const link = `https://go.cb-w.com/dapp?cb_url=${redirectUrl}`;
-  const a = document.createElement("a");
-  a.href = link;
-  a.target = "_blank";
-  a.rel = "noopener,noreferrer";
-  a.click();
+  const link = `https://go.cb-w.com/dapp?cb_url=${encodeURIComponent(window.location.href)}`;
+  window.open(link, "_blank", "noopener,noreferrer");
+  setTimeout(() => {
+    window.location.href = link;
+  }, 500);
 }
 
 function isMobileDevice(): boolean {
@@ -1429,10 +1427,13 @@ function isInAppBrowser(): boolean {
 
 function openMetaMaskDeepLink() {
   if (typeof window === "undefined") return;
-  const dappUrl = encodeURIComponent(
-    `${window.location.protocol}//${window.location.host}${window.location.pathname}${window.location.search}`,
-  );
-  window.location.href = `https://metamask.app.link/dapp/${dappUrl}`;
+  const dappPath = `${window.location.host}${window.location.pathname}`;
+  const link = `https://metamask.app.link/dapp/${dappPath}`;
+  window.open(link, "_blank", "noopener,noreferrer");
+  const fullLink = `https://metamask.app.link/dapp/${dappPath}${window.location.search}`;
+  setTimeout(() => {
+    window.location.href = fullLink;
+  }, 500);
 }
 
 function detectCoinbaseWalletExtension(): WindowEthereum | null {
