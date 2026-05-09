@@ -11,9 +11,12 @@
   "dependencies": {
     "@arcenpay/node": "*",
     "@arcenpay/react": "*",
+    "@rainbow-me/rainbowkit": "^2.2.11",
     "next": "15.1.3",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "viem": "^2.48.11",
+    "wagmi": "^2.19.5"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

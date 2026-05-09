@@ -319,6 +319,19 @@ export function getAllRpcUrls(chainId: number): string[] {
   return fallback ? [fallback] : [];
 }
 
+// ── ZeroDev ────────────────────────────────────────────────────────────────────
+
+/**
+ * ZeroDev project ID for ERC-7579 smart account infrastructure.
+ * This is an ArcenPay-managed key. The SDK receives bundler/paymaster
+ * URLs via /api/v1/public/zerodev-config — integrators never touch this.
+ */
+export const ZERODEV_PROJECT_ID: string = (() => {
+  const val = process.env.ZERODEV_PROJECT_ID ??
+    process.env.NEXT_PUBLIC_ZERODEV_PROJECT_ID;
+  return requireInProd("ZERODEV_PROJECT_ID", val) || "";
+})();
+
 // ── WalletConnect ─────────────────────────────────────────────────────────────
 
 /**

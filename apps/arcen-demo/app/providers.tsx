@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { ArcenPayProvider } from "@arcenpay/react";
+import { RainbowKitProvider, darkTheme } from "@rainbow-me/rainbowkit";
 
 export function Providers({ children }: { children: ReactNode }) {
   const chainId =
@@ -14,7 +15,15 @@ export function Providers({ children }: { children: ReactNode }) {
       publishableKey={process.env.NEXT_PUBLIC_ARCENPAY_PUBLISHABLE_KEY}
       walletConnectProjectId={process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID}
     >
-      {children}
+      <RainbowKitProvider
+        theme={darkTheme({
+          accentColor: "#6366f1",
+          borderRadius: "small",
+        })}
+        modalSize="compact"
+      >
+        {children}
+      </RainbowKitProvider>
     </ArcenPayProvider>
   );
 }

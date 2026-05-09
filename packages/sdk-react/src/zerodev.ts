@@ -1,5 +1,7 @@
 export {
   deploySmartAccount,
+  getCounterfactualSmartAccountAddress,
+  isPrefundError,
   isRecoverableSmartAccountFundingError,
   revokeAutopayModule,
   sendSmartAccountTransaction,

@@ -36,12 +36,15 @@ import {
   ERC7579AutopayModuleABI,
   getBlockExplorerUrl,
   getChain,
+  getConfiguredRuntimeChainId,
   getContractAddresses,
   PlanFactoryABI,
   SubscriptionRegistryABI,
 } from "../sdk";
 import {
   deploySmartAccount,
+  getCounterfactualSmartAccountAddress,
+  isPrefundError,
   isRecoverableSmartAccountFundingError,
   sendSmartAccountTransaction,
   updateAutopayConfig,
@@ -816,6 +819,358 @@ function SecondaryButton({
   );
 }
 
+function WalletSelector({
+  tokens,
+  connecting,
+  onConnectMetaMask,
+  onConnectBase,
+}: {
+  tokens: Tokens;
+  connecting: boolean;
+  onConnectMetaMask: () => void;
+  onConnectBase: () => void;
+}) {
+  if (connecting) {
+    return (
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 10,
+        }}
+      >
+        <PrimaryButton tokens={tokens} fullWidth disabled>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 10,
+            }}
+          >
+            <span
+              style={{
+                display: "inline-block",
+                width: 14,
+                height: 14,
+                border: "2px solid #9ca3af",
+                borderTopColor: "transparent",
+                borderRadius: "50%",
+                animation: "arcenSpin 0.6s linear infinite",
+              }}
+            />
+            Connecting…
+          </div>
+        </PrimaryButton>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <button
+        onClick={onConnectMetaMask}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          width: "100%",
+          padding: "12px 16px",
+          background: "#fff",
+          border: "2px solid #e5e7eb",
+          borderRadius: 10,
+          cursor: "pointer",
+          transition: "border-color 0.15s, box-shadow 0.15s",
+          textAlign: "left",
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.borderColor = "#f5841f";
+          e.currentTarget.style.boxShadow = "0 0 0 2px rgba(245,132,31,0.15)";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.borderColor = "#e5e7eb";
+          e.currentTarget.style.boxShadow = "none";
+        }}
+      >
+        <div
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 10,
+            background: "#fff7ed",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0,
+          }}
+        >
+          <img
+            src="https://upload.wikimedia.org/wikipedia/commons/3/36/MetaMask_Fox.svg"
+            alt="MetaMask"
+            style={{ width: 28, height: 28 }}
+          />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div
+            style={{
+              fontWeight: 600,
+              fontSize: tokens.size - 1,
+              color: tokens.textColor,
+            }}
+          >
+            MetaMask
+          </div>
+          <div
+            style={{
+              fontSize: 11,
+              color: tokens.mutedColor,
+              marginTop: 2,
+            }}
+          >
+            Brave, Rabby, and any injected EVM wallet
+          </div>
+        </div>
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 16 16"
+          fill="none"
+          style={{ flexShrink: 0, opacity: 0.4 }}
+        >
+          <path
+            d="M6 4L10 8L6 12"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </button>
+
+      <button
+        onClick={onConnectBase}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          width: "100%",
+          padding: "12px 16px",
+          background: "#fff",
+          border: "2px solid #e5e7eb",
+          borderRadius: 10,
+          cursor: "pointer",
+          transition: "border-color 0.15s, box-shadow 0.15s",
+          textAlign: "left",
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.borderColor = "#0052ff";
+          e.currentTarget.style.boxShadow = "0 0 0 2px rgba(0,82,255,0.12)";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.borderColor = "#e5e7eb";
+          e.currentTarget.style.boxShadow = "none";
+        }}
+      >
+        <div
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 10,
+            background: "#eff6ff",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0,
+          }}
+        >
+          <img
+            src="https://raw.githubusercontent.com/base/brand-kit/refs/heads/main/logo/Logotype/Digital/Base_lockup_2color.svg"
+            alt="Base"
+            style={{ width: 32, height: 18 }}
+          />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div
+            style={{
+              fontWeight: 600,
+              fontSize: tokens.size - 1,
+              color: tokens.textColor,
+            }}
+          >
+            Base
+          </div>
+          <div
+            style={{
+              fontSize: 11,
+              color: tokens.mutedColor,
+              marginTop: 2,
+            }}
+          >
+            Coinbase Wallet & Base chain
+          </div>
+        </div>
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 16 16"
+          fill="none"
+          style={{ flexShrink: 0, opacity: 0.4 }}
+        >
+          <path
+            d="M6 4L10 8L6 12"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </button>
+    </div>
+  );
+}
+
+function NoWalletSelector({
+  tokens,
+}: {
+  tokens: Tokens;
+}) {
+  const cbWalletDeepLink =
+    typeof window !== "undefined"
+      ? "https://go.cb-w.com/dapp?cb_url=" + encodeURIComponent(window.location.href)
+      : "https://www.coinbase.com/wallet";
+
+  return (
+    <div
+      style={{
+        padding: "14px 16px",
+        background: "#fef9c3",
+        border: "1px solid #fde68a",
+        borderRadius: 10,
+      }}
+    >
+      <div
+        style={{
+          fontWeight: 600,
+          fontSize: tokens.size - 1,
+          color: "#92400e",
+          marginBottom: 8,
+        }}
+      >
+        No wallet found
+      </div>
+      <div
+        style={{
+          fontSize: tokens.size - 2,
+          color: "#78350f",
+          lineHeight: 1.6,
+          marginBottom: 10,
+        }}
+      >
+        Install one of these wallets to connect:
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <a
+          href="https://metamask.io/download/"
+          target="_blank"
+          rel="noreferrer"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "8px 10px",
+            background: "#fff",
+            border: "1px solid #fde68a",
+            borderRadius: 8,
+            textDecoration: "none",
+            cursor: "pointer",
+          }}
+        >
+          <img
+            src="https://upload.wikimedia.org/wikipedia/commons/3/36/MetaMask_Fox.svg"
+            alt="MetaMask"
+            style={{ width: 22, height: 22 }}
+          />
+          <span
+            style={{
+              fontSize: tokens.size - 2,
+              fontWeight: 600,
+              color: "#92400e",
+            }}
+          >
+            Install MetaMask
+          </span>
+        </a>
+        <a
+          href="https://chromewebstore.google.com/detail/coinbase-wallet-extension/hnfanknocfeofbddgcijnmhnfnkdnaad"
+          target="_blank"
+          rel="noreferrer"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "8px 10px",
+            background: "#fff",
+            border: "1px solid #fde68a",
+            borderRadius: 8,
+            textDecoration: "none",
+            cursor: "pointer",
+          }}
+        >
+          <img
+            src="https://raw.githubusercontent.com/base/brand-kit/refs/heads/main/logo/Logotype/Digital/Base_lockup_2color.svg"
+            alt="Base"
+            style={{ width: 26, height: 14 }}
+          />
+          <span
+            style={{
+              fontSize: tokens.size - 2,
+              fontWeight: 600,
+              color: "#92400e",
+            }}
+          >
+            Install Coinbase Wallet
+          </span>
+        </a>
+        <a
+          href={cbWalletDeepLink}
+          target="_blank"
+          rel="noreferrer"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "8px 10px",
+            background: "#fff",
+            border: "1px solid #fde68a",
+            borderRadius: 8,
+            textDecoration: "none",
+            cursor: "pointer",
+          }}
+        >
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+          >
+            <rect x="3" y="6" width="16" height="10" rx="2" stroke="#0052ff" strokeWidth="1.5" />
+            <rect x="7" y="2" width="8" height="5" rx="1.5" stroke="#0052ff" strokeWidth="1.5" />
+          </svg>
+          <span
+            style={{
+              fontSize: tokens.size - 2,
+              fontWeight: 600,
+              color: "#0052ff",
+            }}
+          >
+            Open Coinbase Wallet app
+          </span>
+        </a>
+      </div>
+    </div>
+  );
+}
+
 function MeteredBar({
   item,
   tokens,
@@ -1035,25 +1390,91 @@ function getPlanDisplayPrice(
   return billingPeriod === "annual" && annual > 0 ? annual : monthly;
 }
 
-function getWindowEthereum():
-  | {
-      request: (args: {
-        method: string;
-        params?: unknown[];
-      }) => Promise<unknown>;
+type WindowEthereum = {
+  request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
+  isMetaMask?: boolean;
+  isCoinbaseWallet?: boolean;
+  providers?: Array<WindowEthereum & { isMetaMask?: boolean; isCoinbaseWallet?: boolean }>;
+};
+
+type WalletKind = "metamask" | "coinbase";
+
+function openCoinbaseWalletDeepLink() {
+  if (typeof window === "undefined") return;
+  const link = `https://go.cb-w.com/dapp?cb_url=${encodeURIComponent(window.location.href)}`;
+  window.open(link, "_blank", "noopener,noreferrer");
+  setTimeout(() => {
+    window.location.href = link;
+  }, 500);
+}
+
+function isMobileDevice(): boolean {
+  if (typeof window === "undefined") return false;
+  return /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+}
+
+function isInAppBrowser(): boolean {
+  if (typeof window === "undefined") return true;
+  const ua = navigator.userAgent.toLowerCase();
+  return (
+    ua.includes("wv") ||
+    ua.includes("metamask") ||
+    ua.includes("trust") ||
+    ua.includes("rainbow") ||
+    ua.includes("coinbase")
+  );
+}
+
+function openMetaMaskDeepLink() {
+  if (typeof window === "undefined") return;
+  const dappPath = `${window.location.host}${window.location.pathname}`;
+  const link = `https://metamask.app.link/dapp/${dappPath}`;
+  window.open(link, "_blank", "noopener,noreferrer");
+  const fullLink = `https://metamask.app.link/dapp/${dappPath}${window.location.search}`;
+  setTimeout(() => {
+    window.location.href = fullLink;
+  }, 500);
+}
+
+function detectCoinbaseWalletExtension(): WindowEthereum | null {
+  if (typeof window === "undefined") return null;
+  const win = window as unknown as { coinbaseWalletExtension?: WindowEthereum };
+  return win.coinbaseWalletExtension ?? null;
+}
+
+function getProvider(wallet: WalletKind): WindowEthereum | null {
+  if (typeof window === "undefined") return null;
+  const win = window as unknown as { ethereum?: WindowEthereum };
+  const ethereum = win.ethereum;
+  if (!ethereum) return null;
+
+  if (ethereum.providers?.length) {
+    if (wallet === "coinbase") {
+      return ethereum.providers.find((p) => p.isCoinbaseWallet) ?? null;
     }
-  | undefined {
-  if (typeof window === "undefined") return undefined;
+    if (wallet === "metamask") {
+      return ethereum.providers.find((p) => p.isMetaMask) ?? null;
+    }
+  }
+
+  if (wallet === "coinbase" && ethereum.isCoinbaseWallet) return ethereum;
+  if (wallet === "metamask" && ethereum.isMetaMask) return ethereum;
+
+  if (wallet === "metamask") return ethereum;
+  return null;
+}
+
+function getCoinbaseProvider(): WindowEthereum | null {
+  return detectCoinbaseWalletExtension() ?? getProvider("coinbase");
+}
+
+function getWindowEthereum(): WindowEthereum | null {
+  if (typeof window === "undefined") return null;
   return (
     window as unknown as {
-      ethereum?: {
-        request: (args: {
-          method: string;
-          params?: unknown[];
-        }) => Promise<unknown>;
-      };
+      ethereum?: WindowEthereum;
     }
-  ).ethereum;
+  ).ethereum ?? null;
 }
 
 const WALLET_CONNECT_TIMEOUT_MS = 20_000;
@@ -1085,11 +1506,25 @@ function getWalletConnectionErrorMessage(error: unknown): string {
   return message;
 }
 
-async function requestWindowEthereumAccounts(): Promise<string[]> {
-  const eth = getWindowEthereum();
+async function requestWindowEthereumAccounts(
+  preferredWallet?: WalletKind,
+): Promise<string[]> {
+  let eth: WindowEthereum | null;
+  let installName: string;
+
+  if (preferredWallet === "coinbase") {
+    eth = getCoinbaseProvider();
+    installName = "Coinbase Wallet";
+  } else {
+    eth = preferredWallet
+      ? (getProvider(preferredWallet) ?? getWindowEthereum())
+      : getWindowEthereum();
+    installName = "a Web3 wallet like MetaMask";
+  }
+
   if (!eth) {
     throw new Error(
-      "No browser wallet found. Install a wallet like MetaMask to continue.",
+      `No ${installName} found. Please install ${installName} to continue.`,
     );
   }
 
@@ -4417,6 +4852,7 @@ function PaymentContent({
   onActivationComplete,
   onBack,
   containerWidth,
+  zeroDevConfig,
 }: {
   data: ComponentRenderData;
   selectedPlanId: string | null;
@@ -4436,6 +4872,7 @@ function PaymentContent({
   }) => Promise<void> | void;
   onBack: () => void;
   containerWidth: number;
+  zeroDevConfig?: { bundlerUrl: string; paymasterUrl: string; isReady: boolean } | null;
 }) {
   const selectedPlan = data.plans.find(
     (p: ComponentPlanSummary) => p.id === selectedPlanId,
@@ -4474,14 +4911,14 @@ function PaymentContent({
   const hasInvalidCustomerEmail =
     hasCustomerEmail && !isValidCustomerEmail(normalizedCustomerEmail);
   const paymentMethod = data.paymentMethod as ComponentPaymentMethod | null;
-  const chainId = paymentMethod?.chainId ?? null;
+  const chainId = paymentMethod?.chainId ?? getConfiguredRuntimeChainId();
   const serverSmartAccountAddress =
     typeof paymentMethod?.walletAddress === "string"
       ? paymentMethod.walletAddress
       : null;
   const smartAccountAddress =
     provisionedSmartAccountAddress ?? serverSmartAccountAddress;
-  const zeroDevProjectId = process.env.NEXT_PUBLIC_ZERODEV_PROJECT_ID ?? null;
+  const zeroDevProjectId = zeroDevConfig?.bundlerUrl ? undefined : (process.env.NEXT_PUBLIC_ZERODEV_PROJECT_ID ?? undefined);
   const selectedOnChainPlanId = selectedPlan?.onChainPlanId ?? null;
   const activeOnChainPlanId = activePlan?.onChainPlanId ?? null;
   const isCurrentPlanSelected = isCurrentBillingSelection({
@@ -4541,12 +4978,12 @@ function PaymentContent({
     }
   }, [serverSmartAccountAddress]);
 
-  async function connectWindowEthereum() {
+  async function connectWindowEthereum(walletKind?: WalletKind) {
     setTxError("");
     setTxStatus("idle");
     setConnecting(true);
     try {
-      const accounts = await requestWindowEthereumAccounts();
+      const accounts = await requestWindowEthereumAccounts(walletKind);
       setLocalAddress(accounts[0] ?? null);
     } catch (error) {
       setTxStatus("error");
@@ -4575,9 +5012,9 @@ function PaymentContent({
     );
 
     if (requiresSmartAccountExecution) {
-      if (!zeroDevProjectId || !effectiveSmartAccountAddress) {
+      if ((!zeroDevProjectId && !zeroDevConfig?.isReady) || !effectiveSmartAccountAddress) {
         throw new Error(
-          "Smart-account autopay setup requires NEXT_PUBLIC_ZERODEV_PROJECT_ID.",
+          "Smart-account autopay setup requires ZeroDev configuration.",
         );
       }
 
@@ -4585,6 +5022,8 @@ function PaymentContent({
 
       return sendSmartAccountTransaction({
         projectId: zeroDevProjectId,
+        bundlerUrl: zeroDevConfig?.bundlerUrl,
+        paymasterUrl: zeroDevConfig?.paymasterUrl,
         chainId,
         walletClient: resolvedWalletClient,
         smartAccountAddress: effectiveSmartAccountAddress as `0x${string}`,
@@ -4614,11 +5053,11 @@ function PaymentContent({
     if (
       !chainId ||
       !resolvedWalletClient ||
-      !zeroDevProjectId ||
+      (!zeroDevProjectId && !zeroDevConfig?.isReady) ||
       !finalAddress
     ) {
       throw new Error(
-        "A connected Base Sepolia wallet and NEXT_PUBLIC_ZERODEV_PROJECT_ID are required before activation.",
+        "A connected Base Sepolia wallet and ZeroDev config are required before activation.",
       );
     }
 
@@ -4627,6 +5066,8 @@ function PaymentContent({
     try {
       const result = await deploySmartAccount({
         projectId: zeroDevProjectId,
+        bundlerUrl: zeroDevConfig?.bundlerUrl,
+        paymasterUrl: zeroDevConfig?.paymasterUrl,
         chainId,
         walletClient: resolvedWalletClient,
       });
@@ -4634,14 +5075,17 @@ function PaymentContent({
       setProvisionedSmartAccountAddress(result.smartAccountAddress);
       return result.smartAccountAddress;
     } catch (error) {
-      if (isRecoverableSmartAccountFundingError(error) && finalAddress) {
-        console.warn(
-          "[ArcenEmbed] Smart-account sponsorship unavailable; falling back to direct wallet autopay setup.",
-          error,
+      const msg = error instanceof Error ? error.message : String(error);
+      if (isPrefundError(error)) {
+        throw new Error(
+          "Smart account needs gas to deploy. Your wallet must have ETH on Base Sepolia to cover the deployment prefund. Add ETH to your wallet and try again.",
         );
-        return finalAddress as `0x${string}`;
       }
-
+      if (isRecoverableSmartAccountFundingError(error)) {
+        throw new Error(
+          `Smart account deployment failed — gas or paymaster issue. Ensure your wallet has ETH. (${msg})`,
+        );
+      }
       throw error;
     }
   }
@@ -5119,10 +5563,9 @@ function PaymentContent({
       return;
     }
 
-    if (!resolvedWalletClient || !zeroDevProjectId) {
-      setTxStatus("error");
-      setTxError(
-        "A wallet client and NEXT_PUBLIC_ZERODEV_PROJECT_ID are required for authoritative on-chain plan changes.",
+    if (!resolvedWalletClient || (!zeroDevProjectId && !zeroDevConfig?.isReady)) {
+      throw new Error(
+        "A wallet client and ZeroDev config are required for authoritative on-chain plan changes.",
       );
       return;
     }
@@ -5153,6 +5596,8 @@ function PaymentContent({
 
       const { txHash: autopayTxHash } = await updateAutopayConfig({
         projectId: zeroDevProjectId,
+        bundlerUrl: zeroDevConfig?.bundlerUrl,
+        paymasterUrl: zeroDevConfig?.paymasterUrl,
         chainId,
         walletClient: resolvedWalletClient,
         smartAccountAddress: smartAccountAddress as `0x${string}`,
@@ -5224,7 +5669,7 @@ function PaymentContent({
     (isOnChainPlanChange || requiresHostedActivation) &&
     (!finalConnected || !finalAddress);
   const needsWalletClient =
-    isOnChainPlanChange && (!resolvedWalletClient || !zeroDevProjectId);
+    isOnChainPlanChange && (!resolvedWalletClient || (!zeroDevProjectId && !zeroDevConfig?.isReady));
   const hasWindowEth =
     typeof window !== "undefined" &&
     !!(window as unknown as { ethereum?: unknown }).ethereum;
@@ -5352,49 +5797,31 @@ function PaymentContent({
                     account before authorizing this on-chain{" "}
                     {isImmediateOnChainUpgrade ? "upgrade" : "plan change"}.
                   </div>
-                  {hasWindowEth ? (
-                    <PrimaryButton
+                  {(hasWindowEth || isMobileDevice()) ? (
+                    <WalletSelector
                       tokens={tokens}
-                      fullWidth
-                      disabled={connecting}
-                      onClick={connectWindowEthereum}
-                    >
-                      {connecting ? "Connecting…" : "Connect wallet"}
-                    </PrimaryButton>
-                  ) : (
-                    <div
-                      style={{
-                        padding: "12px 14px",
-                        background: "#fef9c3",
-                        border: "1px solid #fde68a",
-                        borderRadius: 8,
+                      connecting={connecting}
+                      onConnectMetaMask={() => {
+                        if (isMobileDevice() && !getWindowEthereum()) {
+                          openMetaMaskDeepLink();
+                          return;
+                        }
+                        connectWindowEthereum("metamask");
                       }}
-                    >
-                      <div
-                        style={{
-                          fontWeight: 600,
-                          fontSize: tokens.size - 1,
-                          color: "#92400e",
-                          marginBottom: 2,
-                        }}
-                      >
-                        No wallet found
-                      </div>
-                      <div
-                        style={{ fontSize: tokens.size - 2, color: "#78350f" }}
-                      >
-                        Install{" "}
-                        <a
-                          href="https://metamask.io"
-                          target="_blank"
-                          rel="noreferrer"
-                          style={{ color: "#d97706" }}
-                        >
-                          MetaMask
-                        </a>{" "}
-                        or use a Web3-enabled browser.
-                      </div>
-                    </div>
+                      onConnectBase={() => {
+                        if (isMobileDevice() && !getWindowEthereum()) {
+                          openCoinbaseWalletDeepLink();
+                          return;
+                        }
+                        if (!getCoinbaseProvider()) {
+                          openCoinbaseWalletDeepLink();
+                          return;
+                        }
+                        connectWindowEthereum("coinbase");
+                      }}
+                    />
+                  ) : (
+                    <NoWalletSelector tokens={tokens} />
                   )}
                   <div
                     style={{
@@ -5425,7 +5852,7 @@ function PaymentContent({
                   }}
                 >
                   This embed needs a wallet client and
-                  `NEXT_PUBLIC_ZERODEV_PROJECT_ID` to send smart-account plan
+                  ZeroDev config to send smart-account plan
                   change transactions.
                 </div>
               ) : (
@@ -5741,40 +6168,31 @@ function PaymentContent({
               </div>
 
               {needsWallet ? (
-                hasWindowEth ? (
-                  <PrimaryButton
+                (hasWindowEth || isMobileDevice()) ? (
+                  <WalletSelector
                     tokens={tokens}
-                    fullWidth
-                    disabled={connecting}
-                    onClick={connectWindowEthereum}
-                  >
-                    {connecting ? "Connecting…" : "Connect wallet"}
-                  </PrimaryButton>
-                ) : (
-                  <div
-                    style={{
-                      padding: "12px 14px",
-                      background: "#fef9c3",
-                      border: "1px solid #fde68a",
-                      borderRadius: 8,
+                    connecting={connecting}
+                    onConnectMetaMask={() => {
+                      if (isMobileDevice() && !getWindowEthereum()) {
+                        openMetaMaskDeepLink();
+                        return;
+                      }
+                      connectWindowEthereum("metamask");
                     }}
-                  >
-                    <div
-                      style={{
-                        fontWeight: 600,
-                        fontSize: tokens.size - 1,
-                        color: "#92400e",
-                        marginBottom: 2,
-                      }}
-                    >
-                      No wallet found
-                    </div>
-                    <div
-                      style={{ fontSize: tokens.size - 2, color: "#78350f" }}
-                    >
-                      Install a Web3 wallet like MetaMask to continue.
-                    </div>
-                  </div>
+                    onConnectBase={() => {
+                      if (isMobileDevice() && !getWindowEthereum()) {
+                        openCoinbaseWalletDeepLink();
+                        return;
+                      }
+                      if (!getCoinbaseProvider()) {
+                        openCoinbaseWalletDeepLink();
+                        return;
+                      }
+                      connectWindowEthereum("coinbase");
+                    }}
+                  />
+                ) : (
+                  <NoWalletSelector tokens={tokens} />
                 )
               ) : (
                 <div>
@@ -6196,6 +6614,7 @@ function UnsubscribeContent({
   onConfirm,
   onBack,
   containerWidth,
+  zeroDevConfig,
 }: {
   data: ComponentRenderData;
   processing: boolean;
@@ -6203,6 +6622,7 @@ function UnsubscribeContent({
   onConfirm: (confirmation: CancellationConfirmation) => void;
   onBack: () => void;
   containerWidth: number;
+  zeroDevConfig?: { bundlerUrl: string; paymasterUrl: string; isReady: boolean } | null;
 }) {
   const activePlan = data.activePlan;
   const scheduledCancellation = getScheduledCancellationTransition(data);
@@ -6220,12 +6640,12 @@ function UnsubscribeContent({
   >("idle");
   const [txError, setTxError] = useState("");
   const paymentMethod = data.paymentMethod as ComponentPaymentMethod | null;
-  const chainId = paymentMethod?.chainId ?? null;
+  const chainId = paymentMethod?.chainId ?? getConfiguredRuntimeChainId();
   const smartAccountAddress =
     typeof paymentMethod?.walletAddress === "string"
       ? paymentMethod.walletAddress
       : null;
-  const zeroDevProjectId = process.env.NEXT_PUBLIC_ZERODEV_PROJECT_ID ?? null;
+  const zeroDevProjectId = zeroDevConfig?.bundlerUrl ? undefined : (process.env.NEXT_PUBLIC_ZERODEV_PROJECT_ID ?? undefined);
   const finalAddress = address || localAddress;
   const finalConnected = isConnected || !!localAddress;
   const resolvedWalletClient =
@@ -6250,14 +6670,14 @@ function UnsubscribeContent({
   const needsWalletClient =
     requiresOnChainCancellation &&
     (!resolvedWalletClient ||
-      (requiresSmartAccountCancellationExecution && !zeroDevProjectId));
+      (requiresSmartAccountCancellationExecution && !zeroDevProjectId && !zeroDevConfig?.isReady));
 
-  async function connectWindowEthereum() {
+  async function connectWindowEthereum(walletKind?: WalletKind) {
     setTxError("");
     setTxStatus("idle");
     setConnecting(true);
     try {
-      const accounts = await requestWindowEthereumAccounts();
+      const accounts = await requestWindowEthereumAccounts(walletKind);
       setLocalAddress(accounts[0] ?? null);
     } catch (error) {
       setTxStatus("error");
@@ -6283,12 +6703,12 @@ function UnsubscribeContent({
 
     if (
       !resolvedWalletClient ||
-      (requiresSmartAccountCancellationExecution && !zeroDevProjectId)
+      (requiresSmartAccountCancellationExecution && !zeroDevProjectId && !zeroDevConfig?.isReady)
     ) {
       setTxStatus("error");
       setTxError(
         requiresSmartAccountCancellationExecution
-          ? "A wallet client and NEXT_PUBLIC_ZERODEV_PROJECT_ID are required for on-chain cancellation."
+          ? "A wallet client and ZeroDev config are required for on-chain cancellation."
           : "A wallet client is required for on-chain cancellation.",
       );
       return;
@@ -6336,14 +6756,16 @@ function UnsubscribeContent({
 
       let txHash: `0x${string}` | undefined;
       if (requiresSmartAccountCancellationExecution) {
-        if (!zeroDevProjectId) {
+        if ((!zeroDevProjectId && !zeroDevConfig?.isReady)) {
           throw new Error(
-            "Smart-account cancellation requires NEXT_PUBLIC_ZERODEV_PROJECT_ID.",
+            "Smart-account cancellation requires ZeroDev configuration.",
           );
         }
 
         const result = await sendSmartAccountTransaction({
           projectId: zeroDevProjectId,
+        bundlerUrl: zeroDevConfig?.bundlerUrl,
+        paymasterUrl: zeroDevConfig?.paymasterUrl,
           chainId,
           walletClient: resolvedWalletClient,
           smartAccountAddress: smartAccountAddress as `0x${string}`,
@@ -6503,14 +6925,28 @@ function UnsubscribeContent({
               Connect the wallet that controls your subscription smart account
               before stopping future autopay.
             </div>
-            <PrimaryButton
+            <WalletSelector
               tokens={tokens}
-              fullWidth
-              disabled={connecting}
-              onClick={connectWindowEthereum}
-            >
-              {connecting ? "Connecting…" : "Connect wallet"}
-            </PrimaryButton>
+              connecting={connecting}
+              onConnectMetaMask={() => {
+                if (isMobileDevice() && !getWindowEthereum()) {
+                  openMetaMaskDeepLink();
+                  return;
+                }
+                connectWindowEthereum("metamask");
+              }}
+              onConnectBase={() => {
+                if (isMobileDevice() && !getWindowEthereum()) {
+                  openCoinbaseWalletDeepLink();
+                  return;
+                }
+                if (!getCoinbaseProvider()) {
+                  openCoinbaseWalletDeepLink();
+                  return;
+                }
+                connectWindowEthereum("coinbase");
+              }}
+            />
           </div>
         )}
         {txStatus === "error" && txError && (
@@ -6640,7 +7076,7 @@ function UnsubscribeContent({
             }}
           >
             {requiresSmartAccountCancellationExecution
-              ? "This embed needs a wallet client and `NEXT_PUBLIC_ZERODEV_PROJECT_ID` to submit the smart-account autopay shutdown transaction."
+              ? "This embed needs a wallet client and ZeroDev config to submit the smart-account autopay shutdown transaction."
               : "This embed needs a wallet client to submit the autopay shutdown transaction."}
           </div>
         )}
@@ -6973,11 +7409,13 @@ export function ArcenEmbed({
   let providerToken: string | null = null;
   let providerCid: string | null = null;
   let providerBaseUrl: string | null = null;
+  let providerZeroDev: { bundlerUrl: string; paymasterUrl: string; isReady: boolean } | null = null;
   try {
     const arcen = useArcenPay();
     providerToken = arcen.session.token;
     providerCid = arcen.componentId;
     providerBaseUrl = arcen.baseUrl;
+    providerZeroDev = arcen.zeroDev;
   } catch {
     // Provider not available — fall through
   }
@@ -7405,7 +7843,7 @@ export function ArcenEmbed({
             />
           ))}
         </div>
-        <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }`}</style>
+        <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} } @keyframes arcenSpin { to { transform: rotate(360deg) } }`}</style>
       </div>
     );
   }
@@ -7660,6 +8098,7 @@ export function ArcenEmbed({
               tokens={tokens}
               customerEmail={customerEmail}
               containerWidth={effectiveContainerWidth}
+              zeroDevConfig={providerZeroDev}
               onCustomerEmailChange={setCustomerEmail}
               onConfirm={(txHash) => {
                 if (selectedPlanId) handleSwitchPlan(selectedPlanId, txHash);
@@ -7674,6 +8113,7 @@ export function ArcenEmbed({
               processing={processing}
               tokens={tokens}
               containerWidth={effectiveContainerWidth}
+              zeroDevConfig={providerZeroDev}
               onConfirm={(confirmation) => handleUnsubscribe(confirmation)}
               onBack={() => dispatch({ type: "GOTO_PORTAL" })}
             />
@@ -7755,6 +8195,7 @@ export function ArcenEmbed({
                   tokens={tokens}
                   customerEmail={customerEmail}
                   containerWidth={effectiveContainerWidth}
+                  zeroDevConfig={providerZeroDev}
                   onCustomerEmailChange={setCustomerEmail}
                   onConfirm={(txHash) => {
                     if (selectedPlanId)
@@ -7770,6 +8211,7 @@ export function ArcenEmbed({
                   processing={processing}
                   tokens={tokens}
                   containerWidth={effectiveContainerWidth}
+                  zeroDevConfig={providerZeroDev}
                   onConfirm={(confirmation) => handleUnsubscribe(confirmation)}
                   onBack={() => dispatch({ type: "GOTO_PORTAL" })}
                 />

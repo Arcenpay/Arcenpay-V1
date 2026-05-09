@@ -2,12 +2,16 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useWallet } from "./dashboard/useWallet";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { useAccount } from "wagmi";
 import styles from "./page.module.css";
 
 export default function LandingPage() {
   const [menuOpen, setMenuOpen] = useState(false);
-  const { isConnected, connect, shortAddr } = useWallet();
+  const { isConnected, address } = useAccount();
+  const shortAddr = address
+    ? `${address.slice(0, 6)}\u2026${address.slice(-4)}`
+    : null;
 
   return (
     <div className={styles.root}>
@@ -29,7 +33,11 @@ export default function LandingPage() {
             <>
               <Link href="/dashboard" className={styles.navLink} onClick={() => setMenuOpen(false)}>Dashboard</Link>
               <Link href="/dashboard/sdk" className={styles.navLink} onClick={() => setMenuOpen(false)}>SDK Showcase</Link>
-              <button className={styles.btnPrimary} onClick={connect}>Connect Wallet</button>
+              <ConnectButton.Custom>
+                {({ openConnectModal }) => (
+                  <button className={styles.btnPrimary} onClick={openConnectModal}>Connect Wallet</button>
+                )}
+              </ConnectButton.Custom>
             </>
           )}
         </div>
@@ -49,9 +57,13 @@ export default function LandingPage() {
               Open Dashboard →
             </Link>
           ) : (
-            <button onClick={connect} className={styles.btnPrimary} style={{ fontSize: 16, padding: "14px 32px", border: "none" }}>
-              Connect Wallet to Start
-            </button>
+            <ConnectButton.Custom>
+              {({ openConnectModal }) => (
+                <button onClick={openConnectModal} className={styles.btnPrimary} style={{ fontSize: 16, padding: "14px 32px", border: "none" }}>
+                  Connect Wallet to Start
+                </button>
+              )}
+            </ConnectButton.Custom>
           )}
           <Link href="/dashboard/sdk" className={styles.btnSecondary} style={{ fontSize: 16, padding: "14px 32px" }}>
             Explore SDK Showcase
