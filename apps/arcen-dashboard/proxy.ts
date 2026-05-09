@@ -6,14 +6,14 @@ const PUBLIC_PATHS = [
   /^\/sign-in(?:\/.*)?$/,
   /^\/sign-up(?:\/.*)?$/,
   /^\/invite(?:\/.*)?$/,
-  /^\/api\/.*/,              // All API calls go to backend (backend handles its own auth)
+  /^\/api\/.*/,
 ];
 
 function isPublicRoute(pathname: string): boolean {
   return PUBLIC_PATHS.some((pattern) => pattern.test(pathname));
 }
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const hasSessionCookie = Boolean(request.cookies.get(AUTH_COOKIE_NAME)?.value);
 

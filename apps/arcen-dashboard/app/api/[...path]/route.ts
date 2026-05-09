@@ -19,6 +19,10 @@ async function handler(request: NextRequest) {
     if (key === "host" || key === "content-length") return;
     headers[key] = value;
   });
+  headers["x-forwarded-host"] = url.host;
+  headers["x-forwarded-proto"] = url.protocol.replace(":", "");
+  headers["x-forwarded-port"] =
+    url.port || (url.protocol === "https:" ? "443" : "80");
 
   const res = await fetch(backendUrl, {
     method: request.method,
@@ -30,10 +34,18 @@ async function handler(request: NextRequest) {
 
   // Forward response
   const responseHeaders = new Headers();
+  const setCookies =
+    typeof res.headers.getSetCookie === "function"
+      ? res.headers.getSetCookie()
+      : [];
+
   res.headers.forEach((value, key) => {
-    if (key === "content-encoding") return; // Let Next.js handle encoding
+    if (key === "content-encoding" || key === "set-cookie") return; // Let Next.js handle encoding
     responseHeaders.set(key, value);
   });
+  for (const cookie of setCookies) {
+    responseHeaders.append("set-cookie", cookie);
+  }
 
   return new Response(res.body, {
     status: res.status,

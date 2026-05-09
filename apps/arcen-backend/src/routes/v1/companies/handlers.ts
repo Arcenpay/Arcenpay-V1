@@ -1,10 +1,16 @@
 import type { Context } from "hono";
 import { db } from "../../../db.js";
-import { apiSuccess, apiError } from "../../../utils/api-response.js";
+import { apiError } from "../../../utils/api-response.js";
 import { Prisma } from "../../../generated/client/client.js";
+import { requireAnyAuth, isAnyAuthError } from "../../../lib/auth/require-any-auth.js";
 
 export async function listCompanies(c: Context) {
-  const teamId = c.get("apiKeyTeamId") as string;
+  const auth = await requireAnyAuth(c);
+  if (isAnyAuthError(auth)) {
+    return c.json({ ok: false, error: auth.error }, auth.status as any);
+  }
+
+  const { teamId } = auth;
   const url = new URL(c.req.url);
   const limit = Math.min(Number(url.searchParams.get("limit") ?? 50), 200);
   const cursor = url.searchParams.get("cursor");
@@ -42,7 +48,7 @@ export async function listCompanies(c: Context) {
   const hasMore = companies.length > limit;
   const items = hasMore ? companies.slice(0, limit) : companies;
 
-  return apiSuccess(c, {
+  return c.json({
     data: items,
     count: items.length,
     nextCursor: hasMore ? items[items.length - 1]?.id : undefined,
@@ -50,7 +56,12 @@ export async function listCompanies(c: Context) {
 }
 
 export async function createCompany(c: Context) {
-  const teamId = c.get("apiKeyTeamId") as string;
+  const auth = await requireAnyAuth(c);
+  if (isAnyAuthError(auth)) {
+    return c.json({ ok: false, error: auth.error }, auth.status as any);
+  }
+
+  const { teamId } = auth;
 
   let body: {
     name: string;
@@ -119,5 +130,5 @@ export async function createCompany(c: Context) {
     },
   });
 
-  return apiSuccess(c, { data: company }, 201);
+  return c.json({ data: company }, 201 as any);
 }

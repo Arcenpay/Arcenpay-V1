@@ -4,7 +4,12 @@
 //  needs frontend/runtime-safe endpoints here.
 // ============================================================
 
-import { DEFAULT_CHAIN_ID } from "@/lib/default-chain";
+import {
+  BASE_MAINNET_CHAIN_ID,
+  BASE_SEPOLIA_CHAIN_ID,
+  DEFAULT_CHAIN_ID,
+  SEPOLIA_CHAIN_ID,
+} from "@/lib/default-chain";
 
 function isEnabled(value: string | undefined, defaultValue = false): boolean {
   const normalized = (value || "").trim().toLowerCase();
@@ -19,6 +24,35 @@ const SUBGRAPH_REQUIRED = isEnabled(
 const isProd =
   process.env.NODE_ENV === "production" &&
   process.env.NEXT_PHASE !== "phase-production-build";
+
+const PUBLIC_CHAIN_SUBGRAPH_URLS: Record<number, string | undefined> = {
+  [SEPOLIA_CHAIN_ID]:
+    process.env.NEXT_PUBLIC_ARCENPAY_SUBGRAPH_URL_11155111 ||
+    process.env.NEXT_PUBLIC_GRAPH_URL_11155111,
+  [BASE_SEPOLIA_CHAIN_ID]:
+    process.env.NEXT_PUBLIC_ARCENPAY_SUBGRAPH_URL_84532 ||
+    process.env.NEXT_PUBLIC_GRAPH_URL_84532,
+  [BASE_MAINNET_CHAIN_ID]:
+    process.env.NEXT_PUBLIC_ARCENPAY_SUBGRAPH_URL_8453 ||
+    process.env.NEXT_PUBLIC_GRAPH_URL_8453,
+};
+
+const SERVER_CHAIN_SUBGRAPH_URLS: Record<number, string | undefined> = {
+  [SEPOLIA_CHAIN_ID]: process.env.ARCENPAY_SUBGRAPH_URL_11155111,
+  [BASE_SEPOLIA_CHAIN_ID]: process.env.ARCENPAY_SUBGRAPH_URL_84532,
+  [BASE_MAINNET_CHAIN_ID]: process.env.ARCENPAY_SUBGRAPH_URL_8453,
+};
+
+function getConfiguredGraphUrlForChain(chainId: number): string {
+  return (
+    PUBLIC_CHAIN_SUBGRAPH_URLS[chainId] ||
+    process.env.NEXT_PUBLIC_ARCENPAY_SUBGRAPH_URL ||
+    process.env.NEXT_PUBLIC_GRAPH_URL ||
+    SERVER_CHAIN_SUBGRAPH_URLS[chainId] ||
+    process.env.ARCENPAY_SUBGRAPH_URL ||
+    ""
+  );
+}
 
 function requireInProd(name: string, value: string | undefined): string {
   if (!value && isProd) {
@@ -44,13 +78,7 @@ export const BACKEND_URL: string = (() => {
  * ARCENPAY_REQUIRE_SUBGRAPH=true.
  */
 export const GRAPH_URL: string = (() => {
-  const val =
-    process.env[`NEXT_PUBLIC_ARCENPAY_SUBGRAPH_URL_${DEFAULT_CHAIN_ID}`] ||
-    process.env[`NEXT_PUBLIC_GRAPH_URL_${DEFAULT_CHAIN_ID}`] ||
-    process.env.NEXT_PUBLIC_GRAPH_URL ||
-    process.env.NEXT_PUBLIC_ARCENPAY_SUBGRAPH_URL ||
-    process.env[`ARCENPAY_SUBGRAPH_URL_${DEFAULT_CHAIN_ID}`] ||
-    process.env.ARCENPAY_SUBGRAPH_URL;
+  const val = getConfiguredGraphUrlForChain(DEFAULT_CHAIN_ID);
   if (!val) {
     if (isProd && SUBGRAPH_REQUIRED) {
       throw new Error(
@@ -84,16 +112,5 @@ export const GRAPH_URL: string = (() => {
  *   chain manifest subgraphUrl
  */
 export function getGraphUrl(chainId: number): string {
-  const specific =
-    process.env[`NEXT_PUBLIC_ARCENPAY_SUBGRAPH_URL_${chainId}`] ||
-    process.env[`NEXT_PUBLIC_GRAPH_URL_${chainId}`] ||
-    process.env[`ARCENPAY_SUBGRAPH_URL_${chainId}`];
-  if (specific) return specific;
-
-  const global =
-    process.env.NEXT_PUBLIC_ARCENPAY_SUBGRAPH_URL ||
-    process.env.NEXT_PUBLIC_GRAPH_URL ||
-    process.env.ARCENPAY_SUBGRAPH_URL;
-  if (global) return global;
-  return "";
+  return getConfiguredGraphUrlForChain(chainId);
 }

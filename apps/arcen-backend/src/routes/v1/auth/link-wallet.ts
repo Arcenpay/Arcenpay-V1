@@ -50,7 +50,8 @@ export async function linkWallet(c: Context) {
       return c.json({ ok: false, error: "Invalid or expired nonce", code: "UNAUTHORIZED" }, 401 as any);
     }
 
-    const host = c.req.header("host") || "arcenpay.xyz";
+    const host =
+      c.req.header("x-forwarded-host") || c.req.header("host") || "arcenpay.xyz";
     const isLocal = host.includes("localhost") || host.includes("127.0.0.1");
     const proto =
       c.req.header("x-forwarded-proto") || (isLocal ? "http" : "https");

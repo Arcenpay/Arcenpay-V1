@@ -17,6 +17,17 @@ export type DashboardSession = {
   expiresAt: Date;
 };
 
+type BackendSessionResponse = {
+  user?: {
+    id?: string;
+    email?: string | null;
+    walletAddress?: string | null;
+  };
+  currentTeam?: {
+    id?: string;
+  } | null;
+};
+
 async function callBackend<T>(path: string, options: RequestInit = {}): Promise<T | null> {
   const store = await cookies();
   const token = store.get("arcen_session")?.value;
@@ -34,16 +45,17 @@ export async function getSession(): Promise<DashboardSession | null> {
   const token = store.get("arcen_session")?.value;
   if (!token) return null;
 
-  const data = await callBackend<{
-    authenticated: boolean; userId?: string; email?: string | null;
-    walletAddress?: string | null; currentTeamId?: string | null;
-  }>("/api/v1/auth/session");
+  const data = await callBackend<BackendSessionResponse>("/api/v1/auth/session");
+  if (!data?.user?.id) return null;
 
-  if (!data || !data.authenticated) return null;
   return {
-    sessionId: "", userId: data.userId ?? "", clerkUserId: data.userId ?? "",
-    email: data.email ?? null, currentTeamId: data.currentTeamId ?? null,
-    walletAddress: data.walletAddress ?? null, expiresAt: new Date(),
+    sessionId: "",
+    userId: data.user.id,
+    clerkUserId: data.user.id,
+    email: data.user.email ?? null,
+    currentTeamId: data.currentTeam?.id ?? null,
+    walletAddress: data.user.walletAddress ?? null,
+    expiresAt: new Date(),
   };
 }
 
@@ -83,8 +95,15 @@ export async function refreshSession(_sessionId: string): Promise<void> {
 }
 
 export async function clearSession(): Promise<void> {
-  await fetch(`${BACKEND_URL}/api/v1/auth/logout`, { method: "POST" });
   const store = await cookies();
+  const token = store.get("arcen_session")?.value;
+  const headers: Record<string, string> = {};
+  if (token) headers.cookie = `arcen_session=${token}`;
+
+  await fetch(`${BACKEND_URL}/api/v1/auth/logout`, {
+    method: "POST",
+    headers,
+  });
   store.delete("arcen_session");
 }
 
