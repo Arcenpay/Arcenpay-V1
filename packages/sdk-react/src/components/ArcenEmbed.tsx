@@ -43,6 +43,8 @@ import {
 } from "../sdk";
 import {
   deploySmartAccount,
+  getCounterfactualSmartAccountAddress,
+  isPrefundError,
   isRecoverableSmartAccountFundingError,
   sendSmartAccountTransaction,
   updateAutopayConfig,
@@ -1400,11 +1402,37 @@ type WalletKind = "metamask" | "coinbase";
 function openCoinbaseWalletDeepLink() {
   if (typeof window === "undefined") return;
   const redirectUrl = encodeURIComponent(window.location.href);
-  window.open(
-    `https://go.cb-w.com/dapp?cb_url=${redirectUrl}`,
-    "_blank",
-    "noopener,noreferrer",
+  const link = `https://go.cb-w.com/dapp?cb_url=${redirectUrl}`;
+  const a = document.createElement("a");
+  a.href = link;
+  a.target = "_blank";
+  a.rel = "noopener,noreferrer";
+  a.click();
+}
+
+function isMobileDevice(): boolean {
+  if (typeof window === "undefined") return false;
+  return /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+}
+
+function isInAppBrowser(): boolean {
+  if (typeof window === "undefined") return true;
+  const ua = navigator.userAgent.toLowerCase();
+  return (
+    ua.includes("wv") ||
+    ua.includes("metamask") ||
+    ua.includes("trust") ||
+    ua.includes("rainbow") ||
+    ua.includes("coinbase")
   );
+}
+
+function openMetaMaskDeepLink() {
+  if (typeof window === "undefined") return;
+  const dappUrl = encodeURIComponent(
+    `${window.location.protocol}//${window.location.host}${window.location.pathname}${window.location.search}`,
+  );
+  window.location.href = `https://metamask.app.link/dapp/${dappUrl}`;
 }
 
 function detectCoinbaseWalletExtension(): WindowEthereum | null {
@@ -5046,14 +5074,17 @@ function PaymentContent({
       setProvisionedSmartAccountAddress(result.smartAccountAddress);
       return result.smartAccountAddress;
     } catch (error) {
-      if (isRecoverableSmartAccountFundingError(error) && finalAddress) {
-        console.warn(
-          "[ArcenEmbed] Smart-account sponsorship unavailable; falling back to direct wallet autopay setup.",
-          error,
+      const msg = error instanceof Error ? error.message : String(error);
+      if (isPrefundError(error)) {
+        throw new Error(
+          "Smart account needs gas to deploy. Your wallet must have ETH on Base Sepolia to cover the deployment prefund. Add ETH to your wallet and try again.",
         );
-        return finalAddress as `0x${string}`;
       }
-
+      if (isRecoverableSmartAccountFundingError(error)) {
+        throw new Error(
+          `Smart account deployment failed — gas or paymaster issue. Ensure your wallet has ETH. (${msg})`,
+        );
+      }
       throw error;
     }
   }
@@ -5765,12 +5796,22 @@ function PaymentContent({
                     account before authorizing this on-chain{" "}
                     {isImmediateOnChainUpgrade ? "upgrade" : "plan change"}.
                   </div>
-                  {hasWindowEth ? (
+                  {(hasWindowEth || isMobileDevice()) ? (
                     <WalletSelector
                       tokens={tokens}
                       connecting={connecting}
-                      onConnectMetaMask={() => connectWindowEthereum("metamask")}
+                      onConnectMetaMask={() => {
+                        if (isMobileDevice() && !getWindowEthereum()) {
+                          openMetaMaskDeepLink();
+                          return;
+                        }
+                        connectWindowEthereum("metamask");
+                      }}
                       onConnectBase={() => {
+                        if (isMobileDevice() && !getWindowEthereum()) {
+                          openCoinbaseWalletDeepLink();
+                          return;
+                        }
                         if (!getCoinbaseProvider()) {
                           openCoinbaseWalletDeepLink();
                           return;
@@ -6126,12 +6167,22 @@ function PaymentContent({
               </div>
 
               {needsWallet ? (
-                hasWindowEth ? (
+                (hasWindowEth || isMobileDevice()) ? (
                   <WalletSelector
                     tokens={tokens}
                     connecting={connecting}
-                    onConnectMetaMask={() => connectWindowEthereum("metamask")}
+                    onConnectMetaMask={() => {
+                      if (isMobileDevice() && !getWindowEthereum()) {
+                        openMetaMaskDeepLink();
+                        return;
+                      }
+                      connectWindowEthereum("metamask");
+                    }}
                     onConnectBase={() => {
+                      if (isMobileDevice() && !getWindowEthereum()) {
+                        openCoinbaseWalletDeepLink();
+                        return;
+                      }
                       if (!getCoinbaseProvider()) {
                         openCoinbaseWalletDeepLink();
                         return;
@@ -6876,8 +6927,18 @@ function UnsubscribeContent({
             <WalletSelector
               tokens={tokens}
               connecting={connecting}
-              onConnectMetaMask={() => connectWindowEthereum("metamask")}
+              onConnectMetaMask={() => {
+                if (isMobileDevice() && !getWindowEthereum()) {
+                  openMetaMaskDeepLink();
+                  return;
+                }
+                connectWindowEthereum("metamask");
+              }}
               onConnectBase={() => {
+                if (isMobileDevice() && !getWindowEthereum()) {
+                  openCoinbaseWalletDeepLink();
+                  return;
+                }
                 if (!getCoinbaseProvider()) {
                   openCoinbaseWalletDeepLink();
                   return;

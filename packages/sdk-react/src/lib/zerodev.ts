@@ -140,6 +140,39 @@ export function isRecoverableSmartAccountFundingError(error: unknown): boolean {
   );
 }
 
+export function isPrefundError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  return (
+    message.includes("didn't pay prefund") ||
+    message.includes("AA21")
+  );
+}
+
+export async function getCounterfactualSmartAccountAddress(
+  walletClient: WalletClient,
+  chainId: number,
+): Promise<`0x${string}`> {
+  const chain = CHAIN_MAP[chainId] || baseSepolia;
+  const publicClient = createPublicClient({
+    chain,
+    transport: http(),
+  }) as PublicClient;
+
+  const ecdsaValidator = await signerToEcdsaValidator(publicClient, {
+    signer: walletClient as any,
+    entryPoint: ENTRY_POINT as any,
+    kernelVersion: KERNEL_VERSION,
+  });
+
+  const kernelAccount = await createKernelAccount(publicClient, {
+    plugins: { sudo: ecdsaValidator },
+    entryPoint: ENTRY_POINT as any,
+    kernelVersion: KERNEL_VERSION,
+  } as any);
+
+  return kernelAccount.address;
+}
+
 export interface DeploySmartAccountConfig {
   /** (Deprecated) ZeroDev project ID — prefer bundlerUrl + paymasterUrl via ArcenPay context. */
   projectId?: string;
