@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { resolveDemoArcenPayDashboardUrl } from "@/lib/arcenpay-origin";
+import { ARCENPAY_APP_URL } from "@arcenpay/react";
 import { useWallet } from "./useWallet";
 import WalletChip from "./wallet-chip";
 import styles from "./layout.module.css";
@@ -16,7 +16,7 @@ export default function DashboardLayout({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const pathname = usePathname();
   const { isConnected, connecting, connect } = useWallet();
-  const dashboardUrl = resolveDemoArcenPayDashboardUrl();
+  const dashboardUrl = ARCENPAY_APP_URL;
 
   const isActive = (href: string) =>
     href === "/dashboard" ? pathname === href : pathname.startsWith(href);

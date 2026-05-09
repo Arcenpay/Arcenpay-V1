@@ -10,7 +10,7 @@ import {
   getDemoCompanyIdentity,
   getDemoCompanyKeys,
   getDemoUserIdentity,
-  getRawArcenClient,
+  getDemoNodeClient,
 } from "@/lib/arcen-client";
 import { resolveArcenPayBaseUrl } from "@arcenpay/node";
 
@@ -27,7 +27,7 @@ function getNodeStatus() {
 }
 
 async function buildLiveSnapshot() {
-  const client = getRawArcenClient();
+  const client = getDemoNodeClient();
   const company = getDemoCompanyKeys();
   const user = getDemoUserIdentity();
 
@@ -174,7 +174,7 @@ export async function POST(req: NextRequest) {
     body = {};
   }
 
-  const client = getRawArcenClient();
+  const client = getDemoNodeClient();
   const company = getDemoCompanyKeys();
   const user = getDemoUserIdentity();
 

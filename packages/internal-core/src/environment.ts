@@ -29,7 +29,7 @@ const DEFAULT_SERVICES: Record<number, ChainServiceEndpoints> = {
     rpcUrl: "https://ethereum-sepolia-rpc.publicnode.com",
   },
   84532: {
-    rpcUrl: "https://sepolia.base.org",
+    rpcUrl: "https://base-sepolia-rpc.publicnode.com",
   },
   8453: {
     rpcUrl: "https://mainnet.base.org",

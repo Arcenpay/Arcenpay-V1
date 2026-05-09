@@ -1,65 +1,12 @@
 import { ArcenClient } from "@arcenpay/node";
-import type {
-  IdentifyResult,
-  EntitlementResult,
-  FlagResult,
-  ConsumeEntitlementResult,
-} from "@arcenpay/node";
 
 // Singleton ArcenClient for server-side usage
 // Initialized lazily so missing env vars only throw at runtime, not build time.
-
-type DemoCompanyKeys = {
-  wallet?: string;
-  id?: string;
-};
-
-type DemoUserKeys = {
-  id?: string;
-  wallet?: string;
-};
-
-type DemoIdentifyInput = {
-  company: Record<string, unknown>;
-  user?: Record<string, unknown>;
-  expiresIn?: number;
-};
-
-type DemoTrackInput = {
-  name: string;
-  company?: DemoCompanyKeys;
-  user?: DemoUserKeys;
-  traits?: Record<string, unknown>;
-  idempotencyKey?: string;
-};
-
-type DemoConsumeInput = {
-  featureKey: string;
-  company?: DemoCompanyKeys;
-  user?: DemoUserKeys;
-  traits?: Record<string, unknown>;
-  idempotencyKey?: string;
-};
-
-export interface DemoArcenClient {
-  identify(input: DemoIdentifyInput): Promise<IdentifyResult>;
-  checkEntitlement(
-    featureKey: string,
-    company: DemoCompanyKeys,
-  ): Promise<EntitlementResult>;
-  checkFlag(featureKey: string, company: DemoCompanyKeys): Promise<FlagResult>;
-  track(input: DemoTrackInput): Promise<void>;
-  consumeEntitlement(
-    input: DemoConsumeInput,
-  ): Promise<ConsumeEntitlementResult>;
-}
-
-let _client: DemoArcenClient | null = null;
-let _rawClient: ArcenClient | null = null;
+let demoNodeClient: ArcenClient | null = null;
 const DEFAULT_DEMO_COMPANY_ID = "arcen-demo-company";
 
-export function getRawArcenClient(): ArcenClient {
-  if (_rawClient) return _rawClient;
+export function getDemoNodeClient(): ArcenClient {
+  if (demoNodeClient) return demoNodeClient;
 
   const apiKey = process.env.ARCENPAY_API_KEY;
   if (!apiKey) {
@@ -68,36 +15,11 @@ export function getRawArcenClient(): ArcenClient {
     );
   }
 
-  _rawClient = new ArcenClient({
+  demoNodeClient = new ArcenClient({
     apiKey,
   });
 
-  return _rawClient;
-}
-
-export function getArcenClient(): DemoArcenClient {
-  if (_client) return _client;
-  const rawClient = getRawArcenClient();
-
-  const client: DemoArcenClient = {
-    identify: (input) => rawClient.identify(input as never),
-    checkEntitlement: (featureKey, company) =>
-      rawClient.checkEntitlement(featureKey, company as never),
-    checkFlag: (featureKey, company) =>
-      rawClient.checkFlag(featureKey, company as never),
-    track: (input) => rawClient.track(input as never),
-    consumeEntitlement: (input) =>
-      (
-        rawClient as ArcenClient & {
-          consumeEntitlement(
-            payload: DemoConsumeInput,
-          ): Promise<ConsumeEntitlementResult>;
-        }
-      ).consumeEntitlement(input),
-  };
-  _client = client;
-
-  return client;
+  return demoNodeClient;
 }
 
 /** The company wallet used by this demo — simulates a logged-in customer */
@@ -129,18 +51,4 @@ export function getDemoUserIdentity() {
     name: process.env.DEMO_USER_NAME ?? "Demo User",
     email: process.env.DEMO_USER_EMAIL ?? undefined,
   };
-}
-
-export async function ensureDemoIdentity(): Promise<void> {
-  if (!process.env.ARCENPAY_API_KEY) {
-    throw new Error(
-      "ARCENPAY_API_KEY is not set. Copy .env.local.example → .env.local and add your key.",
-    );
-  }
-
-  await getRawArcenClient().identify({
-    company: getDemoCompanyIdentity(),
-    user: getDemoUserIdentity(),
-    expiresIn: 3600,
-  });
 }

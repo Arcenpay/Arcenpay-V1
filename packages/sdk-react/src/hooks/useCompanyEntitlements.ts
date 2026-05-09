@@ -71,7 +71,9 @@ export function useCompanyEntitlements(
   const fetchEntitlements = useCallback(
     async (bustCache = false) => {
       if (options.skip || !session.token) {
+        setEntitlements({});
         setUpdatedAt(null);
+        setError(null);
         setLoading(false);
         return;
       }

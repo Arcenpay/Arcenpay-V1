@@ -409,30 +409,42 @@ export async function POST(c: Context) {
         }
       : {}),
   };
+  let enforcedFeatureKey: string | null = null;
 
   // ── Entitlement enforcement: reject track events that would exceed limits ──
   if (companyId) {
-    invalidateUsageCache(teamId, companyId, b.name);
-    const entitlement = await resolveEntitlementResult({
-      teamId,
-      companyKeys: {
-        id: companyId,
-        wallet: b.company?.wallet ?? undefined,
+    const trackedFeature = await db.catalogFeatureFlag.findFirst({
+      where: {
+        teamId,
+        OR: [{ featureKey: b.name }, { eventKey: b.name }],
       },
-      featureKey: b.name,
+      select: { featureKey: true },
     });
-    if (
-      entitlement &&
-      ((entitlement.allocation !== null && entitlement.exceeded) ||
-        !entitlement.enabled)
-    ) {
-      return jsonWithCors(
-        c,
-        { error: entitlement.exceeded
-          ? `Usage limit reached for "${b.name}". Upgrade to continue.`
-          : `Feature "${b.name}" is not available on your current plan.` },
-        429,
-      );
+
+    if (trackedFeature) {
+      enforcedFeatureKey = trackedFeature.featureKey;
+      invalidateUsageCache(teamId, companyId, trackedFeature.featureKey);
+      const entitlement = await resolveEntitlementResult({
+        teamId,
+        companyKeys: {
+          id: companyId,
+          wallet: b.company?.wallet ?? undefined,
+        },
+        featureKey: trackedFeature.featureKey,
+      });
+      if (
+        entitlement &&
+        ((entitlement.allocation !== null && entitlement.exceeded) ||
+          !entitlement.enabled)
+      ) {
+        return jsonWithCors(
+          c,
+          { error: entitlement.exceeded
+            ? `Usage limit reached for "${trackedFeature.featureKey}". Upgrade to continue.`
+            : `Feature "${trackedFeature.featureKey}" is not available on your current plan.` },
+          429,
+        );
+      }
     }
   }
 
@@ -450,7 +462,7 @@ export async function POST(c: Context) {
   await touchEntityActivity(companyId, userId);
 
   if (companyId) {
-    invalidateUsageCache(teamId, companyId, b.name);
+    invalidateUsageCache(teamId, companyId, enforcedFeatureKey ?? b.name);
     invalidateFlagCache(`${teamId}:`);
   }
 

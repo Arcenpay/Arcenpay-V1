@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { resolveDemoArcenPayDashboardUrl } from "@/lib/arcenpay-origin";
+import { ARCENPAY_APP_URL } from "@arcenpay/react";
 import styles from "./page.module.css";
 
 interface Config {
@@ -15,7 +15,7 @@ interface Config {
 export default function SettingsPage() {
   const [config, setConfig] = useState<Config | null>(null);
   const [copied, setCopied] = useState(false);
-  const dashboardUrl = config?.baseUrl ?? resolveDemoArcenPayDashboardUrl();
+  const dashboardUrl = config?.baseUrl ?? ARCENPAY_APP_URL;
 
   useEffect(() => {
     fetch("/api/config")

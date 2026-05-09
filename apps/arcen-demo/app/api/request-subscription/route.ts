@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { getDemoCompanyKeys, getRawArcenClient } from "@/lib/arcen-client";
+import { getDemoCompanyKeys, getDemoNodeClient } from "@/lib/arcen-client";
 
 const bodySchema = z.object({
   planId: z.union([z.string().trim().min(1), z.number().int().positive()]),
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const result = await getRawArcenClient().activateSubscription({
+    const result = await getDemoNodeClient().activateSubscription({
       planId: parsed.data.planId,
       paymentAccount: parsed.data.paymentAccount,
       subscriberEmail: parsed.data.subscriberEmail,

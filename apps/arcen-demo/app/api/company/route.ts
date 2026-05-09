@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getRawArcenClient } from "@/lib/arcen-client";
+import { getDemoNodeClient } from "@/lib/arcen-client";
 
 export async function GET(req: NextRequest) {
   const wallet = req.nextUrl.searchParams.get("wallet");
@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const client = getRawArcenClient();
+    const client = getDemoNodeClient();
     const companyKeys = { wallet, id: `company-${wallet.slice(2, 10)}` };
 
     // Fetch flags and authoritative company detail through the Node SDK.

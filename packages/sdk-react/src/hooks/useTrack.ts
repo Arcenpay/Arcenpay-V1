@@ -25,10 +25,9 @@ export function useTrack(): {
   const track = useCallback(
     async (name: string, traits?: Record<string, unknown>) => {
       if (!session.token) {
-        console.warn(
-          "[useTrack] Cannot track: no session. Call arcen.identify() first.",
+        throw new Error(
+          "Cannot track without an active ArcenPay session. Call identify() first.",
         );
-        return;
       }
 
       try {
@@ -48,10 +47,11 @@ export function useTrack(): {
           const err = (await res.json().catch(() => ({}))) as {
             error?: string;
           };
-          console.warn(`[useTrack] Failed:`, err.error);
+          throw new Error(err.error ?? `HTTP ${res.status}`);
         }
       } catch (err) {
         console.warn("[useTrack] Error:", err);
+        throw err instanceof Error ? err : new Error("Failed to track event");
       }
     },
     [baseUrl, session.token],
