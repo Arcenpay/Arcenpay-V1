@@ -46,6 +46,8 @@ export interface ZeroDevInfra {
   paymasterUrl: string;
   /** True while the config is still loading from the backend. */
   isReady: boolean;
+  /** True if the ZeroDev project is in self-funded mode (account pays own gas). */
+  selfFunded?: boolean;
 }
 
 export interface ArcenPayConfig {
@@ -339,13 +341,14 @@ export function ArcenPayProvider(props: ArcenPayProviderProps) {
       .then(async (res) => {
         if (!res.ok) return;
         const body = (await res.json()) as {
-          data?: { bundlerUrl?: string; paymasterUrl?: string };
+          data?: { bundlerUrl?: string; paymasterUrl?: string; selfFunded?: boolean };
         };
         if (cancelled) return;
         if (body.data?.bundlerUrl && body.data?.paymasterUrl) {
           setZeroDev({
             bundlerUrl: body.data.bundlerUrl,
             paymasterUrl: body.data.paymasterUrl,
+            selfFunded: body.data.selfFunded ?? false,
             isReady: true,
           });
         }
