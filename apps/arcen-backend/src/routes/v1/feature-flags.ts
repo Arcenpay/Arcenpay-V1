@@ -93,6 +93,7 @@ export async function POST(c: Context) {
     description?: string;
     featureType?: string;
     eventKey?: string;
+    icon?: string;
     unitSingular?: string;
     unitPlural?: string;
     defaultValue?: boolean;
@@ -140,6 +141,7 @@ export async function POST(c: Context) {
       description: body.description,
       featureType: body.featureType ?? "boolean",
       eventKey: body.eventKey,
+      icon: body.icon ?? null,
       unitSingular: body.unitSingular,
       unitPlural: body.unitPlural,
       defaultValue: body.defaultValue ?? false,

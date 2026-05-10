@@ -19,11 +19,14 @@ import {
   Copy,
   Check,
 } from "lucide-react";
+import dynamicIconImports from "lucide-react/dynamicIconImports";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Sheet,
   SheetContent,
@@ -32,13 +35,6 @@ import {
   SheetDescription,
   SheetFooter,
 } from "@/components/ui/sheet";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -56,6 +52,7 @@ interface Feature {
   name: string;
   featureKey: string;
   description: string | null;
+  icon: string | null;
   featureType: FeatureType;
   eventKey: string | null;
   traitKey: string | null;
@@ -93,6 +90,92 @@ const FEATURE_TYPE_META: Record<
 
 const DEFAULT_FEATURE_TYPE_META = FEATURE_TYPE_META.boolean;
 const CREATEABLE_FEATURE_TYPES: FeatureType[] = ["boolean", "event"];
+const FEATURED_ICON_NAMES = [
+  "rocket",
+  "sparkles",
+  "brain",
+  "bot",
+  "shield-check",
+  "gauge",
+  "circle-dollar-sign",
+  "wallet",
+  "shopping-bag",
+  "package",
+  "gift",
+  "megaphone",
+  "message-square",
+  "panel-left",
+  "server-cog",
+  "globe",
+  "camera",
+  "video",
+  "search",
+  "link-2",
+  "layers",
+  "zap",
+  "diamond",
+  "puzzle",
+] as const;
+const ALL_LUCIDE_ICON_NAMES = Object.keys(dynamicIconImports).sort();
+const FEATURE_EMOJI_OPTIONS = [
+  { value: "🚀", label: "Rocket", keywords: ["launch", "fast", "ship"] },
+  { value: "⚡", label: "Lightning", keywords: ["speed", "power", "energy"] },
+  { value: "🔒", label: "Lock", keywords: ["security", "private", "access"] },
+  { value: "🔓", label: "Unlock", keywords: ["open", "access", "public"] },
+  { value: "📊", label: "Bar chart", keywords: ["analytics", "metrics", "growth"] },
+  { value: "📈", label: "Growth chart", keywords: ["revenue", "trend", "up"] },
+  { value: "📉", label: "Decline chart", keywords: ["down", "drop", "trend"] },
+  { value: "📦", label: "Package", keywords: ["bundle", "product", "module"] },
+  { value: "🎁", label: "Gift", keywords: ["perk", "bonus", "promo"] },
+  { value: "💎", label: "Diamond", keywords: ["premium", "pro", "vip"] },
+  { value: "⭐", label: "Star", keywords: ["favorite", "featured", "quality"] },
+  { value: "🌟", label: "Glow star", keywords: ["shine", "highlight", "magic"] },
+  { value: "🔥", label: "Fire", keywords: ["hot", "popular", "trending"] },
+  { value: "🧠", label: "Brain", keywords: ["ai", "smart", "intelligence"] },
+  { value: "🤖", label: "Robot", keywords: ["bot", "agent", "automation"] },
+  { value: "🎯", label: "Target", keywords: ["goal", "focus", "precision"] },
+  { value: "🛡️", label: "Shield", keywords: ["protection", "security", "compliance"] },
+  { value: "💬", label: "Speech", keywords: ["chat", "support", "message"] },
+  { value: "📝", label: "Note", keywords: ["text", "docs", "editor"] },
+  { value: "🔍", label: "Search", keywords: ["find", "query", "discover"] },
+  { value: "🌐", label: "Globe", keywords: ["global", "web", "world"] },
+  { value: "🔗", label: "Link", keywords: ["connect", "integration", "url"] },
+  { value: "📱", label: "Phone", keywords: ["mobile", "app", "device"] },
+  { value: "💼", label: "Briefcase", keywords: ["business", "work", "b2b"] },
+  { value: "🏪", label: "Store", keywords: ["shop", "commerce", "retail"] },
+  { value: "🛒", label: "Cart", keywords: ["checkout", "buy", "commerce"] },
+  { value: "💳", label: "Card", keywords: ["payment", "billing", "charge"] },
+  { value: "💰", label: "Money bag", keywords: ["revenue", "billing", "pricing"] },
+  { value: "🏆", label: "Trophy", keywords: ["winner", "best", "achievement"] },
+  { value: "🎮", label: "Controller", keywords: ["gaming", "play", "fun"] },
+  { value: "🎵", label: "Music", keywords: ["audio", "media", "sound"] },
+  { value: "🎬", label: "Clapper", keywords: ["video", "media", "streaming"] },
+  { value: "📸", label: "Camera", keywords: ["photo", "capture", "media"] },
+  { value: "🎨", label: "Palette", keywords: ["design", "creative", "style"] },
+  { value: "🖼️", label: "Picture", keywords: ["image", "media", "gallery"] },
+  { value: "🔮", label: "Crystal ball", keywords: ["predict", "future", "insight"] },
+  { value: "🪄", label: "Magic wand", keywords: ["magic", "automation", "enhance"] },
+  { value: "📡", label: "Satellite", keywords: ["signal", "network", "broadcast"] },
+  { value: "📶", label: "Signal", keywords: ["wifi", "network", "connection"] },
+  { value: "☁️", label: "Cloud", keywords: ["cloud", "storage", "sync"] },
+  { value: "🔔", label: "Bell", keywords: ["notify", "alerts", "updates"] },
+  { value: "📬", label: "Inbox", keywords: ["mail", "message", "email"] },
+  { value: "👥", label: "Users", keywords: ["team", "people", "collaboration"] },
+  { value: "🧩", label: "Puzzle", keywords: ["plugin", "integration", "extension"] },
+  { value: "🏗️", label: "Construction", keywords: ["build", "infra", "setup"] },
+  { value: "🔬", label: "Microscope", keywords: ["research", "lab", "analysis"] },
+  { value: "🎓", label: "Graduation cap", keywords: ["education", "learn", "academy"] },
+  { value: "📄", label: "Document", keywords: ["docs", "paper", "file"] },
+  { value: "📁", label: "Folder", keywords: ["files", "storage", "organize"] },
+  { value: "⚙️", label: "Gear", keywords: ["settings", "config", "admin"] },
+  { value: "🔄", label: "Refresh", keywords: ["sync", "repeat", "update"] },
+  { value: "✅", label: "Check", keywords: ["success", "approved", "done"] },
+  { value: "❌", label: "Cross", keywords: ["disabled", "stop", "error"] },
+  { value: "📍", label: "Pin", keywords: ["location", "marker", "place"] },
+  { value: "🧪", label: "Test tube", keywords: ["experiments", "beta", "test"] },
+  { value: "🛰️", label: "Satellite dish", keywords: ["broadcast", "remote", "signal"] },
+  { value: "🪙", label: "Coin", keywords: ["pricing", "token", "payments"] },
+];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -105,6 +188,404 @@ function toFeatureKey(name: string): string {
 
 function getFeatureTypeMeta(featureType: string | null | undefined) {
   return FEATURE_TYPE_META[featureType as FeatureType] ?? DEFAULT_FEATURE_TYPE_META;
+}
+
+function toIconLabel(iconName: string) {
+  return iconName
+    .split("-")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function toLucideIconToken(iconName: string) {
+  return `lucide:${iconName}`;
+}
+
+function isLucideIconToken(icon: string | null | undefined) {
+  return Boolean(icon?.startsWith("lucide:"));
+}
+
+function getLucideIconName(icon: string | null | undefined) {
+  return isLucideIconToken(icon) ? icon!.slice("lucide:".length) : null;
+}
+
+function isSvgIcon(icon: string | null | undefined) {
+  return Boolean(icon?.trim().startsWith("<svg"));
+}
+
+function isEmojiLikeIcon(icon: string | null | undefined) {
+  return Boolean(icon && !isSvgIcon(icon) && !isLucideIconToken(icon));
+}
+
+function getFeatureIconSummary(
+  icon: string | null | undefined,
+  featureType: FeatureType,
+) {
+  const lucideIconName = getLucideIconName(icon);
+  if (lucideIconName) {
+    return {
+      label: toIconLabel(lucideIconName),
+      hint: "Icon library",
+    };
+  }
+
+  if (isEmojiLikeIcon(icon)) {
+    return {
+      label: icon!,
+      hint: icon!.length <= 3 ? "Emoji or custom glyph" : "Custom label",
+    };
+  }
+
+  return {
+    label: getFeatureTypeMeta(featureType).label,
+    hint: "Default feature type icon",
+  };
+}
+
+function DynamicLucidePreview({
+  iconName,
+  className,
+}: {
+  iconName: string;
+  className?: string;
+}) {
+  const [IconComponent, setIconComponent] = useState<React.ElementType | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    const loader = dynamicIconImports[iconName as keyof typeof dynamicIconImports];
+
+    if (!loader) {
+      setIconComponent(null);
+      return;
+    }
+
+    void loader().then((mod) => {
+      if (active) setIconComponent(() => mod.default);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [iconName]);
+
+  if (!IconComponent) {
+    return <div className={cn("h-5 w-5 rounded bg-muted/50 animate-pulse", className)} />;
+  }
+
+  return <IconComponent className={className} />;
+}
+
+function FeatureIconPicker({
+  value,
+  featureType,
+  onChange,
+}: {
+  value: string;
+  featureType: FeatureType;
+  onChange: (value: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [activeTab, setActiveTab] = useState<"icons" | "emoji" | "custom">("icons");
+  const [customGlyph, setCustomGlyph] = useState(
+    isEmojiLikeIcon(value) ? value : "",
+  );
+
+  useEffect(() => {
+    if (!open) {
+      setQuery("");
+      setCustomGlyph(isEmojiLikeIcon(value) ? value : "");
+      setActiveTab(isEmojiLikeIcon(value) ? "custom" : "icons");
+    }
+  }, [open, value]);
+
+  const normalizedQuery = query.trim().toLowerCase();
+  const selectedLucideIconName = getLucideIconName(value);
+  const selectedSummary = getFeatureIconSummary(value, featureType);
+  const visibleIconNames = (
+    normalizedQuery.length > 0
+      ? ALL_LUCIDE_ICON_NAMES.filter((iconName) =>
+          `${iconName} ${toIconLabel(iconName)}`.toLowerCase().includes(normalizedQuery),
+        )
+      : [...FEATURED_ICON_NAMES]
+  ).slice(0, 96);
+  const visibleEmojis = FEATURE_EMOJI_OPTIONS.filter((emoji) =>
+    normalizedQuery.length === 0
+      ? true
+      : `${emoji.label} ${emoji.keywords.join(" ")} ${emoji.value}`
+          .toLowerCase()
+          .includes(normalizedQuery),
+  );
+  const customPreview = customGlyph.trim();
+
+  return (
+    <Popover
+      open={open}
+      onOpenChange={(nextOpen) => {
+        setOpen(nextOpen);
+        if (!nextOpen) setQuery("");
+      }}
+    >
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className={cn(
+            "flex h-12 w-12 items-center justify-center rounded-xl border bg-secondary/30 shadow-sm transition-all hover:border-accent/40",
+            open
+              ? "border-accent ring-4 ring-accent/15"
+              : "border-border",
+          )}
+          aria-label="Choose feature icon"
+        >
+          <FeatureAvatar
+            featureType={featureType}
+            icon={value || null}
+            className="h-full w-full rounded-full border-0 bg-transparent"
+          />
+        </button>
+      </PopoverTrigger>
+
+      <PopoverContent
+        align="start"
+        sideOffset={12}
+        className="w-[320px] rounded-2xl border-border bg-popover p-0 shadow-2xl"
+      >
+        <div className="space-y-3 p-3.5">
+          <div className="flex items-center gap-3 rounded-2xl border border-border bg-secondary/20 px-3 py-2.5">
+            <FeatureAvatar
+              featureType={featureType}
+              icon={value || null}
+              className="h-10 w-10 rounded-xl"
+            />
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium text-foreground">
+                {selectedSummary.label}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {selectedSummary.hint}
+              </p>
+            </div>
+          </div>
+
+          <Tabs
+            value={activeTab}
+            onValueChange={(nextValue) =>
+              setActiveTab(nextValue as "icons" | "emoji" | "custom")
+            }
+            className="gap-4"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <TabsList className="grid w-full max-w-[240px] grid-cols-3">
+                <TabsTrigger value="icons">Icons</TabsTrigger>
+                <TabsTrigger value="emoji">Emoji</TabsTrigger>
+                <TabsTrigger value="custom">Custom</TabsTrigger>
+              </TabsList>
+              <button
+                type="button"
+                onClick={() => {
+                  onChange("");
+                  setOpen(false);
+                }}
+                className="text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+              >
+                Clear
+              </button>
+            </div>
+
+            {activeTab !== "custom" && (
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder={
+                    activeTab === "icons"
+                      ? "Search icons or symbols..."
+                      : "Search emojis..."
+                  }
+                  className="h-10 rounded-xl border-border bg-muted/30 pl-12 text-sm"
+                />
+              </div>
+            )}
+
+            <TabsContent value="icons" className="space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                  Icon Library
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {normalizedQuery ? `${visibleIconNames.length} results` : "Featured picks"}
+                </p>
+              </div>
+              <div className="max-h-[256px] overflow-y-auto pr-1">
+                {visibleIconNames.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
+                    No icons match that search.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-6 gap-2">
+                    {visibleIconNames.map((iconName) => {
+                      const isSelected = selectedLucideIconName === iconName;
+                      return (
+                        <button
+                          key={iconName}
+                          type="button"
+                          title={toIconLabel(iconName)}
+                          onClick={() => {
+                            onChange(toLucideIconToken(iconName));
+                            setOpen(false);
+                          }}
+                          className={cn(
+                            "flex h-12 w-12 items-center justify-center rounded-xl border bg-muted/30 text-muted-foreground transition-all hover:border-border hover:text-foreground",
+                            isSelected
+                              ? "border-accent bg-accent/10 text-foreground ring-2 ring-accent/15"
+                              : "border-transparent",
+                          )}
+                          aria-pressed={isSelected}
+                        >
+                          <DynamicLucidePreview
+                            iconName={iconName}
+                            className="h-5 w-5"
+                          />
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="emoji" className="space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                  Emoji Library
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {visibleEmojis.length} options
+                </p>
+              </div>
+              <div className="max-h-[256px] overflow-y-auto pr-1">
+                {visibleEmojis.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
+                    No emojis match that search.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-6 gap-2">
+                    {visibleEmojis.map((emoji) => {
+                      const isSelected = value === emoji.value;
+                      return (
+                        <button
+                          key={`${emoji.value}-${emoji.label}`}
+                          type="button"
+                          title={emoji.label}
+                          onClick={() => {
+                            onChange(emoji.value);
+                            setOpen(false);
+                          }}
+                          className={cn(
+                            "flex h-12 w-12 items-center justify-center rounded-xl border bg-muted/30 text-xl transition-all hover:border-border hover:bg-muted/60",
+                            isSelected
+                              ? "border-accent bg-accent/10 ring-2 ring-accent/15"
+                              : "border-transparent",
+                          )}
+                          aria-pressed={isSelected}
+                        >
+                          {emoji.value}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="custom" className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="custom-feature-glyph">Custom glyph</Label>
+                <Input
+                  id="custom-feature-glyph"
+                  value={customGlyph}
+                  onChange={(e) => setCustomGlyph(e.target.value)}
+                  placeholder="Paste an emoji or short text"
+                  className="h-12 rounded-xl border-border bg-muted/30 text-base"
+                  maxLength={8}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Useful for emoji, initials, or a short custom marker.
+                </p>
+              </div>
+              <div className="flex items-center gap-4 rounded-2xl border border-border bg-muted/20 p-4">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-border bg-background text-2xl">
+                  {customPreview || "•"}
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    Preview
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Apply any emoji or short glyph that fits your theme.
+                  </p>
+                </div>
+              </div>
+              <Button
+                type="button"
+                disabled={!customPreview}
+                onClick={() => {
+                  onChange(customPreview);
+                  setOpen(false);
+                }}
+                className="w-full"
+              >
+                Use custom icon
+              </Button>
+            </TabsContent>
+          </Tabs>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function FeatureAvatar({
+  featureType,
+  icon,
+  className,
+}: {
+  featureType: FeatureType;
+  icon?: string | null;
+  className?: string;
+}) {
+  const meta = getFeatureTypeMeta(featureType);
+  const Icon = meta.icon;
+
+  return (
+    <div
+      className={cn(
+        "rounded-xl flex items-center justify-center bg-secondary border border-border shrink-0",
+        className,
+      )}
+    >
+      {isSvgIcon(icon) ? (
+        <span
+          className={cn(
+            "inline-flex [&>svg]:h-5 [&>svg]:w-5",
+            meta.color,
+          )}
+          dangerouslySetInnerHTML={{ __html: icon ?? "" }}
+        />
+      ) : isLucideIconToken(icon) ? (
+        <DynamicLucidePreview
+          iconName={getLucideIconName(icon)!}
+          className={cn("h-5 w-5", meta.color)}
+        />
+      ) : isEmojiLikeIcon(icon) ? (
+        <span className="text-[1.35rem] leading-none">{icon}</span>
+      ) : (
+        <Icon className={cn("w-5 h-5", meta.color)} />
+      )}
+    </div>
+  );
 }
 
 // ─── Feature Detail View ─────────────────────────────────────────────────────
@@ -169,13 +650,11 @@ function FeatureDetailView({
 
       {/* Header */}
       <div className="flex items-start gap-4">
-        <div
-          className={cn(
-            "w-12 h-12 rounded-xl flex items-center justify-center bg-secondary border border-border shrink-0",
-          )}
-        >
-          <Icon className={cn("w-6 h-6", meta.color)} />
-        </div>
+        <FeatureAvatar
+          featureType={feature.featureType}
+          icon={feature.icon}
+          className="w-12 h-12"
+        />
         <div className="flex-1 min-w-0">
           <h2 className="text-xl font-semibold text-foreground">
             {feature.name}
@@ -320,6 +799,7 @@ function CreateFeatureSheet({
     name: "",
     featureKey: "",
     description: "",
+    icon: "",
     featureType: "boolean" as FeatureType,
     eventKey: "",
     traitKey: "",
@@ -340,6 +820,7 @@ function CreateFeatureSheet({
       name: "",
       featureKey: "",
       description: "",
+      icon: "",
       featureType: "boolean",
       eventKey: "",
       traitKey: "",
@@ -377,6 +858,7 @@ function CreateFeatureSheet({
           name: form.name,
           featureKey: form.featureKey,
           description: form.description || null,
+          icon: form.icon || null,
           featureType: form.featureType,
           eventKey: form.featureType === "event" ? form.eventKey : null,
           traitKey: form.featureType === "trait" ? form.traitKey : null,
@@ -399,25 +881,43 @@ function CreateFeatureSheet({
       setSaving(false);
     }
   };
-
-  const meta = getFeatureTypeMeta(form.featureType);
-  const Icon = meta.icon;
-
   return (
     <Sheet open={open} onOpenChange={(v) => { if (!v) reset(); onOpenChange(v); }}>
-      <SheetContent className="w-full sm:max-w-[420px] flex flex-col gap-0 p-0">
-        <SheetHeader className="px-6 py-5 border-b border-border">
-          <SheetTitle>Create feature</SheetTitle>
+      <SheetContent className="w-full sm:max-w-[560px] flex flex-col gap-0 p-0">
+        <SheetHeader className="px-5 py-4 border-b border-border">
+          <SheetTitle>New feature</SheetTitle>
           <SheetDescription>
-            Define a new feature capability for your product
+            Unlock plan entitlements, company overrides, and track feature utilization.
           </SheetDescription>
         </SheetHeader>
 
-        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
+          <div className="space-y-2">
+            <div className="flex items-center gap-3">
+              <FeatureIconPicker
+                value={form.icon}
+                featureType={form.featureType}
+                onChange={(value) => setForm((p) => ({ ...p, icon: value }))}
+              />
+              <Input
+                id="feat-name"
+                placeholder="Enter name"
+                value={form.name}
+                onChange={(e) =>
+                  setForm((p) => ({ ...p, name: e.target.value }))
+                }
+                className="h-12 flex-1 rounded-xl border-border bg-secondary/30 text-base"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Pick an icon, emoji, or custom glyph and give the feature a clear name.
+            </p>
+          </div>
+
           {/* Feature type selector */}
           <div className="space-y-2">
-            <Label>Type</Label>
-            <div className="grid grid-cols-3 gap-2">
+            <Label>How do you want to control access to this feature?</Label>
+            <div className="grid gap-3 md:grid-cols-2">
               {CREATEABLE_FEATURE_TYPES.map(
                 (type) => {
                   const typeMeta = FEATURE_TYPE_META[type];
@@ -435,71 +935,62 @@ function CreateFeatureSheet({
                         }))
                       }
                       className={cn(
-                        "flex flex-col items-center gap-1.5 p-3 rounded-xl border text-xs font-medium transition-all duration-150",
+                        "flex min-h-20 flex-col items-start gap-2 rounded-2xl border p-3.5 text-left transition-all duration-150",
                         isSelected
-                          ? "bg-accent/10 border-accent text-foreground"
-                          : "bg-secondary border-border text-muted-foreground hover:text-foreground hover:border-border/80",
+                          ? "border-accent/50 bg-accent/5 text-foreground"
+                          : "border-border bg-secondary/20 text-muted-foreground hover:border-border/80 hover:text-foreground",
                       )}
                     >
-                      <TypeIcon
-                        className={cn(
-                          "w-5 h-5",
-                          isSelected ? typeMeta.color : "",
-                        )}
-                      />
-                      {typeMeta.label}
+                      <div className="flex items-center gap-3">
+                        <div className="rounded-xl border border-border bg-background p-2.5">
+                          <TypeIcon
+                            className={cn(
+                              "w-5 h-5",
+                              isSelected ? typeMeta.color : "",
+                            )}
+                          />
+                        </div>
+                        <span className="text-sm font-semibold text-foreground">
+                          {typeMeta.label}
+                        </span>
+                      </div>
+                      <p className="text-xs leading-5 text-muted-foreground">
+                        {typeMeta.description}
+                      </p>
                     </button>
                   );
                 },
               )}
             </div>
-            <p className="text-xs text-muted-foreground">{meta.description}</p>
             <p className="text-xs text-muted-foreground">
               Trait-based targeting is available in Flags, but persisted feature shortcuts currently support boolean and event-based features only.
             </p>
           </div>
 
-          {/* Name */}
-          <div className="space-y-2">
-            <Label htmlFor="feat-name">Feature name</Label>
-            <Input
-              id="feat-name"
-              placeholder="e.g. AI Summary"
-              value={form.name}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, name: e.target.value }))
-              }
-              className="bg-secondary border-border"
-            />
-          </div>
-
           {/* Description */}
           <div className="space-y-2">
             <Label htmlFor="feat-desc">
-              Description{" "}
-              <span className="text-muted-foreground font-normal">
-                (optional)
-              </span>
+              Description <span className="text-muted-foreground font-normal">(optional)</span>
             </Label>
             <Textarea
               id="feat-desc"
-              placeholder="What does this feature do?"
+              placeholder="Enter description"
               value={form.description}
               onChange={(e) =>
                 setForm((p) => ({ ...p, description: e.target.value }))
               }
-              className="bg-secondary border-border resize-none text-sm"
+              className="min-h-[84px] rounded-xl border-border bg-secondary/30 resize-none text-sm"
               rows={2}
             />
+            <p className="text-xs text-muted-foreground">
+              Optional. What does this feature do for the user?
+            </p>
           </div>
 
           {/* Feature key */}
           <div className="space-y-2">
             <Label htmlFor="feat-key">
-              Feature key{" "}
-              <span className="text-muted-foreground font-normal text-xs">
-                (used in SDK + flag rules)
-              </span>
+              Flag key <span className="text-muted-foreground font-normal text-xs">(used in SDK + rules)</span>
             </Label>
             <div className="relative">
               <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
@@ -517,11 +1008,11 @@ function CreateFeatureSheet({
                     keyManuallyEdited: true,
                   }));
                 }}
-                className="bg-secondary border-border font-mono text-sm pl-8"
+                className="h-12 rounded-xl border-border bg-secondary/30 pl-8 font-mono text-sm"
               />
             </div>
             <p className="text-xs text-muted-foreground">
-              Lowercase alphanumeric + underscores. Auto-generated from name.
+              Keys are lowercase and auto-generated from the feature name.
             </p>
           </div>
 
@@ -529,10 +1020,7 @@ function CreateFeatureSheet({
           {form.featureType === "event" && (
             <div className="space-y-2">
               <Label htmlFor="feat-event-key">
-                Event key{" "}
-                <span className="text-muted-foreground font-normal text-xs">
-                  (tracked event name)
-                </span>
+                Event key <span className="text-muted-foreground font-normal text-xs">(tracked event name)</span>
               </Label>
               <div className="relative">
                 <Activity className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
@@ -548,7 +1036,7 @@ function CreateFeatureSheet({
                         .replace(/[^a-z0-9_]/g, "_"),
                     }))
                   }
-                  className="bg-secondary border-border font-mono text-sm pl-8"
+                  className="h-12 rounded-xl border-border bg-secondary/30 pl-8 font-mono text-sm"
                 />
               </div>
               <p className="text-xs text-muted-foreground">
@@ -563,16 +1051,17 @@ function CreateFeatureSheet({
           )}
         </div>
 
-        <SheetFooter className="px-6 py-4 border-t border-border flex-row justify-end gap-2">
+        <SheetFooter className="px-5 py-3.5 border-t border-border flex-row justify-end gap-3">
           <Button
             variant="outline"
             onClick={() => { reset(); onOpenChange(false); }}
+            className="min-w-28"
           >
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={saving}>
+          <Button onClick={handleSubmit} disabled={saving} className="min-w-32">
             <Plus className="w-4 h-4 mr-1.5" />
-            Create feature
+            Create
           </Button>
         </SheetFooter>
       </SheetContent>
@@ -591,9 +1080,16 @@ function EditFeatureSheet({
   onOpenChange: (v: boolean) => void;
   onUpdated: (feature: Feature) => void;
 }) {
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<{
+    name: string;
+    description: string;
+    icon: string;
+    featureType: "boolean" | "event";
+    eventKey: string;
+  }>({
     name: feature.name,
     description: feature.description ?? "",
+    icon: feature.icon ?? "",
     featureType: feature.featureType === "event" ? "event" : "boolean",
     eventKey: feature.eventKey ?? "",
   });
@@ -605,6 +1101,7 @@ function EditFeatureSheet({
     setForm({
       name: feature.name,
       description: feature.description ?? "",
+      icon: feature.icon ?? "",
       featureType: feature.featureType === "event" ? "event" : "boolean",
       eventKey: feature.eventKey ?? "",
     });
@@ -631,6 +1128,7 @@ function EditFeatureSheet({
         body: JSON.stringify({
           name: form.name,
           description: form.description || null,
+          icon: form.icon || null,
           featureType: form.featureType,
           eventKey: form.featureType === "event" ? form.eventKey : null,
         }),
@@ -657,18 +1155,37 @@ function EditFeatureSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-[420px] flex flex-col gap-0 p-0">
-        <SheetHeader className="px-6 py-5 border-b border-border">
+      <SheetContent className="w-full sm:max-w-[560px] flex flex-col gap-0 p-0">
+        <SheetHeader className="px-5 py-4 border-b border-border">
           <SheetTitle>Edit feature</SheetTitle>
           <SheetDescription>
             Update this feature without changing its plan entitlements
           </SheetDescription>
         </SheetHeader>
 
-        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
           <div className="space-y-2">
-            <Label>Type</Label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="flex items-center gap-3">
+              <FeatureIconPicker
+                value={form.icon}
+                featureType={form.featureType}
+                onChange={(value) => setForm((p) => ({ ...p, icon: value }))}
+              />
+              <Input
+                id="edit-feat-name"
+                value={form.name}
+                onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+                className="h-12 flex-1 rounded-xl border-border bg-secondary/30"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Update the feature name and keep the icon aligned with how this feature is presented.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Access control</Label>
+            <div className="grid gap-3 md:grid-cols-2">
               {(["boolean", "event"] as const).map((type) => {
                 const typeMeta = FEATURE_TYPE_META[type];
                 const TypeIcon = typeMeta.icon;
@@ -684,28 +1201,27 @@ function EditFeatureSheet({
                       }))
                     }
                     className={cn(
-                      "flex flex-col items-center gap-1.5 p-3 rounded-xl border text-xs font-medium transition-all duration-150",
+                        "flex min-h-20 flex-col items-start gap-2 rounded-2xl border p-3.5 text-left transition-all duration-150",
                       isSelected
-                        ? "bg-accent/10 border-accent text-foreground"
-                        : "bg-secondary border-border text-muted-foreground hover:text-foreground hover:border-border/80",
+                        ? "border-accent/50 bg-accent/5 text-foreground"
+                        : "border-border bg-secondary/20 text-muted-foreground hover:border-border/80 hover:text-foreground",
                     )}
                   >
-                    <TypeIcon className={cn("w-5 h-5", isSelected ? typeMeta.color : "")} />
-                    {typeMeta.label}
+                    <div className="flex items-center gap-3">
+                      <div className="rounded-xl border border-border bg-background p-2.5">
+                        <TypeIcon className={cn("w-5 h-5", isSelected ? typeMeta.color : "")} />
+                      </div>
+                      <span className="text-sm font-semibold text-foreground">
+                        {typeMeta.label}
+                      </span>
+                    </div>
+                    <p className="text-xs leading-5 text-muted-foreground">
+                      {typeMeta.description}
+                    </p>
                   </button>
                 );
               })}
             </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="edit-feat-name">Feature name</Label>
-            <Input
-              id="edit-feat-name"
-              value={form.name}
-              onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-              className="bg-secondary border-border"
-            />
           </div>
 
           <div className="space-y-2">
@@ -714,14 +1230,14 @@ function EditFeatureSheet({
               id="edit-feat-desc"
               value={form.description}
               onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
-              className="bg-secondary border-border resize-none text-sm"
+              className="min-h-[84px] rounded-xl border-border bg-secondary/30 resize-none text-sm"
               rows={2}
             />
           </div>
 
           <div className="space-y-2">
             <Label>Feature key</Label>
-            <Input value={feature.featureKey} disabled className="bg-secondary border-border font-mono" />
+            <Input value={feature.featureKey} disabled className="h-12 rounded-xl border-border bg-secondary/30 font-mono" />
             <p className="text-xs text-muted-foreground">
               Feature keys stay stable because flags, SDK checks, and entitlements depend on them.
             </p>
@@ -739,7 +1255,7 @@ function EditFeatureSheet({
                     eventKey: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "_"),
                   }))
                 }
-                className="bg-secondary border-border font-mono"
+                className="h-12 rounded-xl border-border bg-secondary/30 font-mono"
               />
             </div>
           )}
@@ -747,11 +1263,11 @@ function EditFeatureSheet({
           {error && <p className="text-sm text-destructive">{error}</p>}
         </div>
 
-        <SheetFooter className="px-6 py-4 border-t border-border flex-row justify-end gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+        <SheetFooter className="px-5 py-3.5 border-t border-border flex-row justify-end gap-3">
+          <Button variant="outline" onClick={() => onOpenChange(false)} className="min-w-28">
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={saving}>
+          <Button onClick={handleSubmit} disabled={saving} className="min-w-32">
             {saving ? "Saving..." : "Save changes"}
           </Button>
         </SheetFooter>
@@ -939,9 +1455,11 @@ export function FeaturesSection() {
                     >
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-secondary border border-border flex items-center justify-center shrink-0">
-                            <Icon className={cn("w-4 h-4", meta.color)} />
-                          </div>
+                          <FeatureAvatar
+                            featureType={feature.featureType}
+                            icon={feature.icon}
+                            className="w-8 h-8 rounded-lg"
+                          />
                           <div>
                             <p className="text-sm font-medium text-foreground">
                               {feature.name}

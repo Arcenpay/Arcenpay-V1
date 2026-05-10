@@ -1324,6 +1324,9 @@ model CatalogFeatureFlag {
   unitSingular     String?  // e.g., "Scan"
   unitPlural       String?  // e.g., "Scans"
 
+  // Visual
+  icon             String?  // emoji icon shown in plan feature lists
+
   rules FlagRule[]
   team  Team       @relation(fields: [teamId], references: [id], onDelete: Cascade)
 

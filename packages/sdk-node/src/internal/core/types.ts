@@ -327,6 +327,8 @@ export interface ComponentEntitlement {
   exceeded?: boolean;
   unitSingular?: string;
   unitPlural?: string;
+  /** Custom feature icon token from the feature definition */
+  icon?: string | null;
 }
 
 export interface ComponentUsageItem {

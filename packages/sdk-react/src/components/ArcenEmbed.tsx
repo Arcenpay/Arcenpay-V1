@@ -89,6 +89,36 @@ export interface ArcenEmbedProps {
   mode?: "inline" | "modal";
 }
 
+function isSvgFeatureIcon(icon: string | null | undefined) {
+  return Boolean(icon?.trim().startsWith("<svg"));
+}
+
+function isTokenFeatureIcon(icon: string | null | undefined) {
+  return Boolean(icon?.startsWith("lucide:"));
+}
+
+function renderFeatureIconNode(
+  icon: string | null | undefined,
+  className: string,
+) {
+  if (!icon) return null;
+
+  if (isTokenFeatureIcon(icon)) {
+    return null;
+  }
+
+  if (isSvgFeatureIcon(icon)) {
+    return (
+      <span
+        className={className}
+        dangerouslySetInnerHTML={{ __html: icon }}
+      />
+    );
+  }
+
+  return <span>{icon}</span>;
+}
+
 type PortalView = "portal" | "checkout" | "payment" | "unsubscribe" | "success";
 
 type AppliedCouponQuote = {
@@ -4385,12 +4415,19 @@ function CheckoutContent({
                 </div>
                 <div style={{ flex: 1 }}>
                   {(() => {
-                    const entitlements: any[] =
+                    const planEntitlements: any[] =
                       (plan.metadata as any)?.entitlements ?? [];
-                    const features = entitlements.filter(
+                    const features = planEntitlements.filter(
                       (e: any) => e.enabled === true,
                     );
                     if (features.length === 0) return null;
+
+                    const iconMap = new Map<string | any, string | null>();
+                    (data.entitlements as any[])?.forEach((ent: any) => {
+                      if (ent.icon && ent.featureKey) {
+                        iconMap.set(ent.featureKey, ent.icon);
+                      }
+                    });
 
                     return (
                       <div
@@ -4408,9 +4445,17 @@ function CheckoutContent({
                               featureKey: string;
                               type: string;
                               value: boolean | number | null;
+                              icon?: string | null;
                             },
                             i: number,
-                          ) => (
+                          ) => {
+                            const featureIcon = ent.icon || iconMap.get(ent.featureKey) || null;
+                            const renderedFeatureIcon = renderFeatureIconNode(
+                              featureIcon,
+                              "inline-flex",
+                            );
+
+                            return (
                             <div
                               key={ent.featureKey || i}
                               style={{
@@ -4425,13 +4470,22 @@ function CheckoutContent({
                               <span
                                 style={{
                                   flexShrink: 0,
-                                  width: 16,
+                                  width: featureIcon ? 20 : 16,
                                   fontWeight: 700,
                                   textAlign: "center",
                                   marginTop: 1,
+                                  fontSize:
+                                    featureIcon &&
+                                    !isSvgFeatureIcon(featureIcon) &&
+                                    featureIcon.length <= 2
+                                      ? tokens.size
+                                      : tokens.size - 2,
+                                  color: tokens.mutedColor,
                                 }}
                               >
-                                {ent.type === "BOOLEAN" ? (
+                                {renderedFeatureIcon ? (
+                                  renderedFeatureIcon
+                                ) : ent.type === "BOOLEAN" ? (
                                   ent.value === true ? (
                                     <span style={{ color: "#16a34a" }}>✓</span>
                                   ) : (
@@ -4458,7 +4512,8 @@ function CheckoutContent({
                                   : ent.featureName || ent.featureKey}
                               </span>
                             </div>
-                          ),
+                            );
+                          },
                         )}
                         {features.length > 8 && (
                           <div
