@@ -16,6 +16,7 @@ export async function OPTIONS(c: Context) {
 export async function GET(c: Context) {
   const origin = c.req.header("origin");
   const chainIdRaw = c.req.query("chainId");
+  const selfFundedRaw = c.req.query("selfFunded");
   const chainId = chainIdRaw
     ? Number.parseInt(chainIdRaw, 10)
     : DEFAULT_CHAIN_ID;
@@ -36,22 +37,29 @@ export async function GET(c: Context) {
     );
   }
 
-  const defaultUrl = `https://rpc.zerodev.app/api/v3/${ZERODEV_PROJECT_ID}/chain/${chainId}`;
+  const isSelfFunded =
+    selfFundedRaw === "true" ||
+    process.env.ZERODEV_MODE === "self-funded" ||
+    false;
+
+  const baseUrl = `https://rpc.zerodev.app/api/v3/${ZERODEV_PROJECT_ID}/chain/${chainId}`;
+  const suffix = isSelfFunded ? "?selfFunded=true" : "";
 
   const bundlerUrl =
     process.env[`ZERODEV_BUNDLER_RPC_${chainId}`] ??
     process.env.ZERODEV_BUNDLER_RPC ??
-    defaultUrl;
+    baseUrl + suffix;
 
   const paymasterUrl =
     process.env[`ZERODEV_PAYMASTER_RPC_${chainId}`] ??
     process.env.ZERODEV_PAYMASTER_RPC ??
-    defaultUrl;
+    baseUrl + suffix;
 
   const data = {
     chainId,
     bundlerUrl,
     paymasterUrl,
+    selfFunded: isSelfFunded,
   };
 
   return c.json({ data }, 200, corsHeaders(origin));

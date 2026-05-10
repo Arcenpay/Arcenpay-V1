@@ -89,6 +89,36 @@ export interface ArcenEmbedProps {
   mode?: "inline" | "modal";
 }
 
+function isSvgFeatureIcon(icon: string | null | undefined) {
+  return Boolean(icon?.trim().startsWith("<svg"));
+}
+
+function isTokenFeatureIcon(icon: string | null | undefined) {
+  return Boolean(icon?.startsWith("lucide:"));
+}
+
+function renderFeatureIconNode(
+  icon: string | null | undefined,
+  className: string,
+) {
+  if (!icon) return null;
+
+  if (isTokenFeatureIcon(icon)) {
+    return null;
+  }
+
+  if (isSvgFeatureIcon(icon)) {
+    return (
+      <span
+        className={className}
+        dangerouslySetInnerHTML={{ __html: icon }}
+      />
+    );
+  }
+
+  return <span>{icon}</span>;
+}
+
 type PortalView = "portal" | "checkout" | "payment" | "unsubscribe" | "success";
 
 type AppliedCouponQuote = {
@@ -927,7 +957,7 @@ function WalletSelector({
               marginTop: 2,
             }}
           >
-            Brave, Rabby, and any injected EVM wallet
+            Brave, Rabby, and any Ethereum-compatible wallet
           </div>
         </div>
         <svg
@@ -4383,7 +4413,123 @@ function CheckoutContent({
                       </div>
                     )}
                 </div>
-                <div style={{ flex: 1 }} />
+                <div style={{ flex: 1 }}>
+                  {(() => {
+                    const planEntitlements: any[] =
+                      (plan.metadata as any)?.entitlements ?? [];
+                    const features = planEntitlements.filter(
+                      (e: any) => e.enabled === true,
+                    );
+                    if (features.length === 0) return null;
+
+                    const iconMap = new Map<string | any, string | null>();
+                    (data.entitlements as any[])?.forEach((ent: any) => {
+                      if (ent.icon && ent.featureKey) {
+                        iconMap.set(ent.featureKey, ent.icon);
+                      }
+                    });
+
+                    return (
+                      <div
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 8,
+                          paddingBottom: 14,
+                        }}
+                      >
+                        {features.slice(0, 8).map(
+                          (
+                            ent: {
+                              featureName: string;
+                              featureKey: string;
+                              type: string;
+                              value: boolean | number | null;
+                              icon?: string | null;
+                            },
+                            i: number,
+                          ) => {
+                            const featureIcon = ent.icon || iconMap.get(ent.featureKey) || null;
+                            const renderedFeatureIcon = renderFeatureIconNode(
+                              featureIcon,
+                              "inline-flex",
+                            );
+
+                            return (
+                            <div
+                              key={ent.featureKey || i}
+                              style={{
+                                display: "flex",
+                                alignItems: "flex-start",
+                                gap: 8,
+                                fontSize: tokens.size - 1,
+                                color: tokens.mutedColor,
+                                lineHeight: 1.35,
+                              }}
+                            >
+                              <span
+                                style={{
+                                  flexShrink: 0,
+                                  width: featureIcon ? 20 : 16,
+                                  fontWeight: 700,
+                                  textAlign: "center",
+                                  marginTop: 1,
+                                  fontSize:
+                                    featureIcon &&
+                                    !isSvgFeatureIcon(featureIcon) &&
+                                    featureIcon.length <= 2
+                                      ? tokens.size
+                                      : tokens.size - 2,
+                                  color: tokens.mutedColor,
+                                }}
+                              >
+                                {renderedFeatureIcon ? (
+                                  renderedFeatureIcon
+                                ) : ent.type === "BOOLEAN" ? (
+                                  ent.value === true ? (
+                                    <span style={{ color: "#16a34a" }}>✓</span>
+                                  ) : (
+                                    <span style={{ color: "#d1d5db" }}>—</span>
+                                  )
+                                ) : ent.type === "UNLIMITED" ? (
+                                  <span
+                                    style={{
+                                      color: tokens.primary,
+                                      fontWeight: 600,
+                                    }}
+                                  >
+                                    ∞
+                                  </span>
+                                ) : (
+                                  <span style={{ color: tokens.primary }}>
+                                    •
+                                  </span>
+                                )}
+                              </span>
+                              <span>
+                                {ent.type === "NUMERIC" && ent.value != null
+                                  ? `${ent.value} ${ent.featureName || ent.featureKey}`
+                                  : ent.featureName || ent.featureKey}
+                              </span>
+                            </div>
+                            );
+                          },
+                        )}
+                        {features.length > 8 && (
+                          <div
+                            style={{
+                              fontSize: 11,
+                              color: tokens.mutedColor,
+                              fontStyle: "italic",
+                            }}
+                          >
+                            +{features.length - 8} more
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </div>
                 {isActive ? (
                   <div
                     style={{
@@ -4593,8 +4739,8 @@ function CheckoutContent({
                         marginTop: 4,
                       }}
                     >
-                      Coupons are not supported for this on-chain subscription
-                      lifecycle flow.
+                       Coupons are not supported for this subscription
+                       lifecycle flow.
                     </div>
                   )}
                 </>
@@ -4872,7 +5018,12 @@ function PaymentContent({
   }) => Promise<void> | void;
   onBack: () => void;
   containerWidth: number;
-  zeroDevConfig?: { bundlerUrl: string; paymasterUrl: string; isReady: boolean } | null;
+  zeroDevConfig?: {
+    bundlerUrl: string;
+    paymasterUrl: string;
+    isReady: boolean;
+    selfFunded?: boolean;
+  } | null;
 }) {
   const selectedPlan = data.plans.find(
     (p: ComponentPlanSummary) => p.id === selectedPlanId,
@@ -5014,7 +5165,7 @@ function PaymentContent({
     if (requiresSmartAccountExecution) {
       if ((!zeroDevProjectId && !zeroDevConfig?.isReady) || !effectiveSmartAccountAddress) {
         throw new Error(
-          "Smart-account autopay setup requires ZeroDev configuration.",
+          "Autopay setup requires additional configuration on this account.",
         );
       }
 
@@ -5057,37 +5208,80 @@ function PaymentContent({
       !finalAddress
     ) {
       throw new Error(
-        "A connected Base Sepolia wallet and ZeroDev config are required before activation.",
+        "A connected Base Sepolia wallet is required before activation.",
       );
     }
 
     await ensureWalletOnTargetChain(resolvedWalletClient, chainId);
 
-    try {
-      const result = await deploySmartAccount({
-        projectId: zeroDevProjectId,
-        bundlerUrl: zeroDevConfig?.bundlerUrl,
-        paymasterUrl: zeroDevConfig?.paymasterUrl,
-        chainId,
-        walletClient: resolvedWalletClient,
-      });
+    const forceSelfFunded = zeroDevConfig?.selfFunded;
 
-      setProvisionedSmartAccountAddress(result.smartAccountAddress);
-      return result.smartAccountAddress;
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
-      if (isPrefundError(error)) {
-        throw new Error(
-          "Smart account needs gas to deploy. Your wallet must have ETH on Base Sepolia to cover the deployment prefund. Add ETH to your wallet and try again.",
-        );
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        const paymasterSuffix = forceSelfFunded || attempt > 0 ? "?selfFunded=true" : "";
+        const paymasterUrl = zeroDevConfig?.paymasterUrl
+          ? zeroDevConfig.paymasterUrl + paymasterSuffix
+          : undefined;
+
+        const result = await deploySmartAccount({
+          projectId: zeroDevProjectId,
+          bundlerUrl: zeroDevConfig?.bundlerUrl,
+          paymasterUrl,
+          chainId,
+          walletClient: resolvedWalletClient,
+        });
+
+        setProvisionedSmartAccountAddress(result.smartAccountAddress);
+        return result.smartAccountAddress;
+      } catch (error) {
+        if (attempt === 0 && isPrefundError(error)) {
+          try {
+            const counterfactualAddress =
+              await getCounterfactualSmartAccountAddress(
+                resolvedWalletClient,
+                chainId,
+              );
+
+            const publicClient = createPublicClient({
+              chain: getChain(chainId),
+              transport: http(),
+            });
+            const existingCode = await publicClient.getCode({
+              address: counterfactualAddress,
+            });
+            if (existingCode && existingCode !== "0x") {
+              continue;
+            }
+
+            const fundTxHash = await resolvedWalletClient.sendTransaction({
+              account: finalAddress as `0x${string}`,
+              chain: getChain(chainId),
+              to: counterfactualAddress,
+              value: 2000000000000000n,
+            });
+
+            await publicClient.waitForTransactionReceipt({
+              hash: fundTxHash,
+            });
+            continue;
+          } catch (fundError) {
+            const fundMsg =
+              fundError instanceof Error
+                ? fundError.message
+                : "unknown error";
+            throw new Error(
+              `Your wallet needs a small amount of ETH on Base Sepolia to cover network fees. Please add ETH to your wallet and retry. (${fundMsg})`,
+            );
+          }
+        }
+
+        throw error;
       }
-      if (isRecoverableSmartAccountFundingError(error)) {
-        throw new Error(
-          `Smart account deployment failed — gas or paymaster issue. Ensure your wallet has ETH. (${msg})`,
-        );
-      }
-      throw error;
     }
+
+    throw new Error(
+      "Could not set up your subscription wallet. Ensure your wallet has a small amount of ETH on Base Sepolia and try again.",
+    );
   }
 
   async function ensureAutopayReadyForActivation(onChainPlanId: string) {
@@ -5175,7 +5369,7 @@ function PaymentContent({
       }
 
       throw new Error(
-        "Autopay setup has not finished syncing for this payment account yet. Please wait a moment and try Activate subscription again.",
+        "Automatic payments setup has not finished syncing for this payment account yet. Please wait a moment and try Activate subscription again.",
       );
     }
 
@@ -5227,7 +5421,7 @@ function PaymentContent({
 
       if (installError) {
         throw new Error(
-          "Autopay installation did not complete. Please confirm the install transaction and try Activate subscription again.",
+          "Automatic payment setup did not complete. Please confirm the transaction and try Activate subscription again.",
         );
       }
     } else {
@@ -5447,7 +5641,7 @@ function PaymentContent({
         setTxStatus("error");
         setTxError(
           requiresResumeActivation
-            ? "Missing on-chain plan metadata for subscription reactivation."
+            ? "Missing plan metadata for subscription reactivation."
             : "Missing on-chain plan metadata for activation.",
         );
         return;
@@ -5550,7 +5744,7 @@ function PaymentContent({
     if (!isOnChainPlanChange) {
       setTxStatus("error");
       setTxError(
-        "This embed no longer accepts direct token transfers for paid plan changes. Use the authoritative hosted checkout or supported on-chain plan-change flow instead.",
+        "This embed does not support direct payments for plan changes. Please use the checkout or select a supported plan.",
       );
       return;
     }
@@ -5558,14 +5752,14 @@ function PaymentContent({
     if (!chainId || !smartAccountAddress || !selectedOnChainPlanId) {
       setTxStatus("error");
       setTxError(
-        "Missing on-chain subscription metadata for this plan change.",
+        "Missing subscription metadata for this plan change.",
       );
       return;
     }
 
     if (!resolvedWalletClient || (!zeroDevProjectId && !zeroDevConfig?.isReady)) {
       throw new Error(
-        "A wallet client and ZeroDev config are required for authoritative on-chain plan changes.",
+        "Connect your wallet before making plan changes.",
       );
       return;
     }
@@ -5775,10 +5969,10 @@ function PaymentContent({
                       color: tokens.textColor,
                     }}
                   >
-                    Update on-chain subscription
+                    Update subscription on the blockchain
                   </div>
                   <div style={{ fontSize: 11, color: tokens.mutedColor }}>
-                    Smart account transaction · EVM
+                    Secure payment wallet transaction
                   </div>
                 </div>
               </div>
@@ -5793,8 +5987,8 @@ function PaymentContent({
                       lineHeight: 1.5,
                     }}
                   >
-                    Connect the wallet that controls your subscription smart
-                    account before authorizing this on-chain{" "}
+                    Connect the wallet you use to manage your subscription
+                    before authorizing this
                     {isImmediateOnChainUpgrade ? "upgrade" : "plan change"}.
                   </div>
                   {(hasWindowEth || isMobileDevice()) ? (
@@ -5835,8 +6029,8 @@ function PaymentContent({
                     }}
                   >
                     {isImmediateOnChainUpgrade
-                      ? "This route verifies the autopay config update, the prorated transfer, and the backend-authorized access update before applying the new plan."
-                      : "This route verifies a real updateConfig transaction and schedules the selected plan for the next renewal without charging again today."}
+                      ? "This route processes the payment update, prorated charge, and applies the new plan."
+                      : "This route schedules the selected plan for the next renewal without charging again today."}
                   </div>
                 </div>
               ) : needsWalletClient ? (
@@ -5851,9 +6045,8 @@ function PaymentContent({
                     lineHeight: 1.6,
                   }}
                 >
-                  This embed needs a wallet client and
-                  ZeroDev config to send smart-account plan
-                  change transactions.
+                  This embed needs a connected wallet to send
+                  plan change transactions.
                 </div>
               ) : (
                 <div>
@@ -6055,7 +6248,7 @@ function PaymentContent({
                   >
                     {isImmediateOnChainUpgrade
                       ? "The backend verifies the real prorated payment before it changes your subscription access."
-                      : "The backend will verify this on-chain config update and schedule the new plan for the next renewal cycle."}
+                      : "The backend will verify this payment configuration update and schedule the new plan for the next renewal cycle."}
                   </div>
                 </div>
               )}
@@ -6099,7 +6292,7 @@ function PaymentContent({
                   <div style={{ fontSize: 11, color: tokens.mutedColor }}>
                     {requiresResumeActivation
                       ? "Restore future renewals"
-                      : "First bill + autopay setup"}
+                      :                     "First bill + automatic payments setup"}
                   </div>
                 </div>
               </div>
@@ -6117,8 +6310,8 @@ function PaymentContent({
                 }}
               >
                 {requiresResumeActivation
-                  ? "This subscription is already active through the current billing period, but future renewals are turned off. Connect the customer wallet, confirm the payment account again, and we will restore autopay for the current plan."
-                  : "This portal can activate the subscription directly from your app. Connect the customer wallet, confirm the payment account, and we will create the subscription on-chain for the selected plan."}
+                  ? "This subscription is already active through the current billing period, but future renewals are turned off. Connect the customer wallet, confirm the payment account again, and we will restore automatic payments for the current plan."
+                  : "This portal can activate the subscription directly from your app. Connect the customer wallet, confirm the payment account, and we will create the subscription for the selected plan."}
               </div>
 
               <div style={{ marginBottom: 16 }}>
@@ -6368,7 +6561,7 @@ function PaymentContent({
                   {price === 0
                     ? "This is a free plan. Click below to activate it — no payment needed."
                     : hasUnsupportedPaidFlow
-                      ? "Paid changes in this portal must come from a verified on-chain subscription flow. Direct token transfer plan changes are disabled."
+                      ? "Paid changes in this portal must come from a verified subscription flow. Direct payment plan changes are disabled."
                       : "This plan cannot be self-activated until the provider finishes wallet and payment setup."}
                 </div>
               </div>
@@ -6587,7 +6780,7 @@ function PaymentContent({
                         marginTop: 6,
                       }}
                     >
-                      On-chain subscription flow · EVM
+                      Subscription on the blockchain
                     </div>
                   )}
               </>
@@ -6622,7 +6815,12 @@ function UnsubscribeContent({
   onConfirm: (confirmation: CancellationConfirmation) => void;
   onBack: () => void;
   containerWidth: number;
-  zeroDevConfig?: { bundlerUrl: string; paymasterUrl: string; isReady: boolean } | null;
+  zeroDevConfig?: {
+    bundlerUrl: string;
+    paymasterUrl: string;
+    isReady: boolean;
+    selfFunded?: boolean;
+  } | null;
 }) {
   const activePlan = data.activePlan;
   const scheduledCancellation = getScheduledCancellationTransition(data);
@@ -6697,7 +6895,7 @@ function UnsubscribeContent({
 
     if (!chainId || !smartAccountAddress) {
       setTxStatus("error");
-      setTxError("Missing on-chain subscription metadata for cancellation.");
+      setTxError("Missing subscription metadata for cancellation.");
       return;
     }
 
@@ -6708,7 +6906,7 @@ function UnsubscribeContent({
       setTxStatus("error");
       setTxError(
         requiresSmartAccountCancellationExecution
-          ? "A wallet client and ZeroDev config are required for on-chain cancellation."
+          ? "A wallet client is required for on-chain cancellation."
           : "A wallet client is required for on-chain cancellation.",
       );
       return;
@@ -6723,7 +6921,7 @@ function UnsubscribeContent({
         | `0x${string}`
         | undefined;
       if (!autopayAddress) {
-        throw new Error("Autopay module is not configured for this chain.");
+        throw new Error("Automatic payment system is not available for this chain.");
       }
 
       const isInitialized = await readAutopayInitialized(
@@ -6758,7 +6956,7 @@ function UnsubscribeContent({
       if (requiresSmartAccountCancellationExecution) {
         if ((!zeroDevProjectId && !zeroDevConfig?.isReady)) {
           throw new Error(
-            "Smart-account cancellation requires ZeroDev configuration.",
+            "Subscription cancellation requires a connected wallet.",
           );
         }
 
@@ -6796,7 +6994,7 @@ function UnsubscribeContent({
     } catch (error) {
       setTxStatus("error");
       setTxError(
-        error instanceof Error ? error.message : "Autopay shutdown failed.",
+        error instanceof Error ? error.message : "Failed to stop automatic payments.",
       );
     }
   }
@@ -6859,7 +7057,7 @@ function UnsubscribeContent({
                 "the end of the current billing period"
               }. You do not need to submit another cancellation transaction.`
             : requiresOnChainCancellation
-              ? "We will stop future autopay now. Your current plan stays active until the end of the current billing period, then your subscription moves to Free."
+               ? "We will stop future automatic payments now. Your current plan stays active until the end of the current billing period, then your subscription moves to Free."
               : "Your current plan stays active until the end of the current billing period, then your subscription moves to Free."}
         </div>
         {requiresOnChainCancellation && (
@@ -6875,7 +7073,7 @@ function UnsubscribeContent({
               marginBottom: 20,
             }}
           >
-            This flow pauses future autopay for the subscription payment account
+            This flow stops future automatic payments for the subscription payment account
             right away, then schedules the actual plan downgrade for the current
             billing period end.
           </div>
@@ -6922,8 +7120,8 @@ function UnsubscribeContent({
                 marginBottom: 12,
               }}
             >
-              Connect the wallet that controls your subscription smart account
-              before stopping future autopay.
+              Connect the wallet you use to manage your subscription
+              before stopping future automatic payments.
             </div>
             <WalletSelector
               tokens={tokens}
@@ -7063,7 +7261,7 @@ function UnsubscribeContent({
               : scheduledCancellation
                 ? "Cancellation already scheduled"
                 : requiresOnChainCancellation
-                  ? "Stop autopay and cancel at period end"
+                   ? "Cancel and stop payments at period end"
                   : "Schedule cancellation"}
         </button>
         {needsWalletClient && (
@@ -7409,7 +7607,12 @@ export function ArcenEmbed({
   let providerToken: string | null = null;
   let providerCid: string | null = null;
   let providerBaseUrl: string | null = null;
-  let providerZeroDev: { bundlerUrl: string; paymasterUrl: string; isReady: boolean } | null = null;
+  let providerZeroDev: {
+    bundlerUrl: string;
+    paymasterUrl: string;
+    isReady: boolean;
+    selfFunded?: boolean;
+  } | null = null;
   try {
     const arcen = useArcenPay();
     providerToken = arcen.session.token;
@@ -7707,7 +7910,7 @@ export function ArcenEmbed({
         successMsg:
           result.successMsg ??
           (result.pending
-            ? "Subscription activation submitted. We’re finalizing the on-chain billing state now."
+            ? "Subscription activation submitted. We’re finalizing your billing state now."
             : "Subscription activated!"),
         txHash: result.txHash,
       });

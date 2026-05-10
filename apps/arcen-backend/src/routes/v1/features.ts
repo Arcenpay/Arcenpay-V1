@@ -54,6 +54,7 @@ export async function GET(c: Context) {
         featureKey: true,
         featureType: true,
         eventKey: true,
+        icon: true,
         description: true,
         createdAt: true,
       },
@@ -67,6 +68,7 @@ export async function GET(c: Context) {
     featureKey: f.featureKey,
     featureType: toUiFeatureType(f.featureType),
     eventKey: f.eventKey ?? null,
+    icon: f.icon ?? null,
     traitKey: null, // not stored in schema; reserved for future use
     description: f.description ?? null,
     linkedPlans: (linkedPlansByFeatureKey.get(f.featureKey) ?? []).map((plan) => plan.name),
@@ -91,6 +93,7 @@ export async function POST(c: Context) {
     eventKey?: string | null;
     traitKey?: string | null;
     description?: string | null;
+    icon?: string | null;
   };
 
   try {
@@ -113,6 +116,9 @@ export async function POST(c: Context) {
   const validTypes = ["boolean", "event", "event_based"];
   if (!validTypes.includes(featureType)) {
     return c.json({ error: "Invalid featureType" }, 400 as any);
+  }
+  if (body.icon && body.icon.trim().length > 4096) {
+    return c.json({ error: "icon is too long" }, 400 as any);
   }
   if (body.traitKey) {
     return c.json({
@@ -137,6 +143,7 @@ export async function POST(c: Context) {
       featureType: toStoredFeatureType(featureType),
       eventKey: body.eventKey ?? null,
       description: body.description ?? null,
+      icon: body.icon?.trim() || null,
       defaultValue: false,
     },
   });
@@ -147,6 +154,7 @@ export async function POST(c: Context) {
     featureKey: flag.featureKey,
     featureType: toUiFeatureType(flag.featureType),
     eventKey: flag.eventKey ?? null,
+    icon: flag.icon ?? null,
     traitKey: null,
     description: flag.description ?? null,
     linkedPlans: [] as string[],

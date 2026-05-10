@@ -261,6 +261,7 @@ export async function GET(c: Context) {
             featureType: true,
             unitSingular: true,
             unitPlural: true,
+            icon: true,
           },
         }),
         resolveEntitlementResults({
@@ -291,6 +292,7 @@ export async function GET(c: Context) {
           exceeded: entitlement.exceeded,
           unitSingular: flag?.unitSingular ?? null,
           unitPlural: flag?.unitPlural ?? flag?.unitSingular ?? null,
+          icon: flag?.icon ?? null,
         };
       });
 

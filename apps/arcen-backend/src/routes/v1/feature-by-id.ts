@@ -52,6 +52,7 @@ export async function PUT(c: Context) {
     description?: string | null;
     featureType?: "boolean" | "event" | "event_based";
     eventKey?: string | null;
+    icon?: string | null;
   };
 
   try {
@@ -62,6 +63,9 @@ export async function PUT(c: Context) {
 
   if (!body.name?.trim()) {
     return c.json({ error: "name is required" }, 400 as any);
+  }
+  if (body.icon && body.icon.trim().length > 4096) {
+    return c.json({ error: "icon is too long" }, 400 as any);
   }
 
   const nextFeatureType = body.featureType ?? "boolean";
@@ -81,6 +85,7 @@ export async function PUT(c: Context) {
     data: {
       name: body.name.trim(),
       description: body.description?.trim() || null,
+      icon: body.icon?.trim() || null,
       featureType: nextFeatureType === "boolean" ? "boolean" : "event_based",
       eventKey: nextFeatureType === "boolean" ? null : body.eventKey!.trim(),
     },
@@ -90,6 +95,7 @@ export async function PUT(c: Context) {
       featureKey: true,
       featureType: true,
       eventKey: true,
+      icon: true,
       description: true,
       createdAt: true,
     },
@@ -102,6 +108,7 @@ export async function PUT(c: Context) {
       featureKey: updated.featureKey,
       featureType: updated.featureType === "event_based" ? "event" : "boolean",
       eventKey: updated.eventKey,
+      icon: updated.icon ?? null,
       traitKey: null,
       description: updated.description,
       linkedPlans: [] as string[],

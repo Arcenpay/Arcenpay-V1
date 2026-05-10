@@ -37,6 +37,7 @@ export type CatalogFeatureFlagMinAggregateOutputType = {
   eventKey: string | null
   unitSingular: string | null
   unitPlural: string | null
+  icon: string | null
 }
 
 export type CatalogFeatureFlagMaxAggregateOutputType = {
@@ -52,6 +53,7 @@ export type CatalogFeatureFlagMaxAggregateOutputType = {
   eventKey: string | null
   unitSingular: string | null
   unitPlural: string | null
+  icon: string | null
 }
 
 export type CatalogFeatureFlagCountAggregateOutputType = {
@@ -67,6 +69,7 @@ export type CatalogFeatureFlagCountAggregateOutputType = {
   eventKey: number
   unitSingular: number
   unitPlural: number
+  icon: number
   _all: number
 }
 
@@ -84,6 +87,7 @@ export type CatalogFeatureFlagMinAggregateInputType = {
   eventKey?: true
   unitSingular?: true
   unitPlural?: true
+  icon?: true
 }
 
 export type CatalogFeatureFlagMaxAggregateInputType = {
@@ -99,6 +103,7 @@ export type CatalogFeatureFlagMaxAggregateInputType = {
   eventKey?: true
   unitSingular?: true
   unitPlural?: true
+  icon?: true
 }
 
 export type CatalogFeatureFlagCountAggregateInputType = {
@@ -114,6 +119,7 @@ export type CatalogFeatureFlagCountAggregateInputType = {
   eventKey?: true
   unitSingular?: true
   unitPlural?: true
+  icon?: true
   _all?: true
 }
 
@@ -202,6 +208,7 @@ export type CatalogFeatureFlagGroupByOutputType = {
   eventKey: string | null
   unitSingular: string | null
   unitPlural: string | null
+  icon: string | null
   _count: CatalogFeatureFlagCountAggregateOutputType | null
   _min: CatalogFeatureFlagMinAggregateOutputType | null
   _max: CatalogFeatureFlagMaxAggregateOutputType | null
@@ -238,6 +245,7 @@ export type CatalogFeatureFlagWhereInput = {
   eventKey?: Prisma.StringNullableFilter<"CatalogFeatureFlag"> | string | null
   unitSingular?: Prisma.StringNullableFilter<"CatalogFeatureFlag"> | string | null
   unitPlural?: Prisma.StringNullableFilter<"CatalogFeatureFlag"> | string | null
+  icon?: Prisma.StringNullableFilter<"CatalogFeatureFlag"> | string | null
   rules?: Prisma.FlagRuleListRelationFilter
   team?: Prisma.XOR<Prisma.TeamScalarRelationFilter, Prisma.TeamWhereInput>
 }
@@ -255,6 +263,7 @@ export type CatalogFeatureFlagOrderByWithRelationInput = {
   eventKey?: Prisma.SortOrderInput | Prisma.SortOrder
   unitSingular?: Prisma.SortOrderInput | Prisma.SortOrder
   unitPlural?: Prisma.SortOrderInput | Prisma.SortOrder
+  icon?: Prisma.SortOrderInput | Prisma.SortOrder
   rules?: Prisma.FlagRuleOrderByRelationAggregateInput
   team?: Prisma.TeamOrderByWithRelationInput
 }
@@ -276,6 +285,7 @@ export type CatalogFeatureFlagWhereUniqueInput = Prisma.AtLeast<{
   eventKey?: Prisma.StringNullableFilter<"CatalogFeatureFlag"> | string | null
   unitSingular?: Prisma.StringNullableFilter<"CatalogFeatureFlag"> | string | null
   unitPlural?: Prisma.StringNullableFilter<"CatalogFeatureFlag"> | string | null
+  icon?: Prisma.StringNullableFilter<"CatalogFeatureFlag"> | string | null
   rules?: Prisma.FlagRuleListRelationFilter
   team?: Prisma.XOR<Prisma.TeamScalarRelationFilter, Prisma.TeamWhereInput>
 }, "id" | "teamId_featureKey">
@@ -293,6 +303,7 @@ export type CatalogFeatureFlagOrderByWithAggregationInput = {
   eventKey?: Prisma.SortOrderInput | Prisma.SortOrder
   unitSingular?: Prisma.SortOrderInput | Prisma.SortOrder
   unitPlural?: Prisma.SortOrderInput | Prisma.SortOrder
+  icon?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.CatalogFeatureFlagCountOrderByAggregateInput
   _max?: Prisma.CatalogFeatureFlagMaxOrderByAggregateInput
   _min?: Prisma.CatalogFeatureFlagMinOrderByAggregateInput
@@ -314,6 +325,7 @@ export type CatalogFeatureFlagScalarWhereWithAggregatesInput = {
   eventKey?: Prisma.StringNullableWithAggregatesFilter<"CatalogFeatureFlag"> | string | null
   unitSingular?: Prisma.StringNullableWithAggregatesFilter<"CatalogFeatureFlag"> | string | null
   unitPlural?: Prisma.StringNullableWithAggregatesFilter<"CatalogFeatureFlag"> | string | null
+  icon?: Prisma.StringNullableWithAggregatesFilter<"CatalogFeatureFlag"> | string | null
 }
 
 export type CatalogFeatureFlagCreateInput = {
@@ -328,6 +340,7 @@ export type CatalogFeatureFlagCreateInput = {
   eventKey?: string | null
   unitSingular?: string | null
   unitPlural?: string | null
+  icon?: string | null
   rules?: Prisma.FlagRuleCreateNestedManyWithoutFlagInput
   team: Prisma.TeamCreateNestedOneWithoutFeatureFlagsInput
 }
@@ -345,6 +358,7 @@ export type CatalogFeatureFlagUncheckedCreateInput = {
   eventKey?: string | null
   unitSingular?: string | null
   unitPlural?: string | null
+  icon?: string | null
   rules?: Prisma.FlagRuleUncheckedCreateNestedManyWithoutFlagInput
 }
 
@@ -360,6 +374,7 @@ export type CatalogFeatureFlagUpdateInput = {
   eventKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   unitSingular?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   unitPlural?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  icon?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   rules?: Prisma.FlagRuleUpdateManyWithoutFlagNestedInput
   team?: Prisma.TeamUpdateOneRequiredWithoutFeatureFlagsNestedInput
 }
@@ -377,6 +392,7 @@ export type CatalogFeatureFlagUncheckedUpdateInput = {
   eventKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   unitSingular?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   unitPlural?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  icon?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   rules?: Prisma.FlagRuleUncheckedUpdateManyWithoutFlagNestedInput
 }
 
@@ -393,6 +409,7 @@ export type CatalogFeatureFlagCreateManyInput = {
   eventKey?: string | null
   unitSingular?: string | null
   unitPlural?: string | null
+  icon?: string | null
 }
 
 export type CatalogFeatureFlagUpdateManyMutationInput = {
@@ -407,6 +424,7 @@ export type CatalogFeatureFlagUpdateManyMutationInput = {
   eventKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   unitSingular?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   unitPlural?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  icon?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type CatalogFeatureFlagUncheckedUpdateManyInput = {
@@ -422,6 +440,7 @@ export type CatalogFeatureFlagUncheckedUpdateManyInput = {
   eventKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   unitSingular?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   unitPlural?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  icon?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type CatalogFeatureFlagListRelationFilter = {
@@ -452,6 +471,7 @@ export type CatalogFeatureFlagCountOrderByAggregateInput = {
   eventKey?: Prisma.SortOrder
   unitSingular?: Prisma.SortOrder
   unitPlural?: Prisma.SortOrder
+  icon?: Prisma.SortOrder
 }
 
 export type CatalogFeatureFlagMaxOrderByAggregateInput = {
@@ -467,6 +487,7 @@ export type CatalogFeatureFlagMaxOrderByAggregateInput = {
   eventKey?: Prisma.SortOrder
   unitSingular?: Prisma.SortOrder
   unitPlural?: Prisma.SortOrder
+  icon?: Prisma.SortOrder
 }
 
 export type CatalogFeatureFlagMinOrderByAggregateInput = {
@@ -482,6 +503,7 @@ export type CatalogFeatureFlagMinOrderByAggregateInput = {
   eventKey?: Prisma.SortOrder
   unitSingular?: Prisma.SortOrder
   unitPlural?: Prisma.SortOrder
+  icon?: Prisma.SortOrder
 }
 
 export type CatalogFeatureFlagScalarRelationFilter = {
@@ -557,6 +579,7 @@ export type CatalogFeatureFlagCreateWithoutTeamInput = {
   eventKey?: string | null
   unitSingular?: string | null
   unitPlural?: string | null
+  icon?: string | null
   rules?: Prisma.FlagRuleCreateNestedManyWithoutFlagInput
 }
 
@@ -572,6 +595,7 @@ export type CatalogFeatureFlagUncheckedCreateWithoutTeamInput = {
   eventKey?: string | null
   unitSingular?: string | null
   unitPlural?: string | null
+  icon?: string | null
   rules?: Prisma.FlagRuleUncheckedCreateNestedManyWithoutFlagInput
 }
 
@@ -617,6 +641,7 @@ export type CatalogFeatureFlagScalarWhereInput = {
   eventKey?: Prisma.StringNullableFilter<"CatalogFeatureFlag"> | string | null
   unitSingular?: Prisma.StringNullableFilter<"CatalogFeatureFlag"> | string | null
   unitPlural?: Prisma.StringNullableFilter<"CatalogFeatureFlag"> | string | null
+  icon?: Prisma.StringNullableFilter<"CatalogFeatureFlag"> | string | null
 }
 
 export type CatalogFeatureFlagCreateWithoutRulesInput = {
@@ -631,6 +656,7 @@ export type CatalogFeatureFlagCreateWithoutRulesInput = {
   eventKey?: string | null
   unitSingular?: string | null
   unitPlural?: string | null
+  icon?: string | null
   team: Prisma.TeamCreateNestedOneWithoutFeatureFlagsInput
 }
 
@@ -647,6 +673,7 @@ export type CatalogFeatureFlagUncheckedCreateWithoutRulesInput = {
   eventKey?: string | null
   unitSingular?: string | null
   unitPlural?: string | null
+  icon?: string | null
 }
 
 export type CatalogFeatureFlagCreateOrConnectWithoutRulesInput = {
@@ -677,6 +704,7 @@ export type CatalogFeatureFlagUpdateWithoutRulesInput = {
   eventKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   unitSingular?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   unitPlural?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  icon?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   team?: Prisma.TeamUpdateOneRequiredWithoutFeatureFlagsNestedInput
 }
 
@@ -693,6 +721,7 @@ export type CatalogFeatureFlagUncheckedUpdateWithoutRulesInput = {
   eventKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   unitSingular?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   unitPlural?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  icon?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type CatalogFeatureFlagCreateManyTeamInput = {
@@ -707,6 +736,7 @@ export type CatalogFeatureFlagCreateManyTeamInput = {
   eventKey?: string | null
   unitSingular?: string | null
   unitPlural?: string | null
+  icon?: string | null
 }
 
 export type CatalogFeatureFlagUpdateWithoutTeamInput = {
@@ -721,6 +751,7 @@ export type CatalogFeatureFlagUpdateWithoutTeamInput = {
   eventKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   unitSingular?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   unitPlural?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  icon?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   rules?: Prisma.FlagRuleUpdateManyWithoutFlagNestedInput
 }
 
@@ -736,6 +767,7 @@ export type CatalogFeatureFlagUncheckedUpdateWithoutTeamInput = {
   eventKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   unitSingular?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   unitPlural?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  icon?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   rules?: Prisma.FlagRuleUncheckedUpdateManyWithoutFlagNestedInput
 }
 
@@ -751,6 +783,7 @@ export type CatalogFeatureFlagUncheckedUpdateManyWithoutTeamInput = {
   eventKey?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   unitSingular?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   unitPlural?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  icon?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 
@@ -797,6 +830,7 @@ export type CatalogFeatureFlagSelect<ExtArgs extends runtime.Types.Extensions.In
   eventKey?: boolean
   unitSingular?: boolean
   unitPlural?: boolean
+  icon?: boolean
   rules?: boolean | Prisma.CatalogFeatureFlag$rulesArgs<ExtArgs>
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
   _count?: boolean | Prisma.CatalogFeatureFlagCountOutputTypeDefaultArgs<ExtArgs>
@@ -815,6 +849,7 @@ export type CatalogFeatureFlagSelectCreateManyAndReturn<ExtArgs extends runtime.
   eventKey?: boolean
   unitSingular?: boolean
   unitPlural?: boolean
+  icon?: boolean
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["catalogFeatureFlag"]>
 
@@ -831,6 +866,7 @@ export type CatalogFeatureFlagSelectUpdateManyAndReturn<ExtArgs extends runtime.
   eventKey?: boolean
   unitSingular?: boolean
   unitPlural?: boolean
+  icon?: boolean
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["catalogFeatureFlag"]>
 
@@ -847,9 +883,10 @@ export type CatalogFeatureFlagSelectScalar = {
   eventKey?: boolean
   unitSingular?: boolean
   unitPlural?: boolean
+  icon?: boolean
 }
 
-export type CatalogFeatureFlagOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "updatedAt" | "teamId" | "featureKey" | "name" | "description" | "defaultValue" | "featureType" | "eventKey" | "unitSingular" | "unitPlural", ExtArgs["result"]["catalogFeatureFlag"]>
+export type CatalogFeatureFlagOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "updatedAt" | "teamId" | "featureKey" | "name" | "description" | "defaultValue" | "featureType" | "eventKey" | "unitSingular" | "unitPlural" | "icon", ExtArgs["result"]["catalogFeatureFlag"]>
 export type CatalogFeatureFlagInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   rules?: boolean | Prisma.CatalogFeatureFlag$rulesArgs<ExtArgs>
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
@@ -881,6 +918,7 @@ export type $CatalogFeatureFlagPayload<ExtArgs extends runtime.Types.Extensions.
     eventKey: string | null
     unitSingular: string | null
     unitPlural: string | null
+    icon: string | null
   }, ExtArgs["result"]["catalogFeatureFlag"]>
   composites: {}
 }
@@ -1318,6 +1356,7 @@ export interface CatalogFeatureFlagFieldRefs {
   readonly eventKey: Prisma.FieldRef<"CatalogFeatureFlag", 'String'>
   readonly unitSingular: Prisma.FieldRef<"CatalogFeatureFlag", 'String'>
   readonly unitPlural: Prisma.FieldRef<"CatalogFeatureFlag", 'String'>
+  readonly icon: Prisma.FieldRef<"CatalogFeatureFlag", 'String'>
 }
     
 

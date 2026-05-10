@@ -358,116 +358,9 @@ export async function deploySmartAccount(
     transport: http(paymasterUrl),
   } as any);
 
-  const kernelClient = createKernelAccountClient({
-    account: kernelAccount,
-    chain,
-    bundlerTransport: http(bundlerUrl),
-    middleware: {
-      sponsorUserOperation: async ({
-        userOperation,
-      }: {
-        userOperation: any;
-      }) => {
-        return (paymasterClient as any).sponsorUserOperation({
-          userOperation,
-          entryPoint: ENTRY_POINT_ADDRESS,
-        });
-      },
-    },
-  } as any);
-
-  // Step 4: Install AutopayModule if not already installed
-  let installTxHash: `0x${string}` | undefined;
-
-  if (contracts.autopayModule) {
-    try {
-      const initialized = (await publicClient.readContract({
-        address: contracts.autopayModule as `0x${string}`,
-        abi: ERC7579AutopayModuleABI,
-        functionName: "isInitialized",
-        args: [smartAccountAddress],
-      })) as boolean;
-
-      if (initialized) {
-        console.log(
-          `[ZeroDev] AutopayModule already initialized for ${smartAccountAddress}`,
-        );
-        return {
-          smartAccountAddress,
-          installTxHash,
-          alreadyDeployed,
-        };
-      }
-
-      // Encode the module installation call
-      // ERC-7579 defines installModule(uint256 moduleType, address module, bytes initData)
-      const installData = encodeFunctionData({
-        abi: [
-          {
-            type: "function",
-            name: "installModule",
-            inputs: [
-              { name: "moduleType", type: "uint256" },
-              { name: "module", type: "address" },
-              { name: "initData", type: "bytes" },
-            ],
-            outputs: [],
-            stateMutability: "nonpayable",
-          },
-        ],
-        functionName: "installModule",
-        args: [
-          2n, // Module type 2 = Executor
-          contracts.autopayModule as `0x${string}`,
-          "0x" as `0x${string}`, // Empty init data
-        ],
-      });
-
-      installTxHash = await (kernelClient as any).sendTransaction({
-        to: smartAccountAddress,
-        data: installData,
-        value: 0n,
-      });
-
-      console.log(
-        `[ZeroDev] AutopayModule installed on ${smartAccountAddress} — tx: ${installTxHash}`,
-      );
-    } catch (err: any) {
-      // Module might already be installed
-      if (
-        err?.message?.includes("already installed") ||
-        err?.message?.includes("AlreadyInitialized")
-      ) {
-        console.log(
-          `[ZeroDev] AutopayModule already installed on ${smartAccountAddress}`,
-        );
-      } else {
-        const normalizedError = normalizeZeroDevError(err, {
-          projectId: config.projectId,
-          chainId: config.chainId,
-          bundlerUrl,
-          paymasterUrl,
-          hasConfiguredUrls,
-        });
-        if (isRecoverableSmartAccountFundingError(normalizedError)) {
-          console.warn(
-            "[ZeroDev] Module installation needs prefund or sponsorship; callers may fall back to the connected wallet:",
-            normalizedError.message,
-          );
-        } else {
-          console.error(
-            "[ZeroDev] Module installation failed:",
-            normalizedError.message,
-          );
-        }
-        throw normalizedError;
-      }
-    }
-  }
-
   return {
     smartAccountAddress,
-    installTxHash,
+    installTxHash: undefined,
     alreadyDeployed,
   };
 }
@@ -483,7 +376,7 @@ export async function revokeAutopayModule(
   const contracts = getContractAddresses(config.chainId);
 
   if (!contracts.autopayModule) {
-    throw new Error("Autopay module address not configured for this chain.");
+    throw new Error("Automatic payment system address is not configured for this chain.");
   }
 
   const { bundlerUrl, paymasterUrl, hasConfiguredUrls } = resolveZeroDevUrls({
@@ -522,7 +415,7 @@ export async function revokeAutopayModule(
     config.smartAccountAddress.toLowerCase()
   ) {
     throw new Error(
-      `Kernel account mismatch. Expected ${config.smartAccountAddress}, got ${kernelAccount.address}.`,
+      `Wallet account mismatch. Expected ${config.smartAccountAddress}, got ${kernelAccount.address}.`,
     );
   }
 
@@ -583,7 +476,7 @@ export async function sendSmartAccountTransaction(
       config.smartAccountAddress.toLowerCase()
   ) {
     throw new Error(
-      `Kernel account mismatch. Expected ${config.smartAccountAddress}, got ${kernelAccount.address}.`,
+      `Wallet account mismatch. Expected ${config.smartAccountAddress}, got ${kernelAccount.address}.`,
     );
   }
 
@@ -619,7 +512,7 @@ export async function updateAutopayConfig(
 }> {
   const contracts = getContractAddresses(config.chainId);
   if (!contracts.autopayModule) {
-    throw new Error("Autopay module address is not configured for this chain.");
+    throw new Error("Automatic payment system address is not configured for this chain.");
   }
 
   const data = encodeFunctionData({

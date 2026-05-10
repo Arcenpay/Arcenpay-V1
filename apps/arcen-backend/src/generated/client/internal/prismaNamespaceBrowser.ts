@@ -958,7 +958,8 @@ export const CatalogFeatureFlagScalarFieldEnum = {
   featureType: 'featureType',
   eventKey: 'eventKey',
   unitSingular: 'unitSingular',
-  unitPlural: 'unitPlural'
+  unitPlural: 'unitPlural',
+  icon: 'icon'
 } as const
 
 export type CatalogFeatureFlagScalarFieldEnum = (typeof CatalogFeatureFlagScalarFieldEnum)[keyof typeof CatalogFeatureFlagScalarFieldEnum]
