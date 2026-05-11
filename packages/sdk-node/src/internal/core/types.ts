@@ -327,7 +327,7 @@ export interface ComponentEntitlement {
   exceeded?: boolean;
   unitSingular?: string;
   unitPlural?: string;
-  /** Custom feature icon token from the feature definition */
+  /** Custom feature icon token, emoji, or fallback legacy SVG from the feature definition */
   icon?: string | null;
 }
 

@@ -1,4 +1,4 @@
-export const ARCENPAY_API_URL = "https://jd6xxlrb-3300.inc1.devtunnels.ms";
+export const ARCENPAY_API_URL = "http://localhost:3300";
 export const ARCENPAY_APP_URL = "https://yak-included-currently.ngrok-free.app";
 
 export interface ResolveArcenPayBaseUrlOptions {
