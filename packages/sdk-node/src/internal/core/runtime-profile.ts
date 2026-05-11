@@ -1,8 +1,8 @@
 import { getChainEnvironment } from "./environment";
 import { getChain } from "./chains";
 
-export const PRIMARY_RUNTIME_CHAIN_ID = 84532 as const;
-export const LEGACY_RUNTIME_CHAIN_IDS = [11155111] as const;
+export const PRIMARY_RUNTIME_CHAIN_ID = 5042002 as const;
+export const LEGACY_RUNTIME_CHAIN_IDS = [11155111, 84532] as const;
 const SUPPORTED_RUNTIME_CHAIN_IDS = [11155111, 84532, 8453, 5042002] as const;
 
 export type RuntimeChainProfile = {

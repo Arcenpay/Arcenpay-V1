@@ -154,7 +154,7 @@ const CHAIN_MAP: Record<number, Chain> = {
 };
 
 // --- Default Chain ---
-export const DEFAULT_CHAIN_ID: SupportedChainId = 84532; // Base Sepolia is the current deployed testnet default
+export const DEFAULT_CHAIN_ID: SupportedChainId = 5042002; // Arc Testnet is the current default
 
 /**
  * Returns the block explorer transaction URL for a given chainId and tx hash.

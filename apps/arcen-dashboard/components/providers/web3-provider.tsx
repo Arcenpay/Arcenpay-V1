@@ -24,7 +24,8 @@ createAppKit({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   adapters: [wagmiAdapter as any],
   projectId,
-  networks,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  networks: networks as any,
   defaultNetwork,
   metadata: {
     name: "ArcenPay Dashboard",

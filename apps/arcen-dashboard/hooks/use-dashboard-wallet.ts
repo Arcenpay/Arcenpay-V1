@@ -4,10 +4,24 @@ import { useCallback } from "react";
 import { useAppKit } from "@reown/appkit/react";
 import { toast } from "sonner";
 import { useAccount, useChainId, useDisconnect, useSwitchChain } from "wagmi";
-import { BASE_SEPOLIA_CHAIN_ID, getChainLabel } from "@/lib/default-chain";
+import {
+  ARC_TESTNET_CHAIN_ID,
+  BASE_SEPOLIA_CHAIN_ID,
+  isSupportedDashboardChainId,
+  getChainLabel,
+} from "@/lib/default-chain";
 
-export const REQUIRED_WALLET_CHAIN_ID = BASE_SEPOLIA_CHAIN_ID;
-export const REQUIRED_WALLET_CHAIN_LABEL = getChainLabel(REQUIRED_WALLET_CHAIN_ID);
+const SUPPORTED_NETWORK_CHAIN_IDS = [
+  ARC_TESTNET_CHAIN_ID,
+  BASE_SEPOLIA_CHAIN_ID,
+] as const;
+
+export const DEFAULT_WALLET_CHAIN_ID = ARC_TESTNET_CHAIN_ID;
+export const DEFAULT_WALLET_CHAIN_LABEL = getChainLabel(DEFAULT_WALLET_CHAIN_ID);
+
+// backward-compat aliases
+export const REQUIRED_WALLET_CHAIN_ID = DEFAULT_WALLET_CHAIN_ID;
+export const REQUIRED_WALLET_CHAIN_LABEL = DEFAULT_WALLET_CHAIN_LABEL;
 
 export function normalizeWalletAddress(address?: string | null): string | null {
   return address?.trim().toLowerCase() ?? null;
@@ -34,8 +48,8 @@ export function useDashboardWallet(linkedWallet?: string | null) {
     normalizedLinkedWallet === normalizedConnectedWallet;
   const isWrongWalletConnected =
     hasLinkedWallet && hasConnectedWallet && !isLinkedWalletConnected;
-  const isOnRequiredNetwork = chainId === REQUIRED_WALLET_CHAIN_ID;
-  const isWrongNetwork = hasConnectedWallet && !isOnRequiredNetwork;
+  const isOnSupportedNetwork = isSupportedDashboardChainId(chainId);
+  const isWrongNetwork = hasConnectedWallet && !isOnSupportedNetwork;
   const connectedWalletLabel = address ? shortWalletAddress(address) : null;
   const linkedWalletLabel = linkedWallet ? shortWalletAddress(linkedWallet) : null;
   const currentNetworkLabel = chainId ? getChainLabel(chainId) : null;
@@ -71,14 +85,14 @@ export function useDashboardWallet(linkedWallet?: string | null) {
     }
   }, [disconnectAsync, hasConnectedWallet, open]);
 
-  const switchToRequiredNetwork = useCallback(async () => {
+  const switchToSupportedNetwork = useCallback(async () => {
     if (!hasConnectedWallet) {
       await open({ view: "Connect" });
       return;
     }
 
     try {
-      await switchChainAsync({ chainId: REQUIRED_WALLET_CHAIN_ID });
+      await switchChainAsync({ chainId: DEFAULT_WALLET_CHAIN_ID });
     } catch {
       await open({ view: "Networks" });
     }
@@ -94,7 +108,7 @@ export function useDashboardWallet(linkedWallet?: string | null) {
     isConnected,
     isDisconnecting,
     isLinkedWalletConnected,
-    isOnRequiredNetwork,
+    isOnSupportedNetwork,
     isSwitchingChain,
     isWrongNetwork,
     isWrongWalletConnected,
@@ -105,6 +119,9 @@ export function useDashboardWallet(linkedWallet?: string | null) {
     openConnectModal,
     reconnectWallet,
     disconnectWallet,
-    switchToRequiredNetwork,
+    switchToSupportedNetwork,
+    // backward-compat aliases
+    isOnRequiredNetwork: isOnSupportedNetwork,
+    switchToRequiredNetwork: switchToSupportedNetwork,
   };
 }
