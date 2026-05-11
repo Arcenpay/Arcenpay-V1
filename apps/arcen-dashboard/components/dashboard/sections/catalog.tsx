@@ -80,7 +80,8 @@ import {
   useSignTypedData,
   useWriteContract,
 } from "wagmi";
-import { getUsdcAddress, getUsdcTokenOptions } from "@/lib/contracts";
+import { getUsdcAddress, getTokenOptions } from "@/lib/contracts";
+import type { TokenOption } from "@/lib/contracts";
 import {
   DEFAULT_CHAIN_ID,
   DEFAULT_TESTNET_CHAIN_ID,
@@ -188,13 +189,7 @@ interface RegisterOnChainResponse {
 
 // ─── Token Options ────────────────────────────────────────────────────────────
 
-const USDC_CHAIN_OPTIONS = getUsdcTokenOptions();
-
-const TOKEN_OPTIONS: { label: string; address: string }[] =
-  USDC_CHAIN_OPTIONS.map((option) => ({
-    label: option.label,
-    address: option.address,
-  }));
+const TOKEN_OPTIONS: TokenOption[] = getTokenOptions();
 
 const DEFAULT_TOKEN = getUsdcAddress(DEFAULT_TESTNET_CHAIN_ID);
 
@@ -209,12 +204,7 @@ function tokenLabel(address: string): string {
     (t) => t.address.toLowerCase() === address.toLowerCase(),
   );
   return match
-    ? match.label.split(" — ")[0] +
-        " (" +
-        address.slice(0, 6) +
-        "…" +
-        address.slice(-4) +
-        ")"
+    ? `${match.symbol} (${address.slice(0, 6)}…${address.slice(-4)})`
     : address.slice(0, 10) + "…";
 }
 
@@ -420,12 +410,11 @@ function CreatePlanDialog({
     }
   }
 
-  const selectedChainOpt = USDC_CHAIN_OPTIONS.find((o) => o.address === form.acceptedToken);
-  const chainName = (o: typeof USDC_CHAIN_OPTIONS[number]) =>
-    o.label.replace(/USDC — |Custom USDC — /, "");
-  const chainInitial = (o: typeof USDC_CHAIN_OPTIONS[number]) => {
-    const n = chainName(o);
-    return n.startsWith("Base") ? "B" : n.startsWith("Sepolia") ? "S" : n[0]?.toUpperCase() ?? "?";
+  const selectedChainOpt = TOKEN_OPTIONS.find((o) => o.address === form.acceptedToken);
+  const chainName = (o: TokenOption) => o.chainLabel;
+  const chainInitial = (o: TokenOption) => {
+    const n = o.chainLabel;
+    return n.startsWith("Base") ? "B" : n.startsWith("Sepolia") ? "S" : n.startsWith("Arc") ? "A" : n[0]?.toUpperCase() ?? "?";
   };
 
   return (
@@ -617,10 +606,10 @@ function CreatePlanDialog({
                           </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent className="w-80">
-                          {USDC_CHAIN_OPTIONS.some((o) => o.tag === "testnet") && (
+                          {TOKEN_OPTIONS.some((o) => o.tag === "testnet") && (
                             <>
                               <div className="px-2 pt-2 pb-1"><p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Testnets</p></div>
-                              {USDC_CHAIN_OPTIONS.filter((o) => o.tag === "testnet").map((opt) => {
+                              {TOKEN_OPTIONS.filter((o) => o.tag === "testnet").map((opt) => {
                                 const isConn = opt.chainId === chainId;
                                 return (
                                   <DropdownMenuItem key={opt.chainId} disabled={!isConn} onClick={() => isConn && setForm((p) => ({ ...p, acceptedToken: opt.address }))} className={`flex items-center justify-between gap-3 py-2.5 ${!isConn ? "opacity-40 cursor-not-allowed" : ""}`}>
@@ -633,7 +622,7 @@ function CreatePlanDialog({
                                           <p className="text-sm font-medium">{chainName(opt)}</p>
                                           {isConn && <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-foreground text-background">Connected</span>}
                                         </div>
-                                        <p className="text-xs font-mono text-muted-foreground mt-0.5">USDC · {opt.address.slice(0, 6)}…{opt.address.slice(-4)}</p>
+                                        <p className="text-xs font-mono text-muted-foreground mt-0.5">{opt.symbol} · {opt.address.slice(0, 6)}…{opt.address.slice(-4)}</p>
                                       </div>
                                     </div>
                                     {form.acceptedToken === opt.address && isConn && <Check className="w-3.5 h-3.5 text-foreground shrink-0" />}
@@ -643,11 +632,11 @@ function CreatePlanDialog({
                               })}
                             </>
                           )}
-                          {USDC_CHAIN_OPTIONS.some((o) => o.tag === "mainnet") && (
+                          {TOKEN_OPTIONS.some((o) => o.tag === "mainnet") && (
                             <>
                               <DropdownMenuSeparator />
                               <div className="px-2 pt-2 pb-1"><p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Mainnets</p></div>
-                              {USDC_CHAIN_OPTIONS.filter((o) => o.tag === "mainnet").map((opt) => {
+                              {TOKEN_OPTIONS.filter((o) => o.tag === "mainnet").map((opt) => {
                                 const isConn = opt.chainId === chainId;
                                 return (
                                   <DropdownMenuItem key={opt.chainId} disabled={!isConn} onClick={() => isConn && setForm((p) => ({ ...p, acceptedToken: opt.address }))} className={`flex items-center justify-between gap-3 py-2.5 ${!isConn ? "opacity-40 cursor-not-allowed" : ""}`}>
@@ -660,7 +649,7 @@ function CreatePlanDialog({
                                           <p className="text-sm font-medium">{chainName(opt)}</p>
                                           {isConn && <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-foreground text-background">Connected</span>}
                                         </div>
-                                        <p className="text-xs font-mono text-muted-foreground mt-0.5">USDC · {opt.address.slice(0, 6)}…{opt.address.slice(-4)}</p>
+                                        <p className="text-xs font-mono text-muted-foreground mt-0.5">{opt.symbol} · {opt.address.slice(0, 6)}…{opt.address.slice(-4)}</p>
                                       </div>
                                     </div>
                                     {form.acceptedToken === opt.address && isConn && <Check className="w-3.5 h-3.5 text-foreground shrink-0" />}
@@ -902,12 +891,11 @@ function CreateAddOnDialog({
   // Auto-derive code from name
   const autoCode = form.name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
 
-  const selectedChainOpt = USDC_CHAIN_OPTIONS.find((o) => o.address === form.acceptedToken);
-  const chainName = (o: typeof USDC_CHAIN_OPTIONS[number]) =>
-    o.label.replace(/USDC — |Custom USDC — /, "");
-  const chainInitial = (o: typeof USDC_CHAIN_OPTIONS[number]) => {
-    const n = chainName(o);
-    return n.startsWith("Base") ? "B" : n.startsWith("Sepolia") ? "S" : n[0]?.toUpperCase() ?? "?";
+  const selectedChainOpt = TOKEN_OPTIONS.find((o) => o.address === form.acceptedToken);
+  const chainName = (o: TokenOption) => o.chainLabel;
+  const chainInitial = (o: TokenOption) => {
+    const n = o.chainLabel;
+    return n.startsWith("Base") ? "B" : n.startsWith("Sepolia") ? "S" : n.startsWith("Arc") ? "A" : n[0]?.toUpperCase() ?? "?";
   };
 
   function validate() {
@@ -1209,10 +1197,10 @@ function CreateAddOnDialog({
                           </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent className="w-80">
-                          {USDC_CHAIN_OPTIONS.some((o) => o.tag === "testnet") && (
+                          {TOKEN_OPTIONS.some((o) => o.tag === "testnet") && (
                             <>
                               <div className="px-2 pt-2 pb-1"><p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Testnets</p></div>
-                              {USDC_CHAIN_OPTIONS.filter((o) => o.tag === "testnet").map((opt) => {
+                              {TOKEN_OPTIONS.filter((o) => o.tag === "testnet").map((opt) => {
                                 const isConn = opt.chainId === chainId;
                                 return (
                                   <DropdownMenuItem key={opt.chainId} disabled={!isConn} onClick={() => isConn && setForm((p) => ({ ...p, acceptedToken: opt.address }))} className={`flex items-center justify-between gap-3 py-2.5 ${!isConn ? "opacity-40 cursor-not-allowed" : ""}`}>
@@ -1225,7 +1213,7 @@ function CreateAddOnDialog({
                                           <p className="text-sm font-medium">{chainName(opt)}</p>
                                           {isConn && <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-foreground text-background">Connected</span>}
                                         </div>
-                                        <p className="text-xs font-mono text-muted-foreground mt-0.5">USDC · {opt.address.slice(0, 6)}…{opt.address.slice(-4)}</p>
+                                        <p className="text-xs font-mono text-muted-foreground mt-0.5">{opt.symbol} · {opt.address.slice(0, 6)}…{opt.address.slice(-4)}</p>
                                       </div>
                                     </div>
                                     {form.acceptedToken === opt.address && isConn && <Check className="w-3.5 h-3.5 text-foreground shrink-0" />}
@@ -1235,11 +1223,11 @@ function CreateAddOnDialog({
                               })}
                             </>
                           )}
-                          {USDC_CHAIN_OPTIONS.some((o) => o.tag === "mainnet") && (
+                          {TOKEN_OPTIONS.some((o) => o.tag === "mainnet") && (
                             <>
                               <DropdownMenuSeparator />
                               <div className="px-2 pt-2 pb-1"><p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Mainnets</p></div>
-                              {USDC_CHAIN_OPTIONS.filter((o) => o.tag === "mainnet").map((opt) => {
+                              {TOKEN_OPTIONS.filter((o) => o.tag === "mainnet").map((opt) => {
                                 const isConn = opt.chainId === chainId;
                                 return (
                                   <DropdownMenuItem key={opt.chainId} disabled={!isConn} onClick={() => isConn && setForm((p) => ({ ...p, acceptedToken: opt.address }))} className={`flex items-center justify-between gap-3 py-2.5 ${!isConn ? "opacity-40 cursor-not-allowed" : ""}`}>
@@ -1252,7 +1240,7 @@ function CreateAddOnDialog({
                                           <p className="text-sm font-medium">{chainName(opt)}</p>
                                           {isConn && <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-foreground text-background">Connected</span>}
                                         </div>
-                                        <p className="text-xs font-mono text-muted-foreground mt-0.5">USDC · {opt.address.slice(0, 6)}…{opt.address.slice(-4)}</p>
+                                        <p className="text-xs font-mono text-muted-foreground mt-0.5">{opt.symbol} · {opt.address.slice(0, 6)}…{opt.address.slice(-4)}</p>
                                       </div>
                                     </div>
                                     {form.acceptedToken === opt.address && isConn && <Check className="w-3.5 h-3.5 text-foreground shrink-0" />}
@@ -1365,12 +1353,11 @@ function CreateCreditTypeDialog({
   // Auto-derive code from name
   const autoCode = form.name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
 
-  const selectedChainOpt = USDC_CHAIN_OPTIONS.find((o) => o.address === form.acceptedToken);
-  const chainName = (o: typeof USDC_CHAIN_OPTIONS[number]) =>
-    o.label.replace(/USDC — |Custom USDC — /, "");
-  const chainInitial = (o: typeof USDC_CHAIN_OPTIONS[number]) => {
-    const n = chainName(o);
-    return n.startsWith("Base") ? "B" : n.startsWith("Sepolia") ? "S" : n[0]?.toUpperCase() ?? "?";
+  const selectedChainOpt = TOKEN_OPTIONS.find((o) => o.address === form.acceptedToken);
+  const chainName = (o: TokenOption) => o.chainLabel;
+  const chainInitial = (o: TokenOption) => {
+    const n = o.chainLabel;
+    return n.startsWith("Base") ? "B" : n.startsWith("Sepolia") ? "S" : n.startsWith("Arc") ? "A" : n[0]?.toUpperCase() ?? "?";
   };
 
   function validate() {
@@ -1625,10 +1612,10 @@ function CreateCreditTypeDialog({
                       </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent className="w-80">
-                      {USDC_CHAIN_OPTIONS.some((o) => o.tag === "testnet") && (
+                      {TOKEN_OPTIONS.some((o) => o.tag === "testnet") && (
                         <>
                           <div className="px-2 pt-2 pb-1"><p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Testnets</p></div>
-                          {USDC_CHAIN_OPTIONS.filter((o) => o.tag === "testnet").map((opt) => {
+                          {TOKEN_OPTIONS.filter((o) => o.tag === "testnet").map((opt) => {
                             const isConn = opt.chainId === chainId;
                             return (
                               <DropdownMenuItem key={opt.chainId} disabled={!isConn} onClick={() => isConn && setForm((p) => ({ ...p, acceptedToken: opt.address }))} className={`flex items-center justify-between gap-3 py-2.5 ${!isConn ? "opacity-40 cursor-not-allowed" : ""}`}>
@@ -1641,7 +1628,7 @@ function CreateCreditTypeDialog({
                                       <p className="text-sm font-medium">{chainName(opt)}</p>
                                       {isConn && <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-foreground text-background">Connected</span>}
                                     </div>
-                                    <p className="text-xs font-mono text-muted-foreground mt-0.5">USDC · {opt.address.slice(0, 6)}…{opt.address.slice(-4)}</p>
+                                    <p className="text-xs font-mono text-muted-foreground mt-0.5">{opt.symbol} · {opt.address.slice(0, 6)}…{opt.address.slice(-4)}</p>
                                   </div>
                                 </div>
                                 {form.acceptedToken === opt.address && isConn && <Check className="w-3.5 h-3.5 text-foreground shrink-0" />}
@@ -1651,11 +1638,11 @@ function CreateCreditTypeDialog({
                           })}
                         </>
                       )}
-                      {USDC_CHAIN_OPTIONS.some((o) => o.tag === "mainnet") && (
+                      {TOKEN_OPTIONS.some((o) => o.tag === "mainnet") && (
                         <>
                           <DropdownMenuSeparator />
                           <div className="px-2 pt-2 pb-1"><p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Mainnets</p></div>
-                          {USDC_CHAIN_OPTIONS.filter((o) => o.tag === "mainnet").map((opt) => {
+                          {TOKEN_OPTIONS.filter((o) => o.tag === "mainnet").map((opt) => {
                             const isConn = opt.chainId === chainId;
                             return (
                               <DropdownMenuItem key={opt.chainId} disabled={!isConn} onClick={() => isConn && setForm((p) => ({ ...p, acceptedToken: opt.address }))} className={`flex items-center justify-between gap-3 py-2.5 ${!isConn ? "opacity-40 cursor-not-allowed" : ""}`}>
@@ -1668,7 +1655,7 @@ function CreateCreditTypeDialog({
                                       <p className="text-sm font-medium">{chainName(opt)}</p>
                                       {isConn && <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-foreground text-background">Connected</span>}
                                     </div>
-                                    <p className="text-xs font-mono text-muted-foreground mt-0.5">USDC · {opt.address.slice(0, 6)}…{opt.address.slice(-4)}</p>
+                                    <p className="text-xs font-mono text-muted-foreground mt-0.5">{opt.symbol} · {opt.address.slice(0, 6)}…{opt.address.slice(-4)}</p>
                                   </div>
                                 </div>
                                 {form.acceptedToken === opt.address && isConn && <Check className="w-3.5 h-3.5 text-foreground shrink-0" />}
@@ -1779,12 +1766,11 @@ function EditCreditTypeDialog({
     }
   }
 
-  const selectedChainOpt = USDC_CHAIN_OPTIONS.find((o) => o.address === form.acceptedToken);
-  const chainName = (o: typeof USDC_CHAIN_OPTIONS[number]) =>
-    o.label.replace(/USDC — |Custom USDC — /, "");
-  const chainInitial = (o: typeof USDC_CHAIN_OPTIONS[number]) => {
-    const n = chainName(o);
-    return n.startsWith("Base") ? "B" : n.startsWith("Sepolia") ? "S" : n[0]?.toUpperCase() ?? "?";
+  const selectedChainOpt = TOKEN_OPTIONS.find((o) => o.address === form.acceptedToken);
+  const chainName = (o: TokenOption) => o.chainLabel;
+  const chainInitial = (o: TokenOption) => {
+    const n = o.chainLabel;
+    return n.startsWith("Base") ? "B" : n.startsWith("Sepolia") ? "S" : n.startsWith("Arc") ? "A" : n[0]?.toUpperCase() ?? "?";
   };
 
   return (
@@ -1872,7 +1858,7 @@ function EditCreditTypeDialog({
                         </div>
                         <div className="text-left">
                           <p className="text-sm font-medium leading-none">{chainName(selectedChainOpt)}</p>
-                          <p className="text-xs text-muted-foreground mt-0.5 font-mono">USDC · {selectedChainOpt.address.slice(0, 6)}…{selectedChainOpt.address.slice(-4)}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5 font-mono">{selectedChainOpt.symbol} · {selectedChainOpt.address.slice(0, 6)}…{selectedChainOpt.address.slice(-4)}</p>
                         </div>
                       </div>
                     ) : (
@@ -1882,7 +1868,7 @@ function EditCreditTypeDialog({
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-72" align="start">
-                  {USDC_CHAIN_OPTIONS.map((opt) => {
+                  {TOKEN_OPTIONS.map((opt) => {
                     const isConn = opt.chainId === chainId;
                     return (
                       <DropdownMenuItem key={opt.chainId} disabled={!isConn} onClick={() => isConn && setForm((p) => ({ ...p, acceptedToken: opt.address }))} className={`flex items-center justify-between gap-3 py-2.5 ${!isConn ? "opacity-40 cursor-not-allowed" : ""}`}>
@@ -1892,7 +1878,7 @@ function EditCreditTypeDialog({
                           </div>
                           <div>
                             <p className="text-sm font-medium">{chainName(opt)}</p>
-                            <p className="text-xs font-mono text-muted-foreground">USDC · {opt.address.slice(0, 6)}…{opt.address.slice(-4)}</p>
+                            <p className="text-xs font-mono text-muted-foreground">{opt.symbol} · {opt.address.slice(0, 6)}…{opt.address.slice(-4)}</p>
                           </div>
                         </div>
                         {form.acceptedToken === opt.address && isConn && <Check className="w-3.5 h-3.5 shrink-0" />}
@@ -4627,15 +4613,14 @@ function EditPlanDialog({
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const autoTier = form.name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
-  const selectedChainOpt = USDC_CHAIN_OPTIONS.find((o) => o.address === form.acceptedToken);
+  const selectedChainOpt = TOKEN_OPTIONS.find((o) => o.address === form.acceptedToken);
   const selectedIntervalLabel =
     BILLING_INTERVALS.find((i) => i.days === billingIntervalDays)?.label.toLowerCase() ??
     `${billingIntervalDays}d`;
-  const chainName = (o: typeof USDC_CHAIN_OPTIONS[number]) =>
-    o.label.replace(/USDC — |Custom USDC — /, "");
-  const chainInitial = (o: typeof USDC_CHAIN_OPTIONS[number]) => {
-    const n = chainName(o);
-    return n.startsWith("Base") ? "B" : n.startsWith("Sepolia") ? "S" : n[0]?.toUpperCase() ?? "?";
+  const chainName = (o: TokenOption) => o.chainLabel;
+  const chainInitial = (o: TokenOption) => {
+    const n = o.chainLabel;
+    return n.startsWith("Base") ? "B" : n.startsWith("Sepolia") ? "S" : n.startsWith("Arc") ? "A" : n[0]?.toUpperCase() ?? "?";
   };
 
   async function handleSubmit(e: React.FormEvent) {
@@ -4910,10 +4895,10 @@ function EditPlanDialog({
                           </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent className="w-80">
-                          {USDC_CHAIN_OPTIONS.some((o) => o.tag === "testnet") && (
+                          {TOKEN_OPTIONS.some((o) => o.tag === "testnet") && (
                             <>
                               <div className="px-2 pt-2 pb-1"><p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Testnets</p></div>
-                              {USDC_CHAIN_OPTIONS.filter((o) => o.tag === "testnet").map((opt) => {
+                              {TOKEN_OPTIONS.filter((o) => o.tag === "testnet").map((opt) => {
                                 const isConn = opt.chainId === chainId;
                                 return (
                                   <DropdownMenuItem key={opt.chainId} disabled={isOnChainLocked || !isConn} onClick={() => isConn && setForm((f) => ({ ...f, acceptedToken: opt.address }))} className={`flex items-center justify-between gap-3 py-2.5 ${!isConn ? "opacity-40 cursor-not-allowed" : ""}`}>
@@ -4926,7 +4911,7 @@ function EditPlanDialog({
                                           <p className="text-sm font-medium">{chainName(opt)}</p>
                                           {isConn && <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-foreground text-background">Connected</span>}
                                         </div>
-                                        <p className="text-xs font-mono text-muted-foreground mt-0.5">USDC · {opt.address.slice(0, 6)}…{opt.address.slice(-4)}</p>
+                                        <p className="text-xs font-mono text-muted-foreground mt-0.5">{opt.symbol} · {opt.address.slice(0, 6)}…{opt.address.slice(-4)}</p>
                                       </div>
                                     </div>
                                     {form.acceptedToken === opt.address && isConn && <Check className="w-3.5 h-3.5 text-foreground shrink-0" />}
@@ -4936,11 +4921,11 @@ function EditPlanDialog({
                               })}
                             </>
                           )}
-                          {USDC_CHAIN_OPTIONS.some((o) => o.tag === "mainnet") && (
+                          {TOKEN_OPTIONS.some((o) => o.tag === "mainnet") && (
                             <>
                               <DropdownMenuSeparator />
                               <div className="px-2 pt-2 pb-1"><p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Mainnets</p></div>
-                              {USDC_CHAIN_OPTIONS.filter((o) => o.tag === "mainnet").map((opt) => {
+                              {TOKEN_OPTIONS.filter((o) => o.tag === "mainnet").map((opt) => {
                                 const isConn = opt.chainId === chainId;
                                 return (
                                   <DropdownMenuItem key={opt.chainId} disabled={isOnChainLocked || !isConn} onClick={() => isConn && setForm((f) => ({ ...f, acceptedToken: opt.address }))} className={`flex items-center justify-between gap-3 py-2.5 ${!isConn ? "opacity-40 cursor-not-allowed" : ""}`}>
@@ -4953,7 +4938,7 @@ function EditPlanDialog({
                                           <p className="text-sm font-medium">{chainName(opt)}</p>
                                           {isConn && <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-foreground text-background">Connected</span>}
                                         </div>
-                                        <p className="text-xs font-mono text-muted-foreground mt-0.5">USDC · {opt.address.slice(0, 6)}…{opt.address.slice(-4)}</p>
+                                        <p className="text-xs font-mono text-muted-foreground mt-0.5">{opt.symbol} · {opt.address.slice(0, 6)}…{opt.address.slice(-4)}</p>
                                       </div>
                                     </div>
                                     {form.acceptedToken === opt.address && isConn && <Check className="w-3.5 h-3.5 text-foreground shrink-0" />}

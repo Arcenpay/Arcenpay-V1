@@ -25,6 +25,11 @@ const CHAIN_CONFIGS: Record<number, ChainConfig> = {
     usdc: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
     explorerBase: "https://basescan.org/address",
   },
+  5042002: {
+    slug: "arcTestnet",
+    usdc: "0x3600000000000000000000000000000000000000",
+    explorerBase: "https://testnet.arcscan.app/address",
+  },
 };
 
 async function main() {

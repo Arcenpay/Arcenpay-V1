@@ -1,7 +1,7 @@
 // @ts-ignore -- ethers is injected by @nomicfoundation/hardhat-toolbox at runtime
 import { ethers, network } from "hardhat";
 
-const TESTNET_CHAIN_IDS = new Set([11155111, 84532]);
+const TESTNET_CHAIN_IDS = new Set([11155111, 84532, 5042002]);
 
 function parseUnits6(value: string): bigint {
   const normalized = value.trim();

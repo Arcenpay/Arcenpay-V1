@@ -13,7 +13,7 @@ import {
   ZKUsageVerifierABI,
   ERC7579AutopayModuleABI,
   YieldSessionVaultABI,
-  TOKENS,
+  getTokenAddress,
 } from "@arcenpay/internal-core";
 import { DEFAULT_CHAIN_ID } from "./default-chain.js";
 
@@ -26,7 +26,7 @@ export {
   ZKUsageVerifierABI,
   ERC7579AutopayModuleABI,
   YieldSessionVaultABI,
-  TOKENS,
+  getTokenAddress,
 };
 
 const EVM_ADDRESS_REGEX = /^0x[a-fA-F0-9]{40}$/;
@@ -48,7 +48,7 @@ export function getUsdcAddress(chainId: number): `0x${string}` {
   const override = resolveUsdcOverride(chainId);
   if (override) return override;
 
-  const token = TOKENS[chainId as keyof typeof TOKENS]?.USDC;
+  const token = getTokenAddress(chainId, "USDC");
   if (isAddress(token)) return token;
-  return TOKENS[DEFAULT_CHAIN_ID].USDC as `0x${string}`;
+  return "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
 }

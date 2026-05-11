@@ -13,7 +13,7 @@ import {
   verifyTypedData,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { PlanFactoryABI, getChain, getContractAddresses, TOKENS } from "@arcenpay/internal-core";
+import { PlanFactoryABI, getChain, getContractAddresses, getTokenAddress } from "@arcenpay/internal-core";
 import { isAddress } from "viem";
 import { z } from "zod";
 
@@ -228,7 +228,7 @@ export async function registerPlanOnChain(c: Context) {
   const usdcAddress = (
     storedToken.startsWith("0x") && storedToken.length === 42
       ? storedToken
-      : (TOKENS[chainId as keyof typeof TOKENS]?.USDC ?? storedToken)
+      : (getTokenAddress(chainId, "USDC") ?? storedToken)
   ) as `0x${string}`;
 
   if (plan.onChainPlanId) {

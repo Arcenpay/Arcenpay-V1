@@ -1,7 +1,7 @@
 import type { Context } from "hono";
 import { z } from "zod";
 import { createPublicClient, http } from "viem";
-import { FeeCollectorABI, TOKENS, getContractAddresses } from "@arcenpay/internal-core";
+import { FeeCollectorABI, getTokenAddress, getContractAddresses } from "@arcenpay/internal-core";
 import { db } from "../../../db.js";
 import { isErrorResponse, requirePermission } from "../../../lib/auth/api-auth.js";
 import { getRpcUrl } from "../../../config.js";
@@ -35,8 +35,8 @@ async function readProtocolFees(chainId: number): Promise<string | null> {
     }
 
     const usdc =
-      TOKENS[chainId as keyof typeof TOKENS]?.USDC ||
-      TOKENS[DEFAULT_CHAIN_ID as keyof typeof TOKENS]?.USDC;
+      getTokenAddress(chainId, "USDC") ||
+      getTokenAddress(DEFAULT_CHAIN_ID, "USDC");
     if (!usdc) return null;
 
     const rpcUrl = getRpcUrl(chainId);

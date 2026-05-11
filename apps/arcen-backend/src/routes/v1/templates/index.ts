@@ -21,7 +21,7 @@ const createSchema = z.object({
   styleTokens: z.record(z.unknown()).default({}),
   compatibility: z.record(z.unknown()).default({
     environments: ["DEVELOPMENT", "PRODUCTION"],
-    chains: [11155111, 84532, 8453],
+    chains: [11155111, 84532, 8453, 5042002],
     tokens: ["USDC"],
   }),
 });

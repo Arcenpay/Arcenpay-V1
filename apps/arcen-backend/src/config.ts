@@ -296,6 +296,7 @@ export function getRpcUrl(chainId: number): string {
     11155111: "https://rpc.sepolia.org",
     8453: "https://mainnet.base.org",
     84532: "https://sepolia.base.org",
+    5042002: "https://rpc.testnet.arc.network",
     1: "https://cloudflare-eth.com",
   };
   return publicRpcs[chainId] ?? "";

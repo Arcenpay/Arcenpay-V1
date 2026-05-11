@@ -52,6 +52,15 @@ const CHAINS: ChainConfig[] = [
     subgraphEnv: "MEAP_SUBGRAPH_URL_8453",
     facilitatorEnv: "MEAP_FACILITATOR_URL_8453",
   },
+  {
+    chainId: 5042002,
+    chainName: "Arc Testnet",
+    isTestnet: true,
+    deploymentFile: "arcTestnet-latest.json",
+    rpcEnv: "ARC_TESTNET_RPC_URL",
+    subgraphEnv: "MEAP_SUBGRAPH_URL_5042002",
+    facilitatorEnv: "MEAP_FACILITATOR_URL_5042002",
+  },
 ];
 
 function resolveDeployment(fileName: string): DeploymentShape | null {

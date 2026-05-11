@@ -20,6 +20,7 @@ const CHAIN_SLUG: Record<number, string> = {
   11155111: "sepolia",
   84532: "baseSepolia",
   8453: "baseMainnet",
+  5042002: "arcTestnet",
 };
 
 function loadBaseDeployment(chainId: number): ContinueDeployment {

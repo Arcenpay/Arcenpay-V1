@@ -45,6 +45,16 @@ const ADDRESSES: Record<number, ContractAddresses> = {
     zkUsageVerifier: '0x0000000000000000000000000000000000000000',
     mirrorRegistry: '0x0000000000000000000000000000000000000000',
   },
+  // Arc Testnet — set ARCENPAY_CONTRACT_5042002_* env vars after deployment
+  5042002: {
+    subscriptionRegistry: '0xe7E0dFfa82596ee6Ba1755bc25c29376a07236dE',
+    autopayModule: '0xC8B9C0986d018509AE4dB507FbE4fBd23DCECCe9',
+    planFactory: '0x03290b6988F87925A4939d974895bC30981aA90D',
+    feeCollector: '0x69Ac04bFdC045A99A2D31bb141A74da354a94c19',
+    sessionVault: '0xd6c90997B4d947548F3D97623ab305461265359D',
+    zkUsageVerifier: '0xFEB51A5Eeac4392c2d05C79bc019DDa823911a8a',
+    mirrorRegistry: '0x8Cef0cbE0c00BC7a6Be8d47d7d2ce933f895c8f8',
+  },
 };
 
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';

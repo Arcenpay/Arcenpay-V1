@@ -79,11 +79,17 @@ export {
   sepolia,
   baseSepolia,
   baseMainnet,
+  arcTestnet,
   SUPPORTED_CHAINS,
   TOKENS,
   DEFAULT_CHAIN_ID,
+  getTokenAddress,
+  getTokenDecimals,
+  getTokensForChain,
+  getChain,
+  getBlockExplorerUrl,
 } from "./chains";
-export type { SupportedChainId } from "./chains";
+export type { SupportedChainId, TokenInfo } from "./chains";
 
 // Contract addresses
 export { getContractAddresses, setContractAddresses } from "./addresses";
@@ -154,8 +160,7 @@ export {
 } from "./errors";
 export type { MEAPErrorCode, ArcenPayErrorCode } from "./errors";
 
-// Chain helpers
-export { getChain, getBlockExplorerUrl } from "./chains";
+// Chain helpers — re-exported from chains.ts above
 
 // Formatting utilities
 export {

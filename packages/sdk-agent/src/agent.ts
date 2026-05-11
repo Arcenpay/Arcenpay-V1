@@ -17,8 +17,9 @@ import {
 } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { sepolia, baseSepolia, base } from 'viem/chains';
+import { arcTestnet } from '@arcenpay/internal-core';
 import type { X402Response, X402PaymentHeader } from '@arcenpay/internal-core';
-import { X402_VERSION, X402_SCHEME, SessionVaultABI, getContractAddresses, TOKENS } from '@arcenpay/internal-core';
+import { X402_VERSION, X402_SCHEME, SessionVaultABI, getContractAddresses, getTokenAddress } from '@arcenpay/internal-core';
 import type {
   AutoTopUpConfig,
   DispatchConfig,
@@ -89,6 +90,7 @@ const CHAIN_MAP: Record<number, Chain> = {
   11155111: sepolia,
   84532: baseSepolia,
   8453: base,
+  5042002: arcTestnet,
 };
 
 const ERC20_APPROVE_ABI = [{
@@ -277,7 +279,7 @@ export class MEAPAgent {
    */
   async fundSession(amount: string): Promise<string> {
     const amountAtomic = parseHumanUsdcAmount(amount, 'amount');
-    const usdcAddress = TOKENS[this.config.chainId as keyof typeof TOKENS]?.USDC as `0x${string}`;
+    const usdcAddress = getTokenAddress(this.config.chainId, 'USDC') ?? undefined;
     const vaultAddress = this.contracts.sessionVault as `0x${string}`;
 
     if (!usdcAddress) {
@@ -509,7 +511,7 @@ export class MEAPAgent {
    */
   async topUpSession(sessionId: string, amount: string): Promise<void> {
     const amountAtomic = parseHumanUsdcAmount(amount, 'amount');
-    const usdcAddress = TOKENS[this.config.chainId as keyof typeof TOKENS]?.USDC as `0x${string}`;
+    const usdcAddress = getTokenAddress(this.config.chainId, 'USDC') ?? undefined;
     const vaultAddress = this.contracts.sessionVault as `0x${string}`;
 
     if (!usdcAddress) {

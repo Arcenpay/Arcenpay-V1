@@ -34,6 +34,9 @@ const DEFAULT_SERVICES: Record<number, ChainServiceEndpoints> = {
   8453: {
     rpcUrl: "https://mainnet.base.org",
   },
+  5042002: {
+    rpcUrl: "https://rpc.testnet.arc.network",
+  },
 };
 
 type ServiceKey = keyof ChainServiceEndpoints;
@@ -42,6 +45,7 @@ const LEGACY_RPC_ENV_KEYS: Record<number, string[]> = {
   11155111: ["SEPOLIA_RPC_URL"],
   84532: ["BASE_SEPOLIA_RPC_URL"],
   8453: ["BASE_MAINNET_RPC_URL"],
+  5042002: ["ARC_RPC_URL", "ARC_SEPOLIA_RPC_URL"],
 };
 
 const SERVICE_ENV_KEYS: Record<ServiceKey, (chainId: number) => string[]> = {
@@ -127,7 +131,7 @@ export function getChainEnvironment(chainId: number): ChainEnvironmentManifest {
 }
 
 export function getEnvironmentManifest(chainIds?: number[]): EnvironmentManifest {
-  const selected = chainIds && chainIds.length > 0 ? chainIds : [11155111, 84532, 8453];
+  const selected = chainIds && chainIds.length > 0 ? chainIds : [11155111, 84532, 8453, 5042002];
   const chains: Record<number, ChainEnvironmentManifest> = {};
   for (const chainId of selected) {
     chains[chainId] = getChainEnvironment(chainId);

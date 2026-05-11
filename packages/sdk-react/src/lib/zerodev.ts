@@ -23,6 +23,7 @@ import {
   getContractAddresses,
   ERC7579AutopayModuleABI,
   SubscriptionRegistryABI,
+  arcTestnet,
 } from "../sdk";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -30,6 +31,7 @@ const CHAIN_MAP: Record<number, any> = {
   11155111: sepolia,
   84532: baseSepolia,
   8453: base,
+  5042002: arcTestnet,
 };
 
 const ENTRY_POINT = zeroDevConstants.getEntryPoint("0.7");
@@ -40,6 +42,7 @@ function getZeroDevChainLabel(chainId: number): string {
   if (chainId === 84532) return "Base Sepolia";
   if (chainId === 8453) return "Base";
   if (chainId === 11155111) return "Sepolia";
+  if (chainId === 5042002) return "Arc Testnet";
   return `Chain ${chainId}`;
 }
 

@@ -35,6 +35,11 @@ const config: HardhatUserConfig = {
       accounts: [DEPLOYER_PRIVATE_KEY],
       chainId: 8453,
     },
+    arcTestnet: {
+      url: process.env.ARC_TESTNET_RPC_URL || "https://rpc.testnet.arc.network",
+      accounts: [DEPLOYER_PRIVATE_KEY],
+      chainId: 5042002,
+    },
   },
   etherscan: {
     apiKey: {

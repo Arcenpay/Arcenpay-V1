@@ -28,6 +28,7 @@ const BLOCKED_CHAIN_IDS = new Set<number>([
     1,          // Ethereum mainnet
     11155111,   // Sepolia (L1 testnet)
     8453,       // Base mainnet
+    5042002,    // Arc Testnet (block sponsorship until paymaster configured)
 ]);
 
 // ── Anti-abuse limits ────────────────────────────────────────────────────────

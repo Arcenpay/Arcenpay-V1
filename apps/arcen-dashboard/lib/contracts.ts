@@ -14,10 +14,13 @@ import {
   ZKUsageVerifierABI,
   ERC7579AutopayModuleABI,
   YieldSessionVaultABI,
-  TOKENS,
+  getTokenAddress,
+  getTokensForChain,
+  getChain,
 } from "@arcenpay/internal-core";
 import {
   BASE_SEPOLIA_CHAIN_ID,
+  ARC_TESTNET_CHAIN_ID,
   DEFAULT_CHAIN_ID,
   getChainLabel,
 } from "@/lib/default-chain";
@@ -31,7 +34,7 @@ export {
   ZKUsageVerifierABI,
   ERC7579AutopayModuleABI,
   YieldSessionVaultABI,
-  TOKENS,
+  getTokenAddress,
 };
 
 const EVM_ADDRESS_REGEX = /^0x[a-fA-F0-9]{40}$/;
@@ -65,51 +68,72 @@ export function getUsdcAddress(chainId: number): `0x${string}` {
   const override = resolveUsdcOverride(chainId);
   if (override) return override;
 
-  const token = TOKENS[chainId as keyof typeof TOKENS]?.USDC;
+  const token = getTokenAddress(chainId, "USDC");
   if (isAddress(token)) return token;
-  return TOKENS[DEFAULT_CHAIN_ID].USDC as `0x${string}`;
+  return "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
 }
 
-export function getUsdcTokenOptions(): Array<{
+const CHAIN_LIST: Array<{
   chainId: number;
   label: string;
   tag: "testnet" | "mainnet";
+}> = [
+  {
+    chainId: BASE_SEPOLIA_CHAIN_ID,
+    label: getChainLabel(BASE_SEPOLIA_CHAIN_ID),
+    tag: "testnet",
+  },
+  {
+    chainId: ARC_TESTNET_CHAIN_ID,
+    label: getChainLabel(ARC_TESTNET_CHAIN_ID),
+    tag: "testnet",
+  },
+];
+
+export interface TokenOption {
+  chainId: number;
+  chainLabel: string;
+  tag: "testnet" | "mainnet";
+  symbol: string;
   address: `0x${string}`;
   source: "default" | "override";
-}> {
-  const chains: Array<{
-    chainId: number;
-    label: string;
-    tag: "testnet" | "mainnet";
-  }> = [
-    {
-      chainId: BASE_SEPOLIA_CHAIN_ID,
-      label: getChainLabel(BASE_SEPOLIA_CHAIN_ID),
-      tag: "testnet",
-    },
-  ];
+}
 
-  const options: Array<{
-    chainId: number;
-    label: string;
-    tag: "testnet" | "mainnet";
-    address: `0x${string}`;
-    source: "default" | "override";
-  }> = [];
+export function getTokenOptions(): TokenOption[] {
+  const options: TokenOption[] = [];
 
-  for (const chain of chains) {
-    const override = resolveUsdcOverride(chain.chainId);
-    const address = getUsdcAddress(chain.chainId);
-    options.push({
-      chainId: chain.chainId,
-      label: `${override ? "Custom USDC" : "USDC"} — ${chain.label}`,
-      tag: chain.tag,
-      address,
-      source: override ? "override" : "default",
-    });
+  for (const chain of CHAIN_LIST) {
+    const symbols = getTokensForChain(chain.chainId);
+    if (symbols.length === 0) continue;
+
+    for (const symbol of symbols) {
+      const override = resolveUsdcOverride(chain.chainId);
+      const address = getTokenAddress(chain.chainId, symbol);
+      if (!address) continue;
+
+      options.push({
+        chainId: chain.chainId,
+        chainLabel: chain.label,
+        tag: chain.tag,
+        symbol,
+        address,
+        source: override ? "override" : "default",
+      });
+    }
   }
 
   return options;
+}
+
+/** @deprecated — use getTokenOptions() instead */
+export function getUsdcTokenOptions() {
+  return getTokenOptions().map((opt) => ({
+    chainId: opt.chainId,
+    label: `${opt.symbol} — ${opt.chainLabel}`,
+    tag: opt.tag,
+    address: opt.address,
+    source: opt.source,
+  }));
 }
 
 /** Returns live contract addresses for the wallet's current chain.

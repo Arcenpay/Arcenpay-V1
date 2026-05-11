@@ -108,7 +108,7 @@ function getChainId(): number {
     const env = process.env.NEXT_PUBLIC_CHAIN_ID;
     if (env) {
       const parsed = parseInt(env, 10);
-      if (!isNaN(parsed) && [11155111, 84532, 8453].includes(parsed)) {
+      if (!isNaN(parsed) && [11155111, 84532, 8453, 5042002].includes(parsed)) {
         return parsed;
       }
     }

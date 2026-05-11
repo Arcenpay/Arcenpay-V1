@@ -3,14 +3,15 @@ import { getChain, getConfiguredRuntimeChainId } from "@arcenpay/internal-core";
 export const SEPOLIA_CHAIN_ID = 11155111 as const;
 export const BASE_SEPOLIA_CHAIN_ID = 84532 as const;
 export const BASE_MAINNET_CHAIN_ID = 8453 as const;
+export const ARC_TESTNET_CHAIN_ID = 5042002 as const;
 
-const SUPPORTED_CHAIN_IDS = [BASE_SEPOLIA_CHAIN_ID] as const;
+const SUPPORTED_CHAIN_IDS = [BASE_SEPOLIA_CHAIN_ID, ARC_TESTNET_CHAIN_ID] as const;
 
 export type SupportedDashboardChainId = (typeof SUPPORTED_CHAIN_IDS)[number];
 export type EnvironmentMode = "DEVELOPMENT" | "PRODUCTION";
 
 const SUPPORTED_CHAIN_ID_SET = new Set<number>(SUPPORTED_CHAIN_IDS);
-const TESTNET_CHAIN_ID_SET = new Set<number>([BASE_SEPOLIA_CHAIN_ID]);
+const TESTNET_CHAIN_ID_SET = new Set<number>([BASE_SEPOLIA_CHAIN_ID, ARC_TESTNET_CHAIN_ID]);
 
 function parseChainId(value: unknown): SupportedDashboardChainId | null {
   const numeric = Number(value);

@@ -518,6 +518,7 @@ function formatChainLabel(chainId?: number | null): string | null {
   if (chainId === 11155111) return "Sepolia";
   if (chainId === 84532) return "Base Sepolia";
   if (chainId === 8453) return "Base";
+  if (chainId === 5042002) return "Arc Testnet";
   return `Chain ${chainId}`;
 }
 

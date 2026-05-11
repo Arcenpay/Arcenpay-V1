@@ -3,7 +3,7 @@ import { getChain } from "./chains";
 
 export const PRIMARY_RUNTIME_CHAIN_ID = 84532 as const;
 export const LEGACY_RUNTIME_CHAIN_IDS = [11155111] as const;
-const SUPPORTED_RUNTIME_CHAIN_IDS = [11155111, 84532, 8453] as const;
+const SUPPORTED_RUNTIME_CHAIN_IDS = [11155111, 84532, 8453, 5042002] as const;
 
 export type RuntimeChainProfile = {
   chainId: number;
@@ -55,6 +55,8 @@ function legacyRpcEnvKeys(chainId: number): string[] {
       return ["BASE_SEPOLIA_RPC_URL"];
     case 8453:
       return ["BASE_MAINNET_RPC_URL", "BASE_RPC_URL"];
+    case 5042002:
+      return ["ARC_RPC_URL", "ARC_SEPOLIA_RPC_URL"];
     default:
       return [];
   }
