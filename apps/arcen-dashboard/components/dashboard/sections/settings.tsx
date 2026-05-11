@@ -70,7 +70,8 @@ import {
   getChainLabel,
 } from "@/lib/default-chain";
 import {
-  REQUIRED_WALLET_CHAIN_LABEL,
+  DEFAULT_WALLET_CHAIN_LABEL,
+  SUPPORTED_WALLET_CHAIN_LABEL,
   useDashboardWallet,
 } from "@/hooks/use-dashboard-wallet";
 
@@ -617,7 +618,7 @@ export function SettingsSection() {
                 Workspace Wallet
               </CardTitle>
               <CardDescription>
-                Dashboard wallet actions are limited to {REQUIRED_WALLET_CHAIN_LABEL} right now.
+                Dashboard wallet actions support {SUPPORTED_WALLET_CHAIN_LABEL}.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -639,9 +640,9 @@ export function SettingsSection() {
               </div>
 
               <div className="rounded-xl border border-border bg-secondary/40 p-4">
-                <p className="text-xs text-muted-foreground mb-1">Supported network</p>
+                <p className="text-xs text-muted-foreground mb-1">Supported networks</p>
                 <p className="text-sm font-medium text-foreground">
-                  {REQUIRED_WALLET_CHAIN_LABEL}
+                  {SUPPORTED_WALLET_CHAIN_LABEL}
                 </p>
               </div>
 
@@ -662,7 +663,7 @@ export function SettingsSection() {
               {isWrongNetwork ? (
                 <div className="flex items-start gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-sm text-amber-700">
                   <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-                  This wallet is on the wrong network. Switch to {REQUIRED_WALLET_CHAIN_LABEL}.
+                  This wallet is on an unsupported network. Switch to {SUPPORTED_WALLET_CHAIN_LABEL}.
                 </div>
               ) : null}
 
@@ -702,7 +703,7 @@ export function SettingsSection() {
                     ) : (
                       <>
                         <Globe className="w-4 h-4 mr-2" />
-                        Switch to {REQUIRED_WALLET_CHAIN_LABEL}
+                        Switch to {DEFAULT_WALLET_CHAIN_LABEL}
                       </>
                     )}
                   </Button>
@@ -994,7 +995,7 @@ export function SettingsSection() {
               </CardTitle>
               <CardDescription>
                 Your linked wallet is the workspace signing identity used by the dashboard on{" "}
-                <span className="text-foreground font-medium">{REQUIRED_WALLET_CHAIN_LABEL}</span>.
+                <span className="text-foreground font-medium">{SUPPORTED_WALLET_CHAIN_LABEL}</span>.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -1040,7 +1041,7 @@ export function SettingsSection() {
                   <div className="flex items-start gap-2 p-3 rounded-lg bg-secondary/50 border border-border">
                     <Info className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
                     <p className="text-xs text-muted-foreground">
-                      Keep this wallet connected when you need to sign dashboard transactions on {REQUIRED_WALLET_CHAIN_LABEL}.
+                      Keep this wallet connected when you need to sign dashboard transactions on {SUPPORTED_WALLET_CHAIN_LABEL}.
                     </p>
                   </div>
                 </div>

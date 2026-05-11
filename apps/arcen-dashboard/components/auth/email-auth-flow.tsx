@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { buildSIWEMessage } from "@/lib/auth";
 import {
-  REQUIRED_WALLET_CHAIN_LABEL,
+  DEFAULT_WALLET_CHAIN_LABEL,
+  SUPPORTED_WALLET_CHAIN_LABEL,
   useDashboardWallet,
 } from "@/hooks/use-dashboard-wallet";
 import {
@@ -77,7 +78,9 @@ export function EmailAuthFlow({ inviteToken }: EmailAuthFlowProps) {
     }
 
     if (!isOnRequiredNetwork) {
-      setError(`Switch to ${REQUIRED_WALLET_CHAIN_LABEL} before signing.`);
+      setError(
+        `Switch to a supported network (${SUPPORTED_WALLET_CHAIN_LABEL}) before signing.`,
+      );
       setStep("wallet");
       return false;
     }
@@ -247,7 +250,7 @@ export function EmailAuthFlow({ inviteToken }: EmailAuthFlowProps) {
             </h1>
             <p className="text-sm text-muted-foreground">
               {step === "wallet" &&
-                `Connect the ${REQUIRED_WALLET_CHAIN_LABEL} wallet you want to use. After email verification, we'll request one signature and complete setup.`}
+                `Connect a wallet on ${SUPPORTED_WALLET_CHAIN_LABEL}. After email verification, we'll request one signature and complete setup.`}
               {step === "email" &&
                 "Once your wallet is connected, we'll send a 6-digit code to your email."}
               {step === "code" &&
@@ -319,7 +322,7 @@ export function EmailAuthFlow({ inviteToken }: EmailAuthFlowProps) {
                       Switching network
                     </>
                   ) : (
-                    `Switch to ${REQUIRED_WALLET_CHAIN_LABEL}`
+                    `Switch to ${DEFAULT_WALLET_CHAIN_LABEL}`
                   )}
                 </Button>
               ) : null}
@@ -518,7 +521,7 @@ export function EmailAuthFlow({ inviteToken }: EmailAuthFlowProps) {
                       Switching network
                     </>
                   ) : (
-                    `Switch to ${REQUIRED_WALLET_CHAIN_LABEL}`
+                    `Switch to ${DEFAULT_WALLET_CHAIN_LABEL}`
                   )}
                 </Button>
               ) : null}

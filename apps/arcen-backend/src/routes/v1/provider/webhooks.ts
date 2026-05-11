@@ -2,7 +2,10 @@ import type { Context } from "hono";
 import { z } from "zod";
 import { db } from "../../../db.js";
 import { writeAuditEvent } from "../../../lib/platform/audit.js";
-import { requireTeamRoles, isErrorResponse } from "../../../lib/auth/api-auth.js";
+import {
+  requireTeamRoles,
+  isErrorResponse,
+} from "../../../lib/auth/api-auth.js";
 
 const EventSubSchema = z.object({
   id: z.string(),
@@ -24,7 +27,8 @@ const UpdateSchema = z.object({
 
 export async function getWebhookConfig(c: Context) {
   const auth = await requireTeamRoles(c, ["OWNER", "ADMIN"]);
-  if (isErrorResponse(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any as any);
+  if (isErrorResponse(auth))
+    return c.json({ ok: false, error: auth.error }, auth.status as any as any);
 
   const { team } = auth;
 
@@ -50,8 +54,9 @@ export async function getWebhookConfig(c: Context) {
     const prefs = profile.notificationPreferences as unknown;
     if (Array.isArray(prefs)) {
       eventSubscriptions = prefs
-        .filter((p): p is { id: string; webhook: boolean } =>
-          typeof p === "object" && p !== null && "id" in p,
+        .filter(
+          (p): p is { id: string; webhook: boolean } =>
+            typeof p === "object" && p !== null && "id" in p,
         )
         .map((p) => ({
           id: p.id,
@@ -71,17 +76,41 @@ export async function getWebhookConfig(c: Context) {
 
 export async function putWebhookConfig(c: Context) {
   const auth = await requireTeamRoles(c, ["OWNER", "ADMIN"]);
-  if (isErrorResponse(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any as any);
+  if (isErrorResponse(auth))
+    return c.json({ ok: false, error: auth.error }, auth.status as any as any);
 
-  const body = await c.req.json() .catch(() => ({}));
+  const body = await c.req.json().catch(() => ({}));
   const parsed = UpdateSchema.safeParse(body);
   if (!parsed.success) {
-    return c.json({ error: "Invalid request", details: parsed.error.flatten().fieldErrors }, 400 as any);
+    return c.json(
+      { error: "Invalid request", details: parsed.error.flatten().fieldErrors },
+      400 as any,
+    );
   }
 
   const { team } = auth;
   const teamId = team.teamId;
   const { webhookUrl, eventSubscriptions } = parsed.data;
+  const existingProfile = await db.providerProfile.findUnique({
+    where: { teamId },
+    select: {
+      webhookSigningSecret: true,
+      notificationPreferences: true,
+    },
+  });
+
+  if (
+    eventSubscriptions?.some((subscription) => subscription.enabled) &&
+    !existingProfile?.webhookSigningSecret
+  ) {
+    return c.json(
+      {
+        error:
+          "Generate a webhook signing secret before enabling webhook events.",
+      },
+      400 as any,
+    );
+  }
 
   const updateData: Record<string, unknown> = {};
   if (webhookUrl !== undefined) updateData.webhookUrl = webhookUrl;
@@ -89,12 +118,12 @@ export async function putWebhookConfig(c: Context) {
   if (eventSubscriptions !== undefined) {
     updateData.notifyWebhook = eventSubscriptions.some((e) => e.enabled);
 
-    const existing = await db.providerProfile.findUnique({
-      where: { teamId },
-      select: { notificationPreferences: true },
-    });
-    const existingPrefs = Array.isArray(existing?.notificationPreferences)
-      ? (existing!.notificationPreferences as Array<Record<string, unknown>>)
+    const existingPrefs = Array.isArray(
+      existingProfile?.notificationPreferences,
+    )
+      ? (existingProfile.notificationPreferences as Array<
+          Record<string, unknown>
+        >)
       : [];
 
     const merged = existingPrefs.map((pref) => {

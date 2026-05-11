@@ -3,7 +3,10 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { ArcenEmbed, renderElement, getDesignTokens } from "@arcenpay/react";
-import type { ComponentRenderData, ComponentDesign } from "@arcenpay/internal-core";
+import type {
+  ComponentRenderData,
+  ComponentDesign,
+} from "@arcenpay/internal-core";
 import type { ComponentElement as SdkComponentElement } from "@arcenpay/internal-core";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -64,6 +67,7 @@ export interface RealPlan {
   tier?: string;
   description?: string;
   acceptedToken?: string;
+  metadata?: Record<string, unknown> | null;
 }
 
 export interface RealFlag {
@@ -71,6 +75,11 @@ export interface RealFlag {
   name: string;
   featureType?: string;
   defaultValue?: boolean;
+  icon?: string | null;
+  limit?: number;
+  usage?: number;
+  unitSingular?: string | null;
+  unitPlural?: string | null;
 }
 
 export interface RealData {
@@ -142,6 +151,7 @@ const ELEMENT_LIBRARY: {
       { type: "next-bill-due", label: "Next Bill Due", icon: Clock },
       { type: "payment-method", label: "Payment Methods", icon: CreditCard },
       { type: "invoices", label: "Invoices", icon: ReceiptText },
+      { type: "billing-history", label: "Billing History", icon: ReceiptText },
       { type: "unsubscribe", label: "Unsubscribe", icon: MinusCircle },
     ],
   },
@@ -156,12 +166,53 @@ const ELEMENT_LIBRARY: {
 
 const ALL_ELEMENTS = ELEMENT_LIBRARY.flatMap((cat) => cat.elements);
 
+const EDITOR_TO_SDK_ELEMENT_TYPES: Record<string, string> = {
+  "plan-manager": "planManager",
+  "included-features": "includedFeatures",
+  "metered-features": "meteredFeatures",
+  "next-bill-due": "nextBillDue",
+  "payment-method": "paymentMethod",
+  "billing-history": "billingHistory",
+};
+
+const SDK_TO_EDITOR_ELEMENT_TYPES = Object.fromEntries(
+  Object.entries(EDITOR_TO_SDK_ELEMENT_TYPES).map(([editorType, sdkType]) => [
+    sdkType,
+    editorType,
+  ]),
+) as Record<string, string>;
+
+function toSdkElementType(type: string): string {
+  return EDITOR_TO_SDK_ELEMENT_TYPES[type] ?? type;
+}
+
+function toEditorElementType(type: string): string {
+  return SDK_TO_EDITOR_ELEMENT_TYPES[type] ?? type;
+}
+
 /** Resolve the icon for an element — falls back to the library definition if
  *  el.icon is missing/invalid (e.g. after JSON round-trip from the API). */
 function resolveElementIcon(el: ComponentElement): React.ElementType {
   if (typeof el.icon === "function") return el.icon;
-  const lib = ALL_ELEMENTS.find((e) => e.type === el.type);
+  const lib = ALL_ELEMENTS.find((e) => e.type === toEditorElementType(el.type));
   return lib?.icon ?? Layers;
+}
+
+function normalizeEditorElement(el: ComponentElement): ComponentElement {
+  const normalizedType = toEditorElementType(el.type);
+  const libElement = ALL_ELEMENTS.find(
+    (entry) => entry.type === normalizedType,
+  );
+  return {
+    ...el,
+    type: normalizedType,
+    label: el.label || libElement?.label || normalizedType,
+    icon:
+      typeof el.icon === "function"
+        ? el.icon
+        : (libElement?.icon ??
+          resolveElementIcon({ ...el, type: normalizedType })),
+  };
 }
 
 // ============================================================
@@ -283,17 +334,8 @@ function ElementPreview({
     };
     const tokens = getDesignTokens(design);
 
-    // Map editor kebab-case types → SDK camelCase types
-    const typeMap: Record<string, string> = {
-      "plan-manager": "planManager",
-      "included-features": "includedFeatures",
-      "metered-features": "meteredFeatures",
-      "next-bill-due": "nextBillDue",
-      "payment-method": "paymentMethod",
-      "billing-history": "billingHistory",
-    };
     const el = {
-      type: typeMap[type] ?? type,
+      type: toSdkElementType(type),
       ...elementProps,
     } as SdkComponentElement & Record<string, unknown>;
     const result = renderElement(
@@ -1444,8 +1486,8 @@ export function ComponentEditor({
     "component",
   );
   const [config, setConfig] = useState<ComponentConfig>(component);
-  const [elements, setElements] = useState<ComponentElement[]>(
-    component.elements,
+  const [elements, setElements] = useState<ComponentElement[]>(() =>
+    component.elements.map(normalizeEditorElement),
   );
   const [draggedElement, setDraggedElement] = useState<ComponentElement | null>(
     null,
@@ -1491,6 +1533,10 @@ export function ComponentEditor({
             tier: p.tier ? String(p.tier) : undefined,
             description: p.description ? String(p.description) : undefined,
             acceptedToken: p.acceptedToken ? String(p.acceptedToken) : "USDC",
+            metadata:
+              p.metadata && typeof p.metadata === "object"
+                ? (p.metadata as Record<string, unknown>)
+                : null,
           }))
           // Free plans (price=0) first, then ascending by price
           .sort((a, b) => a.price - b.price);
@@ -1500,6 +1546,10 @@ export function ComponentEditor({
           name: String(f.name ?? ""),
           featureType: f.featureType ? String(f.featureType) : undefined,
           defaultValue: Boolean(f.defaultValue),
+          icon: typeof f.icon === "string" ? f.icon : null,
+          unitSingular:
+            typeof f.unitSingular === "string" ? f.unitSingular : null,
+          unitPlural: typeof f.unitPlural === "string" ? f.unitPlural : null,
         }));
 
         setLiveData({ plans, flags });
@@ -1568,14 +1618,33 @@ export function ComponentEditor({
           acceptedToken: p.acceptedToken ? String(p.acceptedToken) : "USDC",
           tier: p.tier ? String(p.tier) : undefined,
           description: p.description ? String(p.description) : undefined,
+          metadata:
+            p.metadata && typeof p.metadata === "object"
+              ? (p.metadata as Record<string, unknown>)
+              : null,
         })),
         flags: (data.entitlements as Array<Record<string, unknown>>).map(
           (e) => ({
-            id: String(e.featureKey ?? ""),
             name: String(e.name ?? e.featureKey ?? ""),
             featureKey: String(e.featureKey ?? ""),
             defaultValue: e.value === true || e.value === "true",
             featureType: e.featureType ? String(e.featureType) : "boolean",
+            icon: typeof e.icon === "string" ? e.icon : null,
+            limit:
+              typeof e.limit === "number"
+                ? e.limit
+                : typeof e.limit === "string"
+                  ? Number(e.limit)
+                  : undefined,
+            usage:
+              typeof e.usage === "number"
+                ? e.usage
+                : typeof e.usage === "string"
+                  ? Number(e.usage)
+                  : undefined,
+            unitSingular:
+              typeof e.unitSingular === "string" ? e.unitSingular : null,
+            unitPlural: typeof e.unitPlural === "string" ? e.unitPlural : null,
           }),
         ),
         activePlan: data.activePlan as Record<string, unknown> | null,
@@ -1618,6 +1687,10 @@ export function ComponentEditor({
             tier: p.tier ? String(p.tier) : undefined,
             description: p.description ? String(p.description) : undefined,
             acceptedToken: p.acceptedToken ? String(p.acceptedToken) : "USDC",
+            metadata:
+              p.metadata && typeof p.metadata === "object"
+                ? (p.metadata as Record<string, unknown>)
+                : null,
           }))
           .sort((a, b) => a.price - b.price);
         const flags: RealFlag[] = rawFlags.map((f) => ({
@@ -1625,6 +1698,10 @@ export function ComponentEditor({
           name: String(f.name ?? ""),
           featureType: f.featureType ? String(f.featureType) : undefined,
           defaultValue: Boolean(f.defaultValue),
+          icon: typeof f.icon === "string" ? f.icon : null,
+          unitSingular:
+            typeof f.unitSingular === "string" ? f.unitSingular : null,
+          unitPlural: typeof f.unitPlural === "string" ? f.unitPlural : null,
         }));
         setLiveData({ plans, flags });
       })
@@ -1665,7 +1742,7 @@ export function ComponentEditor({
   // Build mock data for ArcenEmbed preview (used for checkout/payment/unsubscribe previews)
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const canvasMockData = useMemo((): ComponentRenderData => {
-    const sdkPlans = liveData?.plans?.length
+    const sdkPlans: ComponentRenderData["plans"] = liveData?.plans?.length
       ? liveData.plans.slice(0, 4).map((p) => ({
           id: p.id,
           name: p.name,
@@ -1674,6 +1751,7 @@ export function ComponentEditor({
           billingInterval: p.billingInterval === "yearly" ? 31536000 : 2592000,
           description: p.description ?? "",
           acceptedToken: p.acceptedToken,
+          metadata: p.metadata ?? null,
         }))
       : [
           {
@@ -1683,6 +1761,7 @@ export function ComponentEditor({
             price: "0",
             billingInterval: 2592000,
             description: "Get started for free",
+            metadata: null,
           },
           {
             id: "starter",
@@ -1691,6 +1770,7 @@ export function ComponentEditor({
             price: "9.00",
             billingInterval: 2592000,
             description: "",
+            metadata: null,
           },
           {
             id: "pro",
@@ -1699,24 +1779,133 @@ export function ComponentEditor({
             price: "29.00",
             billingInterval: 2592000,
             description: "",
+            metadata: null,
           },
         ];
 
-    const typeMap: Record<string, string> = {
-      "plan-manager": "planManager",
-      "included-features": "includedFeatures",
-      "metered-features": "meteredFeatures",
-      "next-bill-due": "nextBillDue",
-      "payment-method": "paymentMethod",
-      "billing-history": "billingHistory",
-    };
+    const usageMap = new Map(
+      (liveData?.usage ?? []).map((item) => [
+        String(item.featureKey ?? ""),
+        item,
+      ]),
+    );
+    const flagMap = new Map(
+      (liveData?.flags ?? []).map((flag) => [flag.featureKey, flag]),
+    );
+    const preferredPreviewPlan =
+      sdkPlans.find((plan) => {
+        const entitlements = Array.isArray(plan.metadata?.entitlements)
+          ? plan.metadata.entitlements
+          : [];
+        return entitlements.length > 0;
+      }) ??
+      sdkPlans.find((plan) => Number(plan.price ?? "0") > 0) ??
+      sdkPlans[0] ??
+      null;
+    const activePlanId =
+      typeof liveData?.activePlan?.id === "string"
+        ? String(liveData.activePlan.id)
+        : (preferredPreviewPlan?.id ?? null);
+    const activePlan =
+      sdkPlans.find((plan) => plan.id === activePlanId) ??
+      preferredPreviewPlan;
+    const rawPlanEntitlements = Array.isArray(
+      activePlan?.metadata?.entitlements,
+    )
+      ? (activePlan.metadata.entitlements as unknown as Array<
+          Record<string, unknown>
+        >)
+      : [];
+    const planEntitlements: ComponentRenderData["entitlements"] =
+      rawPlanEntitlements
+        .filter(
+          (entry) =>
+            entry &&
+            typeof entry === "object" &&
+            typeof entry.featureKey === "string" &&
+            entry.enabled !== false,
+        )
+        .map((entry) => {
+          const featureKey = String(entry.featureKey);
+          const flag = flagMap.get(featureKey);
+          const usageEntry = usageMap.get(featureKey);
+          const storedType =
+            typeof entry.type === "string" ? entry.type : "BOOLEAN";
+          const normalizedFeatureType =
+            typeof entry.featureType === "string"
+              ? entry.featureType
+              : storedType === "BOOLEAN"
+                ? "boolean"
+                : "event_based";
+          const rawValue = entry.value;
+          const numericValue =
+            typeof rawValue === "number"
+              ? rawValue
+              : typeof rawValue === "string"
+                ? Number(rawValue)
+                : null;
+
+          return {
+            featureKey,
+            name:
+              (typeof entry.featureName === "string" && entry.featureName) ||
+              flag?.name ||
+              featureKey,
+            value:
+              storedType === "BOOLEAN"
+                ? entry.enabled !== false && rawValue !== false
+                : (numericValue ?? flag?.limit ?? 0),
+            featureType: (normalizedFeatureType === "event"
+              ? "event_based"
+              : normalizedFeatureType) as
+              | "boolean"
+              | "event_based"
+              | "trait_based"
+              | "credit",
+            limit:
+              storedType === "BOOLEAN"
+                ? undefined
+                : (numericValue ?? flag?.limit),
+            usage:
+              typeof usageEntry?.used === "number"
+                ? usageEntry.used
+                : (flag?.usage ?? 0),
+            unitSingular:
+              (typeof entry.valueUnit === "string" && entry.valueUnit) ||
+              flag?.unitSingular ||
+              undefined,
+            unitPlural: flag?.unitPlural ?? flag?.unitSingular ?? undefined,
+            icon:
+              (typeof entry.icon === "string" && entry.icon) ||
+              flag?.icon ||
+              null,
+          };
+        });
+    const fallbackEntitlements: ComponentRenderData["entitlements"] =
+      liveData?.flags?.map((f) => ({
+        featureKey: f.featureKey,
+        name: f.name,
+        value: f.defaultValue ?? true,
+        featureType: (f.featureType ?? "boolean") as
+          | "boolean"
+          | "event_based"
+          | "trait_based"
+          | "credit",
+        icon: f.icon ?? null,
+        limit: f.limit,
+        usage: f.usage ?? 0,
+        unitSingular: f.unitSingular ?? undefined,
+        unitPlural: f.unitPlural ?? f.unitSingular ?? undefined,
+      })) ?? [];
+    const previewEntitlements =
+      planEntitlements.length > 0 ? planEntitlements : fallbackEntitlements;
 
     return {
       component: {
         id: "preview",
         name: "Preview",
         elements: elements.map((el) => ({
-          type: typeMap[el.type] ?? el.type,
+          type: toSdkElementType(el.type),
           ...el.props,
         })),
         design: {
@@ -1746,20 +1935,37 @@ export function ComponentEditor({
         name: "Preview Company",
         walletAddress: "0x1234567890abcdef1234",
       },
-      activePlan: sdkPlans[0] ?? null,
+      activePlan,
       plans: sdkPlans,
-      entitlements:
-        liveData?.flags?.map((f) => ({
-          featureKey: f.featureKey,
-          name: f.name,
-          value: f.defaultValue ?? true,
-          featureType: (f.featureType ?? "boolean") as
-            | "boolean"
-            | "event_based"
-            | "trait_based"
-            | "credit",
-        })) ?? [],
-      usage: [],
+      entitlements: previewEntitlements,
+      usage:
+        (liveData?.usage?.map((item) => {
+          const featureKey = String(item.featureKey ?? "");
+          const flag = flagMap.get(featureKey);
+          return {
+            featureKey,
+            name: String(item.name ?? flag?.name ?? featureKey),
+            used:
+              typeof item.used === "number"
+                ? item.used
+                : Number(item.used ?? 0),
+            limit:
+              typeof item.limit === "number"
+                ? item.limit
+                : item.limit !== undefined
+                  ? Number(item.limit)
+                  : flag?.limit,
+            unitSingular:
+              typeof item.unitSingular === "string"
+                ? item.unitSingular
+                : (flag?.unitSingular ?? null),
+            unitPlural:
+              typeof item.unitPlural === "string"
+                ? item.unitPlural
+                : (flag?.unitPlural ?? flag?.unitSingular ?? null),
+            icon: flag?.icon ?? null,
+          };
+        }) as ComponentRenderData["usage"]) ?? [],
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [elements, config.styling, liveData]);
@@ -2080,7 +2286,9 @@ const { data } = await res.json();
                 {cat.elements.map((el) => {
                   const Icon: React.ElementType =
                     typeof el.icon === "function" ? el.icon : Layers;
-                  const isAdded = elements.some((e) => e.type === el.type);
+                  const isAdded = elements.some(
+                    (e) => toEditorElementType(e.type) === el.type,
+                  );
                   return (
                     <div
                       key={el.type}
@@ -2757,9 +2965,13 @@ const { data } = await res.json();
                       >
                         <ArcenEmbed
                           key={embedMountKey}
+                          componentId=""
+                          id=""
+                          className=""
                           mockData={canvasMockData}
                           initialView={tabToEmbedView(activeViewState)}
                           accessToken="preview"
+                          onPlanChange={() => {}}
                           mode="inline"
                           style={{
                             width:
@@ -2773,7 +2985,7 @@ const { data } = await res.json();
                             margin: "0 auto",
                             overflow: "hidden",
                           }}
-                          onViewChange={(v) => {
+                          onViewChange={(v: string) => {
                             const reverseMap: Record<string, string> = {
                               portal: "portal",
                               checkout: "checkout",
@@ -2814,9 +3026,13 @@ const { data } = await res.json();
                     <div className="min-h-full">
                       <ArcenEmbed
                         key={embedMountKey}
+                        componentId=""
+                        id=""
+                        className=""
                         mockData={canvasMockData}
                         initialView={tabToEmbedView(activeViewState)}
                         accessToken="preview"
+                        onPlanChange={() => {}}
                         mode="inline"
                         style={{
                           width:
@@ -2830,7 +3046,7 @@ const { data } = await res.json();
                           margin: "0 auto",
                           overflow: "hidden",
                         }}
-                        onViewChange={(v) => {
+                        onViewChange={(v: string) => {
                           const reverseMap: Record<string, string> = {
                             portal: "portal",
                             checkout: "checkout",

@@ -28,7 +28,9 @@ export async function POST(req: NextRequest) {
       : sigHeader;
 
     if (!sigHex) {
-      console.warn("[webhook] ❌ Missing X-ArcenPay-Signature header — rejected.");
+      console.warn(
+        "[webhook] ❌ Missing X-ArcenPay-Signature header — rejected.",
+      );
       return NextResponse.json({ error: "Missing signature" }, { status: 401 });
     }
 
@@ -37,14 +39,22 @@ export async function POST(req: NextRequest) {
         console.warn("[webhook] ❌ Signature mismatch — rejected.");
         console.debug("[webhook] Headers:", Object.fromEntries(req.headers));
         console.debug("[webhook] Received sig (hex part):", sigHex);
-        return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+        return NextResponse.json(
+          { error: "Invalid signature" },
+          { status: 401 },
+        );
       }
     } catch (err) {
       console.error("[webhook] ❌ Signature verification error:", err);
-      return NextResponse.json({ error: "Signature verification failed" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Signature verification failed" },
+        { status: 401 },
+      );
     }
   } else {
-    console.warn("[webhook] ⚠️ ARCENPAY_WEBHOOK_SECRET not set — skipping signature check.");
+    console.warn(
+      "[webhook] ⚠️ ARCENPAY_WEBHOOK_SECRET not set — skipping signature check.",
+    );
   }
 
   // ── Parse & log the event ──────────────────────────────────────────────────

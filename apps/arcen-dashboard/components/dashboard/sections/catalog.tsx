@@ -73,6 +73,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEnvironment } from "@/contexts/environment-context";
+import { FeatureAvatar } from "./features";
 import {
   useAccount,
   useChainId,
@@ -86,6 +87,7 @@ import {
   DEFAULT_CHAIN_ID,
   DEFAULT_TESTNET_CHAIN_ID,
   getChainLabel,
+  isSupportedDashboardChainId,
 } from "@/lib/default-chain";
 import { toast } from "sonner";
 import { PlanFactoryABI } from "@arcenpay/internal-core";
@@ -349,17 +351,22 @@ function CreatePlanDialog({
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Auto-derive tier from name (lowercase slug)
-  const autoTier = form.name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+  const autoTier = form.name
+    .toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9-]/g, "");
 
   function validate() {
     const e: Record<string, string> = {};
     if (!form.name.trim()) e.name = "Required";
     if (planType === "paid") {
       const p = Number(form.price);
-      if (!form.price || isNaN(p) || p <= 0) e.price = "Must be a positive number";
+      if (!form.price || isNaN(p) || p <= 0)
+        e.price = "Must be a positive number";
       if (hasAnnualPrice) {
         const ap = Number(form.annualPrice);
-        if (!form.annualPrice || isNaN(ap) || ap <= 0) e.annualPrice = "Must be a positive number";
+        if (!form.annualPrice || isNaN(ap) || ap <= 0)
+          e.annualPrice = "Must be a positive number";
       }
     }
     return e;
@@ -370,14 +377,24 @@ function CreatePlanDialog({
     setBillingIntervalDays(30);
     setHasAnnualPrice(false);
     setAnnualDiscount("20");
-    setForm({ name: "", tier: "", description: "", price: "", annualPrice: "", acceptedToken: connectedToken });
+    setForm({
+      name: "",
+      tier: "",
+      description: "",
+      price: "",
+      annualPrice: "",
+      acceptedToken: connectedToken,
+    });
     setErrors({});
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const errs = validate();
-    if (Object.keys(errs).length) { setErrors(errs); return; }
+    if (Object.keys(errs).length) {
+      setErrors(errs);
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch("/api/catalog/plans", {
@@ -410,15 +427,29 @@ function CreatePlanDialog({
     }
   }
 
-  const selectedChainOpt = TOKEN_OPTIONS.find((o) => o.address === form.acceptedToken);
+  const selectedChainOpt = TOKEN_OPTIONS.find(
+    (o) => o.address === form.acceptedToken,
+  );
   const chainName = (o: TokenOption) => o.chainLabel;
   const chainInitial = (o: TokenOption) => {
     const n = o.chainLabel;
-    return n.startsWith("Base") ? "B" : n.startsWith("Sepolia") ? "S" : n.startsWith("Arc") ? "A" : n[0]?.toUpperCase() ?? "?";
+    return n.startsWith("Base")
+      ? "B"
+      : n.startsWith("Sepolia")
+        ? "S"
+        : n.startsWith("Arc")
+          ? "A"
+          : (n[0]?.toUpperCase() ?? "?");
   };
 
   return (
-    <Sheet open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}>
+    <Sheet
+      open={open}
+      onOpenChange={(v) => {
+        setOpen(v);
+        if (!v) resetForm();
+      }}
+    >
       <SheetTrigger asChild>
         <Button size="sm" variant="outline" className="gap-2">
           <Plus className="w-4 h-4" />
@@ -429,7 +460,13 @@ function CreatePlanDialog({
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
           <div />
-          <button onClick={() => { setOpen(false); resetForm(); }} className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-secondary hover:text-foreground transition-all">
+          <button
+            onClick={() => {
+              setOpen(false);
+              resetForm();
+            }}
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-secondary hover:text-foreground transition-all"
+          >
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -439,41 +476,70 @@ function CreatePlanDialog({
           {/* ── LEFT: Plan Preview ── */}
           <div className="w-[300px] shrink-0 border-r border-border bg-secondary/20 p-6 flex flex-col gap-6 overflow-y-auto">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground mb-4">Create Plan</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground mb-4">
+                Create Plan
+              </p>
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-9 h-9 rounded-full bg-linear-to-br from-zinc-400 to-zinc-700 shrink-0" />
                 <p className="text-base font-bold text-foreground truncate">
-                  {form.name || <span className="font-normal text-muted-foreground">Untitled plan</span>}
+                  {form.name || (
+                    <span className="font-normal text-muted-foreground">
+                      Untitled plan
+                    </span>
+                  )}
                 </p>
               </div>
             </div>
             <div>
-              <p className="text-xs font-semibold text-muted-foreground mb-3">Plan Preview</p>
+              <p className="text-xs font-semibold text-muted-foreground mb-3">
+                Plan Preview
+              </p>
               <div className="bg-card border border-border rounded-xl overflow-hidden">
                 <div className="p-4 border-b border-border">
-                  <p className="text-lg font-bold text-foreground leading-tight">{form.name || "—"}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{form.description || form.name || "—"}</p>
+                  <p className="text-lg font-bold text-foreground leading-tight">
+                    {form.name || "—"}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {form.description || form.name || "—"}
+                  </p>
                   <p className="text-sm font-semibold text-foreground mt-1.5">
-                    {planType === "free" ? "Free" : form.price ? `$${form.price} USDC` : "—"}
+                    {planType === "free"
+                      ? "Free"
+                      : form.price
+                        ? `$${form.price} USDC`
+                        : "—"}
                     {planType === "paid" && form.price && (
                       <span className="text-xs font-normal text-muted-foreground ml-1">
-                        / {BILLING_INTERVALS.find((i) => i.days === billingIntervalDays)?.label.toLowerCase() ?? `${billingIntervalDays}d`}
+                        /{" "}
+                        {BILLING_INTERVALS.find(
+                          (i) => i.days === billingIntervalDays,
+                        )?.label.toLowerCase() ?? `${billingIntervalDays}d`}
                       </span>
                     )}
                   </p>
                   {hasAnnualPrice && form.annualPrice && (
                     <p className="text-xs text-muted-foreground mt-0.5">
                       or ${form.annualPrice} USDC / year
-                      {form.price && Number(form.annualPrice) < Number(form.price) * 12 && (
-                        <span className="text-green-500 ml-1">
-                          (save {Math.round((1 - Number(form.annualPrice) / (Number(form.price) * 12)) * 100)}%)
-                        </span>
-                      )}
+                      {form.price &&
+                        Number(form.annualPrice) < Number(form.price) * 12 && (
+                          <span className="text-green-500 ml-1">
+                            (save{" "}
+                            {Math.round(
+                              (1 -
+                                Number(form.annualPrice) /
+                                  (Number(form.price) * 12)) *
+                                100,
+                            )}
+                            %)
+                          </span>
+                        )}
                     </p>
                   )}
                 </div>
                 <div className="p-4">
-                  <p className="text-xs text-muted-foreground text-center py-3">No entitlements yet</p>
+                  <p className="text-xs text-muted-foreground text-center py-3">
+                    No entitlements yet
+                  </p>
                 </div>
                 <div className="px-4 pb-4">
                   <button className="w-full py-2.5 rounded-lg bg-secondary border border-border text-sm font-medium text-muted-foreground cursor-default">
@@ -491,12 +557,16 @@ function CreatePlanDialog({
                 {/* Header */}
                 <div>
                   <div className="flex items-center gap-3 mb-1">
-                    <h2 className="text-2xl font-bold text-foreground tracking-tight">Plan Settings</h2>
+                    <h2 className="text-2xl font-bold text-foreground tracking-tight">
+                      Plan Settings
+                    </h2>
                     <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-secondary border border-border text-muted-foreground">
                       {env === "DEVELOPMENT" ? "Dev" : "Production"}
                     </span>
                   </div>
-                  <p className="text-sm text-muted-foreground">A company can only have one base plan.</p>
+                  <p className="text-sm text-muted-foreground">
+                    A company can only have one base plan.
+                  </p>
                 </div>
 
                 {errors._global && (
@@ -508,23 +578,36 @@ function CreatePlanDialog({
                 {/* Name + Tier */}
                 <div className="grid grid-cols-[1fr_auto] gap-4 items-start">
                   <div>
-                    <Label className="text-sm font-medium text-foreground mb-2 block">Name *</Label>
+                    <Label className="text-sm font-medium text-foreground mb-2 block">
+                      Name *
+                    </Label>
                     <Input
                       value={form.name}
-                      onChange={(e) => { setForm({ ...form, name: e.target.value }); setErrors((p) => ({ ...p, name: "" })); }}
+                      onChange={(e) => {
+                        setForm({ ...form, name: e.target.value });
+                        setErrors((p) => ({ ...p, name: "" }));
+                      }}
                       placeholder="e.g. Pro, Starter, Enterprise"
                       className="h-11 bg-background border-border"
                     />
-                    {errors.name && <p className="text-xs text-destructive mt-1">{errors.name}</p>}
+                    {errors.name && (
+                      <p className="text-xs text-destructive mt-1">
+                        {errors.name}
+                      </p>
+                    )}
                   </div>
                   <div className="w-28">
                     <Label className="text-sm font-medium text-foreground mb-2 block">
                       Tier
-                      <span className="text-muted-foreground font-normal ml-1">(auto)</span>
+                      <span className="text-muted-foreground font-normal ml-1">
+                        (auto)
+                      </span>
                     </Label>
                     <Input
                       value={form.tier || autoTier}
-                      onChange={(e) => setForm({ ...form, tier: e.target.value })}
+                      onChange={(e) =>
+                        setForm({ ...form, tier: e.target.value })
+                      }
                       placeholder={autoTier || "pro"}
                       className="h-11 bg-background border-border font-mono text-sm"
                     />
@@ -533,51 +616,81 @@ function CreatePlanDialog({
 
                 {/* Description */}
                 <div>
-                  <Label className="text-sm font-medium text-foreground mb-2 block">Description</Label>
+                  <Label className="text-sm font-medium text-foreground mb-2 block">
+                    Description
+                  </Label>
                   <Input
                     value={form.description}
-                    onChange={(e) => setForm({ ...form, description: e.target.value })}
+                    onChange={(e) =>
+                      setForm({ ...form, description: e.target.value })
+                    }
                     placeholder="Describe this plan"
                     className="h-11 bg-background border-border"
                   />
-                  <p className="text-xs text-muted-foreground mt-1.5">Optional</p>
+                  <p className="text-xs text-muted-foreground mt-1.5">
+                    Optional
+                  </p>
                 </div>
 
                 {/* Pricing */}
                 <div>
                   <div className="flex items-center gap-2.5 mb-1">
-                    <h3 className="text-xl font-bold text-foreground tracking-tight">Pricing</h3>
+                    <h3 className="text-xl font-bold text-foreground tracking-tight">
+                      Pricing
+                    </h3>
                     <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-warning/10 text-warning border border-warning/20">
                       {env === "DEVELOPMENT" ? "DEV" : "PROD"}
                     </span>
                   </div>
-                  <p className="text-sm text-muted-foreground mb-5">Set a price or keep it free.</p>
+                  <p className="text-sm text-muted-foreground mb-5">
+                    Set a price or keep it free.
+                  </p>
 
                   <div className="grid grid-cols-2 gap-4">
                     {/* Type */}
                     <div>
-                      <Label className="text-sm font-medium text-foreground mb-2 block">Type</Label>
+                      <Label className="text-sm font-medium text-foreground mb-2 block">
+                        Type
+                      </Label>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <button type="button" className="w-full flex items-center justify-between h-11 px-3 rounded-lg bg-background border border-border text-sm text-foreground hover:bg-secondary/50 transition-colors">
-                            <span className="font-medium">{planType === "free" ? "Free" : "Paid"}</span>
+                          <button
+                            type="button"
+                            className="w-full flex items-center justify-between h-11 px-3 rounded-lg bg-background border border-border text-sm text-foreground hover:bg-secondary/50 transition-colors"
+                          >
+                            <span className="font-medium">
+                              {planType === "free" ? "Free" : "Paid"}
+                            </span>
                             <ChevronDown className="w-4 h-4 text-muted-foreground" />
                           </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width]">
-                          <DropdownMenuItem onClick={() => { setPlanType("free"); setForm((p) => ({ ...p, price: "" })); }}>
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setPlanType("free");
+                              setForm((p) => ({ ...p, price: "" }));
+                            }}
+                          >
                             <div className="flex-1">
                               <p className="text-sm font-medium">Free</p>
-                              <p className="text-xs text-muted-foreground">No charge — $0.00 USDC</p>
+                              <p className="text-xs text-muted-foreground">
+                                No charge — $0.00 USDC
+                              </p>
                             </div>
-                            {planType === "free" && <Check className="w-4 h-4 ml-2 text-foreground" />}
+                            {planType === "free" && (
+                              <Check className="w-4 h-4 ml-2 text-foreground" />
+                            )}
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => setPlanType("paid")}>
                             <div className="flex-1">
                               <p className="text-sm font-medium">Paid</p>
-                              <p className="text-xs text-muted-foreground">Recurring USDC payment</p>
+                              <p className="text-xs text-muted-foreground">
+                                Recurring USDC payment
+                              </p>
                             </div>
-                            {planType === "paid" && <Check className="w-4 h-4 ml-2 text-foreground" />}
+                            {planType === "paid" && (
+                              <Check className="w-4 h-4 ml-2 text-foreground" />
+                            )}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -585,21 +698,32 @@ function CreatePlanDialog({
 
                     {/* Billing Integration */}
                     <div>
-                      <Label className="text-sm font-medium text-foreground mb-2 block">Billing Integration</Label>
+                      <Label className="text-sm font-medium text-foreground mb-2 block">
+                        Billing Integration
+                      </Label>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <button type="button" className="w-full flex items-center justify-between h-11 px-3 rounded-lg bg-background border border-border text-sm text-foreground hover:bg-secondary/50 transition-colors">
+                          <button
+                            type="button"
+                            className="w-full flex items-center justify-between h-11 px-3 rounded-lg bg-background border border-border text-sm text-foreground hover:bg-secondary/50 transition-colors"
+                          >
                             <div className="flex items-center gap-2 min-w-0">
                               <span className="font-medium truncate">
-                                {selectedChainOpt ? chainName(selectedChainOpt) : "Select chain"}
+                                {selectedChainOpt
+                                  ? chainName(selectedChainOpt)
+                                  : "Select chain"}
                               </span>
                               {selectedChainOpt && (
-                                <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0 ${selectedChainOpt.tag === "mainnet" ? "bg-success/10 text-success" : "bg-secondary text-muted-foreground border border-border"}`}>
+                                <span
+                                  className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0 ${selectedChainOpt.tag === "mainnet" ? "bg-success/10 text-success" : "bg-secondary text-muted-foreground border border-border"}`}
+                                >
                                   {selectedChainOpt.tag}
                                 </span>
                               )}
                               {selectedChainOpt?.chainId === chainId && (
-                                <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-foreground text-background shrink-0">Connected</span>
+                                <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-foreground text-background shrink-0">
+                                  Connected
+                                </span>
                               )}
                             </div>
                             <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0 ml-1" />
@@ -608,25 +732,63 @@ function CreatePlanDialog({
                         <DropdownMenuContent className="w-80">
                           {TOKEN_OPTIONS.some((o) => o.tag === "testnet") && (
                             <>
-                              <div className="px-2 pt-2 pb-1"><p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Testnets</p></div>
-                              {TOKEN_OPTIONS.filter((o) => o.tag === "testnet").map((opt) => {
+                              <div className="px-2 pt-2 pb-1">
+                                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                                  Testnets
+                                </p>
+                              </div>
+                              {TOKEN_OPTIONS.filter(
+                                (o) => o.tag === "testnet",
+                              ).map((opt) => {
                                 const isConn = opt.chainId === chainId;
                                 return (
-                                  <DropdownMenuItem key={opt.chainId} disabled={!isConn} onClick={() => isConn && setForm((p) => ({ ...p, acceptedToken: opt.address }))} className={`flex items-center justify-between gap-3 py-2.5 ${!isConn ? "opacity-40 cursor-not-allowed" : ""}`}>
+                                  <DropdownMenuItem
+                                    key={opt.chainId}
+                                    disabled={!isConn}
+                                    onClick={() =>
+                                      isConn &&
+                                      setForm((p) => ({
+                                        ...p,
+                                        acceptedToken: opt.address,
+                                      }))
+                                    }
+                                    className={`flex items-center justify-between gap-3 py-2.5 ${!isConn ? "opacity-40 cursor-not-allowed" : ""}`}
+                                  >
                                     <div className="flex items-center gap-2.5">
-                                      <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 border ${isConn ? "bg-foreground text-background border-foreground" : "bg-secondary text-muted-foreground border-border"}`}>
-                                        <span className="text-[10px] font-bold">{chainInitial(opt)}</span>
+                                      <div
+                                        className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 border ${isConn ? "bg-foreground text-background border-foreground" : "bg-secondary text-muted-foreground border-border"}`}
+                                      >
+                                        <span className="text-[10px] font-bold">
+                                          {chainInitial(opt)}
+                                        </span>
                                       </div>
                                       <div>
                                         <div className="flex items-center gap-1.5">
-                                          <p className="text-sm font-medium">{chainName(opt)}</p>
-                                          {isConn && <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-foreground text-background">Connected</span>}
+                                          <p className="text-sm font-medium">
+                                            {chainName(opt)}
+                                          </p>
+                                          {isConn && (
+                                            <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-foreground text-background">
+                                              Connected
+                                            </span>
+                                          )}
                                         </div>
-                                        <p className="text-xs font-mono text-muted-foreground mt-0.5">{opt.symbol} · {opt.address.slice(0, 6)}…{opt.address.slice(-4)}</p>
+                                        <p className="text-xs font-mono text-muted-foreground mt-0.5">
+                                          {opt.symbol} ·{" "}
+                                          {opt.address.slice(0, 6)}…
+                                          {opt.address.slice(-4)}
+                                        </p>
                                       </div>
                                     </div>
-                                    {form.acceptedToken === opt.address && isConn && <Check className="w-3.5 h-3.5 text-foreground shrink-0" />}
-                                    {!isConn && <span className="text-[9px] text-muted-foreground shrink-0">Switch wallet</span>}
+                                    {form.acceptedToken === opt.address &&
+                                      isConn && (
+                                        <Check className="w-3.5 h-3.5 text-foreground shrink-0" />
+                                      )}
+                                    {!isConn && (
+                                      <span className="text-[9px] text-muted-foreground shrink-0">
+                                        Switch wallet
+                                      </span>
+                                    )}
                                   </DropdownMenuItem>
                                 );
                               })}
@@ -635,32 +797,72 @@ function CreatePlanDialog({
                           {TOKEN_OPTIONS.some((o) => o.tag === "mainnet") && (
                             <>
                               <DropdownMenuSeparator />
-                              <div className="px-2 pt-2 pb-1"><p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Mainnets</p></div>
-                              {TOKEN_OPTIONS.filter((o) => o.tag === "mainnet").map((opt) => {
+                              <div className="px-2 pt-2 pb-1">
+                                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                                  Mainnets
+                                </p>
+                              </div>
+                              {TOKEN_OPTIONS.filter(
+                                (o) => o.tag === "mainnet",
+                              ).map((opt) => {
                                 const isConn = opt.chainId === chainId;
                                 return (
-                                  <DropdownMenuItem key={opt.chainId} disabled={!isConn} onClick={() => isConn && setForm((p) => ({ ...p, acceptedToken: opt.address }))} className={`flex items-center justify-between gap-3 py-2.5 ${!isConn ? "opacity-40 cursor-not-allowed" : ""}`}>
+                                  <DropdownMenuItem
+                                    key={opt.chainId}
+                                    disabled={!isConn}
+                                    onClick={() =>
+                                      isConn &&
+                                      setForm((p) => ({
+                                        ...p,
+                                        acceptedToken: opt.address,
+                                      }))
+                                    }
+                                    className={`flex items-center justify-between gap-3 py-2.5 ${!isConn ? "opacity-40 cursor-not-allowed" : ""}`}
+                                  >
                                     <div className="flex items-center gap-2.5">
-                                      <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 border ${isConn ? "bg-foreground text-background border-foreground" : "bg-secondary text-muted-foreground border-border"}`}>
-                                        <span className="text-[10px] font-bold">{chainInitial(opt)}</span>
+                                      <div
+                                        className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 border ${isConn ? "bg-foreground text-background border-foreground" : "bg-secondary text-muted-foreground border-border"}`}
+                                      >
+                                        <span className="text-[10px] font-bold">
+                                          {chainInitial(opt)}
+                                        </span>
                                       </div>
                                       <div>
                                         <div className="flex items-center gap-1.5">
-                                          <p className="text-sm font-medium">{chainName(opt)}</p>
-                                          {isConn && <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-foreground text-background">Connected</span>}
+                                          <p className="text-sm font-medium">
+                                            {chainName(opt)}
+                                          </p>
+                                          {isConn && (
+                                            <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-foreground text-background">
+                                              Connected
+                                            </span>
+                                          )}
                                         </div>
-                                        <p className="text-xs font-mono text-muted-foreground mt-0.5">{opt.symbol} · {opt.address.slice(0, 6)}…{opt.address.slice(-4)}</p>
+                                        <p className="text-xs font-mono text-muted-foreground mt-0.5">
+                                          {opt.symbol} ·{" "}
+                                          {opt.address.slice(0, 6)}…
+                                          {opt.address.slice(-4)}
+                                        </p>
                                       </div>
                                     </div>
-                                    {form.acceptedToken === opt.address && isConn && <Check className="w-3.5 h-3.5 text-foreground shrink-0" />}
-                                    {!isConn && <span className="text-[9px] text-muted-foreground shrink-0">Switch wallet</span>}
+                                    {form.acceptedToken === opt.address &&
+                                      isConn && (
+                                        <Check className="w-3.5 h-3.5 text-foreground shrink-0" />
+                                      )}
+                                    {!isConn && (
+                                      <span className="text-[9px] text-muted-foreground shrink-0">
+                                        Switch wallet
+                                      </span>
+                                    )}
                                   </DropdownMenuItem>
                                 );
                               })}
                             </>
                           )}
                           <div className="px-3 py-2 border-t border-border mt-1">
-                            <p className="text-[10px] text-muted-foreground">Switch your wallet network to enable other chains</p>
+                            <p className="text-[10px] text-muted-foreground">
+                              Switch your wallet network to enable other chains
+                            </p>
                           </div>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -672,12 +874,19 @@ function CreatePlanDialog({
                     <>
                       <div className="grid grid-cols-2 gap-4 mt-4">
                         <div>
-                          <Label className="text-sm font-medium text-foreground mb-2 block">Monthly Price (USDC) *</Label>
+                          <Label className="text-sm font-medium text-foreground mb-2 block">
+                            Monthly Price (USDC) *
+                          </Label>
                           <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">$</span>
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">
+                              $
+                            </span>
                             <Input
                               value={form.price}
-                              onChange={(e) => { setForm({ ...form, price: e.target.value }); setErrors((p) => ({ ...p, price: "" })); }}
+                              onChange={(e) => {
+                                setForm({ ...form, price: e.target.value });
+                                setErrors((p) => ({ ...p, price: "" }));
+                              }}
                               placeholder="29.00"
                               type="number"
                               min="0.01"
@@ -685,25 +894,50 @@ function CreatePlanDialog({
                               className="h-11 bg-background border-border pl-6"
                             />
                           </div>
-                          {errors.price && <p className="text-xs text-destructive mt-1">{errors.price}</p>}
+                          {errors.price && (
+                            <p className="text-xs text-destructive mt-1">
+                              {errors.price}
+                            </p>
+                          )}
                         </div>
                         <div>
-                          <Label className="text-sm font-medium text-foreground mb-2 block">Billing Interval</Label>
+                          <Label className="text-sm font-medium text-foreground mb-2 block">
+                            Billing Interval
+                          </Label>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <button type="button" className="w-full flex items-center justify-between h-11 px-3 rounded-lg bg-background border border-border text-sm text-foreground hover:bg-secondary/50 transition-colors">
-                                <span className="font-medium">{BILLING_INTERVALS.find((i) => i.days === billingIntervalDays)?.label ?? `${billingIntervalDays} days`}</span>
+                              <button
+                                type="button"
+                                className="w-full flex items-center justify-between h-11 px-3 rounded-lg bg-background border border-border text-sm text-foreground hover:bg-secondary/50 transition-colors"
+                              >
+                                <span className="font-medium">
+                                  {BILLING_INTERVALS.find(
+                                    (i) => i.days === billingIntervalDays,
+                                  )?.label ?? `${billingIntervalDays} days`}
+                                </span>
                                 <ChevronDown className="w-4 h-4 text-muted-foreground" />
                               </button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width]">
                               {BILLING_INTERVALS.map((iv) => (
-                                <DropdownMenuItem key={iv.days} onClick={() => setBillingIntervalDays(iv.days)} className="flex items-center justify-between">
+                                <DropdownMenuItem
+                                  key={iv.days}
+                                  onClick={() =>
+                                    setBillingIntervalDays(iv.days)
+                                  }
+                                  className="flex items-center justify-between"
+                                >
                                   <div>
-                                    <p className="text-sm font-medium">{iv.label}</p>
-                                    <p className="text-xs text-muted-foreground">{iv.sublabel}</p>
+                                    <p className="text-sm font-medium">
+                                      {iv.label}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {iv.sublabel}
+                                    </p>
                                   </div>
-                                  {billingIntervalDays === iv.days && <Check className="w-4 h-4 text-foreground ml-2" />}
+                                  {billingIntervalDays === iv.days && (
+                                    <Check className="w-4 h-4 text-foreground ml-2" />
+                                  )}
                                 </DropdownMenuItem>
                               ))}
                             </DropdownMenuContent>
@@ -715,7 +949,9 @@ function CreatePlanDialog({
                       <div className="mt-4 rounded-lg border border-border bg-secondary/20 p-4">
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-sm font-medium text-foreground">Annual Pricing</p>
+                            <p className="text-sm font-medium text-foreground">
+                              Annual Pricing
+                            </p>
                             <p className="text-xs text-muted-foreground mt-0.5">
                               Optional discounted rate for yearly subscribers
                             </p>
@@ -731,8 +967,15 @@ function CreatePlanDialog({
                                 setForm((p) => ({ ...p, annualPrice: "" }));
                               } else if (form.price) {
                                 // Auto-seed 20% discount on enable
-                                const computed = (Number(form.price) * 12 * 0.8).toFixed(2);
-                                setForm((p) => ({ ...p, annualPrice: computed }));
+                                const computed = (
+                                  Number(form.price) *
+                                  12 *
+                                  0.8
+                                ).toFixed(2);
+                                setForm((p) => ({
+                                  ...p,
+                                  annualPrice: computed,
+                                }));
                                 setAnnualDiscount("20");
                               }
                             }}
@@ -741,10 +984,14 @@ function CreatePlanDialog({
                               hasAnnualPrice ? "bg-primary" : "bg-secondary",
                             )}
                           >
-                            <span className={cn(
-                              "pointer-events-none block h-5 w-5 rounded-full bg-background shadow-lg transition-transform",
-                              hasAnnualPrice ? "translate-x-5" : "translate-x-0",
-                            )} />
+                            <span
+                              className={cn(
+                                "pointer-events-none block h-5 w-5 rounded-full bg-background shadow-lg transition-transform",
+                                hasAnnualPrice
+                                  ? "translate-x-5"
+                                  : "translate-x-0",
+                              )}
+                            />
                           </button>
                         </div>
                         {hasAnnualPrice && (
@@ -752,7 +999,9 @@ function CreatePlanDialog({
                             {/* Discount % row */}
                             <div className="flex items-center gap-3">
                               <div className="flex-1">
-                                <Label className="text-xs text-muted-foreground mb-1.5 block">Discount off monthly × 12</Label>
+                                <Label className="text-xs text-muted-foreground mb-1.5 block">
+                                  Discount off monthly × 12
+                                </Label>
                                 <div className="flex items-center gap-2">
                                   <input
                                     type="range"
@@ -764,9 +1013,19 @@ function CreatePlanDialog({
                                       const pct = e.target.value;
                                       setAnnualDiscount(pct);
                                       if (form.price) {
-                                        const computed = (Number(form.price) * 12 * (1 - Number(pct) / 100)).toFixed(2);
-                                        setForm((p) => ({ ...p, annualPrice: computed }));
-                                        setErrors((p) => ({ ...p, annualPrice: "" }));
+                                        const computed = (
+                                          Number(form.price) *
+                                          12 *
+                                          (1 - Number(pct) / 100)
+                                        ).toFixed(2);
+                                        setForm((p) => ({
+                                          ...p,
+                                          annualPrice: computed,
+                                        }));
+                                        setErrors((p) => ({
+                                          ...p,
+                                          annualPrice: "",
+                                        }));
                                       }
                                     }}
                                     className="flex-1 h-1.5 accent-primary cursor-pointer"
@@ -778,17 +1037,35 @@ function CreatePlanDialog({
                                       max="60"
                                       value={annualDiscount}
                                       onChange={(e) => {
-                                        const pct = Math.min(60, Math.max(0, Number(e.target.value) || 0)).toString();
+                                        const pct = Math.min(
+                                          60,
+                                          Math.max(
+                                            0,
+                                            Number(e.target.value) || 0,
+                                          ),
+                                        ).toString();
                                         setAnnualDiscount(pct);
                                         if (form.price) {
-                                          const computed = (Number(form.price) * 12 * (1 - Number(pct) / 100)).toFixed(2);
-                                          setForm((p) => ({ ...p, annualPrice: computed }));
-                                          setErrors((p) => ({ ...p, annualPrice: "" }));
+                                          const computed = (
+                                            Number(form.price) *
+                                            12 *
+                                            (1 - Number(pct) / 100)
+                                          ).toFixed(2);
+                                          setForm((p) => ({
+                                            ...p,
+                                            annualPrice: computed,
+                                          }));
+                                          setErrors((p) => ({
+                                            ...p,
+                                            annualPrice: "",
+                                          }));
                                         }
                                       }}
                                       className="w-full text-sm text-foreground bg-transparent outline-none"
                                     />
-                                    <span className="text-xs text-muted-foreground">%</span>
+                                    <span className="text-xs text-muted-foreground">
+                                      %
+                                    </span>
                                   </div>
                                 </div>
                               </div>
@@ -797,41 +1074,79 @@ function CreatePlanDialog({
                             {/* Computed annual price + override */}
                             <div className="flex items-start gap-3">
                               <div className="flex-1">
-                                <Label className="text-xs text-muted-foreground mb-1.5 block">Annual price (USDC)</Label>
+                                <Label className="text-xs text-muted-foreground mb-1.5 block">
+                                  Annual price (USDC)
+                                </Label>
                                 <div className="relative">
-                                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">$</span>
+                                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">
+                                    $
+                                  </span>
                                   <Input
                                     value={form.annualPrice}
                                     onChange={(e) => {
                                       const val = e.target.value;
                                       setForm({ ...form, annualPrice: val });
-                                      setErrors((p) => ({ ...p, annualPrice: "" }));
+                                      setErrors((p) => ({
+                                        ...p,
+                                        annualPrice: "",
+                                      }));
                                       // Back-calculate discount
-                                      if (form.price && val && Number(val) > 0) {
-                                        const backPct = Math.round((1 - Number(val) / (Number(form.price) * 12)) * 100);
-                                        if (backPct >= 0 && backPct <= 60) setAnnualDiscount(String(backPct));
+                                      if (
+                                        form.price &&
+                                        val &&
+                                        Number(val) > 0
+                                      ) {
+                                        const backPct = Math.round(
+                                          (1 -
+                                            Number(val) /
+                                              (Number(form.price) * 12)) *
+                                            100,
+                                        );
+                                        if (backPct >= 0 && backPct <= 60)
+                                          setAnnualDiscount(String(backPct));
                                       }
                                     }}
-                                    placeholder={form.price ? (Number(form.price) * 12 * 0.8).toFixed(2) : "278.40"}
+                                    placeholder={
+                                      form.price
+                                        ? (
+                                            Number(form.price) *
+                                            12 *
+                                            0.8
+                                          ).toFixed(2)
+                                        : "278.40"
+                                    }
                                     type="number"
                                     min="0.01"
                                     step="0.01"
                                     className="h-9 bg-background border-border pl-6 text-sm"
                                   />
                                 </div>
-                                {errors.annualPrice && <p className="text-xs text-destructive mt-1">{errors.annualPrice}</p>}
+                                {errors.annualPrice && (
+                                  <p className="text-xs text-destructive mt-1">
+                                    {errors.annualPrice}
+                                  </p>
+                                )}
                               </div>
 
-                              {form.price && form.annualPrice && Number(form.annualPrice) > 0 && (
-                                <div className="pt-6 text-right">
-                                  <p className="text-xs font-semibold text-green-500">
-                                    {Math.round((1 - Number(form.annualPrice) / (Number(form.price) * 12)) * 100)}% off
-                                  </p>
-                                  <p className="text-[10px] text-muted-foreground mt-0.5">
-                                    vs ${(Number(form.price) * 12).toFixed(2)}/yr
-                                  </p>
-                                </div>
-                              )}
+                              {form.price &&
+                                form.annualPrice &&
+                                Number(form.annualPrice) > 0 && (
+                                  <div className="pt-6 text-right">
+                                    <p className="text-xs font-semibold text-green-500">
+                                      {Math.round(
+                                        (1 -
+                                          Number(form.annualPrice) /
+                                            (Number(form.price) * 12)) *
+                                          100,
+                                      )}
+                                      % off
+                                    </p>
+                                    <p className="text-[10px] text-muted-foreground mt-0.5">
+                                      vs ${(Number(form.price) * 12).toFixed(2)}
+                                      /yr
+                                    </p>
+                                  </div>
+                                )}
                             </div>
                           </div>
                         )}
@@ -841,8 +1156,9 @@ function CreatePlanDialog({
                 </div>
 
                 <p className="text-xs text-muted-foreground">
-                  Environment: <strong>{env}</strong> — plan will be created in the catalog.
-                  Click &ldquo;Register on-chain&rdquo; after creation to activate it on-chain.
+                  Environment: <strong>{env}</strong> — plan will be created in
+                  the catalog. Click &ldquo;Register on-chain&rdquo; after
+                  creation to activate it on-chain.
                 </p>
               </div>
             </form>
@@ -851,11 +1167,31 @@ function CreatePlanDialog({
 
         {/* Footer */}
         <div className="shrink-0 border-t border-border px-6 py-4 flex items-center justify-end gap-3 bg-background">
-          <Button type="button" variant="outline" onClick={() => { setOpen(false); resetForm(); }} disabled={loading}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              setOpen(false);
+              resetForm();
+            }}
+            disabled={loading}
+          >
             Cancel
           </Button>
-          <Button form="create-plan-form" type="submit" disabled={loading} className="min-w-[140px]">
-            {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Creating…</> : "Save Changes"}
+          <Button
+            form="create-plan-form"
+            type="submit"
+            disabled={loading}
+            className="min-w-[140px]"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Creating…
+              </>
+            ) : (
+              "Save Changes"
+            )}
           </Button>
         </div>
       </SheetContent>
@@ -889,13 +1225,24 @@ function CreateAddOnDialog({
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Auto-derive code from name
-  const autoCode = form.name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+  const autoCode = form.name
+    .toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9-]/g, "");
 
-  const selectedChainOpt = TOKEN_OPTIONS.find((o) => o.address === form.acceptedToken);
+  const selectedChainOpt = TOKEN_OPTIONS.find(
+    (o) => o.address === form.acceptedToken,
+  );
   const chainName = (o: TokenOption) => o.chainLabel;
   const chainInitial = (o: TokenOption) => {
     const n = o.chainLabel;
-    return n.startsWith("Base") ? "B" : n.startsWith("Sepolia") ? "S" : n.startsWith("Arc") ? "A" : n[0]?.toUpperCase() ?? "?";
+    return n.startsWith("Base")
+      ? "B"
+      : n.startsWith("Sepolia")
+        ? "S"
+        : n.startsWith("Arc")
+          ? "A"
+          : (n[0]?.toUpperCase() ?? "?");
   };
 
   function validate() {
@@ -922,7 +1269,10 @@ function CreateAddOnDialog({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const errs = validate();
-    if (Object.keys(errs).length) { setErrors(errs); return; }
+    if (Object.keys(errs).length) {
+      setErrors(errs);
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch("/api/catalog/add-ons", {
@@ -956,7 +1306,13 @@ function CreateAddOnDialog({
   }
 
   return (
-    <Sheet open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}>
+    <Sheet
+      open={open}
+      onOpenChange={(v) => {
+        setOpen(v);
+        if (!v) resetForm();
+      }}
+    >
       <SheetTrigger asChild>
         <Button size="sm" variant="outline" className="gap-2">
           <Plus className="w-4 h-4" />
@@ -967,7 +1323,13 @@ function CreateAddOnDialog({
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
           <div />
-          <button onClick={() => { setOpen(false); resetForm(); }} className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-secondary hover:text-foreground transition-all">
+          <button
+            onClick={() => {
+              setOpen(false);
+              resetForm();
+            }}
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-secondary hover:text-foreground transition-all"
+          >
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -977,26 +1339,40 @@ function CreateAddOnDialog({
           {/* ── LEFT: Add-On Preview ── */}
           <div className="w-[300px] shrink-0 border-r border-border bg-secondary/20 p-6 flex flex-col gap-6 overflow-y-auto">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground mb-4">Create Add-On</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground mb-4">
+                Create Add-On
+              </p>
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-9 h-9 rounded-full bg-linear-to-br from-zinc-400 to-zinc-700 shrink-0" />
                 <p className="text-base font-bold text-foreground truncate">
-                  {form.name || <span className="font-normal text-muted-foreground">Untitled add-on</span>}
+                  {form.name || (
+                    <span className="font-normal text-muted-foreground">
+                      Untitled add-on
+                    </span>
+                  )}
                 </p>
               </div>
             </div>
             <div>
-              <p className="text-xs font-semibold text-muted-foreground mb-3">Add-On Preview</p>
+              <p className="text-xs font-semibold text-muted-foreground mb-3">
+                Add-On Preview
+              </p>
               <div className="bg-card border border-border rounded-xl overflow-hidden">
                 <div className="p-4 border-b border-border">
-                  <p className="text-lg font-bold text-foreground leading-tight">{form.name || "—"}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{form.description || "No description"}</p>
+                  <p className="text-lg font-bold text-foreground leading-tight">
+                    {form.name || "—"}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {form.description || "No description"}
+                  </p>
                   <div className="flex items-center gap-2 mt-1.5">
                     <p className="text-sm font-semibold text-foreground">
                       {form.price ? `$${form.price} USDC` : "—"}
                     </p>
                     <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-secondary border border-border text-muted-foreground">
-                      {form.billingType === "ONE_TIME" ? "One-time" : "Recurring"}
+                      {form.billingType === "ONE_TIME"
+                        ? "One-time"
+                        : "Recurring"}
                     </span>
                     <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-blue-50 border border-blue-200 text-blue-700">
                       {form.saleMode === "STANDALONE"
@@ -1008,12 +1384,17 @@ function CreateAddOnDialog({
                   </div>
                   {form.billingType === "RECURRING" && form.price && (
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      / {BILLING_INTERVALS.find((i) => i.days === billingIntervalDays)?.label.toLowerCase() ?? `${billingIntervalDays}d`}
+                      /{" "}
+                      {BILLING_INTERVALS.find(
+                        (i) => i.days === billingIntervalDays,
+                      )?.label.toLowerCase() ?? `${billingIntervalDays}d`}
                     </p>
                   )}
                 </div>
                 <div className="p-4">
-                  <p className="text-xs text-muted-foreground text-center py-3">No entitlements yet</p>
+                  <p className="text-xs text-muted-foreground text-center py-3">
+                    No entitlements yet
+                  </p>
                 </div>
                 <div className="px-4 pb-4">
                   <button className="w-full py-2.5 rounded-lg bg-secondary border border-border text-sm font-medium text-muted-foreground cursor-default">
@@ -1031,12 +1412,16 @@ function CreateAddOnDialog({
                 {/* Header */}
                 <div>
                   <div className="flex items-center gap-3 mb-1">
-                    <h2 className="text-2xl font-bold text-foreground tracking-tight">Add-On Settings</h2>
+                    <h2 className="text-2xl font-bold text-foreground tracking-tight">
+                      Add-On Settings
+                    </h2>
                     <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-secondary border border-border text-muted-foreground">
                       {env === "DEVELOPMENT" ? "Dev" : "Production"}
                     </span>
                   </div>
-                  <p className="text-sm text-muted-foreground">Additional features customers can purchase alongside plans.</p>
+                  <p className="text-sm text-muted-foreground">
+                    Additional features customers can purchase alongside plans.
+                  </p>
                 </div>
 
                 {errors._global && (
@@ -1047,57 +1432,97 @@ function CreateAddOnDialog({
 
                 {/* Name */}
                 <div>
-                  <Label className="text-sm font-medium text-foreground mb-2 block">Name *</Label>
+                  <Label className="text-sm font-medium text-foreground mb-2 block">
+                    Name *
+                  </Label>
                   <Input
                     value={form.name}
-                    onChange={(e) => { setForm({ ...form, name: e.target.value }); setErrors((p) => ({ ...p, name: "" })); }}
+                    onChange={(e) => {
+                      setForm({ ...form, name: e.target.value });
+                      setErrors((p) => ({ ...p, name: "" }));
+                    }}
                     placeholder="e.g. Extra Storage, Priority Support"
                     className="h-11 bg-background border-border"
                   />
-                  {errors.name && <p className="text-xs text-destructive mt-1">{errors.name}</p>}
+                  {errors.name && (
+                    <p className="text-xs text-destructive mt-1">
+                      {errors.name}
+                    </p>
+                  )}
                   {autoCode && (
-                    <p className="text-xs text-muted-foreground mt-1">Code: <span className="font-mono">{autoCode}</span></p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Code: <span className="font-mono">{autoCode}</span>
+                    </p>
                   )}
                 </div>
 
                 {/* Description */}
                 <div>
-                  <Label className="text-sm font-medium text-foreground mb-2 block">Description</Label>
+                  <Label className="text-sm font-medium text-foreground mb-2 block">
+                    Description
+                  </Label>
                   <Input
                     value={form.description}
-                    onChange={(e) => setForm({ ...form, description: e.target.value })}
+                    onChange={(e) =>
+                      setForm({ ...form, description: e.target.value })
+                    }
                     placeholder="Describe what this add-on provides"
                     className="h-11 bg-background border-border"
                   />
-                  <p className="text-xs text-muted-foreground mt-1.5">Optional</p>
+                  <p className="text-xs text-muted-foreground mt-1.5">
+                    Optional
+                  </p>
                 </div>
 
                 {/* Pricing */}
                 <div>
                   <div className="flex items-center gap-2.5 mb-1">
-                    <h3 className="text-xl font-bold text-foreground tracking-tight">Pricing</h3>
+                    <h3 className="text-xl font-bold text-foreground tracking-tight">
+                      Pricing
+                    </h3>
                   </div>
-                  <p className="text-sm text-muted-foreground mb-5">Configure billing for this add-on</p>
+                  <p className="text-sm text-muted-foreground mb-5">
+                    Configure billing for this add-on
+                  </p>
 
                   <div className="grid grid-cols-2 gap-4">
                     {/* Type */}
                     <div>
-                      <Label className="text-sm font-medium text-foreground mb-2 block">Type</Label>
+                      <Label className="text-sm font-medium text-foreground mb-2 block">
+                        Type
+                      </Label>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <button type="button" className="w-full flex items-center justify-between h-11 px-3 rounded-lg bg-background border border-border text-sm text-foreground hover:bg-secondary/50 transition-colors">
-                            <span className="font-medium">{form.billingType === "ONE_TIME" ? "One-time" : "Recurring"}</span>
+                          <button
+                            type="button"
+                            className="w-full flex items-center justify-between h-11 px-3 rounded-lg bg-background border border-border text-sm text-foreground hover:bg-secondary/50 transition-colors"
+                          >
+                            <span className="font-medium">
+                              {form.billingType === "ONE_TIME"
+                                ? "One-time"
+                                : "Recurring"}
+                            </span>
                             <ChevronDown className="w-4 h-4 text-muted-foreground" />
                           </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width]">
-                          <DropdownMenuItem onClick={() => setForm((p) => ({ ...p, billingType: "ONE_TIME" }))}>
-                            
+                          <DropdownMenuItem
+                            onClick={() =>
+                              setForm((p) => ({
+                                ...p,
+                                billingType: "ONE_TIME",
+                              }))
+                            }
+                          >
                             <div className="flex-1">
                               <p className="text-sm font-medium">One-time</p>
-                              <p className="text-xs text-muted-foreground">Single charge purchase</p>
+                              <p className="text-xs text-muted-foreground">
+                                Single charge purchase
+                              </p>
                             </div>
-                            {form.billingType === "ONE_TIME" && <Check className="w-4 h-4 ml-2 text-foreground" />}
+                            {form.billingType === "ONE_TIME" && (
+                              <Check className="w-4 h-4 ml-2 text-foreground" />
+                            )}
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() =>
@@ -1110,19 +1535,28 @@ function CreateAddOnDialog({
                           >
                             <div className="flex-1">
                               <p className="text-sm font-medium">Recurring</p>
-                              <p className="text-xs text-muted-foreground">Billed on a schedule</p>
+                              <p className="text-xs text-muted-foreground">
+                                Billed on a schedule
+                              </p>
                             </div>
-                            {form.billingType === "RECURRING" && <Check className="w-4 h-4 ml-2 text-foreground" />}
+                            {form.billingType === "RECURRING" && (
+                              <Check className="w-4 h-4 ml-2 text-foreground" />
+                            )}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
 
                     <div>
-                      <Label className="text-sm font-medium text-foreground mb-2 block">Sell As</Label>
+                      <Label className="text-sm font-medium text-foreground mb-2 block">
+                        Sell As
+                      </Label>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <button type="button" className="w-full flex items-center justify-between h-11 px-3 rounded-lg bg-background border border-border text-sm text-foreground hover:bg-secondary/50 transition-colors">
+                          <button
+                            type="button"
+                            className="w-full flex items-center justify-between h-11 px-3 rounded-lg bg-background border border-border text-sm text-foreground hover:bg-secondary/50 transition-colors"
+                          >
                             <span className="font-medium">
                               {form.saleMode === "STANDALONE"
                                 ? "Standalone checkout"
@@ -1144,53 +1578,92 @@ function CreateAddOnDialog({
                             }
                           >
                             <div className="flex-1">
-                              <p className="text-sm font-medium">Standalone checkout</p>
-                              <p className="text-xs text-muted-foreground">Sell with a hosted one-time payment link</p>
+                              <p className="text-sm font-medium">
+                                Standalone checkout
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                Sell with a hosted one-time payment link
+                              </p>
                             </div>
-                            {form.saleMode === "STANDALONE" && <Check className="w-4 h-4 ml-2 text-foreground" />}
+                            {form.saleMode === "STANDALONE" && (
+                              <Check className="w-4 h-4 ml-2 text-foreground" />
+                            )}
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => setForm((p) => ({ ...p, saleMode: "UPSELL" }))}>
+                          <DropdownMenuItem
+                            onClick={() =>
+                              setForm((p) => ({ ...p, saleMode: "UPSELL" }))
+                            }
+                          >
                             <div className="flex-1">
-                              <p className="text-sm font-medium">Subscriber upsell</p>
-                              <p className="text-xs text-muted-foreground">Attach to existing customers or recurring subscriptions</p>
+                              <p className="text-sm font-medium">
+                                Subscriber upsell
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                Attach to existing customers or recurring
+                                subscriptions
+                              </p>
                             </div>
-                            {form.saleMode === "UPSELL" && <Check className="w-4 h-4 ml-2 text-foreground" />}
+                            {form.saleMode === "UPSELL" && (
+                              <Check className="w-4 h-4 ml-2 text-foreground" />
+                            )}
                           </DropdownMenuItem>
                           {form.billingType === "ONE_TIME" && (
-                            <DropdownMenuItem onClick={() => setForm((p) => ({ ...p, saleMode: "BOTH" }))}>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                setForm((p) => ({ ...p, saleMode: "BOTH" }))
+                              }
+                            >
                               <div className="flex-1">
-                                <p className="text-sm font-medium">Standalone + upsell</p>
-                                <p className="text-xs text-muted-foreground">Offer a pay link and allow manual assignment</p>
+                                <p className="text-sm font-medium">
+                                  Standalone + upsell
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  Offer a pay link and allow manual assignment
+                                </p>
                               </div>
-                              {form.saleMode === "BOTH" && <Check className="w-4 h-4 ml-2 text-foreground" />}
+                              {form.saleMode === "BOTH" && (
+                                <Check className="w-4 h-4 ml-2 text-foreground" />
+                              )}
                             </DropdownMenuItem>
                           )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                       {form.billingType === "RECURRING" && (
                         <p className="mt-1.5 text-xs text-muted-foreground">
-                          Recurring add-ons are limited to subscriber upsells for this launch.
+                          Recurring add-ons are limited to subscriber upsells
+                          for this launch.
                         </p>
                       )}
                     </div>
 
                     {/* Billing Integration */}
                     <div className="col-span-2">
-                      <Label className="text-sm font-medium text-foreground mb-2 block">Billing Integration</Label>
+                      <Label className="text-sm font-medium text-foreground mb-2 block">
+                        Billing Integration
+                      </Label>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <button type="button" className="w-full flex items-center justify-between h-11 px-3 rounded-lg bg-background border border-border text-sm text-foreground hover:bg-secondary/50 transition-colors">
+                          <button
+                            type="button"
+                            className="w-full flex items-center justify-between h-11 px-3 rounded-lg bg-background border border-border text-sm text-foreground hover:bg-secondary/50 transition-colors"
+                          >
                             <div className="flex items-center gap-2 min-w-0">
                               <span className="font-medium truncate">
-                                {selectedChainOpt ? chainName(selectedChainOpt) : "Select chain"}
+                                {selectedChainOpt
+                                  ? chainName(selectedChainOpt)
+                                  : "Select chain"}
                               </span>
                               {selectedChainOpt && (
-                                <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0 ${selectedChainOpt.tag === "mainnet" ? "bg-success/10 text-success" : "bg-secondary text-muted-foreground border border-border"}`}>
+                                <span
+                                  className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0 ${selectedChainOpt.tag === "mainnet" ? "bg-success/10 text-success" : "bg-secondary text-muted-foreground border border-border"}`}
+                                >
                                   {selectedChainOpt.tag}
                                 </span>
                               )}
                               {selectedChainOpt?.chainId === chainId && (
-                                <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-foreground text-background shrink-0">Connected</span>
+                                <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-foreground text-background shrink-0">
+                                  Connected
+                                </span>
                               )}
                             </div>
                             <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0 ml-1" />
@@ -1199,25 +1672,63 @@ function CreateAddOnDialog({
                         <DropdownMenuContent className="w-80">
                           {TOKEN_OPTIONS.some((o) => o.tag === "testnet") && (
                             <>
-                              <div className="px-2 pt-2 pb-1"><p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Testnets</p></div>
-                              {TOKEN_OPTIONS.filter((o) => o.tag === "testnet").map((opt) => {
+                              <div className="px-2 pt-2 pb-1">
+                                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                                  Testnets
+                                </p>
+                              </div>
+                              {TOKEN_OPTIONS.filter(
+                                (o) => o.tag === "testnet",
+                              ).map((opt) => {
                                 const isConn = opt.chainId === chainId;
                                 return (
-                                  <DropdownMenuItem key={opt.chainId} disabled={!isConn} onClick={() => isConn && setForm((p) => ({ ...p, acceptedToken: opt.address }))} className={`flex items-center justify-between gap-3 py-2.5 ${!isConn ? "opacity-40 cursor-not-allowed" : ""}`}>
+                                  <DropdownMenuItem
+                                    key={opt.chainId}
+                                    disabled={!isConn}
+                                    onClick={() =>
+                                      isConn &&
+                                      setForm((p) => ({
+                                        ...p,
+                                        acceptedToken: opt.address,
+                                      }))
+                                    }
+                                    className={`flex items-center justify-between gap-3 py-2.5 ${!isConn ? "opacity-40 cursor-not-allowed" : ""}`}
+                                  >
                                     <div className="flex items-center gap-2.5">
-                                      <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 border ${isConn ? "bg-foreground text-background border-foreground" : "bg-secondary text-muted-foreground border-border"}`}>
-                                        <span className="text-[10px] font-bold">{chainInitial(opt)}</span>
+                                      <div
+                                        className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 border ${isConn ? "bg-foreground text-background border-foreground" : "bg-secondary text-muted-foreground border-border"}`}
+                                      >
+                                        <span className="text-[10px] font-bold">
+                                          {chainInitial(opt)}
+                                        </span>
                                       </div>
                                       <div>
                                         <div className="flex items-center gap-1.5">
-                                          <p className="text-sm font-medium">{chainName(opt)}</p>
-                                          {isConn && <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-foreground text-background">Connected</span>}
+                                          <p className="text-sm font-medium">
+                                            {chainName(opt)}
+                                          </p>
+                                          {isConn && (
+                                            <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-foreground text-background">
+                                              Connected
+                                            </span>
+                                          )}
                                         </div>
-                                        <p className="text-xs font-mono text-muted-foreground mt-0.5">{opt.symbol} · {opt.address.slice(0, 6)}…{opt.address.slice(-4)}</p>
+                                        <p className="text-xs font-mono text-muted-foreground mt-0.5">
+                                          {opt.symbol} ·{" "}
+                                          {opt.address.slice(0, 6)}…
+                                          {opt.address.slice(-4)}
+                                        </p>
                                       </div>
                                     </div>
-                                    {form.acceptedToken === opt.address && isConn && <Check className="w-3.5 h-3.5 text-foreground shrink-0" />}
-                                    {!isConn && <span className="text-[9px] text-muted-foreground shrink-0">Switch wallet</span>}
+                                    {form.acceptedToken === opt.address &&
+                                      isConn && (
+                                        <Check className="w-3.5 h-3.5 text-foreground shrink-0" />
+                                      )}
+                                    {!isConn && (
+                                      <span className="text-[9px] text-muted-foreground shrink-0">
+                                        Switch wallet
+                                      </span>
+                                    )}
                                   </DropdownMenuItem>
                                 );
                               })}
@@ -1226,32 +1737,72 @@ function CreateAddOnDialog({
                           {TOKEN_OPTIONS.some((o) => o.tag === "mainnet") && (
                             <>
                               <DropdownMenuSeparator />
-                              <div className="px-2 pt-2 pb-1"><p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Mainnets</p></div>
-                              {TOKEN_OPTIONS.filter((o) => o.tag === "mainnet").map((opt) => {
+                              <div className="px-2 pt-2 pb-1">
+                                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                                  Mainnets
+                                </p>
+                              </div>
+                              {TOKEN_OPTIONS.filter(
+                                (o) => o.tag === "mainnet",
+                              ).map((opt) => {
                                 const isConn = opt.chainId === chainId;
                                 return (
-                                  <DropdownMenuItem key={opt.chainId} disabled={!isConn} onClick={() => isConn && setForm((p) => ({ ...p, acceptedToken: opt.address }))} className={`flex items-center justify-between gap-3 py-2.5 ${!isConn ? "opacity-40 cursor-not-allowed" : ""}`}>
+                                  <DropdownMenuItem
+                                    key={opt.chainId}
+                                    disabled={!isConn}
+                                    onClick={() =>
+                                      isConn &&
+                                      setForm((p) => ({
+                                        ...p,
+                                        acceptedToken: opt.address,
+                                      }))
+                                    }
+                                    className={`flex items-center justify-between gap-3 py-2.5 ${!isConn ? "opacity-40 cursor-not-allowed" : ""}`}
+                                  >
                                     <div className="flex items-center gap-2.5">
-                                      <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 border ${isConn ? "bg-foreground text-background border-foreground" : "bg-secondary text-muted-foreground border-border"}`}>
-                                        <span className="text-[10px] font-bold">{chainInitial(opt)}</span>
+                                      <div
+                                        className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 border ${isConn ? "bg-foreground text-background border-foreground" : "bg-secondary text-muted-foreground border-border"}`}
+                                      >
+                                        <span className="text-[10px] font-bold">
+                                          {chainInitial(opt)}
+                                        </span>
                                       </div>
                                       <div>
                                         <div className="flex items-center gap-1.5">
-                                          <p className="text-sm font-medium">{chainName(opt)}</p>
-                                          {isConn && <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-foreground text-background">Connected</span>}
+                                          <p className="text-sm font-medium">
+                                            {chainName(opt)}
+                                          </p>
+                                          {isConn && (
+                                            <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-foreground text-background">
+                                              Connected
+                                            </span>
+                                          )}
                                         </div>
-                                        <p className="text-xs font-mono text-muted-foreground mt-0.5">{opt.symbol} · {opt.address.slice(0, 6)}…{opt.address.slice(-4)}</p>
+                                        <p className="text-xs font-mono text-muted-foreground mt-0.5">
+                                          {opt.symbol} ·{" "}
+                                          {opt.address.slice(0, 6)}…
+                                          {opt.address.slice(-4)}
+                                        </p>
                                       </div>
                                     </div>
-                                    {form.acceptedToken === opt.address && isConn && <Check className="w-3.5 h-3.5 text-foreground shrink-0" />}
-                                    {!isConn && <span className="text-[9px] text-muted-foreground shrink-0">Switch wallet</span>}
+                                    {form.acceptedToken === opt.address &&
+                                      isConn && (
+                                        <Check className="w-3.5 h-3.5 text-foreground shrink-0" />
+                                      )}
+                                    {!isConn && (
+                                      <span className="text-[9px] text-muted-foreground shrink-0">
+                                        Switch wallet
+                                      </span>
+                                    )}
                                   </DropdownMenuItem>
                                 );
                               })}
                             </>
                           )}
                           <div className="px-3 py-2 border-t border-border mt-1">
-                            <p className="text-[10px] text-muted-foreground">Switch your wallet network to enable other chains</p>
+                            <p className="text-[10px] text-muted-foreground">
+                              Switch your wallet network to enable other chains
+                            </p>
                           </div>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -1262,12 +1813,19 @@ function CreateAddOnDialog({
                   <div className="mt-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label className="text-sm font-medium text-foreground mb-2 block">Price (USDC) *</Label>
+                        <Label className="text-sm font-medium text-foreground mb-2 block">
+                          Price (USDC) *
+                        </Label>
                         <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">$</span>
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">
+                            $
+                          </span>
                           <Input
                             value={form.price}
-                            onChange={(e) => { setForm({ ...form, price: e.target.value }); setErrors((p) => ({ ...p, price: "" })); }}
+                            onChange={(e) => {
+                              setForm({ ...form, price: e.target.value });
+                              setErrors((p) => ({ ...p, price: "" }));
+                            }}
                             placeholder="9.99"
                             type="number"
                             min="0.01"
@@ -1275,28 +1833,53 @@ function CreateAddOnDialog({
                             className="h-11 bg-background border-border pl-6"
                           />
                         </div>
-                        {errors.price && <p className="text-xs text-destructive mt-1">{errors.price}</p>}
+                        {errors.price && (
+                          <p className="text-xs text-destructive mt-1">
+                            {errors.price}
+                          </p>
+                        )}
                       </div>
 
                       {/* Recurring: billing interval */}
                       {form.billingType === "RECURRING" && (
                         <div>
-                          <Label className="text-sm font-medium text-foreground mb-2 block">Billing Interval</Label>
+                          <Label className="text-sm font-medium text-foreground mb-2 block">
+                            Billing Interval
+                          </Label>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <button type="button" className="w-full flex items-center justify-between h-11 px-3 rounded-lg bg-background border border-border text-sm text-foreground hover:bg-secondary/50 transition-colors">
-                                <span className="font-medium">{BILLING_INTERVALS.find((i) => i.days === billingIntervalDays)?.label ?? `${billingIntervalDays} days`}</span>
+                              <button
+                                type="button"
+                                className="w-full flex items-center justify-between h-11 px-3 rounded-lg bg-background border border-border text-sm text-foreground hover:bg-secondary/50 transition-colors"
+                              >
+                                <span className="font-medium">
+                                  {BILLING_INTERVALS.find(
+                                    (i) => i.days === billingIntervalDays,
+                                  )?.label ?? `${billingIntervalDays} days`}
+                                </span>
                                 <ChevronDown className="w-4 h-4 text-muted-foreground" />
                               </button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width]">
                               {BILLING_INTERVALS.map((iv) => (
-                                <DropdownMenuItem key={iv.days} onClick={() => setBillingIntervalDays(iv.days)} className="flex items-center justify-between">
+                                <DropdownMenuItem
+                                  key={iv.days}
+                                  onClick={() =>
+                                    setBillingIntervalDays(iv.days)
+                                  }
+                                  className="flex items-center justify-between"
+                                >
                                   <div>
-                                    <p className="text-sm font-medium">{iv.label}</p>
-                                    <p className="text-xs text-muted-foreground">{iv.sublabel}</p>
+                                    <p className="text-sm font-medium">
+                                      {iv.label}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {iv.sublabel}
+                                    </p>
                                   </div>
-                                  {billingIntervalDays === iv.days && <Check className="w-4 h-4 text-foreground ml-2" />}
+                                  {billingIntervalDays === iv.days && (
+                                    <Check className="w-4 h-4 text-foreground ml-2" />
+                                  )}
                                 </DropdownMenuItem>
                               ))}
                             </DropdownMenuContent>
@@ -1313,11 +1896,31 @@ function CreateAddOnDialog({
 
         {/* Footer */}
         <div className="shrink-0 border-t border-border px-6 py-4 flex items-center justify-end gap-3 bg-background">
-          <Button type="button" variant="outline" onClick={() => { setOpen(false); resetForm(); }} disabled={loading}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              setOpen(false);
+              resetForm();
+            }}
+            disabled={loading}
+          >
             Cancel
           </Button>
-          <Button form="create-addon-form" type="submit" disabled={loading} className="min-w-[140px]">
-            {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Creating…</> : "Save Changes"}
+          <Button
+            form="create-addon-form"
+            type="submit"
+            disabled={loading}
+            className="min-w-[140px]"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Creating…
+              </>
+            ) : (
+              "Save Changes"
+            )}
           </Button>
         </div>
       </SheetContent>
@@ -1351,13 +1954,24 @@ function CreateCreditTypeDialog({
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Auto-derive code from name
-  const autoCode = form.name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+  const autoCode = form.name
+    .toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9-]/g, "");
 
-  const selectedChainOpt = TOKEN_OPTIONS.find((o) => o.address === form.acceptedToken);
+  const selectedChainOpt = TOKEN_OPTIONS.find(
+    (o) => o.address === form.acceptedToken,
+  );
   const chainName = (o: TokenOption) => o.chainLabel;
   const chainInitial = (o: TokenOption) => {
     const n = o.chainLabel;
-    return n.startsWith("Base") ? "B" : n.startsWith("Sepolia") ? "S" : n.startsWith("Arc") ? "A" : n[0]?.toUpperCase() ?? "?";
+    return n.startsWith("Base")
+      ? "B"
+      : n.startsWith("Sepolia")
+        ? "S"
+        : n.startsWith("Arc")
+          ? "A"
+          : (n[0]?.toUpperCase() ?? "?");
   };
 
   function validate() {
@@ -1373,14 +1987,25 @@ function CreateCreditTypeDialog({
   }
 
   function resetForm() {
-    setForm({ name: "", description: "", unitNameSingle: "", unitNamePlural: "", unitsPerPack: "100", price: "", acceptedToken: connectedToken });
+    setForm({
+      name: "",
+      description: "",
+      unitNameSingle: "",
+      unitNamePlural: "",
+      unitsPerPack: "100",
+      price: "",
+      acceptedToken: connectedToken,
+    });
     setErrors({});
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const errs = validate();
-    if (Object.keys(errs).length) { setErrors(errs); return; }
+    if (Object.keys(errs).length) {
+      setErrors(errs);
+      return;
+    }
     setLoading(true);
     try {
       const unitName = form.unitNameSingle.trim();
@@ -1412,7 +2037,13 @@ function CreateCreditTypeDialog({
   }
 
   return (
-    <Sheet open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}>
+    <Sheet
+      open={open}
+      onOpenChange={(v) => {
+        setOpen(v);
+        if (!v) resetForm();
+      }}
+    >
       <SheetTrigger asChild>
         <Button size="sm" variant="outline" className="gap-2">
           <Plus className="w-4 h-4" />
@@ -1423,7 +2054,13 @@ function CreateCreditTypeDialog({
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
           <div />
-          <button onClick={() => { setOpen(false); resetForm(); }} className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-secondary hover:text-foreground transition-all">
+          <button
+            onClick={() => {
+              setOpen(false);
+              resetForm();
+            }}
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-secondary hover:text-foreground transition-all"
+          >
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -1433,35 +2070,49 @@ function CreateCreditTypeDialog({
           {/* ── LEFT: Credit Preview ── */}
           <div className="w-[300px] shrink-0 border-r border-border bg-secondary/20 p-6 flex flex-col gap-6 overflow-y-auto">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground mb-4">Create Credit Type</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground mb-4">
+                Create Credit Type
+              </p>
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-9 h-9 rounded-full bg-linear-to-br from-zinc-400 to-zinc-700 shrink-0 flex items-center justify-center">
                   <Coins className="w-4 h-4 text-white" />
                 </div>
                 <p className="text-base font-bold text-foreground truncate">
-                  {form.name || <span className="font-normal text-muted-foreground">Untitled credit type</span>}
+                  {form.name || (
+                    <span className="font-normal text-muted-foreground">
+                      Untitled credit type
+                    </span>
+                  )}
                 </p>
               </div>
             </div>
             <div>
-              <p className="text-xs font-semibold text-muted-foreground mb-3">Credit Preview</p>
+              <p className="text-xs font-semibold text-muted-foreground mb-3">
+                Credit Preview
+              </p>
               <div className="bg-card border border-border rounded-xl overflow-hidden">
                 <div className="p-4 border-b border-border">
-                  <p className="text-lg font-bold text-foreground leading-tight">{form.name || "—"}</p>
+                  <p className="text-lg font-bold text-foreground leading-tight">
+                    {form.name || "—"}
+                  </p>
                   {form.unitNameSingle && (
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      Unit: <span className="font-medium">{form.unitNameSingle}</span>
+                      Unit:{" "}
+                      <span className="font-medium">{form.unitNameSingle}</span>
                       {form.unitNamePlural && ` / ${form.unitNamePlural}`}
                     </p>
                   )}
                   {form.unitsPerPack && (
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      {form.unitsPerPack} {form.unitNameSingle || "units"} per pack
+                      {form.unitsPerPack} {form.unitNameSingle || "units"} per
+                      pack
                     </p>
                   )}
                   <p className="text-sm font-semibold text-foreground mt-1.5">
                     {form.price ? `$${form.price} USDC` : "—"}
-                    <span className="text-xs font-normal text-muted-foreground ml-1">/ pack</span>
+                    <span className="text-xs font-normal text-muted-foreground ml-1">
+                      / pack
+                    </span>
                   </p>
                 </div>
                 <div className="px-4 pb-4 pt-3">
@@ -1480,12 +2131,16 @@ function CreateCreditTypeDialog({
                 {/* Header */}
                 <div>
                   <div className="flex items-center gap-3 mb-1">
-                    <h2 className="text-2xl font-bold text-foreground tracking-tight">Credit Type Settings</h2>
+                    <h2 className="text-2xl font-bold text-foreground tracking-tight">
+                      Credit Type Settings
+                    </h2>
                     <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-secondary border border-border text-muted-foreground">
                       {env === "DEVELOPMENT" ? "Dev" : "Production"}
                     </span>
                   </div>
-                  <p className="text-sm text-muted-foreground">Define a consumable unit for usage-based billing.</p>
+                  <p className="text-sm text-muted-foreground">
+                    Define a consumable unit for usage-based billing.
+                  </p>
                 </div>
 
                 {errors._global && (
@@ -1496,56 +2151,88 @@ function CreateCreditTypeDialog({
 
                 {/* Credit name */}
                 <div>
-                  <Label className="text-sm font-medium text-foreground mb-2 block">Credit name *</Label>
+                  <Label className="text-sm font-medium text-foreground mb-2 block">
+                    Credit name *
+                  </Label>
                   <Input
                     value={form.name}
-                    onChange={(e) => { setForm({ ...form, name: e.target.value }); setErrors((p) => ({ ...p, name: "" })); }}
+                    onChange={(e) => {
+                      setForm({ ...form, name: e.target.value });
+                      setErrors((p) => ({ ...p, name: "" }));
+                    }}
                     placeholder="e.g. API Calls, Storage GB"
                     className="h-11 bg-background border-border"
                   />
-                  {errors.name && <p className="text-xs text-destructive mt-1">{errors.name}</p>}
+                  {errors.name && (
+                    <p className="text-xs text-destructive mt-1">
+                      {errors.name}
+                    </p>
+                  )}
                   {autoCode && (
-                    <p className="text-xs text-muted-foreground mt-1">Code: <span className="font-mono">{autoCode}</span></p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Code: <span className="font-mono">{autoCode}</span>
+                    </p>
                   )}
                 </div>
 
                 {/* Description */}
                 <div>
-                  <Label className="text-sm font-medium text-foreground mb-2 block">Description</Label>
+                  <Label className="text-sm font-medium text-foreground mb-2 block">
+                    Description
+                  </Label>
                   <Input
                     value={form.description}
-                    onChange={(e) => setForm({ ...form, description: e.target.value })}
+                    onChange={(e) =>
+                      setForm({ ...form, description: e.target.value })
+                    }
                     placeholder="Optional, displayed in components"
                     className="h-11 bg-background border-border"
                   />
-                  <p className="text-xs text-muted-foreground mt-1.5">Optional, displayed in components</p>
+                  <p className="text-xs text-muted-foreground mt-1.5">
+                    Optional, displayed in components
+                  </p>
                 </div>
 
                 {/* Unit names */}
                 <div>
-                  <h3 className="text-base font-semibold text-foreground mb-4">Unit Names</h3>
+                  <h3 className="text-base font-semibold text-foreground mb-4">
+                    Unit Names
+                  </h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label className="text-sm font-medium text-foreground mb-2 block">
                         Single unit name *
-                        <span className="text-muted-foreground font-normal ml-1 text-xs">(A single…)</span>
+                        <span className="text-muted-foreground font-normal ml-1 text-xs">
+                          (A single…)
+                        </span>
                       </Label>
                       <Input
                         value={form.unitNameSingle}
-                        onChange={(e) => { setForm({ ...form, unitNameSingle: e.target.value }); setErrors((p) => ({ ...p, unitNameSingle: "" })); }}
+                        onChange={(e) => {
+                          setForm({ ...form, unitNameSingle: e.target.value });
+                          setErrors((p) => ({ ...p, unitNameSingle: "" }));
+                        }}
                         placeholder="call, gigabyte, credit"
                         className="h-11 bg-background border-border"
                       />
-                      {errors.unitNameSingle && <p className="text-xs text-destructive mt-1">{errors.unitNameSingle}</p>}
+                      {errors.unitNameSingle && (
+                        <p className="text-xs text-destructive mt-1">
+                          {errors.unitNameSingle}
+                        </p>
+                      )}
                     </div>
                     <div>
                       <Label className="text-sm font-medium text-foreground mb-2 block">
                         Multiple unit name
-                        <span className="text-muted-foreground font-normal ml-1 text-xs">(Many…)</span>
+                        <span className="text-muted-foreground font-normal ml-1 text-xs">
+                          (Many…)
+                        </span>
                       </Label>
                       <Input
                         value={form.unitNamePlural}
-                        onChange={(e) => setForm({ ...form, unitNamePlural: e.target.value })}
+                        onChange={(e) =>
+                          setForm({ ...form, unitNamePlural: e.target.value })
+                        }
                         placeholder="calls, gigabytes, credits"
                         className="h-11 bg-background border-border"
                       />
@@ -1555,28 +2242,48 @@ function CreateCreditTypeDialog({
 
                 {/* Pack config */}
                 <div>
-                  <h3 className="text-base font-semibold text-foreground mb-4">Pack Configuration</h3>
+                  <h3 className="text-base font-semibold text-foreground mb-4">
+                    Pack Configuration
+                  </h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label className="text-sm font-medium text-foreground mb-2 block">Units per pack *</Label>
+                      <Label className="text-sm font-medium text-foreground mb-2 block">
+                        Units per pack *
+                      </Label>
                       <Input
                         value={form.unitsPerPack}
-                        onChange={(e) => { setForm({ ...form, unitsPerPack: e.target.value }); setErrors((p) => ({ ...p, unitsPerPack: "" })); }}
+                        onChange={(e) => {
+                          setForm({ ...form, unitsPerPack: e.target.value });
+                          setErrors((p) => ({ ...p, unitsPerPack: "" }));
+                        }}
                         placeholder="100"
                         type="number"
                         min="1"
                         className="h-11 bg-background border-border"
                       />
-                      {errors.unitsPerPack && <p className="text-xs text-destructive mt-1">{errors.unitsPerPack}</p>}
-                      <p className="text-xs text-muted-foreground mt-1.5">How many credits per purchase</p>
+                      {errors.unitsPerPack && (
+                        <p className="text-xs text-destructive mt-1">
+                          {errors.unitsPerPack}
+                        </p>
+                      )}
+                      <p className="text-xs text-muted-foreground mt-1.5">
+                        How many credits per purchase
+                      </p>
                     </div>
                     <div>
-                      <Label className="text-sm font-medium text-foreground mb-2 block">Price (USDC) *</Label>
+                      <Label className="text-sm font-medium text-foreground mb-2 block">
+                        Price (USDC) *
+                      </Label>
                       <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">$</span>
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">
+                          $
+                        </span>
                         <Input
                           value={form.price}
-                          onChange={(e) => { setForm({ ...form, price: e.target.value }); setErrors((p) => ({ ...p, price: "" })); }}
+                          onChange={(e) => {
+                            setForm({ ...form, price: e.target.value });
+                            setErrors((p) => ({ ...p, price: "" }));
+                          }}
                           placeholder="5.00"
                           type="number"
                           min="0.01"
@@ -1584,28 +2291,43 @@ function CreateCreditTypeDialog({
                           className="h-11 bg-background border-border pl-6"
                         />
                       </div>
-                      {errors.price && <p className="text-xs text-destructive mt-1">{errors.price}</p>}
+                      {errors.price && (
+                        <p className="text-xs text-destructive mt-1">
+                          {errors.price}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
 
                 {/* Billing Integration */}
                 <div>
-                  <Label className="text-sm font-medium text-foreground mb-2 block">Billing Integration</Label>
+                  <Label className="text-sm font-medium text-foreground mb-2 block">
+                    Billing Integration
+                  </Label>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <button type="button" className="w-full flex items-center justify-between h-11 px-3 rounded-lg bg-background border border-border text-sm text-foreground hover:bg-secondary/50 transition-colors">
+                      <button
+                        type="button"
+                        className="w-full flex items-center justify-between h-11 px-3 rounded-lg bg-background border border-border text-sm text-foreground hover:bg-secondary/50 transition-colors"
+                      >
                         <div className="flex items-center gap-2 min-w-0">
                           <span className="font-medium truncate">
-                            {selectedChainOpt ? chainName(selectedChainOpt) : "Select chain"}
+                            {selectedChainOpt
+                              ? chainName(selectedChainOpt)
+                              : "Select chain"}
                           </span>
                           {selectedChainOpt && (
-                            <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0 ${selectedChainOpt.tag === "mainnet" ? "bg-success/10 text-success" : "bg-secondary text-muted-foreground border border-border"}`}>
+                            <span
+                              className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0 ${selectedChainOpt.tag === "mainnet" ? "bg-success/10 text-success" : "bg-secondary text-muted-foreground border border-border"}`}
+                            >
                               {selectedChainOpt.tag}
                             </span>
                           )}
                           {selectedChainOpt?.chainId === chainId && (
-                            <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-foreground text-background shrink-0">Connected</span>
+                            <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-foreground text-background shrink-0">
+                              Connected
+                            </span>
                           )}
                         </div>
                         <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0 ml-1" />
@@ -1614,59 +2336,135 @@ function CreateCreditTypeDialog({
                     <DropdownMenuContent className="w-80">
                       {TOKEN_OPTIONS.some((o) => o.tag === "testnet") && (
                         <>
-                          <div className="px-2 pt-2 pb-1"><p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Testnets</p></div>
-                          {TOKEN_OPTIONS.filter((o) => o.tag === "testnet").map((opt) => {
-                            const isConn = opt.chainId === chainId;
-                            return (
-                              <DropdownMenuItem key={opt.chainId} disabled={!isConn} onClick={() => isConn && setForm((p) => ({ ...p, acceptedToken: opt.address }))} className={`flex items-center justify-between gap-3 py-2.5 ${!isConn ? "opacity-40 cursor-not-allowed" : ""}`}>
-                                <div className="flex items-center gap-2.5">
-                                  <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 border ${isConn ? "bg-foreground text-background border-foreground" : "bg-secondary text-muted-foreground border-border"}`}>
-                                    <span className="text-[10px] font-bold">{chainInitial(opt)}</span>
-                                  </div>
-                                  <div>
-                                    <div className="flex items-center gap-1.5">
-                                      <p className="text-sm font-medium">{chainName(opt)}</p>
-                                      {isConn && <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-foreground text-background">Connected</span>}
+                          <div className="px-2 pt-2 pb-1">
+                            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                              Testnets
+                            </p>
+                          </div>
+                          {TOKEN_OPTIONS.filter((o) => o.tag === "testnet").map(
+                            (opt) => {
+                              const isConn = opt.chainId === chainId;
+                              return (
+                                <DropdownMenuItem
+                                  key={opt.chainId}
+                                  disabled={!isConn}
+                                  onClick={() =>
+                                    isConn &&
+                                    setForm((p) => ({
+                                      ...p,
+                                      acceptedToken: opt.address,
+                                    }))
+                                  }
+                                  className={`flex items-center justify-between gap-3 py-2.5 ${!isConn ? "opacity-40 cursor-not-allowed" : ""}`}
+                                >
+                                  <div className="flex items-center gap-2.5">
+                                    <div
+                                      className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 border ${isConn ? "bg-foreground text-background border-foreground" : "bg-secondary text-muted-foreground border-border"}`}
+                                    >
+                                      <span className="text-[10px] font-bold">
+                                        {chainInitial(opt)}
+                                      </span>
                                     </div>
-                                    <p className="text-xs font-mono text-muted-foreground mt-0.5">{opt.symbol} · {opt.address.slice(0, 6)}…{opt.address.slice(-4)}</p>
+                                    <div>
+                                      <div className="flex items-center gap-1.5">
+                                        <p className="text-sm font-medium">
+                                          {chainName(opt)}
+                                        </p>
+                                        {isConn && (
+                                          <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-foreground text-background">
+                                            Connected
+                                          </span>
+                                        )}
+                                      </div>
+                                      <p className="text-xs font-mono text-muted-foreground mt-0.5">
+                                        {opt.symbol} · {opt.address.slice(0, 6)}
+                                        …{opt.address.slice(-4)}
+                                      </p>
+                                    </div>
                                   </div>
-                                </div>
-                                {form.acceptedToken === opt.address && isConn && <Check className="w-3.5 h-3.5 text-foreground shrink-0" />}
-                                {!isConn && <span className="text-[9px] text-muted-foreground shrink-0">Switch wallet</span>}
-                              </DropdownMenuItem>
-                            );
-                          })}
+                                  {form.acceptedToken === opt.address &&
+                                    isConn && (
+                                      <Check className="w-3.5 h-3.5 text-foreground shrink-0" />
+                                    )}
+                                  {!isConn && (
+                                    <span className="text-[9px] text-muted-foreground shrink-0">
+                                      Switch wallet
+                                    </span>
+                                  )}
+                                </DropdownMenuItem>
+                              );
+                            },
+                          )}
                         </>
                       )}
                       {TOKEN_OPTIONS.some((o) => o.tag === "mainnet") && (
                         <>
                           <DropdownMenuSeparator />
-                          <div className="px-2 pt-2 pb-1"><p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Mainnets</p></div>
-                          {TOKEN_OPTIONS.filter((o) => o.tag === "mainnet").map((opt) => {
-                            const isConn = opt.chainId === chainId;
-                            return (
-                              <DropdownMenuItem key={opt.chainId} disabled={!isConn} onClick={() => isConn && setForm((p) => ({ ...p, acceptedToken: opt.address }))} className={`flex items-center justify-between gap-3 py-2.5 ${!isConn ? "opacity-40 cursor-not-allowed" : ""}`}>
-                                <div className="flex items-center gap-2.5">
-                                  <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 border ${isConn ? "bg-foreground text-background border-foreground" : "bg-secondary text-muted-foreground border-border"}`}>
-                                    <span className="text-[10px] font-bold">{chainInitial(opt)}</span>
-                                  </div>
-                                  <div>
-                                    <div className="flex items-center gap-1.5">
-                                      <p className="text-sm font-medium">{chainName(opt)}</p>
-                                      {isConn && <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-foreground text-background">Connected</span>}
+                          <div className="px-2 pt-2 pb-1">
+                            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                              Mainnets
+                            </p>
+                          </div>
+                          {TOKEN_OPTIONS.filter((o) => o.tag === "mainnet").map(
+                            (opt) => {
+                              const isConn = opt.chainId === chainId;
+                              return (
+                                <DropdownMenuItem
+                                  key={opt.chainId}
+                                  disabled={!isConn}
+                                  onClick={() =>
+                                    isConn &&
+                                    setForm((p) => ({
+                                      ...p,
+                                      acceptedToken: opt.address,
+                                    }))
+                                  }
+                                  className={`flex items-center justify-between gap-3 py-2.5 ${!isConn ? "opacity-40 cursor-not-allowed" : ""}`}
+                                >
+                                  <div className="flex items-center gap-2.5">
+                                    <div
+                                      className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 border ${isConn ? "bg-foreground text-background border-foreground" : "bg-secondary text-muted-foreground border-border"}`}
+                                    >
+                                      <span className="text-[10px] font-bold">
+                                        {chainInitial(opt)}
+                                      </span>
                                     </div>
-                                    <p className="text-xs font-mono text-muted-foreground mt-0.5">{opt.symbol} · {opt.address.slice(0, 6)}…{opt.address.slice(-4)}</p>
+                                    <div>
+                                      <div className="flex items-center gap-1.5">
+                                        <p className="text-sm font-medium">
+                                          {chainName(opt)}
+                                        </p>
+                                        {isConn && (
+                                          <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-foreground text-background">
+                                            Connected
+                                          </span>
+                                        )}
+                                      </div>
+                                      <p className="text-xs font-mono text-muted-foreground mt-0.5">
+                                        {opt.symbol} · {opt.address.slice(0, 6)}
+                                        …{opt.address.slice(-4)}
+                                      </p>
+                                    </div>
                                   </div>
-                                </div>
-                                {form.acceptedToken === opt.address && isConn && <Check className="w-3.5 h-3.5 text-foreground shrink-0" />}
-                                {!isConn && <span className="text-[9px] text-muted-foreground shrink-0">Switch wallet</span>}
-                              </DropdownMenuItem>
-                            );
-                          })}
+                                  {form.acceptedToken === opt.address &&
+                                    isConn && (
+                                      <Check className="w-3.5 h-3.5 text-foreground shrink-0" />
+                                    )}
+                                  {!isConn && (
+                                    <span className="text-[9px] text-muted-foreground shrink-0">
+                                      Switch wallet
+                                    </span>
+                                  )}
+                                </DropdownMenuItem>
+                              );
+                            },
+                          )}
                         </>
                       )}
                       <div className="px-3 py-2 border-t border-border mt-1">
-                        <p className="text-[10px] text-muted-foreground">Switch your wallet network to enable other chains</p>
+                        <p className="text-[10px] text-muted-foreground">
+                          Switch your wallet network to enable other chains
+                        </p>
                       </div>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -1678,11 +2476,31 @@ function CreateCreditTypeDialog({
 
         {/* Footer */}
         <div className="shrink-0 border-t border-border px-6 py-4 flex items-center justify-end gap-3 bg-background">
-          <Button type="button" variant="outline" onClick={() => { setOpen(false); resetForm(); }} disabled={loading}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              setOpen(false);
+              resetForm();
+            }}
+            disabled={loading}
+          >
             Cancel
           </Button>
-          <Button form="create-credit-form" type="submit" disabled={loading} className="min-w-[140px]">
-            {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Creating…</> : "Save Changes"}
+          <Button
+            form="create-credit-form"
+            type="submit"
+            disabled={loading}
+            className="min-w-[140px]"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Creating…
+              </>
+            ) : (
+              "Save Changes"
+            )}
           </Button>
         </div>
       </SheetContent>
@@ -1738,7 +2556,10 @@ function EditCreditTypeDialog({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const errs = validate();
-    if (Object.keys(errs).length) { setErrors(errs); return; }
+    if (Object.keys(errs).length) {
+      setErrors(errs);
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch("/api/catalog/credits", {
@@ -1766,11 +2587,19 @@ function EditCreditTypeDialog({
     }
   }
 
-  const selectedChainOpt = TOKEN_OPTIONS.find((o) => o.address === form.acceptedToken);
+  const selectedChainOpt = TOKEN_OPTIONS.find(
+    (o) => o.address === form.acceptedToken,
+  );
   const chainName = (o: TokenOption) => o.chainLabel;
   const chainInitial = (o: TokenOption) => {
     const n = o.chainLabel;
-    return n.startsWith("Base") ? "B" : n.startsWith("Sepolia") ? "S" : n.startsWith("Arc") ? "A" : n[0]?.toUpperCase() ?? "?";
+    return n.startsWith("Base")
+      ? "B"
+      : n.startsWith("Sepolia")
+        ? "S"
+        : n.startsWith("Arc")
+          ? "A"
+          : (n[0]?.toUpperCase() ?? "?");
   };
 
   return (
@@ -1783,13 +2612,20 @@ function EditCreditTypeDialog({
       <SheetContent className="w-full sm:max-w-2xl p-0 overflow-hidden flex flex-col">
         <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
           <h2 className="text-base font-semibold">Edit Credit Type</h2>
-          <button onClick={() => setOpen(false)} className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-secondary hover:text-foreground transition-all">
+          <button
+            onClick={() => setOpen(false)}
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-secondary hover:text-foreground transition-all"
+          >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          <form id="edit-credit-form" onSubmit={handleSubmit} className="p-6 space-y-6">
+          <form
+            id="edit-credit-form"
+            onSubmit={handleSubmit}
+            className="p-6 space-y-6"
+          >
             {errors._global && (
               <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
                 <p className="text-sm text-destructive">{errors._global}</p>
@@ -1797,72 +2633,119 @@ function EditCreditTypeDialog({
             )}
 
             <div>
-              <Label className="text-sm font-medium mb-2 block">Credit name *</Label>
+              <Label className="text-sm font-medium mb-2 block">
+                Credit name *
+              </Label>
               <Input
                 value={form.name}
-                onChange={(e) => { setForm({ ...form, name: e.target.value }); setErrors((p) => ({ ...p, name: "" })); }}
+                onChange={(e) => {
+                  setForm({ ...form, name: e.target.value });
+                  setErrors((p) => ({ ...p, name: "" }));
+                }}
                 className="h-11 bg-background border-border"
               />
-              {errors.name && <p className="text-xs text-destructive mt-1">{errors.name}</p>}
+              {errors.name && (
+                <p className="text-xs text-destructive mt-1">{errors.name}</p>
+              )}
             </div>
 
             <div>
-              <Label className="text-sm font-medium mb-2 block">Unit name (singular) *</Label>
+              <Label className="text-sm font-medium mb-2 block">
+                Unit name (singular) *
+              </Label>
               <Input
                 value={form.unitNameSingle}
-                onChange={(e) => { setForm({ ...form, unitNameSingle: e.target.value }); setErrors((p) => ({ ...p, unitNameSingle: "" })); }}
+                onChange={(e) => {
+                  setForm({ ...form, unitNameSingle: e.target.value });
+                  setErrors((p) => ({ ...p, unitNameSingle: "" }));
+                }}
                 placeholder="e.g. credit, call, token"
                 className="h-11 bg-background border-border"
               />
-              {errors.unitNameSingle && <p className="text-xs text-destructive mt-1">{errors.unitNameSingle}</p>}
+              {errors.unitNameSingle && (
+                <p className="text-xs text-destructive mt-1">
+                  {errors.unitNameSingle}
+                </p>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label className="text-sm font-medium mb-2 block">Units per pack *</Label>
+                <Label className="text-sm font-medium mb-2 block">
+                  Units per pack *
+                </Label>
                 <Input
                   type="number"
                   min="1"
                   step="1"
                   value={form.unitsPerPack}
-                  onChange={(e) => { setForm({ ...form, unitsPerPack: e.target.value }); setErrors((p) => ({ ...p, unitsPerPack: "" })); }}
+                  onChange={(e) => {
+                    setForm({ ...form, unitsPerPack: e.target.value });
+                    setErrors((p) => ({ ...p, unitsPerPack: "" }));
+                  }}
                   className="h-11 bg-background border-border"
                 />
-                {errors.unitsPerPack && <p className="text-xs text-destructive mt-1">{errors.unitsPerPack}</p>}
+                {errors.unitsPerPack && (
+                  <p className="text-xs text-destructive mt-1">
+                    {errors.unitsPerPack}
+                  </p>
+                )}
               </div>
               <div>
-                <Label className="text-sm font-medium mb-2 block">Price (USDC) *</Label>
+                <Label className="text-sm font-medium mb-2 block">
+                  Price (USDC) *
+                </Label>
                 <Input
                   type="number"
                   min="0.01"
                   step="0.01"
                   value={form.price}
-                  onChange={(e) => { setForm({ ...form, price: e.target.value }); setErrors((p) => ({ ...p, price: "" })); }}
+                  onChange={(e) => {
+                    setForm({ ...form, price: e.target.value });
+                    setErrors((p) => ({ ...p, price: "" }));
+                  }}
                   placeholder="0.00"
                   className="h-11 bg-background border-border"
                 />
-                {errors.price && <p className="text-xs text-destructive mt-1">{errors.price}</p>}
+                {errors.price && (
+                  <p className="text-xs text-destructive mt-1">
+                    {errors.price}
+                  </p>
+                )}
               </div>
             </div>
 
             {/* Chain / Billing Integration */}
             <div>
-              <Label className="text-sm font-medium mb-2 block">Billing Integration</Label>
+              <Label className="text-sm font-medium mb-2 block">
+                Billing Integration
+              </Label>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button type="button" className="flex items-center justify-between w-full h-11 px-3 rounded-lg bg-background border border-border text-sm hover:border-ring/50 transition-colors">
+                  <button
+                    type="button"
+                    className="flex items-center justify-between w-full h-11 px-3 rounded-lg bg-background border border-border text-sm hover:border-ring/50 transition-colors"
+                  >
                     {selectedChainOpt ? (
                       <div className="flex items-center gap-2.5">
                         <div className="w-7 h-7 rounded-full bg-foreground text-background flex items-center justify-center text-[10px] font-bold">
                           {chainInitial(selectedChainOpt)}
                         </div>
                         <div className="text-left">
-                          <p className="text-sm font-medium leading-none">{chainName(selectedChainOpt)}</p>
-                          <p className="text-xs text-muted-foreground mt-0.5 font-mono">{selectedChainOpt.symbol} · {selectedChainOpt.address.slice(0, 6)}…{selectedChainOpt.address.slice(-4)}</p>
+                          <p className="text-sm font-medium leading-none">
+                            {chainName(selectedChainOpt)}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-0.5 font-mono">
+                            {selectedChainOpt.symbol} ·{" "}
+                            {selectedChainOpt.address.slice(0, 6)}…
+                            {selectedChainOpt.address.slice(-4)}
+                          </p>
                         </div>
                       </div>
                     ) : (
-                      <span className="text-muted-foreground">Select chain</span>
+                      <span className="text-muted-foreground">
+                        Select chain
+                      </span>
                     )}
                     <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
                   </button>
@@ -1871,18 +2754,41 @@ function EditCreditTypeDialog({
                   {TOKEN_OPTIONS.map((opt) => {
                     const isConn = opt.chainId === chainId;
                     return (
-                      <DropdownMenuItem key={opt.chainId} disabled={!isConn} onClick={() => isConn && setForm((p) => ({ ...p, acceptedToken: opt.address }))} className={`flex items-center justify-between gap-3 py-2.5 ${!isConn ? "opacity-40 cursor-not-allowed" : ""}`}>
+                      <DropdownMenuItem
+                        key={opt.chainId}
+                        disabled={!isConn}
+                        onClick={() =>
+                          isConn &&
+                          setForm((p) => ({ ...p, acceptedToken: opt.address }))
+                        }
+                        className={`flex items-center justify-between gap-3 py-2.5 ${!isConn ? "opacity-40 cursor-not-allowed" : ""}`}
+                      >
                         <div className="flex items-center gap-2.5">
-                          <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 border ${isConn ? "bg-foreground text-background border-foreground" : "bg-secondary text-muted-foreground border-border"}`}>
-                            <span className="text-[10px] font-bold">{chainInitial(opt)}</span>
+                          <div
+                            className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 border ${isConn ? "bg-foreground text-background border-foreground" : "bg-secondary text-muted-foreground border-border"}`}
+                          >
+                            <span className="text-[10px] font-bold">
+                              {chainInitial(opt)}
+                            </span>
                           </div>
                           <div>
-                            <p className="text-sm font-medium">{chainName(opt)}</p>
-                            <p className="text-xs font-mono text-muted-foreground">{opt.symbol} · {opt.address.slice(0, 6)}…{opt.address.slice(-4)}</p>
+                            <p className="text-sm font-medium">
+                              {chainName(opt)}
+                            </p>
+                            <p className="text-xs font-mono text-muted-foreground">
+                              {opt.symbol} · {opt.address.slice(0, 6)}…
+                              {opt.address.slice(-4)}
+                            </p>
                           </div>
                         </div>
-                        {form.acceptedToken === opt.address && isConn && <Check className="w-3.5 h-3.5 shrink-0" />}
-                        {!isConn && <span className="text-[9px] text-muted-foreground shrink-0">Switch wallet</span>}
+                        {form.acceptedToken === opt.address && isConn && (
+                          <Check className="w-3.5 h-3.5 shrink-0" />
+                        )}
+                        {!isConn && (
+                          <span className="text-[9px] text-muted-foreground shrink-0">
+                            Switch wallet
+                          </span>
+                        )}
                       </DropdownMenuItem>
                     );
                   })}
@@ -1893,11 +2799,28 @@ function EditCreditTypeDialog({
         </div>
 
         <div className="shrink-0 border-t border-border px-6 py-4 flex items-center justify-end gap-3 bg-background">
-          <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={loading}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setOpen(false)}
+            disabled={loading}
+          >
             Cancel
           </Button>
-          <Button form="edit-credit-form" type="submit" disabled={loading} className="min-w-[120px]">
-            {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving…</> : "Save Changes"}
+          <Button
+            form="edit-credit-form"
+            type="submit"
+            disabled={loading}
+            className="min-w-[120px]"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Saving…
+              </>
+            ) : (
+              "Save Changes"
+            )}
           </Button>
         </div>
       </SheetContent>
@@ -1979,7 +2902,9 @@ function PlansTable({
 
     // Free plans (price = 0) cannot be registered — PlanFactory requires price > 0
     if (parseFloat(plan.price) === 0) {
-      toast.error("Free plans don't need on-chain registration.", { duration: 4000 });
+      toast.error("Free plans don't need on-chain registration.", {
+        duration: 4000,
+      });
       return;
     }
 
@@ -2313,7 +3238,11 @@ function PlansTable({
                   className="group cursor-pointer hover:bg-secondary/20 transition-colors"
                   onClick={(e) => {
                     // Don't trigger if clicking on actions/buttons
-                    if ((e.target as HTMLElement).closest("button") || (e.target as HTMLElement).closest("[role='menuitem']")) return;
+                    if (
+                      (e.target as HTMLElement).closest("button") ||
+                      (e.target as HTMLElement).closest("[role='menuitem']")
+                    )
+                      return;
                     onSelect?.(plan);
                   }}
                 >
@@ -2323,25 +3252,39 @@ function PlansTable({
                   </TableCell>
                   <TableCell>
                     {isFree ? (
-                      <span className="text-sm font-medium text-foreground">Free</span>
+                      <span className="text-sm font-medium text-foreground">
+                        Free
+                      </span>
                     ) : (
                       <div>
-                        <span className="text-sm">${parseFloat(plan.price).toFixed(2)} USDC</span>
-                        {plan.annualPrice && parseFloat(plan.annualPrice) > 0 && (
-                          <span className="block text-[10px] text-muted-foreground">
-                            ${parseFloat(plan.annualPrice).toFixed(2)}/yr
-                            {parseFloat(plan.price) > 0 && (
-                              <span className="ml-1 text-green-500">
-                                · {Math.round((1 - parseFloat(plan.annualPrice) / (parseFloat(plan.price) * 12)) * 100)}% off
-                              </span>
-                            )}
-                          </span>
-                        )}
+                        <span className="text-sm">
+                          ${parseFloat(plan.price).toFixed(2)} USDC
+                        </span>
+                        {plan.annualPrice &&
+                          parseFloat(plan.annualPrice) > 0 && (
+                            <span className="block text-[10px] text-muted-foreground">
+                              ${parseFloat(plan.annualPrice).toFixed(2)}/yr
+                              {parseFloat(plan.price) > 0 && (
+                                <span className="ml-1 text-green-500">
+                                  ·{" "}
+                                  {Math.round(
+                                    (1 -
+                                      parseFloat(plan.annualPrice) /
+                                        (parseFloat(plan.price) * 12)) *
+                                      100,
+                                  )}
+                                  % off
+                                </span>
+                              )}
+                            </span>
+                          )}
                       </div>
                     )}
                   </TableCell>
                   <TableCell className="text-muted-foreground text-xs">
-                    {BILLING_INTERVALS.find((i) => i.days === plan.billingInterval)?.label ?? `${plan.billingInterval}d`}
+                    {BILLING_INTERVALS.find(
+                      (i) => i.days === plan.billingInterval,
+                    )?.label ?? `${plan.billingInterval}d`}
                   </TableCell>
                   <TableCell className="text-xs">
                     {isFree ? (
@@ -2358,7 +3301,8 @@ function PlansTable({
                       <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full border border-border text-muted-foreground bg-secondary">
                         Off-chain
                       </span>
-                    ) : plan.chainSyncStatus && plan.chainSyncStatus !== "NOT_APPLICABLE" ? (
+                    ) : plan.chainSyncStatus &&
+                      plan.chainSyncStatus !== "NOT_APPLICABLE" ? (
                       <ChainSyncBadge status={plan.chainSyncStatus} />
                     ) : (
                       <span className="text-xs text-muted-foreground">—</span>
@@ -2870,7 +3814,11 @@ function AddOnsTable({
                   key={addon.id}
                   className="cursor-pointer hover:bg-secondary/20 transition-colors"
                   onClick={(e) => {
-                    if ((e.target as HTMLElement).closest("button") || (e.target as HTMLElement).closest("[role='menuitem']")) return;
+                    if (
+                      (e.target as HTMLElement).closest("button") ||
+                      (e.target as HTMLElement).closest("[role='menuitem']")
+                    )
+                      return;
                     onSelect?.(addon);
                   }}
                 >
@@ -3467,7 +4415,11 @@ function CreditTypesTable({
                   key={ct.id}
                   className="cursor-pointer hover:bg-secondary/20 transition-colors"
                   onClick={(e) => {
-                    if ((e.target as HTMLElement).closest("button") || (e.target as HTMLElement).closest("[role='menuitem']")) return;
+                    if (
+                      (e.target as HTMLElement).closest("button") ||
+                      (e.target as HTMLElement).closest("[role='menuitem']")
+                    )
+                      return;
                     onSelect?.(ct);
                   }}
                 >
@@ -3478,13 +4430,17 @@ function CreditTypesTable({
                       </div>
                       <div>
                         <p className="text-sm font-medium">{ct.name}</p>
-                        <p className="text-xs text-muted-foreground font-mono">{ct.code}</p>
+                        <p className="text-xs text-muted-foreground font-mono">
+                          {ct.code}
+                        </p>
                       </div>
                     </div>
                   </TableCell>
                   <TableCell className="text-sm">{ct.unitName}</TableCell>
                   <TableCell className="text-sm">{ct.unitsPerPack}</TableCell>
-                  <TableCell className="text-sm font-medium">${parseFloat(ct.price).toFixed(2)}</TableCell>
+                  <TableCell className="text-sm font-medium">
+                    ${parseFloat(ct.price).toFixed(2)}
+                  </TableCell>
                   <TableCell>
                     <StatusBadge status={ct.status} />
                   </TableCell>
@@ -3496,7 +4452,11 @@ function CreditTypesTable({
                           variant="ghost"
                           disabled={updating === ct.id}
                         >
-                          {updating === ct.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <MoreHorizontal className="w-4 h-4" />}
+                          {updating === ct.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <MoreHorizontal className="w-4 h-4" />
+                          )}
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
@@ -3593,14 +4553,22 @@ function ConfigurationTab() {
   const [loadingConfig, setLoadingConfig] = useState(false);
   const [savingConfig, setSavingConfig] = useState(false);
   const [configError, setConfigError] = useState<string | null>(null);
-  const [settings, setSettings] = useState<CatalogConfigSettings>(DEFAULT_CONFIG_SETTINGS);
+  const [settings, setSettings] = useState<CatalogConfigSettings>(
+    DEFAULT_CONFIG_SETTINGS,
+  );
 
   // Load catalog plans for dropdowns
-  const [catalogPlans, setCatalogPlans] = useState<{ id: string; name: string; tier: string; price: string }[]>([]);
+  const [catalogPlans, setCatalogPlans] = useState<
+    { id: string; name: string; tier: string; price: string }[]
+  >([]);
   useEffect(() => {
-    fetch(`/api/catalog/plans?environmentMode=${envMode}&limit=50`, { cache: "no-store" })
+    fetch(`/api/catalog/plans?environmentMode=${envMode}&limit=50`, {
+      cache: "no-store",
+    })
       .then((r) => (r.ok ? r.json() : null))
-      .then((d) => { if (d?.plans) setCatalogPlans(d.plans); })
+      .then((d) => {
+        if (d?.plans) setCatalogPlans(d.plans);
+      })
       .catch(() => {});
   }, [envMode]);
 
@@ -3608,18 +4576,33 @@ function ConfigurationTab() {
     let cancelled = false;
     setLoadingConfig(true);
     setConfigError(null);
-    fetch(`/api/catalog/config?environmentMode=${envMode}`, { cache: "no-store" })
+    fetch(`/api/catalog/config?environmentMode=${envMode}`, {
+      cache: "no-store",
+    })
       .then((r) => r.json())
       .then((data) => {
         if (cancelled) return;
-        const config = (data.config ?? {}) as Partial<CatalogConfigSettings> & { fallbackPlan?: string | null };
-        setSettings({ ...DEFAULT_CONFIG_SETTINGS, ...config, fallbackPlan: config.fallbackPlan || "none" });
+        const config = (data.config ?? {}) as Partial<CatalogConfigSettings> & {
+          fallbackPlan?: string | null;
+        };
+        setSettings({
+          ...DEFAULT_CONFIG_SETTINGS,
+          ...config,
+          fallbackPlan: config.fallbackPlan || "none",
+        });
       })
       .catch((err: unknown) => {
-        if (!cancelled) setConfigError(err instanceof Error ? err.message : "Failed to load configuration");
+        if (!cancelled)
+          setConfigError(
+            err instanceof Error ? err.message : "Failed to load configuration",
+          );
       })
-      .finally(() => { if (!cancelled) setLoadingConfig(false); });
-    return () => { cancelled = true; };
+      .finally(() => {
+        if (!cancelled) setLoadingConfig(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [envMode]);
 
   useEffect(() => {
@@ -3628,7 +4611,8 @@ function ConfigurationTab() {
     const resolvePlanId = (value: string) => {
       if (!value || value === "none") return value;
       const match = catalogPlans.find(
-        (plan) => plan.id === value || plan.tier === value || plan.name === value,
+        (plan) =>
+          plan.id === value || plan.tier === value || plan.name === value,
       );
       return match?.id ?? value;
     };
@@ -3660,14 +4644,17 @@ function ConfigurationTab() {
         body: JSON.stringify({
           ...settings,
           environmentMode: envMode,
-          fallbackPlan: settings.fallbackPlan === "none" ? null : settings.fallbackPlan,
+          fallbackPlan:
+            settings.fallbackPlan === "none" ? null : settings.fallbackPlan,
         }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Failed to save");
       toast.success(`Configuration saved for ${currentChainInfo.name}`);
     } catch (err: unknown) {
-      setConfigError(err instanceof Error ? err.message : "Failed to save configuration");
+      setConfigError(
+        err instanceof Error ? err.message : "Failed to save configuration",
+      );
     } finally {
       setSavingConfig(false);
     }
@@ -3682,14 +4669,19 @@ function ConfigurationTab() {
       const res = await fetch("/api/environment/switch", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ environmentMode: switchTarget, confirmText: "CONFIRM" }),
+        body: JSON.stringify({
+          environmentMode: switchTarget,
+          confirmText: "CONFIRM",
+        }),
       });
       const data = await res.json();
       if (res.ok) {
         setEnvMode(data.environmentMode as EnvMode);
         setDialogOpen(false);
         setConfirmText("");
-        toast.success(`Switched to ${data.environmentMode} — Chain ${data.chainId}`);
+        toast.success(
+          `Switched to ${data.environmentMode} — Chain ${data.chainId}`,
+        );
       } else {
         setSwitchError(data.error || "Switch failed");
       }
@@ -3699,16 +4691,36 @@ function ConfigurationTab() {
   }
 
   const currentChainInfo = CHAIN_INFO[envMode];
-  const walletChainMatch = chainId === currentChainInfo.chainId;
+  const walletOnConfiguredChain = chainId === currentChainInfo.chainId;
+  const walletOnSupportedChain = isSupportedDashboardChainId(chainId);
   const usdcAddress = getUsdcAddress(currentChainInfo.chainId);
 
   // ToggleRow helper
-  function ToggleRow({ id, label, desc, checked, onChange }: { id: string; label: string; desc: string; checked: boolean; onChange: (v: boolean) => void }) {
+  function ToggleRow({
+    id,
+    label,
+    desc,
+    checked,
+    onChange,
+  }: {
+    id: string;
+    label: string;
+    desc: string;
+    checked: boolean;
+    onChange: (v: boolean) => void;
+  }) {
     return (
       <div className="flex items-start justify-between gap-6 p-5 hover:bg-secondary/10 transition-colors">
         <div className="space-y-1 flex-1">
-          <Label htmlFor={id} className="text-sm font-semibold text-foreground cursor-pointer">{label}</Label>
-          <p className="text-xs text-muted-foreground leading-relaxed">{desc}</p>
+          <Label
+            htmlFor={id}
+            className="text-sm font-semibold text-foreground cursor-pointer"
+          >
+            {label}
+          </Label>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            {desc}
+          </p>
         </div>
         <Switch id={id} checked={checked} onCheckedChange={onChange} />
       </div>
@@ -3717,7 +4729,6 @@ function ConfigurationTab() {
 
   return (
     <div className="max-w-3xl space-y-6">
-
       {/* Active environment status bar */}
       <div className="rounded-xl border border-border bg-card p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
@@ -3737,14 +4748,32 @@ function ConfigurationTab() {
         <div className="flex items-center gap-3">
           {isConnected ? (
             <div className="flex items-center gap-2">
-              <div className={`w-2 h-2 rounded-full ${walletChainMatch ? "bg-green-500" : "bg-orange-500"}`} />
+              <div
+                className={`w-2 h-2 rounded-full ${
+                  walletOnConfiguredChain
+                    ? "bg-green-500"
+                    : walletOnSupportedChain
+                      ? "bg-orange-500"
+                      : "bg-red-500"
+                }`}
+              />
               <p className="text-xs text-muted-foreground">
-                {walletChainMatch ? "Wallet on correct chain" : "Wallet on wrong chain"}
-                {address && <span className="ml-1 font-mono">{address.slice(0, 6)}…{address.slice(-4)}</span>}
+                {walletOnConfiguredChain
+                  ? "Wallet on configured chain"
+                  : walletOnSupportedChain
+                    ? `Wallet on ${getChainLabel(chainId)}`
+                    : "Wallet on unsupported chain"}
+                {address && (
+                  <span className="ml-1 font-mono">
+                    {address.slice(0, 6)}…{address.slice(-4)}
+                  </span>
+                )}
               </p>
             </div>
           ) : (
-            <p className="text-xs text-muted-foreground">Wallet not connected</p>
+            <p className="text-xs text-muted-foreground">
+              Wallet not connected
+            </p>
           )}
         </div>
       </div>
@@ -3766,9 +4795,22 @@ function ConfigurationTab() {
         <div className="p-5 space-y-5">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div className="space-y-2">
-              <Label htmlFor="initial-plan" className="text-sm font-semibold text-foreground">Initial Plan</Label>
-              <Select value={settings.initialPlan} onValueChange={(v) => setSettings({ ...settings, initialPlan: v })}>
-                <SelectTrigger id="initial-plan" className="h-11 bg-background border-border">
+              <Label
+                htmlFor="initial-plan"
+                className="text-sm font-semibold text-foreground"
+              >
+                Initial Plan
+              </Label>
+              <Select
+                value={settings.initialPlan}
+                onValueChange={(v) =>
+                  setSettings({ ...settings, initialPlan: v })
+                }
+              >
+                <SelectTrigger
+                  id="initial-plan"
+                  className="h-11 bg-background border-border"
+                >
                   <SelectValue placeholder="Select a plan…" />
                 </SelectTrigger>
                 <SelectContent>
@@ -3778,29 +4820,52 @@ function ConfigurationTab() {
                       <div className="flex items-center gap-2">
                         <span>{p.name}</span>
                         <span className="text-xs text-muted-foreground">
-                          {parseFloat(p.price) === 0 ? "Free" : `$${parseFloat(p.price).toFixed(2)} USDC`}
+                          {parseFloat(p.price) === 0
+                            ? "Free"
+                            : `$${parseFloat(p.price).toFixed(2)} USDC`}
                         </span>
                       </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground">Assigned when a wallet first connects.</p>
+              <p className="text-xs text-muted-foreground">
+                Assigned when a wallet first connects.
+              </p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="fallback-plan" className="text-sm font-semibold text-foreground">Fallback Plan</Label>
-              <Select value={settings.fallbackPlan} onValueChange={(v) => setSettings({ ...settings, fallbackPlan: v })}>
-                <SelectTrigger id="fallback-plan" className="h-11 bg-background border-border">
+              <Label
+                htmlFor="fallback-plan"
+                className="text-sm font-semibold text-foreground"
+              >
+                Fallback Plan
+              </Label>
+              <Select
+                value={settings.fallbackPlan}
+                onValueChange={(v) =>
+                  setSettings({ ...settings, fallbackPlan: v })
+                }
+              >
+                <SelectTrigger
+                  id="fallback-plan"
+                  className="h-11 bg-background border-border"
+                >
                   <SelectValue placeholder="No fallback" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">None</SelectItem>
-                  {catalogPlans.filter((p) => parseFloat(p.price) === 0).map((p) => (
-                    <SelectItem key={p.id} value={p.id}>{p.name} (Free)</SelectItem>
-                  ))}
+                  {catalogPlans
+                    .filter((p) => parseFloat(p.price) === 0)
+                    .map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name} (Free)
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground">Assigned if a subscription lapses or is cancelled.</p>
+              <p className="text-xs text-muted-foreground">
+                Assigned if a subscription lapses or is cancelled.
+              </p>
             </div>
           </div>
         </div>
@@ -3809,32 +4874,42 @@ function ConfigurationTab() {
       {/* ── Component Display ───────────────────────────────────── */}
       <div className="rounded-xl border border-border bg-card overflow-hidden">
         <div className="px-5 py-4 border-b border-border bg-secondary/20">
-          <h3 className="text-sm font-bold text-foreground">Component Display</h3>
+          <h3 className="text-sm font-bold text-foreground">
+            Component Display
+          </h3>
           <p className="text-xs text-muted-foreground mt-0.5">
             Control what your end-users see in embedded billing components.
           </p>
         </div>
         <div className="divide-y divide-border/50">
           <ToggleRow
-            id="free-price" label='Show "Free" instead of "$0.00"'
+            id="free-price"
+            label='Show "Free" instead of "$0.00"'
             desc="Display the word Free in the portal and checkout instead of a zero price"
             checked={settings.freePlanPriceDisplay}
-            onChange={(v) => setSettings({ ...settings, freePlanPriceDisplay: v })}
+            onChange={(v) =>
+              setSettings({ ...settings, freePlanPriceDisplay: v })
+            }
           />
           <ToggleRow
-            id="hide-credits" label="Hide credit balances"
+            id="hide-credits"
+            label="Hide credit balances"
             desc="Obscure credit balance and USDC consumption from checkout and portal components"
             checked={settings.hideCredits}
             onChange={(v) => setSettings({ ...settings, hideCredits: v })}
           />
           <ToggleRow
-            id="feature-desc" label="Show feature descriptions"
+            id="feature-desc"
+            label="Show feature descriptions"
             desc="Display entitlement descriptions inside checkout and portal plan cards"
             checked={settings.showFeatureDescriptions}
-            onChange={(v) => setSettings({ ...settings, showFeatureDescriptions: v })}
+            onChange={(v) =>
+              setSettings({ ...settings, showFeatureDescriptions: v })
+            }
           />
           <ToggleRow
-            id="hard-limits" label="Show hard limits"
+            id="hard-limits"
+            label="Show hard limits"
             desc="Surface defined hard limits (e.g. max API calls) for metered entitlements"
             checked={settings.showHardLimits}
             onChange={(v) => setSettings({ ...settings, showHardLimits: v })}
@@ -3845,9 +4920,12 @@ function ConfigurationTab() {
       {/* ── Plan Change Rules ───────────────────────────────────── */}
       <div className="rounded-xl border border-border bg-card overflow-hidden">
         <div className="px-5 py-4 border-b border-border bg-secondary/20">
-          <h3 className="text-sm font-bold text-foreground">Plan Change Rules</h3>
+          <h3 className="text-sm font-bold text-foreground">
+            Plan Change Rules
+          </h3>
           <p className="text-xs text-muted-foreground mt-0.5">
-            On-chain rules applied when subscribers upgrade or downgrade their plan.
+            On-chain rules applied when subscribers upgrade or downgrade their
+            plan.
           </p>
         </div>
         <div className="p-5 space-y-4">
@@ -3855,41 +4933,61 @@ function ConfigurationTab() {
           <div className="rounded-lg border border-border bg-secondary/5 overflow-hidden">
             <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50 bg-secondary/10">
               <div className="w-2 h-2 rounded-full bg-green-500" />
-              <p className="text-xs font-bold text-foreground uppercase tracking-wider">On Upgrade</p>
-              <p className="text-xs text-muted-foreground ml-1">→ higher cost plan or adding an add-on</p>
+              <p className="text-xs font-bold text-foreground uppercase tracking-wider">
+                On Upgrade
+              </p>
+              <p className="text-xs text-muted-foreground ml-1">
+                → higher cost plan or adding an add-on
+              </p>
             </div>
             <ToggleRow
-              id="upgrade-immediate" label="Charge the difference immediately on-chain"
+              id="upgrade-immediate"
+              label="Charge the difference immediately on-chain"
               desc="Apply the upgrade and collect the prorated USDC difference in the same transaction"
               checked={settings.upgradeImmediately}
-              onChange={(v) => setSettings({ ...settings, upgradeImmediately: v })}
+              onChange={(v) =>
+                setSettings({ ...settings, upgradeImmediately: v })
+              }
             />
           </div>
           {/* Downgrade */}
           <div className="rounded-lg border border-border bg-secondary/5 overflow-hidden">
             <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50 bg-secondary/10">
               <div className="w-2 h-2 rounded-full bg-orange-500" />
-              <p className="text-xs font-bold text-foreground uppercase tracking-wider">On Downgrade</p>
-              <p className="text-xs text-muted-foreground ml-1">→ lower cost plan or removing an add-on</p>
+              <p className="text-xs font-bold text-foreground uppercase tracking-wider">
+                On Downgrade
+              </p>
+              <p className="text-xs text-muted-foreground ml-1">
+                → lower cost plan or removing an add-on
+              </p>
             </div>
             <div className="divide-y divide-border/50">
               <ToggleRow
-                id="downgrade-immediate" label="Apply downgrade immediately and credit wallet"
+                id="downgrade-immediate"
+                label="Apply downgrade immediately and credit wallet"
                 desc="Downgrade takes effect now and the prorated USDC difference is credited back to the subscriber's wallet"
                 checked={settings.downgradeImmediately}
-                onChange={(v) => setSettings({ ...settings, downgradeImmediately: v })}
+                onChange={(v) =>
+                  setSettings({ ...settings, downgradeImmediately: v })
+                }
               />
               <ToggleRow
-                id="prevent-downgrade" label="Block downgrade when subscriber is over the limit"
+                id="prevent-downgrade"
+                label="Block downgrade when subscriber is over the limit"
                 desc="Reject a downgrade transaction if the subscriber is using more than the destination plan allows"
                 checked={settings.preventDowngradeOverLimit}
-                onChange={(v) => setSettings({ ...settings, preventDowngradeOverLimit: v })}
+                onChange={(v) =>
+                  setSettings({ ...settings, preventDowngradeOverLimit: v })
+                }
               />
               <ToggleRow
-                id="disallow-self-downgrade" label="Require admin approval for downgrades"
+                id="disallow-self-downgrade"
+                label="Require admin approval for downgrades"
                 desc="End-users cannot self-service downgrade — an admin must trigger the on-chain downgrade"
                 checked={settings.disallowSelfServiceDowngrade}
-                onChange={(v) => setSettings({ ...settings, disallowSelfServiceDowngrade: v })}
+                onChange={(v) =>
+                  setSettings({ ...settings, disallowSelfServiceDowngrade: v })
+                }
               />
             </div>
           </div>
@@ -3899,7 +4997,9 @@ function ConfigurationTab() {
       {/* ── Network & Contracts ─────────────────────────────────── */}
       <div className="rounded-xl border border-border bg-card overflow-hidden">
         <div className="px-5 py-4 border-b border-border bg-secondary/20">
-          <h3 className="text-sm font-bold text-foreground">Network & Contracts</h3>
+          <h3 className="text-sm font-bold text-foreground">
+            Network & Contracts
+          </h3>
           <p className="text-xs text-muted-foreground mt-0.5">
             Blockchain network mapping and deployed contract addresses.
           </p>
@@ -3908,27 +5008,57 @@ function ConfigurationTab() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border/50 bg-secondary/5">
-                <th className="text-left py-3 px-5 text-xs font-bold uppercase tracking-wider text-muted-foreground">Environment</th>
-                <th className="text-left py-3 px-5 text-xs font-bold uppercase tracking-wider text-muted-foreground">Network</th>
-                <th className="text-left py-3 px-5 text-xs font-bold uppercase tracking-wider text-muted-foreground">Chain ID</th>
-                <th className="text-left py-3 px-5 text-xs font-bold uppercase tracking-wider text-muted-foreground">USDC Contract</th>
+                <th className="text-left py-3 px-5 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  Environment
+                </th>
+                <th className="text-left py-3 px-5 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  Network
+                </th>
+                <th className="text-left py-3 px-5 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  Chain ID
+                </th>
+                <th className="text-left py-3 px-5 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  USDC Contract
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/30">
-              {(Object.entries(CHAIN_INFO) as [EnvMode, typeof CHAIN_INFO[EnvMode]][]).map(([mode, info]) => {
+              {(
+                Object.entries(CHAIN_INFO) as [
+                  EnvMode,
+                  (typeof CHAIN_INFO)[EnvMode],
+                ][]
+              ).map(([mode, info]) => {
                 const usdc = getUsdcAddress(info.chainId);
                 const isActive = mode === envMode;
                 return (
-                  <tr key={mode} className={`transition-colors ${isActive ? "bg-secondary/10" : "hover:bg-secondary/5"}`}>
+                  <tr
+                    key={mode}
+                    className={`transition-colors ${isActive ? "bg-secondary/10" : "hover:bg-secondary/5"}`}
+                  >
                     <td className="py-3.5 px-5">
                       <div className="flex items-center gap-2.5">
-                        <div className={`w-2 h-2 rounded-full shrink-0 ${info.color}`} />
-                        <span className="font-semibold text-foreground">{mode === "DEVELOPMENT" ? "Development" : "Production"}</span>
-                        {isActive && <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-foreground text-background">Active</span>}
+                        <div
+                          className={`w-2 h-2 rounded-full shrink-0 ${info.color}`}
+                        />
+                        <span className="font-semibold text-foreground">
+                          {mode === "DEVELOPMENT"
+                            ? "Development"
+                            : "Production"}
+                        </span>
+                        {isActive && (
+                          <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-foreground text-background">
+                            Active
+                          </span>
+                        )}
                       </div>
                     </td>
-                    <td className="py-3.5 px-5 text-muted-foreground">{info.name}</td>
-                    <td className="py-3.5 px-5 font-mono text-muted-foreground">{info.chainId}</td>
+                    <td className="py-3.5 px-5 text-muted-foreground">
+                      {info.name}
+                    </td>
+                    <td className="py-3.5 px-5 font-mono text-muted-foreground">
+                      {info.chainId}
+                    </td>
                     <td className="py-3.5 px-5 font-mono text-xs text-muted-foreground">
                       {usdc.slice(0, 10)}…{usdc.slice(-6)}
                     </td>
@@ -3951,15 +5081,22 @@ function ConfigurationTab() {
       {/* ── Switch Environment ─────────────────────────────────── */}
       <div className="rounded-xl border border-border bg-card overflow-hidden">
         <div className="px-5 py-4 border-b border-border bg-secondary/20">
-          <h3 className="text-sm font-bold text-foreground">Switch Environment</h3>
+          <h3 className="text-sm font-bold text-foreground">
+            Switch Environment
+          </h3>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Switches which blockchain network the catalog is published to. Production requires deployed contracts on Base Mainnet.
+            Switches which blockchain network the catalog is published to.
+            Production requires deployed contracts on Base Mainnet.
           </p>
         </div>
         <div className="p-5">
           <Sheet open={dialogOpen} onOpenChange={setDialogOpen}>
             <SheetTrigger asChild>
-              <Button size="default" variant="outline" className="gap-2 h-10 hover:bg-secondary transition-colors">
+              <Button
+                size="default"
+                variant="outline"
+                className="gap-2 h-10 hover:bg-secondary transition-colors"
+              >
                 <SlidersHorizontal className="w-4 h-4" />
                 Switch Environment
               </Button>
@@ -3986,22 +5123,37 @@ function ConfigurationTab() {
                         className={`flex flex-col items-start gap-2 p-4 rounded-xl border text-left transition-all ${isSelected ? "border-foreground bg-secondary" : "border-border hover:bg-secondary/50"}`}
                       >
                         <div className="flex items-center gap-2">
-                          <div className={`w-2 h-2 rounded-full ${info.color}`} />
+                          <div
+                            className={`w-2 h-2 rounded-full ${info.color}`}
+                          />
                           <span className="text-xs font-bold uppercase tracking-wider text-foreground">
                             Development
                           </span>
                         </div>
-                        <p className="text-xs text-muted-foreground">{info.name}</p>
-                        <p className="text-[10px] font-mono text-muted-foreground">Chain {info.chainId}</p>
-                        {isSelected && <Check className="w-4 h-4 text-foreground ml-auto mt-1" />}
+                        <p className="text-xs text-muted-foreground">
+                          {info.name}
+                        </p>
+                        <p className="text-[10px] font-mono text-muted-foreground">
+                          Chain {info.chainId}
+                        </p>
+                        {isSelected && (
+                          <Check className="w-4 h-4 text-foreground ml-auto mt-1" />
+                        )}
                       </button>
                     );
                   })}
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="confirm-text" className="text-sm font-semibold">
-                    Type <span className="font-mono bg-secondary px-1.5 py-0.5 rounded text-foreground">CONFIRM</span> to proceed
+                  <Label
+                    htmlFor="confirm-text"
+                    className="text-sm font-semibold"
+                  >
+                    Type{" "}
+                    <span className="font-mono bg-secondary px-1.5 py-0.5 rounded text-foreground">
+                      CONFIRM
+                    </span>{" "}
+                    to proceed
                   </Label>
                   <Input
                     id="confirm-text"
@@ -4016,16 +5168,37 @@ function ConfigurationTab() {
                 {switchError && (
                   <div className="flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-4">
                     <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-destructive" />
-                    <span className="text-sm text-destructive">{switchError}</span>
+                    <span className="text-sm text-destructive">
+                      {switchError}
+                    </span>
                   </div>
                 )}
 
                 <div className="flex justify-end gap-3 pt-2">
-                  <Button type="button" variant="outline" onClick={() => { setDialogOpen(false); setConfirmText(""); setSwitchError(null); }}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setDialogOpen(false);
+                      setConfirmText("");
+                      setSwitchError(null);
+                    }}
+                  >
                     Cancel
                   </Button>
-                  <Button type="submit" disabled={confirmText !== "CONFIRM" || switching} className="min-w-28">
-                    {switching ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Switching…</> : "Switch"}
+                  <Button
+                    type="submit"
+                    disabled={confirmText !== "CONFIRM" || switching}
+                    className="min-w-28"
+                  >
+                    {switching ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Switching…
+                      </>
+                    ) : (
+                      "Switch"
+                    )}
                   </Button>
                 </div>
               </form>
@@ -4038,14 +5211,33 @@ function ConfigurationTab() {
       <div className="sticky bottom-0 -mx-1 px-1 pb-4 pt-2 bg-gradient-to-t from-background to-transparent">
         <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-card px-4 py-3 shadow-sm">
           <p className="text-xs text-muted-foreground">
-            {loadingConfig ? "Loading configuration…" : "Changes saved per environment"}
+            {loadingConfig
+              ? "Loading configuration…"
+              : "Changes saved per environment"}
           </p>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => setSettings(DEFAULT_CONFIG_SETTINGS)} disabled={loadingConfig || savingConfig}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSettings(DEFAULT_CONFIG_SETTINGS)}
+              disabled={loadingConfig || savingConfig}
+            >
               Reset
             </Button>
-            <Button size="sm" onClick={handleSave} disabled={loadingConfig || savingConfig} className="gap-2 min-w-[120px]">
-              {savingConfig ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" />Saving…</> : "Save changes"}
+            <Button
+              size="sm"
+              onClick={handleSave}
+              disabled={loadingConfig || savingConfig}
+              className="gap-2 min-w-[120px]"
+            >
+              {savingConfig ? (
+                <>
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  Saving…
+                </>
+              ) : (
+                "Save changes"
+              )}
             </Button>
           </div>
         </div>
@@ -4095,7 +5287,11 @@ export function CatalogAddOnsSection() {
           <CreateAddOnDialog env={envMode} onCreated={tr} />
         </div>
       </div>
-      <AddOnsTable env={envMode} refresh={refresh} onSelect={setSelectedAddOn} />
+      <AddOnsTable
+        env={envMode}
+        refresh={refresh}
+        onSelect={setSelectedAddOn}
+      />
     </div>
   );
 }
@@ -4103,7 +5299,8 @@ export function CatalogAddOnsSection() {
 export function CatalogCreditsSection() {
   const { envMode } = useEnvironment();
   const [refresh, setRefresh] = useState(0);
-  const [selectedCredit, setSelectedCredit] = useState<CatalogCreditType | null>(null);
+  const [selectedCredit, setSelectedCredit] =
+    useState<CatalogCreditType | null>(null);
 
   function tr() {
     setRefresh((n) => n + 1);
@@ -4138,7 +5335,11 @@ export function CatalogCreditsSection() {
           <CreateCreditTypeDialog env={envMode} onCreated={tr} />
         </div>
       </div>
-      <CreditTypesTable env={envMode} refresh={refresh} onSelect={setSelectedCredit} />
+      <CreditTypesTable
+        env={envMode}
+        refresh={refresh}
+        onSelect={setSelectedCredit}
+      />
     </div>
   );
 }
@@ -4171,6 +5372,16 @@ interface Entitlement {
   value?: boolean | number | null;
   valueUnit?: string | null;
   enabled: boolean;
+  featureType?: "boolean" | "event" | "trait";
+  icon?: string | null;
+}
+
+function getEntitlementAvatarType(
+  entitlement: Pick<Entitlement, "type" | "featureType">,
+): "boolean" | "event" | "trait" {
+  if (entitlement.featureType === "trait") return "trait";
+  if (entitlement.featureType === "event") return "event";
+  return entitlement.type === "BOOLEAN" ? "boolean" : "event";
 }
 
 // ─── Add Entitlement Dialog ────────────────────────────────────────────────────
@@ -4182,6 +5393,7 @@ type CatalogFeatureDef = {
   featureType: "boolean" | "event" | "trait";
   eventKey: string | null;
   description: string | null;
+  icon?: string | null;
 };
 
 function AddEntitlementDialog({
@@ -4201,9 +5413,12 @@ function AddEntitlementDialog({
   const open = externalOpen !== undefined ? externalOpen : internalOpen;
   const setOpen = externalOnOpenChange ?? setInternalOpen;
   const [loading, setLoading] = useState(false);
-  const [catalogFeatures, setCatalogFeatures] = useState<CatalogFeatureDef[]>([]);
+  const [catalogFeatures, setCatalogFeatures] = useState<CatalogFeatureDef[]>(
+    [],
+  );
   const [featuresLoading, setFeaturesLoading] = useState(false);
-  const [selectedFeature, setSelectedFeature] = useState<CatalogFeatureDef | null>(null);
+  const [selectedFeature, setSelectedFeature] =
+    useState<CatalogFeatureDef | null>(null);
   const [form, setForm] = useState({
     featureName: "",
     featureKey: "",
@@ -4222,7 +5437,7 @@ function AddEntitlementDialog({
     if (!open) return;
     setFeaturesLoading(true);
     fetch("/api/v1/features")
-      .then((r) => r.ok ? r.json() : { features: [] })
+      .then((r) => (r.ok ? r.json() : { features: [] }))
       .then((d: { features?: CatalogFeatureDef[] }) => {
         const added = featRef.current ?? [];
         const addedKeys = new Set(added.map((e) => e.featureKey.toLowerCase()));
@@ -4241,7 +5456,9 @@ function AddEntitlementDialog({
     setSelectedFeature(feat);
     // Boolean features → BOOLEAN entitlement; trait/event features → NUMERIC
     const isBool = feat.featureType === "boolean";
-    const type: "BOOLEAN" | "NUMERIC" | "UNLIMITED" = isBool ? "BOOLEAN" : "NUMERIC";
+    const type: "BOOLEAN" | "NUMERIC" | "UNLIMITED" = isBool
+      ? "BOOLEAN"
+      : "NUMERIC";
     setForm({
       featureName: feat.name,
       featureKey: feat.featureKey,
@@ -4258,7 +5475,14 @@ function AddEntitlementDialog({
 
   function clearFeature() {
     setSelectedFeature(null);
-    setForm({ featureName: "", featureKey: "", type: "BOOLEAN", value: "", valueUnit: "", enabled: true });
+    setForm({
+      featureName: "",
+      featureKey: "",
+      type: "BOOLEAN",
+      value: "",
+      valueUnit: "",
+      enabled: true,
+    });
     setErrors({});
   }
 
@@ -4275,9 +5499,13 @@ function AddEntitlementDialog({
     }
     if (form.type === "NUMERIC") {
       const n = Number(form.value);
-      if (form.value === "" || isNaN(n) || n < 0) e.value = "Enter a valid limit";
+      if (form.value === "" || isNaN(n) || n < 0)
+        e.value = "Enter a valid limit";
     }
-    if (Object.keys(e).length) { setErrors(e); return; }
+    if (Object.keys(e).length) {
+      setErrors(e);
+      return;
+    }
 
     setLoading(true);
     try {
@@ -4294,6 +5522,8 @@ function AddEntitlementDialog({
           value: val,
           enabled: form.enabled,
           valueUnit: form.valueUnit || null,
+          featureType: selectedFeature?.featureType,
+          icon: selectedFeature?.icon ?? null,
         }),
       });
       if (res.ok) {
@@ -4311,10 +5541,18 @@ function AddEntitlementDialog({
   }
 
   const isFree = parseFloat(plan.price) === 0;
-  const planPrice = isFree ? "Free" : `$${parseFloat(plan.price).toFixed(2)}/month`;
+  const planPrice = isFree
+    ? "Free"
+    : `$${parseFloat(plan.price).toFixed(2)}/month`;
 
   return (
-    <Sheet open={open} onOpenChange={(v) => { if (!v) clearFeature(); setOpen(v); }}>
+    <Sheet
+      open={open}
+      onOpenChange={(v) => {
+        if (!v) clearFeature();
+        setOpen(v);
+      }}
+    >
       {externalOpen === undefined && (
         <SheetTrigger asChild>
           <Button className="gap-2">
@@ -4330,7 +5568,9 @@ function AddEntitlementDialog({
             Plan Entitlement
           </p>
           <div className="flex items-center gap-2 mt-0.5">
-            <SheetTitle className="text-lg font-semibold">{plan.name}</SheetTitle>
+            <SheetTitle className="text-lg font-semibold">
+              {plan.name}
+            </SheetTitle>
             <ChevronRight className="w-4 h-4 text-muted-foreground" />
             <span className="text-lg text-muted-foreground font-normal">
               {selectedFeature ? selectedFeature.name : "Choose feature"}
@@ -4359,24 +5599,27 @@ function AddEntitlementDialog({
                 <SelectContent>
                   {catalogFeatures.length === 0 ? (
                     <div className="px-3 py-6 text-center">
-                      <p className="text-sm text-muted-foreground">No features yet</p>
+                      <p className="text-sm text-muted-foreground">
+                        No features yet
+                      </p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Go to <strong>Manage → Features</strong> to create features first
+                        Go to <strong>Manage → Features</strong> to create
+                        features first
                       </p>
                     </div>
                   ) : (
                     catalogFeatures.map((f) => (
                       <SelectItem key={f.id} value={f.id}>
                         <div className="flex items-center gap-2 py-0.5">
-                          <div className="w-5 h-5 rounded bg-secondary border border-border flex items-center justify-center shrink-0">
-                            {f.featureType !== "boolean" ? (
-                              <Hash className="w-3 h-3 text-violet-500" />
-                            ) : (
-                              <ToggleLeft className="w-3 h-3 text-blue-500" />
-                            )}
-                          </div>
+                          <FeatureAvatar
+                            featureType={f.featureType}
+                            icon={f.icon ?? null}
+                            className="w-5 h-5 rounded"
+                          />
                           <span className="font-medium">{f.name}</span>
-                          <code className="text-xs text-muted-foreground font-mono">{f.featureKey}</code>
+                          <code className="text-xs text-muted-foreground font-mono">
+                            {f.featureKey}
+                          </code>
                         </div>
                       </SelectItem>
                     ))
@@ -4384,29 +5627,35 @@ function AddEntitlementDialog({
                 </SelectContent>
               </Select>
             )}
-            {errors._global && <p className="text-sm text-destructive">{errors._global}</p>}
+            {errors._global && (
+              <p className="text-sm text-destructive">{errors._global}</p>
+            )}
           </div>
 
           {/* ── Monetization Settings (shown once feature selected) ── */}
           {!selectedFeature ? (
             <div className="flex flex-col items-center justify-center py-12 text-center rounded-xl border border-dashed border-border bg-secondary/20">
               <ToggleLeft className="w-8 h-8 text-muted-foreground/30 mb-2" />
-              <p className="text-sm font-medium text-muted-foreground">Select a feature to configure entitlement</p>
+              <p className="text-sm font-medium text-muted-foreground">
+                Select a feature to configure entitlement
+              </p>
             </div>
           ) : (
             <>
               {/* Feature info pill */}
               <div className="flex items-center gap-2 p-3 rounded-lg bg-secondary/50 border border-border">
-                <div className="w-8 h-8 rounded-lg bg-card border border-border flex items-center justify-center shrink-0">
-                  {selectedFeature.featureType !== "boolean" ? (
-                    <Hash className="w-4 h-4 text-violet-500" />
-                  ) : (
-                    <ToggleLeft className="w-4 h-4 text-blue-500" />
-                  )}
-                </div>
+                <FeatureAvatar
+                  featureType={selectedFeature.featureType}
+                  icon={selectedFeature.icon ?? null}
+                  className="w-8 h-8"
+                />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground">{selectedFeature.name}</p>
-                  <code className="text-xs text-muted-foreground font-mono">{selectedFeature.featureKey}</code>
+                  <p className="text-sm font-medium text-foreground">
+                    {selectedFeature.name}
+                  </p>
+                  <code className="text-xs text-muted-foreground font-mono">
+                    {selectedFeature.featureKey}
+                  </code>
                 </div>
                 <button
                   type="button"
@@ -4428,36 +5677,56 @@ function AddEntitlementDialog({
                       return t === "NUMERIC" || t === "UNLIMITED";
                     })
                     .map((t) => (
-                    <button
-                      key={t}
-                      type="button"
-                      onClick={() => setForm((f) => ({ ...f, type: t, value: "" }))}
-                      className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg border text-sm transition-all text-left ${
-                        form.type === t
-                          ? "bg-accent/5 border-accent text-foreground"
-                          : "bg-secondary border-border text-muted-foreground hover:text-foreground"
-                      }`}
-                    >
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${form.type === t ? "bg-accent/10" : "bg-card border border-border"}`}>
-                        {t === "BOOLEAN" ? (
-                          <ToggleLeft className={`w-4 h-4 ${form.type === t ? "text-accent" : "text-muted-foreground"}`} />
-                        ) : t === "NUMERIC" ? (
-                          <Hash className={`w-4 h-4 ${form.type === t ? "text-accent" : "text-muted-foreground"}`} />
-                        ) : (
-                          <Package className={`w-4 h-4 ${form.type === t ? "text-accent" : "text-muted-foreground"}`} />
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() =>
+                          setForm((f) => ({ ...f, type: t, value: "" }))
+                        }
+                        className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg border text-sm transition-all text-left ${
+                          form.type === t
+                            ? "bg-accent/5 border-accent text-foreground"
+                            : "bg-secondary border-border text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        <div
+                          className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${form.type === t ? "bg-accent/10" : "bg-card border border-border"}`}
+                        >
+                          {t === "BOOLEAN" ? (
+                            <ToggleLeft
+                              className={`w-4 h-4 ${form.type === t ? "text-accent" : "text-muted-foreground"}`}
+                            />
+                          ) : t === "NUMERIC" ? (
+                            <Hash
+                              className={`w-4 h-4 ${form.type === t ? "text-accent" : "text-muted-foreground"}`}
+                            />
+                          ) : (
+                            <Package
+                              className={`w-4 h-4 ${form.type === t ? "text-accent" : "text-muted-foreground"}`}
+                            />
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-medium leading-none">
+                            {t === "BOOLEAN"
+                              ? "Boolean"
+                              : t === "NUMERIC"
+                                ? "Numeric limit"
+                                : "Unlimited"}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {t === "BOOLEAN"
+                              ? "On / Off access"
+                              : t === "NUMERIC"
+                                ? "Usage cap per billing period"
+                                : "No cap enforced"}
+                          </p>
+                        </div>
+                        {form.type === t && (
+                          <Check className="w-4 h-4 text-accent shrink-0" />
                         )}
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-medium leading-none">
-                          {t === "BOOLEAN" ? "Boolean" : t === "NUMERIC" ? "Numeric limit" : "Unlimited"}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {t === "BOOLEAN" ? "On / Off access" : t === "NUMERIC" ? "Usage cap per billing period" : "No cap enforced"}
-                        </p>
-                      </div>
-                      {form.type === t && <Check className="w-4 h-4 text-accent shrink-0" />}
-                    </button>
-                  ))}
+                      </button>
+                    ))}
                 </div>
               </div>
 
@@ -4465,28 +5734,39 @@ function AddEntitlementDialog({
               {form.type === "NUMERIC" && (
                 <div className="space-y-3 p-4 rounded-lg bg-secondary/30 border border-border">
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-medium">Monthly limit *</Label>
+                    <Label className="text-xs font-medium">
+                      Monthly limit *
+                    </Label>
                     <Input
                       type="number"
                       min="0"
                       value={form.value}
-                      onChange={(e) => setForm((f) => ({ ...f, value: e.target.value }))}
+                      onChange={(e) =>
+                        setForm((f) => ({ ...f, value: e.target.value }))
+                      }
                       placeholder="e.g. 300"
                       className="bg-background border-border"
                     />
-                    {errors.value && <p className="text-xs text-destructive">{errors.value}</p>}
+                    {errors.value && (
+                      <p className="text-xs text-destructive">{errors.value}</p>
+                    )}
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs font-medium">Unit label</Label>
                     <Input
                       value={form.valueUnit}
-                      onChange={(e) => setForm((f) => ({ ...f, valueUnit: e.target.value }))}
+                      onChange={(e) =>
+                        setForm((f) => ({ ...f, valueUnit: e.target.value }))
+                      }
                       placeholder="e.g. Scans, API calls"
                       className="bg-background border-border"
                     />
                     {form.value && (
                       <p className="text-xs text-muted-foreground">
-                        Displays as: <strong>{form.value} {form.valueUnit || "units"} per month</strong>
+                        Displays as:{" "}
+                        <strong>
+                          {form.value} {form.valueUnit || "units"} per month
+                        </strong>
                       </p>
                     )}
                   </div>
@@ -4498,50 +5778,91 @@ function AddEntitlementDialog({
                 <div className="flex items-center justify-between p-4 rounded-lg bg-secondary/30 border border-border">
                   <div>
                     <p className="text-sm font-medium">Enabled by default</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Feature is on for all subscribers of this plan</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Feature is on for all subscribers of this plan
+                    </p>
                   </div>
                   <Switch
                     checked={form.enabled}
-                    onCheckedChange={(v) => setForm((f) => ({ ...f, enabled: v }))}
+                    onCheckedChange={(v) =>
+                      setForm((f) => ({ ...f, enabled: v }))
+                    }
                   />
                 </div>
               )}
 
               {/* Plan preview */}
               <div className="space-y-2">
-                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Plan Preview</Label>
+                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Plan Preview
+                </Label>
                 <div className="rounded-xl border border-border bg-card p-4">
                   <div className="flex items-start justify-between mb-3">
                     <div>
-                      <p className="font-semibold text-foreground">{plan.name}</p>
-                      {plan.description && <p className="text-xs text-muted-foreground mt-0.5">{plan.description}</p>}
+                      <p className="font-semibold text-foreground">
+                        {plan.name}
+                      </p>
+                      {plan.description && (
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {plan.description}
+                        </p>
+                      )}
                     </div>
                     <p className="text-base font-bold text-foreground whitespace-nowrap">
-                      {isFree ? "Free" : `$${parseFloat(plan.price).toFixed(2)}/mo`}
+                      {isFree
+                        ? "Free"
+                        : `$${parseFloat(plan.price).toFixed(2)}/mo`}
                     </p>
                   </div>
                   <div className="space-y-1.5 pt-3 border-t border-border">
                     {(currentEntitlements ?? []).map((ent) => (
-                      <div key={ent.featureKey} className="flex items-center gap-2">
+                      <div
+                        key={ent.featureKey}
+                        className="flex items-center gap-2"
+                      >
                         <div className="w-5 h-5 rounded bg-secondary border border-border flex items-center justify-center shrink-0">
-                          {ent.type === "NUMERIC" ? <Hash className="w-2.5 h-2.5 text-violet-500" /> : <ToggleLeft className="w-2.5 h-2.5 text-blue-500" />}
+                          <FeatureAvatar
+                            featureType={getEntitlementAvatarType(ent)}
+                            icon={ent.icon ?? null}
+                            className="w-4 h-4 rounded"
+                          />
                         </div>
-                        <p className="text-xs text-foreground">{ent.featureName}</p>
+                        <p className="text-xs text-foreground">
+                          {ent.featureName}
+                        </p>
                         <p className="text-xs text-muted-foreground ml-auto">
-                          {ent.type === "NUMERIC" ? `${ent.value} ${ent.valueUnit ?? ""} /mo` : ent.enabled ? "On" : "Off"}
+                          {ent.type === "NUMERIC"
+                            ? `${ent.value} ${ent.valueUnit ?? ""} /mo`
+                            : ent.enabled
+                              ? "On"
+                              : "Off"}
                         </p>
                       </div>
                     ))}
                     {/* New entitlement preview */}
                     <div className="flex items-center gap-2 pt-1 border-t border-dashed border-border/50">
                       <div className="w-5 h-5 rounded bg-accent/10 border border-accent/30 flex items-center justify-center shrink-0">
-                        {form.type === "NUMERIC" ? <Hash className="w-2.5 h-2.5 text-violet-500" /> : <ToggleLeft className="w-2.5 h-2.5 text-blue-500" />}
+                        <FeatureAvatar
+                          featureType={selectedFeature.featureType}
+                          icon={selectedFeature.icon ?? null}
+                          className="w-4 h-4 rounded"
+                        />
                       </div>
-                      <p className="text-xs font-medium text-foreground">{selectedFeature.name}</p>
-                      <p className="text-xs text-muted-foreground ml-auto">
-                        {form.type === "NUMERIC" && form.value ? `${form.value} ${form.valueUnit || ""} /mo` : form.type === "UNLIMITED" ? "Unlimited" : form.enabled ? "On" : "Off"}
+                      <p className="text-xs font-medium text-foreground">
+                        {selectedFeature.name}
                       </p>
-                      <span className="text-xs text-accent font-semibold">New</span>
+                      <p className="text-xs text-muted-foreground ml-auto">
+                        {form.type === "NUMERIC" && form.value
+                          ? `${form.value} ${form.valueUnit || ""} /mo`
+                          : form.type === "UNLIMITED"
+                            ? "Unlimited"
+                            : form.enabled
+                              ? "On"
+                              : "Off"}
+                      </p>
+                      <span className="text-xs text-accent font-semibold">
+                        New
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -4552,9 +5873,18 @@ function AddEntitlementDialog({
 
         {/* Footer */}
         <div className="px-6 py-4 border-t border-border bg-card shrink-0 flex items-center justify-end gap-2">
-          <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+          <Button variant="outline" onClick={() => setOpen(false)}>
+            Cancel
+          </Button>
           <Button disabled={!selectedFeature || loading} onClick={handleSave}>
-            {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving…</> : "Save changes"}
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Saving…
+              </>
+            ) : (
+              "Save changes"
+            )}
           </Button>
         </div>
       </SheetContent>
@@ -4584,14 +5914,19 @@ function EditPlanDialog({
   const [loading, setLoading] = useState(false);
   const isOnChainLocked = Boolean(plan.onChainPlanId);
 
-  const initPlanType: "free" | "paid" = parseFloat(plan.price) === 0 ? "free" : "paid";
+  const initPlanType: "free" | "paid" =
+    parseFloat(plan.price) === 0 ? "free" : "paid";
   const [planType, setPlanType] = useState<"free" | "paid">(initPlanType);
-  const [billingIntervalDays, setBillingIntervalDays] = useState(plan.billingInterval);
+  const [billingIntervalDays, setBillingIntervalDays] = useState(
+    plan.billingInterval,
+  );
   const initialAnnualPrice =
     plan.annualPrice && parseFloat(plan.annualPrice) > 0
       ? parseFloat(plan.annualPrice).toFixed(2)
       : "";
-  const [hasAnnualPrice, setHasAnnualPrice] = useState(Boolean(initialAnnualPrice));
+  const [hasAnnualPrice, setHasAnnualPrice] = useState(
+    Boolean(initialAnnualPrice),
+  );
   const [annualDiscount, setAnnualDiscount] = useState(() => {
     const monthly = parseFloat(plan.price);
     const annual = plan.annualPrice ? parseFloat(plan.annualPrice) : 0;
@@ -4612,15 +5947,27 @@ function EditPlanDialog({
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const autoTier = form.name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
-  const selectedChainOpt = TOKEN_OPTIONS.find((o) => o.address === form.acceptedToken);
+  const autoTier = form.name
+    .toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9-]/g, "");
+  const selectedChainOpt = TOKEN_OPTIONS.find(
+    (o) => o.address === form.acceptedToken,
+  );
   const selectedIntervalLabel =
-    BILLING_INTERVALS.find((i) => i.days === billingIntervalDays)?.label.toLowerCase() ??
-    `${billingIntervalDays}d`;
+    BILLING_INTERVALS.find(
+      (i) => i.days === billingIntervalDays,
+    )?.label.toLowerCase() ?? `${billingIntervalDays}d`;
   const chainName = (o: TokenOption) => o.chainLabel;
   const chainInitial = (o: TokenOption) => {
     const n = o.chainLabel;
-    return n.startsWith("Base") ? "B" : n.startsWith("Sepolia") ? "S" : n.startsWith("Arc") ? "A" : n[0]?.toUpperCase() ?? "?";
+    return n.startsWith("Base")
+      ? "B"
+      : n.startsWith("Sepolia")
+        ? "S"
+        : n.startsWith("Arc")
+          ? "A"
+          : (n[0]?.toUpperCase() ?? "?");
   };
 
   async function handleSubmit(e: React.FormEvent) {
@@ -4640,7 +5987,10 @@ function EditPlanDialog({
         }
       }
     }
-    if (Object.keys(errs).length) { setErrors(errs); return; }
+    if (Object.keys(errs).length) {
+      setErrors(errs);
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch("/api/catalog/plans", {
@@ -4691,7 +6041,10 @@ function EditPlanDialog({
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
           <div />
-          <button onClick={() => setOpen(false)} className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-secondary hover:text-foreground transition-all">
+          <button
+            onClick={() => setOpen(false)}
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-secondary hover:text-foreground transition-all"
+          >
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -4701,43 +6054,72 @@ function EditPlanDialog({
           {/* ── LEFT: Plan Preview ── */}
           <div className="w-[300px] shrink-0 border-r border-border bg-secondary/20 p-6 flex flex-col gap-6 overflow-y-auto">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground mb-4">Edit Plan</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground mb-4">
+                Edit Plan
+              </p>
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-9 h-9 rounded-full bg-linear-to-br from-zinc-400 to-zinc-700 shrink-0 flex items-center justify-center text-white font-bold text-sm">
                   {form.name.charAt(0).toUpperCase() || "?"}
                 </div>
                 <p className="text-base font-bold text-foreground truncate">
-                  {form.name || <span className="font-normal text-muted-foreground">Untitled plan</span>}
+                  {form.name || (
+                    <span className="font-normal text-muted-foreground">
+                      Untitled plan
+                    </span>
+                  )}
                 </p>
               </div>
             </div>
             <div>
-              <p className="text-xs font-semibold text-muted-foreground mb-3">Plan Preview</p>
+              <p className="text-xs font-semibold text-muted-foreground mb-3">
+                Plan Preview
+              </p>
               <div className="bg-card border border-border rounded-xl overflow-hidden">
                 <div className="p-4 border-b border-border">
-                  <p className="text-lg font-bold text-foreground leading-tight">{form.name || "—"}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{form.description || form.name || "—"}</p>
+                  <p className="text-lg font-bold text-foreground leading-tight">
+                    {form.name || "—"}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {form.description || form.name || "—"}
+                  </p>
                   <p className="text-sm font-semibold text-foreground mt-1.5">
-                    {planType === "free" ? "Free" : form.price ? `$${form.price} USDC` : "—"}
+                    {planType === "free"
+                      ? "Free"
+                      : form.price
+                        ? `$${form.price} USDC`
+                        : "—"}
                     {planType === "paid" && form.price && (
                       <span className="text-xs font-normal text-muted-foreground ml-1">
                         / {selectedIntervalLabel}
                       </span>
                     )}
                   </p>
-                  {planType === "paid" && hasAnnualPrice && form.annualPrice && (
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      or ${form.annualPrice} USDC / year
-                      {form.price && Number(form.annualPrice) < Number(form.price) * 12 && (
-                        <span className="text-green-500 ml-1">
-                          (save {Math.round((1 - Number(form.annualPrice) / (Number(form.price) * 12)) * 100)}%)
-                        </span>
-                      )}
-                    </p>
-                  )}
+                  {planType === "paid" &&
+                    hasAnnualPrice &&
+                    form.annualPrice && (
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        or ${form.annualPrice} USDC / year
+                        {form.price &&
+                          Number(form.annualPrice) <
+                            Number(form.price) * 12 && (
+                            <span className="text-green-500 ml-1">
+                              (save{" "}
+                              {Math.round(
+                                (1 -
+                                  Number(form.annualPrice) /
+                                    (Number(form.price) * 12)) *
+                                  100,
+                              )}
+                              %)
+                            </span>
+                          )}
+                      </p>
+                    )}
                 </div>
                 <div className="p-4">
-                  <p className="text-xs text-muted-foreground text-center py-3">No entitlements yet</p>
+                  <p className="text-xs text-muted-foreground text-center py-3">
+                    No entitlements yet
+                  </p>
                 </div>
                 <div className="px-4 pb-4">
                   <button className="w-full py-2.5 rounded-lg bg-secondary border border-border text-sm font-medium text-muted-foreground cursor-default">
@@ -4755,12 +6137,18 @@ function EditPlanDialog({
                 {/* Header */}
                 <div>
                   <div className="flex items-center gap-3 mb-1">
-                    <h2 className="text-2xl font-bold text-foreground tracking-tight">Plan Settings</h2>
+                    <h2 className="text-2xl font-bold text-foreground tracking-tight">
+                      Plan Settings
+                    </h2>
                     <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-secondary border border-border text-muted-foreground">
-                      {plan.environmentMode === "DEVELOPMENT" ? "Dev" : "Production"}
+                      {plan.environmentMode === "DEVELOPMENT"
+                        ? "Dev"
+                        : "Production"}
                     </span>
                   </div>
-                  <p className="text-sm text-muted-foreground">Update this plan's settings.</p>
+                  <p className="text-sm text-muted-foreground">
+                    Update this plan's settings.
+                  </p>
                 </div>
 
                 {errors._global && (
@@ -4775,7 +6163,9 @@ function EditPlanDialog({
                       This plan is already on-chain.
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Monthly price changes can be synced. Name, tier, billing interval, and token stay locked on the existing on-chain plan, so create a new plan if you need to change them.
+                      Monthly price changes can be synced. Name, tier, billing
+                      interval, and token stay locked on the existing on-chain
+                      plan, so create a new plan if you need to change them.
                     </p>
                   </div>
                 )}
@@ -4783,24 +6173,37 @@ function EditPlanDialog({
                 {/* Name + Tier */}
                 <div className="grid grid-cols-[1fr_auto] gap-4 items-start">
                   <div>
-                    <Label className="text-sm font-medium text-foreground mb-2 block">Name *</Label>
+                    <Label className="text-sm font-medium text-foreground mb-2 block">
+                      Name *
+                    </Label>
                     <Input
                       value={form.name}
-                      onChange={(e) => { setForm((f) => ({ ...f, name: e.target.value })); setErrors((p) => ({ ...p, name: "" })); }}
+                      onChange={(e) => {
+                        setForm((f) => ({ ...f, name: e.target.value }));
+                        setErrors((p) => ({ ...p, name: "" }));
+                      }}
                       placeholder="e.g. Pro, Starter, Enterprise"
                       className="h-11 bg-background border-border"
                       disabled={isOnChainLocked}
                     />
-                    {errors.name && <p className="text-xs text-destructive mt-1">{errors.name}</p>}
+                    {errors.name && (
+                      <p className="text-xs text-destructive mt-1">
+                        {errors.name}
+                      </p>
+                    )}
                   </div>
                   <div className="w-28">
                     <Label className="text-sm font-medium text-foreground mb-2 block">
                       Tier
-                      <span className="text-muted-foreground font-normal ml-1">(auto)</span>
+                      <span className="text-muted-foreground font-normal ml-1">
+                        (auto)
+                      </span>
                     </Label>
                     <Input
                       value={form.tier || autoTier}
-                      onChange={(e) => setForm((f) => ({ ...f, tier: e.target.value }))}
+                      onChange={(e) =>
+                        setForm((f) => ({ ...f, tier: e.target.value }))
+                      }
                       placeholder={autoTier || plan.tier}
                       className="h-11 bg-background border-border font-mono text-sm"
                       disabled={isOnChainLocked}
@@ -4810,27 +6213,39 @@ function EditPlanDialog({
 
                 {/* Description */}
                 <div>
-                  <Label className="text-sm font-medium text-foreground mb-2 block">Description</Label>
+                  <Label className="text-sm font-medium text-foreground mb-2 block">
+                    Description
+                  </Label>
                   <Input
                     value={form.description}
-                    onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, description: e.target.value }))
+                    }
                     placeholder="Describe this plan"
                     className="h-11 bg-background border-border"
                   />
-                  <p className="text-xs text-muted-foreground mt-1.5">Optional</p>
+                  <p className="text-xs text-muted-foreground mt-1.5">
+                    Optional
+                  </p>
                 </div>
 
                 {/* Pricing */}
                 <div>
                   <div className="flex items-center gap-2.5 mb-1">
-                    <h3 className="text-xl font-bold text-foreground tracking-tight">Pricing</h3>
+                    <h3 className="text-xl font-bold text-foreground tracking-tight">
+                      Pricing
+                    </h3>
                   </div>
-                  <p className="text-sm text-muted-foreground mb-5">Update pricing and billing settings</p>
+                  <p className="text-sm text-muted-foreground mb-5">
+                    Update pricing and billing settings
+                  </p>
 
                   <div className="grid grid-cols-2 gap-4">
                     {/* Type */}
                     <div>
-                      <Label className="text-sm font-medium text-foreground mb-2 block">Type</Label>
+                      <Label className="text-sm font-medium text-foreground mb-2 block">
+                        Type
+                      </Label>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <button
@@ -4838,7 +6253,9 @@ function EditPlanDialog({
                             disabled={isOnChainLocked}
                             className="w-full flex items-center justify-between h-11 px-3 rounded-lg bg-background border border-border text-sm text-foreground hover:bg-secondary/50 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
                           >
-                            <span className="font-medium">{planType === "free" ? "Free" : "Paid"}</span>
+                            <span className="font-medium">
+                              {planType === "free" ? "Free" : "Paid"}
+                            </span>
                             <ChevronDown className="w-4 h-4 text-muted-foreground" />
                           </button>
                         </DropdownMenuTrigger>
@@ -4848,21 +6265,36 @@ function EditPlanDialog({
                             onClick={() => {
                               setPlanType("free");
                               setHasAnnualPrice(false);
-                              setForm((f) => ({ ...f, price: "0", annualPrice: "" }));
+                              setForm((f) => ({
+                                ...f,
+                                price: "0",
+                                annualPrice: "",
+                              }));
                             }}
                           >
                             <div className="flex-1">
                               <p className="text-sm font-medium">Free</p>
-                              <p className="text-xs text-muted-foreground">No charge — $0.00 USDC</p>
+                              <p className="text-xs text-muted-foreground">
+                                No charge — $0.00 USDC
+                              </p>
                             </div>
-                            {planType === "free" && <Check className="w-4 h-4 ml-2 text-foreground" />}
+                            {planType === "free" && (
+                              <Check className="w-4 h-4 ml-2 text-foreground" />
+                            )}
                           </DropdownMenuItem>
-                          <DropdownMenuItem disabled={isOnChainLocked} onClick={() => setPlanType("paid")}>
+                          <DropdownMenuItem
+                            disabled={isOnChainLocked}
+                            onClick={() => setPlanType("paid")}
+                          >
                             <div className="flex-1">
                               <p className="text-sm font-medium">Paid</p>
-                              <p className="text-xs text-muted-foreground">Recurring USDC payment</p>
+                              <p className="text-xs text-muted-foreground">
+                                Recurring USDC payment
+                              </p>
                             </div>
-                            {planType === "paid" && <Check className="w-4 h-4 ml-2 text-foreground" />}
+                            {planType === "paid" && (
+                              <Check className="w-4 h-4 ml-2 text-foreground" />
+                            )}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -4870,7 +6302,9 @@ function EditPlanDialog({
 
                     {/* Billing Integration */}
                     <div>
-                      <Label className="text-sm font-medium text-foreground mb-2 block">Billing Integration</Label>
+                      <Label className="text-sm font-medium text-foreground mb-2 block">
+                        Billing Integration
+                      </Label>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <button
@@ -4880,15 +6314,21 @@ function EditPlanDialog({
                           >
                             <div className="flex items-center gap-2 min-w-0">
                               <span className="font-medium truncate">
-                                {selectedChainOpt ? chainName(selectedChainOpt) : "Select chain"}
+                                {selectedChainOpt
+                                  ? chainName(selectedChainOpt)
+                                  : "Select chain"}
                               </span>
                               {selectedChainOpt && (
-                                <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0 ${selectedChainOpt.tag === "mainnet" ? "bg-success/10 text-success" : "bg-secondary text-muted-foreground border border-border"}`}>
+                                <span
+                                  className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0 ${selectedChainOpt.tag === "mainnet" ? "bg-success/10 text-success" : "bg-secondary text-muted-foreground border border-border"}`}
+                                >
                                   {selectedChainOpt.tag}
                                 </span>
                               )}
                               {selectedChainOpt?.chainId === chainId && (
-                                <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-foreground text-background shrink-0">Connected</span>
+                                <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-foreground text-background shrink-0">
+                                  Connected
+                                </span>
                               )}
                             </div>
                             <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0 ml-1" />
@@ -4897,25 +6337,63 @@ function EditPlanDialog({
                         <DropdownMenuContent className="w-80">
                           {TOKEN_OPTIONS.some((o) => o.tag === "testnet") && (
                             <>
-                              <div className="px-2 pt-2 pb-1"><p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Testnets</p></div>
-                              {TOKEN_OPTIONS.filter((o) => o.tag === "testnet").map((opt) => {
+                              <div className="px-2 pt-2 pb-1">
+                                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                                  Testnets
+                                </p>
+                              </div>
+                              {TOKEN_OPTIONS.filter(
+                                (o) => o.tag === "testnet",
+                              ).map((opt) => {
                                 const isConn = opt.chainId === chainId;
                                 return (
-                                  <DropdownMenuItem key={opt.chainId} disabled={isOnChainLocked || !isConn} onClick={() => isConn && setForm((f) => ({ ...f, acceptedToken: opt.address }))} className={`flex items-center justify-between gap-3 py-2.5 ${!isConn ? "opacity-40 cursor-not-allowed" : ""}`}>
+                                  <DropdownMenuItem
+                                    key={opt.chainId}
+                                    disabled={isOnChainLocked || !isConn}
+                                    onClick={() =>
+                                      isConn &&
+                                      setForm((f) => ({
+                                        ...f,
+                                        acceptedToken: opt.address,
+                                      }))
+                                    }
+                                    className={`flex items-center justify-between gap-3 py-2.5 ${!isConn ? "opacity-40 cursor-not-allowed" : ""}`}
+                                  >
                                     <div className="flex items-center gap-2.5">
-                                      <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 border ${isConn ? "bg-foreground text-background border-foreground" : "bg-secondary text-muted-foreground border-border"}`}>
-                                        <span className="text-[10px] font-bold">{chainInitial(opt)}</span>
+                                      <div
+                                        className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 border ${isConn ? "bg-foreground text-background border-foreground" : "bg-secondary text-muted-foreground border-border"}`}
+                                      >
+                                        <span className="text-[10px] font-bold">
+                                          {chainInitial(opt)}
+                                        </span>
                                       </div>
                                       <div>
                                         <div className="flex items-center gap-1.5">
-                                          <p className="text-sm font-medium">{chainName(opt)}</p>
-                                          {isConn && <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-foreground text-background">Connected</span>}
+                                          <p className="text-sm font-medium">
+                                            {chainName(opt)}
+                                          </p>
+                                          {isConn && (
+                                            <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-foreground text-background">
+                                              Connected
+                                            </span>
+                                          )}
                                         </div>
-                                        <p className="text-xs font-mono text-muted-foreground mt-0.5">{opt.symbol} · {opt.address.slice(0, 6)}…{opt.address.slice(-4)}</p>
+                                        <p className="text-xs font-mono text-muted-foreground mt-0.5">
+                                          {opt.symbol} ·{" "}
+                                          {opt.address.slice(0, 6)}…
+                                          {opt.address.slice(-4)}
+                                        </p>
                                       </div>
                                     </div>
-                                    {form.acceptedToken === opt.address && isConn && <Check className="w-3.5 h-3.5 text-foreground shrink-0" />}
-                                    {!isConn && <span className="text-[9px] text-muted-foreground shrink-0">Switch wallet</span>}
+                                    {form.acceptedToken === opt.address &&
+                                      isConn && (
+                                        <Check className="w-3.5 h-3.5 text-foreground shrink-0" />
+                                      )}
+                                    {!isConn && (
+                                      <span className="text-[9px] text-muted-foreground shrink-0">
+                                        Switch wallet
+                                      </span>
+                                    )}
                                   </DropdownMenuItem>
                                 );
                               })}
@@ -4924,32 +6402,72 @@ function EditPlanDialog({
                           {TOKEN_OPTIONS.some((o) => o.tag === "mainnet") && (
                             <>
                               <DropdownMenuSeparator />
-                              <div className="px-2 pt-2 pb-1"><p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Mainnets</p></div>
-                              {TOKEN_OPTIONS.filter((o) => o.tag === "mainnet").map((opt) => {
+                              <div className="px-2 pt-2 pb-1">
+                                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                                  Mainnets
+                                </p>
+                              </div>
+                              {TOKEN_OPTIONS.filter(
+                                (o) => o.tag === "mainnet",
+                              ).map((opt) => {
                                 const isConn = opt.chainId === chainId;
                                 return (
-                                  <DropdownMenuItem key={opt.chainId} disabled={isOnChainLocked || !isConn} onClick={() => isConn && setForm((f) => ({ ...f, acceptedToken: opt.address }))} className={`flex items-center justify-between gap-3 py-2.5 ${!isConn ? "opacity-40 cursor-not-allowed" : ""}`}>
+                                  <DropdownMenuItem
+                                    key={opt.chainId}
+                                    disabled={isOnChainLocked || !isConn}
+                                    onClick={() =>
+                                      isConn &&
+                                      setForm((f) => ({
+                                        ...f,
+                                        acceptedToken: opt.address,
+                                      }))
+                                    }
+                                    className={`flex items-center justify-between gap-3 py-2.5 ${!isConn ? "opacity-40 cursor-not-allowed" : ""}`}
+                                  >
                                     <div className="flex items-center gap-2.5">
-                                      <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 border ${isConn ? "bg-foreground text-background border-foreground" : "bg-secondary text-muted-foreground border-border"}`}>
-                                        <span className="text-[10px] font-bold">{chainInitial(opt)}</span>
+                                      <div
+                                        className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 border ${isConn ? "bg-foreground text-background border-foreground" : "bg-secondary text-muted-foreground border-border"}`}
+                                      >
+                                        <span className="text-[10px] font-bold">
+                                          {chainInitial(opt)}
+                                        </span>
                                       </div>
                                       <div>
                                         <div className="flex items-center gap-1.5">
-                                          <p className="text-sm font-medium">{chainName(opt)}</p>
-                                          {isConn && <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-foreground text-background">Connected</span>}
+                                          <p className="text-sm font-medium">
+                                            {chainName(opt)}
+                                          </p>
+                                          {isConn && (
+                                            <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-foreground text-background">
+                                              Connected
+                                            </span>
+                                          )}
                                         </div>
-                                        <p className="text-xs font-mono text-muted-foreground mt-0.5">{opt.symbol} · {opt.address.slice(0, 6)}…{opt.address.slice(-4)}</p>
+                                        <p className="text-xs font-mono text-muted-foreground mt-0.5">
+                                          {opt.symbol} ·{" "}
+                                          {opt.address.slice(0, 6)}…
+                                          {opt.address.slice(-4)}
+                                        </p>
                                       </div>
                                     </div>
-                                    {form.acceptedToken === opt.address && isConn && <Check className="w-3.5 h-3.5 text-foreground shrink-0" />}
-                                    {!isConn && <span className="text-[9px] text-muted-foreground shrink-0">Switch wallet</span>}
+                                    {form.acceptedToken === opt.address &&
+                                      isConn && (
+                                        <Check className="w-3.5 h-3.5 text-foreground shrink-0" />
+                                      )}
+                                    {!isConn && (
+                                      <span className="text-[9px] text-muted-foreground shrink-0">
+                                        Switch wallet
+                                      </span>
+                                    )}
                                   </DropdownMenuItem>
                                 );
                               })}
                             </>
                           )}
                           <div className="px-3 py-2 border-t border-border mt-1">
-                            <p className="text-[10px] text-muted-foreground">Switch your wallet network to enable other chains</p>
+                            <p className="text-[10px] text-muted-foreground">
+                              Switch your wallet network to enable other chains
+                            </p>
                           </div>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -4961,15 +6479,23 @@ function EditPlanDialog({
                     <>
                       <div className="grid grid-cols-2 gap-4 mt-4">
                         <div>
-                          <Label className="text-sm font-medium text-foreground mb-2 block">Monthly Price (USDC) *</Label>
+                          <Label className="text-sm font-medium text-foreground mb-2 block">
+                            Monthly Price (USDC) *
+                          </Label>
                           <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">$</span>
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">
+                              $
+                            </span>
                             <Input
                               value={form.price}
                               onChange={(e) => {
                                 const nextPrice = e.target.value;
                                 setForm((f) => {
-                                  if (!hasAnnualPrice || !nextPrice || isNaN(Number(nextPrice))) {
+                                  if (
+                                    !hasAnnualPrice ||
+                                    !nextPrice ||
+                                    isNaN(Number(nextPrice))
+                                  ) {
                                     return { ...f, price: nextPrice };
                                   }
                                   const computed = (
@@ -4977,9 +6503,17 @@ function EditPlanDialog({
                                     12 *
                                     (1 - Number(annualDiscount) / 100)
                                   ).toFixed(2);
-                                  return { ...f, price: nextPrice, annualPrice: computed };
+                                  return {
+                                    ...f,
+                                    price: nextPrice,
+                                    annualPrice: computed,
+                                  };
                                 });
-                                setErrors((p) => ({ ...p, price: "", annualPrice: "" }));
+                                setErrors((p) => ({
+                                  ...p,
+                                  price: "",
+                                  annualPrice: "",
+                                }));
                               }}
                               placeholder="29.00"
                               type="number"
@@ -4988,10 +6522,16 @@ function EditPlanDialog({
                               className="h-11 bg-background border-border pl-6"
                             />
                           </div>
-                          {errors.price && <p className="text-xs text-destructive mt-1">{errors.price}</p>}
+                          {errors.price && (
+                            <p className="text-xs text-destructive mt-1">
+                              {errors.price}
+                            </p>
+                          )}
                         </div>
                         <div>
-                          <Label className="text-sm font-medium text-foreground mb-2 block">Billing Interval</Label>
+                          <Label className="text-sm font-medium text-foreground mb-2 block">
+                            Billing Interval
+                          </Label>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <button
@@ -4999,18 +6539,35 @@ function EditPlanDialog({
                                 disabled={isOnChainLocked}
                                 className="w-full flex items-center justify-between h-11 px-3 rounded-lg bg-background border border-border text-sm text-foreground hover:bg-secondary/50 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
                               >
-                                <span className="font-medium">{BILLING_INTERVALS.find((i) => i.days === billingIntervalDays)?.label ?? `${billingIntervalDays} days`}</span>
+                                <span className="font-medium">
+                                  {BILLING_INTERVALS.find(
+                                    (i) => i.days === billingIntervalDays,
+                                  )?.label ?? `${billingIntervalDays} days`}
+                                </span>
                                 <ChevronDown className="w-4 h-4 text-muted-foreground" />
                               </button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width]">
                               {BILLING_INTERVALS.map((iv) => (
-                                <DropdownMenuItem key={iv.days} disabled={isOnChainLocked} onClick={() => setBillingIntervalDays(iv.days)} className="flex items-center justify-between">
+                                <DropdownMenuItem
+                                  key={iv.days}
+                                  disabled={isOnChainLocked}
+                                  onClick={() =>
+                                    setBillingIntervalDays(iv.days)
+                                  }
+                                  className="flex items-center justify-between"
+                                >
                                   <div>
-                                    <p className="text-sm font-medium">{iv.label}</p>
-                                    <p className="text-xs text-muted-foreground">{iv.sublabel}</p>
+                                    <p className="text-sm font-medium">
+                                      {iv.label}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {iv.sublabel}
+                                    </p>
                                   </div>
-                                  {billingIntervalDays === iv.days && <Check className="w-4 h-4 text-foreground ml-2" />}
+                                  {billingIntervalDays === iv.days && (
+                                    <Check className="w-4 h-4 text-foreground ml-2" />
+                                  )}
                                 </DropdownMenuItem>
                               ))}
                             </DropdownMenuContent>
@@ -5021,9 +6578,12 @@ function EditPlanDialog({
                       <div className="mt-4 rounded-lg border border-border bg-secondary/20 p-4">
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-sm font-medium text-foreground">Annual Pricing</p>
+                            <p className="text-sm font-medium text-foreground">
+                              Annual Pricing
+                            </p>
                             <p className="text-xs text-muted-foreground mt-0.5">
-                              Optional yearly price for checkout. This stays off-chain; only the monthly price syncs on-chain.
+                              Optional yearly price for checkout. This stays
+                              off-chain; only the monthly price syncs on-chain.
                             </p>
                           </div>
                           <button
@@ -5036,8 +6596,15 @@ function EditPlanDialog({
                               if (!next) {
                                 setForm((f) => ({ ...f, annualPrice: "" }));
                               } else if (form.price) {
-                                const computed = (Number(form.price) * 12 * 0.8).toFixed(2);
-                                setForm((f) => ({ ...f, annualPrice: computed }));
+                                const computed = (
+                                  Number(form.price) *
+                                  12 *
+                                  0.8
+                                ).toFixed(2);
+                                setForm((f) => ({
+                                  ...f,
+                                  annualPrice: computed,
+                                }));
                                 setAnnualDiscount("20");
                               }
                             }}
@@ -5049,7 +6616,9 @@ function EditPlanDialog({
                             <span
                               className={cn(
                                 "pointer-events-none block h-5 w-5 rounded-full bg-background shadow-lg transition-transform",
-                                hasAnnualPrice ? "translate-x-5" : "translate-x-0",
+                                hasAnnualPrice
+                                  ? "translate-x-5"
+                                  : "translate-x-0",
                               )}
                             />
                           </button>
@@ -5058,7 +6627,9 @@ function EditPlanDialog({
                           <div className="mt-4 space-y-3">
                             <div className="flex items-center gap-3">
                               <div className="flex-1">
-                                <Label className="text-xs text-muted-foreground mb-1.5 block">Discount off monthly × 12</Label>
+                                <Label className="text-xs text-muted-foreground mb-1.5 block">
+                                  Discount off monthly × 12
+                                </Label>
                                 <div className="flex items-center gap-2">
                                   <input
                                     type="range"
@@ -5070,9 +6641,19 @@ function EditPlanDialog({
                                       const pct = e.target.value;
                                       setAnnualDiscount(pct);
                                       if (form.price) {
-                                        const computed = (Number(form.price) * 12 * (1 - Number(pct) / 100)).toFixed(2);
-                                        setForm((f) => ({ ...f, annualPrice: computed }));
-                                        setErrors((p) => ({ ...p, annualPrice: "" }));
+                                        const computed = (
+                                          Number(form.price) *
+                                          12 *
+                                          (1 - Number(pct) / 100)
+                                        ).toFixed(2);
+                                        setForm((f) => ({
+                                          ...f,
+                                          annualPrice: computed,
+                                        }));
+                                        setErrors((p) => ({
+                                          ...p,
+                                          annualPrice: "",
+                                        }));
                                       }
                                     }}
                                     className="flex-1 h-1.5 accent-primary cursor-pointer"
@@ -5084,17 +6665,35 @@ function EditPlanDialog({
                                       max="60"
                                       value={annualDiscount}
                                       onChange={(e) => {
-                                        const pct = Math.min(60, Math.max(0, Number(e.target.value) || 0)).toString();
+                                        const pct = Math.min(
+                                          60,
+                                          Math.max(
+                                            0,
+                                            Number(e.target.value) || 0,
+                                          ),
+                                        ).toString();
                                         setAnnualDiscount(pct);
                                         if (form.price) {
-                                          const computed = (Number(form.price) * 12 * (1 - Number(pct) / 100)).toFixed(2);
-                                          setForm((f) => ({ ...f, annualPrice: computed }));
-                                          setErrors((p) => ({ ...p, annualPrice: "" }));
+                                          const computed = (
+                                            Number(form.price) *
+                                            12 *
+                                            (1 - Number(pct) / 100)
+                                          ).toFixed(2);
+                                          setForm((f) => ({
+                                            ...f,
+                                            annualPrice: computed,
+                                          }));
+                                          setErrors((p) => ({
+                                            ...p,
+                                            annualPrice: "",
+                                          }));
                                         }
                                       }}
                                       className="w-full text-sm text-foreground bg-transparent outline-none"
                                     />
-                                    <span className="text-xs text-muted-foreground">%</span>
+                                    <span className="text-xs text-muted-foreground">
+                                      %
+                                    </span>
                                   </div>
                                 </div>
                               </div>
@@ -5102,40 +6701,81 @@ function EditPlanDialog({
 
                             <div className="flex items-start gap-3">
                               <div className="flex-1">
-                                <Label className="text-xs text-muted-foreground mb-1.5 block">Annual price (USDC)</Label>
+                                <Label className="text-xs text-muted-foreground mb-1.5 block">
+                                  Annual price (USDC)
+                                </Label>
                                 <div className="relative">
-                                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">$</span>
+                                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">
+                                    $
+                                  </span>
                                   <Input
                                     value={form.annualPrice}
                                     onChange={(e) => {
                                       const val = e.target.value;
-                                      setForm((f) => ({ ...f, annualPrice: val }));
-                                      setErrors((p) => ({ ...p, annualPrice: "" }));
-                                      if (form.price && val && Number(val) > 0) {
-                                        const backPct = Math.round((1 - Number(val) / (Number(form.price) * 12)) * 100);
-                                        if (backPct >= 0 && backPct <= 60) setAnnualDiscount(String(backPct));
+                                      setForm((f) => ({
+                                        ...f,
+                                        annualPrice: val,
+                                      }));
+                                      setErrors((p) => ({
+                                        ...p,
+                                        annualPrice: "",
+                                      }));
+                                      if (
+                                        form.price &&
+                                        val &&
+                                        Number(val) > 0
+                                      ) {
+                                        const backPct = Math.round(
+                                          (1 -
+                                            Number(val) /
+                                              (Number(form.price) * 12)) *
+                                            100,
+                                        );
+                                        if (backPct >= 0 && backPct <= 60)
+                                          setAnnualDiscount(String(backPct));
                                       }
                                     }}
-                                    placeholder={form.price ? (Number(form.price) * 12 * 0.8).toFixed(2) : "278.40"}
+                                    placeholder={
+                                      form.price
+                                        ? (
+                                            Number(form.price) *
+                                            12 *
+                                            0.8
+                                          ).toFixed(2)
+                                        : "278.40"
+                                    }
                                     type="number"
                                     min="0.01"
                                     step="0.01"
                                     className="h-9 bg-background border-border pl-6 text-sm"
                                   />
                                 </div>
-                                {errors.annualPrice && <p className="text-xs text-destructive mt-1">{errors.annualPrice}</p>}
+                                {errors.annualPrice && (
+                                  <p className="text-xs text-destructive mt-1">
+                                    {errors.annualPrice}
+                                  </p>
+                                )}
                               </div>
 
-                              {form.price && form.annualPrice && Number(form.annualPrice) > 0 && (
-                                <div className="pt-6 text-right">
-                                  <p className="text-xs font-semibold text-green-500">
-                                    {Math.round((1 - Number(form.annualPrice) / (Number(form.price) * 12)) * 100)}% off
-                                  </p>
-                                  <p className="text-[10px] text-muted-foreground mt-0.5">
-                                    vs ${(Number(form.price) * 12).toFixed(2)}/yr
-                                  </p>
-                                </div>
-                              )}
+                              {form.price &&
+                                form.annualPrice &&
+                                Number(form.annualPrice) > 0 && (
+                                  <div className="pt-6 text-right">
+                                    <p className="text-xs font-semibold text-green-500">
+                                      {Math.round(
+                                        (1 -
+                                          Number(form.annualPrice) /
+                                            (Number(form.price) * 12)) *
+                                          100,
+                                      )}
+                                      % off
+                                    </p>
+                                    <p className="text-[10px] text-muted-foreground mt-0.5">
+                                      vs ${(Number(form.price) * 12).toFixed(2)}
+                                      /yr
+                                    </p>
+                                  </div>
+                                )}
                             </div>
                           </div>
                         )}
@@ -5150,11 +6790,28 @@ function EditPlanDialog({
 
         {/* Footer */}
         <div className="shrink-0 border-t border-border px-6 py-4 flex items-center justify-end gap-3 bg-background">
-          <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={loading}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setOpen(false)}
+            disabled={loading}
+          >
             Cancel
           </Button>
-          <Button form="edit-plan-form" type="submit" disabled={loading} className="min-w-[140px]">
-            {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving…</> : "Save Changes"}
+          <Button
+            form="edit-plan-form"
+            type="submit"
+            disabled={loading}
+            className="min-w-[140px]"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Saving…
+              </>
+            ) : (
+              "Save Changes"
+            )}
           </Button>
         </div>
       </SheetContent>
@@ -5213,13 +6870,17 @@ function AddCreditGrantDialog({
     setCreditsLoading(true);
     // Load all credits (published + draft) so users can always link them
     fetch(`/api/catalog/credits?environmentMode=${envMode}`)
-      .then((r) => r.ok ? r.json() : { creditTypes: [] })
-      .then((d: { creditTypes?: CatalogCreditType[] }) => setCreditTypes(d.creditTypes ?? []))
+      .then((r) => (r.ok ? r.json() : { creditTypes: [] }))
+      .then((d: { creditTypes?: CatalogCreditType[] }) =>
+        setCreditTypes(d.creditTypes ?? []),
+      )
       .catch(() => setCreditTypes([]))
       .finally(() => setCreditsLoading(false));
   }, [open, envMode]);
 
-  const availableTypes = creditTypes.filter((ct) => !existingIds.includes(ct.id));
+  const availableTypes = creditTypes.filter(
+    (ct) => !existingIds.includes(ct.id),
+  );
   const selectedCredit = creditTypes.find((ct) => ct.id === selectedId);
 
   async function handleSubmit() {
@@ -5252,7 +6913,16 @@ function AddCreditGrantDialog({
   }
 
   return (
-    <Sheet open={open} onOpenChange={(v) => { if (!v) { setSelectedId(""); setAmount("50"); } setOpen(v); }}>
+    <Sheet
+      open={open}
+      onOpenChange={(v) => {
+        if (!v) {
+          setSelectedId("");
+          setAmount("50");
+        }
+        setOpen(v);
+      }}
+    >
       <SheetTrigger asChild>
         <Button variant="outline" size="sm" className="gap-1.5 font-medium">
           <Plus className="w-3.5 h-3.5" />
@@ -5261,7 +6931,9 @@ function AddCreditGrantDialog({
       </SheetTrigger>
       <SheetContent className="w-full sm:max-w-md flex flex-col p-0 gap-0">
         <SheetHeader className="px-6 py-5 border-b border-border shrink-0">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Credit Grant</p>
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            Credit Grant
+          </p>
           <SheetTitle className="text-lg font-semibold mt-0.5">
             Create Credit Grant for {plan.name}
           </SheetTitle>
@@ -5292,9 +6964,12 @@ function AddCreditGrantDialog({
                 <SelectContent>
                   {availableTypes.length === 0 ? (
                     <div className="px-3 py-5 text-center">
-                      <p className="text-sm text-muted-foreground">No credit types available</p>
+                      <p className="text-sm text-muted-foreground">
+                        No credit types available
+                      </p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Go to <strong>Catalog → Credits</strong> to create credit types first
+                        Go to <strong>Catalog → Credits</strong> to create
+                        credit types first
                       </p>
                     </div>
                   ) : (
@@ -5306,7 +6981,9 @@ function AddCreditGrantDialog({
                           </div>
                           <div>
                             <p className="text-sm font-medium">{ct.name}</p>
-                            <p className="text-xs text-muted-foreground font-mono">{ct.code}</p>
+                            <p className="text-xs text-muted-foreground font-mono">
+                              {ct.code}
+                            </p>
                           </div>
                         </div>
                       </SelectItem>
@@ -5337,7 +7014,9 @@ function AddCreditGrantDialog({
               </div>
               {selectedCredit && (
                 <p className="text-xs text-muted-foreground">
-                  {amount || "0"} {selectedCredit.unitName || selectedCredit.name} will be granted per reset period
+                  {amount || "0"}{" "}
+                  {selectedCredit.unitName || selectedCredit.name} will be
+                  granted per reset period
                 </p>
               )}
             </div>
@@ -5374,7 +7053,10 @@ function AddCreditGrantDialog({
                 className="mt-0.5 rounded border-border"
               />
               <div>
-                <label htmlFor="autoTopUp" className="text-sm font-medium text-foreground cursor-pointer">
+                <label
+                  htmlFor="autoTopUp"
+                  className="text-sm font-medium text-foreground cursor-pointer"
+                >
                   Enable Auto Top-up
                 </label>
                 <p className="text-xs text-muted-foreground mt-0.5">
@@ -5386,12 +7068,21 @@ function AddCreditGrantDialog({
         </div>
 
         <div className="px-6 py-4 border-t border-border bg-card shrink-0 flex items-center justify-end gap-2">
-          <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+          <Button variant="outline" onClick={() => setOpen(false)}>
+            Cancel
+          </Button>
           <Button
             disabled={!selectedId || !amount || loading}
             onClick={handleSubmit}
           >
-            {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Creating…</> : "Create plan grant"}
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Creating…
+              </>
+            ) : (
+              "Create plan grant"
+            )}
           </Button>
         </div>
       </SheetContent>
@@ -5422,7 +7113,9 @@ function PlanDetailView({
   const [creditGrants, setCreditGrants] = useState<any[]>([]);
   const [cgLoading, setCgLoading] = useState(false);
   const [cgRefresh, setCgRefresh] = useState(0);
-  const [subscribedCompanies, setSubscribedCompanies] = useState<PlanCompany[]>([]);
+  const [subscribedCompanies, setSubscribedCompanies] = useState<PlanCompany[]>(
+    [],
+  );
   const [companiesLoading, setCompaniesLoading] = useState(false);
 
   const loadEntitlements = useCallback(async () => {
@@ -5597,16 +7290,28 @@ function PlanDetailView({
               {isFree ? "Free" : planPriceLabel(plan)}
             </Badge>
             {/* Annual price badge */}
-            {!isFree && plan.annualPrice && parseFloat(plan.annualPrice) > 0 && (
-              <Badge variant="outline" className="text-xs font-semibold text-green-600 border-green-500/30 bg-green-500/5">
-                ${parseFloat(plan.annualPrice).toFixed(2)}/yr
-                {parseFloat(plan.price) > 0 && (
-                  <span className="ml-1 opacity-70">
-                    · {Math.round((1 - parseFloat(plan.annualPrice) / (parseFloat(plan.price) * 12)) * 100)}% off
-                  </span>
-                )}
-              </Badge>
-            )}
+            {!isFree &&
+              plan.annualPrice &&
+              parseFloat(plan.annualPrice) > 0 && (
+                <Badge
+                  variant="outline"
+                  className="text-xs font-semibold text-green-600 border-green-500/30 bg-green-500/5"
+                >
+                  ${parseFloat(plan.annualPrice).toFixed(2)}/yr
+                  {parseFloat(plan.price) > 0 && (
+                    <span className="ml-1 opacity-70">
+                      ·{" "}
+                      {Math.round(
+                        (1 -
+                          parseFloat(plan.annualPrice) /
+                            (parseFloat(plan.price) * 12)) *
+                          100,
+                      )}
+                      % off
+                    </span>
+                  )}
+                </Badge>
+              )}
             {/* Chain sync badge */}
             {plan.chainSyncStatus && (
               <ChainSyncBadge status={plan.chainSyncStatus} />
@@ -5625,9 +7330,15 @@ function PlanDetailView({
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={copyId}>
                     {copiedId ? (
-                      <><Check className="w-3.5 h-3.5 mr-2 text-green-500" />Copied!</>
+                      <>
+                        <Check className="w-3.5 h-3.5 mr-2 text-green-500" />
+                        Copied!
+                      </>
                     ) : (
-                      <><Copy className="w-3.5 h-3.5 mr-2" />Copy Plan ID</>
+                      <>
+                        <Copy className="w-3.5 h-3.5 mr-2" />
+                        Copy Plan ID
+                      </>
                     )}
                   </DropdownMenuItem>
                   {plan.status === "DRAFT" && (
@@ -5636,7 +7347,10 @@ function PlanDetailView({
                         await fetch("/api/catalog/plans", {
                           method: "PUT",
                           headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ id: plan.id, status: "PUBLISHED" }),
+                          body: JSON.stringify({
+                            id: plan.id,
+                            status: "PUBLISHED",
+                          }),
                         });
                         onUpdated();
                         toast.success("Plan published");
@@ -5651,7 +7365,10 @@ function PlanDetailView({
                         await fetch("/api/catalog/plans", {
                           method: "PUT",
                           headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ id: plan.id, status: "ARCHIVED" }),
+                          body: JSON.stringify({
+                            id: plan.id,
+                            status: "ARCHIVED",
+                          }),
                         });
                         onUpdated();
                         toast.success("Plan archived");
@@ -5673,7 +7390,9 @@ function PlanDetailView({
                           headers: { "Content-Type": "application/json" },
                           body: JSON.stringify({ id: plan.id }),
                         });
-                        const data = await res.json().catch(() => ({}) as { error?: string });
+                        const data = await res
+                          .json()
+                          .catch(() => ({}) as { error?: string });
                         if (!res.ok) {
                           toast.error(data.error || "Failed to delete plan");
                           return;
@@ -5696,7 +7415,9 @@ function PlanDetailView({
 
       {/* Description line below header */}
       {plan.description && (
-        <p className="text-sm text-muted-foreground -mt-2">{plan.description}</p>
+        <p className="text-sm text-muted-foreground -mt-2">
+          {plan.description}
+        </p>
       )}
 
       {/* Detail tabs */}
@@ -5748,7 +7469,12 @@ function PlanDetailView({
                     viewBox="0 0 24 24"
                     stroke="currentColor"
                   >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                    />
                   </svg>
                 </div>
               </div>
@@ -5786,17 +7512,19 @@ function PlanDetailView({
                             <td className="py-3 px-4">
                               <div className="flex items-center gap-3">
                                 <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center">
-                                  {ent.type === "BOOLEAN" ? (
-                                    <ToggleLeft className="w-4 h-4 text-muted-foreground" />
-                                  ) : ent.type === "NUMERIC" ? (
-                                    <Hash className="w-4 h-4 text-muted-foreground" />
-                                  ) : (
-                                    <Package className="w-4 h-4 text-muted-foreground" />
-                                  )}
+                                  <FeatureAvatar
+                                    featureType={getEntitlementAvatarType(ent)}
+                                    icon={ent.icon ?? null}
+                                    className="w-4 h-4 rounded"
+                                  />
                                 </div>
                                 <div>
-                                  <p className="text-sm font-medium">{ent.featureName}</p>
-                                  <code className="text-xs text-muted-foreground font-mono">{ent.featureKey}</code>
+                                  <p className="text-sm font-medium">
+                                    {ent.featureName}
+                                  </p>
+                                  <code className="text-xs text-muted-foreground font-mono">
+                                    {ent.featureKey}
+                                  </code>
                                 </div>
                               </div>
                             </td>
@@ -5809,24 +7537,40 @@ function PlanDetailView({
                                       ? `${ent.valueUnit} per month`
                                       : "per month"}
                                   </p>
-                                  <p className="text-xs text-muted-foreground">Numerical limit</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    Numerical limit
+                                  </p>
                                 </div>
                               ) : ent.type === "UNLIMITED" ? (
                                 <div className="flex items-center gap-1.5">
                                   <div className="w-2 h-2 rounded-full bg-green-500" />
-                                  <span className="text-sm text-foreground">Unlimited</span>
+                                  <span className="text-sm text-foreground">
+                                    Unlimited
+                                  </span>
                                 </div>
                               ) : (
                                 <button
                                   type="button"
-                                  onClick={() => !toggling && toggleEntitlement(ent.featureKey, !ent.enabled)}
+                                  onClick={() =>
+                                    !toggling &&
+                                    toggleEntitlement(
+                                      ent.featureKey,
+                                      !ent.enabled,
+                                    )
+                                  }
                                   disabled={toggling === ent.featureKey}
                                   className="flex items-center gap-2 group"
                                 >
-                                  <div className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border-2 border-transparent transition-colors ${ent.enabled ? "bg-green-500" : "bg-input"} ${toggling === ent.featureKey ? "opacity-60" : ""}`}>
-                                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${ent.enabled ? "translate-x-4" : "translate-x-0"}`} />
+                                  <div
+                                    className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border-2 border-transparent transition-colors ${ent.enabled ? "bg-green-500" : "bg-input"} ${toggling === ent.featureKey ? "opacity-60" : ""}`}
+                                  >
+                                    <span
+                                      className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${ent.enabled ? "translate-x-4" : "translate-x-0"}`}
+                                    />
                                   </div>
-                                  <span className={`text-sm font-medium ${ent.enabled ? "text-green-600" : "text-muted-foreground"}`}>
+                                  <span
+                                    className={`text-sm font-medium ${ent.enabled ? "text-green-600" : "text-muted-foreground"}`}
+                                  >
                                     {ent.enabled ? "On" : "Off"}
                                   </span>
                                 </button>
@@ -5844,29 +7588,45 @@ function PlanDetailView({
                             <td className="py-3 px-4 text-right">
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                  >
                                     <MoreHorizontal className="w-4 h-4" />
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
                                   <DropdownMenuItem
-                                    onClick={() => openEntitlementInFlags(ent.featureKey)}
+                                    onClick={() =>
+                                      openEntitlementInFlags(ent.featureKey)
+                                    }
                                   >
                                     Edit in Flags
                                   </DropdownMenuItem>
                                   <DropdownMenuItem
-                                    onClick={() => toggleEntitlement(ent.featureKey, !ent.enabled)}
+                                    onClick={() =>
+                                      toggleEntitlement(
+                                        ent.featureKey,
+                                        !ent.enabled,
+                                      )
+                                    }
                                     disabled={toggling === ent.featureKey}
                                   >
                                     {ent.enabled ? "Disable" : "Enable"}
                                   </DropdownMenuItem>
                                   <DropdownMenuItem
-                                    onClick={() => deleteEntitlement(ent.featureKey)}
+                                    onClick={() =>
+                                      deleteEntitlement(ent.featureKey)
+                                    }
                                     disabled={deletingKey === ent.featureKey}
                                     className="text-destructive focus:text-destructive"
                                   >
                                     {deletingKey === ent.featureKey ? (
-                                      <><Loader2 className="mr-2 w-4 h-4 animate-spin" />Removing...</>
+                                      <>
+                                        <Loader2 className="mr-2 w-4 h-4 animate-spin" />
+                                        Removing...
+                                      </>
                                     ) : (
                                       "Remove"
                                     )}
@@ -5883,7 +7643,9 @@ function PlanDetailView({
                   entSearch === "" && (
                     <div className="border border-dashed border-border rounded-xl py-10 flex flex-col items-center justify-center gap-2">
                       <Hash className="w-8 h-8 text-muted-foreground/40" />
-                      <p className="text-sm text-muted-foreground">No entitlements yet</p>
+                      <p className="text-sm text-muted-foreground">
+                        No entitlements yet
+                      </p>
                     </div>
                   )
                 )}
@@ -5942,10 +7704,14 @@ function PlanDetailView({
                   </thead>
                   <tbody>
                     {creditGrants.map((grant) => (
-                      <tr key={grant.creditTypeId} className="border-b border-border last:border-0 hover:bg-secondary/10">
+                      <tr
+                        key={grant.creditTypeId}
+                        className="border-b border-border last:border-0 hover:bg-secondary/10"
+                      >
                         <td className="py-3 px-4 font-medium flex items-center gap-2">
                           <Coins className="w-3.5 h-3.5 text-amber-500" />
-                          {grant.creditTypeId} {/* Ideally show name here, but needs a join or fetch */}
+                          {grant.creditTypeId}{" "}
+                          {/* Ideally show name here, but needs a join or fetch */}
                         </td>
                         <td className="py-3 px-4 text-foreground">
                           {grant.amount} units
@@ -5955,7 +7721,9 @@ function PlanDetailView({
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                            onClick={() => deleteCreditGrant(grant.creditTypeId)}
+                            onClick={() =>
+                              deleteCreditGrant(grant.creditTypeId)
+                            }
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
@@ -5970,9 +7738,12 @@ function PlanDetailView({
                 <div className="flex items-center gap-3">
                   <span className="text-2xl">🪙</span>
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">No Credit Grants</p>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      No Credit Grants
+                    </p>
                     <p className="text-xs text-muted-foreground/70">
-                      Add credit grant to this plan to allocate credits to subscribers.
+                      Add credit grant to this plan to allocate credits to
+                      subscribers.
                     </p>
                   </div>
                 </div>
@@ -5997,7 +7768,12 @@ function PlanDetailView({
               onClick={loadCompanies}
               disabled={companiesLoading}
             >
-              <RefreshCw className={cn("w-4 h-4 mr-2", companiesLoading && "animate-spin")} />
+              <RefreshCw
+                className={cn(
+                  "w-4 h-4 mr-2",
+                  companiesLoading && "animate-spin",
+                )}
+              />
               Refresh
             </Button>
           </div>
@@ -6015,10 +7791,18 @@ function PlanDetailView({
                 <TableBody>
                   {Array.from({ length: 3 }).map((_, index) => (
                     <TableRow key={index}>
-                      <TableCell><div className="h-4 w-32 rounded bg-muted animate-pulse" /></TableCell>
-                      <TableCell><div className="h-4 w-40 rounded bg-muted animate-pulse" /></TableCell>
-                      <TableCell><div className="h-4 w-24 rounded bg-muted animate-pulse" /></TableCell>
-                      <TableCell><div className="h-4 w-24 rounded bg-muted animate-pulse" /></TableCell>
+                      <TableCell>
+                        <div className="h-4 w-32 rounded bg-muted animate-pulse" />
+                      </TableCell>
+                      <TableCell>
+                        <div className="h-4 w-40 rounded bg-muted animate-pulse" />
+                      </TableCell>
+                      <TableCell>
+                        <div className="h-4 w-24 rounded bg-muted animate-pulse" />
+                      </TableCell>
+                      <TableCell>
+                        <div className="h-4 w-24 rounded bg-muted animate-pulse" />
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -6040,9 +7824,13 @@ function PlanDetailView({
                     <TableRow key={company.id}>
                       <TableCell>
                         <div className="space-y-1">
-                          <p className="font-medium text-foreground">{company.name}</p>
+                          <p className="font-medium text-foreground">
+                            {company.name}
+                          </p>
                           {company.email ? (
-                            <p className="text-xs text-muted-foreground">{company.email}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {company.email}
+                            </p>
                           ) : null}
                         </div>
                       </TableCell>
@@ -6054,8 +7842,12 @@ function PlanDetailView({
                               {company.walletAddress.slice(-6)}
                             </p>
                           ) : null}
-                          {company.externalId ? <p>ID: {company.externalId}</p> : null}
-                          {!company.walletAddress && !company.externalId && !company.email ? (
+                          {company.externalId ? (
+                            <p>ID: {company.externalId}</p>
+                          ) : null}
+                          {!company.walletAddress &&
+                          !company.externalId &&
+                          !company.email ? (
                             <p>Internal record</p>
                           ) : null}
                         </div>
@@ -6076,9 +7868,15 @@ function PlanDetailView({
               <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center mb-2">
                 <Package className="w-6 h-6 text-muted-foreground/50" />
               </div>
-              <p className="text-sm font-medium text-foreground">No companies on this plan</p>
+              <p className="text-sm font-medium text-foreground">
+                No companies on this plan
+              </p>
               <p className="text-xs text-muted-foreground max-w-xs text-center">
-                Companies with <code className="bg-secondary px-1 rounded">activePlanId = {plan.id}</code> will appear here.
+                Companies with{" "}
+                <code className="bg-secondary px-1 rounded">
+                  activePlanId = {plan.id}
+                </code>{" "}
+                will appear here.
               </p>
             </div>
           )}
@@ -6092,7 +7890,9 @@ function PlanDetailView({
             <h3 className="text-base font-semibold">Billing Details</h3>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
               <div>
-                <p className="text-xs text-muted-foreground mb-1.5">Monthly price</p>
+                <p className="text-xs text-muted-foreground mb-1.5">
+                  Monthly price
+                </p>
                 <p className="text-lg font-semibold">
                   {isFree ? (
                     <span className="text-green-500">Free</span>
@@ -6100,18 +7900,30 @@ function PlanDetailView({
                     `$${parseFloat(plan.price).toFixed(2)}`
                   )}
                 </p>
-                {!isFree && <p className="text-xs text-muted-foreground">USDC / mo</p>}
+                {!isFree && (
+                  <p className="text-xs text-muted-foreground">USDC / mo</p>
+                )}
               </div>
               <div>
-                <p className="text-xs text-muted-foreground mb-1.5">Annual price</p>
+                <p className="text-xs text-muted-foreground mb-1.5">
+                  Annual price
+                </p>
                 {plan.annualPrice && parseFloat(plan.annualPrice) > 0 ? (
                   <>
-                    <p className="text-lg font-semibold">${parseFloat(plan.annualPrice).toFixed(2)}</p>
+                    <p className="text-lg font-semibold">
+                      ${parseFloat(plan.annualPrice).toFixed(2)}
+                    </p>
                     <p className="text-xs text-muted-foreground">
                       USDC / yr
                       {parseFloat(plan.price) > 0 && (
                         <span className="ml-1.5 text-green-500 font-medium">
-                          {Math.round((1 - parseFloat(plan.annualPrice) / (parseFloat(plan.price) * 12)) * 100)}% off
+                          {Math.round(
+                            (1 -
+                              parseFloat(plan.annualPrice) /
+                                (parseFloat(plan.price) * 12)) *
+                              100,
+                          )}
+                          % off
                         </span>
                       )}
                     </p>
@@ -6121,7 +7933,9 @@ function PlanDetailView({
                 )}
               </div>
               <div>
-                <p className="text-xs text-muted-foreground mb-1.5">Billing interval</p>
+                <p className="text-xs text-muted-foreground mb-1.5">
+                  Billing interval
+                </p>
                 <p className="text-lg font-semibold">
                   {plan.billingInterval <= 30
                     ? "Monthly"
@@ -6129,19 +7943,24 @@ function PlanDetailView({
                       ? "Quarterly"
                       : "Annual"}
                 </p>
-                <p className="text-xs text-muted-foreground">Every {plan.billingInterval} days</p>
+                <p className="text-xs text-muted-foreground">
+                  Every {plan.billingInterval} days
+                </p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground mb-1.5">Token</p>
                 <p className="text-sm font-medium">USDC</p>
                 <p className="text-xs font-mono text-muted-foreground">
-                  {plan.acceptedToken.slice(0, 6)}…{plan.acceptedToken.slice(-4)}
+                  {plan.acceptedToken.slice(0, 6)}…
+                  {plan.acceptedToken.slice(-4)}
                 </p>
               </div>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 pt-2 border-t border-border">
               <div>
-                <p className="text-xs text-muted-foreground mb-1.5">Environment</p>
+                <p className="text-xs text-muted-foreground mb-1.5">
+                  Environment
+                </p>
                 <EnvBadge mode={plan.environmentMode} />
               </div>
             </div>
@@ -6151,7 +7970,9 @@ function PlanDetailView({
           <div className="bg-card border border-border rounded-xl p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-base font-semibold">On-Chain Status</h3>
-              {plan.chainSyncStatus && <ChainSyncBadge status={plan.chainSyncStatus} />}
+              {plan.chainSyncStatus && (
+                <ChainSyncBadge status={plan.chainSyncStatus} />
+              )}
             </div>
 
             {plan.chainSyncStatus === "NOT_APPLICABLE" ? (
@@ -6169,8 +7990,12 @@ function PlanDetailView({
                 </div>
                 {plan.onChainPlanId && (
                   <div className="flex items-center gap-2 p-3 rounded-lg bg-secondary/40 border border-border">
-                    <p className="text-xs text-muted-foreground">On-chain Plan ID:</p>
-                    <code className="text-xs font-mono text-foreground">{plan.onChainPlanId}</code>
+                    <p className="text-xs text-muted-foreground">
+                      On-chain Plan ID:
+                    </p>
+                    <code className="text-xs font-mono text-foreground">
+                      {plan.onChainPlanId}
+                    </code>
                   </div>
                 )}
               </div>
@@ -6184,7 +8009,9 @@ function PlanDetailView({
                   size="sm"
                   variant="outline"
                   className="gap-1.5 border-yellow-500/30 text-yellow-600 hover:bg-yellow-500/10 dark:text-yellow-400"
-                  onClick={() => toast.info("Use the sync button in the plans list")}
+                  onClick={() =>
+                    toast.info("Use the sync button in the plans list")
+                  }
                 >
                   Sync on-chain
                 </Button>
@@ -6195,7 +8022,9 @@ function PlanDetailView({
                 <div>
                   <p className="font-medium">Sync failed</p>
                   {plan.chainSyncError && (
-                    <p className="text-xs text-muted-foreground mt-0.5">{plan.chainSyncError}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {plan.chainSyncError}
+                    </p>
                   )}
                 </div>
               </div>
@@ -6219,7 +8048,9 @@ function AddOnDetailView({
   onUpdated: () => void;
 }) {
   const { address } = useAccount();
-  const [detailTab, setDetailTab] = useState<"companies" | "billing">("companies");
+  const [detailTab, setDetailTab] = useState<"companies" | "billing">(
+    "companies",
+  );
   const [copiedId, setCopiedId] = useState(false);
   const [copiedCheckout, setCopiedCheckout] = useState(false);
   const [grantRows, setGrantRows] = useState<
@@ -6311,7 +8142,9 @@ function AddOnDetailView({
       return;
     }
     if (!address) {
-      toast.error("Connect the provider wallet you want to receive payments with before creating a checkout link.");
+      toast.error(
+        "Connect the provider wallet you want to receive payments with before creating a checkout link.",
+      );
       return;
     }
     setCreatingCheckoutLink(true);
@@ -6342,7 +8175,9 @@ function AddOnDetailView({
       onUpdated();
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Unable to create checkout link",
+        error instanceof Error
+          ? error.message
+          : "Unable to create checkout link",
       );
     } finally {
       setCreatingCheckoutLink(false);
@@ -6371,7 +8206,9 @@ function AddOnDetailView({
           ADD-ONS
         </button>
         <ChevronRight className="w-3.5 h-3.5" />
-        <span className="text-foreground font-medium uppercase">{addon.name}</span>
+        <span className="text-foreground font-medium uppercase">
+          {addon.name}
+        </span>
       </div>
 
       {/* Add-on header card */}
@@ -6383,7 +8220,9 @@ function AddOnDetailView({
               <Package className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-foreground leading-tight">{addon.name}</h2>
+              <h2 className="text-2xl font-bold text-foreground leading-tight">
+                {addon.name}
+              </h2>
               <p className="text-xs text-muted-foreground mt-0.5">
                 Last modified {timeAgo(addon.updatedAt)}
               </p>
@@ -6418,38 +8257,52 @@ function AddOnDetailView({
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={copyId}>
                     {copiedId ? (
-                      <><Check className="w-3.5 h-3.5 mr-2 text-green-500" />Copied!</>
+                      <>
+                        <Check className="w-3.5 h-3.5 mr-2 text-green-500" />
+                        Copied!
+                      </>
                     ) : (
-                      <><Copy className="w-3.5 h-3.5 mr-2" />Copy Add-On ID</>
+                      <>
+                        <Copy className="w-3.5 h-3.5 mr-2" />
+                        Copy Add-On ID
+                      </>
                     )}
                   </DropdownMenuItem>
-                  {addon.billingType === "ONE_TIME" && addon.saleMode !== "UPSELL" && (
-                    <DropdownMenuItem onClick={() => void ensureCheckoutLink()}>
-                      {creatingCheckoutLink ? (
-                        <>
-                          <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />
-                          Creating checkout link…
-                        </>
-                      ) : copiedCheckout ? (
-                        <>
-                          <Check className="w-3.5 h-3.5 mr-2 text-green-500" />
-                          Checkout link copied
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="w-3.5 h-3.5 mr-2" />
-                          {addon.purchaseUrl ? "Copy checkout link" : "Create checkout link"}
-                        </>
-                      )}
-                    </DropdownMenuItem>
-                  )}
+                  {addon.billingType === "ONE_TIME" &&
+                    addon.saleMode !== "UPSELL" && (
+                      <DropdownMenuItem
+                        onClick={() => void ensureCheckoutLink()}
+                      >
+                        {creatingCheckoutLink ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />
+                            Creating checkout link…
+                          </>
+                        ) : copiedCheckout ? (
+                          <>
+                            <Check className="w-3.5 h-3.5 mr-2 text-green-500" />
+                            Checkout link copied
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3.5 h-3.5 mr-2" />
+                            {addon.purchaseUrl
+                              ? "Copy checkout link"
+                              : "Create checkout link"}
+                          </>
+                        )}
+                      </DropdownMenuItem>
+                    )}
                   {addon.status === "DRAFT" && (
                     <DropdownMenuItem
                       onClick={async () => {
                         await fetch("/api/catalog/add-ons", {
                           method: "PUT",
                           headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ id: addon.id, status: "PUBLISHED" }),
+                          body: JSON.stringify({
+                            id: addon.id,
+                            status: "PUBLISHED",
+                          }),
                         });
                         onUpdated();
                         toast.success("Add-on published");
@@ -6464,7 +8317,10 @@ function AddOnDetailView({
                         await fetch("/api/catalog/add-ons", {
                           method: "PUT",
                           headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ id: addon.id, status: "ARCHIVED" }),
+                          body: JSON.stringify({
+                            id: addon.id,
+                            status: "ARCHIVED",
+                          }),
                         });
                         onUpdated();
                         toast.success("Add-on archived");
@@ -6483,7 +8339,9 @@ function AddOnDetailView({
 
       {/* Description */}
       {addon.description && (
-        <p className="text-sm text-muted-foreground -mt-2">{addon.description}</p>
+        <p className="text-sm text-muted-foreground -mt-2">
+          {addon.description}
+        </p>
       )}
 
       {/* Detail tabs */}
@@ -6509,21 +8367,32 @@ function AddOnDetailView({
       {detailTab === "companies" && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-base font-semibold">Companies with this Add-On</h3>
+            <h3 className="text-base font-semibold">
+              Companies with this Add-On
+            </h3>
           </div>
           <div className="bg-card border border-border rounded-xl overflow-hidden">
             <table className="w-full text-sm">
               <thead className="bg-secondary/50 border-b border-border">
                 <tr>
-                  <th className="text-left py-2.5 px-4 font-semibold text-muted-foreground uppercase text-[10px] tracking-wider">Company</th>
-                  <th className="text-left py-2.5 px-4 font-semibold text-muted-foreground uppercase text-[10px] tracking-wider">Subscribed Since</th>
-                  <th className="text-left py-2.5 px-4 font-semibold text-muted-foreground uppercase text-[10px] tracking-wider">Status</th>
+                  <th className="text-left py-2.5 px-4 font-semibold text-muted-foreground uppercase text-[10px] tracking-wider">
+                    Company
+                  </th>
+                  <th className="text-left py-2.5 px-4 font-semibold text-muted-foreground uppercase text-[10px] tracking-wider">
+                    Subscribed Since
+                  </th>
+                  <th className="text-left py-2.5 px-4 font-semibold text-muted-foreground uppercase text-[10px] tracking-wider">
+                    Status
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {grantsLoading ? (
                   <tr>
-                    <td colSpan={3} className="py-12 text-center text-sm text-muted-foreground">
+                    <td
+                      colSpan={3}
+                      className="py-12 text-center text-sm text-muted-foreground"
+                    >
                       Loading purchases…
                     </td>
                   </tr>
@@ -6534,9 +8403,12 @@ function AddOnDetailView({
                         <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center mb-2">
                           <Package className="w-6 h-6 text-muted-foreground/50" />
                         </div>
-                        <p className="text-sm font-medium text-foreground">No companies on this add-on yet</p>
+                        <p className="text-sm font-medium text-foreground">
+                          No companies on this add-on yet
+                        </p>
                         <p className="text-xs text-muted-foreground max-w-xs text-center">
-                          Companies that purchase this add-on or receive it as an upsell will appear here.
+                          Companies that purchase this add-on or receive it as
+                          an upsell will appear here.
                         </p>
                       </div>
                     </td>
@@ -6545,9 +8417,13 @@ function AddOnDetailView({
                   grantRows.map((grant) => (
                     <tr key={grant.id} className="border-t border-border/40">
                       <td className="py-3 px-4">
-                        <div className="font-medium text-foreground">{grant.company.name}</div>
+                        <div className="font-medium text-foreground">
+                          {grant.company.name}
+                        </div>
                         <div className="text-xs text-muted-foreground">
-                          {grant.company.email || grant.company.walletAddress || grant.source}
+                          {grant.company.email ||
+                            grant.company.walletAddress ||
+                            grant.source}
                         </div>
                       </td>
                       <td className="py-3 px-4 text-xs text-muted-foreground">
@@ -6555,7 +8431,13 @@ function AddOnDetailView({
                       </td>
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-2">
-                          <Badge variant={grant.status === "ACTIVE" ? "secondary" : "outline"}>
+                          <Badge
+                            variant={
+                              grant.status === "ACTIVE"
+                                ? "secondary"
+                                : "outline"
+                            }
+                          >
                             {grant.status.toLowerCase()}
                           </Badge>
                           {grant.cancelAtPeriodEnd && (
@@ -6581,11 +8463,15 @@ function AddOnDetailView({
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
               <div>
                 <p className="text-xs text-muted-foreground mb-1.5">Price</p>
-                <p className="text-lg font-semibold">${parseFloat(addon.price).toFixed(2)}</p>
+                <p className="text-lg font-semibold">
+                  ${parseFloat(addon.price).toFixed(2)}
+                </p>
                 <p className="text-xs text-muted-foreground">USDC</p>
               </div>
               <div>
-                <p className="text-xs text-muted-foreground mb-1.5">Billing Type</p>
+                <p className="text-xs text-muted-foreground mb-1.5">
+                  Billing Type
+                </p>
                 <p className="text-sm font-semibold">
                   {addon.billingType === "ONE_TIME" ? "One-time" : "Recurring"}
                 </p>
@@ -6611,45 +8497,54 @@ function AddOnDetailView({
                 <p className="text-xs text-muted-foreground mb-1.5">Token</p>
                 <p className="text-sm font-medium">USDC</p>
                 <p className="text-xs font-mono text-muted-foreground">
-                  {addon.acceptedToken.slice(0, 6)}…{addon.acceptedToken.slice(-4)}
+                  {addon.acceptedToken.slice(0, 6)}…
+                  {addon.acceptedToken.slice(-4)}
                 </p>
               </div>
             </div>
-            {addon.billingType === "ONE_TIME" && addon.saleMode !== "UPSELL" && (
-              <div className="rounded-xl border border-border bg-secondary/20 p-4">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="text-sm font-medium text-foreground">Hosted checkout</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Create or copy a public {getChainLabel(DEFAULT_CHAIN_ID)} pay
-                      link for this add-on.
-                    </p>
+            {addon.billingType === "ONE_TIME" &&
+              addon.saleMode !== "UPSELL" && (
+                <div className="rounded-xl border border-border bg-secondary/20 p-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-foreground">
+                        Hosted checkout
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Create or copy a public{" "}
+                        {getChainLabel(DEFAULT_CHAIN_ID)} pay link for this
+                        add-on.
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => void ensureCheckoutLink()}
+                      disabled={creatingCheckoutLink}
+                    >
+                      {creatingCheckoutLink ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />
+                          Preparing…
+                        </>
+                      ) : addon.purchaseUrl ? (
+                        copiedCheckout ? (
+                          "Copied"
+                        ) : (
+                          "Copy checkout link"
+                        )
+                      ) : (
+                        "Create checkout link"
+                      )}
+                    </Button>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => void ensureCheckoutLink()}
-                    disabled={creatingCheckoutLink}
-                  >
-                    {creatingCheckoutLink ? (
-                      <>
-                        <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />
-                        Preparing…
-                      </>
-                    ) : addon.purchaseUrl ? (
-                      copiedCheckout ? "Copied" : "Copy checkout link"
-                    ) : (
-                      "Create checkout link"
-                    )}
-                  </Button>
+                  {addon.purchaseUrl && (
+                    <p className="mt-3 break-all rounded-lg border border-border bg-background px-3 py-2 font-mono text-xs text-muted-foreground">
+                      {addon.purchaseUrl}
+                    </p>
+                  )}
                 </div>
-                {addon.purchaseUrl && (
-                  <p className="mt-3 break-all rounded-lg border border-border bg-background px-3 py-2 font-mono text-xs text-muted-foreground">
-                    {addon.purchaseUrl}
-                  </p>
-                )}
-              </div>
-            )}
+              )}
           </div>
         </div>
       )}
@@ -6719,7 +8614,9 @@ function CreateBundleDialog({
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{bundle ? "Edit Bundle" : "Create Credit Bundle"}</DialogTitle>
+          <DialogTitle>
+            {bundle ? "Edit Bundle" : "Create Credit Bundle"}
+          </DialogTitle>
           <DialogDescription>
             Bundles allow customers to purchase a pack of credits.
           </DialogDescription>
@@ -6767,7 +8664,9 @@ function CreateBundleDialog({
               Cancel
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              {loading ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : null}
               {bundle ? "Save Changes" : "Create Bundle"}
             </Button>
           </DialogFooter>
@@ -6809,7 +8708,10 @@ function AddPlanGrantDialog({
       const res = await fetch(`/api/catalog/credits/${creditId}/plan-grants`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ planId: selectedPlanId, amount: parseFloat(amount) }),
+        body: JSON.stringify({
+          planId: selectedPlanId,
+          amount: parseFloat(amount),
+        }),
       });
       if (res.ok) {
         onAdded();
@@ -6881,7 +8783,9 @@ function AddPlanGrantDialog({
               Cancel
             </Button>
             <Button type="submit" disabled={loading || !selectedPlanId}>
-              {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              {loading ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : null}
               Add Grant
             </Button>
           </DialogFooter>
@@ -6900,7 +8804,9 @@ function CreditDetailView({
   onBack: () => void;
   onUpdated: () => void;
 }) {
-  const [detailTab, setDetailTab] = useState<"entitlements" | "companies">("entitlements");
+  const [detailTab, setDetailTab] = useState<"entitlements" | "companies">(
+    "entitlements",
+  );
   const [copiedId, setCopiedId] = useState(false);
   const [bundles, setBundles] = useState<any[]>([]);
   const [planGrants, setPlanGrants] = useState<any[]>([]);
@@ -6934,9 +8840,12 @@ function CreditDetailView({
   async function deleteBundle(bundleId: string) {
     if (!window.confirm("Remove this bundle?")) return;
     try {
-      await fetch(`/api/catalog/credits/${credit.id}/bundles?bundleId=${bundleId}`, {
-        method: "DELETE",
-      });
+      await fetch(
+        `/api/catalog/credits/${credit.id}/bundles?bundleId=${bundleId}`,
+        {
+          method: "DELETE",
+        },
+      );
       setRefresh((n) => n + 1);
       toast.success("Bundle removed");
     } catch {
@@ -6947,9 +8856,12 @@ function CreditDetailView({
   async function deletePlanGrant(planId: string) {
     if (!window.confirm("Remove this plan grant?")) return;
     try {
-      await fetch(`/api/catalog/credits/${credit.id}/plan-grants?planId=${planId}`, {
-        method: "DELETE",
-      });
+      await fetch(
+        `/api/catalog/credits/${credit.id}/plan-grants?planId=${planId}`,
+        {
+          method: "DELETE",
+        },
+      );
       setRefresh((n) => n + 1);
       toast.success("Plan grant removed");
     } catch {
@@ -6977,7 +8889,9 @@ function CreditDetailView({
           CREDITS
         </button>
         <ChevronRight className="w-3.5 h-3.5" />
-        <span className="text-foreground font-medium uppercase">{credit.name}</span>
+        <span className="text-foreground font-medium uppercase">
+          {credit.name}
+        </span>
       </div>
 
       {/* Credit header card */}
@@ -6989,7 +8903,9 @@ function CreditDetailView({
               <Coins className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-foreground leading-tight">{credit.name}</h2>
+              <h2 className="text-2xl font-bold text-foreground leading-tight">
+                {credit.name}
+              </h2>
               <p className="text-xs text-muted-foreground mt-0.5">
                 Last modified {timeAgo(credit.updatedAt)}
               </p>
@@ -7018,9 +8934,15 @@ function CreditDetailView({
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={copyId}>
                     {copiedId ? (
-                      <><Check className="w-3.5 h-3.5 mr-2 text-green-500" />Copied!</>
+                      <>
+                        <Check className="w-3.5 h-3.5 mr-2 text-green-500" />
+                        Copied!
+                      </>
                     ) : (
-                      <><Copy className="w-3.5 h-3.5 mr-2" />Copy Credit ID</>
+                      <>
+                        <Copy className="w-3.5 h-3.5 mr-2" />
+                        Copy Credit ID
+                      </>
                     )}
                   </DropdownMenuItem>
                   {credit.status === "DRAFT" && (
@@ -7029,7 +8951,10 @@ function CreditDetailView({
                         await fetch("/api/catalog/credits", {
                           method: "PUT",
                           headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ id: credit.id, status: "PUBLISHED" }),
+                          body: JSON.stringify({
+                            id: credit.id,
+                            status: "PUBLISHED",
+                          }),
                         });
                         onUpdated();
                         toast.success("Credit type published");
@@ -7044,7 +8969,10 @@ function CreditDetailView({
                         await fetch("/api/catalog/credits", {
                           method: "PUT",
                           headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ id: credit.id, status: "ARCHIVED" }),
+                          body: JSON.stringify({
+                            id: credit.id,
+                            status: "ARCHIVED",
+                          }),
                         });
                         onUpdated();
                         toast.success("Credit type archived");
@@ -7115,7 +9043,10 @@ function CreditDetailView({
                   </thead>
                   <tbody>
                     {bundles.map((b) => (
-                      <tr key={b.id} className="border-b border-border last:border-0 hover:bg-secondary/10">
+                      <tr
+                        key={b.id}
+                        className="border-b border-border last:border-0 hover:bg-secondary/10"
+                      >
                         <td className="py-3 px-4 font-medium">{b.name}</td>
                         <td className="py-3 px-4">{b.units} units</td>
                         <td className="py-3 px-4 text-foreground font-medium">
@@ -7144,9 +9075,13 @@ function CreditDetailView({
             ) : (
               <div className="border border-dashed border-border rounded-xl py-12 flex flex-col items-center justify-center gap-2 bg-secondary/10">
                 <Coins className="w-8 h-8 text-muted-foreground/40" />
-                <p className="text-sm font-medium text-muted-foreground">No credit bundles yet</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  No credit bundles yet
+                </p>
                 <p className="text-xs text-muted-foreground/70 max-w-xs text-center">
-                  Bundles allow customers to purchase a pack of {credit.unitsPerPack} {credit.unitName} for ${parseFloat(credit.price).toFixed(2)}.
+                  Bundles allow customers to purchase a pack of{" "}
+                  {credit.unitsPerPack} {credit.unitName} for $
+                  {parseFloat(credit.price).toFixed(2)}.
                 </p>
               </div>
             )}
@@ -7182,7 +9117,10 @@ function CreditDetailView({
                   </thead>
                   <tbody>
                     {planGrants.map((grant) => (
-                      <tr key={grant.planId} className="border-b border-border last:border-0 hover:bg-secondary/10">
+                      <tr
+                        key={grant.planId}
+                        className="border-b border-border last:border-0 hover:bg-secondary/10"
+                      >
                         <td className="py-3 px-4 font-medium flex items-center gap-2">
                           <Package className="w-3.5 h-3.5 text-blue-500" />
                           {grant.planId} {/* Ideally show plan name here */}
@@ -7208,9 +9146,12 @@ function CreditDetailView({
             ) : (
               <div className="border border-dashed border-border rounded-xl py-12 flex flex-col items-center justify-center gap-2 bg-secondary/10">
                 <Package className="w-8 h-8 text-muted-foreground/40" />
-                <p className="text-sm font-medium text-muted-foreground">No plan grants yet</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  No plan grants yet
+                </p>
                 <p className="text-xs text-muted-foreground/70 max-w-xs text-center">
-                  Plan grants automatically allocate {credit.unitName} credits to subscribers of specific plans.
+                  Plan grants automatically allocate {credit.unitName} credits
+                  to subscribers of specific plans.
                 </p>
               </div>
             )}
@@ -7221,15 +9162,20 @@ function CreditDetailView({
       {detailTab === "companies" && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-base font-semibold">Companies with Credit Grants</h3>
+            <h3 className="text-base font-semibold">
+              Companies with Credit Grants
+            </h3>
           </div>
           <div className="border border-dashed border-border rounded-xl py-16 flex flex-col items-center justify-center gap-2">
             <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center mb-2">
               <Coins className="w-6 h-6 text-muted-foreground/50" />
             </div>
-            <p className="text-sm font-medium text-foreground">No companies yet</p>
+            <p className="text-sm font-medium text-foreground">
+              No companies yet
+            </p>
             <p className="text-xs text-muted-foreground max-w-xs text-center">
-              Companies that have been granted {credit.unitName} credits will appear here.
+              Companies that have been granted {credit.unitName} credits will
+              appear here.
             </p>
           </div>
         </div>
@@ -7248,7 +9194,8 @@ export function CatalogSection() {
   const [refresh, setRefresh] = useState(0);
   const [selectedPlan, setSelectedPlan] = useState<CatalogPlan | null>(null);
   const [selectedAddOn, setSelectedAddOn] = useState<CatalogAddOn | null>(null);
-  const [selectedCredit, setSelectedCredit] = useState<CatalogCreditType | null>(null);
+  const [selectedCredit, setSelectedCredit] =
+    useState<CatalogCreditType | null>(null);
   const [plans, setPlans] = useState<CatalogPlan[]>([]);
   const [addOns, setAddOns] = useState<CatalogAddOn[]>([]);
   const [plansLoading, setPlansLoading] = useState(true);
@@ -7711,7 +9658,11 @@ export function CatalogSection() {
                     <tr
                       key={addon.id}
                       onClick={(e) => {
-                        if ((e.target as HTMLElement).closest("button") || (e.target as HTMLElement).closest("[role='menuitem']")) return;
+                        if (
+                          (e.target as HTMLElement).closest("button") ||
+                          (e.target as HTMLElement).closest("[role='menuitem']")
+                        )
+                          return;
                         setSelectedAddOn(addon);
                       }}
                       className="border-b border-border last:border-0 hover:bg-secondary/20 transition-colors cursor-pointer"
@@ -7811,7 +9762,13 @@ export function CatalogSection() {
 
       {/* Credit Types Tab */}
       {activeTab === "credits" && (
-        <CreditTypesTable env={envMode} refresh={refresh} onSelect={(ct) => { setSelectedCredit(ct); }} />
+        <CreditTypesTable
+          env={envMode}
+          refresh={refresh}
+          onSelect={(ct) => {
+            setSelectedCredit(ct);
+          }}
+        />
       )}
 
       {/* Configuration Tab */}
@@ -7850,7 +9807,8 @@ export function CatalogPlansSection() {
         <div>
           <h2 className="text-2xl font-semibold text-foreground mb-1">Plans</h2>
           <p className="text-sm text-muted-foreground">
-            Create and manage subscription plans. Click a plan to configure entitlements, companies, and billing.
+            Create and manage subscription plans. Click a plan to configure
+            entitlements, companies, and billing.
           </p>
         </div>
         <CreatePlanDialog env={envMode} onCreated={tr} />

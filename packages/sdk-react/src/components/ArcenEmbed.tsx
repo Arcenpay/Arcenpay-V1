@@ -93,30 +93,316 @@ function isSvgFeatureIcon(icon: string | null | undefined) {
   return Boolean(icon?.trim().startsWith("<svg"));
 }
 
-function isTokenFeatureIcon(icon: string | null | undefined) {
-  return Boolean(icon?.startsWith("lucide:"));
+function isNamedFeatureIconToken(icon: string | null | undefined) {
+  return Boolean(icon?.startsWith("lucide:") || icon?.startsWith("icon:"));
 }
 
+function extractNamedFeatureIconName(token: string): string {
+  return token.replace(/^(lucide|icon):/, "");
+}
+
+function normalizeNamedFeatureIconName(name: string): string {
+  const normalized = name.trim().toLowerCase();
+  const aliasMap: Record<string, string> = {
+    thunder: "zap",
+    lightning: "zap",
+    bolt: "zap",
+    coin: "circle-dollar-sign",
+    coins: "circle-dollar-sign",
+    dollar: "circle-dollar-sign",
+    money: "circle-dollar-sign",
+    bag: "shopping-bag",
+    chatbot: "bot",
+    ai: "brain",
+    doc: "file-text",
+    document: "file-text",
+    file: "file-text",
+    payment: "credit-card",
+    billing: "credit-card",
+  };
+
+  return aliasMap[normalized] ?? normalized;
+}
+
+function renderNamedFeatureIcon(name: string, size: number) {
+  const stroke = "currentColor";
+  const common = {
+    width: size,
+    height: size,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke,
+    strokeWidth: 1.8,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+    "aria-hidden": true,
+  };
+
+  switch (normalizeNamedFeatureIconName(name)) {
+    case "rocket":
+      return (
+        <svg {...common}>
+          <path d="M4 20c1.5-3.5 4-5.5 7-6 3-.5 5.5-2.5 7-6l1-3-3 1c-3.5 1.5-5.5 4-6 7-.5 3-2.5 5.5-6 7Z" />
+          <path d="M9 15 4 20" />
+          <path d="m14 10 0 0" />
+        </svg>
+      );
+    case "sparkles":
+      return (
+        <svg {...common}>
+          <path d="m12 3 1.5 3.5L17 8l-3.5 1.5L12 13l-1.5-3.5L7 8l3.5-1.5Z" />
+          <path d="m5 14 .8 1.7L7.5 16l-1.7.8L5 18.5l-.8-1.7L2.5 16l1.7-.3Z" />
+          <path d="m19 13 .9 2.1L22 16l-2.1.9L19 19l-.9-2.1L16 16l2.1-.9Z" />
+        </svg>
+      );
+    case "brain":
+      return (
+        <svg {...common}>
+          <path d="M9.5 4.5a3 3 0 0 0-5 2.2 3 3 0 0 0 0 5.6A3 3 0 0 0 7.5 17H10V5.5a3 3 0 0 0-.5-1Z" />
+          <path d="M14.5 4.5a3 3 0 0 1 5 2.2 3 3 0 0 1 0 5.6 3 3 0 0 1-3 4.7H14V5.5a3 3 0 0 1 .5-1Z" />
+          <path d="M10 9H7.5" />
+          <path d="M14 9h2.5" />
+          <path d="M10 13H8.5" />
+          <path d="M14 13h1.5" />
+        </svg>
+      );
+    case "bot":
+      return (
+        <svg {...common}>
+          <rect x="5" y="7" width="14" height="10" rx="3" />
+          <path d="M12 4v3" />
+          <path d="M9 20v-3" />
+          <path d="M15 20v-3" />
+          <circle cx="10" cy="12" r="1" />
+          <circle cx="14" cy="12" r="1" />
+          <path d="M9 15h6" />
+        </svg>
+      );
+    case "shield-check":
+      return (
+        <svg {...common}>
+          <path d="M12 3 6 5.5V11c0 4 2.5 7.2 6 8.5 3.5-1.3 6-4.5 6-8.5V5.5Z" />
+          <path d="m9.5 11.5 1.8 1.8 3.2-3.3" />
+        </svg>
+      );
+    case "gauge":
+      return (
+        <svg {...common}>
+          <path d="M4.5 15a7.5 7.5 0 1 1 15 0" />
+          <path d="M12 12 16 8" />
+          <path d="M12 12 9.5 14.5" />
+        </svg>
+      );
+    case "circle-dollar-sign":
+      return (
+        <svg {...common}>
+          <circle cx="12" cy="12" r="8.5" />
+          <path d="M12 7.5v9" />
+          <path d="M14.5 9.5c0-1-1-2-2.5-2s-2.5.8-2.5 2 1 1.8 2.5 2 2.5.9 2.5 2-1 2-2.5 2-2.5-1-2.5-2" />
+        </svg>
+      );
+    case "wallet":
+      return (
+        <svg {...common}>
+          <path d="M4 8.5A2.5 2.5 0 0 1 6.5 6H18a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6.5A2.5 2.5 0 0 1 4 15.5Z" />
+          <path d="M4 9h12" />
+          <path d="M16 13h2" />
+        </svg>
+      );
+    case "shopping-bag":
+      return (
+        <svg {...common}>
+          <path d="M6 8h12l-1 10H7L6 8Z" />
+          <path d="M9 9V7a3 3 0 0 1 6 0v2" />
+        </svg>
+      );
+    case "package":
+      return (
+        <svg {...common}>
+          <path d="m12 3 7 4-7 4-7-4 7-4Z" />
+          <path d="M5 7v10l7 4 7-4V7" />
+          <path d="M12 11v10" />
+        </svg>
+      );
+    case "gift":
+      return (
+        <svg {...common}>
+          <rect x="4" y="10" width="16" height="10" rx="2" />
+          <path d="M12 10v10" />
+          <path d="M4 14h16" />
+          <path d="M8.5 10c-1.7 0-2.5-.8-2.5-2 0-1.1.8-2 2-2 2 0 4 4 4 4" />
+          <path d="M15.5 10c1.7 0 2.5-.8 2.5-2 0-1.1-.8-2-2-2-2 0-4 4-4 4" />
+        </svg>
+      );
+    case "megaphone":
+      return (
+        <svg {...common}>
+          <path d="M4 12v-2l9-4v10l-9-4Z" />
+          <path d="M13 8h3a3 3 0 0 1 0 6h-3" />
+          <path d="m6 15 1.5 4" />
+        </svg>
+      );
+    case "message-square":
+      return (
+        <svg {...common}>
+          <path d="M6 6h12a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H10l-4 3v-3H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Z" />
+        </svg>
+      );
+    case "panel-left":
+      return (
+        <svg {...common}>
+          <rect x="3.5" y="4" width="17" height="16" rx="2" />
+          <path d="M9 4v16" />
+        </svg>
+      );
+    case "server-cog":
+      return (
+        <svg {...common}>
+          <rect x="4" y="5" width="12" height="5" rx="1.5" />
+          <rect x="4" y="14" width="12" height="5" rx="1.5" />
+          <circle cx="18" cy="9" r="2" />
+          <circle cx="18" cy="16" r="2" />
+        </svg>
+      );
+    case "globe":
+      return (
+        <svg {...common}>
+          <circle cx="12" cy="12" r="8.5" />
+          <path d="M3.5 12h17" />
+          <path d="M12 3.5c2.5 2.5 4 5.3 4 8.5s-1.5 6-4 8.5c-2.5-2.5-4-5.3-4-8.5s1.5-6 4-8.5Z" />
+        </svg>
+      );
+    case "camera":
+      return (
+        <svg {...common}>
+          <path d="M6 8h2l1.5-2h5L16 8h2a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-6a2 2 0 0 1 2-2Z" />
+          <circle cx="12" cy="13" r="3" />
+        </svg>
+      );
+    case "video":
+      return (
+        <svg {...common}>
+          <rect x="4" y="7" width="11" height="10" rx="2" />
+          <path d="m15 10 5-2.5v9L15 14" />
+        </svg>
+      );
+    case "search":
+      return (
+        <svg {...common}>
+          <circle cx="11" cy="11" r="6" />
+          <path d="m20 20-4.2-4.2" />
+        </svg>
+      );
+    case "link-2":
+      return (
+        <svg {...common}>
+          <path d="M10 13a3 3 0 0 0 4.2 0l2.8-2.8a3 3 0 1 0-4.2-4.2L11 7" />
+          <path d="M14 11a3 3 0 0 0-4.2 0L7 13.8A3 3 0 0 0 11.2 18L13 16.2" />
+        </svg>
+      );
+    case "layers":
+      return (
+        <svg {...common}>
+          <path d="m12 4 8 4-8 4-8-4 8-4Z" />
+          <path d="m4 12 8 4 8-4" />
+          <path d="m4 16 8 4 8-4" />
+        </svg>
+      );
+    case "zap":
+      return (
+        <svg {...common}>
+          <path d="M13 2 5 13h5l-1 9 8-11h-5l1-9Z" />
+        </svg>
+      );
+    case "diamond":
+      return (
+        <svg {...common}>
+          <path d="m7 4-4 6 9 10 9-10-4-6Z" />
+          <path d="M7 4h10" />
+          <path d="m9.5 4 2.5 16 2.5-16" />
+        </svg>
+      );
+    case "puzzle":
+      return (
+        <svg {...common}>
+          <path d="M9 5a2 2 0 1 1 4 0v1h3a2 2 0 0 1 2 2v3h-1a2 2 0 1 0 0 4h1v3a2 2 0 0 1-2 2h-3v-1a2 2 0 1 0-4 0v1H6a2 2 0 0 1-2-2v-3h1a2 2 0 1 0 0-4H4V8a2 2 0 0 1 2-2h3Z" />
+        </svg>
+      );
+    case "file-text":
+      return (
+        <svg {...common}>
+          <path d="M7 3.5h7l4 4V20a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 6 20V5A1.5 1.5 0 0 1 7.5 3.5Z" />
+          <path d="M14 3.5V8h4" />
+          <path d="M9 12h6" />
+          <path d="M9 16h6" />
+        </svg>
+      );
+    case "credit-card":
+      return (
+        <svg {...common}>
+          <rect x="3.5" y="6" width="17" height="12" rx="2" />
+          <path d="M3.5 10h17" />
+          <path d="M7 14h3" />
+        </svg>
+      );
+    default:
+      return null;
+  }
+}
+
+/**
+ * Lightweight feature icon renderer.
+ * SVG icons rendered raw, icon-name tokens render internal lightweight SVGs,
+ * and emoji/custom glyphs render as text.
+ */
 function renderFeatureIconNode(
   icon: string | null | undefined,
-  className: string,
+  size: number = 16,
 ) {
   if (!icon) return null;
 
-  if (isTokenFeatureIcon(icon)) {
-    return null;
+  if (isNamedFeatureIconToken(icon)) {
+    const name = extractNamedFeatureIconName(icon);
+    const rendered = renderNamedFeatureIcon(name, size);
+    if (rendered) return rendered;
+    const initial = name.charAt(0).toUpperCase();
+    return (
+      <span
+        style={{
+          width: size,
+          height: size,
+          borderRadius: "50%",
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "#e5e7eb",
+          color: "#6b7280",
+          fontSize: size * 0.45,
+          fontWeight: 700,
+          flexShrink: 0,
+          lineHeight: 1,
+        }}
+      >
+        {initial}
+      </span>
+    );
   }
 
   if (isSvgFeatureIcon(icon)) {
     return (
       <span
-        className={className}
+        style={{
+          width: size,
+          height: size,
+          display: "inline-flex",
+          alignItems: "center",
+        }}
         dangerouslySetInnerHTML={{ __html: icon }}
       />
     );
   }
 
-  return <span>{icon}</span>;
+  return <span style={{ fontSize: size }}>{icon}</span>;
 }
 
 type PortalView = "portal" | "checkout" | "payment" | "unsubscribe" | "success";
@@ -523,18 +809,29 @@ function formatChainLabel(chainId?: number | null): string | null {
 }
 
 function getUsageItems(data: ComponentRenderData): ComponentUsageItem[] {
-  if (data.usage.length > 0) return data.usage;
+  const usageMap = new Map<string, ComponentUsageItem>();
 
-  return data.entitlements
+  data.usage.forEach((item) => {
+    usageMap.set(item.featureKey, item);
+  });
+
+  data.entitlements
     .filter((entitlement) => entitlement.featureType === "event_based")
-    .map((entitlement) => ({
-      featureKey: entitlement.featureKey,
-      name: entitlement.name,
-      used: entitlement.usage ?? 0,
-      limit: entitlement.limit,
-      unitSingular: entitlement.unitSingular ?? null,
-      unitPlural: entitlement.unitPlural ?? null,
-    }));
+    .forEach((entitlement) => {
+      const existing = usageMap.get(entitlement.featureKey);
+      usageMap.set(entitlement.featureKey, {
+        featureKey: entitlement.featureKey,
+        name: existing?.name ?? entitlement.name,
+        used: existing?.used ?? entitlement.usage ?? 0,
+        limit: existing?.limit ?? entitlement.limit,
+        unitSingular:
+          existing?.unitSingular ?? entitlement.unitSingular ?? null,
+        unitPlural: existing?.unitPlural ?? entitlement.unitPlural ?? null,
+        icon: existing?.icon ?? entitlement.icon ?? null,
+      });
+    });
+
+  return Array.from(usageMap.values());
 }
 
 function getSubscriptionTransition(
@@ -560,6 +857,7 @@ type ResolvedBooleanFeature = {
   name: string;
   value: true;
   featureType: "boolean";
+  icon?: string | null;
 };
 
 function getActivePlanBooleanFeatures(
@@ -584,7 +882,7 @@ function getActivePlanBooleanFeatures(
       ? metadataSource.entitlements
       : [];
 
-    return rawEntitlements
+    const metadataBooleanFeatures = rawEntitlements
       .filter(
         (
           entry,
@@ -593,6 +891,7 @@ function getActivePlanBooleanFeatures(
           featureName?: string;
           type?: string;
           enabled?: boolean;
+          icon?: string | null;
         } =>
           Boolean(
             entry &&
@@ -609,7 +908,12 @@ function getActivePlanBooleanFeatures(
         name: entry.featureName ?? entry.featureKey,
         value: true as const,
         featureType: "boolean" as const,
+        icon: entry.icon ?? null,
       }));
+
+    if (metadataBooleanFeatures.length > 0) {
+      return metadataBooleanFeatures;
+    }
   }
 
   return entitlements
@@ -623,6 +927,7 @@ function getActivePlanBooleanFeatures(
       name: entry.name ?? entry.featureKey,
       value: true as const,
       featureType: "boolean" as const,
+      icon: entry.icon ?? null,
     }));
 }
 
@@ -674,7 +979,9 @@ function renderUsageCards(
             marginBottom: 8,
           }}
         >
-          <FeatureIcon size={36}>{CHART_ICON}</FeatureIcon>
+          <FeatureIcon size={36}>
+            {renderFeatureIconNode(item.icon, 18) || CHART_ICON}
+          </FeatureIcon>
           <div>
             <div
               style={{
@@ -1060,14 +1367,11 @@ function WalletSelector({
   );
 }
 
-function NoWalletSelector({
-  tokens,
-}: {
-  tokens: Tokens;
-}) {
+function NoWalletSelector({ tokens }: { tokens: Tokens }) {
   const cbWalletDeepLink =
     typeof window !== "undefined"
-      ? "https://go.cb-w.com/dapp?cb_url=" + encodeURIComponent(window.location.href)
+      ? "https://go.cb-w.com/dapp?cb_url=" +
+        encodeURIComponent(window.location.href)
       : "https://www.coinbase.com/wallet";
 
   return (
@@ -1178,14 +1482,25 @@ function NoWalletSelector({
             cursor: "pointer",
           }}
         >
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-          >
-            <rect x="3" y="6" width="16" height="10" rx="2" stroke="#0052ff" strokeWidth="1.5" />
-            <rect x="7" y="2" width="8" height="5" rx="1.5" stroke="#0052ff" strokeWidth="1.5" />
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <rect
+              x="3"
+              y="6"
+              width="16"
+              height="10"
+              rx="2"
+              stroke="#0052ff"
+              strokeWidth="1.5"
+            />
+            <rect
+              x="7"
+              y="2"
+              width="8"
+              height="5"
+              rx="1.5"
+              stroke="#0052ff"
+              strokeWidth="1.5"
+            />
           </svg>
           <span
             style={{
@@ -1425,10 +1740,18 @@ type WindowEthereum = {
   request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
   isMetaMask?: boolean;
   isCoinbaseWallet?: boolean;
-  providers?: Array<WindowEthereum & { isMetaMask?: boolean; isCoinbaseWallet?: boolean }>;
+  providers?: Array<
+    WindowEthereum & { isMetaMask?: boolean; isCoinbaseWallet?: boolean }
+  >;
 };
 
 type WalletKind = "metamask" | "coinbase";
+
+let preferredWindowEthereum: WindowEthereum | null = null;
+
+function setPreferredWindowEthereum(provider: WindowEthereum | null) {
+  preferredWindowEthereum = provider;
+}
 
 function openCoinbaseWalletDeepLink() {
   if (typeof window === "undefined") return;
@@ -1500,12 +1823,15 @@ function getCoinbaseProvider(): WindowEthereum | null {
 }
 
 function getWindowEthereum(): WindowEthereum | null {
+  if (preferredWindowEthereum) return preferredWindowEthereum;
   if (typeof window === "undefined") return null;
   return (
-    window as unknown as {
-      ethereum?: WindowEthereum;
-    }
-  ).ethereum ?? null;
+    (
+      window as unknown as {
+        ethereum?: WindowEthereum;
+      }
+    ).ethereum ?? null
+  );
 }
 
 const WALLET_CONNECT_TIMEOUT_MS = 20_000;
@@ -1539,7 +1865,7 @@ function getWalletConnectionErrorMessage(error: unknown): string {
 
 async function requestWindowEthereumAccounts(
   preferredWallet?: WalletKind,
-): Promise<string[]> {
+): Promise<{ accounts: string[]; provider: WindowEthereum }> {
   let eth: WindowEthereum | null;
   let installName: string;
 
@@ -1568,7 +1894,7 @@ async function requestWindowEthereumAccounts(
     typeof existingAccounts[0] === "string" &&
     existingAccounts[0]
   ) {
-    return existingAccounts as string[];
+    return { accounts: existingAccounts as string[], provider: eth };
   }
 
   let timeoutId: number | undefined;
@@ -1594,7 +1920,7 @@ async function requestWindowEthereumAccounts(
       throw new Error("No wallet account was returned.");
     }
 
-    return requestedAccounts as string[];
+    return { accounts: requestedAccounts as string[], provider: eth };
   } finally {
     if (timeoutId) {
       window.clearTimeout(timeoutId);
@@ -1605,8 +1931,9 @@ async function requestWindowEthereumAccounts(
 function createBrowserWalletClient(params: {
   chainId: number;
   account: string | null | undefined;
+  provider?: WindowEthereum | null;
 }): WalletClient | null {
-  const ethereum = getWindowEthereum();
+  const ethereum = params.provider ?? getWindowEthereum();
   if (!ethereum || !params.account || !isAddress(params.account)) return null;
 
   return createWalletClient({
@@ -1924,6 +2251,19 @@ export function renderElement(
   const prop = (key: string) =>
     el[key] ?? (el.config as Record<string, unknown> | undefined)?.[key];
 
+  const iconMap = new Map<string, string>();
+  (data.entitlements as any[])?.forEach((ent: any) => {
+    if (ent.icon && ent.featureKey) iconMap.set(ent.featureKey, ent.icon);
+  });
+
+  const featureIconNode = (
+    entry: { featureKey?: string; icon?: string | null },
+    size = 14,
+  ) => {
+    const resolved = entry.icon || iconMap.get(entry.featureKey ?? "") || null;
+    return resolved ? renderFeatureIconNode(resolved, size) : null;
+  };
+
   switch (el.type) {
     case "planManager": {
       const plan = data.activePlan;
@@ -2078,7 +2418,9 @@ export function renderElement(
                     <div
                       style={{ display: "flex", alignItems: "center", gap: 10 }}
                     >
-                      <FeatureIcon>{DOC_ICON}</FeatureIcon>
+                      <FeatureIcon>
+                        {featureIconNode(e) || DOC_ICON}
+                      </FeatureIcon>
                       <span
                         style={{
                           fontSize: tokens.size,
@@ -2119,7 +2461,9 @@ export function renderElement(
                             gap: 10,
                           }}
                         >
-                          <FeatureIcon>{DOC_ICON}</FeatureIcon>
+                          <FeatureIcon>
+                            {featureIconNode(e) || DOC_ICON}
+                          </FeatureIcon>
                           <span
                             style={{
                               fontSize: tokens.size,
@@ -2176,7 +2520,9 @@ export function renderElement(
                     <div
                       style={{ display: "flex", alignItems: "center", gap: 10 }}
                     >
-                      <FeatureIcon>{DOC_ICON}</FeatureIcon>
+                      <FeatureIcon>
+                        {featureIconNode(e) || DOC_ICON}
+                      </FeatureIcon>
                       <span
                         style={{
                           fontSize: tokens.size,
@@ -3026,6 +3372,20 @@ function PortalContent({
     ComponentElement & Record<string, unknown>
   >;
 
+  // Icon map built from entitlements for feature icon rendering
+  const iconMap = new Map<string, string>();
+  (data.entitlements as any[])?.forEach((ent: any) => {
+    if (ent.icon && ent.featureKey) iconMap.set(ent.featureKey, ent.icon);
+  });
+
+  const featIcon = (
+    entry: { featureKey?: string; icon?: string | null },
+    size = 14,
+  ) => {
+    const resolved = entry.icon || iconMap.get(entry.featureKey ?? "") || null;
+    return resolved ? renderFeatureIconNode(resolved, size) : null;
+  };
+
   // Categorise elements by role
   const hasPlanManager = elements.some((e) => e.type === "planManager");
   const hasIncluded = elements.some((e) => e.type === "includedFeatures");
@@ -3326,7 +3686,7 @@ function PortalContent({
                             gap: 10,
                           }}
                         >
-                          <FeatureIcon>{DOC_ICON}</FeatureIcon>
+                          <FeatureIcon>{featIcon(f) || DOC_ICON}</FeatureIcon>
                           <span
                             style={{
                               fontSize: responsiveTokens.size,
@@ -3532,7 +3892,9 @@ function PortalContent({
                                 gap: 10,
                               }}
                             >
-                              <FeatureIcon>{DOC_ICON}</FeatureIcon>
+                              <FeatureIcon>
+                                {featIcon(f) || DOC_ICON}
+                              </FeatureIcon>
                               <span
                                 style={{
                                   fontSize: responsiveTokens.size,
@@ -3789,7 +4151,9 @@ function PortalContent({
                                   gap: 10,
                                 }}
                               >
-                                <FeatureIcon>{DOC_ICON}</FeatureIcon>
+                                <FeatureIcon>
+                                  {featIcon(f) || DOC_ICON}
+                                </FeatureIcon>
                                 <span
                                   style={{
                                     fontSize: tokens.size,
@@ -4450,69 +4814,74 @@ function CheckoutContent({
                             },
                             i: number,
                           ) => {
-                            const featureIcon = ent.icon || iconMap.get(ent.featureKey) || null;
+                            const featureIcon =
+                              ent.icon || iconMap.get(ent.featureKey) || null;
                             const renderedFeatureIcon = renderFeatureIconNode(
                               featureIcon,
-                              "inline-flex",
+                              16,
                             );
 
                             return (
-                            <div
-                              key={ent.featureKey || i}
-                              style={{
-                                display: "flex",
-                                alignItems: "flex-start",
-                                gap: 8,
-                                fontSize: tokens.size - 1,
-                                color: tokens.mutedColor,
-                                lineHeight: 1.35,
-                              }}
-                            >
-                              <span
+                              <div
+                                key={ent.featureKey || i}
                                 style={{
-                                  flexShrink: 0,
-                                  width: featureIcon ? 20 : 16,
-                                  fontWeight: 700,
-                                  textAlign: "center",
-                                  marginTop: 1,
-                                  fontSize:
-                                    featureIcon &&
-                                    !isSvgFeatureIcon(featureIcon) &&
-                                    featureIcon.length <= 2
-                                      ? tokens.size
-                                      : tokens.size - 2,
+                                  display: "flex",
+                                  alignItems: "flex-start",
+                                  gap: 8,
+                                  fontSize: tokens.size - 1,
                                   color: tokens.mutedColor,
+                                  lineHeight: 1.35,
                                 }}
                               >
-                                {renderedFeatureIcon ? (
-                                  renderedFeatureIcon
-                                ) : ent.type === "BOOLEAN" ? (
-                                  ent.value === true ? (
-                                    <span style={{ color: "#16a34a" }}>✓</span>
+                                <span
+                                  style={{
+                                    flexShrink: 0,
+                                    width: featureIcon ? 20 : 16,
+                                    fontWeight: 700,
+                                    textAlign: "center",
+                                    marginTop: 1,
+                                    fontSize:
+                                      featureIcon &&
+                                      !isSvgFeatureIcon(featureIcon) &&
+                                      featureIcon.length <= 2
+                                        ? tokens.size
+                                        : tokens.size - 2,
+                                    color: tokens.mutedColor,
+                                  }}
+                                >
+                                  {renderedFeatureIcon ? (
+                                    renderedFeatureIcon
+                                  ) : ent.type === "BOOLEAN" ? (
+                                    ent.value === true ? (
+                                      <span style={{ color: "#16a34a" }}>
+                                        ✓
+                                      </span>
+                                    ) : (
+                                      <span style={{ color: "#d1d5db" }}>
+                                        —
+                                      </span>
+                                    )
+                                  ) : ent.type === "UNLIMITED" ? (
+                                    <span
+                                      style={{
+                                        color: tokens.primary,
+                                        fontWeight: 600,
+                                      }}
+                                    >
+                                      ∞
+                                    </span>
                                   ) : (
-                                    <span style={{ color: "#d1d5db" }}>—</span>
-                                  )
-                                ) : ent.type === "UNLIMITED" ? (
-                                  <span
-                                    style={{
-                                      color: tokens.primary,
-                                      fontWeight: 600,
-                                    }}
-                                  >
-                                    ∞
-                                  </span>
-                                ) : (
-                                  <span style={{ color: tokens.primary }}>
-                                    •
-                                  </span>
-                                )}
-                              </span>
-                              <span>
-                                {ent.type === "NUMERIC" && ent.value != null
-                                  ? `${ent.value} ${ent.featureName || ent.featureKey}`
-                                  : ent.featureName || ent.featureKey}
-                              </span>
-                            </div>
+                                    <span style={{ color: tokens.primary }}>
+                                      •
+                                    </span>
+                                  )}
+                                </span>
+                                <span>
+                                  {ent.type === "NUMERIC" && ent.value != null
+                                    ? `${ent.value} ${ent.featureName || ent.featureKey}`
+                                    : ent.featureName || ent.featureKey}
+                                </span>
+                              </div>
                             );
                           },
                         )}
@@ -4740,8 +5109,8 @@ function CheckoutContent({
                         marginTop: 4,
                       }}
                     >
-                       Coupons are not supported for this subscription
-                       lifecycle flow.
+                      Coupons are not supported for this subscription lifecycle
+                      flow.
                     </div>
                   )}
                 </>
@@ -5034,6 +5403,9 @@ function PaymentContent({
   const { address, isConnected } = useSafeAccount();
   const { walletClient: wagmiWalletClient } = useSafeWalletClient();
   const [localAddress, setLocalAddress] = useState<string | null>(null);
+  const [localProvider, setLocalProvider] = useState<WindowEthereum | null>(
+    null,
+  );
   const [provisionedSmartAccountAddress, setProvisionedSmartAccountAddress] =
     useState<string | null>(null);
   const [connecting, setConnecting] = useState(false);
@@ -5070,7 +5442,9 @@ function PaymentContent({
       : null;
   const smartAccountAddress =
     provisionedSmartAccountAddress ?? serverSmartAccountAddress;
-  const zeroDevProjectId = zeroDevConfig?.bundlerUrl ? undefined : (process.env.NEXT_PUBLIC_ZERODEV_PROJECT_ID ?? undefined);
+  const zeroDevProjectId = zeroDevConfig?.bundlerUrl
+    ? undefined
+    : (process.env.NEXT_PUBLIC_ZERODEV_PROJECT_ID ?? undefined);
   const selectedOnChainPlanId = selectedPlan?.onChainPlanId ?? null;
   const activeOnChainPlanId = activePlan?.onChainPlanId ?? null;
   const isCurrentPlanSelected = isCurrentBillingSelection({
@@ -5121,6 +5495,7 @@ function PaymentContent({
       ? createBrowserWalletClient({
           chainId,
           account: finalAddress,
+          provider: localProvider,
         })
       : null);
 
@@ -5135,8 +5510,10 @@ function PaymentContent({
     setTxStatus("idle");
     setConnecting(true);
     try {
-      const accounts = await requestWindowEthereumAccounts(walletKind);
-      setLocalAddress(accounts[0] ?? null);
+      const result = await requestWindowEthereumAccounts(walletKind);
+      setPreferredWindowEthereum(result.provider);
+      setLocalProvider(result.provider);
+      setLocalAddress(result.accounts[0] ?? null);
     } catch (error) {
       setTxStatus("error");
       setTxError(getWalletConnectionErrorMessage(error));
@@ -5164,7 +5541,10 @@ function PaymentContent({
     );
 
     if (requiresSmartAccountExecution) {
-      if ((!zeroDevProjectId && !zeroDevConfig?.isReady) || !effectiveSmartAccountAddress) {
+      if (
+        (!zeroDevProjectId && !zeroDevConfig?.isReady) ||
+        !effectiveSmartAccountAddress
+      ) {
         throw new Error(
           "Autopay setup requires additional configuration on this account.",
         );
@@ -5216,10 +5596,13 @@ function PaymentContent({
     await ensureWalletOnTargetChain(resolvedWalletClient, chainId);
 
     const forceSelfFunded = zeroDevConfig?.selfFunded;
+    const chainLabel = formatChainLabel(chainId) ?? `Chain ${chainId}`;
+    const nativeSymbol = getChain(chainId).nativeCurrency.symbol;
 
     for (let attempt = 0; attempt < 2; attempt += 1) {
       try {
-        const paymasterSuffix = forceSelfFunded || attempt > 0 ? "?selfFunded=true" : "";
+        const paymasterSuffix =
+          forceSelfFunded || attempt > 0 ? "?selfFunded=true" : "";
         const paymasterUrl = zeroDevConfig?.paymasterUrl
           ? zeroDevConfig.paymasterUrl + paymasterSuffix
           : undefined;
@@ -5235,7 +5618,11 @@ function PaymentContent({
         setProvisionedSmartAccountAddress(result.smartAccountAddress);
         return result.smartAccountAddress;
       } catch (error) {
-        if (attempt === 0 && isPrefundError(error)) {
+        if (
+          attempt === 0 &&
+          (isPrefundError(error) ||
+            (forceSelfFunded && isRecoverableSmartAccountFundingError(error)))
+        ) {
           try {
             const counterfactualAddress =
               await getCounterfactualSmartAccountAddress(
@@ -5267,11 +5654,11 @@ function PaymentContent({
             continue;
           } catch (fundError) {
             const fundMsg =
-              fundError instanceof Error
-                ? fundError.message
-                : "unknown error";
+              fundError instanceof Error ? fundError.message : "unknown error";
             throw new Error(
-              `Your wallet needs a small amount of ETH on Base Sepolia to cover network fees. Please add ETH to your wallet and retry. (${fundMsg})`,
+              forceSelfFunded
+                ? `Self-funded smart account mode is enabled. Send a small amount of ${nativeSymbol} on ${chainLabel} to the subscription smart account and retry. (${fundMsg})`
+                : `Your wallet needs a small amount of ${nativeSymbol} on ${chainLabel} to cover network fees. Please add ${nativeSymbol} and retry. (${fundMsg})`,
             );
           }
         }
@@ -5281,7 +5668,9 @@ function PaymentContent({
     }
 
     throw new Error(
-      "Could not set up your subscription wallet. Ensure your wallet has a small amount of ETH on Base Sepolia and try again.",
+      forceSelfFunded
+        ? `Could not set up the subscription smart account in self-funded mode. Fund the smart account with ${nativeSymbol} on ${chainLabel} and try again.`
+        : `Could not set up your subscription wallet. Ensure the connected wallet has a small amount of ${nativeSymbol} on ${chainLabel} and try again.`,
     );
   }
 
@@ -5421,9 +5810,11 @@ function PaymentContent({
       }
 
       if (installError) {
-        throw new Error(
-          "Automatic payment setup did not complete. Please confirm the transaction and try Activate subscription again.",
-        );
+        const installMessage =
+          installError instanceof Error
+            ? installError.message
+            : "Automatic payment setup did not complete.";
+        throw new Error(installMessage);
       }
     } else {
       const currentConfig = await readAutopayConfig(
@@ -5752,16 +6143,15 @@ function PaymentContent({
 
     if (!chainId || !smartAccountAddress || !selectedOnChainPlanId) {
       setTxStatus("error");
-      setTxError(
-        "Missing subscription metadata for this plan change.",
-      );
+      setTxError("Missing subscription metadata for this plan change.");
       return;
     }
 
-    if (!resolvedWalletClient || (!zeroDevProjectId && !zeroDevConfig?.isReady)) {
-      throw new Error(
-        "Connect your wallet before making plan changes.",
-      );
+    if (
+      !resolvedWalletClient ||
+      (!zeroDevProjectId && !zeroDevConfig?.isReady)
+    ) {
+      throw new Error("Connect your wallet before making plan changes.");
       return;
     }
 
@@ -5864,7 +6254,8 @@ function PaymentContent({
     (isOnChainPlanChange || requiresHostedActivation) &&
     (!finalConnected || !finalAddress);
   const needsWalletClient =
-    isOnChainPlanChange && (!resolvedWalletClient || (!zeroDevProjectId && !zeroDevConfig?.isReady));
+    isOnChainPlanChange &&
+    (!resolvedWalletClient || (!zeroDevProjectId && !zeroDevConfig?.isReady));
   const hasWindowEth =
     typeof window !== "undefined" &&
     !!(window as unknown as { ethereum?: unknown }).ethereum;
@@ -5992,7 +6383,7 @@ function PaymentContent({
                     before authorizing this
                     {isImmediateOnChainUpgrade ? "upgrade" : "plan change"}.
                   </div>
-                  {(hasWindowEth || isMobileDevice()) ? (
+                  {hasWindowEth || isMobileDevice() ? (
                     <WalletSelector
                       tokens={tokens}
                       connecting={connecting}
@@ -6046,8 +6437,8 @@ function PaymentContent({
                     lineHeight: 1.6,
                   }}
                 >
-                  This embed needs a connected wallet to send
-                  plan change transactions.
+                  This embed needs a connected wallet to send plan change
+                  transactions.
                 </div>
               ) : (
                 <div>
@@ -6097,6 +6488,8 @@ function PaymentContent({
                     <button
                       onClick={() => {
                         setLocalAddress(null);
+                        setLocalProvider(null);
+                        setPreferredWindowEthereum(null);
                       }}
                       style={{
                         marginLeft: "auto",
@@ -6293,7 +6686,7 @@ function PaymentContent({
                   <div style={{ fontSize: 11, color: tokens.mutedColor }}>
                     {requiresResumeActivation
                       ? "Restore future renewals"
-                      :                     "First bill + automatic payments setup"}
+                      : "First bill + automatic payments setup"}
                   </div>
                 </div>
               </div>
@@ -6362,7 +6755,7 @@ function PaymentContent({
               </div>
 
               {needsWallet ? (
-                (hasWindowEth || isMobileDevice()) ? (
+                hasWindowEth || isMobileDevice() ? (
                   <WalletSelector
                     tokens={tokens}
                     connecting={connecting}
@@ -6435,6 +6828,8 @@ function PaymentContent({
                     <button
                       onClick={() => {
                         setLocalAddress(null);
+                        setLocalProvider(null);
+                        setPreferredWindowEthereum(null);
                       }}
                       style={{
                         marginLeft: "auto",
@@ -6833,6 +7228,9 @@ function UnsubscribeContent({
   const { address, isConnected } = useSafeAccount();
   const { walletClient: wagmiWalletClient } = useSafeWalletClient();
   const [localAddress, setLocalAddress] = useState<string | null>(null);
+  const [localProvider, setLocalProvider] = useState<WindowEthereum | null>(
+    null,
+  );
   const [connecting, setConnecting] = useState(false);
   const [txStatus, setTxStatus] = useState<
     "idle" | "approving" | "confirmed" | "error"
@@ -6844,7 +7242,9 @@ function UnsubscribeContent({
     typeof paymentMethod?.walletAddress === "string"
       ? paymentMethod.walletAddress
       : null;
-  const zeroDevProjectId = zeroDevConfig?.bundlerUrl ? undefined : (process.env.NEXT_PUBLIC_ZERODEV_PROJECT_ID ?? undefined);
+  const zeroDevProjectId = zeroDevConfig?.bundlerUrl
+    ? undefined
+    : (process.env.NEXT_PUBLIC_ZERODEV_PROJECT_ID ?? undefined);
   const finalAddress = address || localAddress;
   const finalConnected = isConnected || !!localAddress;
   const resolvedWalletClient =
@@ -6853,6 +7253,7 @@ function UnsubscribeContent({
       ? createBrowserWalletClient({
           chainId,
           account: finalAddress,
+          provider: localProvider,
         })
       : null);
   const requiresOnChainCancellation = Boolean(
@@ -6869,15 +7270,19 @@ function UnsubscribeContent({
   const needsWalletClient =
     requiresOnChainCancellation &&
     (!resolvedWalletClient ||
-      (requiresSmartAccountCancellationExecution && !zeroDevProjectId && !zeroDevConfig?.isReady));
+      (requiresSmartAccountCancellationExecution &&
+        !zeroDevProjectId &&
+        !zeroDevConfig?.isReady));
 
   async function connectWindowEthereum(walletKind?: WalletKind) {
     setTxError("");
     setTxStatus("idle");
     setConnecting(true);
     try {
-      const accounts = await requestWindowEthereumAccounts(walletKind);
-      setLocalAddress(accounts[0] ?? null);
+      const result = await requestWindowEthereumAccounts(walletKind);
+      setPreferredWindowEthereum(result.provider);
+      setLocalProvider(result.provider);
+      setLocalAddress(result.accounts[0] ?? null);
     } catch (error) {
       setTxStatus("error");
       setTxError(getWalletConnectionErrorMessage(error));
@@ -6902,7 +7307,9 @@ function UnsubscribeContent({
 
     if (
       !resolvedWalletClient ||
-      (requiresSmartAccountCancellationExecution && !zeroDevProjectId && !zeroDevConfig?.isReady)
+      (requiresSmartAccountCancellationExecution &&
+        !zeroDevProjectId &&
+        !zeroDevConfig?.isReady)
     ) {
       setTxStatus("error");
       setTxError(
@@ -6922,7 +7329,9 @@ function UnsubscribeContent({
         | `0x${string}`
         | undefined;
       if (!autopayAddress) {
-        throw new Error("Automatic payment system is not available for this chain.");
+        throw new Error(
+          "Automatic payment system is not available for this chain.",
+        );
       }
 
       const isInitialized = await readAutopayInitialized(
@@ -6955,7 +7364,7 @@ function UnsubscribeContent({
 
       let txHash: `0x${string}` | undefined;
       if (requiresSmartAccountCancellationExecution) {
-        if ((!zeroDevProjectId && !zeroDevConfig?.isReady)) {
+        if (!zeroDevProjectId && !zeroDevConfig?.isReady) {
           throw new Error(
             "Subscription cancellation requires a connected wallet.",
           );
@@ -6963,8 +7372,8 @@ function UnsubscribeContent({
 
         const result = await sendSmartAccountTransaction({
           projectId: zeroDevProjectId,
-        bundlerUrl: zeroDevConfig?.bundlerUrl,
-        paymasterUrl: zeroDevConfig?.paymasterUrl,
+          bundlerUrl: zeroDevConfig?.bundlerUrl,
+          paymasterUrl: zeroDevConfig?.paymasterUrl,
           chainId,
           walletClient: resolvedWalletClient,
           smartAccountAddress: smartAccountAddress as `0x${string}`,
@@ -6995,7 +7404,9 @@ function UnsubscribeContent({
     } catch (error) {
       setTxStatus("error");
       setTxError(
-        error instanceof Error ? error.message : "Failed to stop automatic payments.",
+        error instanceof Error
+          ? error.message
+          : "Failed to stop automatic payments.",
       );
     }
   }
@@ -7058,7 +7469,7 @@ function UnsubscribeContent({
                 "the end of the current billing period"
               }. You do not need to submit another cancellation transaction.`
             : requiresOnChainCancellation
-               ? "We will stop future automatic payments now. Your current plan stays active until the end of the current billing period, then your subscription moves to Free."
+              ? "We will stop future automatic payments now. Your current plan stays active until the end of the current billing period, then your subscription moves to Free."
               : "Your current plan stays active until the end of the current billing period, then your subscription moves to Free."}
         </div>
         {requiresOnChainCancellation && (
@@ -7074,9 +7485,9 @@ function UnsubscribeContent({
               marginBottom: 20,
             }}
           >
-            This flow stops future automatic payments for the subscription payment account
-            right away, then schedules the actual plan downgrade for the current
-            billing period end.
+            This flow stops future automatic payments for the subscription
+            payment account right away, then schedules the actual plan downgrade
+            for the current billing period end.
           </div>
         )}
         <div
@@ -7121,8 +7532,8 @@ function UnsubscribeContent({
                 marginBottom: 12,
               }}
             >
-              Connect the wallet you use to manage your subscription
-              before stopping future automatic payments.
+              Connect the wallet you use to manage your subscription before
+              stopping future automatic payments.
             </div>
             <WalletSelector
               tokens={tokens}
@@ -7262,7 +7673,7 @@ function UnsubscribeContent({
               : scheduledCancellation
                 ? "Cancellation already scheduled"
                 : requiresOnChainCancellation
-                   ? "Cancel and stop payments at period end"
+                  ? "Cancel and stop payments at period end"
                   : "Schedule cancellation"}
         </button>
         {needsWalletClient && (
@@ -7604,6 +8015,15 @@ export function ArcenEmbed({
   onPlanChange,
   mode = "modal",
 }: ArcenEmbedProps) {
+  // The portal should always surface plan changes by default.
+  // Workspace-specific restrictions are enforced by backend APIs when a
+  // customer actually attempts the change, so the CTA should not disappear
+  // because of a frontend env toggle.
+  const allowPortalPlanChanges = true;
+  const allowPortalCancellation = mockData
+    ? true
+    : PORTAL_SELF_SERVE_CANCELLATION_ENABLED;
+
   // Try to read token and componentId from Provider context
   let providerToken: string | null = null;
   let providerCid: string | null = null;
@@ -7988,30 +8408,27 @@ export function ArcenEmbed({
   } = state;
 
   useEffect(() => {
-    if (view === "unsubscribe" && !PORTAL_SELF_SERVE_CANCELLATION_ENABLED) {
+    if (view === "unsubscribe" && !allowPortalCancellation) {
       dispatch({
         type: "GOTO_PORTAL",
         flashMsg:
           "Self-serve cancellation is disabled for this launch. Contact support to cancel or downgrade.",
       });
     }
-  }, [view]);
+  }, [allowPortalCancellation, view]);
 
   const handleOpenCheckout = useCallback(() => {
-    if (!PORTAL_SELF_SERVE_PLAN_CHANGES_ENABLED) return;
+    if (!allowPortalPlanChanges) return;
     dispatch({ type: "OPEN_CHECKOUT" });
-  }, []);
+  }, [allowPortalPlanChanges]);
 
   const handleOpenUnsubscribe = useCallback(() => {
-    if (!PORTAL_SELF_SERVE_CANCELLATION_ENABLED) return;
+    if (!allowPortalCancellation) return;
     dispatch({ type: "OPEN_UNSUBSCRIBE" });
-  }, []);
+  }, [allowPortalCancellation]);
 
   const handleResumeSubscription = useCallback(() => {
-    if (
-      !PORTAL_SELF_SERVE_PLAN_CHANGES_ENABLED ||
-      !state.data?.activePlan?.id
-    ) {
+    if (!allowPortalPlanChanges || !state.data?.activePlan?.id) {
       return;
     }
 
@@ -8024,7 +8441,7 @@ export function ArcenEmbed({
       }),
     });
     dispatch({ type: "OPEN_PAYMENT" });
-  }, [state.data]);
+  }, [allowPortalPlanChanges, state.data]);
 
   // Guard: loading — show skeleton first
   if (loading) {
@@ -8253,8 +8670,8 @@ export function ArcenEmbed({
               onChangePlan={handleOpenCheckout}
               onUnsubscribe={handleOpenUnsubscribe}
               onResumeSubscription={handleResumeSubscription}
-              allowPlanChanges={PORTAL_SELF_SERVE_PLAN_CHANGES_ENABLED}
-              allowCancellation={PORTAL_SELF_SERVE_CANCELLATION_ENABLED}
+              allowPlanChanges={allowPortalPlanChanges}
+              allowCancellation={allowPortalCancellation}
               containerWidth={effectiveContainerWidth}
             />
           )}
@@ -8344,8 +8761,8 @@ export function ArcenEmbed({
             onChangePlan={handleOpenCheckout}
             onUnsubscribe={handleOpenUnsubscribe}
             onResumeSubscription={handleResumeSubscription}
-            allowPlanChanges={PORTAL_SELF_SERVE_PLAN_CHANGES_ENABLED}
-            allowCancellation={PORTAL_SELF_SERVE_CANCELLATION_ENABLED}
+            allowPlanChanges={allowPortalPlanChanges}
+            allowCancellation={allowPortalCancellation}
             containerWidth={containerWidth}
           />
           {view !== "portal" && (

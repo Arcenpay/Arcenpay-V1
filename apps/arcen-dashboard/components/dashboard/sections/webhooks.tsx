@@ -124,16 +124,23 @@ function DeliveryRow({ entry }: { entry: DeliveryEntry }) {
         <span className="font-mono text-xs text-foreground truncate">
           {entry.event}
         </span>
-        <Badge variant="secondary" className={`text-xs ${statusClass} justify-center`}>
+        <Badge
+          variant="secondary"
+          className={`text-xs ${statusClass} justify-center`}
+        >
           {entry.status}
         </Badge>
         <span className="text-xs text-muted-foreground text-center">
           {entry.statusCode ?? "—"}
         </span>
-        <span className="text-xs text-muted-foreground text-right">{relTime}</span>
+        <span className="text-xs text-muted-foreground text-right">
+          {relTime}
+        </span>
         <span className="text-xs text-muted-foreground text-right">
           {entry.attemptNumber > 1 ? (
-            <span className="text-warning">{entry.attemptNumber - 1} retries</span>
+            <span className="text-warning">
+              {entry.attemptNumber - 1} retries
+            </span>
           ) : (
             "—"
           )}
@@ -146,14 +153,18 @@ function DeliveryRow({ entry }: { entry: DeliveryEntry }) {
           {entry.url ? (
             <div className="px-4 py-3 border-b border-border/50">
               <p className="text-xs text-muted-foreground mb-1">Endpoint</p>
-              <code className="text-xs text-foreground break-all">{entry.url}</code>
+              <code className="text-xs text-foreground break-all">
+                {entry.url}
+              </code>
             </div>
           ) : null}
 
           {/* Payload */}
           {entry.payload ? (
             <div className="px-4 py-3 border-b border-border/50">
-              <p className="text-xs text-muted-foreground mb-2">Request Payload</p>
+              <p className="text-xs text-muted-foreground mb-2">
+                Request Payload
+              </p>
               <pre className="text-xs text-foreground/80 overflow-x-auto max-h-48 leading-relaxed">
                 {JSON.stringify(entry.payload, null, 2)}
               </pre>
@@ -172,7 +183,9 @@ function DeliveryRow({ entry }: { entry: DeliveryEntry }) {
             <div className="px-4 py-2 bg-secondary/30">
               <p className="text-xs text-muted-foreground">
                 Delivered in {entry.durationMs}ms
-                {entry.attemptNumber > 1 ? ` after ${entry.attemptNumber} attempts` : null}
+                {entry.attemptNumber > 1
+                  ? ` after ${entry.attemptNumber} attempts`
+                  : null}
               </p>
             </div>
           ) : null}
@@ -278,10 +291,19 @@ export function WebhooksSection() {
           eventSubscriptions: events,
         }),
       });
-      if (!res.ok) throw new Error("Save failed");
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string;
+      };
+      if (!res.ok) {
+        throw new Error(data.error || "Save failed");
+      }
       toast.success("Webhook configuration saved");
-    } catch {
-      toast.error("Could not save webhook configuration");
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Could not save webhook configuration",
+      );
     } finally {
       setIsSaving(false);
     }
@@ -336,7 +358,10 @@ export function WebhooksSection() {
         toast.error(data.message ?? data.error ?? "Test failed");
       }
     } catch {
-      setTestResult({ ok: false, error: "Network error — could not reach webhook URL" });
+      setTestResult({
+        ok: false,
+        error: "Network error — could not reach webhook URL",
+      });
       toast.error("Could not send test webhook");
     } finally {
       setIsTesting(false);
@@ -361,9 +386,10 @@ export function WebhooksSection() {
             Webhook Endpoint
           </CardTitle>
           <CardDescription>
-            ArcenPay will send HTTP POST requests to this URL whenever subscribed
-            events occur. Each request is signed with HMAC-SHA256 via the{" "}
-            <code className="text-foreground">X-Arcen-Signature</code> header.
+            ArcenPay will send HTTP POST requests to this URL whenever
+            subscribed events occur. Each request is signed with HMAC-SHA256 via
+            the <code className="text-foreground">X-ArcenPay-Signature</code>{" "}
+            header.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -399,11 +425,7 @@ export function WebhooksSection() {
           </div>
 
           <div className="flex items-center gap-3 pt-2">
-            <Button
-              onClick={handleSave}
-              disabled={isSaving}
-              size="sm"
-            >
+            <Button onClick={handleSave} disabled={isSaving} size="sm">
               {isSaving ? (
                 <>
                   <RefreshCw className="w-3.5 h-3.5 mr-2 animate-spin" />
@@ -421,7 +443,7 @@ export function WebhooksSection() {
               variant="outline"
               size="sm"
               onClick={handleTest}
-              disabled={isTesting || !webhookUrl.trim()}
+              disabled={isTesting || !webhookUrl.trim() || !hasSecret}
             >
               {isTesting ? (
                 <>
@@ -436,6 +458,12 @@ export function WebhooksSection() {
               )}
             </Button>
           </div>
+          {!hasSecret && (
+            <p className="text-xs text-muted-foreground">
+              Generate a signing secret before sending test deliveries or
+              enabling production webhook handling.
+            </p>
+          )}
 
           {/* Test result inline */}
           {testResult && (
@@ -459,7 +487,9 @@ export function WebhooksSection() {
                 >
                   {testResult.ok
                     ? `Delivered — HTTP ${testResult.status ?? 200}`
-                    : (testResult.message ?? testResult.error ?? "Delivery failed")}
+                    : (testResult.message ??
+                      testResult.error ??
+                      "Delivery failed")}
                 </p>
                 {testResult.ok && (
                   <p className="text-xs text-muted-foreground">
@@ -483,8 +513,9 @@ export function WebhooksSection() {
           <CardDescription>
             ArcenPay signs every webhook payload with HMAC-SHA256 using this
             secret. On your server, verify the{" "}
-            <code className="text-foreground">X-Arcen-Signature</code> header
-            to confirm authenticity. The secret is shown <strong>once</strong> — store it securely.
+            <code className="text-foreground">X-ArcenPay-Signature</code> header
+            to confirm authenticity. The secret is shown <strong>once</strong> —
+            store it securely.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -500,7 +531,8 @@ export function WebhooksSection() {
                 </code>
               ) : (
                 <p className="text-xs text-muted-foreground mt-1">
-                  No secret configured — webhooks will be unsigned
+                  No secret configured — outbound webhooks are blocked until you
+                  generate one
                 </p>
               )}
             </div>
@@ -544,10 +576,10 @@ export function WebhooksSection() {
                 Use this in your server to verify webhook signatures:
               </p>
               <pre className="text-xs text-foreground/80 bg-secondary/50 px-3 py-2 rounded-lg border border-border overflow-x-auto">
-{`const sig = createHmac('sha256', '${newSecret.slice(0, 20)}…')
+                {`const sig = createHmac('sha256', '${newSecret.slice(0, 20)}…')
   .update(rawBody)
   .digest('hex');
-const valid = sig === req.headers['x-arcen-signature'].replace('sha256=', '');`}
+const valid = sig === req.headers['x-arcenpay-signature'].replace('sha256=', '');`}
               </pre>
             </div>
           )}
@@ -584,10 +616,10 @@ const valid = sig === req.headers['x-arcen-signature'].replace('sha256=', '');`}
             <Info className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
             <p className="text-xs text-muted-foreground">
               Every outbound webhook includes headers:{" "}
-              <code className="text-foreground">X-Arcen-Event</code>,{" "}
-              <code className="text-foreground">X-Arcen-Timestamp</code>,{" "}
-              <code className="text-foreground">X-Arcen-Signature</code>. Retry
-              policy: exponential backoff, up to 5 attempts over 24 hours.
+              <code className="text-foreground">X-ArcenPay-Event</code>,{" "}
+              <code className="text-foreground">X-ArcenPay-Timestamp</code>,{" "}
+              <code className="text-foreground">X-ArcenPay-Signature</code>.
+              Retry policy: exponential backoff, up to 5 attempts over 24 hours.
             </p>
           </div>
         </CardContent>
@@ -598,7 +630,9 @@ const valid = sig === req.headers['x-arcen-signature'].replace('sha256=', '');`}
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {hasSecret ? "Rotate Signing Secret?" : "Generate Signing Secret?"}
+              {hasSecret
+                ? "Rotate Signing Secret?"
+                : "Generate Signing Secret?"}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {hasSecret
@@ -643,7 +677,9 @@ const valid = sig === req.headers['x-arcen-signature'].replace('sha256=', '');`}
                 size="sm"
                 className="text-xs"
                 onClick={() =>
-                  setEvents((prev) => prev.map((e) => ({ ...e, enabled: true })))
+                  setEvents((prev) =>
+                    prev.map((e) => ({ ...e, enabled: true })),
+                  )
                 }
               >
                 All
@@ -653,7 +689,9 @@ const valid = sig === req.headers['x-arcen-signature'].replace('sha256=', '');`}
                 size="sm"
                 className="text-xs"
                 onClick={() =>
-                  setEvents((prev) => prev.map((e) => ({ ...e, enabled: false })))
+                  setEvents((prev) =>
+                    prev.map((e) => ({ ...e, enabled: false })),
+                  )
                 }
               >
                 None
@@ -671,7 +709,10 @@ const valid = sig === req.headers['x-arcen-signature'].replace('sha256=', '');`}
               <div
                 key={event.id}
                 className="grid grid-cols-[1fr,64px] gap-4 py-3.5 border-b border-border/50 last:border-0 animate-in fade-in slide-in-from-left-2 items-center"
-                style={{ animationDelay: `${idx * 30}ms`, animationFillMode: "both" }}
+                style={{
+                  animationDelay: `${idx * 30}ms`,
+                  animationFillMode: "both",
+                }}
               >
                 <div>
                   <p className="text-sm font-medium text-foreground">
@@ -694,11 +735,7 @@ const valid = sig === req.headers['x-arcen-signature'].replace('sha256=', '');`}
             ))}
           </div>
           <div className="flex justify-end mt-4">
-            <Button
-              size="sm"
-              onClick={handleSave}
-              disabled={isSaving}
-            >
+            <Button size="sm" onClick={handleSave} disabled={isSaving}>
               {isSaving ? (
                 <>
                   <RefreshCw className="w-3.5 h-3.5 mr-2 animate-spin" />
@@ -792,7 +829,7 @@ const valid = sig === req.headers['x-arcen-signature'].replace('sha256=', '');`}
               Node.js / Express
             </div>
             <pre className="px-4 py-4 text-xs text-foreground/80 overflow-x-auto leading-relaxed">
-{`import { createHmac } from 'crypto';
+              {`import { createHmac } from 'crypto';
 
 app.post('/webhooks/arcenpay', express.raw({ type: 'application/json' }), (req, res) => {
   const signature = req.headers['x-arcen-signature']; // "sha256=<hex>"
@@ -821,7 +858,7 @@ app.post('/webhooks/arcenpay', express.raw({ type: 'application/json' }), (req, 
               Next.js App Router (route.ts)
             </div>
             <pre className="px-4 py-4 text-xs text-foreground/80 overflow-x-auto leading-relaxed">
-{`import { createHmac } from 'crypto';
+              {`import { createHmac } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(req: NextRequest) {

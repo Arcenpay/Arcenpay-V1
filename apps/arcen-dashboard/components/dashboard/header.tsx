@@ -8,9 +8,10 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useDashboardSession } from "@/hooks/use-dashboard-session";
-import { BASE_SEPOLIA_CHAIN_ID, getChainLabel } from "@/lib/default-chain";
+import { DEFAULT_CHAIN_ID, getChainLabel } from "@/lib/default-chain";
 import {
-  REQUIRED_WALLET_CHAIN_LABEL,
+  DEFAULT_WALLET_CHAIN_LABEL,
+  SUPPORTED_WALLET_CHAIN_LABEL,
   useDashboardWallet,
 } from "@/hooks/use-dashboard-wallet";
 
@@ -213,7 +214,7 @@ export function Header({ activeSection }: HeaderProps) {
             "border-blue-400/50 text-blue-400 bg-blue-400/5",
           )}
         >
-          {getChainLabel(BASE_SEPOLIA_CHAIN_ID)}
+          {getChainLabel(DEFAULT_CHAIN_ID)}
         </Badge>
 
         {/* Search */}
@@ -326,10 +327,10 @@ export function Header({ activeSection }: HeaderProps) {
               </div>
               <div className="mt-2 rounded-xl border border-border/70 px-3 py-3">
                 <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
-                  Active network
+                  Supported networks
                 </p>
                 <p className="mt-1 text-sm font-medium text-foreground">
-                  {REQUIRED_WALLET_CHAIN_LABEL}
+                  {SUPPORTED_WALLET_CHAIN_LABEL}
                 </p>
               </div>
               {!isLinkedWalletConnected && linkedWalletLabel && hasConnectedWallet ? (
@@ -339,7 +340,7 @@ export function Header({ activeSection }: HeaderProps) {
               ) : null}
               {hasConnectedWallet && !isOnRequiredNetwork ? (
                 <div className="mt-2 rounded-xl border border-amber-500/20 bg-amber-500/5 px-3 py-3 text-xs text-amber-700">
-                  Switch this wallet to {REQUIRED_WALLET_CHAIN_LABEL} before using dashboard transactions.
+                  Switch this wallet to a supported network ({SUPPORTED_WALLET_CHAIN_LABEL}) before using dashboard transactions.
                 </div>
               ) : null}
               <div className="mt-2 grid gap-2">
@@ -372,7 +373,7 @@ export function Header({ activeSection }: HeaderProps) {
                   >
                     {isSwitchingChain
                       ? "Switching network..."
-                      : `Switch to ${REQUIRED_WALLET_CHAIN_LABEL}`}
+                      : `Switch to ${DEFAULT_WALLET_CHAIN_LABEL}`}
                   </Button>
                 ) : null}
                 {hasConnectedWallet ? (

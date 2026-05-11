@@ -9,6 +9,7 @@ const outputFileTracingRoot = path.join(
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   outputFileTracingRoot,
+  transpilePackages: ["@arcenpay/react"],
   typescript: {
     ignoreBuildErrors: false,
   },
@@ -39,7 +40,12 @@ const nextConfig = {
       net: false,
       tls: false,
     };
-    config.externals.push("pino-pretty", "lokijs", "encoding", "@reclaimprotocol/js-sdk");
+    config.externals.push(
+      "pino-pretty",
+      "lokijs",
+      "encoding",
+      "@reclaimprotocol/js-sdk",
+    );
     return config;
   },
 };

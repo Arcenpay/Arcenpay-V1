@@ -547,7 +547,7 @@ function FeatureIconPicker({
   );
 }
 
-function FeatureAvatar({
+export function FeatureAvatar({
   featureType,
   icon,
   className,

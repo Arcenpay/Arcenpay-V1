@@ -338,6 +338,7 @@ export interface ComponentUsageItem {
   limit?: number;
   unitSingular: string | null;
   unitPlural?: string | null;
+  icon?: string | null;
 }
 
 export interface ComponentPlanEntitlement {
@@ -346,6 +347,9 @@ export interface ComponentPlanEntitlement {
   type: "BOOLEAN" | "NUMERIC" | "UNLIMITED";
   value: boolean | number | null;
   enabled: boolean;
+  valueUnit?: string | null;
+  featureType?: "boolean" | "event" | "trait";
+  icon?: string | null;
 }
 
 export interface ComponentPlanSummary {

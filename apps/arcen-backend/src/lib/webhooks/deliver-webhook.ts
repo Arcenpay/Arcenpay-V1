@@ -32,7 +32,10 @@ export interface SendWebhookDeliveryResult {
 
 async function resolveWebhookTarget(
   teamId: string,
-  input: Pick<SendWebhookDeliveryInput, "webhookUrl" | "signingSecret" | "eventName" | "force">,
+  input: Pick<
+    SendWebhookDeliveryInput,
+    "webhookUrl" | "signingSecret" | "eventName" | "force"
+  >,
 ) {
   const profile = await db.providerProfile.findUnique({
     where: { teamId },
@@ -45,12 +48,17 @@ async function resolveWebhookTarget(
   });
 
   const webhookUrl = input.webhookUrl?.trim() || profile?.webhookUrl || null;
-  const signingSecret = input.signingSecret?.trim() || profile?.webhookSigningSecret || null;
+  const signingSecret =
+    input.signingSecret?.trim() || profile?.webhookSigningSecret || null;
 
   if (!webhookUrl) return null;
+  if (!signingSecret) return null;
 
   const prefs = Array.isArray(profile?.notificationPreferences)
-    ? (profile.notificationPreferences as Array<{ id: string; webhook?: boolean }>)
+    ? (profile.notificationPreferences as Array<{
+        id: string;
+        webhook?: boolean;
+      }>)
     : [];
   const hasExplicitWebhookPrefs = prefs.some(
     (pref) => typeof pref?.webhook === "boolean",
@@ -97,12 +105,10 @@ export async function sendWebhookDelivery(
     "X-ArcenPay-Timestamp": String(timestamp),
   };
 
-  if (target.signingSecret) {
-    const sig = createHmac("sha256", target.signingSecret)
-      .update(payload)
-      .digest("hex");
-    headers["X-ArcenPay-Signature"] = `sha256=${sig}`;
-  }
+  const sig = createHmac("sha256", target.signingSecret)
+    .update(payload)
+    .digest("hex");
+  headers["X-ArcenPay-Signature"] = `sha256=${sig}`;
 
   const deliveryId = randomBytes(12).toString("hex");
   let statusCode: number | undefined;

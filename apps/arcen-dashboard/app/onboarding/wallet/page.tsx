@@ -13,7 +13,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { buildSIWEMessage } from "@/lib/auth";
 import {
-  REQUIRED_WALLET_CHAIN_LABEL,
+  DEFAULT_WALLET_CHAIN_LABEL,
+  SUPPORTED_WALLET_CHAIN_LABEL,
   useDashboardWallet,
 } from "@/hooks/use-dashboard-wallet";
 import { toast } from "sonner";
@@ -55,7 +56,9 @@ export default function ConnectWalletPage() {
     }
 
     if (!isOnRequiredNetwork) {
-      toast.error(`Switch to ${REQUIRED_WALLET_CHAIN_LABEL} before signing`);
+      toast.error(
+        `Switch to a supported network (${SUPPORTED_WALLET_CHAIN_LABEL}) before signing`,
+      );
       return;
     }
 
@@ -141,9 +144,9 @@ export default function ConnectWalletPage() {
             </div>
 
             <div className="rounded-lg border border-border bg-secondary/30 px-3 py-3">
-              <p className="text-xs text-muted-foreground">Supported network</p>
+              <p className="text-xs text-muted-foreground">Supported networks</p>
               <p className="mt-1 text-sm font-medium text-foreground">
-                {REQUIRED_WALLET_CHAIN_LABEL}
+                {SUPPORTED_WALLET_CHAIN_LABEL}
               </p>
             </div>
 
@@ -179,7 +182,9 @@ export default function ConnectWalletPage() {
                 {isWrongNetwork ? (
                   <div className="flex items-start gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-3 text-sm text-amber-700">
                     <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-                    <span>Switch this wallet to {REQUIRED_WALLET_CHAIN_LABEL} to continue.</span>
+                    <span>
+                      Switch this wallet to a supported network ({SUPPORTED_WALLET_CHAIN_LABEL}) to continue.
+                    </span>
                   </div>
                 ) : null}
 
@@ -198,7 +203,7 @@ export default function ConnectWalletPage() {
                       ) : (
                         <>
                           <Shield className="w-3.5 h-3.5 mr-2" />
-                          Switch to {REQUIRED_WALLET_CHAIN_LABEL}
+                          Switch to {DEFAULT_WALLET_CHAIN_LABEL}
                         </>
                       )}
                     </Button>
@@ -219,7 +224,7 @@ export default function ConnectWalletPage() {
             ) : (
               <div className="space-y-2.5">
                 <p className="text-sm text-muted-foreground">
-                  Connect your linked workspace wallet on {REQUIRED_WALLET_CHAIN_LABEL} to use
+                  Connect your linked workspace wallet on {SUPPORTED_WALLET_CHAIN_LABEL} to use
                   on-chain actions.
                 </p>
                 <Button className="w-full" variant="outline" onClick={() => void openConnectModal()}>
@@ -248,7 +253,7 @@ export default function ConnectWalletPage() {
           <div>
             <h1 className="text-xl font-semibold text-foreground">Link your wallet</h1>
             <p className="text-sm text-muted-foreground mt-0.5">
-              The dashboard currently supports {REQUIRED_WALLET_CHAIN_LABEL} only.
+              The dashboard currently supports {SUPPORTED_WALLET_CHAIN_LABEL}.
             </p>
           </div>
         </div>
@@ -302,7 +307,7 @@ export default function ConnectWalletPage() {
 
                 {isWrongNetwork ? (
                   <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-3 text-sm text-amber-700">
-                    Switch this wallet to {REQUIRED_WALLET_CHAIN_LABEL} before linking it.
+                    Switch this wallet to a supported network ({SUPPORTED_WALLET_CHAIN_LABEL}) before linking it.
                   </div>
                 ) : null}
 
@@ -318,13 +323,13 @@ export default function ConnectWalletPage() {
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                         Switching network...
                       </>
-                    ) : (
-                      <>
-                        <Shield className="w-4 h-4 mr-2" />
-                        Switch to {REQUIRED_WALLET_CHAIN_LABEL}
-                      </>
-                    )}
-                  </Button>
+                      ) : (
+                        <>
+                          <Shield className="w-4 h-4 mr-2" />
+                          Switch to {DEFAULT_WALLET_CHAIN_LABEL}
+                        </>
+                      )}
+                    </Button>
                 ) : null}
 
                 <Button className="w-full" onClick={handleLinkWallet} disabled={isSigning || isWrongNetwork}>
@@ -344,7 +349,7 @@ export default function ConnectWalletPage() {
             ) : (
               <div className="space-y-3">
                 <p className="text-sm text-muted-foreground">
-                  Connect the Base Sepolia wallet you want to use for this workspace.
+                  Connect the wallet you want to use for this workspace on {SUPPORTED_WALLET_CHAIN_LABEL}.
                 </p>
                 <Button className="w-full" onClick={() => void openConnectModal()}>
                   <Wallet className="w-4 h-4 mr-2" />
@@ -363,7 +368,7 @@ export default function ConnectWalletPage() {
 
         <p className="text-xs text-center text-muted-foreground/60 leading-relaxed">
           This wallet becomes the workspace signing wallet for dashboard actions on
-          {" "}{REQUIRED_WALLET_CHAIN_LABEL}.
+          {" "}{SUPPORTED_WALLET_CHAIN_LABEL}.
         </p>
       </div>
     </div>

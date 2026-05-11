@@ -6,6 +6,7 @@ export const BASE_MAINNET_CHAIN_ID = 8453 as const;
 export const ARC_TESTNET_CHAIN_ID = 5042002 as const;
 
 const SUPPORTED_CHAIN_IDS = [BASE_SEPOLIA_CHAIN_ID, ARC_TESTNET_CHAIN_ID] as const;
+export const SUPPORTED_DASHBOARD_CHAIN_IDS = SUPPORTED_CHAIN_IDS;
 
 export type SupportedDashboardChainId = (typeof SUPPORTED_CHAIN_IDS)[number];
 export type EnvironmentMode = "DEVELOPMENT" | "PRODUCTION";
@@ -64,3 +65,18 @@ export function getChainLabel(chainId: number): string {
     return `Chain ${chainId}`;
   }
 }
+
+export function formatSupportedDashboardChainLabels(): string {
+  const labels = SUPPORTED_DASHBOARD_CHAIN_IDS.map((chainId) =>
+    getChainLabel(chainId),
+  );
+
+  if (labels.length === 0) return "supported network";
+  if (labels.length === 1) return labels[0];
+  if (labels.length === 2) return `${labels[0]} or ${labels[1]}`;
+
+  return `${labels.slice(0, -1).join(", ")}, or ${labels.at(-1)}`;
+}
+
+export const SUPPORTED_DASHBOARD_CHAIN_LABEL =
+  formatSupportedDashboardChainLabels();

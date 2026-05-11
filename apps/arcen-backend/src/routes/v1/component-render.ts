@@ -51,9 +51,7 @@ function asRecord(value: unknown): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
-function normalizeBillingPeriod(
-  value: unknown,
-): "monthly" | "annual" | null {
+function normalizeBillingPeriod(value: unknown): "monthly" | "annual" | null {
   if (typeof value !== "string") return null;
   const normalized = value.trim().toLowerCase();
   if (normalized === "annual" || normalized === "yearly") return "annual";
@@ -79,14 +77,14 @@ export async function GET(c: Context) {
   const origin = c.req.header("origin");
 
   // Extract token from Authorization header or query param
-  const token = extractEmbedAccessToken({ get: (name: string) => c.req.header(name) }, { get: (name: string) => c.req.query(name) ?? null }, { allowQueryParam: true });
+  const token = extractEmbedAccessToken(
+    { get: (name: string) => c.req.header(name) },
+    { get: (name: string) => c.req.query(name) ?? null },
+    { allowQueryParam: true },
+  );
 
   if (!token) {
-    return c.json(
-      { error: "Access token required" },
-      401,
-      corsHeaders(origin),
-    );
+    return c.json({ error: "Access token required" }, 401, corsHeaders(origin));
   }
 
   if (!process.env.ACCESS_TOKEN_SECRET) {
@@ -129,11 +127,7 @@ export async function GET(c: Context) {
   });
 
   if (!component) {
-    return c.json(
-      { error: "Component not found" },
-      404,
-      corsHeaders(origin),
-    );
+    return c.json({ error: "Component not found" }, 404, corsHeaders(origin));
   }
 
   // Load company data
@@ -191,11 +185,8 @@ export async function GET(c: Context) {
         company.subscriptionState?.walletAddress || company.walletAddress
           ? await db.subscriberEmail.findUnique({
               where: {
-                walletAddress:
-                  (
-                    company.subscriptionState?.walletAddress ??
-                    company.walletAddress
-                  )!.toLowerCase(),
+                walletAddress: (company.subscriptionState?.walletAddress ??
+                  company.walletAddress)!.toLowerCase(),
               },
               select: { email: true },
             })
@@ -217,7 +208,7 @@ export async function GET(c: Context) {
       const effectiveActivePlanId =
         company.subscriptionState?.status === "ACTIVE" ||
         company.subscriptionState?.status === "PAST_DUE"
-          ? company.subscriptionState.catalogPlanId ?? company.activePlanId
+          ? (company.subscriptionState.catalogPlanId ?? company.activePlanId)
           : company.activePlanId;
 
       if (effectiveActivePlanId) {
@@ -305,6 +296,7 @@ export async function GET(c: Context) {
           limit: entitlement.limit ?? undefined,
           unitSingular: entitlement.unitSingular ?? null,
           unitPlural: entitlement.unitPlural ?? null,
+          icon: typeof entitlement.icon === "string" ? entitlement.icon : null,
         }));
 
       const invoiceFilters = [
@@ -312,7 +304,10 @@ export async function GET(c: Context) {
           ? { customerWallet: company.walletAddress.toLowerCase() }
           : null,
         company.subscriptionState?.walletAddress
-          ? { customerWallet: company.subscriptionState.walletAddress.toLowerCase() }
+          ? {
+              customerWallet:
+                company.subscriptionState.walletAddress.toLowerCase(),
+            }
           : null,
         company.email ? { customerEmail: company.email } : null,
         subscriberEmailRecord?.email
@@ -386,7 +381,8 @@ export async function GET(c: Context) {
       };
 
       if (company.subscriptionState?.currentPeriodEnd) {
-        nextBillingAt = company.subscriptionState.currentPeriodEnd.toISOString();
+        nextBillingAt =
+          company.subscriptionState.currentPeriodEnd.toISOString();
       }
 
       if (billingPaymentAccount) {
@@ -543,7 +539,8 @@ export async function GET(c: Context) {
   }
 
   const liveMatchedPlan = liveOnChainPlanId
-    ? hydratedPlans.find((plan) => plan.onChainPlanId === liveOnChainPlanId) ?? null
+    ? (hydratedPlans.find((plan) => plan.onChainPlanId === liveOnChainPlanId) ??
+      null)
     : null;
   const hasPendingNextRenewalPlanChange =
     typeof subscriptionTransition?.mode === "string" &&
@@ -554,8 +551,9 @@ export async function GET(c: Context) {
     liveMatchedPlan &&
     !hasPendingNextRenewalPlanChange &&
     (!activePlan ||
-      String((activePlan as { onChainPlanId?: unknown }).onChainPlanId ?? "") !==
-        liveOnChainPlanId)
+      String(
+        (activePlan as { onChainPlanId?: unknown }).onChainPlanId ?? "",
+      ) !== liveOnChainPlanId)
   ) {
     activePlan = {
       id: liveMatchedPlan.id,
@@ -597,7 +595,8 @@ export async function GET(c: Context) {
   }
 
   activeBillingPeriod =
-    activeBillingPeriod ?? deriveBillingPeriodFromInterval(activePlan?.billingInterval);
+    activeBillingPeriod ??
+    deriveBillingPeriodFromInterval(activePlan?.billingInterval);
 
   const plansForResponse = hydratedPlans.map((plan) => ({
     id: plan.id,
