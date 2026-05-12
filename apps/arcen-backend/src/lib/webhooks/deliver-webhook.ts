@@ -54,6 +54,9 @@ async function resolveWebhookTarget(
   if (!webhookUrl) return null;
   if (!signingSecret) return null;
 
+  // Security: only deliver to HTTPS endpoints
+  if (!webhookUrl.startsWith("https://")) return null;
+
   const prefs = Array.isArray(profile?.notificationPreferences)
     ? (profile.notificationPreferences as Array<{
         id: string;

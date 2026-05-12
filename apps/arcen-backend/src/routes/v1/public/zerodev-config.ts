@@ -9,6 +9,16 @@ import { ZERODEV_PROJECT_ID } from "../../../config.js";
 import { DEFAULT_CHAIN_ID } from "../../../lib/platform/default-chain.js";
 import { corsHeaders } from "../../../middleware/cors.js";
 
+function parseChainIdSet(raw: string | undefined): Set<number> {
+  if (!raw) return new Set();
+  return new Set(
+    raw
+      .split(",")
+      .map((value) => Number.parseInt(value.trim(), 10))
+      .filter((value) => Number.isFinite(value) && value > 0),
+  );
+}
+
 export async function OPTIONS(c: Context) {
   return c.json(null, 204 as any, corsHeaders(c.req.header("origin")));
 }
@@ -39,6 +49,10 @@ export async function GET(c: Context) {
 
   const isSelfFunded =
     selfFundedRaw === "true" ||
+    parseChainIdSet(
+      process.env.ZERODEV_SELF_FUNDED_CHAINS ||
+        process.env.ARCENPAY_ZERODEV_SELF_FUNDED_CHAINS,
+    ).has(chainId) ||
     process.env.ZERODEV_MODE === "self-funded" ||
     false;
 
@@ -61,6 +75,8 @@ export async function GET(c: Context) {
     paymasterUrl,
     selfFunded: isSelfFunded,
   };
+
+  console.info("[backend][zerodev-config]", data);
 
   return c.json({ data }, 200, corsHeaders(origin));
 }

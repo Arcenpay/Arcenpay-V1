@@ -280,7 +280,16 @@ export function WebhooksSection() {
     void loadDeliveries();
   }, [loadDeliveries]);
 
+  const urlIsHttp =
+    webhookUrl.trim().length > 0 &&
+    webhookUrl.trim().startsWith("http://") &&
+    !webhookUrl.trim().startsWith("https://");
+
   const handleSave = async () => {
+    if (urlIsHttp) {
+      toast.error("Webhook URL must use HTTPS");
+      return;
+    }
     setIsSaving(true);
     try {
       const res = await fetch("/api/provider/webhooks", {
@@ -338,6 +347,10 @@ export function WebhooksSection() {
   const handleTest = async () => {
     if (!webhookUrl.trim()) {
       toast.error("Enter a webhook URL first");
+      return;
+    }
+    if (urlIsHttp) {
+      toast.error("Webhook URL must use HTTPS");
       return;
     }
     setIsTesting(true);
@@ -403,6 +416,12 @@ export function WebhooksSection() {
                 onChange={(e) => setWebhookUrl(e.target.value)}
                 className="bg-secondary border-border focus:border-accent font-mono text-sm flex-1"
               />
+              {urlIsHttp && (
+                <p className="text-xs text-destructive flex items-center gap-1 mt-1">
+                  <AlertTriangle className="w-3 h-3" />
+                  Webhook URL must use HTTPS — http:// is not accepted
+                </p>
+              )}
               {webhookUrl && (
                 <Button
                   variant="ghost"

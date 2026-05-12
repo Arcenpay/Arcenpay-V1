@@ -15,6 +15,7 @@ import { injected, walletConnect } from "wagmi/connectors";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ContractAddresses, NetworkConfig, PlanTier } from "../sdk";
 import {
+  arcTestnet,
   getChainEnvironment,
   DEFAULT_CHAIN_ID,
   validateChainEnvironment,
@@ -211,7 +212,7 @@ export function ArcenPayProvider(props: ArcenPayProviderProps) {
     };
 
     return createConfig({
-      chains: [sepolia, baseSepolia, base],
+      chains: [sepolia, baseSepolia, base, arcTestnet],
       connectors: projectId
         ? [injected(), walletConnect({ projectId })]
         : [injected()],
@@ -219,6 +220,7 @@ export function ArcenPayProvider(props: ArcenPayProviderProps) {
         [sepolia.id]: getRpcTransport(sepolia.id),
         [baseSepolia.id]: getRpcTransport(baseSepolia.id),
         [base.id]: getRpcTransport(base.id),
+        [arcTestnet.id]: getRpcTransport(arcTestnet.id),
       },
       ssr: true,
     });

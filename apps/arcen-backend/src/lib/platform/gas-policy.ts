@@ -6,7 +6,7 @@
 //
 //  Rules:
 //  - Always sponsor subscriber-side transactions (checkout, renewal)
-//  - Base Sepolia only for the current testnet-only rollout
+//  - Base Sepolia and Arc Testnet for the current testnet rollout
 //  - Enforce daily gas budget per team tier
 //  - Anti-abuse: max sponsorship per wallet per day
 //  - Budget alert thresholds at 80% and 100%
@@ -20,15 +20,15 @@ import { PlatformTier, Prisma } from "../../generated/client/client.js";
 // ── Allowed chains for gas sponsorship (L2 only) ─────────────────────────────
 
 const SPONSORED_CHAIN_IDS = new Set<number>([
-    84532,  // Base Sepolia
+    84532,   // Base Sepolia
+    5042002, // Arc Testnet
 ]);
 
-// L1 chains where sponsorship is explicitly blocked
+// Chains where sponsorship is explicitly blocked
 const BLOCKED_CHAIN_IDS = new Set<number>([
     1,          // Ethereum mainnet
     11155111,   // Sepolia (L1 testnet)
     8453,       // Base mainnet
-    5042002,    // Arc Testnet (block sponsorship until paymaster configured)
 ]);
 
 // ── Anti-abuse limits ────────────────────────────────────────────────────────
@@ -116,14 +116,14 @@ export async function shouldSponsorGas(
     if (BLOCKED_CHAIN_IDS.has(chainId)) {
         return {
             sponsor: false,
-            reason: `Gas sponsorship is not available on chain ${chainId} (L1). Only L2 chains are supported.`,
+            reason: `Gas sponsorship is not available on chain ${chainId}.`,
         };
     }
 
     if (!SPONSORED_CHAIN_IDS.has(chainId)) {
         return {
             sponsor: false,
-            reason: `Chain ${chainId} is not configured for gas sponsorship.`,
+            reason: `Chain ${chainId} is not configured for gas sponsorship. Supported chains: ${[...SPONSORED_CHAIN_IDS].join(", ")}.`,
         };
     }
 

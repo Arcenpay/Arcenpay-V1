@@ -131,6 +131,32 @@ function normalizeZeroDevError(
   return error instanceof Error ? error : new Error(message);
 }
 
+
+async function requestZeroDevPaymasterData(params: {
+  paymasterClient: ReturnType<typeof createZeroDevPaymasterClient>;
+  chainId: number;
+  kernelAccountAddress: `0x${string}`;
+  bundlerUrl: string;
+  paymasterUrl: string;
+  userOperation: any;
+  mode: "stub" | "final";
+}) {
+  const sponsorship =
+    params.mode === "stub"
+      ? await (params.paymasterClient as any).getPaymasterStubData({
+          chainId: params.chainId,
+          entryPointAddress: ENTRY_POINT_ADDRESS,
+          ...params.userOperation,
+        })
+      : await (params.paymasterClient as any).getPaymasterData({
+          chainId: params.chainId,
+          entryPointAddress: ENTRY_POINT_ADDRESS,
+          ...params.userOperation,
+        });
+
+  return sponsorship;
+}
+
 export function isRecoverableSmartAccountFundingError(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error ?? "");
   const lower = message.toLowerCase();
@@ -279,17 +305,34 @@ async function createKernelExecutionContext(config: {
     account: kernelAccount,
     chain,
     bundlerTransport: http(bundlerUrl),
-    middleware: {
-      sponsorUserOperation: async ({
-        userOperation,
-      }: {
-        userOperation: any;
-      }) => {
-        return (paymasterClient as any).sponsorUserOperation({
+    paymaster: {
+      getPaymasterStubData: async (userOperation: any) => {
+        const sponsorship = await requestZeroDevPaymasterData({
+          paymasterClient,
+          chainId: config.chainId,
+          kernelAccountAddress: kernelAccount.address,
+          bundlerUrl,
+          paymasterUrl,
           userOperation,
-          entryPoint: ENTRY_POINT_ADDRESS,
+          mode: "stub",
         });
+
+        return {
+          ...sponsorship,
+          isFinal:
+            "isFinal" in sponsorship ? Boolean(sponsorship.isFinal) : false,
+        };
       },
+      getPaymasterData: async (userOperation: any) =>
+        requestZeroDevPaymasterData({
+          paymasterClient,
+          chainId: config.chainId,
+          kernelAccountAddress: kernelAccount.address,
+          bundlerUrl,
+          paymasterUrl,
+          userOperation,
+          mode: "final",
+        }),
     },
   } as any);
 

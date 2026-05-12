@@ -18,6 +18,10 @@ const UpdateSchema = z.object({
   webhookUrl: z
     .string()
     .url("Invalid webhook URL")
+    .refine(
+      (url) => url.startsWith("https://"),
+      "Webhook URL must use HTTPS (http:// is not allowed)",
+    )
     .nullable()
     .optional()
     .or(z.literal(""))
@@ -98,6 +102,17 @@ export async function putWebhookConfig(c: Context) {
       notificationPreferences: true,
     },
   });
+
+  // Block saving a URL without a signing secret
+  if (webhookUrl && !existingProfile?.webhookSigningSecret) {
+    return c.json(
+      {
+        error:
+          "Generate a webhook signing secret before setting a webhook URL.",
+      },
+      400 as any,
+    );
+  }
 
   if (
     eventSubscriptions?.some((subscription) => subscription.enabled) &&

@@ -165,6 +165,12 @@ const BILLING_MAINTENANCE_LIMIT_PER_TEAM = Number(
 );
 const DEFAULT_ERC4337_ENTRYPOINT_V07 =
   "0x0000000071727de22e5e9d8baf0edac6f37da032";
+const ZERODEV_PROJECT_ID = (
+  process.env.ZERODEV_PROJECT_ID ||
+  process.env.NEXT_PUBLIC_ZERODEV_PROJECT_ID ||
+  process.env.ZERO_DEV_PROJECT_ID ||
+  ""
+).trim();
 const PAYMASTER_RPC_URL = (
   process.env.PAYMASTER_RPC_URL ||
   process.env.ZERODEV_PAYMASTER_RPC ||
@@ -206,6 +212,25 @@ function parseChainIdSet(raw: string): Set<number> {
     .map((v) => Number.parseInt(v.trim(), 10))
     .filter((v) => Number.isFinite(v) && v > 0);
   return new Set(values);
+}
+
+function buildZeroDevPaymasterUrl(chainId: number): string {
+  if (!ZERODEV_PROJECT_ID) return "";
+  return `https://rpc.zerodev.app/api/v3/${ZERODEV_PROJECT_ID}/chain/${chainId}`;
+}
+
+function getPaymasterRpcUrl(chainId: number): string {
+  const specific = (
+    process.env[`PAYMASTER_RPC_URL_${chainId}`] ||
+    process.env[`ZERODEV_PAYMASTER_RPC_${chainId}`] ||
+    ""
+  ).trim();
+  if (specific) return specific;
+
+  const derived = buildZeroDevPaymasterUrl(chainId);
+  if (derived) return derived;
+
+  return PAYMASTER_RPC_URL;
 }
 
 function validateRuntimeConfig(): void {
@@ -263,10 +288,12 @@ function validateRuntimeConfig(): void {
       );
     }
 
-    if (PAYMASTER_CHAIN_IDS.size > 0 && !PAYMASTER_RPC_URL) {
-      errors.push(
-        "PAYMASTER_RPC_URL is required when PAYMASTER_CHAIN_IDS is configured.",
-      );
+    for (const chainId of PAYMASTER_CHAIN_IDS) {
+      if (!getPaymasterRpcUrl(chainId)) {
+        errors.push(
+          `A paymaster RPC URL is required for chain ${chainId}. Set PAYMASTER_RPC_URL_${chainId}, ZERODEV_PAYMASTER_RPC_${chainId}, or ZERODEV_PROJECT_ID.`,
+        );
+      }
     }
 
     for (const artifactPath of [
@@ -311,9 +338,12 @@ function validateRuntimeConfig(): void {
     );
   }
 
-  if (PAYMASTER_CHAIN_IDS.size > 0 && !PAYMASTER_RPC_URL) {
+  if (
+    PAYMASTER_CHAIN_IDS.size > 0 &&
+    [...PAYMASTER_CHAIN_IDS].some((chainId) => !getPaymasterRpcUrl(chainId))
+  ) {
     console.warn(
-      "[Facilitator] PAYMASTER_CHAIN_IDS is set but PAYMASTER_RPC_URL is missing; sponsorship requests will be denied.",
+      "[Facilitator] Some PAYMASTER_CHAIN_IDS do not have a configured paymaster RPC URL; sponsorship requests will be denied for those chains.",
     );
   }
 
@@ -3983,8 +4013,11 @@ async function sponsorUserOperationViaPaymaster(input: {
   entryPoint: `0x${string}`;
   sponsorContext?: Record<string, unknown>;
 }): Promise<{ paymasterAndData: Hex; rawResult: unknown }> {
-  if (!PAYMASTER_RPC_URL) {
-    throw new Error("PAYMASTER_RPC_URL is not configured.");
+  const paymasterRpcUrl = getPaymasterRpcUrl(input.chainId);
+  if (!paymasterRpcUrl) {
+    throw new Error(
+      `Paymaster RPC is not configured for chain ${input.chainId}.`,
+    );
   }
 
   const headers: Record<string, string> = {
@@ -4008,7 +4041,7 @@ async function sponsorUserOperationViaPaymaster(input: {
     ],
   };
 
-  const rpcRes = await fetch(PAYMASTER_RPC_URL, {
+  const rpcRes = await fetch(paymasterRpcUrl, {
     method: "POST",
     headers,
     body: JSON.stringify(payload),
@@ -4081,10 +4114,11 @@ app.post(
       return;
     }
 
-    if (!PAYMASTER_RPC_URL) {
+    const paymasterRpcUrl = getPaymasterRpcUrl(body.chainId);
+    if (!paymasterRpcUrl) {
       res.status(200).json({
         sponsored: false,
-        reason: "Paymaster RPC is not configured (PAYMASTER_RPC_URL missing).",
+        reason: `Paymaster RPC is not configured for chain ${body.chainId}.`,
       });
       return;
     }

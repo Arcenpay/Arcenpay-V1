@@ -5589,7 +5589,7 @@ function PaymentContent({
       !finalAddress
     ) {
       throw new Error(
-        "A connected Base Sepolia wallet is required before activation.",
+        "A connected wallet on the target payment chain is required before activation.",
       );
     }
 
@@ -5598,14 +5598,21 @@ function PaymentContent({
     const forceSelfFunded = zeroDevConfig?.selfFunded;
     const chainLabel = formatChainLabel(chainId) ?? `Chain ${chainId}`;
     const nativeSymbol = getChain(chainId).nativeCurrency.symbol;
+    const ensureSelfFundedQuery = (url: string): string => {
+      if (url.includes("selfFunded=true")) return url;
+      return url.includes("?")
+        ? `${url}&selfFunded=true`
+        : `${url}?selfFunded=true`;
+    };
 
     for (let attempt = 0; attempt < 2; attempt += 1) {
       try {
-        const paymasterSuffix =
-          forceSelfFunded || attempt > 0 ? "?selfFunded=true" : "";
         const paymasterUrl = zeroDevConfig?.paymasterUrl
-          ? zeroDevConfig.paymasterUrl + paymasterSuffix
+          ? forceSelfFunded || attempt > 0
+            ? ensureSelfFundedQuery(zeroDevConfig.paymasterUrl)
+            : zeroDevConfig.paymasterUrl
           : undefined;
+
 
         const result = await deploySmartAccount({
           projectId: zeroDevProjectId,
@@ -5618,49 +5625,34 @@ function PaymentContent({
         setProvisionedSmartAccountAddress(result.smartAccountAddress);
         return result.smartAccountAddress;
       } catch (error) {
-        if (
-          attempt === 0 &&
-          (isPrefundError(error) ||
-            (forceSelfFunded && isRecoverableSmartAccountFundingError(error)))
-        ) {
-          try {
-            const counterfactualAddress =
-              await getCounterfactualSmartAccountAddress(
-                resolvedWalletClient,
-                chainId,
-              );
+        console.error("[ArcenPay][Embed] ensureBillingSmartAccount:error", {
+          attempt,
+          chainId,
+          chainLabel,
+          selfFunded: Boolean(forceSelfFunded),
+          bundlerUrl: zeroDevConfig?.bundlerUrl,
+          paymasterUrl: zeroDevConfig?.paymasterUrl,
+          error: error instanceof Error ? error.message : String(error ?? ""),
+        });
 
-            const publicClient = createPublicClient({
-              chain: getChain(chainId),
-              transport: http(),
-            });
-            const existingCode = await publicClient.getCode({
-              address: counterfactualAddress,
-            });
-            if (existingCode && existingCode !== "0x") {
-              continue;
-            }
+        if (attempt === 0 && !forceSelfFunded && isPrefundError(error)) {
+          continue;
+        }
 
-            const fundTxHash = await resolvedWalletClient.sendTransaction({
-              account: finalAddress as `0x${string}`,
-              chain: getChain(chainId),
-              to: counterfactualAddress,
-              value: 2000000000000000n,
-            });
+        if (forceSelfFunded && isRecoverableSmartAccountFundingError(error)) {
+          const detail =
+            error instanceof Error ? error.message : String(error ?? "");
+          throw new Error(
+            `ZeroDev self-funded sponsorship was not approved for ${chainLabel}. Verify the sponsorship paymaster for chain ${chainId} has enough native gas balance and that your ZeroDev policy allows this UserOperation. (${detail})`,
+          );
+        }
 
-            await publicClient.waitForTransactionReceipt({
-              hash: fundTxHash,
-            });
-            continue;
-          } catch (fundError) {
-            const fundMsg =
-              fundError instanceof Error ? fundError.message : "unknown error";
-            throw new Error(
-              forceSelfFunded
-                ? `Self-funded smart account mode is enabled. Send a small amount of ${nativeSymbol} on ${chainLabel} to the subscription smart account and retry. (${fundMsg})`
-                : `Your wallet needs a small amount of ${nativeSymbol} on ${chainLabel} to cover network fees. Please add ${nativeSymbol} and retry. (${fundMsg})`,
-            );
-          }
+        if (!forceSelfFunded && isRecoverableSmartAccountFundingError(error)) {
+          const detail =
+            error instanceof Error ? error.message : String(error ?? "");
+          throw new Error(
+            `Gas sponsorship was not approved for ${chainLabel}. Verify the ZeroDev paymaster and bundler are enabled for chain ${chainId}, then retry. (${detail})`,
+          );
         }
 
         throw error;
@@ -5669,7 +5661,7 @@ function PaymentContent({
 
     throw new Error(
       forceSelfFunded
-        ? `Could not set up the subscription smart account in self-funded mode. Fund the smart account with ${nativeSymbol} on ${chainLabel} and try again.`
+        ? `Could not set up the subscription smart account with ZeroDev self-funded sponsorship on ${chainLabel}. Verify the sponsorship paymaster deposit and policy, then try again.`
         : `Could not set up your subscription wallet. Ensure the connected wallet has a small amount of ${nativeSymbol} on ${chainLabel} and try again.`,
     );
   }
@@ -7700,6 +7692,54 @@ function UnsubscribeContent({
 
 let _modalIdCounter = 0;
 
+// ─── Secured-by badge ────────────────────────────────────────────────────────
+
+function SecuredByArcenpay({ tokens }: { tokens: Tokens }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 5,
+        paddingTop: 16,
+        paddingBottom: 8,
+        opacity: 0.52,
+        fontSize: 10.5,
+        fontFamily: tokens.font,
+        color: tokens.textColor,
+        userSelect: "none" as const,
+        letterSpacing: 0.1,
+      }}
+    >
+      <svg
+        width="11"
+        height="13"
+        viewBox="0 0 24 28"
+        fill="none"
+        aria-hidden="true"
+        style={{ flexShrink: 0 }}
+      >
+        <path
+          d="M12 1L2 5v9c0 6.075 4.477 11.25 10 12 5.523-.75 10-5.925 10-12V5L12 1z"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M8.5 14l2.5 2.5 5-5"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+      <span>Secured by <strong style={{ fontWeight: 600 }}>Arcenpay</strong></span>
+    </div>
+  );
+}
+
 function FullScreenModal({
   onClose,
   tokens,
@@ -7764,6 +7804,9 @@ function FullScreenModal({
             style={{ flex: 1, overflowY: "auto", minHeight: 0, padding: 24 }}
           >
             {children}
+          </div>
+          <div style={{ flexShrink: 0, borderTop: `1px solid rgba(0,0,0,0.06)` }}>
+            <SecuredByArcenpay tokens={tokens} />
           </div>
         </div>
       </div>
@@ -8751,6 +8794,7 @@ export function ArcenEmbed({
               containerWidth={effectiveContainerWidth}
             />
           )}
+          <SecuredByArcenpay tokens={tokens} />
         </>
       ) : (
         <>
@@ -8851,6 +8895,7 @@ export function ArcenEmbed({
               )}
             </FullScreenModal>
           )}
+          <SecuredByArcenpay tokens={tokens} />
         </>
       )}
     </div>

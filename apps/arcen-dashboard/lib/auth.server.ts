@@ -34,10 +34,25 @@ async function callBackend<T>(path: string, options: RequestInit = {}): Promise<
   const headers: Record<string, string> = { ...(options.headers as Record<string, string> ?? {}) };
   if (token) headers.cookie = `arcen_session=${token}`;
 
-  const res = await fetch(`${BACKEND_URL}${path}`, { ...options, headers, cache: "no-store" });
-  if (!res.ok) return null;
-  const data = await res.json();
-  return data.data ?? data;
+  try {
+    const res = await fetch(`${BACKEND_URL}${path}`, {
+      ...options,
+      headers,
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.data ?? data;
+  } catch (error) {
+    if (path !== "/api/v1/auth/session") {
+      const detail =
+        error instanceof Error ? error.message : String(error ?? "unknown error");
+      console.error(
+        `[auth.server] Backend request failed for ${path} via ${BACKEND_URL}: ${detail}`,
+      );
+    }
+    return null;
+  }
 }
 
 export async function getSession(): Promise<DashboardSession | null> {
