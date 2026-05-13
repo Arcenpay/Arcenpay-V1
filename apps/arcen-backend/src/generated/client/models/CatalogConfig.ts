@@ -33,6 +33,9 @@ export type CatalogConfigMinAggregateOutputType = {
   environmentMode: $Enums.EnvironmentMode | null
   initialPlan: string | null
   fallbackPlan: string | null
+  restrictLivePlans: boolean | null
+  restrictLiveAddOns: boolean | null
+  restrictLiveCreditTypes: boolean | null
   showBillingPeriodToggle: boolean | null
   freePlanPriceDisplay: boolean | null
   hideCredits: boolean | null
@@ -54,6 +57,9 @@ export type CatalogConfigMaxAggregateOutputType = {
   environmentMode: $Enums.EnvironmentMode | null
   initialPlan: string | null
   fallbackPlan: string | null
+  restrictLivePlans: boolean | null
+  restrictLiveAddOns: boolean | null
+  restrictLiveCreditTypes: boolean | null
   showBillingPeriodToggle: boolean | null
   freePlanPriceDisplay: boolean | null
   hideCredits: boolean | null
@@ -75,6 +81,12 @@ export type CatalogConfigCountAggregateOutputType = {
   environmentMode: number
   initialPlan: number
   fallbackPlan: number
+  livePlanIds: number
+  liveAddOnIds: number
+  liveCreditTypeIds: number
+  restrictLivePlans: number
+  restrictLiveAddOns: number
+  restrictLiveCreditTypes: number
   showBillingPeriodToggle: number
   freePlanPriceDisplay: number
   hideCredits: number
@@ -98,6 +110,9 @@ export type CatalogConfigMinAggregateInputType = {
   environmentMode?: true
   initialPlan?: true
   fallbackPlan?: true
+  restrictLivePlans?: true
+  restrictLiveAddOns?: true
+  restrictLiveCreditTypes?: true
   showBillingPeriodToggle?: true
   freePlanPriceDisplay?: true
   hideCredits?: true
@@ -119,6 +134,9 @@ export type CatalogConfigMaxAggregateInputType = {
   environmentMode?: true
   initialPlan?: true
   fallbackPlan?: true
+  restrictLivePlans?: true
+  restrictLiveAddOns?: true
+  restrictLiveCreditTypes?: true
   showBillingPeriodToggle?: true
   freePlanPriceDisplay?: true
   hideCredits?: true
@@ -140,6 +158,12 @@ export type CatalogConfigCountAggregateInputType = {
   environmentMode?: true
   initialPlan?: true
   fallbackPlan?: true
+  livePlanIds?: true
+  liveAddOnIds?: true
+  liveCreditTypeIds?: true
+  restrictLivePlans?: true
+  restrictLiveAddOns?: true
+  restrictLiveCreditTypes?: true
   showBillingPeriodToggle?: true
   freePlanPriceDisplay?: true
   hideCredits?: true
@@ -234,6 +258,12 @@ export type CatalogConfigGroupByOutputType = {
   environmentMode: $Enums.EnvironmentMode
   initialPlan: string
   fallbackPlan: string | null
+  livePlanIds: string[]
+  liveAddOnIds: string[]
+  liveCreditTypeIds: string[]
+  restrictLivePlans: boolean
+  restrictLiveAddOns: boolean
+  restrictLiveCreditTypes: boolean
   showBillingPeriodToggle: boolean
   freePlanPriceDisplay: boolean
   hideCredits: boolean
@@ -276,6 +306,12 @@ export type CatalogConfigWhereInput = {
   environmentMode?: Prisma.EnumEnvironmentModeFilter<"CatalogConfig"> | $Enums.EnvironmentMode
   initialPlan?: Prisma.StringFilter<"CatalogConfig"> | string
   fallbackPlan?: Prisma.StringNullableFilter<"CatalogConfig"> | string | null
+  livePlanIds?: Prisma.StringNullableListFilter<"CatalogConfig">
+  liveAddOnIds?: Prisma.StringNullableListFilter<"CatalogConfig">
+  liveCreditTypeIds?: Prisma.StringNullableListFilter<"CatalogConfig">
+  restrictLivePlans?: Prisma.BoolFilter<"CatalogConfig"> | boolean
+  restrictLiveAddOns?: Prisma.BoolFilter<"CatalogConfig"> | boolean
+  restrictLiveCreditTypes?: Prisma.BoolFilter<"CatalogConfig"> | boolean
   showBillingPeriodToggle?: Prisma.BoolFilter<"CatalogConfig"> | boolean
   freePlanPriceDisplay?: Prisma.BoolFilter<"CatalogConfig"> | boolean
   hideCredits?: Prisma.BoolFilter<"CatalogConfig"> | boolean
@@ -299,6 +335,12 @@ export type CatalogConfigOrderByWithRelationInput = {
   environmentMode?: Prisma.SortOrder
   initialPlan?: Prisma.SortOrder
   fallbackPlan?: Prisma.SortOrderInput | Prisma.SortOrder
+  livePlanIds?: Prisma.SortOrder
+  liveAddOnIds?: Prisma.SortOrder
+  liveCreditTypeIds?: Prisma.SortOrder
+  restrictLivePlans?: Prisma.SortOrder
+  restrictLiveAddOns?: Prisma.SortOrder
+  restrictLiveCreditTypes?: Prisma.SortOrder
   showBillingPeriodToggle?: Prisma.SortOrder
   freePlanPriceDisplay?: Prisma.SortOrder
   hideCredits?: Prisma.SortOrder
@@ -326,6 +368,12 @@ export type CatalogConfigWhereUniqueInput = Prisma.AtLeast<{
   environmentMode?: Prisma.EnumEnvironmentModeFilter<"CatalogConfig"> | $Enums.EnvironmentMode
   initialPlan?: Prisma.StringFilter<"CatalogConfig"> | string
   fallbackPlan?: Prisma.StringNullableFilter<"CatalogConfig"> | string | null
+  livePlanIds?: Prisma.StringNullableListFilter<"CatalogConfig">
+  liveAddOnIds?: Prisma.StringNullableListFilter<"CatalogConfig">
+  liveCreditTypeIds?: Prisma.StringNullableListFilter<"CatalogConfig">
+  restrictLivePlans?: Prisma.BoolFilter<"CatalogConfig"> | boolean
+  restrictLiveAddOns?: Prisma.BoolFilter<"CatalogConfig"> | boolean
+  restrictLiveCreditTypes?: Prisma.BoolFilter<"CatalogConfig"> | boolean
   showBillingPeriodToggle?: Prisma.BoolFilter<"CatalogConfig"> | boolean
   freePlanPriceDisplay?: Prisma.BoolFilter<"CatalogConfig"> | boolean
   hideCredits?: Prisma.BoolFilter<"CatalogConfig"> | boolean
@@ -349,6 +397,12 @@ export type CatalogConfigOrderByWithAggregationInput = {
   environmentMode?: Prisma.SortOrder
   initialPlan?: Prisma.SortOrder
   fallbackPlan?: Prisma.SortOrderInput | Prisma.SortOrder
+  livePlanIds?: Prisma.SortOrder
+  liveAddOnIds?: Prisma.SortOrder
+  liveCreditTypeIds?: Prisma.SortOrder
+  restrictLivePlans?: Prisma.SortOrder
+  restrictLiveAddOns?: Prisma.SortOrder
+  restrictLiveCreditTypes?: Prisma.SortOrder
   showBillingPeriodToggle?: Prisma.SortOrder
   freePlanPriceDisplay?: Prisma.SortOrder
   hideCredits?: Prisma.SortOrder
@@ -376,6 +430,12 @@ export type CatalogConfigScalarWhereWithAggregatesInput = {
   environmentMode?: Prisma.EnumEnvironmentModeWithAggregatesFilter<"CatalogConfig"> | $Enums.EnvironmentMode
   initialPlan?: Prisma.StringWithAggregatesFilter<"CatalogConfig"> | string
   fallbackPlan?: Prisma.StringNullableWithAggregatesFilter<"CatalogConfig"> | string | null
+  livePlanIds?: Prisma.StringNullableListFilter<"CatalogConfig">
+  liveAddOnIds?: Prisma.StringNullableListFilter<"CatalogConfig">
+  liveCreditTypeIds?: Prisma.StringNullableListFilter<"CatalogConfig">
+  restrictLivePlans?: Prisma.BoolWithAggregatesFilter<"CatalogConfig"> | boolean
+  restrictLiveAddOns?: Prisma.BoolWithAggregatesFilter<"CatalogConfig"> | boolean
+  restrictLiveCreditTypes?: Prisma.BoolWithAggregatesFilter<"CatalogConfig"> | boolean
   showBillingPeriodToggle?: Prisma.BoolWithAggregatesFilter<"CatalogConfig"> | boolean
   freePlanPriceDisplay?: Prisma.BoolWithAggregatesFilter<"CatalogConfig"> | boolean
   hideCredits?: Prisma.BoolWithAggregatesFilter<"CatalogConfig"> | boolean
@@ -395,6 +455,12 @@ export type CatalogConfigCreateInput = {
   environmentMode?: $Enums.EnvironmentMode
   initialPlan?: string
   fallbackPlan?: string | null
+  livePlanIds?: Prisma.CatalogConfigCreatelivePlanIdsInput | string[]
+  liveAddOnIds?: Prisma.CatalogConfigCreateliveAddOnIdsInput | string[]
+  liveCreditTypeIds?: Prisma.CatalogConfigCreateliveCreditTypeIdsInput | string[]
+  restrictLivePlans?: boolean
+  restrictLiveAddOns?: boolean
+  restrictLiveCreditTypes?: boolean
   showBillingPeriodToggle?: boolean
   freePlanPriceDisplay?: boolean
   hideCredits?: boolean
@@ -418,6 +484,12 @@ export type CatalogConfigUncheckedCreateInput = {
   environmentMode?: $Enums.EnvironmentMode
   initialPlan?: string
   fallbackPlan?: string | null
+  livePlanIds?: Prisma.CatalogConfigCreatelivePlanIdsInput | string[]
+  liveAddOnIds?: Prisma.CatalogConfigCreateliveAddOnIdsInput | string[]
+  liveCreditTypeIds?: Prisma.CatalogConfigCreateliveCreditTypeIdsInput | string[]
+  restrictLivePlans?: boolean
+  restrictLiveAddOns?: boolean
+  restrictLiveCreditTypes?: boolean
   showBillingPeriodToggle?: boolean
   freePlanPriceDisplay?: boolean
   hideCredits?: boolean
@@ -437,6 +509,12 @@ export type CatalogConfigUpdateInput = {
   environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   initialPlan?: Prisma.StringFieldUpdateOperationsInput | string
   fallbackPlan?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  livePlanIds?: Prisma.CatalogConfigUpdatelivePlanIdsInput | string[]
+  liveAddOnIds?: Prisma.CatalogConfigUpdateliveAddOnIdsInput | string[]
+  liveCreditTypeIds?: Prisma.CatalogConfigUpdateliveCreditTypeIdsInput | string[]
+  restrictLivePlans?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  restrictLiveAddOns?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  restrictLiveCreditTypes?: Prisma.BoolFieldUpdateOperationsInput | boolean
   showBillingPeriodToggle?: Prisma.BoolFieldUpdateOperationsInput | boolean
   freePlanPriceDisplay?: Prisma.BoolFieldUpdateOperationsInput | boolean
   hideCredits?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -460,6 +538,12 @@ export type CatalogConfigUncheckedUpdateInput = {
   environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   initialPlan?: Prisma.StringFieldUpdateOperationsInput | string
   fallbackPlan?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  livePlanIds?: Prisma.CatalogConfigUpdatelivePlanIdsInput | string[]
+  liveAddOnIds?: Prisma.CatalogConfigUpdateliveAddOnIdsInput | string[]
+  liveCreditTypeIds?: Prisma.CatalogConfigUpdateliveCreditTypeIdsInput | string[]
+  restrictLivePlans?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  restrictLiveAddOns?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  restrictLiveCreditTypes?: Prisma.BoolFieldUpdateOperationsInput | boolean
   showBillingPeriodToggle?: Prisma.BoolFieldUpdateOperationsInput | boolean
   freePlanPriceDisplay?: Prisma.BoolFieldUpdateOperationsInput | boolean
   hideCredits?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -481,6 +565,12 @@ export type CatalogConfigCreateManyInput = {
   environmentMode?: $Enums.EnvironmentMode
   initialPlan?: string
   fallbackPlan?: string | null
+  livePlanIds?: Prisma.CatalogConfigCreatelivePlanIdsInput | string[]
+  liveAddOnIds?: Prisma.CatalogConfigCreateliveAddOnIdsInput | string[]
+  liveCreditTypeIds?: Prisma.CatalogConfigCreateliveCreditTypeIdsInput | string[]
+  restrictLivePlans?: boolean
+  restrictLiveAddOns?: boolean
+  restrictLiveCreditTypes?: boolean
   showBillingPeriodToggle?: boolean
   freePlanPriceDisplay?: boolean
   hideCredits?: boolean
@@ -500,6 +590,12 @@ export type CatalogConfigUpdateManyMutationInput = {
   environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   initialPlan?: Prisma.StringFieldUpdateOperationsInput | string
   fallbackPlan?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  livePlanIds?: Prisma.CatalogConfigUpdatelivePlanIdsInput | string[]
+  liveAddOnIds?: Prisma.CatalogConfigUpdateliveAddOnIdsInput | string[]
+  liveCreditTypeIds?: Prisma.CatalogConfigUpdateliveCreditTypeIdsInput | string[]
+  restrictLivePlans?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  restrictLiveAddOns?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  restrictLiveCreditTypes?: Prisma.BoolFieldUpdateOperationsInput | boolean
   showBillingPeriodToggle?: Prisma.BoolFieldUpdateOperationsInput | boolean
   freePlanPriceDisplay?: Prisma.BoolFieldUpdateOperationsInput | boolean
   hideCredits?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -521,6 +617,12 @@ export type CatalogConfigUncheckedUpdateManyInput = {
   environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   initialPlan?: Prisma.StringFieldUpdateOperationsInput | string
   fallbackPlan?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  livePlanIds?: Prisma.CatalogConfigUpdatelivePlanIdsInput | string[]
+  liveAddOnIds?: Prisma.CatalogConfigUpdateliveAddOnIdsInput | string[]
+  liveCreditTypeIds?: Prisma.CatalogConfigUpdateliveCreditTypeIdsInput | string[]
+  restrictLivePlans?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  restrictLiveAddOns?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  restrictLiveCreditTypes?: Prisma.BoolFieldUpdateOperationsInput | boolean
   showBillingPeriodToggle?: Prisma.BoolFieldUpdateOperationsInput | boolean
   freePlanPriceDisplay?: Prisma.BoolFieldUpdateOperationsInput | boolean
   hideCredits?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -543,6 +645,14 @@ export type CatalogConfigOrderByRelationAggregateInput = {
   _count?: Prisma.SortOrder
 }
 
+export type StringNullableListFilter<$PrismaModel = never> = {
+  equals?: string[] | Prisma.ListStringFieldRefInput<$PrismaModel> | null
+  has?: string | Prisma.StringFieldRefInput<$PrismaModel> | null
+  hasEvery?: string[] | Prisma.ListStringFieldRefInput<$PrismaModel>
+  hasSome?: string[] | Prisma.ListStringFieldRefInput<$PrismaModel>
+  isEmpty?: boolean
+}
+
 export type CatalogConfigTeamIdEnvironmentModeCompoundUniqueInput = {
   teamId: string
   environmentMode: $Enums.EnvironmentMode
@@ -557,6 +667,12 @@ export type CatalogConfigCountOrderByAggregateInput = {
   environmentMode?: Prisma.SortOrder
   initialPlan?: Prisma.SortOrder
   fallbackPlan?: Prisma.SortOrder
+  livePlanIds?: Prisma.SortOrder
+  liveAddOnIds?: Prisma.SortOrder
+  liveCreditTypeIds?: Prisma.SortOrder
+  restrictLivePlans?: Prisma.SortOrder
+  restrictLiveAddOns?: Prisma.SortOrder
+  restrictLiveCreditTypes?: Prisma.SortOrder
   showBillingPeriodToggle?: Prisma.SortOrder
   freePlanPriceDisplay?: Prisma.SortOrder
   hideCredits?: Prisma.SortOrder
@@ -578,6 +694,9 @@ export type CatalogConfigMaxOrderByAggregateInput = {
   environmentMode?: Prisma.SortOrder
   initialPlan?: Prisma.SortOrder
   fallbackPlan?: Prisma.SortOrder
+  restrictLivePlans?: Prisma.SortOrder
+  restrictLiveAddOns?: Prisma.SortOrder
+  restrictLiveCreditTypes?: Prisma.SortOrder
   showBillingPeriodToggle?: Prisma.SortOrder
   freePlanPriceDisplay?: Prisma.SortOrder
   hideCredits?: Prisma.SortOrder
@@ -599,6 +718,9 @@ export type CatalogConfigMinOrderByAggregateInput = {
   environmentMode?: Prisma.SortOrder
   initialPlan?: Prisma.SortOrder
   fallbackPlan?: Prisma.SortOrder
+  restrictLivePlans?: Prisma.SortOrder
+  restrictLiveAddOns?: Prisma.SortOrder
+  restrictLiveCreditTypes?: Prisma.SortOrder
   showBillingPeriodToggle?: Prisma.SortOrder
   freePlanPriceDisplay?: Prisma.SortOrder
   hideCredits?: Prisma.SortOrder
@@ -695,6 +817,33 @@ export type CatalogConfigUncheckedUpdateManyWithoutEnvironmentNestedInput = {
   deleteMany?: Prisma.CatalogConfigScalarWhereInput | Prisma.CatalogConfigScalarWhereInput[]
 }
 
+export type CatalogConfigCreatelivePlanIdsInput = {
+  set: string[]
+}
+
+export type CatalogConfigCreateliveAddOnIdsInput = {
+  set: string[]
+}
+
+export type CatalogConfigCreateliveCreditTypeIdsInput = {
+  set: string[]
+}
+
+export type CatalogConfigUpdatelivePlanIdsInput = {
+  set?: string[]
+  push?: string | string[]
+}
+
+export type CatalogConfigUpdateliveAddOnIdsInput = {
+  set?: string[]
+  push?: string | string[]
+}
+
+export type CatalogConfigUpdateliveCreditTypeIdsInput = {
+  set?: string[]
+  push?: string | string[]
+}
+
 export type CatalogConfigCreateWithoutTeamInput = {
   id?: string
   createdAt?: Date | string
@@ -702,6 +851,12 @@ export type CatalogConfigCreateWithoutTeamInput = {
   environmentMode?: $Enums.EnvironmentMode
   initialPlan?: string
   fallbackPlan?: string | null
+  livePlanIds?: Prisma.CatalogConfigCreatelivePlanIdsInput | string[]
+  liveAddOnIds?: Prisma.CatalogConfigCreateliveAddOnIdsInput | string[]
+  liveCreditTypeIds?: Prisma.CatalogConfigCreateliveCreditTypeIdsInput | string[]
+  restrictLivePlans?: boolean
+  restrictLiveAddOns?: boolean
+  restrictLiveCreditTypes?: boolean
   showBillingPeriodToggle?: boolean
   freePlanPriceDisplay?: boolean
   hideCredits?: boolean
@@ -723,6 +878,12 @@ export type CatalogConfigUncheckedCreateWithoutTeamInput = {
   environmentMode?: $Enums.EnvironmentMode
   initialPlan?: string
   fallbackPlan?: string | null
+  livePlanIds?: Prisma.CatalogConfigCreatelivePlanIdsInput | string[]
+  liveAddOnIds?: Prisma.CatalogConfigCreateliveAddOnIdsInput | string[]
+  liveCreditTypeIds?: Prisma.CatalogConfigCreateliveCreditTypeIdsInput | string[]
+  restrictLivePlans?: boolean
+  restrictLiveAddOns?: boolean
+  restrictLiveCreditTypes?: boolean
   showBillingPeriodToggle?: boolean
   freePlanPriceDisplay?: boolean
   hideCredits?: boolean
@@ -773,6 +934,12 @@ export type CatalogConfigScalarWhereInput = {
   environmentMode?: Prisma.EnumEnvironmentModeFilter<"CatalogConfig"> | $Enums.EnvironmentMode
   initialPlan?: Prisma.StringFilter<"CatalogConfig"> | string
   fallbackPlan?: Prisma.StringNullableFilter<"CatalogConfig"> | string | null
+  livePlanIds?: Prisma.StringNullableListFilter<"CatalogConfig">
+  liveAddOnIds?: Prisma.StringNullableListFilter<"CatalogConfig">
+  liveCreditTypeIds?: Prisma.StringNullableListFilter<"CatalogConfig">
+  restrictLivePlans?: Prisma.BoolFilter<"CatalogConfig"> | boolean
+  restrictLiveAddOns?: Prisma.BoolFilter<"CatalogConfig"> | boolean
+  restrictLiveCreditTypes?: Prisma.BoolFilter<"CatalogConfig"> | boolean
   showBillingPeriodToggle?: Prisma.BoolFilter<"CatalogConfig"> | boolean
   freePlanPriceDisplay?: Prisma.BoolFilter<"CatalogConfig"> | boolean
   hideCredits?: Prisma.BoolFilter<"CatalogConfig"> | boolean
@@ -792,6 +959,12 @@ export type CatalogConfigCreateWithoutEnvironmentInput = {
   environmentMode?: $Enums.EnvironmentMode
   initialPlan?: string
   fallbackPlan?: string | null
+  livePlanIds?: Prisma.CatalogConfigCreatelivePlanIdsInput | string[]
+  liveAddOnIds?: Prisma.CatalogConfigCreateliveAddOnIdsInput | string[]
+  liveCreditTypeIds?: Prisma.CatalogConfigCreateliveCreditTypeIdsInput | string[]
+  restrictLivePlans?: boolean
+  restrictLiveAddOns?: boolean
+  restrictLiveCreditTypes?: boolean
   showBillingPeriodToggle?: boolean
   freePlanPriceDisplay?: boolean
   hideCredits?: boolean
@@ -813,6 +986,12 @@ export type CatalogConfigUncheckedCreateWithoutEnvironmentInput = {
   environmentMode?: $Enums.EnvironmentMode
   initialPlan?: string
   fallbackPlan?: string | null
+  livePlanIds?: Prisma.CatalogConfigCreatelivePlanIdsInput | string[]
+  liveAddOnIds?: Prisma.CatalogConfigCreateliveAddOnIdsInput | string[]
+  liveCreditTypeIds?: Prisma.CatalogConfigCreateliveCreditTypeIdsInput | string[]
+  restrictLivePlans?: boolean
+  restrictLiveAddOns?: boolean
+  restrictLiveCreditTypes?: boolean
   showBillingPeriodToggle?: boolean
   freePlanPriceDisplay?: boolean
   hideCredits?: boolean
@@ -859,6 +1038,12 @@ export type CatalogConfigCreateManyTeamInput = {
   environmentMode?: $Enums.EnvironmentMode
   initialPlan?: string
   fallbackPlan?: string | null
+  livePlanIds?: Prisma.CatalogConfigCreatelivePlanIdsInput | string[]
+  liveAddOnIds?: Prisma.CatalogConfigCreateliveAddOnIdsInput | string[]
+  liveCreditTypeIds?: Prisma.CatalogConfigCreateliveCreditTypeIdsInput | string[]
+  restrictLivePlans?: boolean
+  restrictLiveAddOns?: boolean
+  restrictLiveCreditTypes?: boolean
   showBillingPeriodToggle?: boolean
   freePlanPriceDisplay?: boolean
   hideCredits?: boolean
@@ -878,6 +1063,12 @@ export type CatalogConfigUpdateWithoutTeamInput = {
   environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   initialPlan?: Prisma.StringFieldUpdateOperationsInput | string
   fallbackPlan?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  livePlanIds?: Prisma.CatalogConfigUpdatelivePlanIdsInput | string[]
+  liveAddOnIds?: Prisma.CatalogConfigUpdateliveAddOnIdsInput | string[]
+  liveCreditTypeIds?: Prisma.CatalogConfigUpdateliveCreditTypeIdsInput | string[]
+  restrictLivePlans?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  restrictLiveAddOns?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  restrictLiveCreditTypes?: Prisma.BoolFieldUpdateOperationsInput | boolean
   showBillingPeriodToggle?: Prisma.BoolFieldUpdateOperationsInput | boolean
   freePlanPriceDisplay?: Prisma.BoolFieldUpdateOperationsInput | boolean
   hideCredits?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -899,6 +1090,12 @@ export type CatalogConfigUncheckedUpdateWithoutTeamInput = {
   environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   initialPlan?: Prisma.StringFieldUpdateOperationsInput | string
   fallbackPlan?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  livePlanIds?: Prisma.CatalogConfigUpdatelivePlanIdsInput | string[]
+  liveAddOnIds?: Prisma.CatalogConfigUpdateliveAddOnIdsInput | string[]
+  liveCreditTypeIds?: Prisma.CatalogConfigUpdateliveCreditTypeIdsInput | string[]
+  restrictLivePlans?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  restrictLiveAddOns?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  restrictLiveCreditTypes?: Prisma.BoolFieldUpdateOperationsInput | boolean
   showBillingPeriodToggle?: Prisma.BoolFieldUpdateOperationsInput | boolean
   freePlanPriceDisplay?: Prisma.BoolFieldUpdateOperationsInput | boolean
   hideCredits?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -919,6 +1116,12 @@ export type CatalogConfigUncheckedUpdateManyWithoutTeamInput = {
   environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   initialPlan?: Prisma.StringFieldUpdateOperationsInput | string
   fallbackPlan?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  livePlanIds?: Prisma.CatalogConfigUpdatelivePlanIdsInput | string[]
+  liveAddOnIds?: Prisma.CatalogConfigUpdateliveAddOnIdsInput | string[]
+  liveCreditTypeIds?: Prisma.CatalogConfigUpdateliveCreditTypeIdsInput | string[]
+  restrictLivePlans?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  restrictLiveAddOns?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  restrictLiveCreditTypes?: Prisma.BoolFieldUpdateOperationsInput | boolean
   showBillingPeriodToggle?: Prisma.BoolFieldUpdateOperationsInput | boolean
   freePlanPriceDisplay?: Prisma.BoolFieldUpdateOperationsInput | boolean
   hideCredits?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -939,6 +1142,12 @@ export type CatalogConfigCreateManyEnvironmentInput = {
   environmentMode?: $Enums.EnvironmentMode
   initialPlan?: string
   fallbackPlan?: string | null
+  livePlanIds?: Prisma.CatalogConfigCreatelivePlanIdsInput | string[]
+  liveAddOnIds?: Prisma.CatalogConfigCreateliveAddOnIdsInput | string[]
+  liveCreditTypeIds?: Prisma.CatalogConfigCreateliveCreditTypeIdsInput | string[]
+  restrictLivePlans?: boolean
+  restrictLiveAddOns?: boolean
+  restrictLiveCreditTypes?: boolean
   showBillingPeriodToggle?: boolean
   freePlanPriceDisplay?: boolean
   hideCredits?: boolean
@@ -958,6 +1167,12 @@ export type CatalogConfigUpdateWithoutEnvironmentInput = {
   environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   initialPlan?: Prisma.StringFieldUpdateOperationsInput | string
   fallbackPlan?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  livePlanIds?: Prisma.CatalogConfigUpdatelivePlanIdsInput | string[]
+  liveAddOnIds?: Prisma.CatalogConfigUpdateliveAddOnIdsInput | string[]
+  liveCreditTypeIds?: Prisma.CatalogConfigUpdateliveCreditTypeIdsInput | string[]
+  restrictLivePlans?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  restrictLiveAddOns?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  restrictLiveCreditTypes?: Prisma.BoolFieldUpdateOperationsInput | boolean
   showBillingPeriodToggle?: Prisma.BoolFieldUpdateOperationsInput | boolean
   freePlanPriceDisplay?: Prisma.BoolFieldUpdateOperationsInput | boolean
   hideCredits?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -979,6 +1194,12 @@ export type CatalogConfigUncheckedUpdateWithoutEnvironmentInput = {
   environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   initialPlan?: Prisma.StringFieldUpdateOperationsInput | string
   fallbackPlan?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  livePlanIds?: Prisma.CatalogConfigUpdatelivePlanIdsInput | string[]
+  liveAddOnIds?: Prisma.CatalogConfigUpdateliveAddOnIdsInput | string[]
+  liveCreditTypeIds?: Prisma.CatalogConfigUpdateliveCreditTypeIdsInput | string[]
+  restrictLivePlans?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  restrictLiveAddOns?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  restrictLiveCreditTypes?: Prisma.BoolFieldUpdateOperationsInput | boolean
   showBillingPeriodToggle?: Prisma.BoolFieldUpdateOperationsInput | boolean
   freePlanPriceDisplay?: Prisma.BoolFieldUpdateOperationsInput | boolean
   hideCredits?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -999,6 +1220,12 @@ export type CatalogConfigUncheckedUpdateManyWithoutEnvironmentInput = {
   environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   initialPlan?: Prisma.StringFieldUpdateOperationsInput | string
   fallbackPlan?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  livePlanIds?: Prisma.CatalogConfigUpdatelivePlanIdsInput | string[]
+  liveAddOnIds?: Prisma.CatalogConfigUpdateliveAddOnIdsInput | string[]
+  liveCreditTypeIds?: Prisma.CatalogConfigUpdateliveCreditTypeIdsInput | string[]
+  restrictLivePlans?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  restrictLiveAddOns?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  restrictLiveCreditTypes?: Prisma.BoolFieldUpdateOperationsInput | boolean
   showBillingPeriodToggle?: Prisma.BoolFieldUpdateOperationsInput | boolean
   freePlanPriceDisplay?: Prisma.BoolFieldUpdateOperationsInput | boolean
   hideCredits?: Prisma.BoolFieldUpdateOperationsInput | boolean
@@ -1022,6 +1249,12 @@ export type CatalogConfigSelect<ExtArgs extends runtime.Types.Extensions.Interna
   environmentMode?: boolean
   initialPlan?: boolean
   fallbackPlan?: boolean
+  livePlanIds?: boolean
+  liveAddOnIds?: boolean
+  liveCreditTypeIds?: boolean
+  restrictLivePlans?: boolean
+  restrictLiveAddOns?: boolean
+  restrictLiveCreditTypes?: boolean
   showBillingPeriodToggle?: boolean
   freePlanPriceDisplay?: boolean
   hideCredits?: boolean
@@ -1045,6 +1278,12 @@ export type CatalogConfigSelectCreateManyAndReturn<ExtArgs extends runtime.Types
   environmentMode?: boolean
   initialPlan?: boolean
   fallbackPlan?: boolean
+  livePlanIds?: boolean
+  liveAddOnIds?: boolean
+  liveCreditTypeIds?: boolean
+  restrictLivePlans?: boolean
+  restrictLiveAddOns?: boolean
+  restrictLiveCreditTypes?: boolean
   showBillingPeriodToggle?: boolean
   freePlanPriceDisplay?: boolean
   hideCredits?: boolean
@@ -1068,6 +1307,12 @@ export type CatalogConfigSelectUpdateManyAndReturn<ExtArgs extends runtime.Types
   environmentMode?: boolean
   initialPlan?: boolean
   fallbackPlan?: boolean
+  livePlanIds?: boolean
+  liveAddOnIds?: boolean
+  liveCreditTypeIds?: boolean
+  restrictLivePlans?: boolean
+  restrictLiveAddOns?: boolean
+  restrictLiveCreditTypes?: boolean
   showBillingPeriodToggle?: boolean
   freePlanPriceDisplay?: boolean
   hideCredits?: boolean
@@ -1091,6 +1336,12 @@ export type CatalogConfigSelectScalar = {
   environmentMode?: boolean
   initialPlan?: boolean
   fallbackPlan?: boolean
+  livePlanIds?: boolean
+  liveAddOnIds?: boolean
+  liveCreditTypeIds?: boolean
+  restrictLivePlans?: boolean
+  restrictLiveAddOns?: boolean
+  restrictLiveCreditTypes?: boolean
   showBillingPeriodToggle?: boolean
   freePlanPriceDisplay?: boolean
   hideCredits?: boolean
@@ -1103,7 +1354,7 @@ export type CatalogConfigSelectScalar = {
   disallowSelfServiceDowngrade?: boolean
 }
 
-export type CatalogConfigOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "updatedAt" | "teamId" | "environmentId" | "environmentMode" | "initialPlan" | "fallbackPlan" | "showBillingPeriodToggle" | "freePlanPriceDisplay" | "hideCredits" | "yearlyDiscountDisplay" | "showFeatureDescriptions" | "showHardLimits" | "upgradeImmediately" | "downgradeImmediately" | "preventDowngradeOverLimit" | "disallowSelfServiceDowngrade", ExtArgs["result"]["catalogConfig"]>
+export type CatalogConfigOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "updatedAt" | "teamId" | "environmentId" | "environmentMode" | "initialPlan" | "fallbackPlan" | "livePlanIds" | "liveAddOnIds" | "liveCreditTypeIds" | "restrictLivePlans" | "restrictLiveAddOns" | "restrictLiveCreditTypes" | "showBillingPeriodToggle" | "freePlanPriceDisplay" | "hideCredits" | "yearlyDiscountDisplay" | "showFeatureDescriptions" | "showHardLimits" | "upgradeImmediately" | "downgradeImmediately" | "preventDowngradeOverLimit" | "disallowSelfServiceDowngrade", ExtArgs["result"]["catalogConfig"]>
 export type CatalogConfigInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
   environment?: boolean | Prisma.CatalogConfig$environmentArgs<ExtArgs>
@@ -1132,6 +1383,12 @@ export type $CatalogConfigPayload<ExtArgs extends runtime.Types.Extensions.Inter
     environmentMode: $Enums.EnvironmentMode
     initialPlan: string
     fallbackPlan: string | null
+    livePlanIds: string[]
+    liveAddOnIds: string[]
+    liveCreditTypeIds: string[]
+    restrictLivePlans: boolean
+    restrictLiveAddOns: boolean
+    restrictLiveCreditTypes: boolean
     showBillingPeriodToggle: boolean
     freePlanPriceDisplay: boolean
     hideCredits: boolean
@@ -1575,6 +1832,12 @@ export interface CatalogConfigFieldRefs {
   readonly environmentMode: Prisma.FieldRef<"CatalogConfig", 'EnvironmentMode'>
   readonly initialPlan: Prisma.FieldRef<"CatalogConfig", 'String'>
   readonly fallbackPlan: Prisma.FieldRef<"CatalogConfig", 'String'>
+  readonly livePlanIds: Prisma.FieldRef<"CatalogConfig", 'String[]'>
+  readonly liveAddOnIds: Prisma.FieldRef<"CatalogConfig", 'String[]'>
+  readonly liveCreditTypeIds: Prisma.FieldRef<"CatalogConfig", 'String[]'>
+  readonly restrictLivePlans: Prisma.FieldRef<"CatalogConfig", 'Boolean'>
+  readonly restrictLiveAddOns: Prisma.FieldRef<"CatalogConfig", 'Boolean'>
+  readonly restrictLiveCreditTypes: Prisma.FieldRef<"CatalogConfig", 'Boolean'>
   readonly showBillingPeriodToggle: Prisma.FieldRef<"CatalogConfig", 'Boolean'>
   readonly freePlanPriceDisplay: Prisma.FieldRef<"CatalogConfig", 'Boolean'>
   readonly hideCredits: Prisma.FieldRef<"CatalogConfig", 'Boolean'>

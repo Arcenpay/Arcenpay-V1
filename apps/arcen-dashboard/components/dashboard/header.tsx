@@ -9,7 +9,7 @@ import { useChainId } from "wagmi";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useDashboardSession } from "@/hooks/use-dashboard-session";
-import { getChainLabel, resolveEnvironmentChainId, isChainAllowedForEnvironment, formatChainLabelsForEnvironment } from "@/lib/default-chain";
+import { getChainLabel, resolveEnvironmentChainId } from "@/lib/default-chain";
 import {
   SUPPORTED_WALLET_CHAIN_LABEL,
   useDashboardWallet,
@@ -101,8 +101,7 @@ export function Header({ activeSection }: HeaderProps) {
   } = useDashboardWallet(storedWallet);
   const configuredChainId = activeEnvironment?.chainId ?? resolveEnvironmentChainId(envMode);
   const configuredChainLabel = getChainLabel(configuredChainId);
-  const configuredEnvChainsLabel = formatChainLabelsForEnvironment(envMode);
-  const isOnConfiguredNetwork = hasConnectedWallet && isChainAllowedForEnvironment(chainId, envMode);
+  const isOnConfiguredNetwork = hasConnectedWallet && chainId === configuredChainId;
 
   // Notification bell state
   const [showNotifications, setShowNotifications] = useState(false);
@@ -456,7 +455,7 @@ export function Header({ activeSection }: HeaderProps) {
               ) : null}
               {hasConnectedWallet && !isOnConfiguredNetwork ? (
                 <div className="mt-2 rounded-xl border border-amber-500/20 bg-amber-500/5 px-3 py-3 text-xs text-amber-700">
-                  Switch this wallet to {configuredEnvChainsLabel} before using dashboard transactions in the current workspace environment.
+                  Switch this wallet to {configuredChainLabel} before using dashboard transactions in the current workspace environment.
                 </div>
               ) : null}
               <div className="mt-2 grid gap-2">

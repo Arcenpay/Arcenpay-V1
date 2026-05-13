@@ -46,16 +46,11 @@ export default function EnvironmentOnboardingPage() {
     data?.currentTeam?.role === "OWNER" || data?.currentTeam?.role === "ADMIN";
 
   const chainOptions = useMemo(() => CHAINS[mode], [mode]);
+  const hasExistingEnvironments = (data?.environments?.length ?? 0) > 0;
 
   useEffect(() => {
     setChainId(chainOptions[0]?.chainId ?? BASE_SEPOLIA_CHAIN_ID);
   }, [chainOptions]);
-
-  useEffect(() => {
-    if (!isLoading && data?.activeEnvironment) {
-      router.replace("/");
-    }
-  }, [data?.activeEnvironment, isLoading, router]);
 
   async function handleCreate() {
     setSubmitting(true);
@@ -108,7 +103,9 @@ export default function EnvironmentOnboardingPage() {
               <div>
                 <h1 className="text-2xl font-semibold text-foreground">Environments</h1>
                 <p className="text-sm text-muted-foreground">
-                  Create the first environment for this workspace.
+                  {hasExistingEnvironments
+                    ? "Create another environment for this workspace."
+                    : "Create the first environment for this workspace."}
                 </p>
               </div>
             </div>
@@ -207,7 +204,16 @@ export default function EnvironmentOnboardingPage() {
                 <p className="text-sm text-destructive">{error}</p>
               ) : null}
 
-              <div className="flex justify-end">
+              <div className="flex justify-end gap-3">
+                {hasExistingEnvironments ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => router.push("/?section=settings&tab=workspace", { scroll: false })}
+                  >
+                    Back
+                  </Button>
+                ) : null}
                 <Button
                   onClick={() => void handleCreate()}
                   disabled={submitting || !name.trim()}

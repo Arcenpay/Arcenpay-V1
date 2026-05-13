@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "CatalogConfig" ALTER COLUMN "livePlanIds" SET DEFAULT ARRAY[]::TEXT[],
+ALTER COLUMN "liveAddOnIds" SET DEFAULT ARRAY[]::TEXT[],
+ALTER COLUMN "liveCreditTypeIds" SET DEFAULT ARRAY[]::TEXT[];

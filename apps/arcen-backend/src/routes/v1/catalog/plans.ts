@@ -118,9 +118,9 @@ export async function listPlans(c: Context) {
       if (plan.onChainPlanId) return plan;
 
       const resolved = resolvePlanNetwork({
-        environmentMode: plan.environmentMode,
+        environmentMode: activeEnvironment.mode,
         acceptedToken: plan.acceptedToken,
-        requestedChainId: plan.chainId,
+        requestedChainId: activeEnvironment.chainId,
       });
       if (!resolved) return plan;
 
@@ -134,7 +134,7 @@ export async function listPlans(c: Context) {
       const repaired = await db.catalogPlan.update({
         where: { id: plan.id },
         data: {
-          chainId: resolved.chainId,
+          chainId: activeEnvironment.chainId,
           acceptedToken: resolved.acceptedToken,
           chainSyncStatus:
             parseFloat(plan.price.toString()) === 0 ? "NOT_APPLICABLE" : "PENDING",
@@ -186,6 +186,11 @@ export async function createPlan(c: Context) {
     acceptedToken: data.acceptedToken,
     requestedChainId: activeEnvironment.chainId,
   });
+  if (data.chainId !== undefined && data.chainId !== activeEnvironment.chainId) {
+    return c.json({
+      error: `Plans in ${activeEnvironment.name} are locked to chain ${activeEnvironment.chainId}.`,
+    }, 409 as any);
+  }
   if (!resolvedNetwork) {
     return c.json({
       error:
@@ -275,14 +280,29 @@ export async function updatePlan(c: Context) {
   if (!existing.environmentId) {
     return c.json({ error: "Legacy plans without environments cannot be edited here." }, 409 as any);
   }
+  const activeEnvironment = await requireResolvedActiveEnvironment(
+    auth.session,
+    auth.team.teamId,
+  );
+  if (!activeEnvironment || existing.environmentId !== activeEnvironment.id) {
+    return c.json({ error: "Switch to this plan's environment before editing it." }, 409 as any);
+  }
+  if (
+    parsed.data.chainId !== undefined &&
+    parsed.data.chainId !== activeEnvironment.chainId
+  ) {
+    return c.json({
+      error: `Plans in ${activeEnvironment.name} are locked to chain ${activeEnvironment.chainId}.`,
+    }, 409 as any);
+  }
 
   const nextVersion = existing.version + 1;
   const existingPrice = parseFloat(existing.price.toString());
   const nextPrice = parsed.data.price ?? existingPrice;
-  const nextEnvironmentMode = existing.environmentMode;
+  const nextEnvironmentMode = activeEnvironment.mode;
   const nextAcceptedTokenInput =
     parsed.data.acceptedToken ?? existing.acceptedToken;
-  const nextChainIdInput = parsed.data.chainId ?? existing.chainId;
+  const nextChainIdInput = activeEnvironment.chainId;
   const resolvedNetwork =
     parsed.data.acceptedToken !== undefined || parsed.data.chainId !== undefined
       ? resolvePlanNetwork({
@@ -291,7 +311,7 @@ export async function updatePlan(c: Context) {
           requestedChainId: nextChainIdInput,
         })
       : {
-          chainId: existing.chainId,
+          chainId: activeEnvironment.chainId,
           acceptedToken: existing.acceptedToken as `0x${string}`,
         };
 
@@ -376,7 +396,7 @@ export async function updatePlan(c: Context) {
       ...((parsed.data.acceptedToken !== undefined ||
         parsed.data.chainId !== undefined) && {
         acceptedToken: resolvedNetwork.acceptedToken,
-        chainId: resolvedNetwork.chainId,
+        chainId: activeEnvironment.chainId,
       }),
       ...(parsed.data.metadata !== undefined && {
         metadata: toPrismaNullableJson(parsed.data.metadata),
@@ -436,6 +456,13 @@ export async function deletePlan(c: Context) {
   }
   if (!existing.environmentId) {
     return c.json({ error: "Legacy plans without environments cannot be deleted here." }, 409 as any);
+  }
+  const activeEnvironment = await requireResolvedActiveEnvironment(
+    auth.session,
+    auth.team.teamId,
+  );
+  if (!activeEnvironment || existing.environmentId !== activeEnvironment.id) {
+    return c.json({ error: "Switch to this plan's environment before deleting it." }, 409 as any);
   }
 
   if (existing.status === "PUBLISHED") {

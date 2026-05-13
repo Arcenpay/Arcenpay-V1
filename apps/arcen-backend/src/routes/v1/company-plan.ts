@@ -533,6 +533,7 @@ export async function POST(c: Context) {
       billingInterval: true,
       acceptedToken: true,
       onChainPlanId: true,
+      environmentId: true,
       metadata: true,
     },
   });
@@ -560,6 +561,7 @@ export async function POST(c: Context) {
           currentPeriodEnd: true,
           onChainTokenId: true,
           metadata: true,
+          environmentId: true,
         },
       },
     },
@@ -611,30 +613,60 @@ export async function POST(c: Context) {
     }
   }
 
-  const [currentPlan, catalogConfig] = await Promise.all([
-    company.activePlanId
-      ? db.catalogPlan.findFirst({
-          where: { id: company.activePlanId, teamId },
-          select: {
-            id: true,
-            name: true,
-            price: true,
-            annualPrice: true,
-            billingInterval: true,
-            onChainPlanId: true,
-          },
-        })
-      : Promise.resolve(null),
-    db.catalogConfig.findFirst({
-      where: { teamId },
-      orderBy: { updatedAt: "desc" },
-      select: {
-        downgradeImmediately: true,
-        preventDowngradeOverLimit: true,
-        disallowSelfServiceDowngrade: true,
+  const currentPlan = company.activePlanId
+    ? await db.catalogPlan.findFirst({
+        where: { id: company.activePlanId, teamId },
+        select: {
+          id: true,
+          name: true,
+          price: true,
+          annualPrice: true,
+          billingInterval: true,
+          onChainPlanId: true,
+          environmentId: true,
+        },
+      })
+    : null;
+
+  const companyEnvironmentId =
+    company.subscriptionState?.environmentId ?? currentPlan?.environmentId ?? null;
+  const catalogConfig = await db.catalogConfig.findFirst({
+    where: {
+      teamId,
+      ...(companyEnvironmentId
+        ? { environmentId: companyEnvironmentId }
+        : plan.environmentId
+          ? { environmentId: plan.environmentId }
+          : {}),
+    },
+    orderBy: { updatedAt: "desc" },
+    select: {
+      downgradeImmediately: true,
+      preventDowngradeOverLimit: true,
+      disallowSelfServiceDowngrade: true,
+    },
+  });
+  if (!plan.environmentId) {
+    return c.json(
+      {
+        error:
+          "Legacy plans without workspace environments cannot be used for self-service plan changes.",
       },
-    }),
-  ]);
+      409,
+      corsHeaders(origin),
+    );
+  }
+
+  if (companyEnvironmentId && companyEnvironmentId !== plan.environmentId) {
+    return c.json(
+      {
+        error:
+          "This plan belongs to a different workspace environment. Switch to a plan from the company's current environment.",
+      },
+      409,
+      corsHeaders(origin),
+    );
+  }
 
   const previousPlanId = company.activePlanId;
   const currentBillingPeriod =

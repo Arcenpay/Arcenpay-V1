@@ -81,18 +81,19 @@ import {
   useSignTypedData,
   useWriteContract,
 } from "wagmi";
-import { getUsdcAddress, getTokenOptions, getTokenOptionsForEnvironment } from "@/lib/contracts";
+import {
+  getUsdcAddress,
+  getTokenOptions,
+  getTokenOptionsForChain,
+  getTokenOptionsForEnvironment,
+} from "@/lib/contracts";
 import type { TokenOption } from "@/lib/contracts";
 import {
   DEFAULT_CHAIN_ID,
   DEFAULT_TESTNET_CHAIN_ID,
   DEFAULT_MAINNET_CHAIN_ID,
-  BASE_SEPOLIA_CHAIN_ID,
-  ARC_TESTNET_CHAIN_ID,
-  BASE_MAINNET_CHAIN_ID,
   getChainLabel,
   isSupportedDashboardChainId,
-  isChainAllowedForEnvironment,
   resolveEnvironmentChainId,
 } from "@/lib/default-chain";
 import { toast } from "sonner";
@@ -220,22 +221,29 @@ function tokenLabel(address: string): string {
 function getInitialTokenForEnvironment(
   env: EnvMode,
   connectedChainId?: number,
+  lockedChainId?: number,
 ): `0x${string}` {
-  const envTokens = getTokenOptionsForEnvironment(env);
-  const connectedToken = connectedChainId
-    ? getUsdcAddress(connectedChainId)
-    : null;
+  const resolvedChainId = lockedChainId ?? resolveEnvironmentChainId(env);
+  const envTokens = lockedChainId
+    ? getTokenOptionsForChain(lockedChainId)
+    : getTokenOptionsForEnvironment(env);
+
+  const preferredConnectedToken =
+    connectedChainId && connectedChainId === resolvedChainId
+      ? getUsdcAddress(connectedChainId)
+      : null;
 
   if (
-    connectedToken &&
+    preferredConnectedToken &&
     envTokens.some(
-      (token) => token.address.toLowerCase() === connectedToken.toLowerCase(),
+      (token) =>
+        token.address.toLowerCase() === preferredConnectedToken.toLowerCase(),
     )
   ) {
-    return connectedToken;
+    return preferredConnectedToken;
   }
 
-  return envTokens[0]?.address ?? getUsdcAddress(resolveEnvironmentChainId(env));
+  return envTokens[0]?.address ?? getUsdcAddress(resolvedChainId);
 }
 
 function isOwnerActionRequired(data: RegisterOnChainResponse): boolean {
@@ -359,9 +367,16 @@ function CreatePlanDialog({
   env: EnvMode;
   onCreated: () => void;
 }) {
+  const { activeEnvironment } = useEnvironment();
   const chainId = useChainId();
-  const envTokens = getTokenOptionsForEnvironment(env);
-  const initialAcceptedToken = getInitialTokenForEnvironment(env, chainId);
+  const lockedChainId =
+    activeEnvironment?.chainId ?? resolveEnvironmentChainId(env);
+  const envTokens = getTokenOptionsForChain(lockedChainId);
+  const initialAcceptedToken = getInitialTokenForEnvironment(
+    env,
+    chainId,
+    lockedChainId,
+  );
 
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -741,7 +756,7 @@ function CreatePlanDialog({
                               <span className="font-medium truncate">
                                 {selectedChainOpt
                                   ? chainName(selectedChainOpt)
-                                  : "Select chain"}
+                                  : "Select token"}
                               </span>
                               {selectedChainOpt && (
                                 <span
@@ -891,7 +906,7 @@ function CreatePlanDialog({
                           )}
                           <div className="px-3 py-2 border-t border-border mt-1">
                             <p className="text-[10px] text-muted-foreground">
-                              Switch your wallet network to enable other chains
+                              This environment only supports its configured chain.
                             </p>
                           </div>
                         </DropdownMenuContent>
@@ -1238,9 +1253,16 @@ function CreateAddOnDialog({
   env: EnvMode;
   onCreated: () => void;
 }) {
+  const { activeEnvironment } = useEnvironment();
   const chainId = useChainId();
-  const envTokens = getTokenOptionsForEnvironment(env);
-  const initialAcceptedToken = getInitialTokenForEnvironment(env, chainId);
+  const lockedChainId =
+    activeEnvironment?.chainId ?? resolveEnvironmentChainId(env);
+  const envTokens = getTokenOptionsForChain(lockedChainId);
+  const initialAcceptedToken = getInitialTokenForEnvironment(
+    env,
+    chainId,
+    lockedChainId,
+  );
 
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -1682,7 +1704,7 @@ function CreateAddOnDialog({
                               <span className="font-medium truncate">
                                 {selectedChainOpt
                                   ? chainName(selectedChainOpt)
-                                  : "Select chain"}
+                                  : "Select token"}
                               </span>
                               {selectedChainOpt && (
                                 <span
@@ -1832,7 +1854,7 @@ function CreateAddOnDialog({
                           )}
                           <div className="px-3 py-2 border-t border-border mt-1">
                             <p className="text-[10px] text-muted-foreground">
-                              Switch your wallet network to enable other chains
+                              This environment only supports its configured chain.
                             </p>
                           </div>
                         </DropdownMenuContent>
@@ -1968,9 +1990,16 @@ function CreateCreditTypeDialog({
   env: EnvMode;
   onCreated: () => void;
 }) {
+  const { activeEnvironment } = useEnvironment();
   const chainId = useChainId();
-  const envTokens = getTokenOptionsForEnvironment(env);
-  const initialAcceptedToken = getInitialTokenForEnvironment(env, chainId);
+  const lockedChainId =
+    activeEnvironment?.chainId ?? resolveEnvironmentChainId(env);
+  const envTokens = getTokenOptionsForChain(lockedChainId);
+  const initialAcceptedToken = getInitialTokenForEnvironment(
+    env,
+    chainId,
+    lockedChainId,
+  );
 
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -2347,7 +2376,7 @@ function CreateCreditTypeDialog({
                           <span className="font-medium truncate">
                             {selectedChainOpt
                               ? chainName(selectedChainOpt)
-                              : "Select chain"}
+                              : "Select token"}
                           </span>
                           {selectedChainOpt && (
                             <span
@@ -2495,7 +2524,7 @@ function CreateCreditTypeDialog({
                       )}
                       <div className="px-3 py-2 border-t border-border mt-1">
                         <p className="text-[10px] text-muted-foreground">
-                          Switch your wallet network to enable other chains
+                          This environment only supports its configured chain.
                         </p>
                       </div>
                     </DropdownMenuContent>
@@ -2549,8 +2578,11 @@ function EditCreditTypeDialog({
   credit: CatalogCreditType;
   onSaved: () => void;
 }) {
+  const { activeEnvironment } = useEnvironment();
   const chainId = useChainId();
-  const tokenOptions = getTokenOptionsForEnvironment(credit.environmentMode);
+  const lockedChainId =
+    activeEnvironment?.chainId ?? resolveEnvironmentChainId(credit.environmentMode);
+  const tokenOptions = getTokenOptionsForChain(lockedChainId);
 
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -2777,7 +2809,7 @@ function EditCreditTypeDialog({
                       </div>
                     ) : (
                       <span className="text-muted-foreground">
-                        Select chain
+                        Select token
                       </span>
                     )}
                     <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
@@ -2872,6 +2904,7 @@ function PlansTable({
   refresh?: number;
   onSelect?: (plan: CatalogPlan) => void;
 }) {
+  const { activeEnvironment } = useEnvironment();
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
   const publicClient = usePublicClient({ chainId: chainId || DEFAULT_CHAIN_ID });
@@ -3189,23 +3222,7 @@ function PlansTable({
     }
   }
 
-  const envLabel = env === "DEVELOPMENT" ? "Testnet" : "Mainnet";
-  const envTokens = getTokenOptionsForEnvironment(env);
-  const [chainFilter, setChainFilter] = useState<number | null>(null);
-
-  const filteredPlans = chainFilter
-    ? plans.filter((p) => p.chainId === chainFilter)
-    : plans;
-
-  const chainGroups = new Map<string, CatalogPlan[]>();
-  for (const plan of filteredPlans) {
-    const key = plan.chainId ? getChainLabel(plan.chainId) : "Unknown";
-    if (!chainGroups.has(key)) chainGroups.set(key, []);
-    chainGroups.get(key)!.push(plan);
-  }
-  const sortedChains = [...chainGroups.entries()].sort(([a], [b]) =>
-    a.localeCompare(b),
-  );
+  const environmentName = activeEnvironment?.name ?? "this environment";
 
   return (
     <div className="space-y-4">
@@ -3227,40 +3244,17 @@ function PlansTable({
               <SelectItem value="ARCHIVED">Archived</SelectItem>
             </SelectContent>
           </Select>
-          <Select
-            value={chainFilter?.toString() ?? "all"}
-            onValueChange={(v) =>
-              setChainFilter(v === "all" ? null : Number(v))
-            }
-          >
-            <SelectTrigger className="w-44">
-              <SelectValue placeholder="All networks" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All networks</SelectItem>
-              {envTokens.map((t) => (
-                <SelectItem key={t.chainId} value={t.chainId.toString()}>
-                  {t.chainLabel}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Badge variant="outline" className="text-xs">
-            {envLabel}
-          </Badge>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={load}
-            disabled={loading}
-            className="gap-1"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-          </Button>
-        </div>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={load}
+          disabled={loading}
+          className="gap-1 self-start sm:self-auto"
+        >
+          <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+        </Button>
       </div>
 
       {loading ? (
@@ -3271,11 +3265,10 @@ function PlansTable({
             <Package className="h-6 w-6 text-muted-foreground" />
           </div>
           <p className="text-base font-semibold text-foreground">
-            No plans in {envLabel} yet
+            No plans in {environmentName} yet
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Create your first catalog plan to start selling in the active
-            environment.
+            Create and publish your first plan to start selling in this workspace.
           </p>
         </div>
       ) : (
@@ -3287,7 +3280,6 @@ function PlansTable({
               <TableHead>Price</TableHead>
               <TableHead>Interval</TableHead>
               <TableHead>Token</TableHead>
-              <TableHead>Network</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Sync</TableHead>
               <TableHead>v</TableHead>
@@ -3295,23 +3287,7 @@ function PlansTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {sortedChains.map(([chainLabel, chainPlans]) => (
-              <React.Fragment key={chainLabel}>
-                <TableRow className="bg-secondary/30 hover:bg-secondary/30">
-                  <TableCell
-                    colSpan={9}
-                    className="py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide"
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-blue-400/60" />
-                      {chainLabel}
-                      <span className="text-muted-foreground/50">
-                        · {chainPlans.length} plan{chainPlans.length !== 1 ? "s" : ""}
-                      </span>
-                    </div>
-                  </TableCell>
-                </TableRow>
-                {chainPlans.map((plan) => {
+            {plans.map((plan) => {
               const transitions = NEXT_STATUS[plan.status] ?? [];
               const isFree = parseFloat(plan.price) === 0;
               const needsChainSync =
@@ -3378,15 +3354,6 @@ function PlansTable({
                       <span className="text-muted-foreground">—</span>
                     ) : (
                       tokenLabel(plan.acceptedToken)
-                    )}
-                  </TableCell>
-                  <TableCell className="text-xs">
-                    {plan.chainId ? (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full border border-blue-400/30 text-blue-400 bg-blue-400/5">
-                        {getChainLabel(plan.chainId)}
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground text-[10px]">—</span>
                     )}
                   </TableCell>
                   <TableCell>
@@ -3475,8 +3442,6 @@ function PlansTable({
                 </TableRow>
               );
             })}
-            </React.Fragment>
-          ))}
           </TableBody>
         </Table>
       )}
@@ -4587,45 +4552,12 @@ function CreditTypesTable({
 
 // ─── Configuration Tab ─────────────────────────────────────────────────────────
 
-interface ChainEntry {
-  chainId: number;
-  name: string;
-  color: string;
-  tag: string;
-}
-
-const TESTNET_CHAINS: ChainEntry[] = [
-  {
-    chainId: BASE_SEPOLIA_CHAIN_ID,
-    name: getChainLabel(BASE_SEPOLIA_CHAIN_ID),
-    color: "bg-zinc-400",
-    tag: "testnet",
-  },
-  {
-    chainId: ARC_TESTNET_CHAIN_ID,
-    name: getChainLabel(ARC_TESTNET_CHAIN_ID),
-    color: "bg-zinc-400",
-    tag: "testnet",
-  },
-];
-
-const MAINNET_CHAINS: ChainEntry[] = [
-  {
-    chainId: BASE_MAINNET_CHAIN_ID,
-    name: getChainLabel(BASE_MAINNET_CHAIN_ID),
-    color: "bg-emerald-500",
-    tag: "mainnet",
-  },
-];
-
-const CHAIN_INFO: Record<EnvMode, ChainEntry[]> = {
-  DEVELOPMENT: TESTNET_CHAINS,
-  PRODUCTION: MAINNET_CHAINS,
-};
-
 type CatalogConfigSettings = {
   initialPlan: string;
   fallbackPlan: string;
+  livePlanIds: string[];
+  liveAddOnIds: string[];
+  liveCreditTypeIds: string[];
   // display
   freePlanPriceDisplay: boolean;
   hideCredits: boolean;
@@ -4644,6 +4576,9 @@ type CatalogConfigSettings = {
 const DEFAULT_CONFIG_SETTINGS: CatalogConfigSettings = {
   initialPlan: "none",
   fallbackPlan: "none",
+  livePlanIds: [],
+  liveAddOnIds: [],
+  liveCreditTypeIds: [],
   freePlanPriceDisplay: true,
   hideCredits: false,
   showFeatureDescriptions: true,
@@ -4656,6 +4591,72 @@ const DEFAULT_CONFIG_SETTINGS: CatalogConfigSettings = {
   yearlyDiscountDisplay: false,
 };
 
+type ConfigPlanOption = Pick<
+  CatalogPlan,
+  | "id"
+  | "name"
+  | "tier"
+  | "price"
+  | "annualPrice"
+  | "billingInterval"
+  | "acceptedToken"
+  | "chainId"
+> & {
+  companyCount: number;
+};
+
+type ConfigAddOnOption = Pick<
+  CatalogAddOn,
+  | "id"
+  | "name"
+  | "code"
+  | "description"
+  | "billingType"
+  | "saleMode"
+  | "price"
+  | "billingIntervalDays"
+  | "acceptedToken"
+> & {
+  grantCount: number;
+};
+
+type ConfigCreditTypeOption = Pick<
+  CatalogCreditType,
+  | "id"
+  | "name"
+  | "code"
+  | "unitName"
+  | "unitsPerPack"
+  | "price"
+  | "acceptedToken"
+> & {
+  bundleCount: number;
+};
+
+function addUniqueId(ids: string[], nextId: string): string[] {
+  return ids.includes(nextId) ? ids : [...ids, nextId];
+}
+
+function removeSelectedId(ids: string[], removedId: string): string[] {
+  return ids.filter((id) => id !== removedId);
+}
+
+function addOnPriceLabel(addOn: ConfigAddOnOption): string {
+  const price = parseFloat(addOn.price);
+  if (!Number.isFinite(price)) return "Custom";
+  if (addOn.billingType === "RECURRING") {
+    const everyDays = addOn.billingIntervalDays ?? 30;
+    return `$${price.toFixed(2)} every ${everyDays}d`;
+  }
+  return `$${price.toFixed(2)} one-time`;
+}
+
+function creditBundlePriceLabel(creditType: ConfigCreditTypeOption): string {
+  const price = parseFloat(creditType.price);
+  if (!Number.isFinite(price)) return "Custom";
+  return `${creditType.unitsPerPack} ${creditType.unitName} for $${price.toFixed(2)}`;
+}
+
 function ConfigurationTab() {
   const { envMode, activeEnvironment } = useEnvironment();
   const environmentKey = activeEnvironment?.id ?? envMode;
@@ -4667,41 +4668,73 @@ function ConfigurationTab() {
   const [settings, setSettings] = useState<CatalogConfigSettings>(
     DEFAULT_CONFIG_SETTINGS,
   );
-
-  // Load catalog plans for dropdowns
-  const [catalogPlans, setCatalogPlans] = useState<
-    { id: string; name: string; tier: string; price: string }[]
-  >([]);
-
-  useEffect(() => {
-    fetch(`/api/catalog/plans?environmentMode=${envMode}&limit=50`, {
-      cache: "no-store",
-    })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => {
-        if (d?.plans) setCatalogPlans(d.plans);
-      })
-      .catch(() => {});
-  }, [envMode, environmentKey]);
+  const [loadedSettings, setLoadedSettings] = useState<CatalogConfigSettings>(
+    DEFAULT_CONFIG_SETTINGS,
+  );
+  const [catalogPlans, setCatalogPlans] = useState<ConfigPlanOption[]>([]);
+  const [configAddOns, setConfigAddOns] = useState<ConfigAddOnOption[]>([]);
+  const [configCredits, setConfigCredits] = useState<ConfigCreditTypeOption[]>(
+    [],
+  );
 
   useEffect(() => {
     let cancelled = false;
     setLoadingConfig(true);
     setConfigError(null);
-    fetch(`/api/catalog/config?environmentMode=${envMode}`, {
+    fetch("/api/catalog/config", {
       cache: "no-store",
     })
       .then((r) => r.json())
       .then((data) => {
         if (cancelled) return;
+        const plans = Array.isArray(data.catalog?.plans)
+          ? (data.catalog.plans as ConfigPlanOption[])
+          : [];
+        const addOns = Array.isArray(data.catalog?.addOns)
+          ? (data.catalog.addOns as ConfigAddOnOption[])
+          : [];
+        const creditTypes = Array.isArray(data.catalog?.creditTypes)
+          ? (data.catalog.creditTypes as ConfigCreditTypeOption[])
+          : [];
         const config = (data.config ?? {}) as Partial<CatalogConfigSettings> & {
           fallbackPlan?: string | null;
+          livePlanIds?: string[] | null;
+          liveAddOnIds?: string[] | null;
+          liveCreditTypeIds?: string[] | null;
         };
-        setSettings({
+        const nextSettings: CatalogConfigSettings = {
           ...DEFAULT_CONFIG_SETTINGS,
           ...config,
           fallbackPlan: config.fallbackPlan || "none",
-        });
+          livePlanIds:
+            config.livePlanIds == null
+              ? plans.map((plan) => plan.id)
+              : config.livePlanIds.filter((id) =>
+                  plans.some((plan) => plan.id === id),
+                ),
+          liveAddOnIds:
+            config.liveAddOnIds == null
+              ? addOns.map((addOn) => addOn.id)
+              : config.liveAddOnIds.filter((id) =>
+                  addOns.some((addOn) => addOn.id === id),
+                ),
+          liveCreditTypeIds:
+            config.liveCreditTypeIds == null
+              ? creditTypes
+                  .filter((creditType) => creditType.bundleCount > 0)
+                  .map((creditType) => creditType.id)
+              : config.liveCreditTypeIds.filter((id) =>
+                  creditTypes.some(
+                    (creditType) =>
+                      creditType.id === id && creditType.bundleCount > 0,
+                  ),
+                ),
+        };
+        setCatalogPlans(plans);
+        setConfigAddOns(addOns);
+        setConfigCredits(creditTypes);
+        setLoadedSettings(nextSettings);
+        setSettings(nextSettings);
       })
       .catch((err: unknown) => {
         if (!cancelled)
@@ -4742,6 +4775,9 @@ function ConfigurationTab() {
         ...current,
         initialPlan: nextInitial,
         fallbackPlan: nextFallback,
+        livePlanIds: current.livePlanIds.filter((id) =>
+          catalogPlans.some((plan) => plan.id === id),
+        ),
       };
     });
   }, [catalogPlans]);
@@ -4762,7 +4798,8 @@ function ConfigurationTab() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Failed to save");
-      toast.success(`Configuration saved for ${envLabel} · ${envChains.map((c) => c.name).join(", ")}`);
+      setLoadedSettings(settings);
+      toast.success(`Configuration saved for ${activeEnvironment?.name ?? envLabel}`);
     } catch (err: unknown) {
       setConfigError(
         err instanceof Error ? err.message : "Failed to save configuration",
@@ -4773,59 +4810,52 @@ function ConfigurationTab() {
   }
 
   const configuredChainId = activeEnvironment?.chainId ?? resolveEnvironmentChainId(envMode);
-  const envChains = activeEnvironment
-    ? CHAIN_INFO[envMode].filter((chain) => chain.chainId === configuredChainId)
-    : CHAIN_INFO[envMode];
   const envLabel = envMode === "DEVELOPMENT" ? "Development" : "Production";
   const envTag = envMode === "DEVELOPMENT" ? "DEV" : "PROD";
-  const walletOnConfiguredChain = isChainAllowedForEnvironment(chainId, envMode);
+  const selectedLivePlans = catalogPlans.filter((plan) =>
+    settings.livePlanIds.includes(plan.id),
+  );
+  const availableLivePlans = catalogPlans.filter(
+    (plan) => !settings.livePlanIds.includes(plan.id),
+  );
+  const selectedLiveAddOns = configAddOns.filter((addOn) =>
+    settings.liveAddOnIds.includes(addOn.id),
+  );
+  const availableLiveAddOns = configAddOns.filter(
+    (addOn) => !settings.liveAddOnIds.includes(addOn.id),
+  );
+  const liveCreditCandidates = configCredits.filter(
+    (creditType) => creditType.bundleCount > 0,
+  );
+  const selectedLiveCredits = liveCreditCandidates.filter((creditType) =>
+    settings.liveCreditTypeIds.includes(creditType.id),
+  );
+  const availableLiveCredits = liveCreditCandidates.filter(
+    (creditType) => !settings.liveCreditTypeIds.includes(creditType.id),
+  );
+  const hasPublishedPlans = catalogPlans.length > 0;
+  const hasPublishedAddOns = configAddOns.length > 0;
+  const hasPublishedCreditBundles = liveCreditCandidates.length > 0;
+  const walletOnConfiguredChain = chainId === configuredChainId;
   const walletOnSupportedChain = isSupportedDashboardChainId(chainId);
-  const usdcAddress = getUsdcAddress(configuredChainId);
-
-  // ToggleRow helper
-  function ToggleRow({
-    id,
-    label,
-    desc,
-    checked,
-    onChange,
-  }: {
-    id: string;
-    label: string;
-    desc: string;
-    checked: boolean;
-    onChange: (v: boolean) => void;
-  }) {
-    return (
-      <div className="flex items-start justify-between gap-6 p-5 hover:bg-secondary/10 transition-colors">
-        <div className="space-y-1 flex-1">
-          <Label
-            htmlFor={id}
-            className="text-sm font-semibold text-foreground cursor-pointer"
-          >
-            {label}
-          </Label>
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            {desc}
-          </p>
-        </div>
-        <Switch id={id} checked={checked} onCheckedChange={onChange} />
-      </div>
-    );
-  }
+  const configuredChainLabel = getChainLabel(configuredChainId);
 
   return (
     <div className="max-w-3xl space-y-6">
       {/* Active environment status bar */}
       <div className="rounded-xl border border-border bg-card p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${envChains[0].color}`} />
+          <div
+            className={`w-2.5 h-2.5 rounded-full shrink-0 ${
+              envMode === "DEVELOPMENT" ? "bg-zinc-400" : "bg-emerald-500"
+            }`}
+          />
           <div>
             <p className="text-sm font-bold text-foreground leading-tight">
-              {envLabel} · {envChains.length} chain{envChains.length !== 1 ? "s" : ""}
+              {activeEnvironment?.name ?? envLabel}
             </p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {envChains.map((c) => c.name).join(", ")}
+              {configuredChainLabel}
             </p>
           </div>
           <span className="text-[9px] font-bold uppercase px-2 py-0.5 rounded-full border border-border text-muted-foreground">
@@ -4880,306 +4910,418 @@ function ConfigurationTab() {
           </p>
         </div>
         <div className="p-5 space-y-5">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            <div className="space-y-2">
-              <Label
-                htmlFor="initial-plan"
-                className="text-sm font-semibold text-foreground"
-              >
-                Initial Plan
-              </Label>
-              <Select
-                value={settings.initialPlan}
-                onValueChange={(v) =>
-                  setSettings({ ...settings, initialPlan: v })
-                }
-              >
-                <SelectTrigger
-                  id="initial-plan"
-                  className="h-11 bg-background border-border"
-                >
-                  <SelectValue placeholder="Select a plan…" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">None</SelectItem>
-                  {catalogPlans.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      <div className="flex items-center gap-2">
-                        <span>{p.name}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {parseFloat(p.price) === 0
-                            ? "Free"
-                            : `$${parseFloat(p.price).toFixed(2)} USDC`}
-                        </span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                Assigned when a wallet first connects.
+          {!hasPublishedPlans ? (
+            <div className="rounded-xl border border-dashed border-border bg-secondary/5 px-4 py-6">
+              <p className="text-sm font-medium text-foreground">
+                Publish a plan first
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Default and live plan settings appear after this environment has at least one published plan.
               </p>
             </div>
-            <div className="space-y-2">
-              <Label
-                htmlFor="fallback-plan"
-                className="text-sm font-semibold text-foreground"
-              >
-                Fallback Plan
-              </Label>
-              <Select
-                value={settings.fallbackPlan}
-                onValueChange={(v) =>
-                  setSettings({ ...settings, fallbackPlan: v })
-                }
-              >
-                <SelectTrigger
-                  id="fallback-plan"
-                  className="h-11 bg-background border-border"
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div className="space-y-2">
+                <Label
+                  htmlFor="initial-plan"
+                  className="text-sm font-semibold text-foreground"
                 >
-                  <SelectValue placeholder="No fallback" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">None</SelectItem>
-                  {catalogPlans
-                    .filter((p) => parseFloat(p.price) === 0)
-                    .map((p) => (
+                  Initial Plan
+                </Label>
+                <Select
+                  value={settings.initialPlan}
+                  onValueChange={(v) =>
+                    setSettings((current) => ({
+                      ...current,
+                      initialPlan: v,
+                      livePlanIds:
+                        v === "none"
+                          ? current.livePlanIds
+                          : addUniqueId(current.livePlanIds, v),
+                    }))
+                  }
+                >
+                  <SelectTrigger
+                    id="initial-plan"
+                    className="h-11 bg-background border-border"
+                  >
+                    <SelectValue placeholder="Select a plan…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {catalogPlans.map((p) => (
                       <SelectItem key={p.id} value={p.id}>
-                        {p.name} (Free)
+                        <div className="flex items-center gap-2">
+                          <span>{p.name}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {parseFloat(p.price) === 0
+                              ? "Free"
+                              : `$${parseFloat(p.price).toFixed(2)} USDC`}
+                          </span>
+                        </div>
                       </SelectItem>
                     ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                Assigned if a subscription lapses or is cancelled.
-              </p>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Assigned when a wallet first connects.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label
+                  htmlFor="fallback-plan"
+                  className="text-sm font-semibold text-foreground"
+                >
+                  Fallback Plan
+                </Label>
+                <Select
+                  value={settings.fallbackPlan}
+                  onValueChange={(v) =>
+                    setSettings((current) => ({
+                      ...current,
+                      fallbackPlan: v,
+                      livePlanIds:
+                        v === "none"
+                          ? current.livePlanIds
+                          : addUniqueId(current.livePlanIds, v),
+                    }))
+                  }
+                >
+                  <SelectTrigger
+                    id="fallback-plan"
+                    className="h-11 bg-background border-border"
+                  >
+                    <SelectValue placeholder="No fallback" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {catalogPlans
+                      .filter((p) => parseFloat(p.price) === 0)
+                      .map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.name} (Free)
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Assigned if a subscription lapses or is cancelled.
+                </p>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
-      {/* ── Component Display ───────────────────────────────────── */}
       <div className="rounded-xl border border-border bg-card overflow-hidden">
         <div className="px-5 py-4 border-b border-border bg-secondary/20">
-          <h3 className="text-sm font-bold text-foreground">
-            Component Display
-          </h3>
+          <h3 className="text-sm font-bold text-foreground">Live Plans</h3>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Control what your end-users see in embedded billing components.
-          </p>
-        </div>
-        <div className="divide-y divide-border/50">
-          <ToggleRow
-            id="free-price"
-            label='Show "Free" instead of "$0.00"'
-            desc="Display the word Free in the portal and checkout instead of a zero price"
-            checked={settings.freePlanPriceDisplay}
-            onChange={(v) =>
-              setSettings({ ...settings, freePlanPriceDisplay: v })
-            }
-          />
-          <ToggleRow
-            id="hide-credits"
-            label="Hide credit balances"
-            desc="Obscure credit balance and USDC consumption from checkout and portal components"
-            checked={settings.hideCredits}
-            onChange={(v) => setSettings({ ...settings, hideCredits: v })}
-          />
-          <ToggleRow
-            id="feature-desc"
-            label="Show feature descriptions"
-            desc="Display entitlement descriptions inside checkout and portal plan cards"
-            checked={settings.showFeatureDescriptions}
-            onChange={(v) =>
-              setSettings({ ...settings, showFeatureDescriptions: v })
-            }
-          />
-          <ToggleRow
-            id="hard-limits"
-            label="Show hard limits"
-            desc="Surface defined hard limits (e.g. max API calls) for metered entitlements"
-            checked={settings.showHardLimits}
-            onChange={(v) => setSettings({ ...settings, showHardLimits: v })}
-          />
-        </div>
-      </div>
-
-      {/* ── Plan Change Rules ───────────────────────────────────── */}
-      <div className="rounded-xl border border-border bg-card overflow-hidden">
-        <div className="px-5 py-4 border-b border-border bg-secondary/20">
-          <h3 className="text-sm font-bold text-foreground">
-            Plan Change Rules
-          </h3>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            On-chain rules applied when subscribers upgrade or downgrade their
-            plan.
+            These published plans are exposed in checkout and the billing
+            portal for this environment.
           </p>
         </div>
         <div className="p-5 space-y-4">
-          {/* Upgrade */}
-          <div className="rounded-lg border border-border bg-secondary/5 overflow-hidden">
-            <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50 bg-secondary/10">
-              <div className="w-2 h-2 rounded-full bg-green-500" />
-              <p className="text-xs font-bold text-foreground uppercase tracking-wider">
-                On Upgrade
-              </p>
-              <p className="text-xs text-muted-foreground ml-1">
-                → higher cost plan or adding an add-on
-              </p>
+          {selectedLivePlans.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-border bg-secondary/5 px-4 py-6 text-sm text-muted-foreground">
+              No plans are currently live in this environment.
             </div>
-            <ToggleRow
-              id="upgrade-immediate"
-              label="Charge the difference immediately on-chain"
-              desc="Apply the upgrade and collect the prorated USDC difference in the same transaction"
-              checked={settings.upgradeImmediately}
-              onChange={(v) =>
-                setSettings({ ...settings, upgradeImmediately: v })
-              }
-            />
-          </div>
-          {/* Downgrade */}
-          <div className="rounded-lg border border-border bg-secondary/5 overflow-hidden">
-            <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50 bg-secondary/10">
-              <div className="w-2 h-2 rounded-full bg-orange-500" />
-              <p className="text-xs font-bold text-foreground uppercase tracking-wider">
-                On Downgrade
-              </p>
-              <p className="text-xs text-muted-foreground ml-1">
-                → lower cost plan or removing an add-on
-              </p>
-            </div>
-            <div className="divide-y divide-border/50">
-              <ToggleRow
-                id="downgrade-immediate"
-                label="Apply downgrade immediately and credit wallet"
-                desc="Downgrade takes effect now and the prorated USDC difference is credited back to the subscriber's wallet"
-                checked={settings.downgradeImmediately}
-                onChange={(v) =>
-                  setSettings({ ...settings, downgradeImmediately: v })
-                }
-              />
-              <ToggleRow
-                id="prevent-downgrade"
-                label="Block downgrade when subscriber is over the limit"
-                desc="Reject a downgrade transaction if the subscriber is using more than the destination plan allows"
-                checked={settings.preventDowngradeOverLimit}
-                onChange={(v) =>
-                  setSettings({ ...settings, preventDowngradeOverLimit: v })
-                }
-              />
-              <ToggleRow
-                id="disallow-self-downgrade"
-                label="Require admin approval for downgrades"
-                desc="End-users cannot self-service downgrade — an admin must trigger the on-chain downgrade"
-                checked={settings.disallowSelfServiceDowngrade}
-                onChange={(v) =>
-                  setSettings({ ...settings, disallowSelfServiceDowngrade: v })
-                }
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Network & Contracts ─────────────────────────────────── */}
-      <div className="rounded-xl border border-border bg-card overflow-hidden">
-        <div className="px-5 py-4 border-b border-border bg-secondary/20">
-          <h3 className="text-sm font-bold text-foreground">
-            Network & Contracts
-          </h3>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Blockchain network mapping and deployed contract addresses.
-          </p>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border/50 bg-secondary/5">
-                <th className="text-left py-3 px-5 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Environment
-                </th>
-                <th className="text-left py-3 px-5 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Network
-                </th>
-                <th className="text-left py-3 px-5 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Chain ID
-                </th>
-                <th className="text-left py-3 px-5 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  USDC Contract
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/30">
-              {(Object.entries(CHAIN_INFO) as [EnvMode, ChainEntry[]][]).map(
-                ([mode, chains]) =>
-                  chains.map((chain) => {
-                    const usdc = getUsdcAddress(chain.chainId);
-                    const isActive = mode === envMode;
-                    return (
-                      <tr
-                        key={`${mode}-${chain.chainId}`}
-                        className={`transition-colors ${isActive ? "bg-secondary/10" : "hover:bg-secondary/5"}`}
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2">
+              {selectedLivePlans.map((plan) => {
+                const lockedByDefault =
+                  plan.id === settings.initialPlan || plan.id === settings.fallbackPlan;
+                return (
+                  <div
+                    key={plan.id}
+                    className="rounded-xl border border-border bg-background p-4"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-foreground">
+                          {plan.name}
+                        </p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {planPriceLabel(plan)}
+                        </p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 shrink-0"
+                        disabled={lockedByDefault}
+                        onClick={() =>
+                          setSettings((current) => ({
+                            ...current,
+                            livePlanIds: removeSelectedId(current.livePlanIds, plan.id),
+                          }))
+                        }
                       >
-                        <td className="py-3.5 px-5">
-                          <div className="flex items-center gap-2.5">
-                            <div
-                              className={`w-2 h-2 rounded-full shrink-0 ${chain.color}`}
-                            />
-                            <span className="font-semibold text-foreground">
-                              {mode === "DEVELOPMENT"
-                                ? "Development"
-                                : "Production"}
-                            </span>
-                            {isActive && (
-                              <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-foreground text-background">
-                                Active
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="py-3.5 px-5 text-muted-foreground">
-                          {chain.name}
-                        </td>
-                        <td className="py-3.5 px-5 font-mono text-muted-foreground">
-                          {chain.chainId}
-                        </td>
-                        <td className="py-3.5 px-5 font-mono text-xs text-muted-foreground">
-                          {usdc.slice(0, 10)}…{usdc.slice(-6)}
-                        </td>
-                      </tr>
-                    );
-                  }),
-              )}
-            </tbody>
-          </table>
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                      <span>{plan.companyCount} compan{plan.companyCount === 1 ? "y" : "ies"}</span>
+                      {plan.annualPrice && (
+                        <span>${parseFloat(plan.annualPrice).toFixed(2)}/yr</span>
+                      )}
+                      {lockedByDefault && (
+                        <span className="rounded-full border border-border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-foreground">
+                          Default
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <div className="rounded-xl border border-border bg-secondary/5 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-medium text-foreground">
+                  Add published plans
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Only published plans on {getChainLabel(configuredChainId)} can go live here.
+                </p>
+              </div>
+              <Badge variant="outline">{availableLivePlans.length} available</Badge>
+            </div>
+            {!hasPublishedPlans ? (
+              <p className="mt-3 text-xs text-muted-foreground">
+                Publish a plan to start choosing which plans go live.
+              </p>
+            ) : availableLivePlans.length === 0 ? (
+              <p className="mt-3 text-xs text-muted-foreground">
+                All published plans in this environment are already live.
+              </p>
+            ) : (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {availableLivePlans.map((plan) => (
+                  <Button
+                    key={plan.id}
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                    onClick={() =>
+                      setSettings((current) => ({
+                        ...current,
+                        livePlanIds: addUniqueId(current.livePlanIds, plan.id),
+                      }))
+                    }
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    {plan.name}
+                  </Button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
-        {/* Current USDC address */}
-        <div className="px-5 py-3 border-t border-border/50 bg-secondary/5 flex items-center gap-2">
-          <Coins className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-          <p className="text-xs text-muted-foreground">
-            Active USDC ({getChainLabel(configuredChainId)}):{" "}
-            <span className="font-mono text-foreground">{usdcAddress}</span>
+      </div>
+
+      <div className="rounded-xl border border-border bg-card overflow-hidden">
+        <div className="px-5 py-4 border-b border-border bg-secondary/20">
+          <h3 className="text-sm font-bold text-foreground">Live Add-Ons</h3>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Choose which published add-ons customers can discover in this
+            environment.
           </p>
+        </div>
+        <div className="p-5 space-y-4">
+          {selectedLiveAddOns.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-border bg-secondary/5 px-4 py-6 text-sm text-muted-foreground">
+              No add-ons are currently live in this environment.
+            </div>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2">
+              {selectedLiveAddOns.map((addOn) => (
+                <div
+                  key={addOn.id}
+                  className="rounded-xl border border-border bg-background p-4"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">
+                        {addOn.name}
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {addOnPriceLabel(addOn)}
+                      </p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 shrink-0"
+                      onClick={() =>
+                        setSettings((current) => ({
+                          ...current,
+                          liveAddOnIds: removeSelectedId(current.liveAddOnIds, addOn.id),
+                        }))
+                      }
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                    <span>{addOn.code}</span>
+                    <span>{addOn.saleMode.toLowerCase().replace(/_/g, " ")}</span>
+                    <span>{addOn.grantCount} active grant{addOn.grantCount === 1 ? "" : "s"}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="rounded-xl border border-border bg-secondary/5 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-medium text-foreground">
+                  Add published add-ons
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Standalone and upsell add-ons stay pinned to this environment&apos;s chain.
+                </p>
+              </div>
+              <Badge variant="outline">{availableLiveAddOns.length} available</Badge>
+            </div>
+            {!hasPublishedAddOns ? (
+              <p className="mt-3 text-xs text-muted-foreground">
+                Publish an add-on to make it available here.
+              </p>
+            ) : availableLiveAddOns.length === 0 ? (
+              <p className="mt-3 text-xs text-muted-foreground">
+                All published add-ons in this environment are already live.
+              </p>
+            ) : (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {availableLiveAddOns.map((addOn) => (
+                  <Button
+                    key={addOn.id}
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                    onClick={() =>
+                      setSettings((current) => ({
+                        ...current,
+                        liveAddOnIds: addUniqueId(current.liveAddOnIds, addOn.id),
+                      }))
+                    }
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    {addOn.name}
+                  </Button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
       <div className="rounded-xl border border-border bg-card overflow-hidden">
         <div className="px-5 py-4 border-b border-border bg-secondary/20">
           <h3 className="text-sm font-bold text-foreground">
-            Environment Workspace
+            Live Credit Bundles
           </h3>
           <p className="text-xs text-muted-foreground mt-0.5">
-            This catalog is now pinned to the selected workspace environment. Use the header picker or workspace settings to switch environments.
+            Control which published credit bundle products appear to customers
+            in this environment.
           </p>
         </div>
-        <div className="p-5">
-          <div className="rounded-lg border border-border bg-secondary/5 px-4 py-4">
-            <p className="text-sm font-medium text-foreground">
-              Only {getChainLabel(configuredChainId)} is active in this workspace.
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Plans, credits, and catalog configuration created here stay locked to the currently selected environment.
-            </p>
+        <div className="p-5 space-y-4">
+          {selectedLiveCredits.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-border bg-secondary/5 px-4 py-6 text-sm text-muted-foreground">
+              No credit bundles are currently live in this environment.
+            </div>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2">
+              {selectedLiveCredits.map((creditType) => (
+                <div
+                  key={creditType.id}
+                  className="rounded-xl border border-border bg-background p-4"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">
+                        {creditType.name}
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {creditBundlePriceLabel(creditType)}
+                      </p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 shrink-0"
+                      onClick={() =>
+                        setSettings((current) => ({
+                          ...current,
+                          liveCreditTypeIds: removeSelectedId(
+                            current.liveCreditTypeIds,
+                            creditType.id,
+                          ),
+                        }))
+                      }
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                    <span>{creditType.bundleCount} bundle option{creditType.bundleCount === 1 ? "" : "s"}</span>
+                    <span>{creditType.code}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="rounded-xl border border-border bg-secondary/5 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-medium text-foreground">
+                  Add published credit bundles
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Only credit types with at least one configured bundle can go live here.
+                </p>
+              </div>
+              <Badge variant="outline">{availableLiveCredits.length} available</Badge>
+            </div>
+            {configCredits.length > 0 && !hasPublishedCreditBundles ? (
+              <p className="mt-3 text-xs text-muted-foreground">
+                Publish a credit type and add bundle options before it can appear in checkout.
+              </p>
+            ) : !hasPublishedCreditBundles ? (
+              <p className="mt-3 text-xs text-muted-foreground">
+                Publish a credit bundle to make it available here.
+              </p>
+            ) : availableLiveCredits.length === 0 ? (
+              <p className="mt-3 text-xs text-muted-foreground">
+                All configured credit bundles in this environment are already live.
+              </p>
+            ) : (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {availableLiveCredits.map((creditType) => (
+                  <Button
+                    key={creditType.id}
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                    onClick={() =>
+                      setSettings((current) => ({
+                        ...current,
+                        liveCreditTypeIds: addUniqueId(
+                          current.liveCreditTypeIds,
+                          creditType.id,
+                        ),
+                      }))
+                    }
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    {creditType.name}
+                  </Button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -5190,13 +5332,13 @@ function ConfigurationTab() {
           <p className="text-xs text-muted-foreground">
             {loadingConfig
               ? "Loading configuration…"
-              : "Changes saved per environment"}
+              : "Catalog visibility is saved per environment"}
           </p>
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setSettings(DEFAULT_CONFIG_SETTINGS)}
+              onClick={() => setSettings(loadedSettings)}
               disabled={loadingConfig || savingConfig}
             >
               Reset
@@ -5331,7 +5473,7 @@ export function CatalogConfigSection() {
             Configuration
           </h2>
           <p className="text-sm text-muted-foreground">
-            Manage environment settings and blockchain network configuration
+            Choose which published plans, add-ons, and credit bundles go live in this environment
           </p>
         </div>
       </div>
@@ -5882,8 +6024,13 @@ function EditPlanDialog({
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 }) {
+  const { activeEnvironment } = useEnvironment();
   const chainId = useChainId();
-  const tokenOptions = getTokenOptionsForEnvironment(plan.environmentMode);
+  const tokenOptions = getTokenOptionsForChain(
+    plan.chainId ??
+      activeEnvironment?.chainId ??
+      resolveEnvironmentChainId(plan.environmentMode),
+  );
 
   const [internalOpen, setInternalOpen] = useState(false);
   const open = externalOpen !== undefined ? externalOpen : internalOpen;
@@ -6294,7 +6441,7 @@ function EditPlanDialog({
                               <span className="font-medium truncate">
                                 {selectedChainOpt
                                   ? chainName(selectedChainOpt)
-                                  : "Select chain"}
+                                  : "Select token"}
                               </span>
                               {selectedChainOpt && (
                                 <span
@@ -6444,7 +6591,7 @@ function EditPlanDialog({
                           )}
                           <div className="px-3 py-2 border-t border-border mt-1">
                             <p className="text-[10px] text-muted-foreground">
-                              Switch your wallet network to enable other chains
+                              This environment only supports its configured chain.
                             </p>
                           </div>
                         </DropdownMenuContent>
@@ -6812,7 +6959,9 @@ function timeAgo(dateStr: string): string {
   return `${months}mo ago`;
 }
 
-function planPriceLabel(plan: CatalogPlan): string {
+function planPriceLabel(
+  plan: Pick<CatalogPlan, "price" | "billingInterval">,
+): string {
   const price = parseFloat(plan.price);
   if (price === 0) return "Free";
   const intervalLabel =
@@ -7941,14 +8090,6 @@ function PlanDetailView({
                 </p>
                 <EnvBadge mode={plan.environmentMode} />
               </div>
-              {plan.chainId && (
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1.5">Network</p>
-                  <Badge variant="outline" className="text-xs border-blue-400/50 text-blue-400 bg-blue-400/5">
-                    {getChainLabel(plan.chainId)}
-                  </Badge>
-                </div>
-              )}
             </div>
           </div>
 

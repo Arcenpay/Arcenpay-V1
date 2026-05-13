@@ -181,6 +181,14 @@ export async function registerPlanOnChain(c: Context) {
 
   const storedPlan = await db.catalogPlan.findFirst({
     where: { id: planId, teamId: auth.team.teamId },
+    include: {
+      environment: {
+        select: {
+          mode: true,
+          chainId: true,
+        },
+      },
+    },
   });
 
   if (!storedPlan) {
@@ -188,9 +196,9 @@ export async function registerPlanOnChain(c: Context) {
   }
 
   const resolvedNetwork = resolvePlanNetwork({
-    environmentMode: storedPlan.environmentMode,
+    environmentMode: storedPlan.environment?.mode ?? storedPlan.environmentMode,
     acceptedToken: storedPlan.acceptedToken,
-    requestedChainId: storedPlan.chainId,
+    requestedChainId: storedPlan.environment?.chainId ?? storedPlan.chainId,
   });
   if (!resolvedNetwork) {
     return c.json({

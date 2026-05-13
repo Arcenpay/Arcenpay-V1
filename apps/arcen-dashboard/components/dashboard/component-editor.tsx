@@ -1503,43 +1503,58 @@ export function ComponentEditor({
   // ── Live data from the provider (real plans + feature flags) ─────────────
   const [liveData, setLiveData] = useState<RealData | undefined>(undefined);
 
+  function mapLivePlans(rawPlans: Array<Record<string, unknown>>): RealPlan[] {
+    return rawPlans
+      .map((p) => ({
+        id: String(p.id ?? ""),
+        name: String(p.name ?? ""),
+        price: parseFloat(String(p.price ?? "0")),
+        billingInterval:
+          Number(p.billingInterval) === 31536000 ? "yearly" : "monthly",
+        tier: p.tier ? String(p.tier) : undefined,
+        description: p.description ? String(p.description) : undefined,
+        acceptedToken: p.acceptedToken ? String(p.acceptedToken) : "USDC",
+        metadata:
+          p.metadata && typeof p.metadata === "object"
+            ? (p.metadata as Record<string, unknown>)
+            : null,
+      }))
+      .sort((a, b) => a.price - b.price);
+  }
+
+  async function loadConfiguredLivePlans(): Promise<RealPlan[]> {
+    const configRes = await fetch("/api/catalog/config");
+    if (!configRes.ok) return [];
+    const payload = (await configRes.json()) as {
+      catalog?: { plans?: Array<Record<string, unknown>> };
+      config?: { livePlanIds?: string[] | null };
+    };
+
+    const rawPlans = Array.isArray(payload.catalog?.plans)
+      ? payload.catalog.plans
+      : [];
+    const configuredIds = Array.isArray(payload.config?.livePlanIds)
+      ? payload.config.livePlanIds
+      : [];
+    const filteredPlans =
+      configuredIds.length > 0
+        ? rawPlans.filter((plan) => configuredIds.includes(String(plan.id ?? "")))
+        : [];
+
+    return mapLivePlans(filteredPlans);
+  }
+
   useEffect(() => {
     Promise.all([
-      fetch("/api/catalog/plans").then((r) => (r.ok ? r.json() : null)),
+      loadConfiguredLivePlans(),
       fetch("/api/v1/feature-flags").then((r) => (r.ok ? r.json() : null)),
     ])
-      .then(([plansRes, flagsRes]) => {
-        const rawPlans: Array<Record<string, unknown>> = Array.isArray(
-          plansRes?.plans,
-        )
-          ? plansRes.plans
-          : Array.isArray(plansRes)
-            ? plansRes
-            : [];
+      .then(([plans, flagsRes]) => {
         const rawFlags: Array<Record<string, unknown>> = Array.isArray(
           flagsRes?.data,
         )
           ? flagsRes.data
           : [];
-
-        const plans: RealPlan[] = rawPlans
-          .filter((p) => p.status === "PUBLISHED")
-          .map((p) => ({
-            id: String(p.id ?? ""),
-            name: String(p.name ?? ""),
-            price: parseFloat(String(p.price ?? "0")),
-            billingInterval:
-              Number(p.billingInterval) === 31536000 ? "yearly" : "monthly",
-            tier: p.tier ? String(p.tier) : undefined,
-            description: p.description ? String(p.description) : undefined,
-            acceptedToken: p.acceptedToken ? String(p.acceptedToken) : "USDC",
-            metadata:
-              p.metadata && typeof p.metadata === "object"
-                ? (p.metadata as Record<string, unknown>)
-                : null,
-          }))
-          // Free plans (price=0) first, then ascending by price
-          .sort((a, b) => a.price - b.price);
 
         const flags: RealFlag[] = rawFlags.map((f) => ({
           featureKey: String(f.featureKey ?? f.key ?? ""),
@@ -1660,39 +1675,15 @@ export function ComponentEditor({
     setPreviewCompanyId(null);
     // Re-fetch live data from catalog
     Promise.all([
-      fetch("/api/catalog/plans").then((r) => (r.ok ? r.json() : null)),
+      loadConfiguredLivePlans(),
       fetch("/api/v1/feature-flags").then((r) => (r.ok ? r.json() : null)),
     ])
-      .then(([plansRes, flagsRes]) => {
-        const rawPlans: Array<Record<string, unknown>> = Array.isArray(
-          plansRes?.plans,
-        )
-          ? plansRes.plans
-          : Array.isArray(plansRes)
-            ? plansRes
-            : [];
+      .then(([plans, flagsRes]) => {
         const rawFlags: Array<Record<string, unknown>> = Array.isArray(
           flagsRes?.data,
         )
           ? flagsRes.data
           : [];
-        const plans: RealPlan[] = rawPlans
-          .filter((p) => p.status === "PUBLISHED")
-          .map((p) => ({
-            id: String(p.id ?? ""),
-            name: String(p.name ?? ""),
-            price: parseFloat(String(p.price ?? "0")),
-            billingInterval:
-              Number(p.billingInterval) === 31536000 ? "yearly" : "monthly",
-            tier: p.tier ? String(p.tier) : undefined,
-            description: p.description ? String(p.description) : undefined,
-            acceptedToken: p.acceptedToken ? String(p.acceptedToken) : "USDC",
-            metadata:
-              p.metadata && typeof p.metadata === "object"
-                ? (p.metadata as Record<string, unknown>)
-                : null,
-          }))
-          .sort((a, b) => a.price - b.price);
         const flags: RealFlag[] = rawFlags.map((f) => ({
           featureKey: String(f.featureKey ?? f.key ?? ""),
           name: String(f.name ?? ""),

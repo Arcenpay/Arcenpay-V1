@@ -67,6 +67,23 @@ function deriveBillingPeriodFromInterval(
     : "monthly";
 }
 
+function deriveVisiblePlanIds(config: {
+  restrictLivePlans?: boolean;
+  livePlanIds?: string[];
+  initialPlan?: string | null;
+  fallbackPlan?: string | null;
+} | null): string[] | null {
+  if (!config) return null;
+  if (config.restrictLivePlans) {
+    return Array.isArray(config.livePlanIds) ? config.livePlanIds : [];
+  }
+
+  const ids = new Set<string>();
+  if (config.initialPlan && config.initialPlan !== "none") ids.add(config.initialPlan);
+  if (config.fallbackPlan && config.fallbackPlan !== "none") ids.add(config.fallbackPlan);
+  return Array.from(ids);
+}
+
 // Handle CORS preflight requests from embedded apps
 export async function OPTIONS(c: Context) {
   return c.json(null, 204 as any, corsHeaders(c.req.header("origin")));
@@ -144,6 +161,7 @@ export async function GET(c: Context) {
   let liveOnChainTokenId: string | null = null;
   let liveCurrentPeriodEnd: string | null = null;
   let activeBillingPeriod: "monthly" | "annual" | null = null;
+  let companyEnvironmentId: string | null = null;
 
   if (companyId) {
     const [company, user] = await Promise.all([
@@ -164,6 +182,7 @@ export async function GET(c: Context) {
               currentPeriodEnd: true,
               metadata: true,
               chainId: true,
+              environmentId: true,
             },
           },
         },
@@ -211,6 +230,7 @@ export async function GET(c: Context) {
         company.subscriptionState?.status === "PAST_DUE"
           ? (company.subscriptionState.catalogPlanId ?? company.activePlanId)
           : company.activePlanId;
+      companyEnvironmentId = company.subscriptionState?.environmentId ?? null;
 
       if (effectiveActivePlanId) {
         activePlan = (await db.catalogPlan.findUnique({
@@ -226,6 +246,7 @@ export async function GET(c: Context) {
             acceptedToken: true,
             onChainPlanId: true,
             chainId: true,
+            environmentId: true,
             metadata: true,
           },
         })) as Record<string, unknown> | null;
@@ -444,9 +465,55 @@ export async function GET(c: Context) {
     }
   }
 
+  let effectiveEnvironmentId =
+    companyEnvironmentId ??
+    (typeof activePlan?.environmentId === "string"
+      ? (activePlan.environmentId as string)
+      : null);
+
+  const fallbackCatalogConfig = !effectiveEnvironmentId
+    ? await db.catalogConfig.findFirst({
+        where: {
+          teamId,
+          environmentId: { not: null },
+        },
+        orderBy: { updatedAt: "desc" },
+        select: {
+          environmentId: true,
+          livePlanIds: true,
+          restrictLivePlans: true,
+          initialPlan: true,
+          fallbackPlan: true,
+        },
+      })
+    : null;
+
+  if (!effectiveEnvironmentId) {
+    effectiveEnvironmentId = fallbackCatalogConfig?.environmentId ?? null;
+  }
+
+  const catalogConfig = effectiveEnvironmentId
+    ? await db.catalogConfig.findUnique({
+        where: { environmentId: effectiveEnvironmentId },
+        select: {
+          livePlanIds: true,
+          restrictLivePlans: true,
+          initialPlan: true,
+          fallbackPlan: true,
+        },
+      })
+    : fallbackCatalogConfig;
+  const visiblePlanIds = deriveVisiblePlanIds(catalogConfig);
+
   // Load all published plans for the plans table element
   const allPlans = await db.catalogPlan.findMany({
-    where: { teamId, status: "PUBLISHED", active: true },
+    where: {
+      teamId,
+      status: "PUBLISHED",
+      active: true,
+      ...(effectiveEnvironmentId ? { environmentId: effectiveEnvironmentId } : {}),
+      ...(visiblePlanIds ? { id: { in: visiblePlanIds } } : {})
+    },
     orderBy: { price: "asc" },
     select: {
       id: true,

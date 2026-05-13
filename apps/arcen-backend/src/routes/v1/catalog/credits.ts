@@ -4,6 +4,7 @@ import { db } from "../../../db.js";
 import { requirePermission, isErrorResponse } from "../../../lib/auth/api-auth.js";
 import { writeAuditEvent } from "../../../lib/platform/audit.js";
 import { requireResolvedActiveEnvironment } from "../../../lib/environments/workspace-environments.js";
+import { isAcceptedTokenSupportedOnChain } from "../../../lib/environments/supported-tokens.js";
 
 const createSchema = z.object({
   name: z.string().min(1),
@@ -77,6 +78,11 @@ export async function createCredit(c: Context) {
   if (!activeEnvironment) {
     return c.json({ error: "No workspace environment selected" }, 409 as any);
   }
+  if (!isAcceptedTokenSupportedOnChain(activeEnvironment.chainId, data.acceptedToken)) {
+    return c.json({
+      error: `Accepted token must belong to ${activeEnvironment.name}'s configured chain.`,
+    }, 400 as any);
+  }
   const creditType = await db.catalogCreditType.create({
     data: {
       teamId: auth.team.teamId,
@@ -139,6 +145,21 @@ export async function updateCredit(c: Context) {
   }
   if (!existing.environmentId) {
     return c.json({ error: "Legacy credit types without environments cannot be edited here." }, 409 as any);
+  }
+  const activeEnvironment = await requireResolvedActiveEnvironment(
+    auth.session,
+    auth.team.teamId,
+  );
+  if (!activeEnvironment || existing.environmentId !== activeEnvironment.id) {
+    return c.json({ error: "Switch to this credit environment before editing it." }, 409 as any);
+  }
+  if (
+    parsed.data.acceptedToken !== undefined &&
+    !isAcceptedTokenSupportedOnChain(activeEnvironment.chainId, parsed.data.acceptedToken)
+  ) {
+    return c.json({
+      error: `Accepted token must belong to ${activeEnvironment.name}'s configured chain.`,
+    }, 400 as any);
   }
 
   const updated = await db.catalogCreditType.update({

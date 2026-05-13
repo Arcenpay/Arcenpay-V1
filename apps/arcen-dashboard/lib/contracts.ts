@@ -123,6 +123,12 @@ export function getTokenOptions(): TokenOption[] {
   return buildTokenOptions(CHAIN_LIST);
 }
 
+export function getTokenOptionsForChain(chainId: number): TokenOption[] {
+  const chain = CHAIN_LIST.find((entry) => entry.chainId === chainId);
+  if (!chain) return [];
+  return buildTokenOptions([chain]);
+}
+
 /** Returns token options filtered to chains valid for the given env mode.
  *  DEV → testnet chains only. PROD → mainnet chains only. */
 export function getTokenOptionsForEnvironment(

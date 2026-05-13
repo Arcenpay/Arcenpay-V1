@@ -597,6 +597,12 @@ model CatalogConfig {
 
   initialPlan                 String  @default("Free")
   fallbackPlan                String?
+  livePlanIds                 String[] @default([])
+  liveAddOnIds                String[] @default([])
+  liveCreditTypeIds           String[] @default([])
+  restrictLivePlans           Boolean  @default(false)
+  restrictLiveAddOns          Boolean  @default(false)
+  restrictLiveCreditTypes     Boolean  @default(false)
   showBillingPeriodToggle     Boolean @default(true)
   freePlanPriceDisplay        Boolean @default(true)
   hideCredits                 Boolean @default(false)

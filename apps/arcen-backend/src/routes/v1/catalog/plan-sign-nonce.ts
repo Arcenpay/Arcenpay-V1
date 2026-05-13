@@ -56,6 +56,12 @@ export async function getPlanSignNonce(c: Context) {
     select: {
       id: true,
       environmentMode: true,
+      environment: {
+        select: {
+          mode: true,
+          chainId: true,
+        },
+      },
       acceptedToken: true,
       chainId: true,
       onChainPlanId: true,
@@ -66,9 +72,9 @@ export async function getPlanSignNonce(c: Context) {
   }
 
   const resolvedNetwork = resolvePlanNetwork({
-    environmentMode: plan.environmentMode,
+    environmentMode: plan.environment?.mode ?? plan.environmentMode,
     acceptedToken: plan.acceptedToken,
-    requestedChainId: plan.chainId,
+    requestedChainId: plan.environment?.chainId ?? plan.chainId,
   });
   if (!resolvedNetwork) {
     return c.json({

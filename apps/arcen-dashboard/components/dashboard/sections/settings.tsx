@@ -60,7 +60,7 @@ import {
 } from "wagmi";
 import { parseEther, isAddress } from "viem";
 import { toast } from "sonner";
-import { useContractAddresses } from "@/lib/contracts";
+import { getUsdcAddress, useContractAddresses } from "@/lib/contracts";
 import { getBlockExplorerUrl } from "@/lib/format";
 import { CANONICAL_WEBHOOK_EVENTS } from "@/lib/webhook-events";
 import { useDashboardSession } from "@/hooks/use-dashboard-session";
@@ -68,8 +68,6 @@ import {
   DEFAULT_CHAIN_ID,
   getChainLabel,
   resolveEnvironmentChainId,
-  isChainAllowedForEnvironment,
-  formatChainLabelsForEnvironment,
 } from "@/lib/default-chain";
 import {
   SUPPORTED_WALLET_CHAIN_LABEL,
@@ -147,8 +145,16 @@ export function SettingsSection() {
   const configuredChainId = activeEnvironment?.chainId ?? resolveEnvironmentChainId(envMode);
   const contractAddresses = useContractAddresses(configuredChainId);
   const configuredChainLabel = getChainLabel(configuredChainId);
-  const configuredEnvChainsLabel = formatChainLabelsForEnvironment(envMode);
-  const isOnConfiguredNetwork = hasConnectedWallet && isChainAllowedForEnvironment(chainId, envMode);
+  const isOnConfiguredNetwork = hasConnectedWallet && chainId === configuredChainId;
+  const activeUsdcAddress = getUsdcAddress(configuredChainId);
+  const activePlanFactoryAddress =
+    typeof contractAddresses.planFactory === "string"
+      ? contractAddresses.planFactory
+      : null;
+  const activeSubscriptionRegistryAddress =
+    typeof contractAddresses.subscriptionRegistry === "string"
+      ? contractAddresses.subscriptionRegistry
+      : null;
 
   const [activeTab, setActiveTab] = useState("profile");
   const [notifications, setNotifications] = useState(NOTIFICATION_DEFAULTS);
@@ -716,7 +722,7 @@ export function SettingsSection() {
               {hasConnectedWallet && !isOnConfiguredNetwork ? (
                 <div className="flex items-start gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-sm text-amber-700">
                   <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-                  This wallet is on an unsupported network. Switch to {configuredEnvChainsLabel} to match the current workspace environment.
+                  This wallet is on an unsupported network. Switch to {configuredChainLabel} to match the current workspace environment.
                 </div>
               ) : null}
 
@@ -959,6 +965,106 @@ export function SettingsSection() {
                           </div>
                         );
                       })}
+                    </div>
+                    <div className="rounded-xl border border-border bg-background/60 p-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-medium text-foreground">
+                            Active environment network
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            The current workspace environment is locked to this chain and contract set.
+                          </p>
+                        </div>
+                        <Badge variant="outline">{configuredChainLabel}</Badge>
+                      </div>
+                      <div className="mt-4 grid gap-3 md:grid-cols-2">
+                        <div className="rounded-lg border border-border bg-secondary/30 p-3">
+                          <p className="text-xs text-muted-foreground">Chain ID</p>
+                          <p className="mt-1 text-sm font-semibold text-foreground">
+                            {configuredChainId}
+                          </p>
+                        </div>
+                        <div className="rounded-lg border border-border bg-secondary/30 p-3">
+                          <p className="text-xs text-muted-foreground">USDC</p>
+                          <div className="mt-1 flex items-center justify-between gap-2">
+                            <code className="truncate text-sm text-foreground">
+                              {activeUsdcAddress}
+                            </code>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 shrink-0"
+                              onClick={() =>
+                                handleCopyAddress(
+                                  "Active USDC",
+                                  activeUsdcAddress,
+                                )
+                              }
+                            >
+                              {copiedAddress === "Active USDC" ? (
+                                <Check className="w-3.5 h-3.5 text-success" />
+                              ) : (
+                                <Copy className="w-3.5 h-3.5" />
+                              )}
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="rounded-lg border border-border bg-secondary/30 p-3">
+                          <p className="text-xs text-muted-foreground">Plan Factory</p>
+                          <div className="mt-1 flex items-center justify-between gap-2">
+                            <code className="truncate text-sm text-foreground">
+                              {activePlanFactoryAddress ?? "Not deployed"}
+                            </code>
+                            {activePlanFactoryAddress ? (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 shrink-0"
+                                onClick={() =>
+                                  handleCopyAddress(
+                                    "Plan Factory",
+                                    activePlanFactoryAddress,
+                                  )
+                                }
+                              >
+                                {copiedAddress === "Plan Factory" ? (
+                                  <Check className="w-3.5 h-3.5 text-success" />
+                                ) : (
+                                  <Copy className="w-3.5 h-3.5" />
+                                )}
+                              </Button>
+                            ) : null}
+                          </div>
+                        </div>
+                        <div className="rounded-lg border border-border bg-secondary/30 p-3">
+                          <p className="text-xs text-muted-foreground">Subscription Registry</p>
+                          <div className="mt-1 flex items-center justify-between gap-2">
+                            <code className="truncate text-sm text-foreground">
+                              {activeSubscriptionRegistryAddress ?? "Not deployed"}
+                            </code>
+                            {activeSubscriptionRegistryAddress ? (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 shrink-0"
+                                onClick={() =>
+                                  handleCopyAddress(
+                                    "Subscription Registry",
+                                    activeSubscriptionRegistryAddress,
+                                  )
+                                }
+                              >
+                                {copiedAddress === "Subscription Registry" ? (
+                                  <Check className="w-3.5 h-3.5 text-success" />
+                                ) : (
+                                  <Copy className="w-3.5 h-3.5" />
+                                )}
+                              </Button>
+                            ) : null}
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
@@ -1315,9 +1421,9 @@ export function SettingsSection() {
                 </div>
                 <div className="mt-3 rounded-md border border-border bg-background/60 px-3 py-2">
                   <p className="text-xs text-muted-foreground">
-                    This workspace is configured for {configuredChainLabel}.
-                    Change the chain env values if you want the dashboard and
-                    facilitator to target a different supported network.
+                    This environment is pinned to {configuredChainLabel}. To use
+                    another network, create a separate environment instead of
+                    changing this one.
                   </p>
                 </div>
               </div>
