@@ -509,7 +509,7 @@ export async function POST(c: Context) {
       status: "PUBLISHED",
       onChainPlanId: onChainPlanId.toString(),
     },
-    select: { id: true, name: true, acceptedToken: true },
+    select: { id: true, name: true, acceptedToken: true, chainId: true },
   });
 
   if (!catalogPlan) {
@@ -523,7 +523,9 @@ export async function POST(c: Context) {
     );
   }
 
-  const chainId = DEFAULT_CHAIN_ID;
+  // Use the chain the plan was registered on. Fall back to DEFAULT_CHAIN_ID for
+  // legacy plans that pre-date the chainId column (they'll have the default 84532).
+  const chainId = catalogPlan.chainId ?? DEFAULT_CHAIN_ID;
   const chain = getChain(chainId);
   const rpcUrl = getRpcUrl(chainId);
   const contracts = getContractAddresses(chainId);
@@ -817,6 +819,7 @@ export async function POST(c: Context) {
       teamId,
       companyId: company.id,
       walletAddress: paymentAccount,
+      chainId,
       status: "ACTIVE",
       catalogPlanId: existingCatalogPlan?.id ?? catalogPlan.id,
       onChainPlanId: existingOnChainPlanId,

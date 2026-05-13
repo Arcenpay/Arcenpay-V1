@@ -68,7 +68,9 @@ export const SUPPORTED_CHAINS = {
   arcTestnet,
 } as const;
 
-export type SupportedChainId = 11155111 | 84532 | 8453 | 5042002;
+export const SUPPORTED_CHAIN_IDS = [11155111, 84532, 8453, 5042002] as const;
+
+export type SupportedChainId = (typeof SUPPORTED_CHAIN_IDS)[number];
 
 // ─── Token Registry ──────────────────────────────────────────────────────────
 
@@ -99,10 +101,9 @@ export const TOKENS = {
   8453: {
     USDC: { address: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as const, decimals: 6 },
   },
-  // Arc Testnet — USDC is the native gas token (18 decimals).
-  // USDC ERC-20 precompile sits at 0x3600... with 6 decimals for compatibility.
+  // Arc Testnet — canonical deployed USDC used by the current PlanFactory deployment.
   5042002: {
-    USDC: { address: '0x3600000000000000000000000000000000000000' as const, decimals: 6 },
+    USDC: { address: '0xF9610c064FFD64255A1d509d17b2Af8733084e50' as const, decimals: 6 },
   },
 } as const;
 
@@ -146,7 +147,7 @@ export function getTokensForChain(chainId: number): string[] {
 
 // ─── Chain Helpers ──────────────────────────────────────────────────────────
 
-const CHAIN_MAP: Record<number, Chain> = {
+const CHAIN_MAP: Record<SupportedChainId, Chain> = {
   11155111: sepolia,
   84532: baseSepolia,
   8453: baseMainnet,
@@ -161,11 +162,15 @@ export const DEFAULT_CHAIN_ID: SupportedChainId = 5042002; // Arc Testnet is the
  * Falls back to an empty string if the chainId is unknown.
  */
 export function getBlockExplorerUrl(chainId: number, txHash: string): string {
-  const chain = CHAIN_MAP[chainId];
+  const chain = isSupportedChainId(chainId) ? CHAIN_MAP[chainId] : undefined;
   if (!chain) return '';
   const explorerUrl = chain.blockExplorers?.default?.url;
   if (!explorerUrl) return '';
   return `${explorerUrl}/tx/${txHash}`;
+}
+
+export function isSupportedChainId(chainId: number): chainId is SupportedChainId {
+  return (SUPPORTED_CHAIN_IDS as readonly number[]).includes(chainId);
 }
 
 /**
@@ -173,7 +178,7 @@ export function getBlockExplorerUrl(chainId: number, txHash: string): string {
  * Throws if the chain is not supported.
  */
 export function getChain(chainId: number): Chain {
-  const chain = CHAIN_MAP[chainId];
+  const chain = isSupportedChainId(chainId) ? CHAIN_MAP[chainId] : undefined;
   if (!chain) {
     throw new Error(
       `[getChain] Unsupported chainId: ${chainId}. ` +

@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
+import { isSupportedChainId } from "../src/chains";
 import {
   getChainEnvironment,
   isZeroAddress,
@@ -79,5 +80,11 @@ describe("environment", () => {
     expect(isZeroAddress("0x1111111111111111111111111111111111111111")).toBe(
       false,
     );
+  });
+
+  it("recognizes supported runtime chains", () => {
+    expect(isSupportedChainId(5042002)).toBe(true);
+    expect(isSupportedChainId(84532)).toBe(true);
+    expect(isSupportedChainId(1)).toBe(false);
   });
 });

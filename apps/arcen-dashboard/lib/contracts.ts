@@ -21,9 +21,11 @@ import {
 import {
   BASE_SEPOLIA_CHAIN_ID,
   ARC_TESTNET_CHAIN_ID,
+  BASE_MAINNET_CHAIN_ID,
   DEFAULT_CHAIN_ID,
   getChainLabel,
 } from "@/lib/default-chain";
+import type { EnvironmentMode } from "@/lib/default-chain";
 
 export {
   getContractAddresses,
@@ -57,6 +59,9 @@ function resolveUsdcOverride(chainId: number): `0x${string}` | null {
     8453:
       process.env.NEXT_PUBLIC_USDC_ADDRESS_8453 ||
       process.env.NEXT_PUBLIC_MOCK_USDC_ADDRESS_8453,
+    5042002:
+      process.env.NEXT_PUBLIC_USDC_ADDRESS_5042002 ||
+      process.env.NEXT_PUBLIC_MOCK_USDC_ADDRESS_5042002,
   };
 
   const candidate = chainOverrides[chainId] || globalOverride;
@@ -73,7 +78,7 @@ export function getUsdcAddress(chainId: number): `0x${string}` {
   return "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
 }
 
-const CHAIN_LIST: Array<{
+const TESTNET_CHAIN_LIST: Array<{
   chainId: number;
   label: string;
   tag: "testnet" | "mainnet";
@@ -90,6 +95,21 @@ const CHAIN_LIST: Array<{
   },
 ];
 
+const MAINNET_CHAIN_LIST: Array<{
+  chainId: number;
+  label: string;
+  tag: "testnet" | "mainnet";
+}> = [
+  {
+    chainId: BASE_MAINNET_CHAIN_ID,
+    label: getChainLabel(BASE_MAINNET_CHAIN_ID),
+    tag: "mainnet",
+  },
+];
+
+// All chains (used when no env mode filter is required)
+const CHAIN_LIST = [...TESTNET_CHAIN_LIST, ...MAINNET_CHAIN_LIST];
+
 export interface TokenOption {
   chainId: number;
   chainLabel: string;
@@ -100,15 +120,34 @@ export interface TokenOption {
 }
 
 export function getTokenOptions(): TokenOption[] {
+  return buildTokenOptions(CHAIN_LIST);
+}
+
+/** Returns token options filtered to chains valid for the given env mode.
+ *  DEV → testnet chains only. PROD → mainnet chains only. */
+export function getTokenOptionsForEnvironment(
+  mode: EnvironmentMode,
+): TokenOption[] {
+  return buildTokenOptions(
+    mode === "PRODUCTION" ? MAINNET_CHAIN_LIST : TESTNET_CHAIN_LIST,
+  );
+}
+
+function buildTokenOptions(
+  chainList: typeof CHAIN_LIST,
+): TokenOption[] {
   const options: TokenOption[] = [];
 
-  for (const chain of CHAIN_LIST) {
+  for (const chain of chainList) {
     const symbols = getTokensForChain(chain.chainId);
     if (symbols.length === 0) continue;
 
     for (const symbol of symbols) {
       const override = resolveUsdcOverride(chain.chainId);
-      const address = getTokenAddress(chain.chainId, symbol);
+      const address =
+        symbol === "USDC"
+          ? (override ?? getTokenAddress(chain.chainId, symbol))
+          : getTokenAddress(chain.chainId, symbol);
       if (!address) continue;
 
       options.push({
@@ -136,10 +175,12 @@ export function getUsdcTokenOptions() {
   }));
 }
 
-/** Returns live contract addresses for the wallet's current chain.
- *  Falls back to the configured default chain when unsupported. */
-export function useContractAddresses() {
-  const chainId = useChainId();
+/** Returns live contract addresses for the requested chain, or the wallet's
+ * current chain when no override is supplied. Falls back to the configured
+ * default chain when unsupported in development. */
+export function useContractAddresses(chainIdOverride?: number) {
+  const walletChainId = useChainId();
+  const chainId = chainIdOverride ?? walletChainId;
   try {
     const addresses = getContractAddresses(chainId);
     if (process.env.NODE_ENV === "production") {

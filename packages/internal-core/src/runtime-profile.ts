@@ -1,9 +1,8 @@
 import { getChainEnvironment } from "./environment";
-import { getChain } from "./chains";
+import { getChain, SUPPORTED_CHAIN_IDS } from "./chains";
 
 export const PRIMARY_RUNTIME_CHAIN_ID = 5042002 as const;
 export const LEGACY_RUNTIME_CHAIN_IDS = [11155111, 84532] as const;
-const SUPPORTED_RUNTIME_CHAIN_IDS = [11155111, 84532, 8453, 5042002] as const;
 
 export type RuntimeChainProfile = {
   chainId: number;
@@ -36,9 +35,7 @@ function parseConfiguredRuntimeChainId(): number | null {
     const numeric = Number(candidate);
     if (
       Number.isInteger(numeric) &&
-      SUPPORTED_RUNTIME_CHAIN_IDS.includes(
-        numeric as (typeof SUPPORTED_RUNTIME_CHAIN_IDS)[number],
-      )
+      SUPPORTED_CHAIN_IDS.includes(numeric as (typeof SUPPORTED_CHAIN_IDS)[number])
     ) {
       return numeric;
     }
@@ -50,13 +47,13 @@ function parseConfiguredRuntimeChainId(): number | null {
 function legacyRpcEnvKeys(chainId: number): string[] {
   switch (chainId) {
     case 11155111:
-      return ["SEPOLIA_RPC_URL"];
+      return ["MEAP_RPC_URL_11155111", "SEPOLIA_RPC_URL"];
     case 84532:
-      return ["BASE_SEPOLIA_RPC_URL"];
+      return ["MEAP_RPC_URL_84532", "BASE_SEPOLIA_RPC_URL"];
     case 8453:
-      return ["BASE_MAINNET_RPC_URL", "BASE_RPC_URL"];
+      return ["MEAP_RPC_URL_8453", "BASE_MAINNET_RPC_URL", "BASE_RPC_URL"];
     case 5042002:
-      return ["ARC_RPC_URL", "ARC_SEPOLIA_RPC_URL"];
+      return ["MEAP_RPC_URL_5042002", "ARC_RPC_URL", "ARC_SEPOLIA_RPC_URL"];
     default:
       return [];
   }

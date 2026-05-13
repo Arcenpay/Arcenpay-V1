@@ -81,6 +81,7 @@ export {
   baseMainnet,
   arcTestnet,
   SUPPORTED_CHAINS,
+  SUPPORTED_CHAIN_IDS,
   TOKENS,
   DEFAULT_CHAIN_ID,
   getTokenAddress,
@@ -88,6 +89,7 @@ export {
   getTokensForChain,
   getChain,
   getBlockExplorerUrl,
+  isSupportedChainId,
 } from "./chains";
 export type { SupportedChainId, TokenInfo } from "./chains";
 

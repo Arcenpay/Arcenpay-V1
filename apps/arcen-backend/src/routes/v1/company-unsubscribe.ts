@@ -36,10 +36,10 @@ function asRecord(value: unknown): Record<string, unknown> {
 
 async function readAutopayShutdownState(
   paymentAccount: string,
+  chainId: number,
 ): Promise<"PAUSED" | "REVOKED" | null> {
   if (!isAddress(paymentAccount)) return null;
 
-  const chainId = DEFAULT_CHAIN_ID;
   const contracts = getContractAddresses(chainId);
   const autopayAddress = contracts.autopayModule as `0x${string}` | undefined;
   if (!autopayAddress || !isAddress(autopayAddress)) return null;
@@ -141,6 +141,7 @@ export async function POST(c: Context) {
             currentPeriodEnd: true,
             onChainPlanId: true,
             onChainTokenId: true,
+            chainId: true,
           },
         },
       },
@@ -213,13 +214,16 @@ export async function POST(c: Context) {
       }
 
       if (normalizedAutopayTxHash) {
+        // Use the chain recorded in SubscriptionState; fall back to DEFAULT_CHAIN_ID for legacy rows.
+        const subChainId = company.subscriptionState?.chainId ?? DEFAULT_CHAIN_ID;
         const verification = await verifyAutopayCancellationControl({
           paymentAccount: companyPaymentAccount,
           txHash: normalizedAutopayTxHash,
+          chainId: subChainId,
         });
         if (!verification.ok) {
           if (verification.status === 425) {
-            const control = await readAutopayShutdownState(companyPaymentAccount);
+            const control = await readAutopayShutdownState(companyPaymentAccount, subChainId);
             if (!control) {
               return c.json(
                 { error: verification.error },
@@ -247,7 +251,8 @@ export async function POST(c: Context) {
           };
         }
       } else {
-        const control = await readAutopayShutdownState(companyPaymentAccount);
+        const subChainId = company.subscriptionState?.chainId ?? DEFAULT_CHAIN_ID;
+        const control = await readAutopayShutdownState(companyPaymentAccount, subChainId);
         if (!control) {
           return c.json(
             {

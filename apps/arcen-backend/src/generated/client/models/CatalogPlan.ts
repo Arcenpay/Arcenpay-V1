@@ -31,6 +31,7 @@ export type CatalogPlanAvgAggregateOutputType = {
   annualPrice: runtime.Decimal | null
   billingInterval: number | null
   version: number | null
+  chainId: number | null
 }
 
 export type CatalogPlanSumAggregateOutputType = {
@@ -38,6 +39,7 @@ export type CatalogPlanSumAggregateOutputType = {
   annualPrice: runtime.Decimal | null
   billingInterval: number | null
   version: number | null
+  chainId: number | null
 }
 
 export type CatalogPlanMinAggregateOutputType = {
@@ -57,6 +59,7 @@ export type CatalogPlanMinAggregateOutputType = {
   active: boolean | null
   version: number | null
   publishedAt: Date | null
+  chainId: number | null
   onChainPlanId: string | null
   chainSyncStatus: $Enums.ChainSyncStatus | null
   chainTxHash: string | null
@@ -81,6 +84,7 @@ export type CatalogPlanMaxAggregateOutputType = {
   active: boolean | null
   version: number | null
   publishedAt: Date | null
+  chainId: number | null
   onChainPlanId: string | null
   chainSyncStatus: $Enums.ChainSyncStatus | null
   chainTxHash: string | null
@@ -106,6 +110,7 @@ export type CatalogPlanCountAggregateOutputType = {
   active: number
   version: number
   publishedAt: number
+  chainId: number
   onChainPlanId: number
   chainSyncStatus: number
   chainTxHash: number
@@ -120,6 +125,7 @@ export type CatalogPlanAvgAggregateInputType = {
   annualPrice?: true
   billingInterval?: true
   version?: true
+  chainId?: true
 }
 
 export type CatalogPlanSumAggregateInputType = {
@@ -127,6 +133,7 @@ export type CatalogPlanSumAggregateInputType = {
   annualPrice?: true
   billingInterval?: true
   version?: true
+  chainId?: true
 }
 
 export type CatalogPlanMinAggregateInputType = {
@@ -146,6 +153,7 @@ export type CatalogPlanMinAggregateInputType = {
   active?: true
   version?: true
   publishedAt?: true
+  chainId?: true
   onChainPlanId?: true
   chainSyncStatus?: true
   chainTxHash?: true
@@ -170,6 +178,7 @@ export type CatalogPlanMaxAggregateInputType = {
   active?: true
   version?: true
   publishedAt?: true
+  chainId?: true
   onChainPlanId?: true
   chainSyncStatus?: true
   chainTxHash?: true
@@ -195,6 +204,7 @@ export type CatalogPlanCountAggregateInputType = {
   active?: true
   version?: true
   publishedAt?: true
+  chainId?: true
   onChainPlanId?: true
   chainSyncStatus?: true
   chainTxHash?: true
@@ -307,6 +317,7 @@ export type CatalogPlanGroupByOutputType = {
   active: boolean
   version: number
   publishedAt: Date | null
+  chainId: number
   onChainPlanId: string | null
   chainSyncStatus: $Enums.ChainSyncStatus
   chainTxHash: string | null
@@ -355,6 +366,7 @@ export type CatalogPlanWhereInput = {
   active?: Prisma.BoolFilter<"CatalogPlan"> | boolean
   version?: Prisma.IntFilter<"CatalogPlan"> | number
   publishedAt?: Prisma.DateTimeNullableFilter<"CatalogPlan"> | Date | string | null
+  chainId?: Prisma.IntFilter<"CatalogPlan"> | number
   onChainPlanId?: Prisma.StringNullableFilter<"CatalogPlan"> | string | null
   chainSyncStatus?: Prisma.EnumChainSyncStatusFilter<"CatalogPlan"> | $Enums.ChainSyncStatus
   chainTxHash?: Prisma.StringNullableFilter<"CatalogPlan"> | string | null
@@ -381,6 +393,7 @@ export type CatalogPlanOrderByWithRelationInput = {
   active?: Prisma.SortOrder
   version?: Prisma.SortOrder
   publishedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  chainId?: Prisma.SortOrder
   onChainPlanId?: Prisma.SortOrderInput | Prisma.SortOrder
   chainSyncStatus?: Prisma.SortOrder
   chainTxHash?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -410,6 +423,7 @@ export type CatalogPlanWhereUniqueInput = Prisma.AtLeast<{
   active?: Prisma.BoolFilter<"CatalogPlan"> | boolean
   version?: Prisma.IntFilter<"CatalogPlan"> | number
   publishedAt?: Prisma.DateTimeNullableFilter<"CatalogPlan"> | Date | string | null
+  chainId?: Prisma.IntFilter<"CatalogPlan"> | number
   onChainPlanId?: Prisma.StringNullableFilter<"CatalogPlan"> | string | null
   chainSyncStatus?: Prisma.EnumChainSyncStatusFilter<"CatalogPlan"> | $Enums.ChainSyncStatus
   chainTxHash?: Prisma.StringNullableFilter<"CatalogPlan"> | string | null
@@ -436,6 +450,7 @@ export type CatalogPlanOrderByWithAggregationInput = {
   active?: Prisma.SortOrder
   version?: Prisma.SortOrder
   publishedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  chainId?: Prisma.SortOrder
   onChainPlanId?: Prisma.SortOrderInput | Prisma.SortOrder
   chainSyncStatus?: Prisma.SortOrder
   chainTxHash?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -469,6 +484,7 @@ export type CatalogPlanScalarWhereWithAggregatesInput = {
   active?: Prisma.BoolWithAggregatesFilter<"CatalogPlan"> | boolean
   version?: Prisma.IntWithAggregatesFilter<"CatalogPlan"> | number
   publishedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"CatalogPlan"> | Date | string | null
+  chainId?: Prisma.IntWithAggregatesFilter<"CatalogPlan"> | number
   onChainPlanId?: Prisma.StringNullableWithAggregatesFilter<"CatalogPlan"> | string | null
   chainSyncStatus?: Prisma.EnumChainSyncStatusWithAggregatesFilter<"CatalogPlan"> | $Enums.ChainSyncStatus
   chainTxHash?: Prisma.StringNullableWithAggregatesFilter<"CatalogPlan"> | string | null
@@ -493,6 +509,7 @@ export type CatalogPlanCreateInput = {
   active?: boolean
   version?: number
   publishedAt?: Date | string | null
+  chainId?: number
   onChainPlanId?: string | null
   chainSyncStatus?: $Enums.ChainSyncStatus
   chainTxHash?: string | null
@@ -519,6 +536,7 @@ export type CatalogPlanUncheckedCreateInput = {
   active?: boolean
   version?: number
   publishedAt?: Date | string | null
+  chainId?: number
   onChainPlanId?: string | null
   chainSyncStatus?: $Enums.ChainSyncStatus
   chainTxHash?: string | null
@@ -543,6 +561,7 @@ export type CatalogPlanUpdateInput = {
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   version?: Prisma.IntFieldUpdateOperationsInput | number
   publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chainId?: Prisma.IntFieldUpdateOperationsInput | number
   onChainPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   chainSyncStatus?: Prisma.EnumChainSyncStatusFieldUpdateOperationsInput | $Enums.ChainSyncStatus
   chainTxHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -569,6 +588,7 @@ export type CatalogPlanUncheckedUpdateInput = {
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   version?: Prisma.IntFieldUpdateOperationsInput | number
   publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chainId?: Prisma.IntFieldUpdateOperationsInput | number
   onChainPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   chainSyncStatus?: Prisma.EnumChainSyncStatusFieldUpdateOperationsInput | $Enums.ChainSyncStatus
   chainTxHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -594,6 +614,7 @@ export type CatalogPlanCreateManyInput = {
   active?: boolean
   version?: number
   publishedAt?: Date | string | null
+  chainId?: number
   onChainPlanId?: string | null
   chainSyncStatus?: $Enums.ChainSyncStatus
   chainTxHash?: string | null
@@ -618,6 +639,7 @@ export type CatalogPlanUpdateManyMutationInput = {
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   version?: Prisma.IntFieldUpdateOperationsInput | number
   publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chainId?: Prisma.IntFieldUpdateOperationsInput | number
   onChainPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   chainSyncStatus?: Prisma.EnumChainSyncStatusFieldUpdateOperationsInput | $Enums.ChainSyncStatus
   chainTxHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -643,6 +665,7 @@ export type CatalogPlanUncheckedUpdateManyInput = {
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   version?: Prisma.IntFieldUpdateOperationsInput | number
   publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chainId?: Prisma.IntFieldUpdateOperationsInput | number
   onChainPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   chainSyncStatus?: Prisma.EnumChainSyncStatusFieldUpdateOperationsInput | $Enums.ChainSyncStatus
   chainTxHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -678,6 +701,7 @@ export type CatalogPlanCountOrderByAggregateInput = {
   active?: Prisma.SortOrder
   version?: Prisma.SortOrder
   publishedAt?: Prisma.SortOrder
+  chainId?: Prisma.SortOrder
   onChainPlanId?: Prisma.SortOrder
   chainSyncStatus?: Prisma.SortOrder
   chainTxHash?: Prisma.SortOrder
@@ -690,6 +714,7 @@ export type CatalogPlanAvgOrderByAggregateInput = {
   annualPrice?: Prisma.SortOrder
   billingInterval?: Prisma.SortOrder
   version?: Prisma.SortOrder
+  chainId?: Prisma.SortOrder
 }
 
 export type CatalogPlanMaxOrderByAggregateInput = {
@@ -709,6 +734,7 @@ export type CatalogPlanMaxOrderByAggregateInput = {
   active?: Prisma.SortOrder
   version?: Prisma.SortOrder
   publishedAt?: Prisma.SortOrder
+  chainId?: Prisma.SortOrder
   onChainPlanId?: Prisma.SortOrder
   chainSyncStatus?: Prisma.SortOrder
   chainTxHash?: Prisma.SortOrder
@@ -733,6 +759,7 @@ export type CatalogPlanMinOrderByAggregateInput = {
   active?: Prisma.SortOrder
   version?: Prisma.SortOrder
   publishedAt?: Prisma.SortOrder
+  chainId?: Prisma.SortOrder
   onChainPlanId?: Prisma.SortOrder
   chainSyncStatus?: Prisma.SortOrder
   chainTxHash?: Prisma.SortOrder
@@ -745,6 +772,7 @@ export type CatalogPlanSumOrderByAggregateInput = {
   annualPrice?: Prisma.SortOrder
   billingInterval?: Prisma.SortOrder
   version?: Prisma.SortOrder
+  chainId?: Prisma.SortOrder
 }
 
 export type CatalogPlanCreateNestedManyWithoutTeamInput = {
@@ -830,6 +858,7 @@ export type CatalogPlanCreateWithoutTeamInput = {
   active?: boolean
   version?: number
   publishedAt?: Date | string | null
+  chainId?: number
   onChainPlanId?: string | null
   chainSyncStatus?: $Enums.ChainSyncStatus
   chainTxHash?: string | null
@@ -854,6 +883,7 @@ export type CatalogPlanUncheckedCreateWithoutTeamInput = {
   active?: boolean
   version?: number
   publishedAt?: Date | string | null
+  chainId?: number
   onChainPlanId?: string | null
   chainSyncStatus?: $Enums.ChainSyncStatus
   chainTxHash?: string | null
@@ -908,6 +938,7 @@ export type CatalogPlanScalarWhereInput = {
   active?: Prisma.BoolFilter<"CatalogPlan"> | boolean
   version?: Prisma.IntFilter<"CatalogPlan"> | number
   publishedAt?: Prisma.DateTimeNullableFilter<"CatalogPlan"> | Date | string | null
+  chainId?: Prisma.IntFilter<"CatalogPlan"> | number
   onChainPlanId?: Prisma.StringNullableFilter<"CatalogPlan"> | string | null
   chainSyncStatus?: Prisma.EnumChainSyncStatusFilter<"CatalogPlan"> | $Enums.ChainSyncStatus
   chainTxHash?: Prisma.StringNullableFilter<"CatalogPlan"> | string | null
@@ -932,6 +963,7 @@ export type CatalogPlanCreateManyTeamInput = {
   active?: boolean
   version?: number
   publishedAt?: Date | string | null
+  chainId?: number
   onChainPlanId?: string | null
   chainSyncStatus?: $Enums.ChainSyncStatus
   chainTxHash?: string | null
@@ -956,6 +988,7 @@ export type CatalogPlanUpdateWithoutTeamInput = {
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   version?: Prisma.IntFieldUpdateOperationsInput | number
   publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chainId?: Prisma.IntFieldUpdateOperationsInput | number
   onChainPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   chainSyncStatus?: Prisma.EnumChainSyncStatusFieldUpdateOperationsInput | $Enums.ChainSyncStatus
   chainTxHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -980,6 +1013,7 @@ export type CatalogPlanUncheckedUpdateWithoutTeamInput = {
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   version?: Prisma.IntFieldUpdateOperationsInput | number
   publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chainId?: Prisma.IntFieldUpdateOperationsInput | number
   onChainPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   chainSyncStatus?: Prisma.EnumChainSyncStatusFieldUpdateOperationsInput | $Enums.ChainSyncStatus
   chainTxHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1004,6 +1038,7 @@ export type CatalogPlanUncheckedUpdateManyWithoutTeamInput = {
   active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   version?: Prisma.IntFieldUpdateOperationsInput | number
   publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chainId?: Prisma.IntFieldUpdateOperationsInput | number
   onChainPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   chainSyncStatus?: Prisma.EnumChainSyncStatusFieldUpdateOperationsInput | $Enums.ChainSyncStatus
   chainTxHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1031,6 +1066,7 @@ export type CatalogPlanSelect<ExtArgs extends runtime.Types.Extensions.InternalA
   active?: boolean
   version?: boolean
   publishedAt?: boolean
+  chainId?: boolean
   onChainPlanId?: boolean
   chainSyncStatus?: boolean
   chainTxHash?: boolean
@@ -1057,6 +1093,7 @@ export type CatalogPlanSelectCreateManyAndReturn<ExtArgs extends runtime.Types.E
   active?: boolean
   version?: boolean
   publishedAt?: boolean
+  chainId?: boolean
   onChainPlanId?: boolean
   chainSyncStatus?: boolean
   chainTxHash?: boolean
@@ -1083,6 +1120,7 @@ export type CatalogPlanSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.E
   active?: boolean
   version?: boolean
   publishedAt?: boolean
+  chainId?: boolean
   onChainPlanId?: boolean
   chainSyncStatus?: boolean
   chainTxHash?: boolean
@@ -1109,6 +1147,7 @@ export type CatalogPlanSelectScalar = {
   active?: boolean
   version?: boolean
   publishedAt?: boolean
+  chainId?: boolean
   onChainPlanId?: boolean
   chainSyncStatus?: boolean
   chainTxHash?: boolean
@@ -1116,7 +1155,7 @@ export type CatalogPlanSelectScalar = {
   chainSyncedAt?: boolean
 }
 
-export type CatalogPlanOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "updatedAt" | "teamId" | "environmentMode" | "status" | "name" | "tier" | "description" | "price" | "annualPrice" | "billingInterval" | "acceptedToken" | "metadata" | "active" | "version" | "publishedAt" | "onChainPlanId" | "chainSyncStatus" | "chainTxHash" | "chainSyncError" | "chainSyncedAt", ExtArgs["result"]["catalogPlan"]>
+export type CatalogPlanOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "updatedAt" | "teamId" | "environmentMode" | "status" | "name" | "tier" | "description" | "price" | "annualPrice" | "billingInterval" | "acceptedToken" | "metadata" | "active" | "version" | "publishedAt" | "chainId" | "onChainPlanId" | "chainSyncStatus" | "chainTxHash" | "chainSyncError" | "chainSyncedAt", ExtArgs["result"]["catalogPlan"]>
 export type CatalogPlanInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
 }
@@ -1150,6 +1189,7 @@ export type $CatalogPlanPayload<ExtArgs extends runtime.Types.Extensions.Interna
     active: boolean
     version: number
     publishedAt: Date | null
+    chainId: number
     onChainPlanId: string | null
     chainSyncStatus: $Enums.ChainSyncStatus
     chainTxHash: string | null
@@ -1596,6 +1636,7 @@ export interface CatalogPlanFieldRefs {
   readonly active: Prisma.FieldRef<"CatalogPlan", 'Boolean'>
   readonly version: Prisma.FieldRef<"CatalogPlan", 'Int'>
   readonly publishedAt: Prisma.FieldRef<"CatalogPlan", 'DateTime'>
+  readonly chainId: Prisma.FieldRef<"CatalogPlan", 'Int'>
   readonly onChainPlanId: Prisma.FieldRef<"CatalogPlan", 'String'>
   readonly chainSyncStatus: Prisma.FieldRef<"CatalogPlan", 'ChainSyncStatus'>
   readonly chainTxHash: Prisma.FieldRef<"CatalogPlan", 'String'>

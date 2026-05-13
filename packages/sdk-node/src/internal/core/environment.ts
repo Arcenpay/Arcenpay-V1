@@ -42,10 +42,10 @@ const DEFAULT_SERVICES: Record<number, ChainServiceEndpoints> = {
 type ServiceKey = keyof ChainServiceEndpoints;
 
 const LEGACY_RPC_ENV_KEYS: Record<number, string[]> = {
-  11155111: ["SEPOLIA_RPC_URL"],
-  84532: ["BASE_SEPOLIA_RPC_URL"],
-  8453: ["BASE_MAINNET_RPC_URL"],
-  5042002: ["ARC_RPC_URL", "ARC_SEPOLIA_RPC_URL"],
+  11155111: ["MEAP_RPC_URL_11155111", "SEPOLIA_RPC_URL"],
+  84532: ["MEAP_RPC_URL_84532", "BASE_SEPOLIA_RPC_URL"],
+  8453: ["MEAP_RPC_URL_8453", "BASE_MAINNET_RPC_URL"],
+  5042002: ["MEAP_RPC_URL_5042002", "ARC_RPC_URL", "ARC_SEPOLIA_RPC_URL"],
 };
 
 const SERVICE_ENV_KEYS: Record<ServiceKey, (chainId: number) => string[]> = {

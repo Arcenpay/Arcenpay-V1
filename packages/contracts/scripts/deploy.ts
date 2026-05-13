@@ -27,7 +27,7 @@ const CHAIN_CONFIGS: Record<number, ChainConfig> = {
   },
   5042002: {
     slug: "arcTestnet",
-    usdc: "0x3600000000000000000000000000000000000000",
+    usdc: "0xF9610c064FFD64255A1d509d17b2Af8733084e50",
     explorerBase: "https://testnet.arcscan.app/address",
   },
 };

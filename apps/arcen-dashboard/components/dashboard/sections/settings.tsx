@@ -66,14 +66,16 @@ import { CANONICAL_WEBHOOK_EVENTS } from "@/lib/webhook-events";
 import { useDashboardSession } from "@/hooks/use-dashboard-session";
 import {
   DEFAULT_CHAIN_ID,
-  DEFAULT_TESTNET_CHAIN_ID,
   getChainLabel,
+  resolveEnvironmentChainId,
+  isChainAllowedForEnvironment,
+  formatChainLabelsForEnvironment,
 } from "@/lib/default-chain";
 import {
-  DEFAULT_WALLET_CHAIN_LABEL,
   SUPPORTED_WALLET_CHAIN_LABEL,
   useDashboardWallet,
 } from "@/hooks/use-dashboard-wallet";
+import { useEnvironment } from "@/contexts/environment-context";
 
 const NOTIFICATION_DEFAULTS = CANONICAL_WEBHOOK_EVENTS.map((event) => ({
   ...event,
@@ -113,28 +115,32 @@ const REGISTRY_GMP_ABI = [
 
 export function SettingsSection() {
   const searchParams = useSearchParams();
+  const { envMode } = useEnvironment();
   const { isConnected, address: connectedAddress } = useAccount();
   const { data: sessionData } = useDashboardSession();
   const chainId = useChainId();
   const linkedWallet = sessionData?.user.walletAddress ?? undefined;
   const {
     connectedWalletLabel,
-    currentNetworkLabel,
     disconnectWallet,
     hasConnectedWallet,
+    hasLinkedWallet,
     isDisconnecting,
     isLinkedWalletConnected,
-    isOnRequiredNetwork,
     isSwitchingChain,
-    isWrongNetwork,
     isWrongWalletConnected,
     linkedWalletLabel,
     openAccountModal,
     openConnectModal,
     reconnectWallet,
     switchToRequiredNetwork,
+    currentNetworkLabel,
   } = useDashboardWallet(linkedWallet);
-  const contractAddresses = useContractAddresses();
+  const configuredChainId = resolveEnvironmentChainId(envMode);
+  const contractAddresses = useContractAddresses(configuredChainId);
+  const configuredChainLabel = getChainLabel(configuredChainId);
+  const configuredEnvChainsLabel = formatChainLabelsForEnvironment(envMode);
+  const isOnConfiguredNetwork = hasConnectedWallet && isChainAllowedForEnvironment(chainId, envMode);
 
   const [activeTab, setActiveTab] = useState("profile");
   const [notifications, setNotifications] = useState(NOTIFICATION_DEFAULTS);
@@ -193,7 +199,6 @@ export function SettingsSection() {
 
   const registryAddress =
     contractAddresses.subscriptionRegistry as `0x${string}`;
-  const configuredChainLabel = getChainLabel(DEFAULT_CHAIN_ID);
 
   const { data: transportData, refetch: refetchTransports } = useReadContracts({
     contracts: [
@@ -660,10 +665,10 @@ export function SettingsSection() {
                 </div>
               ) : null}
 
-              {isWrongNetwork ? (
+              {hasConnectedWallet && !isOnConfiguredNetwork ? (
                 <div className="flex items-start gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-sm text-amber-700">
                   <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-                  This wallet is on an unsupported network. Switch to {SUPPORTED_WALLET_CHAIN_LABEL}.
+                  This wallet is on an unsupported network. Switch to {configuredEnvChainsLabel} to match the current workspace environment.
                 </div>
               ) : null}
 
@@ -689,10 +694,10 @@ export function SettingsSection() {
                   </Button>
                 ) : null}
 
-                {hasConnectedWallet && !isOnRequiredNetwork ? (
+                {hasConnectedWallet && !isOnConfiguredNetwork ? (
                   <Button
                     variant="outline"
-                    onClick={() => void switchToRequiredNetwork()}
+                    onClick={() => void switchToRequiredNetwork(configuredChainId)}
                     disabled={isSwitchingChain}
                   >
                     {isSwitchingChain ? (
@@ -703,7 +708,7 @@ export function SettingsSection() {
                     ) : (
                       <>
                         <Globe className="w-4 h-4 mr-2" />
-                        Switch to {DEFAULT_WALLET_CHAIN_LABEL}
+                        Switch to {configuredChainLabel}
                       </>
                     )}
                   </Button>

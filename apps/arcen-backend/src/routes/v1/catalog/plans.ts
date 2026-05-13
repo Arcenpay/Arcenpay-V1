@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "../../../db.js";
 import { requirePermission, isErrorResponse } from "../../../lib/auth/api-auth.js";
 import { writeAuditEvent } from "../../../lib/platform/audit.js";
+import { resolvePlanNetwork } from "../../../lib/catalog/plan-network.js";
 import { toPrismaNullableJson } from "../../../utils/prisma-json.js";
 import { assertCanCreatePlan } from "../../../lib/catalog/tier-guard.js";
 
@@ -19,6 +20,7 @@ const createSchema = z.object({
   annualPrice: z.coerce.number().nonnegative().optional(),
   billingInterval: z.coerce.number().int().positive(),
   acceptedToken: z.string().min(1),
+  chainId: z.coerce.number().int().positive().optional(),
   metadata: z.record(z.unknown()).optional(),
   environmentMode: z.enum(["DEVELOPMENT", "PRODUCTION"]).default("DEVELOPMENT"),
 });
@@ -32,6 +34,7 @@ const updateSchema = z.object({
   annualPrice: z.coerce.number().nonnegative().nullable().optional(),
   billingInterval: z.coerce.number().int().positive().optional(),
   acceptedToken: z.string().min(1).optional(),
+  chainId: z.coerce.number().int().positive().optional(),
   metadata: z.record(z.unknown()).optional(),
   status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]).optional(),
   active: z.boolean().optional(),
@@ -47,6 +50,7 @@ function getLockedOnChainFieldChanges(
     tier: string;
     billingInterval: number;
     acceptedToken: string;
+    chainId: number;
   },
   updates: z.infer<typeof updateSchema>,
 ): string[] {
@@ -70,6 +74,9 @@ function getLockedOnChainFieldChanges(
       normalizeComparableAddress(existing.acceptedToken)
   ) {
     changedFields.push("accepted token");
+  }
+  if (updates.chainId !== undefined && updates.chainId !== existing.chainId) {
+    changedFields.push("network");
   }
 
   return changedFields;
@@ -99,7 +106,41 @@ export async function listPlans(c: Context) {
     orderBy: [{ updatedAt: "desc" }],
   });
 
-  const freePlansToFix = plans.filter(
+  const repairedPlans = await Promise.all(
+    plans.map(async (plan) => {
+      if (plan.onChainPlanId) return plan;
+
+      const resolved = resolvePlanNetwork({
+        environmentMode: plan.environmentMode,
+        acceptedToken: plan.acceptedToken,
+        requestedChainId: plan.chainId,
+      });
+      if (!resolved) return plan;
+
+      const chainChanged = plan.chainId !== resolved.chainId;
+      const tokenChanged =
+        normalizeComparableAddress(plan.acceptedToken) !==
+        normalizeComparableAddress(resolved.acceptedToken);
+
+      if (!chainChanged && !tokenChanged) return plan;
+
+      const repaired = await db.catalogPlan.update({
+        where: { id: plan.id },
+        data: {
+          chainId: resolved.chainId,
+          acceptedToken: resolved.acceptedToken,
+          chainSyncStatus:
+            parseFloat(plan.price.toString()) === 0 ? "NOT_APPLICABLE" : "PENDING",
+          chainSyncError: null,
+          chainSyncedAt: null,
+        },
+      });
+
+      return repaired;
+    }),
+  );
+
+  const freePlansToFix = repairedPlans.filter(
     (p) => parseFloat(p.price.toString()) === 0 && p.chainSyncStatus !== "NOT_APPLICABLE",
   );
   if (freePlansToFix.length > 0) {
@@ -112,7 +153,7 @@ export async function listPlans(c: Context) {
     }
   }
 
-  return c.json({ plans });
+  return c.json({ plans: repairedPlans });
 }
 
 export async function createPlan(c: Context) {
@@ -126,6 +167,17 @@ export async function createPlan(c: Context) {
   }
 
   const data = parsed.data;
+  const resolvedNetwork = resolvePlanNetwork({
+    environmentMode: data.environmentMode,
+    acceptedToken: data.acceptedToken,
+    requestedChainId: data.chainId,
+  });
+  if (!resolvedNetwork) {
+    return c.json({
+      error:
+        "Invalid billing network selection. Choose a supported network and matching USDC token.",
+    }, 400 as any);
+  }
 
   const tierCheck = await assertCanCreatePlan(auth.team.teamId);
   if (!tierCheck.allowed) {
@@ -152,7 +204,8 @@ export async function createPlan(c: Context) {
         annualPrice: data.annualPrice.toFixed(6),
       }),
       billingInterval: data.billingInterval,
-      acceptedToken: data.acceptedToken,
+      acceptedToken: resolvedNetwork.acceptedToken,
+      chainId: resolvedNetwork.chainId,
       metadata: toPrismaNullableJson(data.metadata),
       status: "DRAFT",
       active: true,
@@ -207,6 +260,29 @@ export async function updatePlan(c: Context) {
   const nextVersion = existing.version + 1;
   const existingPrice = parseFloat(existing.price.toString());
   const nextPrice = parsed.data.price ?? existingPrice;
+  const nextEnvironmentMode = existing.environmentMode;
+  const nextAcceptedTokenInput =
+    parsed.data.acceptedToken ?? existing.acceptedToken;
+  const nextChainIdInput = parsed.data.chainId ?? existing.chainId;
+  const resolvedNetwork =
+    parsed.data.acceptedToken !== undefined || parsed.data.chainId !== undefined
+      ? resolvePlanNetwork({
+          environmentMode: nextEnvironmentMode,
+          acceptedToken: nextAcceptedTokenInput,
+          requestedChainId: nextChainIdInput,
+        })
+      : {
+          chainId: existing.chainId,
+          acceptedToken: existing.acceptedToken as `0x${string}`,
+        };
+
+  if (!resolvedNetwork) {
+    return c.json({
+      error:
+        "Invalid billing network selection. Choose a supported network and matching USDC token.",
+    }, 400 as any);
+  }
+
   const lockedFieldChanges = existing.onChainPlanId
     ? getLockedOnChainFieldChanges(existing, parsed.data)
     : [];
@@ -233,7 +309,8 @@ export async function updatePlan(c: Context) {
     parsed.data.name !== undefined ||
     parsed.data.tier !== undefined ||
     parsed.data.billingInterval !== undefined ||
-    parsed.data.acceptedToken !== undefined;
+    parsed.data.acceptedToken !== undefined ||
+    parsed.data.chainId !== undefined;
 
   const chainSyncUpdate = existing.onChainPlanId
     ? priceChanged
@@ -277,8 +354,10 @@ export async function updatePlan(c: Context) {
       ...(parsed.data.billingInterval !== undefined && {
         billingInterval: parsed.data.billingInterval,
       }),
-      ...(parsed.data.acceptedToken !== undefined && {
-        acceptedToken: parsed.data.acceptedToken,
+      ...((parsed.data.acceptedToken !== undefined ||
+        parsed.data.chainId !== undefined) && {
+        acceptedToken: resolvedNetwork.acceptedToken,
+        chainId: resolvedNetwork.chainId,
       }),
       ...(parsed.data.metadata !== undefined && {
         metadata: toPrismaNullableJson(parsed.data.metadata),

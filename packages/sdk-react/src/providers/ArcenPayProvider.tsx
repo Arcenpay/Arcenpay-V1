@@ -9,7 +9,7 @@ import React, {
   useCallback,
   type ReactNode,
 } from "react";
-import { WagmiProvider, createConfig, http } from "wagmi";
+import { WagmiProvider, createConfig, http, useAccount } from "wagmi";
 import { sepolia, baseSepolia, base } from "wagmi/chains";
 import { injected, walletConnect } from "wagmi/connectors";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -18,6 +18,7 @@ import {
   arcTestnet,
   getChainEnvironment,
   DEFAULT_CHAIN_ID,
+  isSupportedChainId,
   validateChainEnvironment,
 } from "../sdk";
 
@@ -163,6 +164,15 @@ export interface ArcenPayProviderProps {
   walletConnectProjectId?: string;
 }
 
+interface ArcenPayRuntimeProps {
+  children: ReactNode;
+  baseUrl: string;
+  componentId: string;
+  configuredChainId: number;
+  publishableKey: string;
+  userConfig?: Partial<ArcenPayConfig>;
+}
+
 // ─── Provider Component ──────────────────────────────────────────────────────
 
 export function ArcenPayProvider(props: ArcenPayProviderProps) {
@@ -178,7 +188,8 @@ export function ArcenPayProvider(props: ArcenPayProviderProps) {
 
   // Resolve configuration — explicit props first, then env vars, then defaults
   const publishableKey = pkProp ?? getPublishableKey() ?? "";
-  const chainId = chainIdProp ?? getChainId();
+  const configuredChainId =
+    chainIdProp && isSupportedChainId(chainIdProp) ? chainIdProp : getChainId();
   const baseUrl = baseUrlProp ?? resolveDashboardBaseUrl();
   const wcProjectId = wcProp ?? getWalletConnectProjectId();
   const componentId =
@@ -234,6 +245,37 @@ export function ArcenPayProvider(props: ArcenPayProviderProps) {
         },
       }),
   );
+
+  return (
+    <WagmiProvider config={wagmiConfig}>
+      <QueryClientProvider client={queryClient}>
+        <ArcenPayRuntime
+          baseUrl={baseUrl}
+          componentId={componentId}
+          configuredChainId={configuredChainId}
+          publishableKey={publishableKey}
+          userConfig={userConfig}
+        >
+          {children}
+        </ArcenPayRuntime>
+      </QueryClientProvider>
+    </WagmiProvider>
+  );
+}
+
+function ArcenPayRuntime({
+  children,
+  baseUrl,
+  componentId,
+  configuredChainId,
+  publishableKey,
+  userConfig,
+}: ArcenPayRuntimeProps) {
+  const { chainId: walletChainId, isConnected } = useAccount();
+  const chainId =
+    isConnected && walletChainId && isSupportedChainId(walletChainId)
+      ? walletChainId
+      : configuredChainId;
 
   // ── Session state ──────────────────────────────────────────────────────
   const [session, setSession] = useState<ArcenSessionValue>({
@@ -336,9 +378,22 @@ export function ArcenPayProvider(props: ArcenPayProviderProps) {
   });
 
   useEffect(() => {
-    if (!baseUrl || !chainId) return;
+    if (!baseUrl || !chainId) {
+      setZeroDev({
+        bundlerUrl: "",
+        paymasterUrl: "",
+        isReady: false,
+      });
+      return;
+    }
 
     let cancelled = false;
+    setZeroDev({
+      bundlerUrl: "",
+      paymasterUrl: "",
+      isReady: false,
+    });
+
     fetch(`${baseUrl}/api/v1/public/zerodev-config?chainId=${chainId}`)
       .then(async (res) => {
         if (!res.ok) return;
@@ -357,7 +412,9 @@ export function ArcenPayProvider(props: ArcenPayProviderProps) {
       })
       .catch(() => {});
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [baseUrl, chainId]);
 
   // ── Protocol context ───────────────────────────────────────────────────
@@ -410,16 +467,12 @@ export function ArcenPayProvider(props: ArcenPayProviderProps) {
       componentId,
       zeroDev,
     };
-  }, [baseUrl, chainId, session, componentId, userConfig, zeroDev]);
+  }, [baseUrl, chainId, componentId, session, userConfig, zeroDev]);
 
   return (
-    <WagmiProvider config={wagmiConfig}>
-      <QueryClientProvider client={queryClient}>
-        <ArcenPayContext.Provider value={contextValue}>
-          {children}
-        </ArcenPayContext.Provider>
-      </QueryClientProvider>
-    </WagmiProvider>
+    <ArcenPayContext.Provider value={contextValue}>
+      {children}
+    </ArcenPayContext.Provider>
   );
 }
 

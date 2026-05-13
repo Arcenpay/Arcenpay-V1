@@ -5,15 +5,16 @@ import type { Section } from "@/app/(dashboard)/page";
 import { Bell, Search, ChevronDown, LogOut, UserRound, Wallet } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useChainId } from "wagmi";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useDashboardSession } from "@/hooks/use-dashboard-session";
-import { DEFAULT_CHAIN_ID, getChainLabel } from "@/lib/default-chain";
+import { getChainLabel, resolveEnvironmentChainId, isChainAllowedForEnvironment, formatChainLabelsForEnvironment } from "@/lib/default-chain";
 import {
-  DEFAULT_WALLET_CHAIN_LABEL,
   SUPPORTED_WALLET_CHAIN_LABEL,
   useDashboardWallet,
 } from "@/hooks/use-dashboard-wallet";
+import { useEnvironment } from "@/contexts/environment-context";
 
 type AuditEntry = {
   id: string;
@@ -73,6 +74,8 @@ const sectionDescriptions: Record<Section, string> = {
 
 export function Header({ activeSection }: HeaderProps) {
   const router = useRouter();
+  const { envMode } = useEnvironment();
+  const chainId = useChainId();
   const [searchFocused, setSearchFocused] = useState(false);
   const { data: sessionData, refresh: refreshSessionData } = useDashboardSession();
   const storedWallet = sessionData?.user.walletAddress ?? null;
@@ -83,7 +86,6 @@ export function Header({ activeSection }: HeaderProps) {
     hasConnectedWallet,
     isDisconnecting,
     isLinkedWalletConnected,
-    isOnRequiredNetwork,
     isSwitchingChain,
     isWrongWalletConnected,
     linkedWalletLabel,
@@ -92,6 +94,10 @@ export function Header({ activeSection }: HeaderProps) {
     reconnectWallet,
     switchToRequiredNetwork,
   } = useDashboardWallet(storedWallet);
+  const configuredChainId = resolveEnvironmentChainId(envMode);
+  const configuredChainLabel = getChainLabel(configuredChainId);
+  const configuredEnvChainsLabel = formatChainLabelsForEnvironment(envMode);
+  const isOnConfiguredNetwork = hasConnectedWallet && isChainAllowedForEnvironment(chainId, envMode);
 
   // Notification bell state
   const [showNotifications, setShowNotifications] = useState(false);
@@ -214,7 +220,7 @@ export function Header({ activeSection }: HeaderProps) {
             "border-blue-400/50 text-blue-400 bg-blue-400/5",
           )}
         >
-          {getChainLabel(DEFAULT_CHAIN_ID)}
+          {configuredChainLabel}
         </Badge>
 
         {/* Search */}
@@ -338,9 +344,9 @@ export function Header({ activeSection }: HeaderProps) {
                   Connected wallet does not match {linkedWalletLabel}. Reconnect with the linked wallet for on-chain actions.
                 </div>
               ) : null}
-              {hasConnectedWallet && !isOnRequiredNetwork ? (
+              {hasConnectedWallet && !isOnConfiguredNetwork ? (
                 <div className="mt-2 rounded-xl border border-amber-500/20 bg-amber-500/5 px-3 py-3 text-xs text-amber-700">
-                  Switch this wallet to a supported network ({SUPPORTED_WALLET_CHAIN_LABEL}) before using dashboard transactions.
+                  Switch this wallet to {configuredEnvChainsLabel} before using dashboard transactions in the current workspace environment.
                 </div>
               ) : null}
               <div className="mt-2 grid gap-2">
@@ -363,17 +369,17 @@ export function Header({ activeSection }: HeaderProps) {
                     Reconnect correct wallet
                   </Button>
                 ) : null}
-                {hasConnectedWallet && !isOnRequiredNetwork ? (
+                {hasConnectedWallet && !isOnConfiguredNetwork ? (
                   <Button
                     size="sm"
                     variant="outline"
                     className="w-full"
-                    onClick={() => void switchToRequiredNetwork()}
+                    onClick={() => void switchToRequiredNetwork(configuredChainId)}
                     disabled={isSwitchingChain}
                   >
                     {isSwitchingChain
                       ? "Switching network..."
-                      : `Switch to ${DEFAULT_WALLET_CHAIN_LABEL}`}
+                      : `Switch to ${configuredChainLabel}`}
                   </Button>
                 ) : null}
                 {hasConnectedWallet ? (

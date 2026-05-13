@@ -81,18 +81,20 @@ export function useDashboardWallet(linkedWallet?: string | null) {
     }
   }, [disconnectAsync, hasConnectedWallet, open]);
 
-  const switchToSupportedNetwork = useCallback(async () => {
+  const switchToSupportedNetwork = useCallback(async (targetChainId?: number) => {
     if (!hasConnectedWallet) {
       await open({ view: "Connect" });
       return;
     }
 
+    const target = targetChainId ?? (isSupportedDashboardChainId(chainId) ? chainId : DEFAULT_WALLET_CHAIN_ID);
+
     try {
-      await switchChainAsync({ chainId: DEFAULT_WALLET_CHAIN_ID });
+      await switchChainAsync({ chainId: target });
     } catch {
       await open({ view: "Networks" });
     }
-  }, [hasConnectedWallet, open, switchChainAsync]);
+  }, [hasConnectedWallet, chainId, open, switchChainAsync]);
 
   return {
     address,

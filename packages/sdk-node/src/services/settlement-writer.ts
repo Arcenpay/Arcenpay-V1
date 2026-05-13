@@ -23,6 +23,7 @@ const CHAIN_MAP: Record<number, any> = {
   11155111: sepolia,
   84532: baseSepolia,
   8453: base,
+  5042002: baseSepolia, // Arc Testnet — USDC-native chain, uses Base Sepolia transport
 };
 
 type SessionState = {

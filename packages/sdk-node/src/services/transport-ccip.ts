@@ -13,6 +13,7 @@ const CHAIN_MAP: Record<number, any> = {
   11155111: sepolia,
   84532: baseSepolia,
   8453: base,
+  5042002: baseSepolia, // Arc Testnet
 };
 
 // CCIP chain selector mapping (Chainlink uses uint64 selectors)

@@ -163,6 +163,7 @@ export async function GET(c: Context) {
               walletAddress: true,
               currentPeriodEnd: true,
               metadata: true,
+              chainId: true,
             },
           },
         },
@@ -224,6 +225,7 @@ export async function GET(c: Context) {
             description: true,
             acceptedToken: true,
             onChainPlanId: true,
+            chainId: true,
             metadata: true,
           },
         })) as Record<string, unknown> | null;
@@ -368,7 +370,10 @@ export async function GET(c: Context) {
         );
       }
 
-      const configuredChainId = DEFAULT_CHAIN_ID;
+      // Derive payment chain from the active plan, then subscription state, then env default.
+      const configuredChainId =
+        (typeof activePlan?.chainId === "number" ? activePlan.chainId : null) ??
+        (company.subscriptionState?.chainId ?? DEFAULT_CHAIN_ID);
       billingPaymentAccount = company.subscriptionState?.walletAddress ?? null;
 
       paymentMethod = {
@@ -454,6 +459,7 @@ export async function GET(c: Context) {
       metadata: true,
       acceptedToken: true,
       onChainPlanId: true,
+      chainId: true,
       chainTxHash: true,
       chainSyncStatus: true,
     },
@@ -469,21 +475,29 @@ export async function GET(c: Context) {
 
   if (recoverablePlans.length > 0) {
     try {
-      const configuredChainId = DEFAULT_CHAIN_ID;
-      const contracts = getContractAddresses(configuredChainId);
-      const planFactoryAddress = contracts.planFactory as `0x${string}`;
+      // Group recoverable plans by their chain so we query each chain's RPC once.
+      const plansByChain = new Map<number, typeof recoverablePlans>();
+      for (const plan of recoverablePlans) {
+        const cid = plan.chainId ?? DEFAULT_CHAIN_ID;
+        if (!plansByChain.has(cid)) plansByChain.set(cid, []);
+        plansByChain.get(cid)!.push(plan);
+      }
 
-      if (
-        planFactoryAddress &&
-        planFactoryAddress !== "0x0000000000000000000000000000000000000000"
-      ) {
+      const recoveredIds = new Map<string, string>();
+
+      for (const [chainId, chainPlans] of plansByChain) {
+        const contracts = getContractAddresses(chainId);
+        const planFactoryAddress = contracts.planFactory as `0x${string}`;
+        if (
+          !planFactoryAddress ||
+          planFactoryAddress === "0x0000000000000000000000000000000000000000"
+        ) continue;
+
         const rpcClient = createPublicClient({
-          transport: http(getRpcUrl(configuredChainId)),
+          transport: http(getRpcUrl(chainId)),
         });
 
-        const recoveredIds = new Map<string, string>();
-
-        for (const plan of recoverablePlans) {
+        for (const plan of chainPlans) {
           try {
             const receipt = await rpcClient.getTransactionReceipt({
               hash: plan.chainTxHash as `0x${string}`,
@@ -525,13 +539,13 @@ export async function GET(c: Context) {
             // Best effort repair path only; ignore per-plan failures.
           }
         }
+      }
 
-        if (recoveredIds.size > 0) {
-          hydratedPlans = allPlans.map((plan) => ({
-            ...plan,
-            onChainPlanId: recoveredIds.get(plan.id) ?? plan.onChainPlanId,
-          }));
-        }
+      if (recoveredIds.size > 0) {
+        hydratedPlans = allPlans.map((plan) => ({
+          ...plan,
+          onChainPlanId: recoveredIds.get(plan.id) ?? plan.onChainPlanId,
+        }));
       }
     } catch {
       // Ignore auto-recovery errors and continue with current catalog state.

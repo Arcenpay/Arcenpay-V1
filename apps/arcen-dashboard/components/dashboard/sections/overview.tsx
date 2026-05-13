@@ -14,7 +14,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { formatUsdc } from "@/lib/format";
-import { DEFAULT_CHAIN_ID } from "@/lib/default-chain";
+import { getChainLabel, resolveEnvironmentChainId } from "@/lib/default-chain";
 
 type OverviewPayload = {
   context: {
@@ -46,9 +46,7 @@ export function OverviewSection() {
     setMounted(true);
   }, []);
 
-  const effectiveChainId = isConnected
-    ? walletChainId
-    : DEFAULT_CHAIN_ID;
+  const effectiveChainId = resolveEnvironmentChainId(envMode);
 
   useEffect(() => {
     if (!mounted || envLoading) return;
@@ -115,7 +113,7 @@ export function OverviewSection() {
         <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-warning/5 border border-warning/20 animate-in fade-in slide-in-from-top-2 duration-300">
           <AlertTriangle className="w-4 h-4 text-warning shrink-0" />
           <p className="text-sm text-muted-foreground">
-            Wallet disconnected — showing data for the default network.
+            Wallet disconnected — showing data for {getChainLabel(effectiveChainId)}.
           </p>
         </div>
       )}

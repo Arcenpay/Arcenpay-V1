@@ -100,40 +100,35 @@ async function switchEnvironment(c: Context) {
     return c.json({ error: `No configured contracts for chain ${targetChainId}` }, 400 as any);
   }
 
+  // ── Run preflight checks (informational — do NOT block the switch) ──────────
+  const warnings: string[] = [];
+
   if (hasZeroAddress(addresses)) {
-    return c.json({
-        error:
-          "Environment switch blocked: contract registry contains zero-address placeholders.",
-      }, 409 as any);
+    warnings.push(
+      "Contract registry contains zero-address placeholders. Set ARCENPAY_CONTRACT_<chainId>_* env vars after deployment.",
+    );
   }
 
   const missingServices: string[] = [];
   if (SUBGRAPH_REQUIRED && !GRAPH_URL) missingServices.push("GRAPH_URL");
   if (!FACILITATOR_URL) missingServices.push("FACILITATOR_URL");
   if (missingServices.length > 0) {
-    return c.json({
-        error: "Environment switch blocked: required service endpoints are missing.",
-        missingServices,
-      }, 409 as any);
+    warnings.push(
+      `Required service endpoints are missing: ${missingServices.join(", ")}.`,
+    );
   }
 
-  let preflight: PreflightResult;
+  let preflight: PreflightResult | null = null;
   try {
     preflight = await runContractPreflight(targetChainId, addresses);
+    if (!preflight.ok) {
+      warnings.push(
+        `Contracts not deployed on target chain: ${preflight.failedContracts.join(", ")}.`,
+      );
+    }
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
-    return c.json({
-        error: "Contract health preflight failed — RPC unreachable.",
-        detail: message,
-      }, 503 as any);
-  }
-
-  if (!preflight.ok) {
-    return c.json({
-        error: "Contract health preflight failed — contracts not deployed on target chain.",
-        failedContracts: preflight.failedContracts,
-        checks: preflight.checks,
-      }, 409 as any);
+    warnings.push(`Contract preflight RPC unreachable: ${message}`);
   }
 
   const previous = await db.team.findUnique({
@@ -164,7 +159,8 @@ async function switchEnvironment(c: Context) {
       chainId: targetChainId,
     },
     metadata: {
-      preflightChecks: preflight.checks,
+      preflightChecks: preflight?.checks ?? [],
+      warnings,
     },
   });
 
@@ -173,7 +169,8 @@ async function switchEnvironment(c: Context) {
     teamId: team.id,
     environmentMode: normalizeEnvironmentMode(team.environmentMode),
     chainId: targetChainId,
-    preflight: preflight.checks,
+    preflight: preflight?.checks ?? [],
+    warnings,
   });
 }
 

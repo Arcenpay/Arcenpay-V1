@@ -34,6 +34,7 @@ export interface VerifyDirectErc20TransferInput {
   expectedAmountAtomic: bigint;
   recipientWallet: string;
   senderWallet?: string | null;
+  chainId?: number;
 }
 
 export type VerifyDirectErc20TransferResult =
@@ -106,12 +107,12 @@ async function assertReceiptFinalized(params: {
   return null;
 }
 
-function resolveChain() {
-  return getChain(DEFAULT_CHAIN_ID);
+function resolveChain(chainId?: number) {
+  return getChain(chainId ?? DEFAULT_CHAIN_ID);
 }
 
-function createChainPublicClient() {
-  const chain = resolveChain();
+function createChainPublicClient(chainId?: number) {
+  const chain = resolveChain(chainId);
   return {
     chain,
     contracts: getContractAddresses(chain.id),
@@ -147,7 +148,7 @@ export async function verifyDirectErc20Transfer(
     };
   }
 
-  const { publicClient } = createChainPublicClient();
+  const { publicClient } = createChainPublicClient(params.chainId);
 
   try {
     const [transaction, receipt] = await Promise.all([
@@ -246,6 +247,7 @@ export interface VerifyAutopayPlanChangeInput {
   txHash: `0x${string}`;
   expectedOnChainPlanId: string;
   requireRegistryPlanChange?: boolean;
+  chainId?: number;
 }
 
 export type VerifyAutopayPlanChangeResult =
@@ -269,6 +271,7 @@ export interface VerifySubscriptionRegistryPlanChangeInput {
   paymentAccount: string;
   txHash: `0x${string}`;
   expectedOnChainPlanId: string;
+  chainId?: number;
 }
 
 export type VerifySubscriptionRegistryPlanChangeResult =
@@ -299,7 +302,7 @@ export async function verifyAutopayPlanChange(
   }
 
   const expectedOnChainPlanId = BigInt(params.expectedOnChainPlanId);
-  const { publicClient, contracts } = createChainPublicClient();
+  const { publicClient, contracts } = createChainPublicClient(params.chainId);
   const autopayAddress = contracts.autopayModule as `0x${string}`;
   const subscriptionRegistryAddress =
     contracts.subscriptionRegistry as `0x${string}`;
@@ -571,7 +574,7 @@ export async function verifySubscriptionRegistryPlanChange(
   }
 
   const expectedOnChainPlanId = BigInt(params.expectedOnChainPlanId);
-  const { publicClient, contracts } = createChainPublicClient();
+  const { publicClient, contracts } = createChainPublicClient(params.chainId);
   const subscriptionRegistryAddress =
     contracts.subscriptionRegistry as `0x${string}`;
 
@@ -760,6 +763,7 @@ export async function verifySubscriptionRegistryPlanChange(
 export interface VerifySubscriptionCancellationInput {
   paymentAccount: string;
   txHash: `0x${string}`;
+  chainId?: number;
 }
 
 export type VerifySubscriptionCancellationResult =
@@ -779,6 +783,7 @@ export type VerifySubscriptionCancellationResult =
 export interface VerifyAutopayCancellationControlInput {
   paymentAccount: string;
   txHash: `0x${string}`;
+  chainId?: number;
 }
 
 export type VerifyAutopayCancellationControlResult =
@@ -806,7 +811,7 @@ export async function verifyAutopayCancellationControl(
     };
   }
 
-  const { publicClient, contracts } = createChainPublicClient();
+  const { publicClient, contracts } = createChainPublicClient(params.chainId);
   const autopayAddress = contracts.autopayModule as `0x${string}`;
 
   if (!autopayAddress || !isAddress(autopayAddress)) {
@@ -939,7 +944,7 @@ export async function verifySubscriptionCancellation(
     };
   }
 
-  const { publicClient, contracts } = createChainPublicClient();
+  const { publicClient, contracts } = createChainPublicClient(params.chainId);
   const subscriptionRegistryAddress =
     contracts.subscriptionRegistry as `0x${string}`;
 

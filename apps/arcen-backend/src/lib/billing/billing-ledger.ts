@@ -56,6 +56,7 @@ export async function upsertSubscriptionLedgerState(input: {
   teamId: string;
   companyId?: string | null;
   walletAddress?: string | null;
+  chainId?: number | null;
   status: "ACTIVE" | "PAST_DUE" | "CANCELLED";
   catalogPlanId?: string | null;
   onChainPlanId?: string | null;
@@ -83,6 +84,7 @@ export async function upsertSubscriptionLedgerState(input: {
     update: {
       walletAddress: normalizeWallet(input.walletAddress) ?? company.walletAddress ?? null,
       status: input.status,
+      ...(input.chainId != null ? { chainId: input.chainId } : {}),
       ...(input.catalogPlanId !== undefined ? { catalogPlanId: input.catalogPlanId } : {}),
       ...(input.onChainPlanId !== undefined ? { onChainPlanId: input.onChainPlanId } : {}),
       ...(input.onChainTokenId !== undefined ? { onChainTokenId: input.onChainTokenId } : {}),
@@ -110,6 +112,7 @@ export async function upsertSubscriptionLedgerState(input: {
       companyId: company.id,
       walletAddress: normalizeWallet(input.walletAddress) ?? company.walletAddress ?? null,
       status: input.status,
+      ...(input.chainId != null ? { chainId: input.chainId } : {}),
       catalogPlanId: nextCatalogPlanId,
       onChainPlanId: input.onChainPlanId ?? null,
       onChainTokenId: input.onChainTokenId ?? null,

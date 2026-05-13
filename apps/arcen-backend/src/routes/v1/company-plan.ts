@@ -148,16 +148,16 @@ function requiredConfirmations(): number {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : 2;
 }
 
-function createChainClients() {
-  const chainId = DEFAULT_CHAIN_ID;
-  const chain = getChain(chainId);
+function createChainClients(chainId?: number) {
+  const resolvedChainId = chainId ?? DEFAULT_CHAIN_ID;
+  const chain = getChain(resolvedChainId);
   return {
     chain,
     publicClient: createPublicClient({
       chain,
-      transport: http(getRpcUrl(chainId)),
+      transport: http(getRpcUrl(resolvedChainId)),
     }),
-    contracts: getContractAddresses(chainId),
+    contracts: getContractAddresses(resolvedChainId),
   };
 }
 
@@ -188,6 +188,7 @@ function resolveAuthorizedRegistryPlanChangeCapability() {
 async function executeAuthorizedRegistryPlanChange(input: {
   tokenId: string;
   expectedOnChainPlanId: string;
+  chainId?: number;
 }) {
   const capability = resolveAuthorizedRegistryPlanChangeCapability();
   if (!capability.ok) {
@@ -195,7 +196,7 @@ async function executeAuthorizedRegistryPlanChange(input: {
   }
   const { billerPrivateKey } = capability;
 
-  const { chain, publicClient, contracts } = createChainClients();
+  const { chain, publicClient, contracts } = createChainClients(input.chainId);
   const subscriptionRegistryAddress =
     contracts.subscriptionRegistry as `0x${string}`;
 
@@ -553,6 +554,7 @@ export async function POST(c: Context) {
       subscriptionState: {
         select: {
           id: true,
+          chainId: true,
           walletAddress: true,
           currentPeriodStart: true,
           currentPeriodEnd: true,
@@ -846,7 +848,8 @@ export async function POST(c: Context) {
         );
       }
 
-      const { publicClient, contracts } = createChainClients();
+      const subChainId = company.subscriptionState?.chainId;
+      const { publicClient, contracts } = createChainClients(subChainId);
       const subscriptionRegistryAddress =
         contracts.subscriptionRegistry as `0x${string}`;
       if (
@@ -939,10 +942,12 @@ export async function POST(c: Context) {
       );
     }
 
+    const subChainId = company.subscriptionState?.chainId;
     const verification = await verifyAutopayPlanChange({
       paymentAccount: companyPaymentAccount,
       txHash: normalizedAutopayConfigTxHash,
       expectedOnChainPlanId: plan.onChainPlanId!,
+      chainId: subChainId,
     });
     if (!verification.ok) {
       return c.json(
@@ -1028,6 +1033,8 @@ export async function POST(c: Context) {
         );
       }
 
+      const subChainId = company.subscriptionState?.chainId;
+
       if (normalizedPaymentTxHash && proration.amountDueMicros > 0n) {
         const paymentCheck = await verifyDirectErc20Transfer({
           acceptedToken: verification.acceptedToken,
@@ -1035,6 +1042,7 @@ export async function POST(c: Context) {
           expectedAmountAtomic: proration.amountDueMicros,
           recipientWallet: verification.merchantWallet,
           senderWallet: companyPaymentAccount,
+          chainId: subChainId,
         });
         if (!paymentCheck.ok) {
           return c.json(
@@ -1050,6 +1058,7 @@ export async function POST(c: Context) {
         const accessChangeExecution = await executeAuthorizedRegistryPlanChange({
           tokenId: verification.tokenId,
           expectedOnChainPlanId: plan.onChainPlanId!,
+          chainId: subChainId,
         });
         if (!accessChangeExecution.ok) {
           return c.json(
@@ -1065,6 +1074,7 @@ export async function POST(c: Context) {
         paymentAccount: companyPaymentAccount,
         txHash: accessChangeTxHashLocal,
         expectedOnChainPlanId: plan.onChainPlanId!,
+        chainId: subChainId,
       });
       if (!accessChange.ok) {
         return c.json(

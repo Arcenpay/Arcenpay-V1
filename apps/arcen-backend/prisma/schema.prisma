@@ -444,6 +444,9 @@ model CatalogPlan {
   version     Int       @default(1)
   publishedAt DateTime?
 
+  // On-chain identity — chainId tells us which network this plan is registered on.
+  // Default 84532 = Base Sepolia (matches historic DEFAULT_CHAIN_ID).
+  chainId         Int             @default(84532)
   onChainPlanId   String?
   chainSyncStatus ChainSyncStatus @default(NOT_APPLICABLE)
   chainTxHash     String?
@@ -454,6 +457,7 @@ model CatalogPlan {
 
   @@index([teamId, environmentMode, status])
   @@index([teamId, name])
+  @@index([teamId, chainId, onChainPlanId])
 }
 
 model CatalogAddOn {
@@ -817,6 +821,9 @@ model SubscriptionState {
   catalogPlanId     String?
   onChainPlanId     String?
   onChainTokenId    String?
+  // chainId records which chain this subscription is active on.
+  // Default 84532 = Base Sepolia (matches historic DEFAULT_CHAIN_ID).
+  chainId           Int                @default(84532)
   currentPeriodStart DateTime?
   currentPeriodEnd   DateTime?
   lastEvent         String?
@@ -836,6 +843,7 @@ model SubscriptionState {
 
   @@index([teamId, status])
   @@index([teamId, walletAddress])
+  @@index([teamId, chainId])
 }
 
 model Payment {

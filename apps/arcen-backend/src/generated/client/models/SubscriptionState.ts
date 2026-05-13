@@ -20,8 +20,18 @@ export type SubscriptionStateModel = runtime.Types.Result.DefaultSelection<Prism
 
 export type AggregateSubscriptionState = {
   _count: SubscriptionStateCountAggregateOutputType | null
+  _avg: SubscriptionStateAvgAggregateOutputType | null
+  _sum: SubscriptionStateSumAggregateOutputType | null
   _min: SubscriptionStateMinAggregateOutputType | null
   _max: SubscriptionStateMaxAggregateOutputType | null
+}
+
+export type SubscriptionStateAvgAggregateOutputType = {
+  chainId: number | null
+}
+
+export type SubscriptionStateSumAggregateOutputType = {
+  chainId: number | null
 }
 
 export type SubscriptionStateMinAggregateOutputType = {
@@ -35,6 +45,7 @@ export type SubscriptionStateMinAggregateOutputType = {
   catalogPlanId: string | null
   onChainPlanId: string | null
   onChainTokenId: string | null
+  chainId: number | null
   currentPeriodStart: Date | null
   currentPeriodEnd: Date | null
   lastEvent: string | null
@@ -57,6 +68,7 @@ export type SubscriptionStateMaxAggregateOutputType = {
   catalogPlanId: string | null
   onChainPlanId: string | null
   onChainTokenId: string | null
+  chainId: number | null
   currentPeriodStart: Date | null
   currentPeriodEnd: Date | null
   lastEvent: string | null
@@ -79,6 +91,7 @@ export type SubscriptionStateCountAggregateOutputType = {
   catalogPlanId: number
   onChainPlanId: number
   onChainTokenId: number
+  chainId: number
   currentPeriodStart: number
   currentPeriodEnd: number
   lastEvent: number
@@ -93,6 +106,14 @@ export type SubscriptionStateCountAggregateOutputType = {
 }
 
 
+export type SubscriptionStateAvgAggregateInputType = {
+  chainId?: true
+}
+
+export type SubscriptionStateSumAggregateInputType = {
+  chainId?: true
+}
+
 export type SubscriptionStateMinAggregateInputType = {
   id?: true
   createdAt?: true
@@ -104,6 +125,7 @@ export type SubscriptionStateMinAggregateInputType = {
   catalogPlanId?: true
   onChainPlanId?: true
   onChainTokenId?: true
+  chainId?: true
   currentPeriodStart?: true
   currentPeriodEnd?: true
   lastEvent?: true
@@ -126,6 +148,7 @@ export type SubscriptionStateMaxAggregateInputType = {
   catalogPlanId?: true
   onChainPlanId?: true
   onChainTokenId?: true
+  chainId?: true
   currentPeriodStart?: true
   currentPeriodEnd?: true
   lastEvent?: true
@@ -148,6 +171,7 @@ export type SubscriptionStateCountAggregateInputType = {
   catalogPlanId?: true
   onChainPlanId?: true
   onChainTokenId?: true
+  chainId?: true
   currentPeriodStart?: true
   currentPeriodEnd?: true
   lastEvent?: true
@@ -199,6 +223,18 @@ export type SubscriptionStateAggregateArgs<ExtArgs extends runtime.Types.Extensi
   /**
    * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
    * 
+   * Select which fields to average
+  **/
+  _avg?: SubscriptionStateAvgAggregateInputType
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+   * 
+   * Select which fields to sum
+  **/
+  _sum?: SubscriptionStateSumAggregateInputType
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+   * 
    * Select which fields to find the minimum value
   **/
   _min?: SubscriptionStateMinAggregateInputType
@@ -229,6 +265,8 @@ export type SubscriptionStateGroupByArgs<ExtArgs extends runtime.Types.Extension
   take?: number
   skip?: number
   _count?: SubscriptionStateCountAggregateInputType | true
+  _avg?: SubscriptionStateAvgAggregateInputType
+  _sum?: SubscriptionStateSumAggregateInputType
   _min?: SubscriptionStateMinAggregateInputType
   _max?: SubscriptionStateMaxAggregateInputType
 }
@@ -244,6 +282,7 @@ export type SubscriptionStateGroupByOutputType = {
   catalogPlanId: string | null
   onChainPlanId: string | null
   onChainTokenId: string | null
+  chainId: number
   currentPeriodStart: Date | null
   currentPeriodEnd: Date | null
   lastEvent: string | null
@@ -255,6 +294,8 @@ export type SubscriptionStateGroupByOutputType = {
   graceEndsAt: Date | null
   metadata: runtime.JsonValue | null
   _count: SubscriptionStateCountAggregateOutputType | null
+  _avg: SubscriptionStateAvgAggregateOutputType | null
+  _sum: SubscriptionStateSumAggregateOutputType | null
   _min: SubscriptionStateMinAggregateOutputType | null
   _max: SubscriptionStateMaxAggregateOutputType | null
 }
@@ -288,6 +329,7 @@ export type SubscriptionStateWhereInput = {
   catalogPlanId?: Prisma.StringNullableFilter<"SubscriptionState"> | string | null
   onChainPlanId?: Prisma.StringNullableFilter<"SubscriptionState"> | string | null
   onChainTokenId?: Prisma.StringNullableFilter<"SubscriptionState"> | string | null
+  chainId?: Prisma.IntFilter<"SubscriptionState"> | number
   currentPeriodStart?: Prisma.DateTimeNullableFilter<"SubscriptionState"> | Date | string | null
   currentPeriodEnd?: Prisma.DateTimeNullableFilter<"SubscriptionState"> | Date | string | null
   lastEvent?: Prisma.StringNullableFilter<"SubscriptionState"> | string | null
@@ -316,6 +358,7 @@ export type SubscriptionStateOrderByWithRelationInput = {
   catalogPlanId?: Prisma.SortOrderInput | Prisma.SortOrder
   onChainPlanId?: Prisma.SortOrderInput | Prisma.SortOrder
   onChainTokenId?: Prisma.SortOrderInput | Prisma.SortOrder
+  chainId?: Prisma.SortOrder
   currentPeriodStart?: Prisma.SortOrderInput | Prisma.SortOrder
   currentPeriodEnd?: Prisma.SortOrderInput | Prisma.SortOrder
   lastEvent?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -347,6 +390,7 @@ export type SubscriptionStateWhereUniqueInput = Prisma.AtLeast<{
   catalogPlanId?: Prisma.StringNullableFilter<"SubscriptionState"> | string | null
   onChainPlanId?: Prisma.StringNullableFilter<"SubscriptionState"> | string | null
   onChainTokenId?: Prisma.StringNullableFilter<"SubscriptionState"> | string | null
+  chainId?: Prisma.IntFilter<"SubscriptionState"> | number
   currentPeriodStart?: Prisma.DateTimeNullableFilter<"SubscriptionState"> | Date | string | null
   currentPeriodEnd?: Prisma.DateTimeNullableFilter<"SubscriptionState"> | Date | string | null
   lastEvent?: Prisma.StringNullableFilter<"SubscriptionState"> | string | null
@@ -375,6 +419,7 @@ export type SubscriptionStateOrderByWithAggregationInput = {
   catalogPlanId?: Prisma.SortOrderInput | Prisma.SortOrder
   onChainPlanId?: Prisma.SortOrderInput | Prisma.SortOrder
   onChainTokenId?: Prisma.SortOrderInput | Prisma.SortOrder
+  chainId?: Prisma.SortOrder
   currentPeriodStart?: Prisma.SortOrderInput | Prisma.SortOrder
   currentPeriodEnd?: Prisma.SortOrderInput | Prisma.SortOrder
   lastEvent?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -386,8 +431,10 @@ export type SubscriptionStateOrderByWithAggregationInput = {
   graceEndsAt?: Prisma.SortOrderInput | Prisma.SortOrder
   metadata?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.SubscriptionStateCountOrderByAggregateInput
+  _avg?: Prisma.SubscriptionStateAvgOrderByAggregateInput
   _max?: Prisma.SubscriptionStateMaxOrderByAggregateInput
   _min?: Prisma.SubscriptionStateMinOrderByAggregateInput
+  _sum?: Prisma.SubscriptionStateSumOrderByAggregateInput
 }
 
 export type SubscriptionStateScalarWhereWithAggregatesInput = {
@@ -404,6 +451,7 @@ export type SubscriptionStateScalarWhereWithAggregatesInput = {
   catalogPlanId?: Prisma.StringNullableWithAggregatesFilter<"SubscriptionState"> | string | null
   onChainPlanId?: Prisma.StringNullableWithAggregatesFilter<"SubscriptionState"> | string | null
   onChainTokenId?: Prisma.StringNullableWithAggregatesFilter<"SubscriptionState"> | string | null
+  chainId?: Prisma.IntWithAggregatesFilter<"SubscriptionState"> | number
   currentPeriodStart?: Prisma.DateTimeNullableWithAggregatesFilter<"SubscriptionState"> | Date | string | null
   currentPeriodEnd?: Prisma.DateTimeNullableWithAggregatesFilter<"SubscriptionState"> | Date | string | null
   lastEvent?: Prisma.StringNullableWithAggregatesFilter<"SubscriptionState"> | string | null
@@ -425,6 +473,7 @@ export type SubscriptionStateCreateInput = {
   catalogPlanId?: string | null
   onChainPlanId?: string | null
   onChainTokenId?: string | null
+  chainId?: number
   currentPeriodStart?: Date | string | null
   currentPeriodEnd?: Date | string | null
   lastEvent?: string | null
@@ -453,6 +502,7 @@ export type SubscriptionStateUncheckedCreateInput = {
   catalogPlanId?: string | null
   onChainPlanId?: string | null
   onChainTokenId?: string | null
+  chainId?: number
   currentPeriodStart?: Date | string | null
   currentPeriodEnd?: Date | string | null
   lastEvent?: string | null
@@ -477,6 +527,7 @@ export type SubscriptionStateUpdateInput = {
   catalogPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   onChainPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   onChainTokenId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chainId?: Prisma.IntFieldUpdateOperationsInput | number
   currentPeriodStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   currentPeriodEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastEvent?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -505,6 +556,7 @@ export type SubscriptionStateUncheckedUpdateInput = {
   catalogPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   onChainPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   onChainTokenId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chainId?: Prisma.IntFieldUpdateOperationsInput | number
   currentPeriodStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   currentPeriodEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastEvent?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -531,6 +583,7 @@ export type SubscriptionStateCreateManyInput = {
   catalogPlanId?: string | null
   onChainPlanId?: string | null
   onChainTokenId?: string | null
+  chainId?: number
   currentPeriodStart?: Date | string | null
   currentPeriodEnd?: Date | string | null
   lastEvent?: string | null
@@ -552,6 +605,7 @@ export type SubscriptionStateUpdateManyMutationInput = {
   catalogPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   onChainPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   onChainTokenId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chainId?: Prisma.IntFieldUpdateOperationsInput | number
   currentPeriodStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   currentPeriodEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastEvent?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -575,6 +629,7 @@ export type SubscriptionStateUncheckedUpdateManyInput = {
   catalogPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   onChainPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   onChainTokenId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chainId?: Prisma.IntFieldUpdateOperationsInput | number
   currentPeriodStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   currentPeriodEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastEvent?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -608,6 +663,7 @@ export type SubscriptionStateCountOrderByAggregateInput = {
   catalogPlanId?: Prisma.SortOrder
   onChainPlanId?: Prisma.SortOrder
   onChainTokenId?: Prisma.SortOrder
+  chainId?: Prisma.SortOrder
   currentPeriodStart?: Prisma.SortOrder
   currentPeriodEnd?: Prisma.SortOrder
   lastEvent?: Prisma.SortOrder
@@ -618,6 +674,10 @@ export type SubscriptionStateCountOrderByAggregateInput = {
   pastDueAt?: Prisma.SortOrder
   graceEndsAt?: Prisma.SortOrder
   metadata?: Prisma.SortOrder
+}
+
+export type SubscriptionStateAvgOrderByAggregateInput = {
+  chainId?: Prisma.SortOrder
 }
 
 export type SubscriptionStateMaxOrderByAggregateInput = {
@@ -631,6 +691,7 @@ export type SubscriptionStateMaxOrderByAggregateInput = {
   catalogPlanId?: Prisma.SortOrder
   onChainPlanId?: Prisma.SortOrder
   onChainTokenId?: Prisma.SortOrder
+  chainId?: Prisma.SortOrder
   currentPeriodStart?: Prisma.SortOrder
   currentPeriodEnd?: Prisma.SortOrder
   lastEvent?: Prisma.SortOrder
@@ -653,6 +714,7 @@ export type SubscriptionStateMinOrderByAggregateInput = {
   catalogPlanId?: Prisma.SortOrder
   onChainPlanId?: Prisma.SortOrder
   onChainTokenId?: Prisma.SortOrder
+  chainId?: Prisma.SortOrder
   currentPeriodStart?: Prisma.SortOrder
   currentPeriodEnd?: Prisma.SortOrder
   lastEvent?: Prisma.SortOrder
@@ -662,6 +724,10 @@ export type SubscriptionStateMinOrderByAggregateInput = {
   cancelledAt?: Prisma.SortOrder
   pastDueAt?: Prisma.SortOrder
   graceEndsAt?: Prisma.SortOrder
+}
+
+export type SubscriptionStateSumOrderByAggregateInput = {
+  chainId?: Prisma.SortOrder
 }
 
 export type SubscriptionStateNullableScalarRelationFilter = {
@@ -804,6 +870,7 @@ export type SubscriptionStateCreateWithoutTeamInput = {
   catalogPlanId?: string | null
   onChainPlanId?: string | null
   onChainTokenId?: string | null
+  chainId?: number
   currentPeriodStart?: Date | string | null
   currentPeriodEnd?: Date | string | null
   lastEvent?: string | null
@@ -830,6 +897,7 @@ export type SubscriptionStateUncheckedCreateWithoutTeamInput = {
   catalogPlanId?: string | null
   onChainPlanId?: string | null
   onChainTokenId?: string | null
+  chainId?: number
   currentPeriodStart?: Date | string | null
   currentPeriodEnd?: Date | string | null
   lastEvent?: string | null
@@ -885,6 +953,7 @@ export type SubscriptionStateScalarWhereInput = {
   catalogPlanId?: Prisma.StringNullableFilter<"SubscriptionState"> | string | null
   onChainPlanId?: Prisma.StringNullableFilter<"SubscriptionState"> | string | null
   onChainTokenId?: Prisma.StringNullableFilter<"SubscriptionState"> | string | null
+  chainId?: Prisma.IntFilter<"SubscriptionState"> | number
   currentPeriodStart?: Prisma.DateTimeNullableFilter<"SubscriptionState"> | Date | string | null
   currentPeriodEnd?: Prisma.DateTimeNullableFilter<"SubscriptionState"> | Date | string | null
   lastEvent?: Prisma.StringNullableFilter<"SubscriptionState"> | string | null
@@ -906,6 +975,7 @@ export type SubscriptionStateCreateWithoutPaymentsInput = {
   catalogPlanId?: string | null
   onChainPlanId?: string | null
   onChainTokenId?: string | null
+  chainId?: number
   currentPeriodStart?: Date | string | null
   currentPeriodEnd?: Date | string | null
   lastEvent?: string | null
@@ -933,6 +1003,7 @@ export type SubscriptionStateUncheckedCreateWithoutPaymentsInput = {
   catalogPlanId?: string | null
   onChainPlanId?: string | null
   onChainTokenId?: string | null
+  chainId?: number
   currentPeriodStart?: Date | string | null
   currentPeriodEnd?: Date | string | null
   lastEvent?: string | null
@@ -972,6 +1043,7 @@ export type SubscriptionStateUpdateWithoutPaymentsInput = {
   catalogPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   onChainPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   onChainTokenId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chainId?: Prisma.IntFieldUpdateOperationsInput | number
   currentPeriodStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   currentPeriodEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastEvent?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -999,6 +1071,7 @@ export type SubscriptionStateUncheckedUpdateWithoutPaymentsInput = {
   catalogPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   onChainPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   onChainTokenId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chainId?: Prisma.IntFieldUpdateOperationsInput | number
   currentPeriodStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   currentPeriodEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastEvent?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1022,6 +1095,7 @@ export type SubscriptionStateCreateWithoutBillingAdjustmentsInput = {
   catalogPlanId?: string | null
   onChainPlanId?: string | null
   onChainTokenId?: string | null
+  chainId?: number
   currentPeriodStart?: Date | string | null
   currentPeriodEnd?: Date | string | null
   lastEvent?: string | null
@@ -1049,6 +1123,7 @@ export type SubscriptionStateUncheckedCreateWithoutBillingAdjustmentsInput = {
   catalogPlanId?: string | null
   onChainPlanId?: string | null
   onChainTokenId?: string | null
+  chainId?: number
   currentPeriodStart?: Date | string | null
   currentPeriodEnd?: Date | string | null
   lastEvent?: string | null
@@ -1088,6 +1163,7 @@ export type SubscriptionStateUpdateWithoutBillingAdjustmentsInput = {
   catalogPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   onChainPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   onChainTokenId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chainId?: Prisma.IntFieldUpdateOperationsInput | number
   currentPeriodStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   currentPeriodEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastEvent?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1115,6 +1191,7 @@ export type SubscriptionStateUncheckedUpdateWithoutBillingAdjustmentsInput = {
   catalogPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   onChainPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   onChainTokenId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chainId?: Prisma.IntFieldUpdateOperationsInput | number
   currentPeriodStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   currentPeriodEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastEvent?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1138,6 +1215,7 @@ export type SubscriptionStateCreateWithoutCompanyInput = {
   catalogPlanId?: string | null
   onChainPlanId?: string | null
   onChainTokenId?: string | null
+  chainId?: number
   currentPeriodStart?: Date | string | null
   currentPeriodEnd?: Date | string | null
   lastEvent?: string | null
@@ -1164,6 +1242,7 @@ export type SubscriptionStateUncheckedCreateWithoutCompanyInput = {
   catalogPlanId?: string | null
   onChainPlanId?: string | null
   onChainTokenId?: string | null
+  chainId?: number
   currentPeriodStart?: Date | string | null
   currentPeriodEnd?: Date | string | null
   lastEvent?: string | null
@@ -1204,6 +1283,7 @@ export type SubscriptionStateUpdateWithoutCompanyInput = {
   catalogPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   onChainPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   onChainTokenId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chainId?: Prisma.IntFieldUpdateOperationsInput | number
   currentPeriodStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   currentPeriodEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastEvent?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1230,6 +1310,7 @@ export type SubscriptionStateUncheckedUpdateWithoutCompanyInput = {
   catalogPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   onChainPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   onChainTokenId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chainId?: Prisma.IntFieldUpdateOperationsInput | number
   currentPeriodStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   currentPeriodEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastEvent?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1254,6 +1335,7 @@ export type SubscriptionStateCreateWithoutCheckoutSessionsInput = {
   catalogPlanId?: string | null
   onChainPlanId?: string | null
   onChainTokenId?: string | null
+  chainId?: number
   currentPeriodStart?: Date | string | null
   currentPeriodEnd?: Date | string | null
   lastEvent?: string | null
@@ -1281,6 +1363,7 @@ export type SubscriptionStateUncheckedCreateWithoutCheckoutSessionsInput = {
   catalogPlanId?: string | null
   onChainPlanId?: string | null
   onChainTokenId?: string | null
+  chainId?: number
   currentPeriodStart?: Date | string | null
   currentPeriodEnd?: Date | string | null
   lastEvent?: string | null
@@ -1320,6 +1403,7 @@ export type SubscriptionStateUpdateWithoutCheckoutSessionsInput = {
   catalogPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   onChainPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   onChainTokenId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chainId?: Prisma.IntFieldUpdateOperationsInput | number
   currentPeriodStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   currentPeriodEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastEvent?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1347,6 +1431,7 @@ export type SubscriptionStateUncheckedUpdateWithoutCheckoutSessionsInput = {
   catalogPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   onChainPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   onChainTokenId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chainId?: Prisma.IntFieldUpdateOperationsInput | number
   currentPeriodStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   currentPeriodEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastEvent?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1371,6 +1456,7 @@ export type SubscriptionStateCreateManyTeamInput = {
   catalogPlanId?: string | null
   onChainPlanId?: string | null
   onChainTokenId?: string | null
+  chainId?: number
   currentPeriodStart?: Date | string | null
   currentPeriodEnd?: Date | string | null
   lastEvent?: string | null
@@ -1392,6 +1478,7 @@ export type SubscriptionStateUpdateWithoutTeamInput = {
   catalogPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   onChainPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   onChainTokenId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chainId?: Prisma.IntFieldUpdateOperationsInput | number
   currentPeriodStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   currentPeriodEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastEvent?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1418,6 +1505,7 @@ export type SubscriptionStateUncheckedUpdateWithoutTeamInput = {
   catalogPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   onChainPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   onChainTokenId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chainId?: Prisma.IntFieldUpdateOperationsInput | number
   currentPeriodStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   currentPeriodEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastEvent?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1443,6 +1531,7 @@ export type SubscriptionStateUncheckedUpdateManyWithoutTeamInput = {
   catalogPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   onChainPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   onChainTokenId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chainId?: Prisma.IntFieldUpdateOperationsInput | number
   currentPeriodStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   currentPeriodEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   lastEvent?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1515,6 +1604,7 @@ export type SubscriptionStateSelect<ExtArgs extends runtime.Types.Extensions.Int
   catalogPlanId?: boolean
   onChainPlanId?: boolean
   onChainTokenId?: boolean
+  chainId?: boolean
   currentPeriodStart?: boolean
   currentPeriodEnd?: boolean
   lastEvent?: boolean
@@ -1544,6 +1634,7 @@ export type SubscriptionStateSelectCreateManyAndReturn<ExtArgs extends runtime.T
   catalogPlanId?: boolean
   onChainPlanId?: boolean
   onChainTokenId?: boolean
+  chainId?: boolean
   currentPeriodStart?: boolean
   currentPeriodEnd?: boolean
   lastEvent?: boolean
@@ -1569,6 +1660,7 @@ export type SubscriptionStateSelectUpdateManyAndReturn<ExtArgs extends runtime.T
   catalogPlanId?: boolean
   onChainPlanId?: boolean
   onChainTokenId?: boolean
+  chainId?: boolean
   currentPeriodStart?: boolean
   currentPeriodEnd?: boolean
   lastEvent?: boolean
@@ -1594,6 +1686,7 @@ export type SubscriptionStateSelectScalar = {
   catalogPlanId?: boolean
   onChainPlanId?: boolean
   onChainTokenId?: boolean
+  chainId?: boolean
   currentPeriodStart?: boolean
   currentPeriodEnd?: boolean
   lastEvent?: boolean
@@ -1606,7 +1699,7 @@ export type SubscriptionStateSelectScalar = {
   metadata?: boolean
 }
 
-export type SubscriptionStateOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "updatedAt" | "teamId" | "companyId" | "walletAddress" | "status" | "catalogPlanId" | "onChainPlanId" | "onChainTokenId" | "currentPeriodStart" | "currentPeriodEnd" | "lastEvent" | "lastEventAt" | "lastSourceTxHash" | "cancelAtPeriodEnd" | "cancelledAt" | "pastDueAt" | "graceEndsAt" | "metadata", ExtArgs["result"]["subscriptionState"]>
+export type SubscriptionStateOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "updatedAt" | "teamId" | "companyId" | "walletAddress" | "status" | "catalogPlanId" | "onChainPlanId" | "onChainTokenId" | "chainId" | "currentPeriodStart" | "currentPeriodEnd" | "lastEvent" | "lastEventAt" | "lastSourceTxHash" | "cancelAtPeriodEnd" | "cancelledAt" | "pastDueAt" | "graceEndsAt" | "metadata", ExtArgs["result"]["subscriptionState"]>
 export type SubscriptionStateInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
   company?: boolean | Prisma.ArcenCompanyDefaultArgs<ExtArgs>
@@ -1644,6 +1737,7 @@ export type $SubscriptionStatePayload<ExtArgs extends runtime.Types.Extensions.I
     catalogPlanId: string | null
     onChainPlanId: string | null
     onChainTokenId: string | null
+    chainId: number
     currentPeriodStart: Date | null
     currentPeriodEnd: Date | null
     lastEvent: string | null
@@ -2092,6 +2186,7 @@ export interface SubscriptionStateFieldRefs {
   readonly catalogPlanId: Prisma.FieldRef<"SubscriptionState", 'String'>
   readonly onChainPlanId: Prisma.FieldRef<"SubscriptionState", 'String'>
   readonly onChainTokenId: Prisma.FieldRef<"SubscriptionState", 'String'>
+  readonly chainId: Prisma.FieldRef<"SubscriptionState", 'Int'>
   readonly currentPeriodStart: Prisma.FieldRef<"SubscriptionState", 'DateTime'>
   readonly currentPeriodEnd: Prisma.FieldRef<"SubscriptionState", 'DateTime'>
   readonly lastEvent: Prisma.FieldRef<"SubscriptionState", 'String'>

@@ -55,7 +55,7 @@ import {
   shortHash,
 } from "@/lib/format";
 import { useEnvironment } from "@/contexts/environment-context";
-import { DEFAULT_CHAIN_ID } from "@/lib/default-chain";
+import { resolveEnvironmentChainId } from "@/lib/default-chain";
 
 interface SessionRow {
   id: string;
@@ -138,9 +138,9 @@ function SkeletonCard() {
 
 export function SessionsSection() {
   const { isConnected } = useAccount();
-  const walletChainId = useChainId();
   const { envMode, isLoading: envLoading } = useEnvironment();
-  const contractAddresses = useContractAddresses();
+  const configuredChainId = resolveEnvironmentChainId(envMode);
+  const contractAddresses = useContractAddresses(configuredChainId);
 
   const [mounted, setMounted] = useState(false);
   const [payload, setPayload] = useState<SessionsPayload | null>(null);
@@ -157,10 +157,8 @@ export function SessionsSection() {
     setMounted(true);
   }, []);
 
-  const effectiveChainId = isConnected
-    ? walletChainId
-    : DEFAULT_CHAIN_ID;
-  const sessionFundingToken = getUsdcAddress(walletChainId);
+  const effectiveChainId = configuredChainId;
+  const sessionFundingToken = getUsdcAddress(configuredChainId);
 
   const loadSessionsData = useCallback(async () => {
     if (!mounted || envLoading) return;

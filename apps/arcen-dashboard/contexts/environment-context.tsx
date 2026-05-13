@@ -1,10 +1,9 @@
-"use client";
+'use client';
 
-import React, { createContext, useContext, useState, useEffect } from "react";
-import { useAppKitNetwork } from "@reown/appkit/react";
-import { BASE_SEPOLIA_CHAIN_ID, normalizeEnvironmentMode } from "@/lib/default-chain";
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { normalizeEnvironmentMode } from '@/lib/default-chain';
 
-export type EnvMode = "DEVELOPMENT" | "PRODUCTION";
+export type EnvMode = 'DEVELOPMENT' | 'PRODUCTION';
 
 interface EnvironmentContextType {
   envMode: EnvMode;
@@ -16,17 +15,6 @@ const EnvironmentContext = createContext<EnvironmentContextType | undefined>(
   undefined,
 );
 
-function getEnvModeFromChainId(chainId: number | undefined): EnvMode | null {
-  if (!chainId) return null;
-  if (chainId === BASE_SEPOLIA_CHAIN_ID) {
-    // The current launch profile uses the same chain for both development and
-    // production catalog slices, so chain selection alone cannot determine the
-    // workspace environment mode.
-    return null;
-  }
-  return null;
-}
-
 export function EnvironmentProvider({
   children,
 }: {
@@ -34,10 +22,11 @@ export function EnvironmentProvider({
 }) {
   const [envMode, setEnvMode] = useState<EnvMode>("DEVELOPMENT");
   const [isLoading, setIsLoading] = useState(true);
-  const { chainId } = useAppKitNetwork();
 
   useEffect(() => {
-    // Fetch the current environment mode from the team settings
+    // The workspace environment is a team-level setting. Keep it sourced from
+    // the backend so manual environment switches are not overwritten by the
+    // currently connected wallet network.
     fetch("/api/team")
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
@@ -48,27 +37,6 @@ export function EnvironmentProvider({
       .catch(() => {})
       .finally(() => setIsLoading(false));
   }, []);
-
-  // Auto-sync environment when network changes
-  useEffect(() => {
-    if (isLoading || !chainId) return;
-
-    const newEnvMode = getEnvModeFromChainId(Number(chainId));
-    if (newEnvMode && newEnvMode !== envMode) {
-      setEnvMode(normalizeEnvironmentMode(newEnvMode));
-
-      // Sync with backend
-      fetch("/api/team", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          environmentMode: normalizeEnvironmentMode(newEnvMode),
-        }),
-      }).catch((err) => {
-        console.error("Failed to sync environment mode:", err);
-      });
-    }
-  }, [chainId, envMode, isLoading]);
 
   return (
     <EnvironmentContext.Provider value={{ envMode, setEnvMode, isLoading }}>

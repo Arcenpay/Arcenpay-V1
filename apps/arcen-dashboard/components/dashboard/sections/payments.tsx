@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useAccount } from "wagmi";
+import { useAccount, useChainId } from "wagmi";
 import {
   Copy,
   CreditCard,
@@ -43,8 +43,9 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { getUsdcAddress } from "@/lib/contracts";
-import { DEFAULT_CHAIN_ID, getChainLabel } from "@/lib/default-chain";
+import { getChainLabel, resolveEnvironmentChainId } from "@/lib/default-chain";
 import { toast } from "sonner";
+import { useEnvironment } from "@/contexts/environment-context";
 
 type CompanyOption = {
   id: string;
@@ -99,9 +100,6 @@ type CheckoutSessionRow = {
   payment?: { id: string; status: string; txHash: string; amount: string; currency: string } | null;
 };
 
-const RUNTIME_USDC = getUsdcAddress(DEFAULT_CHAIN_ID);
-const RUNTIME_CHAIN_LABEL = getChainLabel(DEFAULT_CHAIN_ID);
-
 function CopyButton({ value, label = "Copy" }: { value: string; label?: string }) {
   const [copied, setCopied] = useState(false);
   return (
@@ -148,6 +146,10 @@ const LINK_KIND_LABELS: Record<string, string> = {
 
 export function PaymentsSection() {
   const { address } = useAccount();
+  const { envMode } = useEnvironment();
+  const configuredChainId = resolveEnvironmentChainId(envMode);
+  const runtimeUsdc = getUsdcAddress(configuredChainId);
+  const runtimeChainLabel = getChainLabel(configuredChainId);
   const [paymentLinks, setPaymentLinks] = useState<PaymentLinkRow[]>([]);
   const [checkoutSessions, setCheckoutSessions] = useState<CheckoutSessionRow[]>([]);
   const [companies, setCompanies] = useState<CompanyOption[]>([]);
@@ -237,7 +239,7 @@ export function PaymentsSection() {
           name: form.name,
           description: form.description || undefined,
           amount: Number(form.amount),
-          acceptedToken: RUNTIME_USDC,
+          acceptedToken: runtimeUsdc,
           recipientWallet: form.recipientWallet,
           companyId: form.companyId || undefined,
           successUrl: form.successUrl || undefined,
@@ -366,7 +368,7 @@ export function PaymentsSection() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Payments</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Create hosted one-time payment links, monitor sessions, and verify {RUNTIME_CHAIN_LABEL} checkout activity.
+            Create hosted one-time payment links, monitor sessions, and verify {runtimeChainLabel} checkout activity.
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={() => void load()} disabled={loading}>
@@ -431,7 +433,7 @@ export function PaymentsSection() {
           <div className="mb-4">
             <p className="text-sm font-semibold text-foreground">Create payment link</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Custom USDC collection link on {RUNTIME_CHAIN_LABEL}. Shareable and reusable.
+              Custom USDC collection link on {runtimeChainLabel}. Shareable and reusable.
             </p>
           </div>
           <div className="space-y-4">
@@ -683,7 +685,7 @@ export function PaymentsSection() {
           <div>
             <p className="text-sm font-semibold text-foreground">Checkout sessions</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Real hosted payment activity and verification status on {RUNTIME_CHAIN_LABEL}.
+              Real hosted payment activity and verification status on {runtimeChainLabel}.
             </p>
           </div>
           <Badge variant="outline">{checkoutSessions.length}</Badge>

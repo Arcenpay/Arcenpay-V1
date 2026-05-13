@@ -6,7 +6,7 @@ import { buildSIWEMessage } from "../../../lib/auth/auth.js";
 import { consumeNonce } from "../../../lib/auth/nonce.server.js";
 import { getSessionFromCtx } from "../../../lib/auth/auth.server.js";
 import { maskEmail } from "../../../lib/auth/auth-flow.js";
-import { BASE_SEPOLIA_CHAIN_ID, getChainLabel } from "../../../lib/platform/default-chain.js";
+import { isSupportedDashboardChainId, getChainLabel, TESTNET_CHAIN_IDS } from "../../../lib/platform/default-chain.js";
 
 const Schema = z.object({
   message: z.string().min(1),
@@ -37,10 +37,11 @@ export async function linkWallet(c: Context) {
     const { message, signature, address, chainId, nonce } = parsed.data;
     const normalizedAddress = address.toLowerCase();
 
-    if (chainId !== BASE_SEPOLIA_CHAIN_ID) {
+    if (!isSupportedDashboardChainId(chainId)) {
+      const labels = TESTNET_CHAIN_IDS.map(getChainLabel).join(" or ");
       return c.json({
           ok: false,
-          error: `Only ${getChainLabel(BASE_SEPOLIA_CHAIN_ID)} is supported right now`,
+          error: `Unsupported network. Connect to ${labels} to link your wallet.`,
           code: "BAD_REQUEST",
         }, 400 as any);
     }

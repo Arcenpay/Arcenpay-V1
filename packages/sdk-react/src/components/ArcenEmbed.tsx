@@ -1726,6 +1726,14 @@ function useSafeWalletClient(): { walletClient: WalletClient | null } {
   }
 }
 
+function useRuntimeChainId(): number {
+  try {
+    return useArcenPay().network.chainId;
+  } catch {
+    return getConfiguredRuntimeChainId();
+  }
+}
+
 function getPlanDisplayPrice(
   plan: ComponentPlanSummary | null | undefined,
   billingPeriod: "monthly" | "annual",
@@ -5400,6 +5408,7 @@ function PaymentContent({
   );
   const activePlan = data.activePlan;
   const scheduledCancellation = getScheduledCancellationTransition(data);
+  const runtimeChainId = useRuntimeChainId();
   const { address, isConnected } = useSafeAccount();
   const { walletClient: wagmiWalletClient } = useSafeWalletClient();
   const [localAddress, setLocalAddress] = useState<string | null>(null);
@@ -5435,7 +5444,7 @@ function PaymentContent({
   const hasInvalidCustomerEmail =
     hasCustomerEmail && !isValidCustomerEmail(normalizedCustomerEmail);
   const paymentMethod = data.paymentMethod as ComponentPaymentMethod | null;
-  const chainId = paymentMethod?.chainId ?? getConfiguredRuntimeChainId();
+  const chainId = paymentMethod?.chainId ?? runtimeChainId;
   const serverSmartAccountAddress =
     typeof paymentMethod?.walletAddress === "string"
       ? paymentMethod.walletAddress
@@ -7217,6 +7226,7 @@ function UnsubscribeContent({
     ? intervalLabel(Number(activePlan.billingInterval)).replace("/", "") || "mo"
     : "mo";
   const isMobileUnsub = containerWidth < 600;
+  const runtimeChainId = useRuntimeChainId();
   const { address, isConnected } = useSafeAccount();
   const { walletClient: wagmiWalletClient } = useSafeWalletClient();
   const [localAddress, setLocalAddress] = useState<string | null>(null);
@@ -7229,7 +7239,7 @@ function UnsubscribeContent({
   >("idle");
   const [txError, setTxError] = useState("");
   const paymentMethod = data.paymentMethod as ComponentPaymentMethod | null;
-  const chainId = paymentMethod?.chainId ?? getConfiguredRuntimeChainId();
+  const chainId = paymentMethod?.chainId ?? runtimeChainId;
   const smartAccountAddress =
     typeof paymentMethod?.walletAddress === "string"
       ? paymentMethod.walletAddress

@@ -81,16 +81,23 @@ import {
   useSignTypedData,
   useWriteContract,
 } from "wagmi";
-import { getUsdcAddress, getTokenOptions } from "@/lib/contracts";
+import { getUsdcAddress, getTokenOptions, getTokenOptionsForEnvironment } from "@/lib/contracts";
 import type { TokenOption } from "@/lib/contracts";
 import {
   DEFAULT_CHAIN_ID,
   DEFAULT_TESTNET_CHAIN_ID,
+  DEFAULT_MAINNET_CHAIN_ID,
+  BASE_SEPOLIA_CHAIN_ID,
+  ARC_TESTNET_CHAIN_ID,
+  BASE_MAINNET_CHAIN_ID,
   getChainLabel,
   isSupportedDashboardChainId,
+  isChainAllowedForEnvironment,
+  resolveEnvironmentChainId,
 } from "@/lib/default-chain";
 import { toast } from "sonner";
 import { PlanFactoryABI } from "@arcenpay/internal-core";
+import { useDashboardWallet } from "@/hooks/use-dashboard-wallet";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -115,6 +122,8 @@ interface CatalogPlan {
   chainSyncStatus?: "PENDING" | "SYNCED" | "FAILED" | "NOT_APPLICABLE";
   onChainPlanId?: string | null;
   chainSyncError?: string | null;
+  chainId?: number | null;
+  chainTxHash?: string | null;
 }
 
 interface CatalogAddOn {
@@ -193,8 +202,6 @@ interface RegisterOnChainResponse {
 
 const TOKEN_OPTIONS: TokenOption[] = getTokenOptions();
 
-const DEFAULT_TOKEN = getUsdcAddress(DEFAULT_TESTNET_CHAIN_ID);
-
 const BILLING_INTERVALS: { label: string; days: number; sublabel: string }[] = [
   { label: "Monthly", days: 30, sublabel: "Every 30 days" },
   { label: "Quarterly", days: 90, sublabel: "Every 90 days" },
@@ -208,6 +215,27 @@ function tokenLabel(address: string): string {
   return match
     ? `${match.symbol} (${address.slice(0, 6)}…${address.slice(-4)})`
     : address.slice(0, 10) + "…";
+}
+
+function getInitialTokenForEnvironment(
+  env: EnvMode,
+  connectedChainId?: number,
+): `0x${string}` {
+  const envTokens = getTokenOptionsForEnvironment(env);
+  const connectedToken = connectedChainId
+    ? getUsdcAddress(connectedChainId)
+    : null;
+
+  if (
+    connectedToken &&
+    envTokens.some(
+      (token) => token.address.toLowerCase() === connectedToken.toLowerCase(),
+    )
+  ) {
+    return connectedToken;
+  }
+
+  return envTokens[0]?.address ?? getUsdcAddress(resolveEnvironmentChainId(env));
 }
 
 function isOwnerActionRequired(data: RegisterOnChainResponse): boolean {
@@ -332,7 +360,8 @@ function CreatePlanDialog({
   onCreated: () => void;
 }) {
   const chainId = useChainId();
-  const connectedToken = getUsdcAddress(chainId);
+  const envTokens = getTokenOptionsForEnvironment(env);
+  const initialAcceptedToken = getInitialTokenForEnvironment(env, chainId);
 
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -346,7 +375,7 @@ function CreatePlanDialog({
     description: "",
     price: "",
     annualPrice: "",
-    acceptedToken: connectedToken,
+    acceptedToken: initialAcceptedToken,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -383,7 +412,7 @@ function CreatePlanDialog({
       description: "",
       price: "",
       annualPrice: "",
-      acceptedToken: connectedToken,
+      acceptedToken: initialAcceptedToken,
     });
     setErrors({});
   }
@@ -410,6 +439,7 @@ function CreatePlanDialog({
             : {}),
           billingInterval: billingIntervalDays,
           acceptedToken: form.acceptedToken,
+          chainId: selectedChainOpt?.chainId,
           environmentMode: env,
         }),
       });
@@ -427,7 +457,7 @@ function CreatePlanDialog({
     }
   }
 
-  const selectedChainOpt = TOKEN_OPTIONS.find(
+  const selectedChainOpt = envTokens.find(
     (o) => o.address === form.acceptedToken,
   );
   const chainName = (o: TokenOption) => o.chainLabel;
@@ -730,14 +760,14 @@ function CreatePlanDialog({
                           </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent className="w-80">
-                          {TOKEN_OPTIONS.some((o) => o.tag === "testnet") && (
+                          {envTokens.some((o) => o.tag === "testnet") && (
                             <>
                               <div className="px-2 pt-2 pb-1">
                                 <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                                   Testnets
                                 </p>
                               </div>
-                              {TOKEN_OPTIONS.filter(
+                              {envTokens.filter(
                                 (o) => o.tag === "testnet",
                               ).map((opt) => {
                                 const isConn = opt.chainId === chainId;
@@ -794,7 +824,7 @@ function CreatePlanDialog({
                               })}
                             </>
                           )}
-                          {TOKEN_OPTIONS.some((o) => o.tag === "mainnet") && (
+                          {envTokens.some((o) => o.tag === "mainnet") && (
                             <>
                               <DropdownMenuSeparator />
                               <div className="px-2 pt-2 pb-1">
@@ -802,7 +832,7 @@ function CreatePlanDialog({
                                   Mainnets
                                 </p>
                               </div>
-                              {TOKEN_OPTIONS.filter(
+                              {envTokens.filter(
                                 (o) => o.tag === "mainnet",
                               ).map((opt) => {
                                 const isConn = opt.chainId === chainId;
@@ -1209,7 +1239,8 @@ function CreateAddOnDialog({
   onCreated: () => void;
 }) {
   const chainId = useChainId();
-  const connectedToken = getUsdcAddress(chainId);
+  const envTokens = getTokenOptionsForEnvironment(env);
+  const initialAcceptedToken = getInitialTokenForEnvironment(env, chainId);
 
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -1220,7 +1251,7 @@ function CreateAddOnDialog({
     billingType: "ONE_TIME" as "ONE_TIME" | "RECURRING",
     saleMode: "STANDALONE" as "STANDALONE" | "UPSELL" | "BOTH",
     price: "",
-    acceptedToken: connectedToken,
+    acceptedToken: initialAcceptedToken,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -1230,7 +1261,7 @@ function CreateAddOnDialog({
     .replace(/\s+/g, "-")
     .replace(/[^a-z0-9-]/g, "");
 
-  const selectedChainOpt = TOKEN_OPTIONS.find(
+  const selectedChainOpt = envTokens.find(
     (o) => o.address === form.acceptedToken,
   );
   const chainName = (o: TokenOption) => o.chainLabel;
@@ -1261,7 +1292,7 @@ function CreateAddOnDialog({
       billingType: "ONE_TIME",
       saleMode: "STANDALONE",
       price: "",
-      acceptedToken: connectedToken,
+      acceptedToken: initialAcceptedToken,
     });
     setErrors({});
   }
@@ -1670,14 +1701,14 @@ function CreateAddOnDialog({
                           </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent className="w-80">
-                          {TOKEN_OPTIONS.some((o) => o.tag === "testnet") && (
+                          {envTokens.some((o) => o.tag === "testnet") && (
                             <>
                               <div className="px-2 pt-2 pb-1">
                                 <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                                   Testnets
                                 </p>
                               </div>
-                              {TOKEN_OPTIONS.filter(
+                              {envTokens.filter(
                                 (o) => o.tag === "testnet",
                               ).map((opt) => {
                                 const isConn = opt.chainId === chainId;
@@ -1734,7 +1765,7 @@ function CreateAddOnDialog({
                               })}
                             </>
                           )}
-                          {TOKEN_OPTIONS.some((o) => o.tag === "mainnet") && (
+                          {envTokens.some((o) => o.tag === "mainnet") && (
                             <>
                               <DropdownMenuSeparator />
                               <div className="px-2 pt-2 pb-1">
@@ -1742,7 +1773,7 @@ function CreateAddOnDialog({
                                   Mainnets
                                 </p>
                               </div>
-                              {TOKEN_OPTIONS.filter(
+                              {envTokens.filter(
                                 (o) => o.tag === "mainnet",
                               ).map((opt) => {
                                 const isConn = opt.chainId === chainId;
@@ -1938,7 +1969,8 @@ function CreateCreditTypeDialog({
   onCreated: () => void;
 }) {
   const chainId = useChainId();
-  const connectedToken = getUsdcAddress(chainId);
+  const envTokens = getTokenOptionsForEnvironment(env);
+  const initialAcceptedToken = getInitialTokenForEnvironment(env, chainId);
 
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -1949,7 +1981,7 @@ function CreateCreditTypeDialog({
     unitNamePlural: "",
     unitsPerPack: "100",
     price: "",
-    acceptedToken: connectedToken,
+    acceptedToken: initialAcceptedToken,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -1959,7 +1991,7 @@ function CreateCreditTypeDialog({
     .replace(/\s+/g, "-")
     .replace(/[^a-z0-9-]/g, "");
 
-  const selectedChainOpt = TOKEN_OPTIONS.find(
+  const selectedChainOpt = envTokens.find(
     (o) => o.address === form.acceptedToken,
   );
   const chainName = (o: TokenOption) => o.chainLabel;
@@ -1994,7 +2026,7 @@ function CreateCreditTypeDialog({
       unitNamePlural: "",
       unitsPerPack: "100",
       price: "",
-      acceptedToken: connectedToken,
+      acceptedToken: initialAcceptedToken,
     });
     setErrors({});
   }
@@ -2334,14 +2366,14 @@ function CreateCreditTypeDialog({
                       </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent className="w-80">
-                      {TOKEN_OPTIONS.some((o) => o.tag === "testnet") && (
+                      {envTokens.some((o) => o.tag === "testnet") && (
                         <>
                           <div className="px-2 pt-2 pb-1">
                             <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                               Testnets
                             </p>
                           </div>
-                          {TOKEN_OPTIONS.filter((o) => o.tag === "testnet").map(
+                          {envTokens.filter((o) => o.tag === "testnet").map(
                             (opt) => {
                               const isConn = opt.chainId === chainId;
                               return (
@@ -2397,7 +2429,7 @@ function CreateCreditTypeDialog({
                           )}
                         </>
                       )}
-                      {TOKEN_OPTIONS.some((o) => o.tag === "mainnet") && (
+                      {envTokens.some((o) => o.tag === "mainnet") && (
                         <>
                           <DropdownMenuSeparator />
                           <div className="px-2 pt-2 pb-1">
@@ -2405,7 +2437,7 @@ function CreateCreditTypeDialog({
                               Mainnets
                             </p>
                           </div>
-                          {TOKEN_OPTIONS.filter((o) => o.tag === "mainnet").map(
+                          {envTokens.filter((o) => o.tag === "mainnet").map(
                             (opt) => {
                               const isConn = opt.chainId === chainId;
                               return (
@@ -2518,6 +2550,7 @@ function EditCreditTypeDialog({
   onSaved: () => void;
 }) {
   const chainId = useChainId();
+  const tokenOptions = getTokenOptionsForEnvironment(credit.environmentMode);
 
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -2587,7 +2620,7 @@ function EditCreditTypeDialog({
     }
   }
 
-  const selectedChainOpt = TOKEN_OPTIONS.find(
+  const selectedChainOpt = tokenOptions.find(
     (o) => o.address === form.acceptedToken,
   );
   const chainName = (o: TokenOption) => o.chainLabel;
@@ -2751,7 +2784,7 @@ function EditCreditTypeDialog({
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-72" align="start">
-                  {TOKEN_OPTIONS.map((opt) => {
+                  {tokenOptions.map((opt) => {
                     const isConn = opt.chainId === chainId;
                     return (
                       <DropdownMenuItem
@@ -2841,7 +2874,7 @@ function PlansTable({
 }) {
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
-  const publicClient = usePublicClient({ chainId: DEFAULT_CHAIN_ID });
+  const publicClient = usePublicClient({ chainId: chainId || DEFAULT_CHAIN_ID });
   const { signTypedDataAsync } = useSignTypedData();
   const { writeContractAsync } = useWriteContract();
 
@@ -2935,9 +2968,10 @@ function PlansTable({
         providerAddress?: string;
       };
 
-      if (chainId !== DEFAULT_CHAIN_ID) {
+      if (chainId !== domain.chainId) {
+        const expectedLabel = getChainLabel(domain.chainId);
         toast.error(
-          `Switch your wallet to ${getChainLabel(DEFAULT_CHAIN_ID)} to sync this plan.`,
+          `Switch your wallet to ${expectedLabel} to sync this plan.`,
         );
         return;
       }
@@ -2974,7 +3008,7 @@ function PlansTable({
       if (plan.onChainPlanId && signingRequired) {
         if (!publicClient) {
           throw new Error(
-            `Public client unavailable for ${getChainLabel(DEFAULT_CHAIN_ID)}`,
+            `Public client unavailable for ${getChainLabel(domain.chainId)}`,
           );
         }
 
@@ -3156,26 +3190,62 @@ function PlansTable({
   }
 
   const envLabel = env === "DEVELOPMENT" ? "Testnet" : "Mainnet";
+  const envTokens = getTokenOptionsForEnvironment(env);
+  const [chainFilter, setChainFilter] = useState<number | null>(null);
+
+  const filteredPlans = chainFilter
+    ? plans.filter((p) => p.chainId === chainFilter)
+    : plans;
+
+  const chainGroups = new Map<string, CatalogPlan[]>();
+  for (const plan of filteredPlans) {
+    const key = plan.chainId ? getChainLabel(plan.chainId) : "Unknown";
+    if (!chainGroups.has(key)) chainGroups.set(key, []);
+    chainGroups.get(key)!.push(plan);
+  }
+  const sortedChains = [...chainGroups.entries()].sort(([a], [b]) =>
+    a.localeCompare(b),
+  );
 
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <Select
-          value={statusFilter || "all"}
-          onValueChange={(v) =>
-            setStatusFilter(v === "all" ? "" : (v as CatalogStatus))
-          }
-        >
-          <SelectTrigger className="w-40">
-            <SelectValue placeholder="All statuses" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All statuses</SelectItem>
-            <SelectItem value="DRAFT">Draft</SelectItem>
-            <SelectItem value="PUBLISHED">Published</SelectItem>
-            <SelectItem value="ARCHIVED">Archived</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-3">
+          <Select
+            value={statusFilter || "all"}
+            onValueChange={(v) =>
+              setStatusFilter(v === "all" ? "" : (v as CatalogStatus))
+            }
+          >
+            <SelectTrigger className="w-40">
+              <SelectValue placeholder="All statuses" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All statuses</SelectItem>
+              <SelectItem value="DRAFT">Draft</SelectItem>
+              <SelectItem value="PUBLISHED">Published</SelectItem>
+              <SelectItem value="ARCHIVED">Archived</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select
+            value={chainFilter?.toString() ?? "all"}
+            onValueChange={(v) =>
+              setChainFilter(v === "all" ? null : Number(v))
+            }
+          >
+            <SelectTrigger className="w-44">
+              <SelectValue placeholder="All networks" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All networks</SelectItem>
+              {envTokens.map((t) => (
+                <SelectItem key={t.chainId} value={t.chainId.toString()}>
+                  {t.chainLabel}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="text-xs">
@@ -3217,14 +3287,31 @@ function PlansTable({
               <TableHead>Price</TableHead>
               <TableHead>Interval</TableHead>
               <TableHead>Token</TableHead>
+              <TableHead>Network</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Chain</TableHead>
+              <TableHead>Sync</TableHead>
               <TableHead>v</TableHead>
               <TableHead />
             </TableRow>
           </TableHeader>
           <TableBody>
-            {plans.map((plan) => {
+            {sortedChains.map(([chainLabel, chainPlans]) => (
+              <React.Fragment key={chainLabel}>
+                <TableRow className="bg-secondary/30 hover:bg-secondary/30">
+                  <TableCell
+                    colSpan={9}
+                    className="py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide"
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-blue-400/60" />
+                      {chainLabel}
+                      <span className="text-muted-foreground/50">
+                        · {chainPlans.length} plan{chainPlans.length !== 1 ? "s" : ""}
+                      </span>
+                    </div>
+                  </TableCell>
+                </TableRow>
+                {chainPlans.map((plan) => {
               const transitions = NEXT_STATUS[plan.status] ?? [];
               const isFree = parseFloat(plan.price) === 0;
               const needsChainSync =
@@ -3291,6 +3378,15 @@ function PlansTable({
                       <span className="text-muted-foreground">—</span>
                     ) : (
                       tokenLabel(plan.acceptedToken)
+                    )}
+                  </TableCell>
+                  <TableCell className="text-xs">
+                    {plan.chainId ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full border border-blue-400/30 text-blue-400 bg-blue-400/5">
+                        {getChainLabel(plan.chainId)}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground text-[10px]">—</span>
                     )}
                   </TableCell>
                   <TableCell>
@@ -3379,6 +3475,8 @@ function PlansTable({
                 </TableRow>
               );
             })}
+            </React.Fragment>
+          ))}
           </TableBody>
         </Table>
       )}
@@ -4489,22 +4587,40 @@ function CreditTypesTable({
 
 // ─── Configuration Tab ─────────────────────────────────────────────────────────
 
-const CHAIN_INFO: Record<
-  EnvMode,
-  { chainId: number; name: string; color: string; tag: string }
-> = {
-  DEVELOPMENT: {
-    chainId: DEFAULT_TESTNET_CHAIN_ID,
-    name: getChainLabel(DEFAULT_TESTNET_CHAIN_ID),
+interface ChainEntry {
+  chainId: number;
+  name: string;
+  color: string;
+  tag: string;
+}
+
+const TESTNET_CHAINS: ChainEntry[] = [
+  {
+    chainId: BASE_SEPOLIA_CHAIN_ID,
+    name: getChainLabel(BASE_SEPOLIA_CHAIN_ID),
     color: "bg-zinc-400",
     tag: "testnet",
   },
-  PRODUCTION: {
-    chainId: DEFAULT_CHAIN_ID,
-    name: getChainLabel(DEFAULT_CHAIN_ID),
+  {
+    chainId: ARC_TESTNET_CHAIN_ID,
+    name: getChainLabel(ARC_TESTNET_CHAIN_ID),
     color: "bg-zinc-400",
     tag: "testnet",
   },
+];
+
+const MAINNET_CHAINS: ChainEntry[] = [
+  {
+    chainId: BASE_MAINNET_CHAIN_ID,
+    name: getChainLabel(BASE_MAINNET_CHAIN_ID),
+    color: "bg-emerald-500",
+    tag: "mainnet",
+  },
+];
+
+const CHAIN_INFO: Record<EnvMode, ChainEntry[]> = {
+  DEVELOPMENT: TESTNET_CHAINS,
+  PRODUCTION: MAINNET_CHAINS,
 };
 
 type CatalogConfigSettings = {
@@ -4544,8 +4660,11 @@ function ConfigurationTab() {
   const { envMode, setEnvMode } = useEnvironment();
   const chainId = useChainId();
   const { isConnected, address } = useAccount();
+  const { hasConnectedWallet, switchToRequiredNetwork } = useDashboardWallet();
+  const alternateEnvMode: EnvMode =
+    envMode === "DEVELOPMENT" ? "PRODUCTION" : "DEVELOPMENT";
 
-  const [switchTarget, setSwitchTarget] = useState<EnvMode>("DEVELOPMENT");
+  const [switchTarget, setSwitchTarget] = useState<EnvMode>(alternateEnvMode);
   const [confirmText, setConfirmText] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [switching, setSwitching] = useState(false);
@@ -4561,6 +4680,10 @@ function ConfigurationTab() {
   const [catalogPlans, setCatalogPlans] = useState<
     { id: string; name: string; tier: string; price: string }[]
   >([]);
+  useEffect(() => {
+    setSwitchTarget(alternateEnvMode);
+  }, [alternateEnvMode]);
+
   useEffect(() => {
     fetch(`/api/catalog/plans?environmentMode=${envMode}&limit=50`, {
       cache: "no-store",
@@ -4650,7 +4773,7 @@ function ConfigurationTab() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Failed to save");
-      toast.success(`Configuration saved for ${currentChainInfo.name}`);
+      toast.success(`Configuration saved for ${envLabel} · ${envChains.map((c) => c.name).join(", ")}`);
     } catch (err: unknown) {
       setConfigError(
         err instanceof Error ? err.message : "Failed to save configuration",
@@ -4663,6 +4786,10 @@ function ConfigurationTab() {
   async function handleSwitch(e: React.FormEvent) {
     e.preventDefault();
     if (confirmText !== "CONFIRM") return;
+    if (switchTarget === envMode) {
+      setSwitchError("Select the other environment before switching.");
+      return;
+    }
     setSwitching(true);
     setSwitchError(null);
     try {
@@ -4677,11 +4804,22 @@ function ConfigurationTab() {
       const data = await res.json();
       if (res.ok) {
         setEnvMode(data.environmentMode as EnvMode);
+        if (hasConnectedWallet && typeof data.chainId === "number") {
+          void switchToRequiredNetwork(data.chainId);
+        }
         setDialogOpen(false);
         setConfirmText("");
-        toast.success(
-          `Switched to ${data.environmentMode} — Chain ${data.chainId}`,
-        );
+        const warnings = data.warnings as string[] | undefined;
+        if (warnings && warnings.length > 0) {
+          toast.success(
+            `Switched to ${data.environmentMode}`,
+            { description: warnings[0], duration: 6000 },
+          );
+        } else {
+          toast.success(
+            `Switched to ${data.environmentMode} — Chain ${data.chainId}`,
+          );
+        }
       } else {
         setSwitchError(data.error || "Switch failed");
       }
@@ -4690,10 +4828,13 @@ function ConfigurationTab() {
     }
   }
 
-  const currentChainInfo = CHAIN_INFO[envMode];
-  const walletOnConfiguredChain = chainId === currentChainInfo.chainId;
+  const configuredChainId = resolveEnvironmentChainId(envMode);
+  const envChains = CHAIN_INFO[envMode];
+  const envLabel = envMode === "DEVELOPMENT" ? "Development" : "Production";
+  const envTag = envMode === "DEVELOPMENT" ? "testnet" : "mainnet";
+  const walletOnConfiguredChain = isChainAllowedForEnvironment(chainId, envMode);
   const walletOnSupportedChain = isSupportedDashboardChainId(chainId);
-  const usdcAddress = getUsdcAddress(currentChainInfo.chainId);
+  const usdcAddress = getUsdcAddress(configuredChainId);
 
   // ToggleRow helper
   function ToggleRow({
@@ -4732,17 +4873,17 @@ function ConfigurationTab() {
       {/* Active environment status bar */}
       <div className="rounded-xl border border-border bg-card p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-2.5 h-2.5 rounded-full shrink-0 bg-zinc-400" />
+          <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${envChains[0].color}`} />
           <div>
             <p className="text-sm font-bold text-foreground leading-tight">
-              Configured Network
+              {envLabel} · {envChains.length} chain{envChains.length !== 1 ? "s" : ""}
             </p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {currentChainInfo.name} · Chain {currentChainInfo.chainId}
+              {envChains.map((c) => c.name).join(", ")}
             </p>
           </div>
           <span className="text-[9px] font-bold uppercase px-2 py-0.5 rounded-full border border-border text-muted-foreground">
-            {currentChainInfo.tag}
+            {envTag}
           </span>
         </div>
         <div className="flex items-center gap-3">
@@ -5023,48 +5164,46 @@ function ConfigurationTab() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border/30">
-              {(
-                Object.entries(CHAIN_INFO) as [
-                  EnvMode,
-                  (typeof CHAIN_INFO)[EnvMode],
-                ][]
-              ).map(([mode, info]) => {
-                const usdc = getUsdcAddress(info.chainId);
-                const isActive = mode === envMode;
-                return (
-                  <tr
-                    key={mode}
-                    className={`transition-colors ${isActive ? "bg-secondary/10" : "hover:bg-secondary/5"}`}
-                  >
-                    <td className="py-3.5 px-5">
-                      <div className="flex items-center gap-2.5">
-                        <div
-                          className={`w-2 h-2 rounded-full shrink-0 ${info.color}`}
-                        />
-                        <span className="font-semibold text-foreground">
-                          {mode === "DEVELOPMENT"
-                            ? "Development"
-                            : "Production"}
-                        </span>
-                        {isActive && (
-                          <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-foreground text-background">
-                            Active
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-5 text-muted-foreground">
-                      {info.name}
-                    </td>
-                    <td className="py-3.5 px-5 font-mono text-muted-foreground">
-                      {info.chainId}
-                    </td>
-                    <td className="py-3.5 px-5 font-mono text-xs text-muted-foreground">
-                      {usdc.slice(0, 10)}…{usdc.slice(-6)}
-                    </td>
-                  </tr>
-                );
-              })}
+              {(Object.entries(CHAIN_INFO) as [EnvMode, ChainEntry[]][]).map(
+                ([mode, chains]) =>
+                  chains.map((chain) => {
+                    const usdc = getUsdcAddress(chain.chainId);
+                    const isActive = mode === envMode;
+                    return (
+                      <tr
+                        key={`${mode}-${chain.chainId}`}
+                        className={`transition-colors ${isActive ? "bg-secondary/10" : "hover:bg-secondary/5"}`}
+                      >
+                        <td className="py-3.5 px-5">
+                          <div className="flex items-center gap-2.5">
+                            <div
+                              className={`w-2 h-2 rounded-full shrink-0 ${chain.color}`}
+                            />
+                            <span className="font-semibold text-foreground">
+                              {mode === "DEVELOPMENT"
+                                ? "Development"
+                                : "Production"}
+                            </span>
+                            {isActive && (
+                              <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-foreground text-background">
+                                Active
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-3.5 px-5 text-muted-foreground">
+                          {chain.name}
+                        </td>
+                        <td className="py-3.5 px-5 font-mono text-muted-foreground">
+                          {chain.chainId}
+                        </td>
+                        <td className="py-3.5 px-5 font-mono text-xs text-muted-foreground">
+                          {usdc.slice(0, 10)}…{usdc.slice(-6)}
+                        </td>
+                      </tr>
+                    );
+                  }),
+              )}
             </tbody>
           </table>
         </div>
@@ -5072,7 +5211,7 @@ function ConfigurationTab() {
         <div className="px-5 py-3 border-t border-border/50 bg-secondary/5 flex items-center gap-2">
           <Coins className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
           <p className="text-xs text-muted-foreground">
-            Active USDC ({currentChainInfo.name}):{" "}
+            Active USDC ({getChainLabel(configuredChainId)}):{" "}
             <span className="font-mono text-foreground">{usdcAddress}</span>
           </p>
         </div>
@@ -5090,7 +5229,17 @@ function ConfigurationTab() {
           </p>
         </div>
         <div className="p-5">
-          <Sheet open={dialogOpen} onOpenChange={setDialogOpen}>
+          <Sheet
+            open={dialogOpen}
+            onOpenChange={(open) => {
+              setDialogOpen(open);
+              if (open) {
+                setSwitchTarget(alternateEnvMode);
+                setConfirmText("");
+                setSwitchError(null);
+              }
+            }}
+          >
             <SheetTrigger asChild>
               <Button
                 size="default"
@@ -5112,9 +5261,13 @@ function ConfigurationTab() {
               <form onSubmit={handleSwitch} className="space-y-5 py-5">
                 {/* Target selector */}
                 <div className="grid grid-cols-1 gap-3">
-                  {(["DEVELOPMENT"] as EnvMode[]).map((mode) => {
-                    const info = CHAIN_INFO[mode];
+                  {(Object.keys(CHAIN_INFO) as EnvMode[])
+                    .filter((mode) => mode !== envMode)
+                    .map((mode) => {
+                    const chains = CHAIN_INFO[mode];
                     const isSelected = switchTarget === mode;
+                    const envLabel =
+                      mode === "PRODUCTION" ? "Production" : "Development";
                     return (
                       <button
                         key={mode}
@@ -5124,18 +5277,24 @@ function ConfigurationTab() {
                       >
                         <div className="flex items-center gap-2">
                           <div
-                            className={`w-2 h-2 rounded-full ${info.color}`}
+                            className={`w-2 h-2 rounded-full ${chains[0].color}`}
                           />
                           <span className="text-xs font-bold uppercase tracking-wider text-foreground">
-                            Development
+                            {envLabel}
                           </span>
                         </div>
-                        <p className="text-xs text-muted-foreground">
-                          {info.name}
-                        </p>
-                        <p className="text-[10px] font-mono text-muted-foreground">
-                          Chain {info.chainId}
-                        </p>
+                        <div className="space-y-1">
+                          {chains.map((c) => (
+                            <div key={c.chainId} className="flex items-center gap-2">
+                              <p className="text-xs text-muted-foreground">
+                                {c.name}
+                              </p>
+                              <p className="text-[10px] font-mono text-muted-foreground">
+                                Chain {c.chainId}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
                         {isSelected && (
                           <Check className="w-4 h-4 text-foreground ml-auto mt-1" />
                         )}
@@ -5188,7 +5347,11 @@ function ConfigurationTab() {
                   </Button>
                   <Button
                     type="submit"
-                    disabled={confirmText !== "CONFIRM" || switching}
+                    disabled={
+                      confirmText !== "CONFIRM" ||
+                      switching ||
+                      switchTarget === envMode
+                    }
                     className="min-w-28"
                   >
                     {switching ? (
@@ -5906,7 +6069,7 @@ function EditPlanDialog({
   onOpenChange?: (open: boolean) => void;
 }) {
   const chainId = useChainId();
-  const connectedToken = getUsdcAddress(chainId);
+  const tokenOptions = getTokenOptionsForEnvironment(plan.environmentMode);
 
   const [internalOpen, setInternalOpen] = useState(false);
   const open = externalOpen !== undefined ? externalOpen : internalOpen;
@@ -5951,7 +6114,7 @@ function EditPlanDialog({
     .toLowerCase()
     .replace(/\s+/g, "-")
     .replace(/[^a-z0-9-]/g, "");
-  const selectedChainOpt = TOKEN_OPTIONS.find(
+  const selectedChainOpt = tokenOptions.find(
     (o) => o.address === form.acceptedToken,
   );
   const selectedIntervalLabel =
@@ -6008,6 +6171,7 @@ function EditPlanDialog({
               : null,
           billingInterval: billingIntervalDays,
           acceptedToken: form.acceptedToken,
+          chainId: selectedChainOpt?.chainId,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -6335,14 +6499,14 @@ function EditPlanDialog({
                           </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent className="w-80">
-                          {TOKEN_OPTIONS.some((o) => o.tag === "testnet") && (
+                          {tokenOptions.some((o) => o.tag === "testnet") && (
                             <>
                               <div className="px-2 pt-2 pb-1">
                                 <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                                   Testnets
                                 </p>
                               </div>
-                              {TOKEN_OPTIONS.filter(
+                              {tokenOptions.filter(
                                 (o) => o.tag === "testnet",
                               ).map((opt) => {
                                 const isConn = opt.chainId === chainId;
@@ -6399,7 +6563,7 @@ function EditPlanDialog({
                               })}
                             </>
                           )}
-                          {TOKEN_OPTIONS.some((o) => o.tag === "mainnet") && (
+                          {tokenOptions.some((o) => o.tag === "mainnet") && (
                             <>
                               <DropdownMenuSeparator />
                               <div className="px-2 pt-2 pb-1">
@@ -6407,7 +6571,7 @@ function EditPlanDialog({
                                   Mainnets
                                 </p>
                               </div>
-                              {TOKEN_OPTIONS.filter(
+                              {tokenOptions.filter(
                                 (o) => o.tag === "mainnet",
                               ).map((opt) => {
                                 const isConn = opt.chainId === chainId;
@@ -7963,6 +8127,14 @@ function PlanDetailView({
                 </p>
                 <EnvBadge mode={plan.environmentMode} />
               </div>
+              {plan.chainId && (
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1.5">Network</p>
+                  <Badge variant="outline" className="text-xs border-blue-400/50 text-blue-400 bg-blue-400/5">
+                    {getChainLabel(plan.chainId)}
+                  </Badge>
+                </div>
+              )}
             </div>
           </div>
 
@@ -8047,7 +8219,7 @@ function AddOnDetailView({
   onBack: () => void;
   onUpdated: () => void;
 }) {
-  const { address } = useAccount();
+  const { address, chainId: walletChainId } = useAccount();
   const [detailTab, setDetailTab] = useState<"companies" | "billing">(
     "companies",
   );
@@ -8512,7 +8684,7 @@ function AddOnDetailView({
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">
                         Create or copy a public{" "}
-                        {getChainLabel(DEFAULT_CHAIN_ID)} pay link for this
+                        {getChainLabel(walletChainId ?? DEFAULT_CHAIN_ID)} pay link for this
                         add-on.
                       </p>
                     </div>

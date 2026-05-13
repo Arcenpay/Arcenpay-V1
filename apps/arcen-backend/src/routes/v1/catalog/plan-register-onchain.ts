@@ -3,7 +3,8 @@ import { db } from "../../../db.js";
 import { requirePermission, isErrorResponse } from "../../../lib/auth/api-auth.js";
 import { writeAuditEvent } from "../../../lib/platform/audit.js";
 import { getRpcUrl } from "../../../config.js";
-import { DEFAULT_CHAIN_ID } from "../../../lib/platform/default-chain.js";
+import { isSupportedDashboardChainId } from "../../../lib/platform/default-chain.js";
+import { resolvePlanNetwork } from "../../../lib/catalog/plan-network.js";
 import {
   createWalletClient,
   createPublicClient,
@@ -13,7 +14,7 @@ import {
   verifyTypedData,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { PlanFactoryABI, getChain, getContractAddresses, getTokenAddress } from "@arcenpay/internal-core";
+import { PlanFactoryABI, getChain, getContractAddresses } from "@arcenpay/internal-core";
 import { isAddress } from "viem";
 import { z } from "zod";
 
@@ -178,13 +179,47 @@ export async function registerPlanOnChain(c: Context) {
     return c.json({ error: "No provider address is available for on-chain registration." }, 400 as any);
   }
 
-  const plan = await db.catalogPlan.findFirst({
+  const storedPlan = await db.catalogPlan.findFirst({
     where: { id: planId, teamId: auth.team.teamId },
   });
 
-  if (!plan) {
+  if (!storedPlan) {
     return c.json({ error: "Plan not found" }, 404 as any);
   }
+
+  const resolvedNetwork = resolvePlanNetwork({
+    environmentMode: storedPlan.environmentMode,
+    acceptedToken: storedPlan.acceptedToken,
+    requestedChainId: storedPlan.chainId,
+  });
+  if (!resolvedNetwork) {
+    return c.json({
+      error:
+        "Plan has an invalid billing network configuration. Update the plan and try again.",
+    }, 400 as any);
+  }
+
+  const needsPlanRepair =
+    !storedPlan.onChainPlanId &&
+    (storedPlan.chainId !== resolvedNetwork.chainId ||
+      storedPlan.acceptedToken.toLowerCase() !==
+        resolvedNetwork.acceptedToken.toLowerCase());
+
+  const plan = needsPlanRepair
+    ? await db.catalogPlan.update({
+        where: { id: storedPlan.id },
+        data: {
+          chainId: resolvedNetwork.chainId,
+          acceptedToken: resolvedNetwork.acceptedToken,
+          chainSyncStatus:
+            parseFloat(storedPlan.price.toString()) === 0
+              ? "NOT_APPLICABLE"
+              : "PENDING",
+          chainSyncError: null,
+          chainSyncedAt: null,
+        },
+      })
+    : storedPlan;
 
   if (parseFloat(plan.price.toString()) === 0) {
     await db.catalogPlan.update({
@@ -204,7 +239,13 @@ export async function registerPlanOnChain(c: Context) {
     });
   }
 
-  const chainId = DEFAULT_CHAIN_ID;
+  if (!isSupportedDashboardChainId(plan.chainId)) {
+    return c.json(
+      { error: `Plan chain ${plan.chainId} is not supported by this deployment.` },
+      400 as any,
+    );
+  }
+  const chainId = plan.chainId;
   const rpcUrl = getRpcUrl(chainId);
   const chain = getChain(chainId);
 
@@ -224,12 +265,9 @@ export async function registerPlanOnChain(c: Context) {
     Math.round(parseFloat(plan.price.toString()) * 1_000_000),
   );
   const billingIntervalSeconds = plan.billingInterval * 86400;
-  const storedToken = plan.acceptedToken;
-  const usdcAddress = (
-    storedToken.startsWith("0x") && storedToken.length === 42
-      ? storedToken
-      : (getTokenAddress(chainId, "USDC") ?? storedToken)
-  ) as `0x${string}`;
+  const usdcAddress = plan.onChainPlanId
+    ? (plan.acceptedToken as `0x${string}`)
+    : resolvedNetwork.acceptedToken;
 
   if (plan.onChainPlanId) {
     const onChainPlanId = BigInt(plan.onChainPlanId);
@@ -687,6 +725,7 @@ export async function registerPlanOnChain(c: Context) {
   const updatedPlan = await db.catalogPlan.update({
     where: { id: planId },
     data: {
+      chainId,
       chainSyncStatus:
         confirmedOnChain && decodedOnChainPlanId ? "SYNCED" : "PENDING",
       chainTxHash: txHash,
