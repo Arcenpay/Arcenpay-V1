@@ -5,11 +5,8 @@ import { FeeCollectorABI, getTokenAddress, getContractAddresses } from "@arcenpa
 import { db } from "../../../db.js";
 import { isErrorResponse, requirePermission } from "../../../lib/auth/api-auth.js";
 import { getRpcUrl } from "../../../config.js";
-import {
-  DEFAULT_CHAIN_ID,
-  normalizeEnvironmentMode,
-  resolveEnvironmentChainId,
-} from "../../../lib/platform/default-chain.js";
+import { DEFAULT_CHAIN_ID } from "../../../lib/platform/default-chain.js";
+import { requireResolvedActiveEnvironment } from "../../../lib/environments/workspace-environments.js";
 
 const querySchema = z.object({
   chainId: z.coerce.number().int().positive().optional(),
@@ -68,21 +65,15 @@ export async function getOverview(c: Context) {
     return c.json({ error: "Invalid query", details: parsed.error.flatten().fieldErrors }, 400 as any);
   }
 
-  const team = await db.team.findUnique({
-    where: { id: auth.team.teamId },
-    select: { environmentMode: true },
-  });
-  if (!team) {
-    return c.json({ error: "Team not found" }, 404 as any);
+  const activeEnvironment = await requireResolvedActiveEnvironment(
+    auth.session,
+    auth.team.teamId,
+  );
+  if (!activeEnvironment) {
+    return c.json({ error: "No workspace environment selected" }, 409 as any);
   }
-
-  const environmentMode = normalizeEnvironmentMode(
-    parsed.data.environmentMode || team.environmentMode,
-  );
-  const chainId = resolveEnvironmentChainId(
-    environmentMode,
-    parsed.data.chainId,
-  );
+  const environmentMode = activeEnvironment.mode;
+  const chainId = activeEnvironment.chainId;
 
   const [
     activePlans,
@@ -94,7 +85,7 @@ export async function getOverview(c: Context) {
       db.catalogPlan.count({
         where: {
           teamId: auth.team.teamId,
-          environmentMode,
+          environmentId: activeEnvironment.id,
           active: true,
           status: { not: "ARCHIVED" },
         },
@@ -102,13 +93,14 @@ export async function getOverview(c: Context) {
       db.subscriptionState.count({
         where: {
           teamId: auth.team.teamId,
+          environmentId: activeEnvironment.id,
           status: { in: ["ACTIVE", "PAST_DUE"] },
         },
       }),
       db.invoice.aggregate({
         where: {
           teamId: auth.team.teamId,
-          environmentMode,
+          environmentId: activeEnvironment.id,
           status: "PAID",
           issuedAt: {
             gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),

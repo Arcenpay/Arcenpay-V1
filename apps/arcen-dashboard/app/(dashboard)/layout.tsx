@@ -13,5 +13,12 @@ export default async function DashboardLayout({
     redirect("/onboarding/wallet");
   }
 
+  if (!session.activeEnvironment) {
+    if (session.currentTeamRole === "OWNER" || session.currentTeamRole === "ADMIN") {
+      redirect("/onboarding/environment");
+    }
+    redirect("/onboarding/environment/waiting");
+  }
+
   return <>{children}</>;
 }

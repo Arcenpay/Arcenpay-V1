@@ -4657,18 +4657,10 @@ const DEFAULT_CONFIG_SETTINGS: CatalogConfigSettings = {
 };
 
 function ConfigurationTab() {
-  const { envMode, setEnvMode } = useEnvironment();
+  const { envMode, activeEnvironment } = useEnvironment();
+  const environmentKey = activeEnvironment?.id ?? envMode;
   const chainId = useChainId();
   const { isConnected, address } = useAccount();
-  const { hasConnectedWallet, switchToRequiredNetwork } = useDashboardWallet();
-  const alternateEnvMode: EnvMode =
-    envMode === "DEVELOPMENT" ? "PRODUCTION" : "DEVELOPMENT";
-
-  const [switchTarget, setSwitchTarget] = useState<EnvMode>(alternateEnvMode);
-  const [confirmText, setConfirmText] = useState("");
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [switching, setSwitching] = useState(false);
-  const [switchError, setSwitchError] = useState<string | null>(null);
   const [loadingConfig, setLoadingConfig] = useState(false);
   const [savingConfig, setSavingConfig] = useState(false);
   const [configError, setConfigError] = useState<string | null>(null);
@@ -4680,9 +4672,6 @@ function ConfigurationTab() {
   const [catalogPlans, setCatalogPlans] = useState<
     { id: string; name: string; tier: string; price: string }[]
   >([]);
-  useEffect(() => {
-    setSwitchTarget(alternateEnvMode);
-  }, [alternateEnvMode]);
 
   useEffect(() => {
     fetch(`/api/catalog/plans?environmentMode=${envMode}&limit=50`, {
@@ -4693,7 +4682,7 @@ function ConfigurationTab() {
         if (d?.plans) setCatalogPlans(d.plans);
       })
       .catch(() => {});
-  }, [envMode]);
+  }, [envMode, environmentKey]);
 
   useEffect(() => {
     let cancelled = false;
@@ -4726,7 +4715,7 @@ function ConfigurationTab() {
     return () => {
       cancelled = true;
     };
-  }, [envMode]);
+  }, [envMode, environmentKey]);
 
   useEffect(() => {
     if (catalogPlans.length === 0) return;
@@ -4783,55 +4772,12 @@ function ConfigurationTab() {
     }
   }
 
-  async function handleSwitch(e: React.FormEvent) {
-    e.preventDefault();
-    if (confirmText !== "CONFIRM") return;
-    if (switchTarget === envMode) {
-      setSwitchError("Select the other environment before switching.");
-      return;
-    }
-    setSwitching(true);
-    setSwitchError(null);
-    try {
-      const res = await fetch("/api/environment/switch", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          environmentMode: switchTarget,
-          confirmText: "CONFIRM",
-        }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setEnvMode(data.environmentMode as EnvMode);
-        if (hasConnectedWallet && typeof data.chainId === "number") {
-          void switchToRequiredNetwork(data.chainId);
-        }
-        setDialogOpen(false);
-        setConfirmText("");
-        const warnings = data.warnings as string[] | undefined;
-        if (warnings && warnings.length > 0) {
-          toast.success(
-            `Switched to ${data.environmentMode}`,
-            { description: warnings[0], duration: 6000 },
-          );
-        } else {
-          toast.success(
-            `Switched to ${data.environmentMode} — Chain ${data.chainId}`,
-          );
-        }
-      } else {
-        setSwitchError(data.error || "Switch failed");
-      }
-    } finally {
-      setSwitching(false);
-    }
-  }
-
-  const configuredChainId = resolveEnvironmentChainId(envMode);
-  const envChains = CHAIN_INFO[envMode];
+  const configuredChainId = activeEnvironment?.chainId ?? resolveEnvironmentChainId(envMode);
+  const envChains = activeEnvironment
+    ? CHAIN_INFO[envMode].filter((chain) => chain.chainId === configuredChainId)
+    : CHAIN_INFO[envMode];
   const envLabel = envMode === "DEVELOPMENT" ? "Development" : "Production";
-  const envTag = envMode === "DEVELOPMENT" ? "testnet" : "mainnet";
+  const envTag = envMode === "DEVELOPMENT" ? "DEV" : "PROD";
   const walletOnConfiguredChain = isChainAllowedForEnvironment(chainId, envMode);
   const walletOnSupportedChain = isSupportedDashboardChainId(chainId);
   const usdcAddress = getUsdcAddress(configuredChainId);
@@ -5217,156 +5163,24 @@ function ConfigurationTab() {
         </div>
       </div>
 
-      {/* ── Switch Environment ─────────────────────────────────── */}
       <div className="rounded-xl border border-border bg-card overflow-hidden">
         <div className="px-5 py-4 border-b border-border bg-secondary/20">
           <h3 className="text-sm font-bold text-foreground">
-            Switch Environment
+            Environment Workspace
           </h3>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Switches which blockchain network the catalog is published to.
-            Production requires deployed contracts on Base Mainnet.
+            This catalog is now pinned to the selected workspace environment. Use the header picker or workspace settings to switch environments.
           </p>
         </div>
         <div className="p-5">
-          <Sheet
-            open={dialogOpen}
-            onOpenChange={(open) => {
-              setDialogOpen(open);
-              if (open) {
-                setSwitchTarget(alternateEnvMode);
-                setConfirmText("");
-                setSwitchError(null);
-              }
-            }}
-          >
-            <SheetTrigger asChild>
-              <Button
-                size="default"
-                variant="outline"
-                className="gap-2 h-10 hover:bg-secondary transition-colors"
-              >
-                <SlidersHorizontal className="w-4 h-4" />
-                Switch Environment
-              </Button>
-            </SheetTrigger>
-            <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
-              <SheetHeader className="pb-4 border-b border-border">
-                <SheetTitle>Switch Environment</SheetTitle>
-                <SheetDescription>
-                  Environment mode currently runs on the configured workspace
-                  network.
-                </SheetDescription>
-              </SheetHeader>
-              <form onSubmit={handleSwitch} className="space-y-5 py-5">
-                {/* Target selector */}
-                <div className="grid grid-cols-1 gap-3">
-                  {(Object.keys(CHAIN_INFO) as EnvMode[])
-                    .filter((mode) => mode !== envMode)
-                    .map((mode) => {
-                    const chains = CHAIN_INFO[mode];
-                    const isSelected = switchTarget === mode;
-                    const envLabel =
-                      mode === "PRODUCTION" ? "Production" : "Development";
-                    return (
-                      <button
-                        key={mode}
-                        type="button"
-                        onClick={() => setSwitchTarget(mode)}
-                        className={`flex flex-col items-start gap-2 p-4 rounded-xl border text-left transition-all ${isSelected ? "border-foreground bg-secondary" : "border-border hover:bg-secondary/50"}`}
-                      >
-                        <div className="flex items-center gap-2">
-                          <div
-                            className={`w-2 h-2 rounded-full ${chains[0].color}`}
-                          />
-                          <span className="text-xs font-bold uppercase tracking-wider text-foreground">
-                            {envLabel}
-                          </span>
-                        </div>
-                        <div className="space-y-1">
-                          {chains.map((c) => (
-                            <div key={c.chainId} className="flex items-center gap-2">
-                              <p className="text-xs text-muted-foreground">
-                                {c.name}
-                              </p>
-                              <p className="text-[10px] font-mono text-muted-foreground">
-                                Chain {c.chainId}
-                              </p>
-                            </div>
-                          ))}
-                        </div>
-                        {isSelected && (
-                          <Check className="w-4 h-4 text-foreground ml-auto mt-1" />
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="confirm-text"
-                    className="text-sm font-semibold"
-                  >
-                    Type{" "}
-                    <span className="font-mono bg-secondary px-1.5 py-0.5 rounded text-foreground">
-                      CONFIRM
-                    </span>{" "}
-                    to proceed
-                  </Label>
-                  <Input
-                    id="confirm-text"
-                    value={confirmText}
-                    onChange={(e) => setConfirmText(e.target.value)}
-                    placeholder="CONFIRM"
-                    className="bg-background border-border font-mono h-11"
-                    autoComplete="off"
-                  />
-                </div>
-
-                {switchError && (
-                  <div className="flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-4">
-                    <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-destructive" />
-                    <span className="text-sm text-destructive">
-                      {switchError}
-                    </span>
-                  </div>
-                )}
-
-                <div className="flex justify-end gap-3 pt-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      setDialogOpen(false);
-                      setConfirmText("");
-                      setSwitchError(null);
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={
-                      confirmText !== "CONFIRM" ||
-                      switching ||
-                      switchTarget === envMode
-                    }
-                    className="min-w-28"
-                  >
-                    {switching ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Switching…
-                      </>
-                    ) : (
-                      "Switch"
-                    )}
-                  </Button>
-                </div>
-              </form>
-            </SheetContent>
-          </Sheet>
+          <div className="rounded-lg border border-border bg-secondary/5 px-4 py-4">
+            <p className="text-sm font-medium text-foreground">
+              Only {getChainLabel(configuredChainId)} is active in this workspace.
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Plans, credits, and catalog configuration created here stay locked to the currently selected environment.
+            </p>
+          </div>
         </div>
       </div>
 
@@ -9361,7 +9175,8 @@ function CreditDetailView({
 type CatalogTab = "plans" | "addons" | "credits" | "config";
 
 export function CatalogSection() {
-  const { envMode } = useEnvironment();
+  const { envMode, activeEnvironment } = useEnvironment();
+  const environmentKey = activeEnvironment?.id ?? envMode;
   const [activeTab, setActiveTab] = useState<CatalogTab>("plans");
   const [refresh, setRefresh] = useState(0);
   const [selectedPlan, setSelectedPlan] = useState<CatalogPlan | null>(null);
@@ -9387,7 +9202,7 @@ export function CatalogSection() {
     } finally {
       setPlansLoading(false);
     }
-  }, [envMode]);
+  }, [envMode, environmentKey]);
 
   const loadAddOns = useCallback(async () => {
     setAddOnsLoading(true);
@@ -9402,7 +9217,7 @@ export function CatalogSection() {
     } finally {
       setAddOnsLoading(false);
     }
-  }, [envMode]);
+  }, [envMode, environmentKey]);
 
   useEffect(() => {
     loadPlans();

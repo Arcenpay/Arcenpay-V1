@@ -388,6 +388,7 @@ export const ModelName = {
   AuthSession: 'AuthSession',
   EmailAuthCode: 'EmailAuthCode',
   Team: 'Team',
+  WorkspaceEnvironment: 'WorkspaceEnvironment',
   TeamMember: 'TeamMember',
   TeamInvitation: 'TeamInvitation',
   ProviderProfile: 'ProviderProfile',
@@ -453,7 +454,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "authSession" | "emailAuthCode" | "team" | "teamMember" | "teamInvitation" | "providerProfile" | "subscriberEmail" | "authNonce" | "catalogPlan" | "catalogAddOn" | "catalogCreditType" | "catalogVersion" | "catalogConfig" | "catalogCoupon" | "billingTemplate" | "billingTemplateVersion" | "templateInstall" | "taxProfile" | "invoiceSequence" | "invoice" | "invoiceLine" | "invoiceDelivery" | "creditNote" | "auditEvent" | "billingEvent" | "subscriptionState" | "payment" | "paymentAttempt" | "billingAdjustment" | "billingBalance" | "refund" | "billingRecoveryTask" | "webhookDelivery" | "platformTierConfig" | "gasSpend" | "tierUpgradeHistory" | "supportTicket" | "arcenCompany" | "arcenUser" | "arcenEvent" | "companyAddOnGrant" | "paymentLink" | "checkoutSession" | "catalogFeatureFlag" | "flagRule" | "flagRuleCondition" | "companyOverride" | "embedAccessToken" | "arcenApiKey" | "zkTlsProof" | "embedComponent" | "arcenAgentConfig" | "arcenDispatchRequest"
+    modelProps: "user" | "authSession" | "emailAuthCode" | "team" | "workspaceEnvironment" | "teamMember" | "teamInvitation" | "providerProfile" | "subscriberEmail" | "authNonce" | "catalogPlan" | "catalogAddOn" | "catalogCreditType" | "catalogVersion" | "catalogConfig" | "catalogCoupon" | "billingTemplate" | "billingTemplateVersion" | "templateInstall" | "taxProfile" | "invoiceSequence" | "invoice" | "invoiceLine" | "invoiceDelivery" | "creditNote" | "auditEvent" | "billingEvent" | "subscriptionState" | "payment" | "paymentAttempt" | "billingAdjustment" | "billingBalance" | "refund" | "billingRecoveryTask" | "webhookDelivery" | "platformTierConfig" | "gasSpend" | "tierUpgradeHistory" | "supportTicket" | "arcenCompany" | "arcenUser" | "arcenEvent" | "companyAddOnGrant" | "paymentLink" | "checkoutSession" | "catalogFeatureFlag" | "flagRule" | "flagRuleCondition" | "companyOverride" | "embedAccessToken" | "arcenApiKey" | "zkTlsProof" | "embedComponent" | "arcenAgentConfig" | "arcenDispatchRequest"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -750,6 +751,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.TeamCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.TeamCountAggregateOutputType> | number
+        }
+      }
+    }
+    WorkspaceEnvironment: {
+      payload: Prisma.$WorkspaceEnvironmentPayload<ExtArgs>
+      fields: Prisma.WorkspaceEnvironmentFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.WorkspaceEnvironmentFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WorkspaceEnvironmentPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.WorkspaceEnvironmentFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WorkspaceEnvironmentPayload>
+        }
+        findFirst: {
+          args: Prisma.WorkspaceEnvironmentFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WorkspaceEnvironmentPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.WorkspaceEnvironmentFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WorkspaceEnvironmentPayload>
+        }
+        findMany: {
+          args: Prisma.WorkspaceEnvironmentFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WorkspaceEnvironmentPayload>[]
+        }
+        create: {
+          args: Prisma.WorkspaceEnvironmentCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WorkspaceEnvironmentPayload>
+        }
+        createMany: {
+          args: Prisma.WorkspaceEnvironmentCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.WorkspaceEnvironmentCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WorkspaceEnvironmentPayload>[]
+        }
+        delete: {
+          args: Prisma.WorkspaceEnvironmentDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WorkspaceEnvironmentPayload>
+        }
+        update: {
+          args: Prisma.WorkspaceEnvironmentUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WorkspaceEnvironmentPayload>
+        }
+        deleteMany: {
+          args: Prisma.WorkspaceEnvironmentDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.WorkspaceEnvironmentUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.WorkspaceEnvironmentUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WorkspaceEnvironmentPayload>[]
+        }
+        upsert: {
+          args: Prisma.WorkspaceEnvironmentUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WorkspaceEnvironmentPayload>
+        }
+        aggregate: {
+          args: Prisma.WorkspaceEnvironmentAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateWorkspaceEnvironment>
+        }
+        groupBy: {
+          args: Prisma.WorkspaceEnvironmentGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.WorkspaceEnvironmentGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.WorkspaceEnvironmentCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.WorkspaceEnvironmentCountAggregateOutputType> | number
         }
       }
     }
@@ -4509,6 +4584,7 @@ export const AuthSessionScalarFieldEnum = {
   id: 'id',
   createdAt: 'createdAt',
   userId: 'userId',
+  activeEnvironmentId: 'activeEnvironmentId',
   tokenHash: 'tokenHash',
   expiresAt: 'expiresAt',
   lastSeenAt: 'lastSeenAt',
@@ -4547,6 +4623,19 @@ export const TeamScalarFieldEnum = {
 } as const
 
 export type TeamScalarFieldEnum = (typeof TeamScalarFieldEnum)[keyof typeof TeamScalarFieldEnum]
+
+
+export const WorkspaceEnvironmentScalarFieldEnum = {
+  id: 'id',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  teamId: 'teamId',
+  name: 'name',
+  mode: 'mode',
+  chainId: 'chainId'
+} as const
+
+export type WorkspaceEnvironmentScalarFieldEnum = (typeof WorkspaceEnvironmentScalarFieldEnum)[keyof typeof WorkspaceEnvironmentScalarFieldEnum]
 
 
 export const TeamMemberScalarFieldEnum = {
@@ -4623,6 +4712,7 @@ export const CatalogPlanScalarFieldEnum = {
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
   teamId: 'teamId',
+  environmentId: 'environmentId',
   environmentMode: 'environmentMode',
   status: 'status',
   name: 'name',
@@ -4652,6 +4742,7 @@ export const CatalogAddOnScalarFieldEnum = {
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
   teamId: 'teamId',
+  environmentId: 'environmentId',
   environmentMode: 'environmentMode',
   status: 'status',
   name: 'name',
@@ -4680,6 +4771,7 @@ export const CatalogCreditTypeScalarFieldEnum = {
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
   teamId: 'teamId',
+  environmentId: 'environmentId',
   environmentMode: 'environmentMode',
   status: 'status',
   name: 'name',
@@ -4706,6 +4798,7 @@ export const CatalogVersionScalarFieldEnum = {
   createdAt: 'createdAt',
   publishedAt: 'publishedAt',
   teamId: 'teamId',
+  environmentId: 'environmentId',
   environmentMode: 'environmentMode',
   entityType: 'entityType',
   entityId: 'entityId',
@@ -4722,6 +4815,7 @@ export const CatalogConfigScalarFieldEnum = {
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
   teamId: 'teamId',
+  environmentId: 'environmentId',
   environmentMode: 'environmentMode',
   initialPlan: 'initialPlan',
   fallbackPlan: 'fallbackPlan',
@@ -4793,6 +4887,7 @@ export const TemplateInstallScalarFieldEnum = {
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
   teamId: 'teamId',
+  environmentId: 'environmentId',
   templateId: 'templateId',
   installedVersion: 'installedVersion',
   environmentMode: 'environmentMode',
@@ -4836,6 +4931,7 @@ export const InvoiceScalarFieldEnum = {
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
   teamId: 'teamId',
+  environmentId: 'environmentId',
   environmentMode: 'environmentMode',
   status: 'status',
   number: 'number',
@@ -4947,6 +5043,7 @@ export const SubscriptionStateScalarFieldEnum = {
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
   teamId: 'teamId',
+  environmentId: 'environmentId',
   companyId: 'companyId',
   walletAddress: 'walletAddress',
   status: 'status',
@@ -4974,6 +5071,7 @@ export const PaymentScalarFieldEnum = {
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
   teamId: 'teamId',
+  environmentId: 'environmentId',
   companyId: 'companyId',
   invoiceId: 'invoiceId',
   subscriptionStateId: 'subscriptionStateId',
@@ -5130,6 +5228,8 @@ export const PlatformTierConfigScalarFieldEnum = {
   maxTeamMembers: 'maxTeamMembers',
   maxFeatureFlags: 'maxFeatureFlags',
   maxChains: 'maxChains',
+  maxDevelopmentEnvironments: 'maxDevelopmentEnvironments',
+  maxProductionEnvironments: 'maxProductionEnvironments',
   platformFeeBps: 'platformFeeBps',
   gasSponsored: 'gasSponsored',
   gasDailyBudgetUsd: 'gasDailyBudgetUsd'
@@ -5261,6 +5361,7 @@ export const PaymentLinkScalarFieldEnum = {
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
   teamId: 'teamId',
+  environmentId: 'environmentId',
   kind: 'kind',
   status: 'status',
   name: 'name',
@@ -5288,6 +5389,7 @@ export const CheckoutSessionScalarFieldEnum = {
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
   teamId: 'teamId',
+  environmentId: 'environmentId',
   paymentLinkId: 'paymentLinkId',
   companyId: 'companyId',
   catalogAddOnId: 'catalogAddOnId',
@@ -6127,6 +6229,7 @@ export type GlobalOmitConfig = {
   authSession?: Prisma.AuthSessionOmit
   emailAuthCode?: Prisma.EmailAuthCodeOmit
   team?: Prisma.TeamOmit
+  workspaceEnvironment?: Prisma.WorkspaceEnvironmentOmit
   teamMember?: Prisma.TeamMemberOmit
   teamInvitation?: Prisma.TeamInvitationOmit
   providerProfile?: Prisma.ProviderProfileOmit

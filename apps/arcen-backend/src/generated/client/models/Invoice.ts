@@ -49,6 +49,7 @@ export type InvoiceMinAggregateOutputType = {
   createdAt: Date | null
   updatedAt: Date | null
   teamId: string | null
+  environmentId: string | null
   environmentMode: $Enums.EnvironmentMode | null
   status: $Enums.InvoiceStatus | null
   number: string | null
@@ -73,6 +74,7 @@ export type InvoiceMaxAggregateOutputType = {
   createdAt: Date | null
   updatedAt: Date | null
   teamId: string | null
+  environmentId: string | null
   environmentMode: $Enums.EnvironmentMode | null
   status: $Enums.InvoiceStatus | null
   number: string | null
@@ -97,6 +99,7 @@ export type InvoiceCountAggregateOutputType = {
   createdAt: number
   updatedAt: number
   teamId: number
+  environmentId: number
   environmentMode: number
   status: number
   number: number
@@ -142,6 +145,7 @@ export type InvoiceMinAggregateInputType = {
   createdAt?: true
   updatedAt?: true
   teamId?: true
+  environmentId?: true
   environmentMode?: true
   status?: true
   number?: true
@@ -166,6 +170,7 @@ export type InvoiceMaxAggregateInputType = {
   createdAt?: true
   updatedAt?: true
   teamId?: true
+  environmentId?: true
   environmentMode?: true
   status?: true
   number?: true
@@ -190,6 +195,7 @@ export type InvoiceCountAggregateInputType = {
   createdAt?: true
   updatedAt?: true
   teamId?: true
+  environmentId?: true
   environmentMode?: true
   status?: true
   number?: true
@@ -302,6 +308,7 @@ export type InvoiceGroupByOutputType = {
   createdAt: Date
   updatedAt: Date
   teamId: string
+  environmentId: string | null
   environmentMode: $Enums.EnvironmentMode
   status: $Enums.InvoiceStatus
   number: string | null
@@ -350,6 +357,7 @@ export type InvoiceWhereInput = {
   createdAt?: Prisma.DateTimeFilter<"Invoice"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Invoice"> | Date | string
   teamId?: Prisma.StringFilter<"Invoice"> | string
+  environmentId?: Prisma.StringNullableFilter<"Invoice"> | string | null
   environmentMode?: Prisma.EnumEnvironmentModeFilter<"Invoice"> | $Enums.EnvironmentMode
   status?: Prisma.EnumInvoiceStatusFilter<"Invoice"> | $Enums.InvoiceStatus
   number?: Prisma.StringNullableFilter<"Invoice"> | string | null
@@ -369,6 +377,7 @@ export type InvoiceWhereInput = {
   planId?: Prisma.StringNullableFilter<"Invoice"> | string | null
   metadata?: Prisma.JsonNullableFilter<"Invoice">
   team?: Prisma.XOR<Prisma.TeamScalarRelationFilter, Prisma.TeamWhereInput>
+  environment?: Prisma.XOR<Prisma.WorkspaceEnvironmentNullableScalarRelationFilter, Prisma.WorkspaceEnvironmentWhereInput> | null
   lineItems?: Prisma.InvoiceLineListRelationFilter
   deliveries?: Prisma.InvoiceDeliveryListRelationFilter
   creditNotes?: Prisma.CreditNoteListRelationFilter
@@ -383,6 +392,7 @@ export type InvoiceOrderByWithRelationInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrderInput | Prisma.SortOrder
   environmentMode?: Prisma.SortOrder
   status?: Prisma.SortOrder
   number?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -402,6 +412,7 @@ export type InvoiceOrderByWithRelationInput = {
   planId?: Prisma.SortOrderInput | Prisma.SortOrder
   metadata?: Prisma.SortOrderInput | Prisma.SortOrder
   team?: Prisma.TeamOrderByWithRelationInput
+  environment?: Prisma.WorkspaceEnvironmentOrderByWithRelationInput
   lineItems?: Prisma.InvoiceLineOrderByRelationAggregateInput
   deliveries?: Prisma.InvoiceDeliveryOrderByRelationAggregateInput
   creditNotes?: Prisma.CreditNoteOrderByRelationAggregateInput
@@ -420,6 +431,7 @@ export type InvoiceWhereUniqueInput = Prisma.AtLeast<{
   createdAt?: Prisma.DateTimeFilter<"Invoice"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Invoice"> | Date | string
   teamId?: Prisma.StringFilter<"Invoice"> | string
+  environmentId?: Prisma.StringNullableFilter<"Invoice"> | string | null
   environmentMode?: Prisma.EnumEnvironmentModeFilter<"Invoice"> | $Enums.EnvironmentMode
   status?: Prisma.EnumInvoiceStatusFilter<"Invoice"> | $Enums.InvoiceStatus
   currency?: Prisma.StringFilter<"Invoice"> | string
@@ -438,6 +450,7 @@ export type InvoiceWhereUniqueInput = Prisma.AtLeast<{
   planId?: Prisma.StringNullableFilter<"Invoice"> | string | null
   metadata?: Prisma.JsonNullableFilter<"Invoice">
   team?: Prisma.XOR<Prisma.TeamScalarRelationFilter, Prisma.TeamWhereInput>
+  environment?: Prisma.XOR<Prisma.WorkspaceEnvironmentNullableScalarRelationFilter, Prisma.WorkspaceEnvironmentWhereInput> | null
   lineItems?: Prisma.InvoiceLineListRelationFilter
   deliveries?: Prisma.InvoiceDeliveryListRelationFilter
   creditNotes?: Prisma.CreditNoteListRelationFilter
@@ -452,6 +465,7 @@ export type InvoiceOrderByWithAggregationInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrderInput | Prisma.SortOrder
   environmentMode?: Prisma.SortOrder
   status?: Prisma.SortOrder
   number?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -485,6 +499,7 @@ export type InvoiceScalarWhereWithAggregatesInput = {
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Invoice"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Invoice"> | Date | string
   teamId?: Prisma.StringWithAggregatesFilter<"Invoice"> | string
+  environmentId?: Prisma.StringNullableWithAggregatesFilter<"Invoice"> | string | null
   environmentMode?: Prisma.EnumEnvironmentModeWithAggregatesFilter<"Invoice"> | $Enums.EnvironmentMode
   status?: Prisma.EnumInvoiceStatusWithAggregatesFilter<"Invoice"> | $Enums.InvoiceStatus
   number?: Prisma.StringNullableWithAggregatesFilter<"Invoice"> | string | null
@@ -528,6 +543,7 @@ export type InvoiceCreateInput = {
   planId?: string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   team: Prisma.TeamCreateNestedOneWithoutInvoicesInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutInvoicesInput
   lineItems?: Prisma.InvoiceLineCreateNestedManyWithoutInvoiceInput
   deliveries?: Prisma.InvoiceDeliveryCreateNestedManyWithoutInvoiceInput
   creditNotes?: Prisma.CreditNoteCreateNestedManyWithoutInvoiceInput
@@ -542,6 +558,7 @@ export type InvoiceUncheckedCreateInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   teamId: string
+  environmentId?: string | null
   environmentMode?: $Enums.EnvironmentMode
   status?: $Enums.InvoiceStatus
   number?: string | null
@@ -592,6 +609,7 @@ export type InvoiceUpdateInput = {
   planId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   team?: Prisma.TeamUpdateOneRequiredWithoutInvoicesNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutInvoicesNestedInput
   lineItems?: Prisma.InvoiceLineUpdateManyWithoutInvoiceNestedInput
   deliveries?: Prisma.InvoiceDeliveryUpdateManyWithoutInvoiceNestedInput
   creditNotes?: Prisma.CreditNoteUpdateManyWithoutInvoiceNestedInput
@@ -606,6 +624,7 @@ export type InvoiceUncheckedUpdateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   status?: Prisma.EnumInvoiceStatusFieldUpdateOperationsInput | $Enums.InvoiceStatus
   number?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -638,6 +657,7 @@ export type InvoiceCreateManyInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   teamId: string
+  environmentId?: string | null
   environmentMode?: $Enums.EnvironmentMode
   status?: $Enums.InvoiceStatus
   number?: string | null
@@ -687,6 +707,7 @@ export type InvoiceUncheckedUpdateManyInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   status?: Prisma.EnumInvoiceStatusFieldUpdateOperationsInput | $Enums.InvoiceStatus
   number?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -722,6 +743,7 @@ export type InvoiceCountOrderByAggregateInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrder
   environmentMode?: Prisma.SortOrder
   status?: Prisma.SortOrder
   number?: Prisma.SortOrder
@@ -756,6 +778,7 @@ export type InvoiceMaxOrderByAggregateInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrder
   environmentMode?: Prisma.SortOrder
   status?: Prisma.SortOrder
   number?: Prisma.SortOrder
@@ -780,6 +803,7 @@ export type InvoiceMinOrderByAggregateInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrder
   environmentMode?: Prisma.SortOrder
   status?: Prisma.SortOrder
   number?: Prisma.SortOrder
@@ -857,6 +881,48 @@ export type InvoiceUncheckedUpdateManyWithoutTeamNestedInput = {
   connect?: Prisma.InvoiceWhereUniqueInput | Prisma.InvoiceWhereUniqueInput[]
   update?: Prisma.InvoiceUpdateWithWhereUniqueWithoutTeamInput | Prisma.InvoiceUpdateWithWhereUniqueWithoutTeamInput[]
   updateMany?: Prisma.InvoiceUpdateManyWithWhereWithoutTeamInput | Prisma.InvoiceUpdateManyWithWhereWithoutTeamInput[]
+  deleteMany?: Prisma.InvoiceScalarWhereInput | Prisma.InvoiceScalarWhereInput[]
+}
+
+export type InvoiceCreateNestedManyWithoutEnvironmentInput = {
+  create?: Prisma.XOR<Prisma.InvoiceCreateWithoutEnvironmentInput, Prisma.InvoiceUncheckedCreateWithoutEnvironmentInput> | Prisma.InvoiceCreateWithoutEnvironmentInput[] | Prisma.InvoiceUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.InvoiceCreateOrConnectWithoutEnvironmentInput | Prisma.InvoiceCreateOrConnectWithoutEnvironmentInput[]
+  createMany?: Prisma.InvoiceCreateManyEnvironmentInputEnvelope
+  connect?: Prisma.InvoiceWhereUniqueInput | Prisma.InvoiceWhereUniqueInput[]
+}
+
+export type InvoiceUncheckedCreateNestedManyWithoutEnvironmentInput = {
+  create?: Prisma.XOR<Prisma.InvoiceCreateWithoutEnvironmentInput, Prisma.InvoiceUncheckedCreateWithoutEnvironmentInput> | Prisma.InvoiceCreateWithoutEnvironmentInput[] | Prisma.InvoiceUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.InvoiceCreateOrConnectWithoutEnvironmentInput | Prisma.InvoiceCreateOrConnectWithoutEnvironmentInput[]
+  createMany?: Prisma.InvoiceCreateManyEnvironmentInputEnvelope
+  connect?: Prisma.InvoiceWhereUniqueInput | Prisma.InvoiceWhereUniqueInput[]
+}
+
+export type InvoiceUpdateManyWithoutEnvironmentNestedInput = {
+  create?: Prisma.XOR<Prisma.InvoiceCreateWithoutEnvironmentInput, Prisma.InvoiceUncheckedCreateWithoutEnvironmentInput> | Prisma.InvoiceCreateWithoutEnvironmentInput[] | Prisma.InvoiceUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.InvoiceCreateOrConnectWithoutEnvironmentInput | Prisma.InvoiceCreateOrConnectWithoutEnvironmentInput[]
+  upsert?: Prisma.InvoiceUpsertWithWhereUniqueWithoutEnvironmentInput | Prisma.InvoiceUpsertWithWhereUniqueWithoutEnvironmentInput[]
+  createMany?: Prisma.InvoiceCreateManyEnvironmentInputEnvelope
+  set?: Prisma.InvoiceWhereUniqueInput | Prisma.InvoiceWhereUniqueInput[]
+  disconnect?: Prisma.InvoiceWhereUniqueInput | Prisma.InvoiceWhereUniqueInput[]
+  delete?: Prisma.InvoiceWhereUniqueInput | Prisma.InvoiceWhereUniqueInput[]
+  connect?: Prisma.InvoiceWhereUniqueInput | Prisma.InvoiceWhereUniqueInput[]
+  update?: Prisma.InvoiceUpdateWithWhereUniqueWithoutEnvironmentInput | Prisma.InvoiceUpdateWithWhereUniqueWithoutEnvironmentInput[]
+  updateMany?: Prisma.InvoiceUpdateManyWithWhereWithoutEnvironmentInput | Prisma.InvoiceUpdateManyWithWhereWithoutEnvironmentInput[]
+  deleteMany?: Prisma.InvoiceScalarWhereInput | Prisma.InvoiceScalarWhereInput[]
+}
+
+export type InvoiceUncheckedUpdateManyWithoutEnvironmentNestedInput = {
+  create?: Prisma.XOR<Prisma.InvoiceCreateWithoutEnvironmentInput, Prisma.InvoiceUncheckedCreateWithoutEnvironmentInput> | Prisma.InvoiceCreateWithoutEnvironmentInput[] | Prisma.InvoiceUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.InvoiceCreateOrConnectWithoutEnvironmentInput | Prisma.InvoiceCreateOrConnectWithoutEnvironmentInput[]
+  upsert?: Prisma.InvoiceUpsertWithWhereUniqueWithoutEnvironmentInput | Prisma.InvoiceUpsertWithWhereUniqueWithoutEnvironmentInput[]
+  createMany?: Prisma.InvoiceCreateManyEnvironmentInputEnvelope
+  set?: Prisma.InvoiceWhereUniqueInput | Prisma.InvoiceWhereUniqueInput[]
+  disconnect?: Prisma.InvoiceWhereUniqueInput | Prisma.InvoiceWhereUniqueInput[]
+  delete?: Prisma.InvoiceWhereUniqueInput | Prisma.InvoiceWhereUniqueInput[]
+  connect?: Prisma.InvoiceWhereUniqueInput | Prisma.InvoiceWhereUniqueInput[]
+  update?: Prisma.InvoiceUpdateWithWhereUniqueWithoutEnvironmentInput | Prisma.InvoiceUpdateWithWhereUniqueWithoutEnvironmentInput[]
+  updateMany?: Prisma.InvoiceUpdateManyWithWhereWithoutEnvironmentInput | Prisma.InvoiceUpdateManyWithWhereWithoutEnvironmentInput[]
   deleteMany?: Prisma.InvoiceScalarWhereInput | Prisma.InvoiceScalarWhereInput[]
 }
 
@@ -992,6 +1058,7 @@ export type InvoiceCreateWithoutTeamInput = {
   externalRef?: string | null
   planId?: string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutInvoicesInput
   lineItems?: Prisma.InvoiceLineCreateNestedManyWithoutInvoiceInput
   deliveries?: Prisma.InvoiceDeliveryCreateNestedManyWithoutInvoiceInput
   creditNotes?: Prisma.CreditNoteCreateNestedManyWithoutInvoiceInput
@@ -1005,6 +1072,7 @@ export type InvoiceUncheckedCreateWithoutTeamInput = {
   id?: string
   createdAt?: Date | string
   updatedAt?: Date | string
+  environmentId?: string | null
   environmentMode?: $Enums.EnvironmentMode
   status?: $Enums.InvoiceStatus
   number?: string | null
@@ -1066,6 +1134,7 @@ export type InvoiceScalarWhereInput = {
   createdAt?: Prisma.DateTimeFilter<"Invoice"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Invoice"> | Date | string
   teamId?: Prisma.StringFilter<"Invoice"> | string
+  environmentId?: Prisma.StringNullableFilter<"Invoice"> | string | null
   environmentMode?: Prisma.EnumEnvironmentModeFilter<"Invoice"> | $Enums.EnvironmentMode
   status?: Prisma.EnumInvoiceStatusFilter<"Invoice"> | $Enums.InvoiceStatus
   number?: Prisma.StringNullableFilter<"Invoice"> | string | null
@@ -1084,6 +1153,96 @@ export type InvoiceScalarWhereInput = {
   externalRef?: Prisma.StringNullableFilter<"Invoice"> | string | null
   planId?: Prisma.StringNullableFilter<"Invoice"> | string | null
   metadata?: Prisma.JsonNullableFilter<"Invoice">
+}
+
+export type InvoiceCreateWithoutEnvironmentInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  environmentMode?: $Enums.EnvironmentMode
+  status?: $Enums.InvoiceStatus
+  number?: string | null
+  currency?: string
+  customerEmail?: string | null
+  customerWallet?: string | null
+  subtotal?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  taxTotal?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  total?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  amountPaid?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  amountCredited?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  amountOutstanding?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  dueAt?: Date | string | null
+  issuedAt?: Date | string | null
+  paidAt?: Date | string | null
+  externalRef?: string | null
+  planId?: string | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  team: Prisma.TeamCreateNestedOneWithoutInvoicesInput
+  lineItems?: Prisma.InvoiceLineCreateNestedManyWithoutInvoiceInput
+  deliveries?: Prisma.InvoiceDeliveryCreateNestedManyWithoutInvoiceInput
+  creditNotes?: Prisma.CreditNoteCreateNestedManyWithoutInvoiceInput
+  payments?: Prisma.PaymentCreateNestedManyWithoutInvoiceInput
+  refunds?: Prisma.RefundCreateNestedManyWithoutInvoiceInput
+  paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutInvoiceInput
+  checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutInvoiceInput
+}
+
+export type InvoiceUncheckedCreateWithoutEnvironmentInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  teamId: string
+  environmentMode?: $Enums.EnvironmentMode
+  status?: $Enums.InvoiceStatus
+  number?: string | null
+  currency?: string
+  customerEmail?: string | null
+  customerWallet?: string | null
+  subtotal?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  taxTotal?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  total?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  amountPaid?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  amountCredited?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  amountOutstanding?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  dueAt?: Date | string | null
+  issuedAt?: Date | string | null
+  paidAt?: Date | string | null
+  externalRef?: string | null
+  planId?: string | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  lineItems?: Prisma.InvoiceLineUncheckedCreateNestedManyWithoutInvoiceInput
+  deliveries?: Prisma.InvoiceDeliveryUncheckedCreateNestedManyWithoutInvoiceInput
+  creditNotes?: Prisma.CreditNoteUncheckedCreateNestedManyWithoutInvoiceInput
+  payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutInvoiceInput
+  refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutInvoiceInput
+  paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutInvoiceInput
+  checkoutSessions?: Prisma.CheckoutSessionUncheckedCreateNestedManyWithoutInvoiceInput
+}
+
+export type InvoiceCreateOrConnectWithoutEnvironmentInput = {
+  where: Prisma.InvoiceWhereUniqueInput
+  create: Prisma.XOR<Prisma.InvoiceCreateWithoutEnvironmentInput, Prisma.InvoiceUncheckedCreateWithoutEnvironmentInput>
+}
+
+export type InvoiceCreateManyEnvironmentInputEnvelope = {
+  data: Prisma.InvoiceCreateManyEnvironmentInput | Prisma.InvoiceCreateManyEnvironmentInput[]
+  skipDuplicates?: boolean
+}
+
+export type InvoiceUpsertWithWhereUniqueWithoutEnvironmentInput = {
+  where: Prisma.InvoiceWhereUniqueInput
+  update: Prisma.XOR<Prisma.InvoiceUpdateWithoutEnvironmentInput, Prisma.InvoiceUncheckedUpdateWithoutEnvironmentInput>
+  create: Prisma.XOR<Prisma.InvoiceCreateWithoutEnvironmentInput, Prisma.InvoiceUncheckedCreateWithoutEnvironmentInput>
+}
+
+export type InvoiceUpdateWithWhereUniqueWithoutEnvironmentInput = {
+  where: Prisma.InvoiceWhereUniqueInput
+  data: Prisma.XOR<Prisma.InvoiceUpdateWithoutEnvironmentInput, Prisma.InvoiceUncheckedUpdateWithoutEnvironmentInput>
+}
+
+export type InvoiceUpdateManyWithWhereWithoutEnvironmentInput = {
+  where: Prisma.InvoiceScalarWhereInput
+  data: Prisma.XOR<Prisma.InvoiceUpdateManyMutationInput, Prisma.InvoiceUncheckedUpdateManyWithoutEnvironmentInput>
 }
 
 export type InvoiceCreateWithoutLineItemsInput = {
@@ -1109,6 +1268,7 @@ export type InvoiceCreateWithoutLineItemsInput = {
   planId?: string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   team: Prisma.TeamCreateNestedOneWithoutInvoicesInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutInvoicesInput
   deliveries?: Prisma.InvoiceDeliveryCreateNestedManyWithoutInvoiceInput
   creditNotes?: Prisma.CreditNoteCreateNestedManyWithoutInvoiceInput
   payments?: Prisma.PaymentCreateNestedManyWithoutInvoiceInput
@@ -1122,6 +1282,7 @@ export type InvoiceUncheckedCreateWithoutLineItemsInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   teamId: string
+  environmentId?: string | null
   environmentMode?: $Enums.EnvironmentMode
   status?: $Enums.InvoiceStatus
   number?: string | null
@@ -1187,6 +1348,7 @@ export type InvoiceUpdateWithoutLineItemsInput = {
   planId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   team?: Prisma.TeamUpdateOneRequiredWithoutInvoicesNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutInvoicesNestedInput
   deliveries?: Prisma.InvoiceDeliveryUpdateManyWithoutInvoiceNestedInput
   creditNotes?: Prisma.CreditNoteUpdateManyWithoutInvoiceNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutInvoiceNestedInput
@@ -1200,6 +1362,7 @@ export type InvoiceUncheckedUpdateWithoutLineItemsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   status?: Prisma.EnumInvoiceStatusFieldUpdateOperationsInput | $Enums.InvoiceStatus
   number?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1249,6 +1412,7 @@ export type InvoiceCreateWithoutDeliveriesInput = {
   planId?: string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   team: Prisma.TeamCreateNestedOneWithoutInvoicesInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutInvoicesInput
   lineItems?: Prisma.InvoiceLineCreateNestedManyWithoutInvoiceInput
   creditNotes?: Prisma.CreditNoteCreateNestedManyWithoutInvoiceInput
   payments?: Prisma.PaymentCreateNestedManyWithoutInvoiceInput
@@ -1262,6 +1426,7 @@ export type InvoiceUncheckedCreateWithoutDeliveriesInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   teamId: string
+  environmentId?: string | null
   environmentMode?: $Enums.EnvironmentMode
   status?: $Enums.InvoiceStatus
   number?: string | null
@@ -1327,6 +1492,7 @@ export type InvoiceUpdateWithoutDeliveriesInput = {
   planId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   team?: Prisma.TeamUpdateOneRequiredWithoutInvoicesNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutInvoicesNestedInput
   lineItems?: Prisma.InvoiceLineUpdateManyWithoutInvoiceNestedInput
   creditNotes?: Prisma.CreditNoteUpdateManyWithoutInvoiceNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutInvoiceNestedInput
@@ -1340,6 +1506,7 @@ export type InvoiceUncheckedUpdateWithoutDeliveriesInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   status?: Prisma.EnumInvoiceStatusFieldUpdateOperationsInput | $Enums.InvoiceStatus
   number?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1389,6 +1556,7 @@ export type InvoiceCreateWithoutCreditNotesInput = {
   planId?: string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   team: Prisma.TeamCreateNestedOneWithoutInvoicesInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutInvoicesInput
   lineItems?: Prisma.InvoiceLineCreateNestedManyWithoutInvoiceInput
   deliveries?: Prisma.InvoiceDeliveryCreateNestedManyWithoutInvoiceInput
   payments?: Prisma.PaymentCreateNestedManyWithoutInvoiceInput
@@ -1402,6 +1570,7 @@ export type InvoiceUncheckedCreateWithoutCreditNotesInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   teamId: string
+  environmentId?: string | null
   environmentMode?: $Enums.EnvironmentMode
   status?: $Enums.InvoiceStatus
   number?: string | null
@@ -1467,6 +1636,7 @@ export type InvoiceUpdateWithoutCreditNotesInput = {
   planId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   team?: Prisma.TeamUpdateOneRequiredWithoutInvoicesNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutInvoicesNestedInput
   lineItems?: Prisma.InvoiceLineUpdateManyWithoutInvoiceNestedInput
   deliveries?: Prisma.InvoiceDeliveryUpdateManyWithoutInvoiceNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutInvoiceNestedInput
@@ -1480,6 +1650,7 @@ export type InvoiceUncheckedUpdateWithoutCreditNotesInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   status?: Prisma.EnumInvoiceStatusFieldUpdateOperationsInput | $Enums.InvoiceStatus
   number?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1529,6 +1700,7 @@ export type InvoiceCreateWithoutPaymentsInput = {
   planId?: string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   team: Prisma.TeamCreateNestedOneWithoutInvoicesInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutInvoicesInput
   lineItems?: Prisma.InvoiceLineCreateNestedManyWithoutInvoiceInput
   deliveries?: Prisma.InvoiceDeliveryCreateNestedManyWithoutInvoiceInput
   creditNotes?: Prisma.CreditNoteCreateNestedManyWithoutInvoiceInput
@@ -1542,6 +1714,7 @@ export type InvoiceUncheckedCreateWithoutPaymentsInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   teamId: string
+  environmentId?: string | null
   environmentMode?: $Enums.EnvironmentMode
   status?: $Enums.InvoiceStatus
   number?: string | null
@@ -1607,6 +1780,7 @@ export type InvoiceUpdateWithoutPaymentsInput = {
   planId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   team?: Prisma.TeamUpdateOneRequiredWithoutInvoicesNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutInvoicesNestedInput
   lineItems?: Prisma.InvoiceLineUpdateManyWithoutInvoiceNestedInput
   deliveries?: Prisma.InvoiceDeliveryUpdateManyWithoutInvoiceNestedInput
   creditNotes?: Prisma.CreditNoteUpdateManyWithoutInvoiceNestedInput
@@ -1620,6 +1794,7 @@ export type InvoiceUncheckedUpdateWithoutPaymentsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   status?: Prisma.EnumInvoiceStatusFieldUpdateOperationsInput | $Enums.InvoiceStatus
   number?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1669,6 +1844,7 @@ export type InvoiceCreateWithoutRefundsInput = {
   planId?: string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   team: Prisma.TeamCreateNestedOneWithoutInvoicesInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutInvoicesInput
   lineItems?: Prisma.InvoiceLineCreateNestedManyWithoutInvoiceInput
   deliveries?: Prisma.InvoiceDeliveryCreateNestedManyWithoutInvoiceInput
   creditNotes?: Prisma.CreditNoteCreateNestedManyWithoutInvoiceInput
@@ -1682,6 +1858,7 @@ export type InvoiceUncheckedCreateWithoutRefundsInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   teamId: string
+  environmentId?: string | null
   environmentMode?: $Enums.EnvironmentMode
   status?: $Enums.InvoiceStatus
   number?: string | null
@@ -1747,6 +1924,7 @@ export type InvoiceUpdateWithoutRefundsInput = {
   planId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   team?: Prisma.TeamUpdateOneRequiredWithoutInvoicesNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutInvoicesNestedInput
   lineItems?: Prisma.InvoiceLineUpdateManyWithoutInvoiceNestedInput
   deliveries?: Prisma.InvoiceDeliveryUpdateManyWithoutInvoiceNestedInput
   creditNotes?: Prisma.CreditNoteUpdateManyWithoutInvoiceNestedInput
@@ -1760,6 +1938,7 @@ export type InvoiceUncheckedUpdateWithoutRefundsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   status?: Prisma.EnumInvoiceStatusFieldUpdateOperationsInput | $Enums.InvoiceStatus
   number?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1809,6 +1988,7 @@ export type InvoiceCreateWithoutPaymentLinksInput = {
   planId?: string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   team: Prisma.TeamCreateNestedOneWithoutInvoicesInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutInvoicesInput
   lineItems?: Prisma.InvoiceLineCreateNestedManyWithoutInvoiceInput
   deliveries?: Prisma.InvoiceDeliveryCreateNestedManyWithoutInvoiceInput
   creditNotes?: Prisma.CreditNoteCreateNestedManyWithoutInvoiceInput
@@ -1822,6 +2002,7 @@ export type InvoiceUncheckedCreateWithoutPaymentLinksInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   teamId: string
+  environmentId?: string | null
   environmentMode?: $Enums.EnvironmentMode
   status?: $Enums.InvoiceStatus
   number?: string | null
@@ -1887,6 +2068,7 @@ export type InvoiceUpdateWithoutPaymentLinksInput = {
   planId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   team?: Prisma.TeamUpdateOneRequiredWithoutInvoicesNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutInvoicesNestedInput
   lineItems?: Prisma.InvoiceLineUpdateManyWithoutInvoiceNestedInput
   deliveries?: Prisma.InvoiceDeliveryUpdateManyWithoutInvoiceNestedInput
   creditNotes?: Prisma.CreditNoteUpdateManyWithoutInvoiceNestedInput
@@ -1900,6 +2082,7 @@ export type InvoiceUncheckedUpdateWithoutPaymentLinksInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   status?: Prisma.EnumInvoiceStatusFieldUpdateOperationsInput | $Enums.InvoiceStatus
   number?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1949,6 +2132,7 @@ export type InvoiceCreateWithoutCheckoutSessionsInput = {
   planId?: string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   team: Prisma.TeamCreateNestedOneWithoutInvoicesInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutInvoicesInput
   lineItems?: Prisma.InvoiceLineCreateNestedManyWithoutInvoiceInput
   deliveries?: Prisma.InvoiceDeliveryCreateNestedManyWithoutInvoiceInput
   creditNotes?: Prisma.CreditNoteCreateNestedManyWithoutInvoiceInput
@@ -1962,6 +2146,7 @@ export type InvoiceUncheckedCreateWithoutCheckoutSessionsInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   teamId: string
+  environmentId?: string | null
   environmentMode?: $Enums.EnvironmentMode
   status?: $Enums.InvoiceStatus
   number?: string | null
@@ -2027,6 +2212,7 @@ export type InvoiceUpdateWithoutCheckoutSessionsInput = {
   planId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   team?: Prisma.TeamUpdateOneRequiredWithoutInvoicesNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutInvoicesNestedInput
   lineItems?: Prisma.InvoiceLineUpdateManyWithoutInvoiceNestedInput
   deliveries?: Prisma.InvoiceDeliveryUpdateManyWithoutInvoiceNestedInput
   creditNotes?: Prisma.CreditNoteUpdateManyWithoutInvoiceNestedInput
@@ -2040,6 +2226,7 @@ export type InvoiceUncheckedUpdateWithoutCheckoutSessionsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   status?: Prisma.EnumInvoiceStatusFieldUpdateOperationsInput | $Enums.InvoiceStatus
   number?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2070,6 +2257,7 @@ export type InvoiceCreateManyTeamInput = {
   id?: string
   createdAt?: Date | string
   updatedAt?: Date | string
+  environmentId?: string | null
   environmentMode?: $Enums.EnvironmentMode
   status?: $Enums.InvoiceStatus
   number?: string | null
@@ -2112,6 +2300,7 @@ export type InvoiceUpdateWithoutTeamInput = {
   externalRef?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   planId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutInvoicesNestedInput
   lineItems?: Prisma.InvoiceLineUpdateManyWithoutInvoiceNestedInput
   deliveries?: Prisma.InvoiceDeliveryUpdateManyWithoutInvoiceNestedInput
   creditNotes?: Prisma.CreditNoteUpdateManyWithoutInvoiceNestedInput
@@ -2125,6 +2314,7 @@ export type InvoiceUncheckedUpdateWithoutTeamInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   status?: Prisma.EnumInvoiceStatusFieldUpdateOperationsInput | $Enums.InvoiceStatus
   number?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2156,6 +2346,121 @@ export type InvoiceUncheckedUpdateManyWithoutTeamInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
+  status?: Prisma.EnumInvoiceStatusFieldUpdateOperationsInput | $Enums.InvoiceStatus
+  number?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
+  customerEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  customerWallet?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  subtotal?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  taxTotal?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  total?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  amountPaid?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  amountCredited?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  amountOutstanding?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  dueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  issuedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  paidAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  externalRef?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  planId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+}
+
+export type InvoiceCreateManyEnvironmentInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  teamId: string
+  environmentMode?: $Enums.EnvironmentMode
+  status?: $Enums.InvoiceStatus
+  number?: string | null
+  currency?: string
+  customerEmail?: string | null
+  customerWallet?: string | null
+  subtotal?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  taxTotal?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  total?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  amountPaid?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  amountCredited?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  amountOutstanding?: runtime.Decimal | runtime.DecimalJsLike | number | string
+  dueAt?: Date | string | null
+  issuedAt?: Date | string | null
+  paidAt?: Date | string | null
+  externalRef?: string | null
+  planId?: string | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+}
+
+export type InvoiceUpdateWithoutEnvironmentInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
+  status?: Prisma.EnumInvoiceStatusFieldUpdateOperationsInput | $Enums.InvoiceStatus
+  number?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
+  customerEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  customerWallet?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  subtotal?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  taxTotal?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  total?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  amountPaid?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  amountCredited?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  amountOutstanding?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  dueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  issuedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  paidAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  externalRef?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  planId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  team?: Prisma.TeamUpdateOneRequiredWithoutInvoicesNestedInput
+  lineItems?: Prisma.InvoiceLineUpdateManyWithoutInvoiceNestedInput
+  deliveries?: Prisma.InvoiceDeliveryUpdateManyWithoutInvoiceNestedInput
+  creditNotes?: Prisma.CreditNoteUpdateManyWithoutInvoiceNestedInput
+  payments?: Prisma.PaymentUpdateManyWithoutInvoiceNestedInput
+  refunds?: Prisma.RefundUpdateManyWithoutInvoiceNestedInput
+  paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutInvoiceNestedInput
+  checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutInvoiceNestedInput
+}
+
+export type InvoiceUncheckedUpdateWithoutEnvironmentInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
+  status?: Prisma.EnumInvoiceStatusFieldUpdateOperationsInput | $Enums.InvoiceStatus
+  number?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
+  customerEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  customerWallet?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  subtotal?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  taxTotal?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  total?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  amountPaid?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  amountCredited?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  amountOutstanding?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  dueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  issuedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  paidAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  externalRef?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  planId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  lineItems?: Prisma.InvoiceLineUncheckedUpdateManyWithoutInvoiceNestedInput
+  deliveries?: Prisma.InvoiceDeliveryUncheckedUpdateManyWithoutInvoiceNestedInput
+  creditNotes?: Prisma.CreditNoteUncheckedUpdateManyWithoutInvoiceNestedInput
+  payments?: Prisma.PaymentUncheckedUpdateManyWithoutInvoiceNestedInput
+  refunds?: Prisma.RefundUncheckedUpdateManyWithoutInvoiceNestedInput
+  paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutInvoiceNestedInput
+  checkoutSessions?: Prisma.CheckoutSessionUncheckedUpdateManyWithoutInvoiceNestedInput
+}
+
+export type InvoiceUncheckedUpdateManyWithoutEnvironmentInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamId?: Prisma.StringFieldUpdateOperationsInput | string
   environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   status?: Prisma.EnumInvoiceStatusFieldUpdateOperationsInput | $Enums.InvoiceStatus
   number?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2266,6 +2571,7 @@ export type InvoiceSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   createdAt?: boolean
   updatedAt?: boolean
   teamId?: boolean
+  environmentId?: boolean
   environmentMode?: boolean
   status?: boolean
   number?: boolean
@@ -2285,6 +2591,7 @@ export type InvoiceSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   planId?: boolean
   metadata?: boolean
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.Invoice$environmentArgs<ExtArgs>
   lineItems?: boolean | Prisma.Invoice$lineItemsArgs<ExtArgs>
   deliveries?: boolean | Prisma.Invoice$deliveriesArgs<ExtArgs>
   creditNotes?: boolean | Prisma.Invoice$creditNotesArgs<ExtArgs>
@@ -2300,6 +2607,7 @@ export type InvoiceSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exten
   createdAt?: boolean
   updatedAt?: boolean
   teamId?: boolean
+  environmentId?: boolean
   environmentMode?: boolean
   status?: boolean
   number?: boolean
@@ -2319,6 +2627,7 @@ export type InvoiceSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exten
   planId?: boolean
   metadata?: boolean
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.Invoice$environmentArgs<ExtArgs>
 }, ExtArgs["result"]["invoice"]>
 
 export type InvoiceSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -2326,6 +2635,7 @@ export type InvoiceSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exten
   createdAt?: boolean
   updatedAt?: boolean
   teamId?: boolean
+  environmentId?: boolean
   environmentMode?: boolean
   status?: boolean
   number?: boolean
@@ -2345,6 +2655,7 @@ export type InvoiceSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exten
   planId?: boolean
   metadata?: boolean
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.Invoice$environmentArgs<ExtArgs>
 }, ExtArgs["result"]["invoice"]>
 
 export type InvoiceSelectScalar = {
@@ -2352,6 +2663,7 @@ export type InvoiceSelectScalar = {
   createdAt?: boolean
   updatedAt?: boolean
   teamId?: boolean
+  environmentId?: boolean
   environmentMode?: boolean
   status?: boolean
   number?: boolean
@@ -2372,9 +2684,10 @@ export type InvoiceSelectScalar = {
   metadata?: boolean
 }
 
-export type InvoiceOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "updatedAt" | "teamId" | "environmentMode" | "status" | "number" | "currency" | "customerEmail" | "customerWallet" | "subtotal" | "taxTotal" | "total" | "amountPaid" | "amountCredited" | "amountOutstanding" | "dueAt" | "issuedAt" | "paidAt" | "externalRef" | "planId" | "metadata", ExtArgs["result"]["invoice"]>
+export type InvoiceOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "updatedAt" | "teamId" | "environmentId" | "environmentMode" | "status" | "number" | "currency" | "customerEmail" | "customerWallet" | "subtotal" | "taxTotal" | "total" | "amountPaid" | "amountCredited" | "amountOutstanding" | "dueAt" | "issuedAt" | "paidAt" | "externalRef" | "planId" | "metadata", ExtArgs["result"]["invoice"]>
 export type InvoiceInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.Invoice$environmentArgs<ExtArgs>
   lineItems?: boolean | Prisma.Invoice$lineItemsArgs<ExtArgs>
   deliveries?: boolean | Prisma.Invoice$deliveriesArgs<ExtArgs>
   creditNotes?: boolean | Prisma.Invoice$creditNotesArgs<ExtArgs>
@@ -2386,15 +2699,18 @@ export type InvoiceInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs
 }
 export type InvoiceIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.Invoice$environmentArgs<ExtArgs>
 }
 export type InvoiceIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.Invoice$environmentArgs<ExtArgs>
 }
 
 export type $InvoicePayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "Invoice"
   objects: {
     team: Prisma.$TeamPayload<ExtArgs>
+    environment: Prisma.$WorkspaceEnvironmentPayload<ExtArgs> | null
     lineItems: Prisma.$InvoiceLinePayload<ExtArgs>[]
     deliveries: Prisma.$InvoiceDeliveryPayload<ExtArgs>[]
     creditNotes: Prisma.$CreditNotePayload<ExtArgs>[]
@@ -2408,6 +2724,7 @@ export type $InvoicePayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     createdAt: Date
     updatedAt: Date
     teamId: string
+    environmentId: string | null
     environmentMode: $Enums.EnvironmentMode
     status: $Enums.InvoiceStatus
     number: string | null
@@ -2821,6 +3138,7 @@ readonly fields: InvoiceFieldRefs;
 export interface Prisma__InvoiceClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   team<T extends Prisma.TeamDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TeamDefaultArgs<ExtArgs>>): Prisma.Prisma__TeamClient<runtime.Types.Result.GetResult<Prisma.$TeamPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  environment<T extends Prisma.Invoice$environmentArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Invoice$environmentArgs<ExtArgs>>): Prisma.Prisma__WorkspaceEnvironmentClient<runtime.Types.Result.GetResult<Prisma.$WorkspaceEnvironmentPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   lineItems<T extends Prisma.Invoice$lineItemsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Invoice$lineItemsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$InvoiceLinePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   deliveries<T extends Prisma.Invoice$deliveriesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Invoice$deliveriesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$InvoiceDeliveryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   creditNotes<T extends Prisma.Invoice$creditNotesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Invoice$creditNotesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CreditNotePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -2861,6 +3179,7 @@ export interface InvoiceFieldRefs {
   readonly createdAt: Prisma.FieldRef<"Invoice", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Invoice", 'DateTime'>
   readonly teamId: Prisma.FieldRef<"Invoice", 'String'>
+  readonly environmentId: Prisma.FieldRef<"Invoice", 'String'>
   readonly environmentMode: Prisma.FieldRef<"Invoice", 'EnvironmentMode'>
   readonly status: Prisma.FieldRef<"Invoice", 'InvoiceStatus'>
   readonly number: Prisma.FieldRef<"Invoice", 'String'>
@@ -3272,6 +3591,25 @@ export type InvoiceDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.Inter
    * Limit how many Invoices to delete.
    */
   limit?: number
+}
+
+/**
+ * Invoice.environment
+ */
+export type Invoice$environmentArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the WorkspaceEnvironment
+   */
+  select?: Prisma.WorkspaceEnvironmentSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the WorkspaceEnvironment
+   */
+  omit?: Prisma.WorkspaceEnvironmentOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.WorkspaceEnvironmentInclude<ExtArgs> | null
+  where?: Prisma.WorkspaceEnvironmentWhereInput
 }
 
 /**

@@ -19,6 +19,7 @@ function normalizeWallet(value?: string | null): string | null {
 
 export async function createPaymentLink(input: {
   teamId: string;
+  environmentId?: string | null;
   kind: "ADDON" | "INVOICE" | "CUSTOM";
   name: string;
   description?: string | null;
@@ -41,6 +42,7 @@ export async function createPaymentLink(input: {
   return db.paymentLink.create({
     data: {
       teamId: input.teamId,
+      environmentId: input.environmentId ?? null,
       kind: input.kind,
       name: input.name.trim(),
       slug,
@@ -69,9 +71,9 @@ export async function createPaymentLink(input: {
   });
 }
 
-export async function listPaymentLinks(teamId: string) {
+export async function listPaymentLinks(teamId: string, environmentId?: string | null) {
   return db.paymentLink.findMany({
-    where: { teamId },
+    where: { teamId, ...(environmentId ? { environmentId } : {}) },
     include: {
       catalogAddOn: {
         select: { id: true, name: true, code: true, billingType: true, saleMode: true },

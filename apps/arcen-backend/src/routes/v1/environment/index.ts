@@ -1,146 +1,254 @@
 import { Hono } from "hono";
 import type { Context } from "hono";
 import { z } from "zod";
-import { createPublicClient, http, type Address } from "viem";
-import { getContractAddresses } from "@arcenpay/internal-core";
 import { db } from "../../../db.js";
-import { requirePermission, isErrorResponse } from "../../../lib/auth/api-auth.js";
+import {
+  canManageEnvironment,
+  isChainAllowedForMode,
+  listEnvironmentSummaries,
+  toEnvironmentSummary,
+} from "../../../lib/environments/workspace-environments.js";
+import { isErrorResponse, requireTeamRoles } from "../../../lib/auth/api-auth.js";
 import { writeAuditEvent } from "../../../lib/platform/audit.js";
-import { FACILITATOR_URL, getRpcUrl } from "../../../config.js";
-import { GRAPH_URL } from "../../../config.js";
-import { normalizeEnvironmentMode, resolveEnvironmentChainId } from "../../../lib/platform/default-chain.js";
-import { SUBGRAPH_REQUIRED } from "../../../lib/platform/launch-flags.js";
+import { getTierLimits } from "../../../lib/catalog/tier-guard.js";
 
-const switchSchema = z.object({
-  environmentMode: z.enum(["DEVELOPMENT", "PRODUCTION"]),
-  chainId: z.coerce.number().int().positive().optional(),
-  confirmText: z.string().optional(),
+const manageRoles = ["OWNER", "ADMIN"] as const;
+
+const createSchema = z.object({
+  name: z.string().trim().min(1).max(64),
+  mode: z.enum(["DEVELOPMENT", "PRODUCTION"]),
+  chainId: z.coerce.number().int().positive(),
 });
 
-function hasZeroAddress(addresses: object): boolean {
-  return Object.values(addresses as Record<string, unknown>).some(
-    (value) =>
-      typeof value === "string" &&
-      value.toLowerCase() === "0x0000000000000000000000000000000000000000",
-  );
-}
+const selectSchema = z.object({
+  environmentId: z.string().min(1),
+});
 
-type PreflightResult = {
-  ok: boolean;
-  checks: { contract: string; address: string; deployed: boolean }[];
-  failedContracts: string[];
-};
+const renameSchema = z.object({
+  environmentId: z.string().min(1),
+  name: z.string().trim().min(1).max(64),
+});
 
-async function runContractPreflight(
-  chainId: number,
-  addresses: ReturnType<typeof getContractAddresses>,
-): Promise<PreflightResult> {
-  const rpcUrl = getRpcUrl(chainId);
-  if (!rpcUrl) {
-    return { ok: true, checks: [], failedContracts: [] };
+async function listEnvironments(c: Context) {
+  const auth = await requireTeamRoles(c, [
+    "OWNER",
+    "ADMIN",
+    "FINANCE",
+    "DEVELOPER",
+    "SUPPORT",
+    "MEMBER",
+  ]);
+  if (isErrorResponse(auth)) {
+    return c.json({ ok: false, error: auth.error }, auth.status as any);
   }
 
-  const client = createPublicClient({
-    transport: http(rpcUrl, { timeout: 8_000 }),
-  });
-
-  const contractsToCheck: { name: string; address: string }[] = [
-    { name: "planFactory", address: addresses.planFactory },
-    { name: "subscriptionRegistry", address: addresses.subscriptionRegistry },
-    { name: "feeCollector", address: addresses.feeCollector },
-  ];
-
-  const results = await Promise.allSettled(
-    contractsToCheck.map(async ({ name, address }) => {
-      const code = await client.getBytecode({ address: address as Address });
-      return { contract: name, address, deployed: !!code && code !== "0x" };
-    }),
-  );
-
-  const checks = results.map((r, i) => {
-    if (r.status === "fulfilled") return r.value;
-    return {
-      contract: contractsToCheck[i].name,
-      address: contractsToCheck[i].address,
-      deployed: false,
-    };
-  });
-
-  const failedContracts = checks
-    .filter((c) => !c.deployed)
-    .map((c) => c.contract);
-
-  return { ok: failedContracts.length === 0, checks, failedContracts };
-}
-
-async function switchEnvironment(c: Context) {
-  const auth = await requirePermission(c, "environment:switch");
-  if (isErrorResponse(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any as any);
-
-  const body = await c.req.json() .catch(() => ({}));
-  const parsed = switchSchema.safeParse(body);
-  if (!parsed.success) {
-    return c.json({ error: "Invalid request", details: parsed.error.flatten().fieldErrors }, 400 as any);
-  }
-
-  if (parsed.data.confirmText !== "CONFIRM") {
-    return c.json({ error: "confirmText must equal CONFIRM" }, 400 as any);
-  }
-
-  const targetChainId =
-    resolveEnvironmentChainId(
-      normalizeEnvironmentMode(parsed.data.environmentMode),
-      parsed.data.chainId,
-    );
-
-  let addresses: ReturnType<typeof getContractAddresses>;
-  try {
-    addresses = getContractAddresses(targetChainId);
-  } catch {
-    return c.json({ error: `No configured contracts for chain ${targetChainId}` }, 400 as any);
-  }
-
-  // ── Run preflight checks (informational — do NOT block the switch) ──────────
-  const warnings: string[] = [];
-
-  if (hasZeroAddress(addresses)) {
-    warnings.push(
-      "Contract registry contains zero-address placeholders. Set ARCENPAY_CONTRACT_<chainId>_* env vars after deployment.",
-    );
-  }
-
-  const missingServices: string[] = [];
-  if (SUBGRAPH_REQUIRED && !GRAPH_URL) missingServices.push("GRAPH_URL");
-  if (!FACILITATOR_URL) missingServices.push("FACILITATOR_URL");
-  if (missingServices.length > 0) {
-    warnings.push(
-      `Required service endpoints are missing: ${missingServices.join(", ")}.`,
-    );
-  }
-
-  let preflight: PreflightResult | null = null;
-  try {
-    preflight = await runContractPreflight(targetChainId, addresses);
-    if (!preflight.ok) {
-      warnings.push(
-        `Contracts not deployed on target chain: ${preflight.failedContracts.join(", ")}.`,
-      );
-    }
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
-    warnings.push(`Contract preflight RPC unreachable: ${message}`);
-  }
-
-  const previous = await db.team.findUnique({
+  const team = await db.team.findUnique({
     where: { id: auth.team.teamId },
+    select: { platformTier: true },
   });
-  if (!previous) {
+  if (!team) {
     return c.json({ error: "Team not found" }, 404 as any);
   }
 
-  const team = await db.team.update({
+  const [limits, environments] = await Promise.all([
+    getTierLimits(team.platformTier),
+    listEnvironmentSummaries(auth.team.teamId, auth.session.activeEnvironmentId),
+  ]);
+
+  return c.json({
+    environments,
+    limits: {
+      development: limits.maxDevelopmentEnvironments,
+      production: limits.maxProductionEnvironments,
+    },
+    counts: {
+      development: environments.filter((env) => env.mode === "DEVELOPMENT").length,
+      production: environments.filter((env) => env.mode === "PRODUCTION").length,
+    },
+  });
+}
+
+async function createEnvironment(c: Context) {
+  const auth = await requireTeamRoles(c, ["OWNER", "ADMIN"]);
+  if (isErrorResponse(auth)) {
+    return c.json({ ok: false, error: auth.error }, auth.status as any);
+  }
+
+  const parsed = createSchema.safeParse(await c.req.json().catch(() => ({})));
+  if (!parsed.success) {
+    return c.json(
+      { error: "Invalid request", details: parsed.error.flatten().fieldErrors },
+      400 as any,
+    );
+  }
+
+  if (!isChainAllowedForMode(parsed.data.mode, parsed.data.chainId)) {
+    return c.json({ error: "Selected chain is not allowed for this environment type." }, 400 as any);
+  }
+
+  const team = await db.team.findUnique({
     where: { id: auth.team.teamId },
-    data: { environmentMode: normalizeEnvironmentMode(parsed.data.environmentMode) },
+    select: { platformTier: true },
+  });
+  if (!team) {
+    return c.json({ error: "Team not found" }, 404 as any);
+  }
+
+  const [limits, existingCount, existingName] = await Promise.all([
+    getTierLimits(team.platformTier),
+    db.workspaceEnvironment.count({
+      where: { teamId: auth.team.teamId, mode: parsed.data.mode },
+    }),
+    db.workspaceEnvironment.findFirst({
+      where: {
+        teamId: auth.team.teamId,
+        name: parsed.data.name,
+      },
+      select: { id: true },
+    }),
+  ]);
+
+  if (existingName) {
+    return c.json({ error: "An environment with this name already exists." }, 409 as any);
+  }
+
+  const limit =
+    parsed.data.mode === "DEVELOPMENT"
+      ? limits.maxDevelopmentEnvironments
+      : limits.maxProductionEnvironments;
+
+  if (existingCount >= limit) {
+    return c.json(
+      {
+        error: `Environment limit reached for ${parsed.data.mode.toLowerCase()}.`,
+        limit,
+        current: existingCount,
+      },
+      409 as any,
+    );
+  }
+
+  const environment = await db.workspaceEnvironment.create({
+    data: {
+      teamId: auth.team.teamId,
+      name: parsed.data.name,
+      mode: parsed.data.mode,
+      chainId: parsed.data.chainId,
+    },
+  });
+
+  await db.authSession.update({
+    where: { id: auth.session.sessionId },
+    data: { activeEnvironmentId: environment.id },
+  });
+
+  await db.catalogConfig.create({
+    data: {
+      teamId: auth.team.teamId,
+      environmentId: environment.id,
+      environmentMode: environment.mode,
+    },
+  }).catch(() => {});
+
+  await writeAuditEvent({
+    headers: c.req.raw.headers,
+    teamId: auth.team.teamId,
+    userId: auth.team.userId,
+    walletAddress: auth.team.walletAddress,
+    action: "environment.create",
+    resourceType: "WorkspaceEnvironment",
+    resourceId: environment.id,
+    afterData: environment,
+  });
+
+  return c.json(
+    {
+      environment: toEnvironmentSummary(environment, environment.id),
+    },
+    201 as any,
+  );
+}
+
+async function selectEnvironment(c: Context) {
+  const auth = await requireTeamRoles(c, [
+    "OWNER",
+    "ADMIN",
+    "FINANCE",
+    "DEVELOPER",
+    "SUPPORT",
+    "MEMBER",
+  ]);
+  if (isErrorResponse(auth)) {
+    return c.json({ ok: false, error: auth.error }, auth.status as any);
+  }
+
+  const parsed = selectSchema.safeParse(await c.req.json().catch(() => ({})));
+  if (!parsed.success) {
+    return c.json(
+      { error: "Invalid request", details: parsed.error.flatten().fieldErrors },
+      400 as any,
+    );
+  }
+
+  const environment = await db.workspaceEnvironment.findFirst({
+    where: {
+      id: parsed.data.environmentId,
+      teamId: auth.team.teamId,
+    },
+  });
+  if (!environment) {
+    return c.json({ error: "Environment not found" }, 404 as any);
+  }
+
+  await db.authSession.update({
+    where: { id: auth.session.sessionId },
+    data: { activeEnvironmentId: environment.id },
+  });
+
+  return c.json({
+    environment: toEnvironmentSummary(environment, environment.id),
+  });
+}
+
+async function renameEnvironment(c: Context) {
+  const auth = await requireTeamRoles(c, ["OWNER", "ADMIN"]);
+  if (isErrorResponse(auth)) {
+    return c.json({ ok: false, error: auth.error }, auth.status as any);
+  }
+
+  const parsed = renameSchema.safeParse(await c.req.json().catch(() => ({})));
+  if (!parsed.success) {
+    return c.json(
+      { error: "Invalid request", details: parsed.error.flatten().fieldErrors },
+      400 as any,
+    );
+  }
+
+  const existing = await db.workspaceEnvironment.findFirst({
+    where: {
+      id: parsed.data.environmentId,
+      teamId: auth.team.teamId,
+    },
+  });
+  if (!existing) {
+    return c.json({ error: "Environment not found" }, 404 as any);
+  }
+
+  const conflict = await db.workspaceEnvironment.findFirst({
+    where: {
+      teamId: auth.team.teamId,
+      name: parsed.data.name,
+      id: { not: existing.id },
+    },
+    select: { id: true },
+  });
+  if (conflict) {
+    return c.json({ error: "An environment with this name already exists." }, 409 as any);
+  }
+
+  const updated = await db.workspaceEnvironment.update({
+    where: { id: existing.id },
+    data: { name: parsed.data.name },
   });
 
   await writeAuditEvent({
@@ -148,31 +256,36 @@ async function switchEnvironment(c: Context) {
     teamId: auth.team.teamId,
     userId: auth.team.userId,
     walletAddress: auth.team.walletAddress,
-    action: "environment.switch",
-    resourceType: "Team",
-    resourceId: team.id,
-    beforeData: {
-      environmentMode: previous.environmentMode,
-    },
-    afterData: {
-      environmentMode: normalizeEnvironmentMode(team.environmentMode),
-      chainId: targetChainId,
-    },
-    metadata: {
-      preflightChecks: preflight?.checks ?? [],
-      warnings,
-    },
+    action: "environment.rename",
+    resourceType: "WorkspaceEnvironment",
+    resourceId: updated.id,
+    beforeData: existing,
+    afterData: updated,
   });
 
   return c.json({
-    ok: true,
-    teamId: team.id,
-    environmentMode: normalizeEnvironmentMode(team.environmentMode),
-    chainId: targetChainId,
-    preflight: preflight?.checks ?? [],
-    warnings,
+    environment: toEnvironmentSummary(updated, auth.session.activeEnvironmentId),
   });
 }
 
+async function deprecatedSwitch(c: Context) {
+  const auth = await requireTeamRoles(c, ["OWNER", "ADMIN"]);
+  if (isErrorResponse(auth)) {
+    return c.json({ ok: false, error: auth.error }, auth.status as any);
+  }
+
+  return c.json(
+    {
+      error:
+        "Environment mode switching has been removed. Create or select a workspace environment instead.",
+    },
+    410 as any,
+  );
+}
+
 export const environmentRoutes = new Hono()
-  .post("/switch", switchEnvironment);
+  .get("/", listEnvironments)
+  .post("/", createEnvironment)
+  .post("/select", selectEnvironment)
+  .patch("/", renameEnvironment)
+  .post("/switch", deprecatedSwitch);

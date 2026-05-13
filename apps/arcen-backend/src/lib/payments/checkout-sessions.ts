@@ -79,6 +79,7 @@ async function resolveOrCreateCompany(input: {
 
 export async function createCheckoutSession(input: {
   teamId: string;
+  environmentId?: string | null;
   purpose: "ADDON" | "INVOICE" | "CUSTOM";
   paymentLinkId?: string | null;
   companyId?: string | null;
@@ -100,6 +101,7 @@ export async function createCheckoutSession(input: {
   return db.checkoutSession.create({
     data: {
       teamId: input.teamId,
+      environmentId: input.environmentId ?? null,
       purpose: input.purpose,
       paymentLinkId: input.paymentLinkId ?? null,
       companyId: input.companyId ?? null,
@@ -231,6 +233,7 @@ export async function confirmCheckoutSessionPayment(input: {
   if (!invoiceId && (session.purpose === "ADDON" || session.purpose === "CUSTOM")) {
     const issued = await createIssuedChargeInvoice({
       teamId: session.teamId,
+      environmentId: session.environmentId,
       amount: Number(session.amount),
       description: deriveCheckoutDescription({
         purpose: session.purpose,

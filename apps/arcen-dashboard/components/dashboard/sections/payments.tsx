@@ -146,8 +146,9 @@ const LINK_KIND_LABELS: Record<string, string> = {
 
 export function PaymentsSection() {
   const { address } = useAccount();
-  const { envMode } = useEnvironment();
-  const configuredChainId = resolveEnvironmentChainId(envMode);
+  const { envMode, activeEnvironment } = useEnvironment();
+  const configuredChainId = activeEnvironment?.chainId ?? resolveEnvironmentChainId(envMode);
+  const environmentKey = activeEnvironment?.id ?? envMode;
   const runtimeUsdc = getUsdcAddress(configuredChainId);
   const runtimeChainLabel = getChainLabel(configuredChainId);
   const [paymentLinks, setPaymentLinks] = useState<PaymentLinkRow[]>([]);
@@ -210,7 +211,7 @@ export function PaymentsSection() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [environmentKey]);
 
   useEffect(() => {
     void load();

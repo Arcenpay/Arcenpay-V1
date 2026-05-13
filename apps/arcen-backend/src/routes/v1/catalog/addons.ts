@@ -4,6 +4,7 @@ import { db } from "../../../db.js";
 import { requirePermission, isErrorResponse } from "../../../lib/auth/api-auth.js";
 import { writeAuditEvent } from "../../../lib/platform/audit.js";
 import { APP_URL } from "../../../config.js";
+import { requireResolvedActiveEnvironment } from "../../../lib/environments/workspace-environments.js";
 
 const createSchema = z.object({
   name: z.string().min(1),
@@ -83,15 +84,19 @@ export async function listAddOns(c: Context) {
   const auth = await requirePermission(c, "catalog:read");
   if (isErrorResponse(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any as any);
 
-  const environmentMode = c.req.query("environmentMode") || undefined;
   const status = c.req.query("status") || undefined;
+  const activeEnvironment = await requireResolvedActiveEnvironment(
+    auth.session,
+    auth.team.teamId,
+  );
+  if (!activeEnvironment) {
+    return c.json({ error: "No workspace environment selected" }, 409 as any);
+  }
 
   const addOns = await db.catalogAddOn.findMany({
     where: {
       teamId: auth.team.teamId,
-      ...(environmentMode && {
-        environmentMode: environmentMode as "DEVELOPMENT" | "PRODUCTION",
-      }),
+      environmentId: activeEnvironment.id,
       ...(status && { status: status as "DRAFT" | "PUBLISHED" | "ARCHIVED" }),
     },
     include: {
@@ -121,10 +126,18 @@ export async function createAddOn(c: Context) {
   }
 
   const data = parsed.data;
+  const activeEnvironment = await requireResolvedActiveEnvironment(
+    auth.session,
+    auth.team.teamId,
+  );
+  if (!activeEnvironment) {
+    return c.json({ error: "No workspace environment selected" }, 409 as any);
+  }
   const addOn = await db.catalogAddOn.create({
     data: {
       teamId: auth.team.teamId,
-      environmentMode: data.environmentMode,
+      environmentId: activeEnvironment.id,
+      environmentMode: activeEnvironment.mode,
       name: data.name,
       code: data.code,
       description: data.description,
@@ -145,6 +158,7 @@ export async function createAddOn(c: Context) {
   await db.catalogVersion.create({
     data: {
       teamId: auth.team.teamId,
+      environmentId: activeEnvironment.id,
       environmentMode: addOn.environmentMode,
       entityType: "ADDON",
       entityId: addOn.id,
@@ -184,6 +198,9 @@ export async function updateAddOn(c: Context) {
   if (!existing) {
     return c.json({ error: "Add-on not found" }, 404 as any);
   }
+  if (!existing.environmentId) {
+    return c.json({ error: "Legacy add-ons without environments cannot be edited here." }, 409 as any);
+  }
 
   const updated = await db.catalogAddOn.update({
     where: { id: existing.id },
@@ -222,6 +239,7 @@ export async function updateAddOn(c: Context) {
   await db.catalogVersion.create({
     data: {
       teamId: auth.team.teamId,
+      environmentId: existing.environmentId,
       environmentMode: updated.environmentMode,
       entityType: "ADDON",
       entityId: updated.id,

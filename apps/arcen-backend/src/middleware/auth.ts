@@ -11,6 +11,7 @@ export interface AuthSession {
   userId: string;
   email: string | null;
   currentTeamId: string | null;
+  activeEnvironmentId: string | null;
   walletAddress: string | null;
   expiresAt: Date;
 }
@@ -75,6 +76,7 @@ export async function resolveSession(c: Context): Promise<AuthSession | null> {
       userId: record.user.id,
       email: record.user.email ?? null,
       currentTeamId: record.user.currentTeamId ?? null,
+      activeEnvironmentId: record.activeEnvironmentId ?? null,
       walletAddress: record.user.walletAddress ?? null,
       expiresAt,
     };
@@ -85,6 +87,7 @@ export async function resolveSession(c: Context): Promise<AuthSession | null> {
     userId: record.user.id,
     email: record.user.email ?? null,
     currentTeamId: record.user.currentTeamId ?? null,
+    activeEnvironmentId: record.activeEnvironmentId ?? null,
     walletAddress: record.user.walletAddress ?? null,
     expiresAt: record.expiresAt,
   };

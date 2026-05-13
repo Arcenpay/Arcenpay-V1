@@ -115,6 +115,8 @@ export async function resolveBillingRecipientEmail(
 
 export interface CreateChargeInvoiceInput {
   teamId: string;
+  environmentId?: string | null;
+  environmentMode?: "DEVELOPMENT" | "PRODUCTION";
   amount: number;
   description: string;
   customerEmail?: string | null;
@@ -142,7 +144,8 @@ export async function createIssuedChargeInvoice(
   const invoice = await db.invoice.create({
     data: {
       teamId: input.teamId,
-      environmentMode: team.environmentMode,
+      environmentId: input.environmentId ?? null,
+      environmentMode: input.environmentMode ?? team.environmentMode,
       status: "ISSUED",
       number,
       currency: "USDC",

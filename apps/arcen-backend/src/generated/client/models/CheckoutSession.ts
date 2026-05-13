@@ -41,6 +41,7 @@ export type CheckoutSessionMinAggregateOutputType = {
   createdAt: Date | null
   updatedAt: Date | null
   teamId: string | null
+  environmentId: string | null
   paymentLinkId: string | null
   companyId: string | null
   catalogAddOnId: string | null
@@ -71,6 +72,7 @@ export type CheckoutSessionMaxAggregateOutputType = {
   createdAt: Date | null
   updatedAt: Date | null
   teamId: string | null
+  environmentId: string | null
   paymentLinkId: string | null
   companyId: string | null
   catalogAddOnId: string | null
@@ -101,6 +103,7 @@ export type CheckoutSessionCountAggregateOutputType = {
   createdAt: number
   updatedAt: number
   teamId: number
+  environmentId: number
   paymentLinkId: number
   companyId: number
   catalogAddOnId: number
@@ -144,6 +147,7 @@ export type CheckoutSessionMinAggregateInputType = {
   createdAt?: true
   updatedAt?: true
   teamId?: true
+  environmentId?: true
   paymentLinkId?: true
   companyId?: true
   catalogAddOnId?: true
@@ -174,6 +178,7 @@ export type CheckoutSessionMaxAggregateInputType = {
   createdAt?: true
   updatedAt?: true
   teamId?: true
+  environmentId?: true
   paymentLinkId?: true
   companyId?: true
   catalogAddOnId?: true
@@ -204,6 +209,7 @@ export type CheckoutSessionCountAggregateInputType = {
   createdAt?: true
   updatedAt?: true
   teamId?: true
+  environmentId?: true
   paymentLinkId?: true
   companyId?: true
   catalogAddOnId?: true
@@ -322,6 +328,7 @@ export type CheckoutSessionGroupByOutputType = {
   createdAt: Date
   updatedAt: Date
   teamId: string
+  environmentId: string | null
   paymentLinkId: string | null
   companyId: string | null
   catalogAddOnId: string | null
@@ -376,6 +383,7 @@ export type CheckoutSessionWhereInput = {
   createdAt?: Prisma.DateTimeFilter<"CheckoutSession"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"CheckoutSession"> | Date | string
   teamId?: Prisma.StringFilter<"CheckoutSession"> | string
+  environmentId?: Prisma.StringNullableFilter<"CheckoutSession"> | string | null
   paymentLinkId?: Prisma.StringNullableFilter<"CheckoutSession"> | string | null
   companyId?: Prisma.StringNullableFilter<"CheckoutSession"> | string | null
   catalogAddOnId?: Prisma.StringNullableFilter<"CheckoutSession"> | string | null
@@ -401,6 +409,7 @@ export type CheckoutSessionWhereInput = {
   cancelledAt?: Prisma.DateTimeNullableFilter<"CheckoutSession"> | Date | string | null
   metadata?: Prisma.JsonNullableFilter<"CheckoutSession">
   team?: Prisma.XOR<Prisma.TeamScalarRelationFilter, Prisma.TeamWhereInput>
+  environment?: Prisma.XOR<Prisma.WorkspaceEnvironmentNullableScalarRelationFilter, Prisma.WorkspaceEnvironmentWhereInput> | null
   paymentLink?: Prisma.XOR<Prisma.PaymentLinkNullableScalarRelationFilter, Prisma.PaymentLinkWhereInput> | null
   company?: Prisma.XOR<Prisma.ArcenCompanyNullableScalarRelationFilter, Prisma.ArcenCompanyWhereInput> | null
   catalogAddOn?: Prisma.XOR<Prisma.CatalogAddOnNullableScalarRelationFilter, Prisma.CatalogAddOnWhereInput> | null
@@ -415,6 +424,7 @@ export type CheckoutSessionOrderByWithRelationInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrderInput | Prisma.SortOrder
   paymentLinkId?: Prisma.SortOrderInput | Prisma.SortOrder
   companyId?: Prisma.SortOrderInput | Prisma.SortOrder
   catalogAddOnId?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -440,6 +450,7 @@ export type CheckoutSessionOrderByWithRelationInput = {
   cancelledAt?: Prisma.SortOrderInput | Prisma.SortOrder
   metadata?: Prisma.SortOrderInput | Prisma.SortOrder
   team?: Prisma.TeamOrderByWithRelationInput
+  environment?: Prisma.WorkspaceEnvironmentOrderByWithRelationInput
   paymentLink?: Prisma.PaymentLinkOrderByWithRelationInput
   company?: Prisma.ArcenCompanyOrderByWithRelationInput
   catalogAddOn?: Prisma.CatalogAddOnOrderByWithRelationInput
@@ -458,6 +469,7 @@ export type CheckoutSessionWhereUniqueInput = Prisma.AtLeast<{
   createdAt?: Prisma.DateTimeFilter<"CheckoutSession"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"CheckoutSession"> | Date | string
   teamId?: Prisma.StringFilter<"CheckoutSession"> | string
+  environmentId?: Prisma.StringNullableFilter<"CheckoutSession"> | string | null
   paymentLinkId?: Prisma.StringNullableFilter<"CheckoutSession"> | string | null
   companyId?: Prisma.StringNullableFilter<"CheckoutSession"> | string | null
   catalogAddOnId?: Prisma.StringNullableFilter<"CheckoutSession"> | string | null
@@ -482,6 +494,7 @@ export type CheckoutSessionWhereUniqueInput = Prisma.AtLeast<{
   cancelledAt?: Prisma.DateTimeNullableFilter<"CheckoutSession"> | Date | string | null
   metadata?: Prisma.JsonNullableFilter<"CheckoutSession">
   team?: Prisma.XOR<Prisma.TeamScalarRelationFilter, Prisma.TeamWhereInput>
+  environment?: Prisma.XOR<Prisma.WorkspaceEnvironmentNullableScalarRelationFilter, Prisma.WorkspaceEnvironmentWhereInput> | null
   paymentLink?: Prisma.XOR<Prisma.PaymentLinkNullableScalarRelationFilter, Prisma.PaymentLinkWhereInput> | null
   company?: Prisma.XOR<Prisma.ArcenCompanyNullableScalarRelationFilter, Prisma.ArcenCompanyWhereInput> | null
   catalogAddOn?: Prisma.XOR<Prisma.CatalogAddOnNullableScalarRelationFilter, Prisma.CatalogAddOnWhereInput> | null
@@ -496,6 +509,7 @@ export type CheckoutSessionOrderByWithAggregationInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrderInput | Prisma.SortOrder
   paymentLinkId?: Prisma.SortOrderInput | Prisma.SortOrder
   companyId?: Prisma.SortOrderInput | Prisma.SortOrder
   catalogAddOnId?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -535,6 +549,7 @@ export type CheckoutSessionScalarWhereWithAggregatesInput = {
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"CheckoutSession"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"CheckoutSession"> | Date | string
   teamId?: Prisma.StringWithAggregatesFilter<"CheckoutSession"> | string
+  environmentId?: Prisma.StringNullableWithAggregatesFilter<"CheckoutSession"> | string | null
   paymentLinkId?: Prisma.StringNullableWithAggregatesFilter<"CheckoutSession"> | string | null
   companyId?: Prisma.StringNullableWithAggregatesFilter<"CheckoutSession"> | string | null
   catalogAddOnId?: Prisma.StringNullableWithAggregatesFilter<"CheckoutSession"> | string | null
@@ -584,6 +599,7 @@ export type CheckoutSessionCreateInput = {
   cancelledAt?: Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   team: Prisma.TeamCreateNestedOneWithoutCheckoutSessionsInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutCheckoutSessionsInput
   paymentLink?: Prisma.PaymentLinkCreateNestedOneWithoutCheckoutSessionsInput
   company?: Prisma.ArcenCompanyCreateNestedOneWithoutCheckoutSessionsInput
   catalogAddOn?: Prisma.CatalogAddOnCreateNestedOneWithoutCheckoutSessionsInput
@@ -598,6 +614,7 @@ export type CheckoutSessionUncheckedCreateInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   teamId: string
+  environmentId?: string | null
   paymentLinkId?: string | null
   companyId?: string | null
   catalogAddOnId?: string | null
@@ -648,6 +665,7 @@ export type CheckoutSessionUpdateInput = {
   cancelledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   team?: Prisma.TeamUpdateOneRequiredWithoutCheckoutSessionsNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutCheckoutSessionsNestedInput
   paymentLink?: Prisma.PaymentLinkUpdateOneWithoutCheckoutSessionsNestedInput
   company?: Prisma.ArcenCompanyUpdateOneWithoutCheckoutSessionsNestedInput
   catalogAddOn?: Prisma.CatalogAddOnUpdateOneWithoutCheckoutSessionsNestedInput
@@ -662,6 +680,7 @@ export type CheckoutSessionUncheckedUpdateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   paymentLinkId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   companyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   catalogAddOnId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -694,6 +713,7 @@ export type CheckoutSessionCreateManyInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   teamId: string
+  environmentId?: string | null
   paymentLinkId?: string | null
   companyId?: string | null
   catalogAddOnId?: string | null
@@ -749,6 +769,7 @@ export type CheckoutSessionUncheckedUpdateManyInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   paymentLinkId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   companyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   catalogAddOnId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -795,6 +816,7 @@ export type CheckoutSessionCountOrderByAggregateInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrder
   paymentLinkId?: Prisma.SortOrder
   companyId?: Prisma.SortOrder
   catalogAddOnId?: Prisma.SortOrder
@@ -831,6 +853,7 @@ export type CheckoutSessionMaxOrderByAggregateInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrder
   paymentLinkId?: Prisma.SortOrder
   companyId?: Prisma.SortOrder
   catalogAddOnId?: Prisma.SortOrder
@@ -861,6 +884,7 @@ export type CheckoutSessionMinOrderByAggregateInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrder
   paymentLinkId?: Prisma.SortOrder
   companyId?: Prisma.SortOrder
   catalogAddOnId?: Prisma.SortOrder
@@ -930,6 +954,48 @@ export type CheckoutSessionUncheckedUpdateManyWithoutTeamNestedInput = {
   connect?: Prisma.CheckoutSessionWhereUniqueInput | Prisma.CheckoutSessionWhereUniqueInput[]
   update?: Prisma.CheckoutSessionUpdateWithWhereUniqueWithoutTeamInput | Prisma.CheckoutSessionUpdateWithWhereUniqueWithoutTeamInput[]
   updateMany?: Prisma.CheckoutSessionUpdateManyWithWhereWithoutTeamInput | Prisma.CheckoutSessionUpdateManyWithWhereWithoutTeamInput[]
+  deleteMany?: Prisma.CheckoutSessionScalarWhereInput | Prisma.CheckoutSessionScalarWhereInput[]
+}
+
+export type CheckoutSessionCreateNestedManyWithoutEnvironmentInput = {
+  create?: Prisma.XOR<Prisma.CheckoutSessionCreateWithoutEnvironmentInput, Prisma.CheckoutSessionUncheckedCreateWithoutEnvironmentInput> | Prisma.CheckoutSessionCreateWithoutEnvironmentInput[] | Prisma.CheckoutSessionUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.CheckoutSessionCreateOrConnectWithoutEnvironmentInput | Prisma.CheckoutSessionCreateOrConnectWithoutEnvironmentInput[]
+  createMany?: Prisma.CheckoutSessionCreateManyEnvironmentInputEnvelope
+  connect?: Prisma.CheckoutSessionWhereUniqueInput | Prisma.CheckoutSessionWhereUniqueInput[]
+}
+
+export type CheckoutSessionUncheckedCreateNestedManyWithoutEnvironmentInput = {
+  create?: Prisma.XOR<Prisma.CheckoutSessionCreateWithoutEnvironmentInput, Prisma.CheckoutSessionUncheckedCreateWithoutEnvironmentInput> | Prisma.CheckoutSessionCreateWithoutEnvironmentInput[] | Prisma.CheckoutSessionUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.CheckoutSessionCreateOrConnectWithoutEnvironmentInput | Prisma.CheckoutSessionCreateOrConnectWithoutEnvironmentInput[]
+  createMany?: Prisma.CheckoutSessionCreateManyEnvironmentInputEnvelope
+  connect?: Prisma.CheckoutSessionWhereUniqueInput | Prisma.CheckoutSessionWhereUniqueInput[]
+}
+
+export type CheckoutSessionUpdateManyWithoutEnvironmentNestedInput = {
+  create?: Prisma.XOR<Prisma.CheckoutSessionCreateWithoutEnvironmentInput, Prisma.CheckoutSessionUncheckedCreateWithoutEnvironmentInput> | Prisma.CheckoutSessionCreateWithoutEnvironmentInput[] | Prisma.CheckoutSessionUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.CheckoutSessionCreateOrConnectWithoutEnvironmentInput | Prisma.CheckoutSessionCreateOrConnectWithoutEnvironmentInput[]
+  upsert?: Prisma.CheckoutSessionUpsertWithWhereUniqueWithoutEnvironmentInput | Prisma.CheckoutSessionUpsertWithWhereUniqueWithoutEnvironmentInput[]
+  createMany?: Prisma.CheckoutSessionCreateManyEnvironmentInputEnvelope
+  set?: Prisma.CheckoutSessionWhereUniqueInput | Prisma.CheckoutSessionWhereUniqueInput[]
+  disconnect?: Prisma.CheckoutSessionWhereUniqueInput | Prisma.CheckoutSessionWhereUniqueInput[]
+  delete?: Prisma.CheckoutSessionWhereUniqueInput | Prisma.CheckoutSessionWhereUniqueInput[]
+  connect?: Prisma.CheckoutSessionWhereUniqueInput | Prisma.CheckoutSessionWhereUniqueInput[]
+  update?: Prisma.CheckoutSessionUpdateWithWhereUniqueWithoutEnvironmentInput | Prisma.CheckoutSessionUpdateWithWhereUniqueWithoutEnvironmentInput[]
+  updateMany?: Prisma.CheckoutSessionUpdateManyWithWhereWithoutEnvironmentInput | Prisma.CheckoutSessionUpdateManyWithWhereWithoutEnvironmentInput[]
+  deleteMany?: Prisma.CheckoutSessionScalarWhereInput | Prisma.CheckoutSessionScalarWhereInput[]
+}
+
+export type CheckoutSessionUncheckedUpdateManyWithoutEnvironmentNestedInput = {
+  create?: Prisma.XOR<Prisma.CheckoutSessionCreateWithoutEnvironmentInput, Prisma.CheckoutSessionUncheckedCreateWithoutEnvironmentInput> | Prisma.CheckoutSessionCreateWithoutEnvironmentInput[] | Prisma.CheckoutSessionUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.CheckoutSessionCreateOrConnectWithoutEnvironmentInput | Prisma.CheckoutSessionCreateOrConnectWithoutEnvironmentInput[]
+  upsert?: Prisma.CheckoutSessionUpsertWithWhereUniqueWithoutEnvironmentInput | Prisma.CheckoutSessionUpsertWithWhereUniqueWithoutEnvironmentInput[]
+  createMany?: Prisma.CheckoutSessionCreateManyEnvironmentInputEnvelope
+  set?: Prisma.CheckoutSessionWhereUniqueInput | Prisma.CheckoutSessionWhereUniqueInput[]
+  disconnect?: Prisma.CheckoutSessionWhereUniqueInput | Prisma.CheckoutSessionWhereUniqueInput[]
+  delete?: Prisma.CheckoutSessionWhereUniqueInput | Prisma.CheckoutSessionWhereUniqueInput[]
+  connect?: Prisma.CheckoutSessionWhereUniqueInput | Prisma.CheckoutSessionWhereUniqueInput[]
+  update?: Prisma.CheckoutSessionUpdateWithWhereUniqueWithoutEnvironmentInput | Prisma.CheckoutSessionUpdateWithWhereUniqueWithoutEnvironmentInput[]
+  updateMany?: Prisma.CheckoutSessionUpdateManyWithWhereWithoutEnvironmentInput | Prisma.CheckoutSessionUpdateManyWithWhereWithoutEnvironmentInput[]
   deleteMany?: Prisma.CheckoutSessionScalarWhereInput | Prisma.CheckoutSessionScalarWhereInput[]
 }
 
@@ -1231,6 +1297,7 @@ export type CheckoutSessionCreateWithoutTeamInput = {
   paidAt?: Date | string | null
   cancelledAt?: Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutCheckoutSessionsInput
   paymentLink?: Prisma.PaymentLinkCreateNestedOneWithoutCheckoutSessionsInput
   company?: Prisma.ArcenCompanyCreateNestedOneWithoutCheckoutSessionsInput
   catalogAddOn?: Prisma.CatalogAddOnCreateNestedOneWithoutCheckoutSessionsInput
@@ -1244,6 +1311,7 @@ export type CheckoutSessionUncheckedCreateWithoutTeamInput = {
   id?: string
   createdAt?: Date | string
   updatedAt?: Date | string
+  environmentId?: string | null
   paymentLinkId?: string | null
   companyId?: string | null
   catalogAddOnId?: string | null
@@ -1305,6 +1373,7 @@ export type CheckoutSessionScalarWhereInput = {
   createdAt?: Prisma.DateTimeFilter<"CheckoutSession"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"CheckoutSession"> | Date | string
   teamId?: Prisma.StringFilter<"CheckoutSession"> | string
+  environmentId?: Prisma.StringNullableFilter<"CheckoutSession"> | string | null
   paymentLinkId?: Prisma.StringNullableFilter<"CheckoutSession"> | string | null
   companyId?: Prisma.StringNullableFilter<"CheckoutSession"> | string | null
   catalogAddOnId?: Prisma.StringNullableFilter<"CheckoutSession"> | string | null
@@ -1331,7 +1400,7 @@ export type CheckoutSessionScalarWhereInput = {
   metadata?: Prisma.JsonNullableFilter<"CheckoutSession">
 }
 
-export type CheckoutSessionCreateWithoutCatalogAddOnInput = {
+export type CheckoutSessionCreateWithoutEnvironmentInput = {
   id?: string
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1356,6 +1425,97 @@ export type CheckoutSessionCreateWithoutCatalogAddOnInput = {
   team: Prisma.TeamCreateNestedOneWithoutCheckoutSessionsInput
   paymentLink?: Prisma.PaymentLinkCreateNestedOneWithoutCheckoutSessionsInput
   company?: Prisma.ArcenCompanyCreateNestedOneWithoutCheckoutSessionsInput
+  catalogAddOn?: Prisma.CatalogAddOnCreateNestedOneWithoutCheckoutSessionsInput
+  invoice?: Prisma.InvoiceCreateNestedOneWithoutCheckoutSessionsInput
+  payment?: Prisma.PaymentCreateNestedOneWithoutCheckoutSessionsInput
+  subscriptionState?: Prisma.SubscriptionStateCreateNestedOneWithoutCheckoutSessionsInput
+  addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutCheckoutSessionInput
+}
+
+export type CheckoutSessionUncheckedCreateWithoutEnvironmentInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  teamId: string
+  paymentLinkId?: string | null
+  companyId?: string | null
+  catalogAddOnId?: string | null
+  invoiceId?: string | null
+  paymentId?: string | null
+  subscriptionStateId?: string | null
+  purpose: $Enums.CheckoutSessionPurpose
+  status?: $Enums.CheckoutSessionStatus
+  customerEmail?: string | null
+  customerWallet?: string | null
+  customerName?: string | null
+  currency?: string
+  amount: runtime.Decimal | runtime.DecimalJsLike | number | string
+  acceptedToken: string
+  chainId?: number
+  recipientWallet: string
+  txHash?: string | null
+  verificationError?: string | null
+  successUrl?: string | null
+  cancelUrl?: string | null
+  expiresAt?: Date | string | null
+  paidAt?: Date | string | null
+  cancelledAt?: Date | string | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutCheckoutSessionInput
+}
+
+export type CheckoutSessionCreateOrConnectWithoutEnvironmentInput = {
+  where: Prisma.CheckoutSessionWhereUniqueInput
+  create: Prisma.XOR<Prisma.CheckoutSessionCreateWithoutEnvironmentInput, Prisma.CheckoutSessionUncheckedCreateWithoutEnvironmentInput>
+}
+
+export type CheckoutSessionCreateManyEnvironmentInputEnvelope = {
+  data: Prisma.CheckoutSessionCreateManyEnvironmentInput | Prisma.CheckoutSessionCreateManyEnvironmentInput[]
+  skipDuplicates?: boolean
+}
+
+export type CheckoutSessionUpsertWithWhereUniqueWithoutEnvironmentInput = {
+  where: Prisma.CheckoutSessionWhereUniqueInput
+  update: Prisma.XOR<Prisma.CheckoutSessionUpdateWithoutEnvironmentInput, Prisma.CheckoutSessionUncheckedUpdateWithoutEnvironmentInput>
+  create: Prisma.XOR<Prisma.CheckoutSessionCreateWithoutEnvironmentInput, Prisma.CheckoutSessionUncheckedCreateWithoutEnvironmentInput>
+}
+
+export type CheckoutSessionUpdateWithWhereUniqueWithoutEnvironmentInput = {
+  where: Prisma.CheckoutSessionWhereUniqueInput
+  data: Prisma.XOR<Prisma.CheckoutSessionUpdateWithoutEnvironmentInput, Prisma.CheckoutSessionUncheckedUpdateWithoutEnvironmentInput>
+}
+
+export type CheckoutSessionUpdateManyWithWhereWithoutEnvironmentInput = {
+  where: Prisma.CheckoutSessionScalarWhereInput
+  data: Prisma.XOR<Prisma.CheckoutSessionUpdateManyMutationInput, Prisma.CheckoutSessionUncheckedUpdateManyWithoutEnvironmentInput>
+}
+
+export type CheckoutSessionCreateWithoutCatalogAddOnInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  purpose: $Enums.CheckoutSessionPurpose
+  status?: $Enums.CheckoutSessionStatus
+  customerEmail?: string | null
+  customerWallet?: string | null
+  customerName?: string | null
+  currency?: string
+  amount: runtime.Decimal | runtime.DecimalJsLike | number | string
+  acceptedToken: string
+  chainId?: number
+  recipientWallet: string
+  txHash?: string | null
+  verificationError?: string | null
+  successUrl?: string | null
+  cancelUrl?: string | null
+  expiresAt?: Date | string | null
+  paidAt?: Date | string | null
+  cancelledAt?: Date | string | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  team: Prisma.TeamCreateNestedOneWithoutCheckoutSessionsInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutCheckoutSessionsInput
+  paymentLink?: Prisma.PaymentLinkCreateNestedOneWithoutCheckoutSessionsInput
+  company?: Prisma.ArcenCompanyCreateNestedOneWithoutCheckoutSessionsInput
   invoice?: Prisma.InvoiceCreateNestedOneWithoutCheckoutSessionsInput
   payment?: Prisma.PaymentCreateNestedOneWithoutCheckoutSessionsInput
   subscriptionState?: Prisma.SubscriptionStateCreateNestedOneWithoutCheckoutSessionsInput
@@ -1367,6 +1527,7 @@ export type CheckoutSessionUncheckedCreateWithoutCatalogAddOnInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   teamId: string
+  environmentId?: string | null
   paymentLinkId?: string | null
   companyId?: string | null
   invoiceId?: string | null
@@ -1442,6 +1603,7 @@ export type CheckoutSessionCreateWithoutInvoiceInput = {
   cancelledAt?: Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   team: Prisma.TeamCreateNestedOneWithoutCheckoutSessionsInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutCheckoutSessionsInput
   paymentLink?: Prisma.PaymentLinkCreateNestedOneWithoutCheckoutSessionsInput
   company?: Prisma.ArcenCompanyCreateNestedOneWithoutCheckoutSessionsInput
   catalogAddOn?: Prisma.CatalogAddOnCreateNestedOneWithoutCheckoutSessionsInput
@@ -1455,6 +1617,7 @@ export type CheckoutSessionUncheckedCreateWithoutInvoiceInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   teamId: string
+  environmentId?: string | null
   paymentLinkId?: string | null
   companyId?: string | null
   catalogAddOnId?: string | null
@@ -1530,6 +1693,7 @@ export type CheckoutSessionCreateWithoutSubscriptionStateInput = {
   cancelledAt?: Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   team: Prisma.TeamCreateNestedOneWithoutCheckoutSessionsInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutCheckoutSessionsInput
   paymentLink?: Prisma.PaymentLinkCreateNestedOneWithoutCheckoutSessionsInput
   company?: Prisma.ArcenCompanyCreateNestedOneWithoutCheckoutSessionsInput
   catalogAddOn?: Prisma.CatalogAddOnCreateNestedOneWithoutCheckoutSessionsInput
@@ -1543,6 +1707,7 @@ export type CheckoutSessionUncheckedCreateWithoutSubscriptionStateInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   teamId: string
+  environmentId?: string | null
   paymentLinkId?: string | null
   companyId?: string | null
   catalogAddOnId?: string | null
@@ -1618,6 +1783,7 @@ export type CheckoutSessionCreateWithoutPaymentInput = {
   cancelledAt?: Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   team: Prisma.TeamCreateNestedOneWithoutCheckoutSessionsInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutCheckoutSessionsInput
   paymentLink?: Prisma.PaymentLinkCreateNestedOneWithoutCheckoutSessionsInput
   company?: Prisma.ArcenCompanyCreateNestedOneWithoutCheckoutSessionsInput
   catalogAddOn?: Prisma.CatalogAddOnCreateNestedOneWithoutCheckoutSessionsInput
@@ -1631,6 +1797,7 @@ export type CheckoutSessionUncheckedCreateWithoutPaymentInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   teamId: string
+  environmentId?: string | null
   paymentLinkId?: string | null
   companyId?: string | null
   catalogAddOnId?: string | null
@@ -1706,6 +1873,7 @@ export type CheckoutSessionCreateWithoutCompanyInput = {
   cancelledAt?: Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   team: Prisma.TeamCreateNestedOneWithoutCheckoutSessionsInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutCheckoutSessionsInput
   paymentLink?: Prisma.PaymentLinkCreateNestedOneWithoutCheckoutSessionsInput
   catalogAddOn?: Prisma.CatalogAddOnCreateNestedOneWithoutCheckoutSessionsInput
   invoice?: Prisma.InvoiceCreateNestedOneWithoutCheckoutSessionsInput
@@ -1719,6 +1887,7 @@ export type CheckoutSessionUncheckedCreateWithoutCompanyInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   teamId: string
+  environmentId?: string | null
   paymentLinkId?: string | null
   catalogAddOnId?: string | null
   invoiceId?: string | null
@@ -1794,6 +1963,7 @@ export type CheckoutSessionCreateWithoutAddOnGrantsInput = {
   cancelledAt?: Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   team: Prisma.TeamCreateNestedOneWithoutCheckoutSessionsInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutCheckoutSessionsInput
   paymentLink?: Prisma.PaymentLinkCreateNestedOneWithoutCheckoutSessionsInput
   company?: Prisma.ArcenCompanyCreateNestedOneWithoutCheckoutSessionsInput
   catalogAddOn?: Prisma.CatalogAddOnCreateNestedOneWithoutCheckoutSessionsInput
@@ -1807,6 +1977,7 @@ export type CheckoutSessionUncheckedCreateWithoutAddOnGrantsInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   teamId: string
+  environmentId?: string | null
   paymentLinkId?: string | null
   companyId?: string | null
   catalogAddOnId?: string | null
@@ -1872,6 +2043,7 @@ export type CheckoutSessionUpdateWithoutAddOnGrantsInput = {
   cancelledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   team?: Prisma.TeamUpdateOneRequiredWithoutCheckoutSessionsNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutCheckoutSessionsNestedInput
   paymentLink?: Prisma.PaymentLinkUpdateOneWithoutCheckoutSessionsNestedInput
   company?: Prisma.ArcenCompanyUpdateOneWithoutCheckoutSessionsNestedInput
   catalogAddOn?: Prisma.CatalogAddOnUpdateOneWithoutCheckoutSessionsNestedInput
@@ -1885,6 +2057,7 @@ export type CheckoutSessionUncheckedUpdateWithoutAddOnGrantsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   paymentLinkId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   companyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   catalogAddOnId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1934,6 +2107,7 @@ export type CheckoutSessionCreateWithoutPaymentLinkInput = {
   cancelledAt?: Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   team: Prisma.TeamCreateNestedOneWithoutCheckoutSessionsInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutCheckoutSessionsInput
   company?: Prisma.ArcenCompanyCreateNestedOneWithoutCheckoutSessionsInput
   catalogAddOn?: Prisma.CatalogAddOnCreateNestedOneWithoutCheckoutSessionsInput
   invoice?: Prisma.InvoiceCreateNestedOneWithoutCheckoutSessionsInput
@@ -1947,6 +2121,7 @@ export type CheckoutSessionUncheckedCreateWithoutPaymentLinkInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   teamId: string
+  environmentId?: string | null
   companyId?: string | null
   catalogAddOnId?: string | null
   invoiceId?: string | null
@@ -2003,6 +2178,7 @@ export type CheckoutSessionCreateManyTeamInput = {
   id?: string
   createdAt?: Date | string
   updatedAt?: Date | string
+  environmentId?: string | null
   paymentLinkId?: string | null
   companyId?: string | null
   catalogAddOnId?: string | null
@@ -2051,6 +2227,7 @@ export type CheckoutSessionUpdateWithoutTeamInput = {
   paidAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   cancelledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutCheckoutSessionsNestedInput
   paymentLink?: Prisma.PaymentLinkUpdateOneWithoutCheckoutSessionsNestedInput
   company?: Prisma.ArcenCompanyUpdateOneWithoutCheckoutSessionsNestedInput
   catalogAddOn?: Prisma.CatalogAddOnUpdateOneWithoutCheckoutSessionsNestedInput
@@ -2064,6 +2241,7 @@ export type CheckoutSessionUncheckedUpdateWithoutTeamInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   paymentLinkId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   companyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   catalogAddOnId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2095,6 +2273,133 @@ export type CheckoutSessionUncheckedUpdateManyWithoutTeamInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  paymentLinkId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  companyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  catalogAddOnId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  invoiceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  paymentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  subscriptionStateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  purpose?: Prisma.EnumCheckoutSessionPurposeFieldUpdateOperationsInput | $Enums.CheckoutSessionPurpose
+  status?: Prisma.EnumCheckoutSessionStatusFieldUpdateOperationsInput | $Enums.CheckoutSessionStatus
+  customerEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  customerWallet?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  customerName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
+  amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  acceptedToken?: Prisma.StringFieldUpdateOperationsInput | string
+  chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  recipientWallet?: Prisma.StringFieldUpdateOperationsInput | string
+  txHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  verificationError?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  successUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  cancelUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  paidAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  cancelledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+}
+
+export type CheckoutSessionCreateManyEnvironmentInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  teamId: string
+  paymentLinkId?: string | null
+  companyId?: string | null
+  catalogAddOnId?: string | null
+  invoiceId?: string | null
+  paymentId?: string | null
+  subscriptionStateId?: string | null
+  purpose: $Enums.CheckoutSessionPurpose
+  status?: $Enums.CheckoutSessionStatus
+  customerEmail?: string | null
+  customerWallet?: string | null
+  customerName?: string | null
+  currency?: string
+  amount: runtime.Decimal | runtime.DecimalJsLike | number | string
+  acceptedToken: string
+  chainId?: number
+  recipientWallet: string
+  txHash?: string | null
+  verificationError?: string | null
+  successUrl?: string | null
+  cancelUrl?: string | null
+  expiresAt?: Date | string | null
+  paidAt?: Date | string | null
+  cancelledAt?: Date | string | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+}
+
+export type CheckoutSessionUpdateWithoutEnvironmentInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  purpose?: Prisma.EnumCheckoutSessionPurposeFieldUpdateOperationsInput | $Enums.CheckoutSessionPurpose
+  status?: Prisma.EnumCheckoutSessionStatusFieldUpdateOperationsInput | $Enums.CheckoutSessionStatus
+  customerEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  customerWallet?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  customerName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
+  amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  acceptedToken?: Prisma.StringFieldUpdateOperationsInput | string
+  chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  recipientWallet?: Prisma.StringFieldUpdateOperationsInput | string
+  txHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  verificationError?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  successUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  cancelUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  paidAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  cancelledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  team?: Prisma.TeamUpdateOneRequiredWithoutCheckoutSessionsNestedInput
+  paymentLink?: Prisma.PaymentLinkUpdateOneWithoutCheckoutSessionsNestedInput
+  company?: Prisma.ArcenCompanyUpdateOneWithoutCheckoutSessionsNestedInput
+  catalogAddOn?: Prisma.CatalogAddOnUpdateOneWithoutCheckoutSessionsNestedInput
+  invoice?: Prisma.InvoiceUpdateOneWithoutCheckoutSessionsNestedInput
+  payment?: Prisma.PaymentUpdateOneWithoutCheckoutSessionsNestedInput
+  subscriptionState?: Prisma.SubscriptionStateUpdateOneWithoutCheckoutSessionsNestedInput
+  addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutCheckoutSessionNestedInput
+}
+
+export type CheckoutSessionUncheckedUpdateWithoutEnvironmentInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  paymentLinkId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  companyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  catalogAddOnId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  invoiceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  paymentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  subscriptionStateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  purpose?: Prisma.EnumCheckoutSessionPurposeFieldUpdateOperationsInput | $Enums.CheckoutSessionPurpose
+  status?: Prisma.EnumCheckoutSessionStatusFieldUpdateOperationsInput | $Enums.CheckoutSessionStatus
+  customerEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  customerWallet?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  customerName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
+  amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  acceptedToken?: Prisma.StringFieldUpdateOperationsInput | string
+  chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  recipientWallet?: Prisma.StringFieldUpdateOperationsInput | string
+  txHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  verificationError?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  successUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  cancelUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  paidAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  cancelledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutCheckoutSessionNestedInput
+}
+
+export type CheckoutSessionUncheckedUpdateManyWithoutEnvironmentInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamId?: Prisma.StringFieldUpdateOperationsInput | string
   paymentLinkId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   companyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   catalogAddOnId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2126,6 +2431,7 @@ export type CheckoutSessionCreateManyCatalogAddOnInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   teamId: string
+  environmentId?: string | null
   paymentLinkId?: string | null
   companyId?: string | null
   invoiceId?: string | null
@@ -2174,6 +2480,7 @@ export type CheckoutSessionUpdateWithoutCatalogAddOnInput = {
   cancelledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   team?: Prisma.TeamUpdateOneRequiredWithoutCheckoutSessionsNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutCheckoutSessionsNestedInput
   paymentLink?: Prisma.PaymentLinkUpdateOneWithoutCheckoutSessionsNestedInput
   company?: Prisma.ArcenCompanyUpdateOneWithoutCheckoutSessionsNestedInput
   invoice?: Prisma.InvoiceUpdateOneWithoutCheckoutSessionsNestedInput
@@ -2187,6 +2494,7 @@ export type CheckoutSessionUncheckedUpdateWithoutCatalogAddOnInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   paymentLinkId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   companyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   invoiceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2218,6 +2526,7 @@ export type CheckoutSessionUncheckedUpdateManyWithoutCatalogAddOnInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   paymentLinkId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   companyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   invoiceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2248,6 +2557,7 @@ export type CheckoutSessionCreateManyInvoiceInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   teamId: string
+  environmentId?: string | null
   paymentLinkId?: string | null
   companyId?: string | null
   catalogAddOnId?: string | null
@@ -2296,6 +2606,7 @@ export type CheckoutSessionUpdateWithoutInvoiceInput = {
   cancelledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   team?: Prisma.TeamUpdateOneRequiredWithoutCheckoutSessionsNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutCheckoutSessionsNestedInput
   paymentLink?: Prisma.PaymentLinkUpdateOneWithoutCheckoutSessionsNestedInput
   company?: Prisma.ArcenCompanyUpdateOneWithoutCheckoutSessionsNestedInput
   catalogAddOn?: Prisma.CatalogAddOnUpdateOneWithoutCheckoutSessionsNestedInput
@@ -2309,6 +2620,7 @@ export type CheckoutSessionUncheckedUpdateWithoutInvoiceInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   paymentLinkId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   companyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   catalogAddOnId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2340,6 +2652,7 @@ export type CheckoutSessionUncheckedUpdateManyWithoutInvoiceInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   paymentLinkId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   companyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   catalogAddOnId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2370,6 +2683,7 @@ export type CheckoutSessionCreateManySubscriptionStateInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   teamId: string
+  environmentId?: string | null
   paymentLinkId?: string | null
   companyId?: string | null
   catalogAddOnId?: string | null
@@ -2418,6 +2732,7 @@ export type CheckoutSessionUpdateWithoutSubscriptionStateInput = {
   cancelledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   team?: Prisma.TeamUpdateOneRequiredWithoutCheckoutSessionsNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutCheckoutSessionsNestedInput
   paymentLink?: Prisma.PaymentLinkUpdateOneWithoutCheckoutSessionsNestedInput
   company?: Prisma.ArcenCompanyUpdateOneWithoutCheckoutSessionsNestedInput
   catalogAddOn?: Prisma.CatalogAddOnUpdateOneWithoutCheckoutSessionsNestedInput
@@ -2431,6 +2746,7 @@ export type CheckoutSessionUncheckedUpdateWithoutSubscriptionStateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   paymentLinkId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   companyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   catalogAddOnId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2462,6 +2778,7 @@ export type CheckoutSessionUncheckedUpdateManyWithoutSubscriptionStateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   paymentLinkId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   companyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   catalogAddOnId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2492,6 +2809,7 @@ export type CheckoutSessionCreateManyPaymentInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   teamId: string
+  environmentId?: string | null
   paymentLinkId?: string | null
   companyId?: string | null
   catalogAddOnId?: string | null
@@ -2540,6 +2858,7 @@ export type CheckoutSessionUpdateWithoutPaymentInput = {
   cancelledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   team?: Prisma.TeamUpdateOneRequiredWithoutCheckoutSessionsNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutCheckoutSessionsNestedInput
   paymentLink?: Prisma.PaymentLinkUpdateOneWithoutCheckoutSessionsNestedInput
   company?: Prisma.ArcenCompanyUpdateOneWithoutCheckoutSessionsNestedInput
   catalogAddOn?: Prisma.CatalogAddOnUpdateOneWithoutCheckoutSessionsNestedInput
@@ -2553,6 +2872,7 @@ export type CheckoutSessionUncheckedUpdateWithoutPaymentInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   paymentLinkId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   companyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   catalogAddOnId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2584,6 +2904,7 @@ export type CheckoutSessionUncheckedUpdateManyWithoutPaymentInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   paymentLinkId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   companyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   catalogAddOnId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2614,6 +2935,7 @@ export type CheckoutSessionCreateManyCompanyInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   teamId: string
+  environmentId?: string | null
   paymentLinkId?: string | null
   catalogAddOnId?: string | null
   invoiceId?: string | null
@@ -2662,6 +2984,7 @@ export type CheckoutSessionUpdateWithoutCompanyInput = {
   cancelledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   team?: Prisma.TeamUpdateOneRequiredWithoutCheckoutSessionsNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutCheckoutSessionsNestedInput
   paymentLink?: Prisma.PaymentLinkUpdateOneWithoutCheckoutSessionsNestedInput
   catalogAddOn?: Prisma.CatalogAddOnUpdateOneWithoutCheckoutSessionsNestedInput
   invoice?: Prisma.InvoiceUpdateOneWithoutCheckoutSessionsNestedInput
@@ -2675,6 +2998,7 @@ export type CheckoutSessionUncheckedUpdateWithoutCompanyInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   paymentLinkId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   catalogAddOnId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   invoiceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2706,6 +3030,7 @@ export type CheckoutSessionUncheckedUpdateManyWithoutCompanyInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   paymentLinkId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   catalogAddOnId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   invoiceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2736,6 +3061,7 @@ export type CheckoutSessionCreateManyPaymentLinkInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   teamId: string
+  environmentId?: string | null
   companyId?: string | null
   catalogAddOnId?: string | null
   invoiceId?: string | null
@@ -2784,6 +3110,7 @@ export type CheckoutSessionUpdateWithoutPaymentLinkInput = {
   cancelledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   team?: Prisma.TeamUpdateOneRequiredWithoutCheckoutSessionsNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutCheckoutSessionsNestedInput
   company?: Prisma.ArcenCompanyUpdateOneWithoutCheckoutSessionsNestedInput
   catalogAddOn?: Prisma.CatalogAddOnUpdateOneWithoutCheckoutSessionsNestedInput
   invoice?: Prisma.InvoiceUpdateOneWithoutCheckoutSessionsNestedInput
@@ -2797,6 +3124,7 @@ export type CheckoutSessionUncheckedUpdateWithoutPaymentLinkInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   companyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   catalogAddOnId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   invoiceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2828,6 +3156,7 @@ export type CheckoutSessionUncheckedUpdateManyWithoutPaymentLinkInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   companyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   catalogAddOnId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   invoiceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2889,6 +3218,7 @@ export type CheckoutSessionSelect<ExtArgs extends runtime.Types.Extensions.Inter
   createdAt?: boolean
   updatedAt?: boolean
   teamId?: boolean
+  environmentId?: boolean
   paymentLinkId?: boolean
   companyId?: boolean
   catalogAddOnId?: boolean
@@ -2914,6 +3244,7 @@ export type CheckoutSessionSelect<ExtArgs extends runtime.Types.Extensions.Inter
   cancelledAt?: boolean
   metadata?: boolean
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.CheckoutSession$environmentArgs<ExtArgs>
   paymentLink?: boolean | Prisma.CheckoutSession$paymentLinkArgs<ExtArgs>
   company?: boolean | Prisma.CheckoutSession$companyArgs<ExtArgs>
   catalogAddOn?: boolean | Prisma.CheckoutSession$catalogAddOnArgs<ExtArgs>
@@ -2929,6 +3260,7 @@ export type CheckoutSessionSelectCreateManyAndReturn<ExtArgs extends runtime.Typ
   createdAt?: boolean
   updatedAt?: boolean
   teamId?: boolean
+  environmentId?: boolean
   paymentLinkId?: boolean
   companyId?: boolean
   catalogAddOnId?: boolean
@@ -2954,6 +3286,7 @@ export type CheckoutSessionSelectCreateManyAndReturn<ExtArgs extends runtime.Typ
   cancelledAt?: boolean
   metadata?: boolean
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.CheckoutSession$environmentArgs<ExtArgs>
   paymentLink?: boolean | Prisma.CheckoutSession$paymentLinkArgs<ExtArgs>
   company?: boolean | Prisma.CheckoutSession$companyArgs<ExtArgs>
   catalogAddOn?: boolean | Prisma.CheckoutSession$catalogAddOnArgs<ExtArgs>
@@ -2967,6 +3300,7 @@ export type CheckoutSessionSelectUpdateManyAndReturn<ExtArgs extends runtime.Typ
   createdAt?: boolean
   updatedAt?: boolean
   teamId?: boolean
+  environmentId?: boolean
   paymentLinkId?: boolean
   companyId?: boolean
   catalogAddOnId?: boolean
@@ -2992,6 +3326,7 @@ export type CheckoutSessionSelectUpdateManyAndReturn<ExtArgs extends runtime.Typ
   cancelledAt?: boolean
   metadata?: boolean
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.CheckoutSession$environmentArgs<ExtArgs>
   paymentLink?: boolean | Prisma.CheckoutSession$paymentLinkArgs<ExtArgs>
   company?: boolean | Prisma.CheckoutSession$companyArgs<ExtArgs>
   catalogAddOn?: boolean | Prisma.CheckoutSession$catalogAddOnArgs<ExtArgs>
@@ -3005,6 +3340,7 @@ export type CheckoutSessionSelectScalar = {
   createdAt?: boolean
   updatedAt?: boolean
   teamId?: boolean
+  environmentId?: boolean
   paymentLinkId?: boolean
   companyId?: boolean
   catalogAddOnId?: boolean
@@ -3031,9 +3367,10 @@ export type CheckoutSessionSelectScalar = {
   metadata?: boolean
 }
 
-export type CheckoutSessionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "updatedAt" | "teamId" | "paymentLinkId" | "companyId" | "catalogAddOnId" | "invoiceId" | "paymentId" | "subscriptionStateId" | "purpose" | "status" | "customerEmail" | "customerWallet" | "customerName" | "currency" | "amount" | "acceptedToken" | "chainId" | "recipientWallet" | "txHash" | "verificationError" | "successUrl" | "cancelUrl" | "expiresAt" | "paidAt" | "cancelledAt" | "metadata", ExtArgs["result"]["checkoutSession"]>
+export type CheckoutSessionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "updatedAt" | "teamId" | "environmentId" | "paymentLinkId" | "companyId" | "catalogAddOnId" | "invoiceId" | "paymentId" | "subscriptionStateId" | "purpose" | "status" | "customerEmail" | "customerWallet" | "customerName" | "currency" | "amount" | "acceptedToken" | "chainId" | "recipientWallet" | "txHash" | "verificationError" | "successUrl" | "cancelUrl" | "expiresAt" | "paidAt" | "cancelledAt" | "metadata", ExtArgs["result"]["checkoutSession"]>
 export type CheckoutSessionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.CheckoutSession$environmentArgs<ExtArgs>
   paymentLink?: boolean | Prisma.CheckoutSession$paymentLinkArgs<ExtArgs>
   company?: boolean | Prisma.CheckoutSession$companyArgs<ExtArgs>
   catalogAddOn?: boolean | Prisma.CheckoutSession$catalogAddOnArgs<ExtArgs>
@@ -3045,6 +3382,7 @@ export type CheckoutSessionInclude<ExtArgs extends runtime.Types.Extensions.Inte
 }
 export type CheckoutSessionIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.CheckoutSession$environmentArgs<ExtArgs>
   paymentLink?: boolean | Prisma.CheckoutSession$paymentLinkArgs<ExtArgs>
   company?: boolean | Prisma.CheckoutSession$companyArgs<ExtArgs>
   catalogAddOn?: boolean | Prisma.CheckoutSession$catalogAddOnArgs<ExtArgs>
@@ -3054,6 +3392,7 @@ export type CheckoutSessionIncludeCreateManyAndReturn<ExtArgs extends runtime.Ty
 }
 export type CheckoutSessionIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.CheckoutSession$environmentArgs<ExtArgs>
   paymentLink?: boolean | Prisma.CheckoutSession$paymentLinkArgs<ExtArgs>
   company?: boolean | Prisma.CheckoutSession$companyArgs<ExtArgs>
   catalogAddOn?: boolean | Prisma.CheckoutSession$catalogAddOnArgs<ExtArgs>
@@ -3066,6 +3405,7 @@ export type $CheckoutSessionPayload<ExtArgs extends runtime.Types.Extensions.Int
   name: "CheckoutSession"
   objects: {
     team: Prisma.$TeamPayload<ExtArgs>
+    environment: Prisma.$WorkspaceEnvironmentPayload<ExtArgs> | null
     paymentLink: Prisma.$PaymentLinkPayload<ExtArgs> | null
     company: Prisma.$ArcenCompanyPayload<ExtArgs> | null
     catalogAddOn: Prisma.$CatalogAddOnPayload<ExtArgs> | null
@@ -3079,6 +3419,7 @@ export type $CheckoutSessionPayload<ExtArgs extends runtime.Types.Extensions.Int
     createdAt: Date
     updatedAt: Date
     teamId: string
+    environmentId: string | null
     paymentLinkId: string | null
     companyId: string | null
     catalogAddOnId: string | null
@@ -3498,6 +3839,7 @@ readonly fields: CheckoutSessionFieldRefs;
 export interface Prisma__CheckoutSessionClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   team<T extends Prisma.TeamDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TeamDefaultArgs<ExtArgs>>): Prisma.Prisma__TeamClient<runtime.Types.Result.GetResult<Prisma.$TeamPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  environment<T extends Prisma.CheckoutSession$environmentArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.CheckoutSession$environmentArgs<ExtArgs>>): Prisma.Prisma__WorkspaceEnvironmentClient<runtime.Types.Result.GetResult<Prisma.$WorkspaceEnvironmentPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   paymentLink<T extends Prisma.CheckoutSession$paymentLinkArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.CheckoutSession$paymentLinkArgs<ExtArgs>>): Prisma.Prisma__PaymentLinkClient<runtime.Types.Result.GetResult<Prisma.$PaymentLinkPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   company<T extends Prisma.CheckoutSession$companyArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.CheckoutSession$companyArgs<ExtArgs>>): Prisma.Prisma__ArcenCompanyClient<runtime.Types.Result.GetResult<Prisma.$ArcenCompanyPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   catalogAddOn<T extends Prisma.CheckoutSession$catalogAddOnArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.CheckoutSession$catalogAddOnArgs<ExtArgs>>): Prisma.Prisma__CatalogAddOnClient<runtime.Types.Result.GetResult<Prisma.$CatalogAddOnPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
@@ -3538,6 +3880,7 @@ export interface CheckoutSessionFieldRefs {
   readonly createdAt: Prisma.FieldRef<"CheckoutSession", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"CheckoutSession", 'DateTime'>
   readonly teamId: Prisma.FieldRef<"CheckoutSession", 'String'>
+  readonly environmentId: Prisma.FieldRef<"CheckoutSession", 'String'>
   readonly paymentLinkId: Prisma.FieldRef<"CheckoutSession", 'String'>
   readonly companyId: Prisma.FieldRef<"CheckoutSession", 'String'>
   readonly catalogAddOnId: Prisma.FieldRef<"CheckoutSession", 'String'>
@@ -3955,6 +4298,25 @@ export type CheckoutSessionDeleteManyArgs<ExtArgs extends runtime.Types.Extensio
    * Limit how many CheckoutSessions to delete.
    */
   limit?: number
+}
+
+/**
+ * CheckoutSession.environment
+ */
+export type CheckoutSession$environmentArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the WorkspaceEnvironment
+   */
+  select?: Prisma.WorkspaceEnvironmentSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the WorkspaceEnvironment
+   */
+  omit?: Prisma.WorkspaceEnvironmentOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.WorkspaceEnvironmentInclude<ExtArgs> | null
+  where?: Prisma.WorkspaceEnvironmentWhereInput
 }
 
 /**

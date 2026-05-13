@@ -65,6 +65,7 @@ export const v1Router = new Hono()
   .route("/subscriber", subscriberRoutes)
   .route("/templates", templatesRoutes)
   .route("/audit-log", auditRoutes)
+  .route("/environments", environmentRoutes)
   .route("/environment", environmentRoutes)
   .route("/public", publicRoutes)
 

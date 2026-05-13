@@ -39,6 +39,7 @@ export type SubscriptionStateMinAggregateOutputType = {
   createdAt: Date | null
   updatedAt: Date | null
   teamId: string | null
+  environmentId: string | null
   companyId: string | null
   walletAddress: string | null
   status: $Enums.SubscriptionStatus | null
@@ -62,6 +63,7 @@ export type SubscriptionStateMaxAggregateOutputType = {
   createdAt: Date | null
   updatedAt: Date | null
   teamId: string | null
+  environmentId: string | null
   companyId: string | null
   walletAddress: string | null
   status: $Enums.SubscriptionStatus | null
@@ -85,6 +87,7 @@ export type SubscriptionStateCountAggregateOutputType = {
   createdAt: number
   updatedAt: number
   teamId: number
+  environmentId: number
   companyId: number
   walletAddress: number
   status: number
@@ -119,6 +122,7 @@ export type SubscriptionStateMinAggregateInputType = {
   createdAt?: true
   updatedAt?: true
   teamId?: true
+  environmentId?: true
   companyId?: true
   walletAddress?: true
   status?: true
@@ -142,6 +146,7 @@ export type SubscriptionStateMaxAggregateInputType = {
   createdAt?: true
   updatedAt?: true
   teamId?: true
+  environmentId?: true
   companyId?: true
   walletAddress?: true
   status?: true
@@ -165,6 +170,7 @@ export type SubscriptionStateCountAggregateInputType = {
   createdAt?: true
   updatedAt?: true
   teamId?: true
+  environmentId?: true
   companyId?: true
   walletAddress?: true
   status?: true
@@ -276,6 +282,7 @@ export type SubscriptionStateGroupByOutputType = {
   createdAt: Date
   updatedAt: Date
   teamId: string
+  environmentId: string | null
   companyId: string
   walletAddress: string | null
   status: $Enums.SubscriptionStatus
@@ -323,6 +330,7 @@ export type SubscriptionStateWhereInput = {
   createdAt?: Prisma.DateTimeFilter<"SubscriptionState"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"SubscriptionState"> | Date | string
   teamId?: Prisma.StringFilter<"SubscriptionState"> | string
+  environmentId?: Prisma.StringNullableFilter<"SubscriptionState"> | string | null
   companyId?: Prisma.StringFilter<"SubscriptionState"> | string
   walletAddress?: Prisma.StringNullableFilter<"SubscriptionState"> | string | null
   status?: Prisma.EnumSubscriptionStatusFilter<"SubscriptionState"> | $Enums.SubscriptionStatus
@@ -341,6 +349,7 @@ export type SubscriptionStateWhereInput = {
   graceEndsAt?: Prisma.DateTimeNullableFilter<"SubscriptionState"> | Date | string | null
   metadata?: Prisma.JsonNullableFilter<"SubscriptionState">
   team?: Prisma.XOR<Prisma.TeamScalarRelationFilter, Prisma.TeamWhereInput>
+  environment?: Prisma.XOR<Prisma.WorkspaceEnvironmentNullableScalarRelationFilter, Prisma.WorkspaceEnvironmentWhereInput> | null
   company?: Prisma.XOR<Prisma.ArcenCompanyScalarRelationFilter, Prisma.ArcenCompanyWhereInput>
   payments?: Prisma.PaymentListRelationFilter
   billingAdjustments?: Prisma.BillingAdjustmentListRelationFilter
@@ -352,6 +361,7 @@ export type SubscriptionStateOrderByWithRelationInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrderInput | Prisma.SortOrder
   companyId?: Prisma.SortOrder
   walletAddress?: Prisma.SortOrderInput | Prisma.SortOrder
   status?: Prisma.SortOrder
@@ -370,6 +380,7 @@ export type SubscriptionStateOrderByWithRelationInput = {
   graceEndsAt?: Prisma.SortOrderInput | Prisma.SortOrder
   metadata?: Prisma.SortOrderInput | Prisma.SortOrder
   team?: Prisma.TeamOrderByWithRelationInput
+  environment?: Prisma.WorkspaceEnvironmentOrderByWithRelationInput
   company?: Prisma.ArcenCompanyOrderByWithRelationInput
   payments?: Prisma.PaymentOrderByRelationAggregateInput
   billingAdjustments?: Prisma.BillingAdjustmentOrderByRelationAggregateInput
@@ -385,6 +396,7 @@ export type SubscriptionStateWhereUniqueInput = Prisma.AtLeast<{
   createdAt?: Prisma.DateTimeFilter<"SubscriptionState"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"SubscriptionState"> | Date | string
   teamId?: Prisma.StringFilter<"SubscriptionState"> | string
+  environmentId?: Prisma.StringNullableFilter<"SubscriptionState"> | string | null
   walletAddress?: Prisma.StringNullableFilter<"SubscriptionState"> | string | null
   status?: Prisma.EnumSubscriptionStatusFilter<"SubscriptionState"> | $Enums.SubscriptionStatus
   catalogPlanId?: Prisma.StringNullableFilter<"SubscriptionState"> | string | null
@@ -402,6 +414,7 @@ export type SubscriptionStateWhereUniqueInput = Prisma.AtLeast<{
   graceEndsAt?: Prisma.DateTimeNullableFilter<"SubscriptionState"> | Date | string | null
   metadata?: Prisma.JsonNullableFilter<"SubscriptionState">
   team?: Prisma.XOR<Prisma.TeamScalarRelationFilter, Prisma.TeamWhereInput>
+  environment?: Prisma.XOR<Prisma.WorkspaceEnvironmentNullableScalarRelationFilter, Prisma.WorkspaceEnvironmentWhereInput> | null
   company?: Prisma.XOR<Prisma.ArcenCompanyScalarRelationFilter, Prisma.ArcenCompanyWhereInput>
   payments?: Prisma.PaymentListRelationFilter
   billingAdjustments?: Prisma.BillingAdjustmentListRelationFilter
@@ -413,6 +426,7 @@ export type SubscriptionStateOrderByWithAggregationInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrderInput | Prisma.SortOrder
   companyId?: Prisma.SortOrder
   walletAddress?: Prisma.SortOrderInput | Prisma.SortOrder
   status?: Prisma.SortOrder
@@ -445,6 +459,7 @@ export type SubscriptionStateScalarWhereWithAggregatesInput = {
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"SubscriptionState"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"SubscriptionState"> | Date | string
   teamId?: Prisma.StringWithAggregatesFilter<"SubscriptionState"> | string
+  environmentId?: Prisma.StringNullableWithAggregatesFilter<"SubscriptionState"> | string | null
   companyId?: Prisma.StringWithAggregatesFilter<"SubscriptionState"> | string
   walletAddress?: Prisma.StringNullableWithAggregatesFilter<"SubscriptionState"> | string | null
   status?: Prisma.EnumSubscriptionStatusWithAggregatesFilter<"SubscriptionState"> | $Enums.SubscriptionStatus
@@ -485,6 +500,7 @@ export type SubscriptionStateCreateInput = {
   graceEndsAt?: Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   team: Prisma.TeamCreateNestedOneWithoutSubscriptionStatesInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutSubscriptionStatesInput
   company: Prisma.ArcenCompanyCreateNestedOneWithoutSubscriptionStateInput
   payments?: Prisma.PaymentCreateNestedManyWithoutSubscriptionStateInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutSubscriptionStateInput
@@ -496,6 +512,7 @@ export type SubscriptionStateUncheckedCreateInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   teamId: string
+  environmentId?: string | null
   companyId: string
   walletAddress?: string | null
   status?: $Enums.SubscriptionStatus
@@ -539,6 +556,7 @@ export type SubscriptionStateUpdateInput = {
   graceEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   team?: Prisma.TeamUpdateOneRequiredWithoutSubscriptionStatesNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutSubscriptionStatesNestedInput
   company?: Prisma.ArcenCompanyUpdateOneRequiredWithoutSubscriptionStateNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutSubscriptionStateNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutSubscriptionStateNestedInput
@@ -550,6 +568,7 @@ export type SubscriptionStateUncheckedUpdateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   companyId?: Prisma.StringFieldUpdateOperationsInput | string
   walletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumSubscriptionStatusFieldUpdateOperationsInput | $Enums.SubscriptionStatus
@@ -577,6 +596,7 @@ export type SubscriptionStateCreateManyInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   teamId: string
+  environmentId?: string | null
   companyId: string
   walletAddress?: string | null
   status?: $Enums.SubscriptionStatus
@@ -623,6 +643,7 @@ export type SubscriptionStateUncheckedUpdateManyInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   companyId?: Prisma.StringFieldUpdateOperationsInput | string
   walletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumSubscriptionStatusFieldUpdateOperationsInput | $Enums.SubscriptionStatus
@@ -657,6 +678,7 @@ export type SubscriptionStateCountOrderByAggregateInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrder
   companyId?: Prisma.SortOrder
   walletAddress?: Prisma.SortOrder
   status?: Prisma.SortOrder
@@ -685,6 +707,7 @@ export type SubscriptionStateMaxOrderByAggregateInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrder
   companyId?: Prisma.SortOrder
   walletAddress?: Prisma.SortOrder
   status?: Prisma.SortOrder
@@ -708,6 +731,7 @@ export type SubscriptionStateMinOrderByAggregateInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrder
   companyId?: Prisma.SortOrder
   walletAddress?: Prisma.SortOrder
   status?: Prisma.SortOrder
@@ -774,6 +798,48 @@ export type SubscriptionStateUncheckedUpdateManyWithoutTeamNestedInput = {
   connect?: Prisma.SubscriptionStateWhereUniqueInput | Prisma.SubscriptionStateWhereUniqueInput[]
   update?: Prisma.SubscriptionStateUpdateWithWhereUniqueWithoutTeamInput | Prisma.SubscriptionStateUpdateWithWhereUniqueWithoutTeamInput[]
   updateMany?: Prisma.SubscriptionStateUpdateManyWithWhereWithoutTeamInput | Prisma.SubscriptionStateUpdateManyWithWhereWithoutTeamInput[]
+  deleteMany?: Prisma.SubscriptionStateScalarWhereInput | Prisma.SubscriptionStateScalarWhereInput[]
+}
+
+export type SubscriptionStateCreateNestedManyWithoutEnvironmentInput = {
+  create?: Prisma.XOR<Prisma.SubscriptionStateCreateWithoutEnvironmentInput, Prisma.SubscriptionStateUncheckedCreateWithoutEnvironmentInput> | Prisma.SubscriptionStateCreateWithoutEnvironmentInput[] | Prisma.SubscriptionStateUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.SubscriptionStateCreateOrConnectWithoutEnvironmentInput | Prisma.SubscriptionStateCreateOrConnectWithoutEnvironmentInput[]
+  createMany?: Prisma.SubscriptionStateCreateManyEnvironmentInputEnvelope
+  connect?: Prisma.SubscriptionStateWhereUniqueInput | Prisma.SubscriptionStateWhereUniqueInput[]
+}
+
+export type SubscriptionStateUncheckedCreateNestedManyWithoutEnvironmentInput = {
+  create?: Prisma.XOR<Prisma.SubscriptionStateCreateWithoutEnvironmentInput, Prisma.SubscriptionStateUncheckedCreateWithoutEnvironmentInput> | Prisma.SubscriptionStateCreateWithoutEnvironmentInput[] | Prisma.SubscriptionStateUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.SubscriptionStateCreateOrConnectWithoutEnvironmentInput | Prisma.SubscriptionStateCreateOrConnectWithoutEnvironmentInput[]
+  createMany?: Prisma.SubscriptionStateCreateManyEnvironmentInputEnvelope
+  connect?: Prisma.SubscriptionStateWhereUniqueInput | Prisma.SubscriptionStateWhereUniqueInput[]
+}
+
+export type SubscriptionStateUpdateManyWithoutEnvironmentNestedInput = {
+  create?: Prisma.XOR<Prisma.SubscriptionStateCreateWithoutEnvironmentInput, Prisma.SubscriptionStateUncheckedCreateWithoutEnvironmentInput> | Prisma.SubscriptionStateCreateWithoutEnvironmentInput[] | Prisma.SubscriptionStateUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.SubscriptionStateCreateOrConnectWithoutEnvironmentInput | Prisma.SubscriptionStateCreateOrConnectWithoutEnvironmentInput[]
+  upsert?: Prisma.SubscriptionStateUpsertWithWhereUniqueWithoutEnvironmentInput | Prisma.SubscriptionStateUpsertWithWhereUniqueWithoutEnvironmentInput[]
+  createMany?: Prisma.SubscriptionStateCreateManyEnvironmentInputEnvelope
+  set?: Prisma.SubscriptionStateWhereUniqueInput | Prisma.SubscriptionStateWhereUniqueInput[]
+  disconnect?: Prisma.SubscriptionStateWhereUniqueInput | Prisma.SubscriptionStateWhereUniqueInput[]
+  delete?: Prisma.SubscriptionStateWhereUniqueInput | Prisma.SubscriptionStateWhereUniqueInput[]
+  connect?: Prisma.SubscriptionStateWhereUniqueInput | Prisma.SubscriptionStateWhereUniqueInput[]
+  update?: Prisma.SubscriptionStateUpdateWithWhereUniqueWithoutEnvironmentInput | Prisma.SubscriptionStateUpdateWithWhereUniqueWithoutEnvironmentInput[]
+  updateMany?: Prisma.SubscriptionStateUpdateManyWithWhereWithoutEnvironmentInput | Prisma.SubscriptionStateUpdateManyWithWhereWithoutEnvironmentInput[]
+  deleteMany?: Prisma.SubscriptionStateScalarWhereInput | Prisma.SubscriptionStateScalarWhereInput[]
+}
+
+export type SubscriptionStateUncheckedUpdateManyWithoutEnvironmentNestedInput = {
+  create?: Prisma.XOR<Prisma.SubscriptionStateCreateWithoutEnvironmentInput, Prisma.SubscriptionStateUncheckedCreateWithoutEnvironmentInput> | Prisma.SubscriptionStateCreateWithoutEnvironmentInput[] | Prisma.SubscriptionStateUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.SubscriptionStateCreateOrConnectWithoutEnvironmentInput | Prisma.SubscriptionStateCreateOrConnectWithoutEnvironmentInput[]
+  upsert?: Prisma.SubscriptionStateUpsertWithWhereUniqueWithoutEnvironmentInput | Prisma.SubscriptionStateUpsertWithWhereUniqueWithoutEnvironmentInput[]
+  createMany?: Prisma.SubscriptionStateCreateManyEnvironmentInputEnvelope
+  set?: Prisma.SubscriptionStateWhereUniqueInput | Prisma.SubscriptionStateWhereUniqueInput[]
+  disconnect?: Prisma.SubscriptionStateWhereUniqueInput | Prisma.SubscriptionStateWhereUniqueInput[]
+  delete?: Prisma.SubscriptionStateWhereUniqueInput | Prisma.SubscriptionStateWhereUniqueInput[]
+  connect?: Prisma.SubscriptionStateWhereUniqueInput | Prisma.SubscriptionStateWhereUniqueInput[]
+  update?: Prisma.SubscriptionStateUpdateWithWhereUniqueWithoutEnvironmentInput | Prisma.SubscriptionStateUpdateWithWhereUniqueWithoutEnvironmentInput[]
+  updateMany?: Prisma.SubscriptionStateUpdateManyWithWhereWithoutEnvironmentInput | Prisma.SubscriptionStateUpdateManyWithWhereWithoutEnvironmentInput[]
   deleteMany?: Prisma.SubscriptionStateScalarWhereInput | Prisma.SubscriptionStateScalarWhereInput[]
 }
 
@@ -881,6 +947,7 @@ export type SubscriptionStateCreateWithoutTeamInput = {
   pastDueAt?: Date | string | null
   graceEndsAt?: Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutSubscriptionStatesInput
   company: Prisma.ArcenCompanyCreateNestedOneWithoutSubscriptionStateInput
   payments?: Prisma.PaymentCreateNestedManyWithoutSubscriptionStateInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutSubscriptionStateInput
@@ -891,6 +958,7 @@ export type SubscriptionStateUncheckedCreateWithoutTeamInput = {
   id?: string
   createdAt?: Date | string
   updatedAt?: Date | string
+  environmentId?: string | null
   companyId: string
   walletAddress?: string | null
   status?: $Enums.SubscriptionStatus
@@ -947,6 +1015,7 @@ export type SubscriptionStateScalarWhereInput = {
   createdAt?: Prisma.DateTimeFilter<"SubscriptionState"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"SubscriptionState"> | Date | string
   teamId?: Prisma.StringFilter<"SubscriptionState"> | string
+  environmentId?: Prisma.StringNullableFilter<"SubscriptionState"> | string | null
   companyId?: Prisma.StringFilter<"SubscriptionState"> | string
   walletAddress?: Prisma.StringNullableFilter<"SubscriptionState"> | string | null
   status?: Prisma.EnumSubscriptionStatusFilter<"SubscriptionState"> | $Enums.SubscriptionStatus
@@ -964,6 +1033,86 @@ export type SubscriptionStateScalarWhereInput = {
   pastDueAt?: Prisma.DateTimeNullableFilter<"SubscriptionState"> | Date | string | null
   graceEndsAt?: Prisma.DateTimeNullableFilter<"SubscriptionState"> | Date | string | null
   metadata?: Prisma.JsonNullableFilter<"SubscriptionState">
+}
+
+export type SubscriptionStateCreateWithoutEnvironmentInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  walletAddress?: string | null
+  status?: $Enums.SubscriptionStatus
+  catalogPlanId?: string | null
+  onChainPlanId?: string | null
+  onChainTokenId?: string | null
+  chainId?: number
+  currentPeriodStart?: Date | string | null
+  currentPeriodEnd?: Date | string | null
+  lastEvent?: string | null
+  lastEventAt?: Date | string | null
+  lastSourceTxHash?: string | null
+  cancelAtPeriodEnd?: boolean
+  cancelledAt?: Date | string | null
+  pastDueAt?: Date | string | null
+  graceEndsAt?: Date | string | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  team: Prisma.TeamCreateNestedOneWithoutSubscriptionStatesInput
+  company: Prisma.ArcenCompanyCreateNestedOneWithoutSubscriptionStateInput
+  payments?: Prisma.PaymentCreateNestedManyWithoutSubscriptionStateInput
+  billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutSubscriptionStateInput
+  checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutSubscriptionStateInput
+}
+
+export type SubscriptionStateUncheckedCreateWithoutEnvironmentInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  teamId: string
+  companyId: string
+  walletAddress?: string | null
+  status?: $Enums.SubscriptionStatus
+  catalogPlanId?: string | null
+  onChainPlanId?: string | null
+  onChainTokenId?: string | null
+  chainId?: number
+  currentPeriodStart?: Date | string | null
+  currentPeriodEnd?: Date | string | null
+  lastEvent?: string | null
+  lastEventAt?: Date | string | null
+  lastSourceTxHash?: string | null
+  cancelAtPeriodEnd?: boolean
+  cancelledAt?: Date | string | null
+  pastDueAt?: Date | string | null
+  graceEndsAt?: Date | string | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutSubscriptionStateInput
+  billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutSubscriptionStateInput
+  checkoutSessions?: Prisma.CheckoutSessionUncheckedCreateNestedManyWithoutSubscriptionStateInput
+}
+
+export type SubscriptionStateCreateOrConnectWithoutEnvironmentInput = {
+  where: Prisma.SubscriptionStateWhereUniqueInput
+  create: Prisma.XOR<Prisma.SubscriptionStateCreateWithoutEnvironmentInput, Prisma.SubscriptionStateUncheckedCreateWithoutEnvironmentInput>
+}
+
+export type SubscriptionStateCreateManyEnvironmentInputEnvelope = {
+  data: Prisma.SubscriptionStateCreateManyEnvironmentInput | Prisma.SubscriptionStateCreateManyEnvironmentInput[]
+  skipDuplicates?: boolean
+}
+
+export type SubscriptionStateUpsertWithWhereUniqueWithoutEnvironmentInput = {
+  where: Prisma.SubscriptionStateWhereUniqueInput
+  update: Prisma.XOR<Prisma.SubscriptionStateUpdateWithoutEnvironmentInput, Prisma.SubscriptionStateUncheckedUpdateWithoutEnvironmentInput>
+  create: Prisma.XOR<Prisma.SubscriptionStateCreateWithoutEnvironmentInput, Prisma.SubscriptionStateUncheckedCreateWithoutEnvironmentInput>
+}
+
+export type SubscriptionStateUpdateWithWhereUniqueWithoutEnvironmentInput = {
+  where: Prisma.SubscriptionStateWhereUniqueInput
+  data: Prisma.XOR<Prisma.SubscriptionStateUpdateWithoutEnvironmentInput, Prisma.SubscriptionStateUncheckedUpdateWithoutEnvironmentInput>
+}
+
+export type SubscriptionStateUpdateManyWithWhereWithoutEnvironmentInput = {
+  where: Prisma.SubscriptionStateScalarWhereInput
+  data: Prisma.XOR<Prisma.SubscriptionStateUpdateManyMutationInput, Prisma.SubscriptionStateUncheckedUpdateManyWithoutEnvironmentInput>
 }
 
 export type SubscriptionStateCreateWithoutPaymentsInput = {
@@ -987,6 +1136,7 @@ export type SubscriptionStateCreateWithoutPaymentsInput = {
   graceEndsAt?: Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   team: Prisma.TeamCreateNestedOneWithoutSubscriptionStatesInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutSubscriptionStatesInput
   company: Prisma.ArcenCompanyCreateNestedOneWithoutSubscriptionStateInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutSubscriptionStateInput
   checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutSubscriptionStateInput
@@ -997,6 +1147,7 @@ export type SubscriptionStateUncheckedCreateWithoutPaymentsInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   teamId: string
+  environmentId?: string | null
   companyId: string
   walletAddress?: string | null
   status?: $Enums.SubscriptionStatus
@@ -1055,6 +1206,7 @@ export type SubscriptionStateUpdateWithoutPaymentsInput = {
   graceEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   team?: Prisma.TeamUpdateOneRequiredWithoutSubscriptionStatesNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutSubscriptionStatesNestedInput
   company?: Prisma.ArcenCompanyUpdateOneRequiredWithoutSubscriptionStateNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutSubscriptionStateNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutSubscriptionStateNestedInput
@@ -1065,6 +1217,7 @@ export type SubscriptionStateUncheckedUpdateWithoutPaymentsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   companyId?: Prisma.StringFieldUpdateOperationsInput | string
   walletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumSubscriptionStatusFieldUpdateOperationsInput | $Enums.SubscriptionStatus
@@ -1107,6 +1260,7 @@ export type SubscriptionStateCreateWithoutBillingAdjustmentsInput = {
   graceEndsAt?: Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   team: Prisma.TeamCreateNestedOneWithoutSubscriptionStatesInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutSubscriptionStatesInput
   company: Prisma.ArcenCompanyCreateNestedOneWithoutSubscriptionStateInput
   payments?: Prisma.PaymentCreateNestedManyWithoutSubscriptionStateInput
   checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutSubscriptionStateInput
@@ -1117,6 +1271,7 @@ export type SubscriptionStateUncheckedCreateWithoutBillingAdjustmentsInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   teamId: string
+  environmentId?: string | null
   companyId: string
   walletAddress?: string | null
   status?: $Enums.SubscriptionStatus
@@ -1175,6 +1330,7 @@ export type SubscriptionStateUpdateWithoutBillingAdjustmentsInput = {
   graceEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   team?: Prisma.TeamUpdateOneRequiredWithoutSubscriptionStatesNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutSubscriptionStatesNestedInput
   company?: Prisma.ArcenCompanyUpdateOneRequiredWithoutSubscriptionStateNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutSubscriptionStateNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutSubscriptionStateNestedInput
@@ -1185,6 +1341,7 @@ export type SubscriptionStateUncheckedUpdateWithoutBillingAdjustmentsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   companyId?: Prisma.StringFieldUpdateOperationsInput | string
   walletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumSubscriptionStatusFieldUpdateOperationsInput | $Enums.SubscriptionStatus
@@ -1227,6 +1384,7 @@ export type SubscriptionStateCreateWithoutCompanyInput = {
   graceEndsAt?: Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   team: Prisma.TeamCreateNestedOneWithoutSubscriptionStatesInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutSubscriptionStatesInput
   payments?: Prisma.PaymentCreateNestedManyWithoutSubscriptionStateInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutSubscriptionStateInput
   checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutSubscriptionStateInput
@@ -1237,6 +1395,7 @@ export type SubscriptionStateUncheckedCreateWithoutCompanyInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   teamId: string
+  environmentId?: string | null
   walletAddress?: string | null
   status?: $Enums.SubscriptionStatus
   catalogPlanId?: string | null
@@ -1295,6 +1454,7 @@ export type SubscriptionStateUpdateWithoutCompanyInput = {
   graceEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   team?: Prisma.TeamUpdateOneRequiredWithoutSubscriptionStatesNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutSubscriptionStatesNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutSubscriptionStateNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutSubscriptionStateNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutSubscriptionStateNestedInput
@@ -1305,6 +1465,7 @@ export type SubscriptionStateUncheckedUpdateWithoutCompanyInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   walletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumSubscriptionStatusFieldUpdateOperationsInput | $Enums.SubscriptionStatus
   catalogPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1347,6 +1508,7 @@ export type SubscriptionStateCreateWithoutCheckoutSessionsInput = {
   graceEndsAt?: Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   team: Prisma.TeamCreateNestedOneWithoutSubscriptionStatesInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutSubscriptionStatesInput
   company: Prisma.ArcenCompanyCreateNestedOneWithoutSubscriptionStateInput
   payments?: Prisma.PaymentCreateNestedManyWithoutSubscriptionStateInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutSubscriptionStateInput
@@ -1357,6 +1519,7 @@ export type SubscriptionStateUncheckedCreateWithoutCheckoutSessionsInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   teamId: string
+  environmentId?: string | null
   companyId: string
   walletAddress?: string | null
   status?: $Enums.SubscriptionStatus
@@ -1415,6 +1578,7 @@ export type SubscriptionStateUpdateWithoutCheckoutSessionsInput = {
   graceEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   team?: Prisma.TeamUpdateOneRequiredWithoutSubscriptionStatesNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutSubscriptionStatesNestedInput
   company?: Prisma.ArcenCompanyUpdateOneRequiredWithoutSubscriptionStateNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutSubscriptionStateNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutSubscriptionStateNestedInput
@@ -1425,6 +1589,7 @@ export type SubscriptionStateUncheckedUpdateWithoutCheckoutSessionsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   companyId?: Prisma.StringFieldUpdateOperationsInput | string
   walletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumSubscriptionStatusFieldUpdateOperationsInput | $Enums.SubscriptionStatus
@@ -1450,6 +1615,7 @@ export type SubscriptionStateCreateManyTeamInput = {
   id?: string
   createdAt?: Date | string
   updatedAt?: Date | string
+  environmentId?: string | null
   companyId: string
   walletAddress?: string | null
   status?: $Enums.SubscriptionStatus
@@ -1489,6 +1655,7 @@ export type SubscriptionStateUpdateWithoutTeamInput = {
   pastDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   graceEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutSubscriptionStatesNestedInput
   company?: Prisma.ArcenCompanyUpdateOneRequiredWithoutSubscriptionStateNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutSubscriptionStateNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutSubscriptionStateNestedInput
@@ -1499,6 +1666,7 @@ export type SubscriptionStateUncheckedUpdateWithoutTeamInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   companyId?: Prisma.StringFieldUpdateOperationsInput | string
   walletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumSubscriptionStatusFieldUpdateOperationsInput | $Enums.SubscriptionStatus
@@ -1525,6 +1693,109 @@ export type SubscriptionStateUncheckedUpdateManyWithoutTeamInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  companyId?: Prisma.StringFieldUpdateOperationsInput | string
+  walletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumSubscriptionStatusFieldUpdateOperationsInput | $Enums.SubscriptionStatus
+  catalogPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  onChainPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  onChainTokenId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  currentPeriodStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  currentPeriodEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastEvent?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastEventAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastSourceTxHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  cancelAtPeriodEnd?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  cancelledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  pastDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  graceEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+}
+
+export type SubscriptionStateCreateManyEnvironmentInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  teamId: string
+  companyId: string
+  walletAddress?: string | null
+  status?: $Enums.SubscriptionStatus
+  catalogPlanId?: string | null
+  onChainPlanId?: string | null
+  onChainTokenId?: string | null
+  chainId?: number
+  currentPeriodStart?: Date | string | null
+  currentPeriodEnd?: Date | string | null
+  lastEvent?: string | null
+  lastEventAt?: Date | string | null
+  lastSourceTxHash?: string | null
+  cancelAtPeriodEnd?: boolean
+  cancelledAt?: Date | string | null
+  pastDueAt?: Date | string | null
+  graceEndsAt?: Date | string | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+}
+
+export type SubscriptionStateUpdateWithoutEnvironmentInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  walletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumSubscriptionStatusFieldUpdateOperationsInput | $Enums.SubscriptionStatus
+  catalogPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  onChainPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  onChainTokenId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  currentPeriodStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  currentPeriodEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastEvent?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastEventAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastSourceTxHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  cancelAtPeriodEnd?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  cancelledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  pastDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  graceEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  team?: Prisma.TeamUpdateOneRequiredWithoutSubscriptionStatesNestedInput
+  company?: Prisma.ArcenCompanyUpdateOneRequiredWithoutSubscriptionStateNestedInput
+  payments?: Prisma.PaymentUpdateManyWithoutSubscriptionStateNestedInput
+  billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutSubscriptionStateNestedInput
+  checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutSubscriptionStateNestedInput
+}
+
+export type SubscriptionStateUncheckedUpdateWithoutEnvironmentInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  companyId?: Prisma.StringFieldUpdateOperationsInput | string
+  walletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumSubscriptionStatusFieldUpdateOperationsInput | $Enums.SubscriptionStatus
+  catalogPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  onChainPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  onChainTokenId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  currentPeriodStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  currentPeriodEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastEvent?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  lastEventAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  lastSourceTxHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  cancelAtPeriodEnd?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  cancelledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  pastDueAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  graceEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  payments?: Prisma.PaymentUncheckedUpdateManyWithoutSubscriptionStateNestedInput
+  billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutSubscriptionStateNestedInput
+  checkoutSessions?: Prisma.CheckoutSessionUncheckedUpdateManyWithoutSubscriptionStateNestedInput
+}
+
+export type SubscriptionStateUncheckedUpdateManyWithoutEnvironmentInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamId?: Prisma.StringFieldUpdateOperationsInput | string
   companyId?: Prisma.StringFieldUpdateOperationsInput | string
   walletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.EnumSubscriptionStatusFieldUpdateOperationsInput | $Enums.SubscriptionStatus
@@ -1598,6 +1869,7 @@ export type SubscriptionStateSelect<ExtArgs extends runtime.Types.Extensions.Int
   createdAt?: boolean
   updatedAt?: boolean
   teamId?: boolean
+  environmentId?: boolean
   companyId?: boolean
   walletAddress?: boolean
   status?: boolean
@@ -1616,6 +1888,7 @@ export type SubscriptionStateSelect<ExtArgs extends runtime.Types.Extensions.Int
   graceEndsAt?: boolean
   metadata?: boolean
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.SubscriptionState$environmentArgs<ExtArgs>
   company?: boolean | Prisma.ArcenCompanyDefaultArgs<ExtArgs>
   payments?: boolean | Prisma.SubscriptionState$paymentsArgs<ExtArgs>
   billingAdjustments?: boolean | Prisma.SubscriptionState$billingAdjustmentsArgs<ExtArgs>
@@ -1628,6 +1901,7 @@ export type SubscriptionStateSelectCreateManyAndReturn<ExtArgs extends runtime.T
   createdAt?: boolean
   updatedAt?: boolean
   teamId?: boolean
+  environmentId?: boolean
   companyId?: boolean
   walletAddress?: boolean
   status?: boolean
@@ -1646,6 +1920,7 @@ export type SubscriptionStateSelectCreateManyAndReturn<ExtArgs extends runtime.T
   graceEndsAt?: boolean
   metadata?: boolean
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.SubscriptionState$environmentArgs<ExtArgs>
   company?: boolean | Prisma.ArcenCompanyDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["subscriptionState"]>
 
@@ -1654,6 +1929,7 @@ export type SubscriptionStateSelectUpdateManyAndReturn<ExtArgs extends runtime.T
   createdAt?: boolean
   updatedAt?: boolean
   teamId?: boolean
+  environmentId?: boolean
   companyId?: boolean
   walletAddress?: boolean
   status?: boolean
@@ -1672,6 +1948,7 @@ export type SubscriptionStateSelectUpdateManyAndReturn<ExtArgs extends runtime.T
   graceEndsAt?: boolean
   metadata?: boolean
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.SubscriptionState$environmentArgs<ExtArgs>
   company?: boolean | Prisma.ArcenCompanyDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["subscriptionState"]>
 
@@ -1680,6 +1957,7 @@ export type SubscriptionStateSelectScalar = {
   createdAt?: boolean
   updatedAt?: boolean
   teamId?: boolean
+  environmentId?: boolean
   companyId?: boolean
   walletAddress?: boolean
   status?: boolean
@@ -1699,9 +1977,10 @@ export type SubscriptionStateSelectScalar = {
   metadata?: boolean
 }
 
-export type SubscriptionStateOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "updatedAt" | "teamId" | "companyId" | "walletAddress" | "status" | "catalogPlanId" | "onChainPlanId" | "onChainTokenId" | "chainId" | "currentPeriodStart" | "currentPeriodEnd" | "lastEvent" | "lastEventAt" | "lastSourceTxHash" | "cancelAtPeriodEnd" | "cancelledAt" | "pastDueAt" | "graceEndsAt" | "metadata", ExtArgs["result"]["subscriptionState"]>
+export type SubscriptionStateOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "updatedAt" | "teamId" | "environmentId" | "companyId" | "walletAddress" | "status" | "catalogPlanId" | "onChainPlanId" | "onChainTokenId" | "chainId" | "currentPeriodStart" | "currentPeriodEnd" | "lastEvent" | "lastEventAt" | "lastSourceTxHash" | "cancelAtPeriodEnd" | "cancelledAt" | "pastDueAt" | "graceEndsAt" | "metadata", ExtArgs["result"]["subscriptionState"]>
 export type SubscriptionStateInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.SubscriptionState$environmentArgs<ExtArgs>
   company?: boolean | Prisma.ArcenCompanyDefaultArgs<ExtArgs>
   payments?: boolean | Prisma.SubscriptionState$paymentsArgs<ExtArgs>
   billingAdjustments?: boolean | Prisma.SubscriptionState$billingAdjustmentsArgs<ExtArgs>
@@ -1710,10 +1989,12 @@ export type SubscriptionStateInclude<ExtArgs extends runtime.Types.Extensions.In
 }
 export type SubscriptionStateIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.SubscriptionState$environmentArgs<ExtArgs>
   company?: boolean | Prisma.ArcenCompanyDefaultArgs<ExtArgs>
 }
 export type SubscriptionStateIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.SubscriptionState$environmentArgs<ExtArgs>
   company?: boolean | Prisma.ArcenCompanyDefaultArgs<ExtArgs>
 }
 
@@ -1721,6 +2002,7 @@ export type $SubscriptionStatePayload<ExtArgs extends runtime.Types.Extensions.I
   name: "SubscriptionState"
   objects: {
     team: Prisma.$TeamPayload<ExtArgs>
+    environment: Prisma.$WorkspaceEnvironmentPayload<ExtArgs> | null
     company: Prisma.$ArcenCompanyPayload<ExtArgs>
     payments: Prisma.$PaymentPayload<ExtArgs>[]
     billingAdjustments: Prisma.$BillingAdjustmentPayload<ExtArgs>[]
@@ -1731,6 +2013,7 @@ export type $SubscriptionStatePayload<ExtArgs extends runtime.Types.Extensions.I
     createdAt: Date
     updatedAt: Date
     teamId: string
+    environmentId: string | null
     companyId: string
     walletAddress: string | null
     status: $Enums.SubscriptionStatus
@@ -2143,6 +2426,7 @@ readonly fields: SubscriptionStateFieldRefs;
 export interface Prisma__SubscriptionStateClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   team<T extends Prisma.TeamDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TeamDefaultArgs<ExtArgs>>): Prisma.Prisma__TeamClient<runtime.Types.Result.GetResult<Prisma.$TeamPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  environment<T extends Prisma.SubscriptionState$environmentArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.SubscriptionState$environmentArgs<ExtArgs>>): Prisma.Prisma__WorkspaceEnvironmentClient<runtime.Types.Result.GetResult<Prisma.$WorkspaceEnvironmentPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   company<T extends Prisma.ArcenCompanyDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ArcenCompanyDefaultArgs<ExtArgs>>): Prisma.Prisma__ArcenCompanyClient<runtime.Types.Result.GetResult<Prisma.$ArcenCompanyPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   payments<T extends Prisma.SubscriptionState$paymentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.SubscriptionState$paymentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PaymentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   billingAdjustments<T extends Prisma.SubscriptionState$billingAdjustmentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.SubscriptionState$billingAdjustmentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$BillingAdjustmentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -2180,6 +2464,7 @@ export interface SubscriptionStateFieldRefs {
   readonly createdAt: Prisma.FieldRef<"SubscriptionState", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"SubscriptionState", 'DateTime'>
   readonly teamId: Prisma.FieldRef<"SubscriptionState", 'String'>
+  readonly environmentId: Prisma.FieldRef<"SubscriptionState", 'String'>
   readonly companyId: Prisma.FieldRef<"SubscriptionState", 'String'>
   readonly walletAddress: Prisma.FieldRef<"SubscriptionState", 'String'>
   readonly status: Prisma.FieldRef<"SubscriptionState", 'SubscriptionStatus'>
@@ -2590,6 +2875,25 @@ export type SubscriptionStateDeleteManyArgs<ExtArgs extends runtime.Types.Extens
    * Limit how many SubscriptionStates to delete.
    */
   limit?: number
+}
+
+/**
+ * SubscriptionState.environment
+ */
+export type SubscriptionState$environmentArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the WorkspaceEnvironment
+   */
+  select?: Prisma.WorkspaceEnvironmentSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the WorkspaceEnvironment
+   */
+  omit?: Prisma.WorkspaceEnvironmentOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.WorkspaceEnvironmentInclude<ExtArgs> | null
+  where?: Prisma.WorkspaceEnvironmentWhereInput
 }
 
 /**

@@ -2,6 +2,7 @@ import type { Context } from "hono";
 import { z } from "zod";
 import { db } from "../../../db.js";
 import { requirePermission, isErrorResponse } from "../../../lib/auth/api-auth.js";
+import { requireResolvedActiveEnvironment } from "../../../lib/environments/workspace-environments.js";
 import { writeAuditEvent } from "../../../lib/platform/audit.js";
 
 const publishSchema = z.object({
@@ -18,19 +19,39 @@ export async function publishCatalog(c: Context) {
     return c.json({ error: "Invalid request", details: parsed.error.flatten().fieldErrors }, 400 as any);
   }
 
-  const environmentMode = parsed.data.environmentMode;
+  const activeEnvironment = await requireResolvedActiveEnvironment(
+    auth.session,
+    auth.team.teamId,
+  );
+  if (!activeEnvironment) {
+    return c.json({ error: "No workspace environment selected" }, 409 as any);
+  }
+
+  const environmentMode = activeEnvironment.mode;
 
   const [plans, addOns, credits] = await Promise.all([
     db.catalogPlan.findMany({
-      where: { teamId: auth.team.teamId, environmentMode, status: "DRAFT" },
+      where: {
+        teamId: auth.team.teamId,
+        environmentId: activeEnvironment.id,
+        status: "DRAFT",
+      },
       select: { id: true, name: true, tier: true, onChainPlanId: true, chainSyncError: true, chainSyncStatus: true },
     }),
     db.catalogAddOn.findMany({
-      where: { teamId: auth.team.teamId, environmentMode, status: "DRAFT" },
+      where: {
+        teamId: auth.team.teamId,
+        environmentId: activeEnvironment.id,
+        status: "DRAFT",
+      },
       select: { id: true, name: true, code: true },
     }),
     db.catalogCreditType.findMany({
-      where: { teamId: auth.team.teamId, environmentMode, status: "DRAFT" },
+      where: {
+        teamId: auth.team.teamId,
+        environmentId: activeEnvironment.id,
+        status: "DRAFT",
+      },
       select: { id: true, name: true, code: true },
     }),
   ]);
@@ -49,11 +70,19 @@ export async function publishCatalog(c: Context) {
       }),
     ),
     db.catalogAddOn.updateMany({
-      where: { teamId: auth.team.teamId, environmentMode, status: "DRAFT" },
+      where: {
+        teamId: auth.team.teamId,
+        environmentId: activeEnvironment.id,
+        status: "DRAFT",
+      },
       data: { status: "PUBLISHED", publishedAt: now, chainSyncStatus: "NOT_APPLICABLE" },
     }),
     db.catalogCreditType.updateMany({
-      where: { teamId: auth.team.teamId, environmentMode, status: "DRAFT" },
+      where: {
+        teamId: auth.team.teamId,
+        environmentId: activeEnvironment.id,
+        status: "DRAFT",
+      },
       data: { status: "PUBLISHED", publishedAt: now, chainSyncStatus: "NOT_APPLICABLE" },
     }),
   ]);
@@ -66,6 +95,7 @@ export async function publishCatalog(c: Context) {
     action: "catalog.publish",
     resourceType: "Catalog",
     metadata: {
+      environmentId: activeEnvironment.id,
       environmentMode,
       plans: plans.length,
       addOns: addOns.length,
@@ -77,6 +107,7 @@ export async function publishCatalog(c: Context) {
 
   return c.json({
     ok: true,
+    environmentId: activeEnvironment.id,
     environmentMode,
     published: {
       plans: plans.map((p) => ({

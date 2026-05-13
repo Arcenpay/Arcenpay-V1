@@ -225,6 +225,7 @@ export type TeamWhereInput = {
   members?: Prisma.TeamMemberListRelationFilter
   providerProfile?: Prisma.XOR<Prisma.ProviderProfileNullableScalarRelationFilter, Prisma.ProviderProfileWhereInput> | null
   invitations?: Prisma.TeamInvitationListRelationFilter
+  environments?: Prisma.WorkspaceEnvironmentListRelationFilter
   catalogPlans?: Prisma.CatalogPlanListRelationFilter
   catalogAddOns?: Prisma.CatalogAddOnListRelationFilter
   catalogCreditTypes?: Prisma.CatalogCreditTypeListRelationFilter
@@ -272,6 +273,7 @@ export type TeamOrderByWithRelationInput = {
   members?: Prisma.TeamMemberOrderByRelationAggregateInput
   providerProfile?: Prisma.ProviderProfileOrderByWithRelationInput
   invitations?: Prisma.TeamInvitationOrderByRelationAggregateInput
+  environments?: Prisma.WorkspaceEnvironmentOrderByRelationAggregateInput
   catalogPlans?: Prisma.CatalogPlanOrderByRelationAggregateInput
   catalogAddOns?: Prisma.CatalogAddOnOrderByRelationAggregateInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeOrderByRelationAggregateInput
@@ -322,6 +324,7 @@ export type TeamWhereUniqueInput = Prisma.AtLeast<{
   members?: Prisma.TeamMemberListRelationFilter
   providerProfile?: Prisma.XOR<Prisma.ProviderProfileNullableScalarRelationFilter, Prisma.ProviderProfileWhereInput> | null
   invitations?: Prisma.TeamInvitationListRelationFilter
+  environments?: Prisma.WorkspaceEnvironmentListRelationFilter
   catalogPlans?: Prisma.CatalogPlanListRelationFilter
   catalogAddOns?: Prisma.CatalogAddOnListRelationFilter
   catalogCreditTypes?: Prisma.CatalogCreditTypeListRelationFilter
@@ -401,6 +404,7 @@ export type TeamCreateInput = {
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
@@ -448,6 +452,7 @@ export type TeamUncheckedCreateInput = {
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
@@ -495,6 +500,7 @@ export type TeamUpdateInput = {
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
@@ -542,6 +548,7 @@ export type TeamUncheckedUpdateInput = {
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
@@ -664,6 +671,20 @@ export type EnumEnvironmentModeFieldUpdateOperationsInput = {
 
 export type EnumPlatformTierFieldUpdateOperationsInput = {
   set?: $Enums.PlatformTier
+}
+
+export type TeamCreateNestedOneWithoutEnvironmentsInput = {
+  create?: Prisma.XOR<Prisma.TeamCreateWithoutEnvironmentsInput, Prisma.TeamUncheckedCreateWithoutEnvironmentsInput>
+  connectOrCreate?: Prisma.TeamCreateOrConnectWithoutEnvironmentsInput
+  connect?: Prisma.TeamWhereUniqueInput
+}
+
+export type TeamUpdateOneRequiredWithoutEnvironmentsNestedInput = {
+  create?: Prisma.XOR<Prisma.TeamCreateWithoutEnvironmentsInput, Prisma.TeamUncheckedCreateWithoutEnvironmentsInput>
+  connectOrCreate?: Prisma.TeamCreateOrConnectWithoutEnvironmentsInput
+  upsert?: Prisma.TeamUpsertWithoutEnvironmentsInput
+  connect?: Prisma.TeamWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.TeamUpdateToOneWithWhereWithoutEnvironmentsInput, Prisma.TeamUpdateWithoutEnvironmentsInput>, Prisma.TeamUncheckedUpdateWithoutEnvironmentsInput>
 }
 
 export type TeamCreateNestedOneWithoutMembersInput = {
@@ -1142,6 +1163,210 @@ export type TeamUpdateOneRequiredWithoutDispatchRequestsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.TeamUpdateToOneWithWhereWithoutDispatchRequestsInput, Prisma.TeamUpdateWithoutDispatchRequestsInput>, Prisma.TeamUncheckedUpdateWithoutDispatchRequestsInput>
 }
 
+export type TeamCreateWithoutEnvironmentsInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  name: string
+  slug: string
+  environmentMode?: $Enums.EnvironmentMode
+  invoicePrefix?: string | null
+  platformTier?: $Enums.PlatformTier
+  tierExpiresAt?: Date | string | null
+  tierSubscriptionId?: string | null
+  members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
+  providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
+  invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
+  catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
+  catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
+  catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
+  catalogVersions?: Prisma.CatalogVersionCreateNestedManyWithoutTeamInput
+  catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
+  billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
+  templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutTeamInput
+  invoices?: Prisma.InvoiceCreateNestedManyWithoutTeamInput
+  payments?: Prisma.PaymentCreateNestedManyWithoutTeamInput
+  paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutTeamInput
+  checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutTeamInput
+  billingBalances?: Prisma.BillingBalanceCreateNestedManyWithoutTeamInput
+  refunds?: Prisma.RefundCreateNestedManyWithoutTeamInput
+  billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutTeamInput
+  subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutTeamInput
+  billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutTeamInput
+  taxProfile?: Prisma.TaxProfileCreateNestedOneWithoutTeamInput
+  invoiceSequences?: Prisma.InvoiceSequenceCreateNestedManyWithoutTeamInput
+  auditEvents?: Prisma.AuditEventCreateNestedManyWithoutTeamInput
+  billingEvents?: Prisma.BillingEventCreateNestedManyWithoutTeamInput
+  webhookDeliveries?: Prisma.WebhookDeliveryCreateNestedManyWithoutTeamInput
+  gasSpends?: Prisma.GasSpendCreateNestedManyWithoutTeamInput
+  tierHistory?: Prisma.TierUpgradeHistoryCreateNestedManyWithoutTeamInput
+  supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
+  arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
+  addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
+  featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
+  arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
+  embedComponents?: Prisma.EmbedComponentCreateNestedManyWithoutTeamInput
+  agentConfig?: Prisma.ArcenAgentConfigCreateNestedOneWithoutTeamInput
+  dispatchRequests?: Prisma.ArcenDispatchRequestCreateNestedManyWithoutTeamInput
+}
+
+export type TeamUncheckedCreateWithoutEnvironmentsInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  name: string
+  slug: string
+  environmentMode?: $Enums.EnvironmentMode
+  invoicePrefix?: string | null
+  platformTier?: $Enums.PlatformTier
+  tierExpiresAt?: Date | string | null
+  tierSubscriptionId?: string | null
+  members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
+  providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
+  invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
+  catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
+  catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
+  catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
+  catalogVersions?: Prisma.CatalogVersionUncheckedCreateNestedManyWithoutTeamInput
+  catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
+  billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
+  templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutTeamInput
+  invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutTeamInput
+  payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutTeamInput
+  paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutTeamInput
+  checkoutSessions?: Prisma.CheckoutSessionUncheckedCreateNestedManyWithoutTeamInput
+  billingBalances?: Prisma.BillingBalanceUncheckedCreateNestedManyWithoutTeamInput
+  refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutTeamInput
+  billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutTeamInput
+  subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutTeamInput
+  billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutTeamInput
+  taxProfile?: Prisma.TaxProfileUncheckedCreateNestedOneWithoutTeamInput
+  invoiceSequences?: Prisma.InvoiceSequenceUncheckedCreateNestedManyWithoutTeamInput
+  auditEvents?: Prisma.AuditEventUncheckedCreateNestedManyWithoutTeamInput
+  billingEvents?: Prisma.BillingEventUncheckedCreateNestedManyWithoutTeamInput
+  webhookDeliveries?: Prisma.WebhookDeliveryUncheckedCreateNestedManyWithoutTeamInput
+  gasSpends?: Prisma.GasSpendUncheckedCreateNestedManyWithoutTeamInput
+  tierHistory?: Prisma.TierUpgradeHistoryUncheckedCreateNestedManyWithoutTeamInput
+  supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
+  arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
+  addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
+  featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
+  arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
+  embedComponents?: Prisma.EmbedComponentUncheckedCreateNestedManyWithoutTeamInput
+  agentConfig?: Prisma.ArcenAgentConfigUncheckedCreateNestedOneWithoutTeamInput
+  dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedCreateNestedManyWithoutTeamInput
+}
+
+export type TeamCreateOrConnectWithoutEnvironmentsInput = {
+  where: Prisma.TeamWhereUniqueInput
+  create: Prisma.XOR<Prisma.TeamCreateWithoutEnvironmentsInput, Prisma.TeamUncheckedCreateWithoutEnvironmentsInput>
+}
+
+export type TeamUpsertWithoutEnvironmentsInput = {
+  update: Prisma.XOR<Prisma.TeamUpdateWithoutEnvironmentsInput, Prisma.TeamUncheckedUpdateWithoutEnvironmentsInput>
+  create: Prisma.XOR<Prisma.TeamCreateWithoutEnvironmentsInput, Prisma.TeamUncheckedCreateWithoutEnvironmentsInput>
+  where?: Prisma.TeamWhereInput
+}
+
+export type TeamUpdateToOneWithWhereWithoutEnvironmentsInput = {
+  where?: Prisma.TeamWhereInput
+  data: Prisma.XOR<Prisma.TeamUpdateWithoutEnvironmentsInput, Prisma.TeamUncheckedUpdateWithoutEnvironmentsInput>
+}
+
+export type TeamUpdateWithoutEnvironmentsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  slug?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
+  invoicePrefix?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
+  tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
+  providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
+  invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
+  catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
+  catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
+  catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
+  catalogVersions?: Prisma.CatalogVersionUpdateManyWithoutTeamNestedInput
+  catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
+  billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
+  templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutTeamNestedInput
+  invoices?: Prisma.InvoiceUpdateManyWithoutTeamNestedInput
+  payments?: Prisma.PaymentUpdateManyWithoutTeamNestedInput
+  paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutTeamNestedInput
+  checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutTeamNestedInput
+  billingBalances?: Prisma.BillingBalanceUpdateManyWithoutTeamNestedInput
+  refunds?: Prisma.RefundUpdateManyWithoutTeamNestedInput
+  billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutTeamNestedInput
+  subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutTeamNestedInput
+  billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutTeamNestedInput
+  taxProfile?: Prisma.TaxProfileUpdateOneWithoutTeamNestedInput
+  invoiceSequences?: Prisma.InvoiceSequenceUpdateManyWithoutTeamNestedInput
+  auditEvents?: Prisma.AuditEventUpdateManyWithoutTeamNestedInput
+  billingEvents?: Prisma.BillingEventUpdateManyWithoutTeamNestedInput
+  webhookDeliveries?: Prisma.WebhookDeliveryUpdateManyWithoutTeamNestedInput
+  gasSpends?: Prisma.GasSpendUpdateManyWithoutTeamNestedInput
+  tierHistory?: Prisma.TierUpgradeHistoryUpdateManyWithoutTeamNestedInput
+  supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
+  arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
+  addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
+  featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
+  arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
+  embedComponents?: Prisma.EmbedComponentUpdateManyWithoutTeamNestedInput
+  agentConfig?: Prisma.ArcenAgentConfigUpdateOneWithoutTeamNestedInput
+  dispatchRequests?: Prisma.ArcenDispatchRequestUpdateManyWithoutTeamNestedInput
+}
+
+export type TeamUncheckedUpdateWithoutEnvironmentsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  slug?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
+  invoicePrefix?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
+  tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
+  providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
+  invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
+  catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
+  catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
+  catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
+  catalogVersions?: Prisma.CatalogVersionUncheckedUpdateManyWithoutTeamNestedInput
+  catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
+  billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
+  templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutTeamNestedInput
+  invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutTeamNestedInput
+  payments?: Prisma.PaymentUncheckedUpdateManyWithoutTeamNestedInput
+  paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutTeamNestedInput
+  checkoutSessions?: Prisma.CheckoutSessionUncheckedUpdateManyWithoutTeamNestedInput
+  billingBalances?: Prisma.BillingBalanceUncheckedUpdateManyWithoutTeamNestedInput
+  refunds?: Prisma.RefundUncheckedUpdateManyWithoutTeamNestedInput
+  billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutTeamNestedInput
+  subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutTeamNestedInput
+  billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutTeamNestedInput
+  taxProfile?: Prisma.TaxProfileUncheckedUpdateOneWithoutTeamNestedInput
+  invoiceSequences?: Prisma.InvoiceSequenceUncheckedUpdateManyWithoutTeamNestedInput
+  auditEvents?: Prisma.AuditEventUncheckedUpdateManyWithoutTeamNestedInput
+  billingEvents?: Prisma.BillingEventUncheckedUpdateManyWithoutTeamNestedInput
+  webhookDeliveries?: Prisma.WebhookDeliveryUncheckedUpdateManyWithoutTeamNestedInput
+  gasSpends?: Prisma.GasSpendUncheckedUpdateManyWithoutTeamNestedInput
+  tierHistory?: Prisma.TierUpgradeHistoryUncheckedUpdateManyWithoutTeamNestedInput
+  supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
+  arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
+  addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
+  featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
+  arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
+  embedComponents?: Prisma.EmbedComponentUncheckedUpdateManyWithoutTeamNestedInput
+  agentConfig?: Prisma.ArcenAgentConfigUncheckedUpdateOneWithoutTeamNestedInput
+  dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedUpdateManyWithoutTeamNestedInput
+}
+
 export type TeamCreateWithoutMembersInput = {
   id?: string
   createdAt?: Date | string
@@ -1155,6 +1380,7 @@ export type TeamCreateWithoutMembersInput = {
   tierSubscriptionId?: string | null
   providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
@@ -1201,6 +1427,7 @@ export type TeamUncheckedCreateWithoutMembersInput = {
   tierSubscriptionId?: string | null
   providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
@@ -1263,6 +1490,7 @@ export type TeamUpdateWithoutMembersInput = {
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
@@ -1309,6 +1537,7 @@ export type TeamUncheckedUpdateWithoutMembersInput = {
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
@@ -1355,6 +1584,7 @@ export type TeamCreateWithoutInvitationsInput = {
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
@@ -1401,6 +1631,7 @@ export type TeamUncheckedCreateWithoutInvitationsInput = {
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
@@ -1463,6 +1694,7 @@ export type TeamUpdateWithoutInvitationsInput = {
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
@@ -1509,6 +1741,7 @@ export type TeamUncheckedUpdateWithoutInvitationsInput = {
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
@@ -1555,6 +1788,7 @@ export type TeamCreateWithoutProviderProfileInput = {
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
@@ -1601,6 +1835,7 @@ export type TeamUncheckedCreateWithoutProviderProfileInput = {
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
@@ -1663,6 +1898,7 @@ export type TeamUpdateWithoutProviderProfileInput = {
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
@@ -1709,6 +1945,7 @@ export type TeamUncheckedUpdateWithoutProviderProfileInput = {
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
@@ -1756,6 +1993,7 @@ export type TeamCreateWithoutCatalogPlansInput = {
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionCreateNestedManyWithoutTeamInput
@@ -1802,6 +2040,7 @@ export type TeamUncheckedCreateWithoutCatalogPlansInput = {
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionUncheckedCreateNestedManyWithoutTeamInput
@@ -1864,6 +2103,7 @@ export type TeamUpdateWithoutCatalogPlansInput = {
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUpdateManyWithoutTeamNestedInput
@@ -1910,6 +2150,7 @@ export type TeamUncheckedUpdateWithoutCatalogPlansInput = {
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUncheckedUpdateManyWithoutTeamNestedInput
@@ -1956,6 +2197,7 @@ export type TeamCreateWithoutCatalogAddOnsInput = {
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionCreateNestedManyWithoutTeamInput
@@ -2002,6 +2244,7 @@ export type TeamUncheckedCreateWithoutCatalogAddOnsInput = {
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionUncheckedCreateNestedManyWithoutTeamInput
@@ -2064,6 +2307,7 @@ export type TeamUpdateWithoutCatalogAddOnsInput = {
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUpdateManyWithoutTeamNestedInput
@@ -2110,6 +2354,7 @@ export type TeamUncheckedUpdateWithoutCatalogAddOnsInput = {
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUncheckedUpdateManyWithoutTeamNestedInput
@@ -2156,6 +2401,7 @@ export type TeamCreateWithoutCatalogCreditTypesInput = {
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionCreateNestedManyWithoutTeamInput
@@ -2202,6 +2448,7 @@ export type TeamUncheckedCreateWithoutCatalogCreditTypesInput = {
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogVersions?: Prisma.CatalogVersionUncheckedCreateNestedManyWithoutTeamInput
@@ -2264,6 +2511,7 @@ export type TeamUpdateWithoutCatalogCreditTypesInput = {
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUpdateManyWithoutTeamNestedInput
@@ -2310,6 +2558,7 @@ export type TeamUncheckedUpdateWithoutCatalogCreditTypesInput = {
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogVersions?: Prisma.CatalogVersionUncheckedUpdateManyWithoutTeamNestedInput
@@ -2356,6 +2605,7 @@ export type TeamCreateWithoutCatalogVersionsInput = {
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
@@ -2402,6 +2652,7 @@ export type TeamUncheckedCreateWithoutCatalogVersionsInput = {
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
@@ -2464,6 +2715,7 @@ export type TeamUpdateWithoutCatalogVersionsInput = {
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
@@ -2510,6 +2762,7 @@ export type TeamUncheckedUpdateWithoutCatalogVersionsInput = {
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
@@ -2556,6 +2809,7 @@ export type TeamCreateWithoutCatalogConfigsInput = {
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
@@ -2602,6 +2856,7 @@ export type TeamUncheckedCreateWithoutCatalogConfigsInput = {
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
@@ -2664,6 +2919,7 @@ export type TeamUpdateWithoutCatalogConfigsInput = {
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
@@ -2710,6 +2966,7 @@ export type TeamUncheckedUpdateWithoutCatalogConfigsInput = {
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
@@ -2756,6 +3013,7 @@ export type TeamCreateWithoutBillingTemplatesInput = {
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
@@ -2802,6 +3060,7 @@ export type TeamUncheckedCreateWithoutBillingTemplatesInput = {
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
@@ -2864,6 +3123,7 @@ export type TeamUpdateWithoutBillingTemplatesInput = {
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
@@ -2910,6 +3170,7 @@ export type TeamUncheckedUpdateWithoutBillingTemplatesInput = {
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
@@ -2956,6 +3217,7 @@ export type TeamCreateWithoutTemplateInstallsInput = {
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
@@ -3002,6 +3264,7 @@ export type TeamUncheckedCreateWithoutTemplateInstallsInput = {
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
@@ -3064,6 +3327,7 @@ export type TeamUpdateWithoutTemplateInstallsInput = {
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
@@ -3110,6 +3374,7 @@ export type TeamUncheckedUpdateWithoutTemplateInstallsInput = {
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
@@ -3156,6 +3421,7 @@ export type TeamCreateWithoutTaxProfileInput = {
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
@@ -3202,6 +3468,7 @@ export type TeamUncheckedCreateWithoutTaxProfileInput = {
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
@@ -3264,6 +3531,7 @@ export type TeamUpdateWithoutTaxProfileInput = {
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
@@ -3310,6 +3578,7 @@ export type TeamUncheckedUpdateWithoutTaxProfileInput = {
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
@@ -3356,6 +3625,7 @@ export type TeamCreateWithoutInvoiceSequencesInput = {
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
@@ -3402,6 +3672,7 @@ export type TeamUncheckedCreateWithoutInvoiceSequencesInput = {
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
@@ -3464,6 +3735,7 @@ export type TeamUpdateWithoutInvoiceSequencesInput = {
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
@@ -3510,6 +3782,7 @@ export type TeamUncheckedUpdateWithoutInvoiceSequencesInput = {
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
@@ -3556,6 +3829,7 @@ export type TeamCreateWithoutInvoicesInput = {
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
@@ -3602,6 +3876,7 @@ export type TeamUncheckedCreateWithoutInvoicesInput = {
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
@@ -3664,6 +3939,7 @@ export type TeamUpdateWithoutInvoicesInput = {
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
@@ -3710,6 +3986,7 @@ export type TeamUncheckedUpdateWithoutInvoicesInput = {
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
@@ -3756,6 +4033,7 @@ export type TeamCreateWithoutAuditEventsInput = {
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
@@ -3802,6 +4080,7 @@ export type TeamUncheckedCreateWithoutAuditEventsInput = {
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
@@ -3864,6 +4143,7 @@ export type TeamUpdateWithoutAuditEventsInput = {
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
@@ -3910,6 +4190,7 @@ export type TeamUncheckedUpdateWithoutAuditEventsInput = {
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
@@ -3956,6 +4237,7 @@ export type TeamCreateWithoutBillingEventsInput = {
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
@@ -4002,6 +4284,7 @@ export type TeamUncheckedCreateWithoutBillingEventsInput = {
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
@@ -4064,6 +4347,7 @@ export type TeamUpdateWithoutBillingEventsInput = {
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
@@ -4110,6 +4394,7 @@ export type TeamUncheckedUpdateWithoutBillingEventsInput = {
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
@@ -4156,6 +4441,7 @@ export type TeamCreateWithoutSubscriptionStatesInput = {
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
@@ -4202,6 +4488,7 @@ export type TeamUncheckedCreateWithoutSubscriptionStatesInput = {
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
@@ -4264,6 +4551,7 @@ export type TeamUpdateWithoutSubscriptionStatesInput = {
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
@@ -4310,6 +4598,7 @@ export type TeamUncheckedUpdateWithoutSubscriptionStatesInput = {
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
@@ -4356,6 +4645,7 @@ export type TeamCreateWithoutPaymentsInput = {
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
@@ -4402,6 +4692,7 @@ export type TeamUncheckedCreateWithoutPaymentsInput = {
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
@@ -4464,6 +4755,7 @@ export type TeamUpdateWithoutPaymentsInput = {
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
@@ -4510,6 +4802,7 @@ export type TeamUncheckedUpdateWithoutPaymentsInput = {
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
@@ -4556,6 +4849,7 @@ export type TeamCreateWithoutBillingAdjustmentsInput = {
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
@@ -4602,6 +4896,7 @@ export type TeamUncheckedCreateWithoutBillingAdjustmentsInput = {
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
@@ -4664,6 +4959,7 @@ export type TeamUpdateWithoutBillingAdjustmentsInput = {
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
@@ -4710,6 +5006,7 @@ export type TeamUncheckedUpdateWithoutBillingAdjustmentsInput = {
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
@@ -4756,6 +5053,7 @@ export type TeamCreateWithoutBillingBalancesInput = {
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
@@ -4802,6 +5100,7 @@ export type TeamUncheckedCreateWithoutBillingBalancesInput = {
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
@@ -4864,6 +5163,7 @@ export type TeamUpdateWithoutBillingBalancesInput = {
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
@@ -4910,6 +5210,7 @@ export type TeamUncheckedUpdateWithoutBillingBalancesInput = {
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
@@ -4956,6 +5257,7 @@ export type TeamCreateWithoutRefundsInput = {
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
@@ -5002,6 +5304,7 @@ export type TeamUncheckedCreateWithoutRefundsInput = {
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
@@ -5064,6 +5367,7 @@ export type TeamUpdateWithoutRefundsInput = {
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
@@ -5110,6 +5414,7 @@ export type TeamUncheckedUpdateWithoutRefundsInput = {
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
@@ -5156,6 +5461,7 @@ export type TeamCreateWithoutBillingRecoveryTasksInput = {
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
@@ -5202,6 +5508,7 @@ export type TeamUncheckedCreateWithoutBillingRecoveryTasksInput = {
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
@@ -5264,6 +5571,7 @@ export type TeamUpdateWithoutBillingRecoveryTasksInput = {
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
@@ -5310,6 +5618,7 @@ export type TeamUncheckedUpdateWithoutBillingRecoveryTasksInput = {
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
@@ -5356,6 +5665,7 @@ export type TeamCreateWithoutWebhookDeliveriesInput = {
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
@@ -5402,6 +5712,7 @@ export type TeamUncheckedCreateWithoutWebhookDeliveriesInput = {
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
@@ -5464,6 +5775,7 @@ export type TeamUpdateWithoutWebhookDeliveriesInput = {
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
@@ -5510,6 +5822,7 @@ export type TeamUncheckedUpdateWithoutWebhookDeliveriesInput = {
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
@@ -5556,6 +5869,7 @@ export type TeamCreateWithoutGasSpendsInput = {
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
@@ -5602,6 +5916,7 @@ export type TeamUncheckedCreateWithoutGasSpendsInput = {
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
@@ -5664,6 +5979,7 @@ export type TeamUpdateWithoutGasSpendsInput = {
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
@@ -5710,6 +6026,7 @@ export type TeamUncheckedUpdateWithoutGasSpendsInput = {
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
@@ -5756,6 +6073,7 @@ export type TeamCreateWithoutTierHistoryInput = {
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
@@ -5802,6 +6120,7 @@ export type TeamUncheckedCreateWithoutTierHistoryInput = {
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
@@ -5864,6 +6183,7 @@ export type TeamUpdateWithoutTierHistoryInput = {
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
@@ -5910,6 +6230,7 @@ export type TeamUncheckedUpdateWithoutTierHistoryInput = {
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
@@ -5956,6 +6277,7 @@ export type TeamCreateWithoutSupportTicketsInput = {
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
@@ -6002,6 +6324,7 @@ export type TeamUncheckedCreateWithoutSupportTicketsInput = {
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
@@ -6064,6 +6387,7 @@ export type TeamUpdateWithoutSupportTicketsInput = {
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
@@ -6110,6 +6434,7 @@ export type TeamUncheckedUpdateWithoutSupportTicketsInput = {
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
@@ -6156,6 +6481,7 @@ export type TeamCreateWithoutArcenCompaniesInput = {
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
@@ -6202,6 +6528,7 @@ export type TeamUncheckedCreateWithoutArcenCompaniesInput = {
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
@@ -6264,6 +6591,7 @@ export type TeamUpdateWithoutArcenCompaniesInput = {
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
@@ -6310,6 +6638,7 @@ export type TeamUncheckedUpdateWithoutArcenCompaniesInput = {
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
@@ -6356,6 +6685,7 @@ export type TeamCreateWithoutAddOnGrantsInput = {
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
@@ -6402,6 +6732,7 @@ export type TeamUncheckedCreateWithoutAddOnGrantsInput = {
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
@@ -6464,6 +6795,7 @@ export type TeamUpdateWithoutAddOnGrantsInput = {
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
@@ -6510,6 +6842,7 @@ export type TeamUncheckedUpdateWithoutAddOnGrantsInput = {
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
@@ -6556,6 +6889,7 @@ export type TeamCreateWithoutPaymentLinksInput = {
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
@@ -6602,6 +6936,7 @@ export type TeamUncheckedCreateWithoutPaymentLinksInput = {
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
@@ -6664,6 +6999,7 @@ export type TeamUpdateWithoutPaymentLinksInput = {
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
@@ -6710,6 +7046,7 @@ export type TeamUncheckedUpdateWithoutPaymentLinksInput = {
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
@@ -6756,6 +7093,7 @@ export type TeamCreateWithoutCheckoutSessionsInput = {
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
@@ -6802,6 +7140,7 @@ export type TeamUncheckedCreateWithoutCheckoutSessionsInput = {
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
@@ -6864,6 +7203,7 @@ export type TeamUpdateWithoutCheckoutSessionsInput = {
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
@@ -6910,6 +7250,7 @@ export type TeamUncheckedUpdateWithoutCheckoutSessionsInput = {
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
@@ -6956,6 +7297,7 @@ export type TeamCreateWithoutFeatureFlagsInput = {
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
@@ -7002,6 +7344,7 @@ export type TeamUncheckedCreateWithoutFeatureFlagsInput = {
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
@@ -7064,6 +7407,7 @@ export type TeamUpdateWithoutFeatureFlagsInput = {
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
@@ -7110,6 +7454,7 @@ export type TeamUncheckedUpdateWithoutFeatureFlagsInput = {
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
@@ -7156,6 +7501,7 @@ export type TeamCreateWithoutArcenApiKeysInput = {
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
@@ -7202,6 +7548,7 @@ export type TeamUncheckedCreateWithoutArcenApiKeysInput = {
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
@@ -7264,6 +7611,7 @@ export type TeamUpdateWithoutArcenApiKeysInput = {
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
@@ -7310,6 +7658,7 @@ export type TeamUncheckedUpdateWithoutArcenApiKeysInput = {
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
@@ -7356,6 +7705,7 @@ export type TeamCreateWithoutEmbedComponentsInput = {
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
@@ -7402,6 +7752,7 @@ export type TeamUncheckedCreateWithoutEmbedComponentsInput = {
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
@@ -7464,6 +7815,7 @@ export type TeamUpdateWithoutEmbedComponentsInput = {
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
@@ -7510,6 +7862,7 @@ export type TeamUncheckedUpdateWithoutEmbedComponentsInput = {
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
@@ -7556,6 +7909,7 @@ export type TeamCreateWithoutAgentConfigInput = {
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
@@ -7602,6 +7956,7 @@ export type TeamUncheckedCreateWithoutAgentConfigInput = {
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
@@ -7664,6 +8019,7 @@ export type TeamUpdateWithoutAgentConfigInput = {
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
@@ -7710,6 +8066,7 @@ export type TeamUncheckedUpdateWithoutAgentConfigInput = {
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
@@ -7756,6 +8113,7 @@ export type TeamCreateWithoutDispatchRequestsInput = {
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
@@ -7802,6 +8160,7 @@ export type TeamUncheckedCreateWithoutDispatchRequestsInput = {
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
   providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
@@ -7864,6 +8223,7 @@ export type TeamUpdateWithoutDispatchRequestsInput = {
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
@@ -7910,6 +8270,7 @@ export type TeamUncheckedUpdateWithoutDispatchRequestsInput = {
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
   providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
   catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
@@ -7950,6 +8311,7 @@ export type TeamUncheckedUpdateWithoutDispatchRequestsInput = {
 export type TeamCountOutputType = {
   members: number
   invitations: number
+  environments: number
   catalogPlans: number
   catalogAddOns: number
   catalogCreditTypes: number
@@ -7984,6 +8346,7 @@ export type TeamCountOutputType = {
 export type TeamCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   members?: boolean | TeamCountOutputTypeCountMembersArgs
   invitations?: boolean | TeamCountOutputTypeCountInvitationsArgs
+  environments?: boolean | TeamCountOutputTypeCountEnvironmentsArgs
   catalogPlans?: boolean | TeamCountOutputTypeCountCatalogPlansArgs
   catalogAddOns?: boolean | TeamCountOutputTypeCountCatalogAddOnsArgs
   catalogCreditTypes?: boolean | TeamCountOutputTypeCountCatalogCreditTypesArgs
@@ -8037,6 +8400,13 @@ export type TeamCountOutputTypeCountMembersArgs<ExtArgs extends runtime.Types.Ex
  */
 export type TeamCountOutputTypeCountInvitationsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.TeamInvitationWhereInput
+}
+
+/**
+ * TeamCountOutputType without action
+ */
+export type TeamCountOutputTypeCountEnvironmentsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.WorkspaceEnvironmentWhereInput
 }
 
 /**
@@ -8257,6 +8627,7 @@ export type TeamSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   members?: boolean | Prisma.Team$membersArgs<ExtArgs>
   providerProfile?: boolean | Prisma.Team$providerProfileArgs<ExtArgs>
   invitations?: boolean | Prisma.Team$invitationsArgs<ExtArgs>
+  environments?: boolean | Prisma.Team$environmentsArgs<ExtArgs>
   catalogPlans?: boolean | Prisma.Team$catalogPlansArgs<ExtArgs>
   catalogAddOns?: boolean | Prisma.Team$catalogAddOnsArgs<ExtArgs>
   catalogCreditTypes?: boolean | Prisma.Team$catalogCreditTypesArgs<ExtArgs>
@@ -8335,6 +8706,7 @@ export type TeamInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   members?: boolean | Prisma.Team$membersArgs<ExtArgs>
   providerProfile?: boolean | Prisma.Team$providerProfileArgs<ExtArgs>
   invitations?: boolean | Prisma.Team$invitationsArgs<ExtArgs>
+  environments?: boolean | Prisma.Team$environmentsArgs<ExtArgs>
   catalogPlans?: boolean | Prisma.Team$catalogPlansArgs<ExtArgs>
   catalogAddOns?: boolean | Prisma.Team$catalogAddOnsArgs<ExtArgs>
   catalogCreditTypes?: boolean | Prisma.Team$catalogCreditTypesArgs<ExtArgs>
@@ -8377,6 +8749,7 @@ export type $TeamPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     members: Prisma.$TeamMemberPayload<ExtArgs>[]
     providerProfile: Prisma.$ProviderProfilePayload<ExtArgs> | null
     invitations: Prisma.$TeamInvitationPayload<ExtArgs>[]
+    environments: Prisma.$WorkspaceEnvironmentPayload<ExtArgs>[]
     catalogPlans: Prisma.$CatalogPlanPayload<ExtArgs>[]
     catalogAddOns: Prisma.$CatalogAddOnPayload<ExtArgs>[]
     catalogCreditTypes: Prisma.$CatalogCreditTypePayload<ExtArgs>[]
@@ -8817,6 +9190,7 @@ export interface Prisma__TeamClient<T, Null = never, ExtArgs extends runtime.Typ
   members<T extends Prisma.Team$membersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$membersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TeamMemberPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   providerProfile<T extends Prisma.Team$providerProfileArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$providerProfileArgs<ExtArgs>>): Prisma.Prisma__ProviderProfileClient<runtime.Types.Result.GetResult<Prisma.$ProviderProfilePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   invitations<T extends Prisma.Team$invitationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$invitationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TeamInvitationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  environments<T extends Prisma.Team$environmentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$environmentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$WorkspaceEnvironmentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   catalogPlans<T extends Prisma.Team$catalogPlansArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$catalogPlansArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CatalogPlanPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   catalogAddOns<T extends Prisma.Team$catalogAddOnsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$catalogAddOnsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CatalogAddOnPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   catalogCreditTypes<T extends Prisma.Team$catalogCreditTypesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$catalogCreditTypesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CatalogCreditTypePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -9339,6 +9713,30 @@ export type Team$invitationsArgs<ExtArgs extends runtime.Types.Extensions.Intern
   take?: number
   skip?: number
   distinct?: Prisma.TeamInvitationScalarFieldEnum | Prisma.TeamInvitationScalarFieldEnum[]
+}
+
+/**
+ * Team.environments
+ */
+export type Team$environmentsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the WorkspaceEnvironment
+   */
+  select?: Prisma.WorkspaceEnvironmentSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the WorkspaceEnvironment
+   */
+  omit?: Prisma.WorkspaceEnvironmentOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.WorkspaceEnvironmentInclude<ExtArgs> | null
+  where?: Prisma.WorkspaceEnvironmentWhereInput
+  orderBy?: Prisma.WorkspaceEnvironmentOrderByWithRelationInput | Prisma.WorkspaceEnvironmentOrderByWithRelationInput[]
+  cursor?: Prisma.WorkspaceEnvironmentWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.WorkspaceEnvironmentScalarFieldEnum | Prisma.WorkspaceEnvironmentScalarFieldEnum[]
 }
 
 /**

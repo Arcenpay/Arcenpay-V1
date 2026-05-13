@@ -115,7 +115,15 @@ const REGISTRY_GMP_ABI = [
 
 export function SettingsSection() {
   const searchParams = useSearchParams();
-  const { envMode } = useEnvironment();
+  const {
+    envMode,
+    activeEnvironment,
+    environments,
+    environmentCounts,
+    environmentLimits,
+    selectEnvironment,
+    refreshEnvironments,
+  } = useEnvironment();
   const { isConnected, address: connectedAddress } = useAccount();
   const { data: sessionData } = useDashboardSession();
   const chainId = useChainId();
@@ -136,7 +144,7 @@ export function SettingsSection() {
     switchToRequiredNetwork,
     currentNetworkLabel,
   } = useDashboardWallet(linkedWallet);
-  const configuredChainId = resolveEnvironmentChainId(envMode);
+  const configuredChainId = activeEnvironment?.chainId ?? resolveEnvironmentChainId(envMode);
   const contractAddresses = useContractAddresses(configuredChainId);
   const configuredChainLabel = getChainLabel(configuredChainId);
   const configuredEnvChainsLabel = formatChainLabelsForEnvironment(envMode);
@@ -146,9 +154,6 @@ export function SettingsSection() {
   const [notifications, setNotifications] = useState(NOTIFICATION_DEFAULTS);
   const [isSaving, setIsSaving] = useState(false);
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
-  const [environmentMode, setEnvironmentMode] = useState<
-    "DEVELOPMENT" | "PRODUCTION"
-  >("DEVELOPMENT");
   const [teamInfo, setTeamInfo] = useState<{
     id: string;
     name: string;
@@ -175,6 +180,8 @@ export function SettingsSection() {
   >([]);
   const [workspaceLoading, setWorkspaceLoading] = useState(true);
   const [workspaceBusy, setWorkspaceBusy] = useState(false);
+  const [renamingEnvironmentId, setRenamingEnvironmentId] = useState<string | null>(null);
+  const [environmentNameDraft, setEnvironmentNameDraft] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<
     "ADMIN" | "MEMBER" | "FINANCE" | "DEVELOPER" | "SUPPORT"
@@ -196,6 +203,8 @@ export function SettingsSection() {
   const [newAxelarTransport, setNewAxelarTransport] = useState("");
   const [newCcipTransport, setNewCcipTransport] = useState("");
   const [isSettingTransports, setIsSettingTransports] = useState(false);
+
+  const environmentMode = activeEnvironment?.mode ?? envMode;
 
   const registryAddress =
     contractAddresses.subscriptionRegistry as `0x${string}`;
@@ -332,18 +341,6 @@ export function SettingsSection() {
         }
       })
       .catch(() => {});
-    fetch("/api/team")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((team) => {
-        if (!team) return;
-        if (
-          team.environmentMode === "DEVELOPMENT" ||
-          team.environmentMode === "PRODUCTION"
-        ) {
-          setEnvironmentMode(team.environmentMode);
-        }
-      })
-      .catch(() => {});
   }, []);
 
   const { data: gmpBalance } = useBalance({
@@ -463,6 +460,57 @@ export function SettingsSection() {
 
   const canManageWorkspace =
     teamInfo?.myRole === "OWNER" || teamInfo?.myRole === "ADMIN";
+
+  const handleSelectEnvironment = async (environmentId: string) => {
+    setWorkspaceBusy(true);
+    try {
+      const ok = await selectEnvironment(environmentId);
+      if (!ok) {
+        throw new Error("Failed to switch environment");
+      }
+      await Promise.all([loadWorkspaceData(), refreshEnvironments()]);
+      toast.success("Environment switched");
+    } catch (err: unknown) {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to switch environment",
+      );
+    } finally {
+      setWorkspaceBusy(false);
+    }
+  };
+
+  const handleRenameEnvironment = async (environmentId: string) => {
+    if (!environmentNameDraft.trim()) {
+      toast.error("Enter an environment name");
+      return;
+    }
+
+    setWorkspaceBusy(true);
+    try {
+      const response = await fetch("/api/environments", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          environmentId,
+          name: environmentNameDraft.trim(),
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload?.error ?? "Failed to rename environment");
+      }
+      setRenamingEnvironmentId(null);
+      setEnvironmentNameDraft("");
+      await Promise.all([loadWorkspaceData(), refreshEnvironments()]);
+      toast.success("Environment renamed");
+    } catch (err: unknown) {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to rename environment",
+      );
+    } finally {
+      setWorkspaceBusy(false);
+    }
+  };
 
   const handleInviteMember = async () => {
     if (!inviteEmail.trim()) {
@@ -779,7 +827,7 @@ export function SettingsSection() {
                       <p className="text-xs text-muted-foreground mb-1">Your role</p>
                       <p className="text-sm font-semibold text-foreground">{teamInfo.myRole}</p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Current environment: {teamInfo.environmentMode}
+                        Current environment: {activeEnvironment?.name ?? "None selected"}
                       </p>
                     </div>
                     <div className="rounded-xl border border-border bg-secondary/40 p-4">
@@ -791,6 +839,126 @@ export function SettingsSection() {
                       <p className="text-xs text-muted-foreground mt-1">
                         Switch instantly from the workspace menu in the header.
                       </p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-border bg-secondary/20 p-4 space-y-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-medium text-foreground">Environments</p>
+                        <p className="text-xs text-muted-foreground">
+                          Every environment is locked to one chain and one mode.
+                        </p>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => window.location.assign("/onboarding/environment")}
+                      >
+                        <Plus className="w-3.5 h-3.5 mr-2" />
+                        Create
+                      </Button>
+                    </div>
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <div className="rounded-xl border border-border bg-background/60 p-3">
+                        <p className="text-xs text-muted-foreground">Development</p>
+                        <p className="mt-1 text-sm font-semibold text-foreground">
+                          {environmentCounts?.development ?? 0}
+                          {" / "}
+                          {environmentLimits?.development ?? "—"}
+                        </p>
+                      </div>
+                      <div className="rounded-xl border border-border bg-background/60 p-3">
+                        <p className="text-xs text-muted-foreground">Production</p>
+                        <p className="mt-1 text-sm font-semibold text-foreground">
+                          {environmentCounts?.production ?? 0}
+                          {" / "}
+                          {environmentLimits?.production ?? "—"}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      {environments.map((environment) => {
+                        const isRenaming = renamingEnvironmentId === environment.id;
+                        return (
+                          <div
+                            key={environment.id}
+                            className="rounded-xl border border-border bg-background/60 p-4"
+                          >
+                            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <p className="text-sm font-semibold text-foreground">
+                                    {environment.name}
+                                  </p>
+                                  <Badge variant="outline">
+                                    {environment.mode === "DEVELOPMENT" ? "DEV" : "PROD"}
+                                  </Badge>
+                                  {environment.isActive ? (
+                                    <Badge variant="secondary">Active</Badge>
+                                  ) : null}
+                                </div>
+                                <p className="mt-1 text-xs text-muted-foreground">
+                                  {environment.chainLabel} · Chain {environment.chainId}
+                                </p>
+                              </div>
+                              <div className="flex flex-wrap gap-2">
+                                {!environment.isActive ? (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    disabled={workspaceBusy}
+                                    onClick={() => void handleSelectEnvironment(environment.id)}
+                                  >
+                                    Select
+                                  </Button>
+                                ) : null}
+                                {canManageWorkspace ? (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    disabled={workspaceBusy}
+                                    onClick={() => {
+                                      setRenamingEnvironmentId(environment.id);
+                                      setEnvironmentNameDraft(environment.name);
+                                    }}
+                                  >
+                                    Rename
+                                  </Button>
+                                ) : null}
+                              </div>
+                            </div>
+                            {isRenaming ? (
+                              <div className="mt-3 flex flex-col gap-2 md:flex-row">
+                                <Input
+                                  value={environmentNameDraft}
+                                  onChange={(event) => setEnvironmentNameDraft(event.target.value)}
+                                  placeholder="Environment name"
+                                />
+                                <div className="flex gap-2">
+                                  <Button
+                                    size="sm"
+                                    disabled={workspaceBusy}
+                                    onClick={() => void handleRenameEnvironment(environment.id)}
+                                  >
+                                    Save
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      setRenamingEnvironmentId(null);
+                                      setEnvironmentNameDraft("");
+                                    }}
+                                  >
+                                    Cancel
+                                  </Button>
+                                </div>
+                              </div>
+                            ) : null}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
 

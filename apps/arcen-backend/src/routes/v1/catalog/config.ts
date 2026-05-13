@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "../../../db.js";
 import { requirePermission, isErrorResponse } from "../../../lib/auth/api-auth.js";
 import { writeAuditEvent } from "../../../lib/platform/audit.js";
+import { requireResolvedActiveEnvironment } from "../../../lib/environments/workspace-environments.js";
 
 const envModeSchema = z.enum(["DEVELOPMENT", "PRODUCTION"]);
 
@@ -35,27 +36,23 @@ export async function getCatalogConfig(c: Context) {
     return c.json({ error: "Invalid query", details: parsed.error.flatten().fieldErrors }, 400 as any);
   }
 
-  const team = await db.team.findUnique({
-    where: { id: auth.team.teamId },
-    select: { environmentMode: true },
-  });
-  if (!team) {
-    return c.json({ error: "Team not found" }, 404 as any);
+  const activeEnvironment = await requireResolvedActiveEnvironment(
+    auth.session,
+    auth.team.teamId,
+  );
+  if (!activeEnvironment) {
+    return c.json({ error: "No workspace environment selected" }, 409 as any);
   }
-
-  const environmentMode = parsed.data.environmentMode || team.environmentMode;
 
   const config = await db.catalogConfig.upsert({
     where: {
-      teamId_environmentMode: {
-        teamId: auth.team.teamId,
-        environmentMode,
-      },
+      environmentId: activeEnvironment.id,
     },
     update: {},
     create: {
       teamId: auth.team.teamId,
-      environmentMode,
+      environmentId: activeEnvironment.id,
+      environmentMode: activeEnvironment.mode,
     },
   });
 
@@ -72,16 +69,15 @@ export async function updateCatalogConfig(c: Context) {
     return c.json({ error: "Invalid request", details: parsed.error.flatten().fieldErrors }, 400 as any);
   }
 
-  const team = await db.team.findUnique({
-    where: { id: auth.team.teamId },
-    select: { environmentMode: true },
-  });
-  if (!team) {
-    return c.json({ error: "Team not found" }, 404 as any);
+  const activeEnvironment = await requireResolvedActiveEnvironment(
+    auth.session,
+    auth.team.teamId,
+  );
+  if (!activeEnvironment) {
+    return c.json({ error: "No workspace environment selected" }, 409 as any);
   }
 
   const {
-    environmentMode = team.environmentMode,
     initialPlan,
     fallbackPlan,
     showBillingPeriodToggle,
@@ -97,21 +93,11 @@ export async function updateCatalogConfig(c: Context) {
   } = parsed.data;
 
   const existing = await db.catalogConfig.findUnique({
-    where: {
-      teamId_environmentMode: {
-        teamId: auth.team.teamId,
-        environmentMode,
-      },
-    },
+    where: { environmentId: activeEnvironment.id },
   });
 
   const config = await db.catalogConfig.upsert({
-    where: {
-      teamId_environmentMode: {
-        teamId: auth.team.teamId,
-        environmentMode,
-      },
-    },
+    where: { environmentId: activeEnvironment.id },
     update: {
       initialPlan,
       fallbackPlan,
@@ -128,7 +114,8 @@ export async function updateCatalogConfig(c: Context) {
     },
     create: {
       teamId: auth.team.teamId,
-      environmentMode,
+      environmentId: activeEnvironment.id,
+      environmentMode: activeEnvironment.mode,
       initialPlan,
       fallbackPlan,
       showBillingPeriodToggle,

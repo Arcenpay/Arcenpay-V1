@@ -51,6 +51,17 @@ export async function switchTeam(c: Context) {
     data: { currentTeamId: parsed.data.teamId },
   });
 
+  const firstEnvironment = await db.workspaceEnvironment.findFirst({
+    where: { teamId: parsed.data.teamId },
+    orderBy: { createdAt: "asc" },
+    select: { id: true },
+  });
+
+  await db.authSession.update({
+    where: { id: session.sessionId },
+    data: { activeEnvironmentId: firstEnvironment?.id ?? null },
+  });
+
   return c.json({
     ok: true,
     currentTeam: {

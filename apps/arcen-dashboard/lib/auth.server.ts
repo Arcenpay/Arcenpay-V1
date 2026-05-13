@@ -14,6 +14,23 @@ export type DashboardSession = {
   email: string | null;
   currentTeamId: string | null;
   walletAddress: string | null;
+  currentTeamRole: string | null;
+  activeEnvironment: {
+    id: string;
+    name: string;
+    mode: "DEVELOPMENT" | "PRODUCTION";
+    chainId: number;
+    chainLabel: string;
+    isActive: boolean;
+  } | null;
+  environments: Array<{
+    id: string;
+    name: string;
+    mode: "DEVELOPMENT" | "PRODUCTION";
+    chainId: number;
+    chainLabel: string;
+    isActive: boolean;
+  }>;
   expiresAt: Date;
 };
 
@@ -25,7 +42,24 @@ type BackendSessionResponse = {
   };
   currentTeam?: {
     id?: string;
+    role?: string;
   } | null;
+  activeEnvironment?: {
+    id: string;
+    name: string;
+    mode: "DEVELOPMENT" | "PRODUCTION";
+    chainId: number;
+    chainLabel: string;
+    isActive: boolean;
+  } | null;
+  environments?: Array<{
+    id: string;
+    name: string;
+    mode: "DEVELOPMENT" | "PRODUCTION";
+    chainId: number;
+    chainLabel: string;
+    isActive: boolean;
+  }>;
 };
 
 async function callBackend<T>(path: string, options: RequestInit = {}): Promise<T | null> {
@@ -70,6 +104,9 @@ export async function getSession(): Promise<DashboardSession | null> {
     email: data.user.email ?? null,
     currentTeamId: data.currentTeam?.id ?? null,
     walletAddress: data.user.walletAddress ?? null,
+    currentTeamRole: data.currentTeam?.role ?? null,
+    activeEnvironment: data.activeEnvironment ?? null,
+    environments: Array.isArray(data.environments) ? data.environments : [],
     expiresAt: new Date(),
   };
 }
@@ -97,7 +134,18 @@ export async function createSession(userId: string): Promise<DashboardSession> {
   }
   const data = await res.json();
   const session = data.data ?? data;
-  return { sessionId: session.sessionId ?? "", userId: session.userId ?? "", clerkUserId: session.userId ?? "", email: session.email ?? null, currentTeamId: session.currentTeamId ?? null, walletAddress: session.walletAddress ?? null, expiresAt: new Date(session.expiresAt ?? Date.now()) };
+  return {
+    sessionId: session.sessionId ?? "",
+    userId: session.userId ?? "",
+    clerkUserId: session.userId ?? "",
+    email: session.email ?? null,
+    currentTeamId: session.currentTeamId ?? null,
+    walletAddress: session.walletAddress ?? null,
+    currentTeamRole: null,
+    activeEnvironment: null,
+    environments: [],
+    expiresAt: new Date(session.expiresAt ?? Date.now()),
+  };
 }
 
 export async function refreshSession(_sessionId: string): Promise<void> {

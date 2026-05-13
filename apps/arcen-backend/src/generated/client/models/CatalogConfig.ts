@@ -29,6 +29,7 @@ export type CatalogConfigMinAggregateOutputType = {
   createdAt: Date | null
   updatedAt: Date | null
   teamId: string | null
+  environmentId: string | null
   environmentMode: $Enums.EnvironmentMode | null
   initialPlan: string | null
   fallbackPlan: string | null
@@ -49,6 +50,7 @@ export type CatalogConfigMaxAggregateOutputType = {
   createdAt: Date | null
   updatedAt: Date | null
   teamId: string | null
+  environmentId: string | null
   environmentMode: $Enums.EnvironmentMode | null
   initialPlan: string | null
   fallbackPlan: string | null
@@ -69,6 +71,7 @@ export type CatalogConfigCountAggregateOutputType = {
   createdAt: number
   updatedAt: number
   teamId: number
+  environmentId: number
   environmentMode: number
   initialPlan: number
   fallbackPlan: number
@@ -91,6 +94,7 @@ export type CatalogConfigMinAggregateInputType = {
   createdAt?: true
   updatedAt?: true
   teamId?: true
+  environmentId?: true
   environmentMode?: true
   initialPlan?: true
   fallbackPlan?: true
@@ -111,6 +115,7 @@ export type CatalogConfigMaxAggregateInputType = {
   createdAt?: true
   updatedAt?: true
   teamId?: true
+  environmentId?: true
   environmentMode?: true
   initialPlan?: true
   fallbackPlan?: true
@@ -131,6 +136,7 @@ export type CatalogConfigCountAggregateInputType = {
   createdAt?: true
   updatedAt?: true
   teamId?: true
+  environmentId?: true
   environmentMode?: true
   initialPlan?: true
   fallbackPlan?: true
@@ -224,6 +230,7 @@ export type CatalogConfigGroupByOutputType = {
   createdAt: Date
   updatedAt: Date
   teamId: string
+  environmentId: string | null
   environmentMode: $Enums.EnvironmentMode
   initialPlan: string
   fallbackPlan: string | null
@@ -265,6 +272,7 @@ export type CatalogConfigWhereInput = {
   createdAt?: Prisma.DateTimeFilter<"CatalogConfig"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"CatalogConfig"> | Date | string
   teamId?: Prisma.StringFilter<"CatalogConfig"> | string
+  environmentId?: Prisma.StringNullableFilter<"CatalogConfig"> | string | null
   environmentMode?: Prisma.EnumEnvironmentModeFilter<"CatalogConfig"> | $Enums.EnvironmentMode
   initialPlan?: Prisma.StringFilter<"CatalogConfig"> | string
   fallbackPlan?: Prisma.StringNullableFilter<"CatalogConfig"> | string | null
@@ -279,6 +287,7 @@ export type CatalogConfigWhereInput = {
   preventDowngradeOverLimit?: Prisma.BoolFilter<"CatalogConfig"> | boolean
   disallowSelfServiceDowngrade?: Prisma.BoolFilter<"CatalogConfig"> | boolean
   team?: Prisma.XOR<Prisma.TeamScalarRelationFilter, Prisma.TeamWhereInput>
+  environment?: Prisma.XOR<Prisma.WorkspaceEnvironmentNullableScalarRelationFilter, Prisma.WorkspaceEnvironmentWhereInput> | null
 }
 
 export type CatalogConfigOrderByWithRelationInput = {
@@ -286,6 +295,7 @@ export type CatalogConfigOrderByWithRelationInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrderInput | Prisma.SortOrder
   environmentMode?: Prisma.SortOrder
   initialPlan?: Prisma.SortOrder
   fallbackPlan?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -300,10 +310,12 @@ export type CatalogConfigOrderByWithRelationInput = {
   preventDowngradeOverLimit?: Prisma.SortOrder
   disallowSelfServiceDowngrade?: Prisma.SortOrder
   team?: Prisma.TeamOrderByWithRelationInput
+  environment?: Prisma.WorkspaceEnvironmentOrderByWithRelationInput
 }
 
 export type CatalogConfigWhereUniqueInput = Prisma.AtLeast<{
   id?: string
+  environmentId?: string
   teamId_environmentMode?: Prisma.CatalogConfigTeamIdEnvironmentModeCompoundUniqueInput
   AND?: Prisma.CatalogConfigWhereInput | Prisma.CatalogConfigWhereInput[]
   OR?: Prisma.CatalogConfigWhereInput[]
@@ -325,13 +337,15 @@ export type CatalogConfigWhereUniqueInput = Prisma.AtLeast<{
   preventDowngradeOverLimit?: Prisma.BoolFilter<"CatalogConfig"> | boolean
   disallowSelfServiceDowngrade?: Prisma.BoolFilter<"CatalogConfig"> | boolean
   team?: Prisma.XOR<Prisma.TeamScalarRelationFilter, Prisma.TeamWhereInput>
-}, "id" | "teamId_environmentMode">
+  environment?: Prisma.XOR<Prisma.WorkspaceEnvironmentNullableScalarRelationFilter, Prisma.WorkspaceEnvironmentWhereInput> | null
+}, "id" | "environmentId" | "teamId_environmentMode">
 
 export type CatalogConfigOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrderInput | Prisma.SortOrder
   environmentMode?: Prisma.SortOrder
   initialPlan?: Prisma.SortOrder
   fallbackPlan?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -358,6 +372,7 @@ export type CatalogConfigScalarWhereWithAggregatesInput = {
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"CatalogConfig"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"CatalogConfig"> | Date | string
   teamId?: Prisma.StringWithAggregatesFilter<"CatalogConfig"> | string
+  environmentId?: Prisma.StringNullableWithAggregatesFilter<"CatalogConfig"> | string | null
   environmentMode?: Prisma.EnumEnvironmentModeWithAggregatesFilter<"CatalogConfig"> | $Enums.EnvironmentMode
   initialPlan?: Prisma.StringWithAggregatesFilter<"CatalogConfig"> | string
   fallbackPlan?: Prisma.StringNullableWithAggregatesFilter<"CatalogConfig"> | string | null
@@ -391,6 +406,7 @@ export type CatalogConfigCreateInput = {
   preventDowngradeOverLimit?: boolean
   disallowSelfServiceDowngrade?: boolean
   team: Prisma.TeamCreateNestedOneWithoutCatalogConfigsInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutCatalogConfigsInput
 }
 
 export type CatalogConfigUncheckedCreateInput = {
@@ -398,6 +414,7 @@ export type CatalogConfigUncheckedCreateInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   teamId: string
+  environmentId?: string | null
   environmentMode?: $Enums.EnvironmentMode
   initialPlan?: string
   fallbackPlan?: string | null
@@ -431,6 +448,7 @@ export type CatalogConfigUpdateInput = {
   preventDowngradeOverLimit?: Prisma.BoolFieldUpdateOperationsInput | boolean
   disallowSelfServiceDowngrade?: Prisma.BoolFieldUpdateOperationsInput | boolean
   team?: Prisma.TeamUpdateOneRequiredWithoutCatalogConfigsNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutCatalogConfigsNestedInput
 }
 
 export type CatalogConfigUncheckedUpdateInput = {
@@ -438,6 +456,7 @@ export type CatalogConfigUncheckedUpdateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   initialPlan?: Prisma.StringFieldUpdateOperationsInput | string
   fallbackPlan?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -458,6 +477,7 @@ export type CatalogConfigCreateManyInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   teamId: string
+  environmentId?: string | null
   environmentMode?: $Enums.EnvironmentMode
   initialPlan?: string
   fallbackPlan?: string | null
@@ -497,6 +517,7 @@ export type CatalogConfigUncheckedUpdateManyInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   initialPlan?: Prisma.StringFieldUpdateOperationsInput | string
   fallbackPlan?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -532,6 +553,7 @@ export type CatalogConfigCountOrderByAggregateInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrder
   environmentMode?: Prisma.SortOrder
   initialPlan?: Prisma.SortOrder
   fallbackPlan?: Prisma.SortOrder
@@ -552,6 +574,7 @@ export type CatalogConfigMaxOrderByAggregateInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrder
   environmentMode?: Prisma.SortOrder
   initialPlan?: Prisma.SortOrder
   fallbackPlan?: Prisma.SortOrder
@@ -572,6 +595,7 @@ export type CatalogConfigMinOrderByAggregateInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrder
   environmentMode?: Prisma.SortOrder
   initialPlan?: Prisma.SortOrder
   fallbackPlan?: Prisma.SortOrder
@@ -629,6 +653,48 @@ export type CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput = {
   deleteMany?: Prisma.CatalogConfigScalarWhereInput | Prisma.CatalogConfigScalarWhereInput[]
 }
 
+export type CatalogConfigCreateNestedManyWithoutEnvironmentInput = {
+  create?: Prisma.XOR<Prisma.CatalogConfigCreateWithoutEnvironmentInput, Prisma.CatalogConfigUncheckedCreateWithoutEnvironmentInput> | Prisma.CatalogConfigCreateWithoutEnvironmentInput[] | Prisma.CatalogConfigUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.CatalogConfigCreateOrConnectWithoutEnvironmentInput | Prisma.CatalogConfigCreateOrConnectWithoutEnvironmentInput[]
+  createMany?: Prisma.CatalogConfigCreateManyEnvironmentInputEnvelope
+  connect?: Prisma.CatalogConfigWhereUniqueInput | Prisma.CatalogConfigWhereUniqueInput[]
+}
+
+export type CatalogConfigUncheckedCreateNestedManyWithoutEnvironmentInput = {
+  create?: Prisma.XOR<Prisma.CatalogConfigCreateWithoutEnvironmentInput, Prisma.CatalogConfigUncheckedCreateWithoutEnvironmentInput> | Prisma.CatalogConfigCreateWithoutEnvironmentInput[] | Prisma.CatalogConfigUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.CatalogConfigCreateOrConnectWithoutEnvironmentInput | Prisma.CatalogConfigCreateOrConnectWithoutEnvironmentInput[]
+  createMany?: Prisma.CatalogConfigCreateManyEnvironmentInputEnvelope
+  connect?: Prisma.CatalogConfigWhereUniqueInput | Prisma.CatalogConfigWhereUniqueInput[]
+}
+
+export type CatalogConfigUpdateManyWithoutEnvironmentNestedInput = {
+  create?: Prisma.XOR<Prisma.CatalogConfigCreateWithoutEnvironmentInput, Prisma.CatalogConfigUncheckedCreateWithoutEnvironmentInput> | Prisma.CatalogConfigCreateWithoutEnvironmentInput[] | Prisma.CatalogConfigUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.CatalogConfigCreateOrConnectWithoutEnvironmentInput | Prisma.CatalogConfigCreateOrConnectWithoutEnvironmentInput[]
+  upsert?: Prisma.CatalogConfigUpsertWithWhereUniqueWithoutEnvironmentInput | Prisma.CatalogConfigUpsertWithWhereUniqueWithoutEnvironmentInput[]
+  createMany?: Prisma.CatalogConfigCreateManyEnvironmentInputEnvelope
+  set?: Prisma.CatalogConfigWhereUniqueInput | Prisma.CatalogConfigWhereUniqueInput[]
+  disconnect?: Prisma.CatalogConfigWhereUniqueInput | Prisma.CatalogConfigWhereUniqueInput[]
+  delete?: Prisma.CatalogConfigWhereUniqueInput | Prisma.CatalogConfigWhereUniqueInput[]
+  connect?: Prisma.CatalogConfigWhereUniqueInput | Prisma.CatalogConfigWhereUniqueInput[]
+  update?: Prisma.CatalogConfigUpdateWithWhereUniqueWithoutEnvironmentInput | Prisma.CatalogConfigUpdateWithWhereUniqueWithoutEnvironmentInput[]
+  updateMany?: Prisma.CatalogConfigUpdateManyWithWhereWithoutEnvironmentInput | Prisma.CatalogConfigUpdateManyWithWhereWithoutEnvironmentInput[]
+  deleteMany?: Prisma.CatalogConfigScalarWhereInput | Prisma.CatalogConfigScalarWhereInput[]
+}
+
+export type CatalogConfigUncheckedUpdateManyWithoutEnvironmentNestedInput = {
+  create?: Prisma.XOR<Prisma.CatalogConfigCreateWithoutEnvironmentInput, Prisma.CatalogConfigUncheckedCreateWithoutEnvironmentInput> | Prisma.CatalogConfigCreateWithoutEnvironmentInput[] | Prisma.CatalogConfigUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.CatalogConfigCreateOrConnectWithoutEnvironmentInput | Prisma.CatalogConfigCreateOrConnectWithoutEnvironmentInput[]
+  upsert?: Prisma.CatalogConfigUpsertWithWhereUniqueWithoutEnvironmentInput | Prisma.CatalogConfigUpsertWithWhereUniqueWithoutEnvironmentInput[]
+  createMany?: Prisma.CatalogConfigCreateManyEnvironmentInputEnvelope
+  set?: Prisma.CatalogConfigWhereUniqueInput | Prisma.CatalogConfigWhereUniqueInput[]
+  disconnect?: Prisma.CatalogConfigWhereUniqueInput | Prisma.CatalogConfigWhereUniqueInput[]
+  delete?: Prisma.CatalogConfigWhereUniqueInput | Prisma.CatalogConfigWhereUniqueInput[]
+  connect?: Prisma.CatalogConfigWhereUniqueInput | Prisma.CatalogConfigWhereUniqueInput[]
+  update?: Prisma.CatalogConfigUpdateWithWhereUniqueWithoutEnvironmentInput | Prisma.CatalogConfigUpdateWithWhereUniqueWithoutEnvironmentInput[]
+  updateMany?: Prisma.CatalogConfigUpdateManyWithWhereWithoutEnvironmentInput | Prisma.CatalogConfigUpdateManyWithWhereWithoutEnvironmentInput[]
+  deleteMany?: Prisma.CatalogConfigScalarWhereInput | Prisma.CatalogConfigScalarWhereInput[]
+}
+
 export type CatalogConfigCreateWithoutTeamInput = {
   id?: string
   createdAt?: Date | string
@@ -646,12 +712,14 @@ export type CatalogConfigCreateWithoutTeamInput = {
   downgradeImmediately?: boolean
   preventDowngradeOverLimit?: boolean
   disallowSelfServiceDowngrade?: boolean
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutCatalogConfigsInput
 }
 
 export type CatalogConfigUncheckedCreateWithoutTeamInput = {
   id?: string
   createdAt?: Date | string
   updatedAt?: Date | string
+  environmentId?: string | null
   environmentMode?: $Enums.EnvironmentMode
   initialPlan?: string
   fallbackPlan?: string | null
@@ -701,6 +769,7 @@ export type CatalogConfigScalarWhereInput = {
   createdAt?: Prisma.DateTimeFilter<"CatalogConfig"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"CatalogConfig"> | Date | string
   teamId?: Prisma.StringFilter<"CatalogConfig"> | string
+  environmentId?: Prisma.StringNullableFilter<"CatalogConfig"> | string | null
   environmentMode?: Prisma.EnumEnvironmentModeFilter<"CatalogConfig"> | $Enums.EnvironmentMode
   initialPlan?: Prisma.StringFilter<"CatalogConfig"> | string
   fallbackPlan?: Prisma.StringNullableFilter<"CatalogConfig"> | string | null
@@ -716,10 +785,77 @@ export type CatalogConfigScalarWhereInput = {
   disallowSelfServiceDowngrade?: Prisma.BoolFilter<"CatalogConfig"> | boolean
 }
 
+export type CatalogConfigCreateWithoutEnvironmentInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  environmentMode?: $Enums.EnvironmentMode
+  initialPlan?: string
+  fallbackPlan?: string | null
+  showBillingPeriodToggle?: boolean
+  freePlanPriceDisplay?: boolean
+  hideCredits?: boolean
+  yearlyDiscountDisplay?: boolean
+  showFeatureDescriptions?: boolean
+  showHardLimits?: boolean
+  upgradeImmediately?: boolean
+  downgradeImmediately?: boolean
+  preventDowngradeOverLimit?: boolean
+  disallowSelfServiceDowngrade?: boolean
+  team: Prisma.TeamCreateNestedOneWithoutCatalogConfigsInput
+}
+
+export type CatalogConfigUncheckedCreateWithoutEnvironmentInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  teamId: string
+  environmentMode?: $Enums.EnvironmentMode
+  initialPlan?: string
+  fallbackPlan?: string | null
+  showBillingPeriodToggle?: boolean
+  freePlanPriceDisplay?: boolean
+  hideCredits?: boolean
+  yearlyDiscountDisplay?: boolean
+  showFeatureDescriptions?: boolean
+  showHardLimits?: boolean
+  upgradeImmediately?: boolean
+  downgradeImmediately?: boolean
+  preventDowngradeOverLimit?: boolean
+  disallowSelfServiceDowngrade?: boolean
+}
+
+export type CatalogConfigCreateOrConnectWithoutEnvironmentInput = {
+  where: Prisma.CatalogConfigWhereUniqueInput
+  create: Prisma.XOR<Prisma.CatalogConfigCreateWithoutEnvironmentInput, Prisma.CatalogConfigUncheckedCreateWithoutEnvironmentInput>
+}
+
+export type CatalogConfigCreateManyEnvironmentInputEnvelope = {
+  data: Prisma.CatalogConfigCreateManyEnvironmentInput | Prisma.CatalogConfigCreateManyEnvironmentInput[]
+  skipDuplicates?: boolean
+}
+
+export type CatalogConfigUpsertWithWhereUniqueWithoutEnvironmentInput = {
+  where: Prisma.CatalogConfigWhereUniqueInput
+  update: Prisma.XOR<Prisma.CatalogConfigUpdateWithoutEnvironmentInput, Prisma.CatalogConfigUncheckedUpdateWithoutEnvironmentInput>
+  create: Prisma.XOR<Prisma.CatalogConfigCreateWithoutEnvironmentInput, Prisma.CatalogConfigUncheckedCreateWithoutEnvironmentInput>
+}
+
+export type CatalogConfigUpdateWithWhereUniqueWithoutEnvironmentInput = {
+  where: Prisma.CatalogConfigWhereUniqueInput
+  data: Prisma.XOR<Prisma.CatalogConfigUpdateWithoutEnvironmentInput, Prisma.CatalogConfigUncheckedUpdateWithoutEnvironmentInput>
+}
+
+export type CatalogConfigUpdateManyWithWhereWithoutEnvironmentInput = {
+  where: Prisma.CatalogConfigScalarWhereInput
+  data: Prisma.XOR<Prisma.CatalogConfigUpdateManyMutationInput, Prisma.CatalogConfigUncheckedUpdateManyWithoutEnvironmentInput>
+}
+
 export type CatalogConfigCreateManyTeamInput = {
   id?: string
   createdAt?: Date | string
   updatedAt?: Date | string
+  environmentId?: string | null
   environmentMode?: $Enums.EnvironmentMode
   initialPlan?: string
   fallbackPlan?: string | null
@@ -752,12 +888,14 @@ export type CatalogConfigUpdateWithoutTeamInput = {
   downgradeImmediately?: Prisma.BoolFieldUpdateOperationsInput | boolean
   preventDowngradeOverLimit?: Prisma.BoolFieldUpdateOperationsInput | boolean
   disallowSelfServiceDowngrade?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutCatalogConfigsNestedInput
 }
 
 export type CatalogConfigUncheckedUpdateWithoutTeamInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   initialPlan?: Prisma.StringFieldUpdateOperationsInput | string
   fallbackPlan?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -777,6 +915,87 @@ export type CatalogConfigUncheckedUpdateManyWithoutTeamInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
+  initialPlan?: Prisma.StringFieldUpdateOperationsInput | string
+  fallbackPlan?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  showBillingPeriodToggle?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  freePlanPriceDisplay?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  hideCredits?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  yearlyDiscountDisplay?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  showFeatureDescriptions?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  showHardLimits?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  upgradeImmediately?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  downgradeImmediately?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  preventDowngradeOverLimit?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  disallowSelfServiceDowngrade?: Prisma.BoolFieldUpdateOperationsInput | boolean
+}
+
+export type CatalogConfigCreateManyEnvironmentInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  teamId: string
+  environmentMode?: $Enums.EnvironmentMode
+  initialPlan?: string
+  fallbackPlan?: string | null
+  showBillingPeriodToggle?: boolean
+  freePlanPriceDisplay?: boolean
+  hideCredits?: boolean
+  yearlyDiscountDisplay?: boolean
+  showFeatureDescriptions?: boolean
+  showHardLimits?: boolean
+  upgradeImmediately?: boolean
+  downgradeImmediately?: boolean
+  preventDowngradeOverLimit?: boolean
+  disallowSelfServiceDowngrade?: boolean
+}
+
+export type CatalogConfigUpdateWithoutEnvironmentInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
+  initialPlan?: Prisma.StringFieldUpdateOperationsInput | string
+  fallbackPlan?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  showBillingPeriodToggle?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  freePlanPriceDisplay?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  hideCredits?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  yearlyDiscountDisplay?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  showFeatureDescriptions?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  showHardLimits?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  upgradeImmediately?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  downgradeImmediately?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  preventDowngradeOverLimit?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  disallowSelfServiceDowngrade?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  team?: Prisma.TeamUpdateOneRequiredWithoutCatalogConfigsNestedInput
+}
+
+export type CatalogConfigUncheckedUpdateWithoutEnvironmentInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
+  initialPlan?: Prisma.StringFieldUpdateOperationsInput | string
+  fallbackPlan?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  showBillingPeriodToggle?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  freePlanPriceDisplay?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  hideCredits?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  yearlyDiscountDisplay?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  showFeatureDescriptions?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  showHardLimits?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  upgradeImmediately?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  downgradeImmediately?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  preventDowngradeOverLimit?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  disallowSelfServiceDowngrade?: Prisma.BoolFieldUpdateOperationsInput | boolean
+}
+
+export type CatalogConfigUncheckedUpdateManyWithoutEnvironmentInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamId?: Prisma.StringFieldUpdateOperationsInput | string
   environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   initialPlan?: Prisma.StringFieldUpdateOperationsInput | string
   fallbackPlan?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -799,6 +1018,7 @@ export type CatalogConfigSelect<ExtArgs extends runtime.Types.Extensions.Interna
   createdAt?: boolean
   updatedAt?: boolean
   teamId?: boolean
+  environmentId?: boolean
   environmentMode?: boolean
   initialPlan?: boolean
   fallbackPlan?: boolean
@@ -813,6 +1033,7 @@ export type CatalogConfigSelect<ExtArgs extends runtime.Types.Extensions.Interna
   preventDowngradeOverLimit?: boolean
   disallowSelfServiceDowngrade?: boolean
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.CatalogConfig$environmentArgs<ExtArgs>
 }, ExtArgs["result"]["catalogConfig"]>
 
 export type CatalogConfigSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -820,6 +1041,7 @@ export type CatalogConfigSelectCreateManyAndReturn<ExtArgs extends runtime.Types
   createdAt?: boolean
   updatedAt?: boolean
   teamId?: boolean
+  environmentId?: boolean
   environmentMode?: boolean
   initialPlan?: boolean
   fallbackPlan?: boolean
@@ -834,6 +1056,7 @@ export type CatalogConfigSelectCreateManyAndReturn<ExtArgs extends runtime.Types
   preventDowngradeOverLimit?: boolean
   disallowSelfServiceDowngrade?: boolean
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.CatalogConfig$environmentArgs<ExtArgs>
 }, ExtArgs["result"]["catalogConfig"]>
 
 export type CatalogConfigSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -841,6 +1064,7 @@ export type CatalogConfigSelectUpdateManyAndReturn<ExtArgs extends runtime.Types
   createdAt?: boolean
   updatedAt?: boolean
   teamId?: boolean
+  environmentId?: boolean
   environmentMode?: boolean
   initialPlan?: boolean
   fallbackPlan?: boolean
@@ -855,6 +1079,7 @@ export type CatalogConfigSelectUpdateManyAndReturn<ExtArgs extends runtime.Types
   preventDowngradeOverLimit?: boolean
   disallowSelfServiceDowngrade?: boolean
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.CatalogConfig$environmentArgs<ExtArgs>
 }, ExtArgs["result"]["catalogConfig"]>
 
 export type CatalogConfigSelectScalar = {
@@ -862,6 +1087,7 @@ export type CatalogConfigSelectScalar = {
   createdAt?: boolean
   updatedAt?: boolean
   teamId?: boolean
+  environmentId?: boolean
   environmentMode?: boolean
   initialPlan?: boolean
   fallbackPlan?: boolean
@@ -877,27 +1103,32 @@ export type CatalogConfigSelectScalar = {
   disallowSelfServiceDowngrade?: boolean
 }
 
-export type CatalogConfigOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "updatedAt" | "teamId" | "environmentMode" | "initialPlan" | "fallbackPlan" | "showBillingPeriodToggle" | "freePlanPriceDisplay" | "hideCredits" | "yearlyDiscountDisplay" | "showFeatureDescriptions" | "showHardLimits" | "upgradeImmediately" | "downgradeImmediately" | "preventDowngradeOverLimit" | "disallowSelfServiceDowngrade", ExtArgs["result"]["catalogConfig"]>
+export type CatalogConfigOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "updatedAt" | "teamId" | "environmentId" | "environmentMode" | "initialPlan" | "fallbackPlan" | "showBillingPeriodToggle" | "freePlanPriceDisplay" | "hideCredits" | "yearlyDiscountDisplay" | "showFeatureDescriptions" | "showHardLimits" | "upgradeImmediately" | "downgradeImmediately" | "preventDowngradeOverLimit" | "disallowSelfServiceDowngrade", ExtArgs["result"]["catalogConfig"]>
 export type CatalogConfigInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.CatalogConfig$environmentArgs<ExtArgs>
 }
 export type CatalogConfigIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.CatalogConfig$environmentArgs<ExtArgs>
 }
 export type CatalogConfigIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.CatalogConfig$environmentArgs<ExtArgs>
 }
 
 export type $CatalogConfigPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "CatalogConfig"
   objects: {
     team: Prisma.$TeamPayload<ExtArgs>
+    environment: Prisma.$WorkspaceEnvironmentPayload<ExtArgs> | null
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
     createdAt: Date
     updatedAt: Date
     teamId: string
+    environmentId: string | null
     environmentMode: $Enums.EnvironmentMode
     initialPlan: string
     fallbackPlan: string | null
@@ -1306,6 +1537,7 @@ readonly fields: CatalogConfigFieldRefs;
 export interface Prisma__CatalogConfigClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   team<T extends Prisma.TeamDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TeamDefaultArgs<ExtArgs>>): Prisma.Prisma__TeamClient<runtime.Types.Result.GetResult<Prisma.$TeamPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  environment<T extends Prisma.CatalogConfig$environmentArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.CatalogConfig$environmentArgs<ExtArgs>>): Prisma.Prisma__WorkspaceEnvironmentClient<runtime.Types.Result.GetResult<Prisma.$WorkspaceEnvironmentPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1339,6 +1571,7 @@ export interface CatalogConfigFieldRefs {
   readonly createdAt: Prisma.FieldRef<"CatalogConfig", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"CatalogConfig", 'DateTime'>
   readonly teamId: Prisma.FieldRef<"CatalogConfig", 'String'>
+  readonly environmentId: Prisma.FieldRef<"CatalogConfig", 'String'>
   readonly environmentMode: Prisma.FieldRef<"CatalogConfig", 'EnvironmentMode'>
   readonly initialPlan: Prisma.FieldRef<"CatalogConfig", 'String'>
   readonly fallbackPlan: Prisma.FieldRef<"CatalogConfig", 'String'>
@@ -1745,6 +1978,25 @@ export type CatalogConfigDeleteManyArgs<ExtArgs extends runtime.Types.Extensions
    * Limit how many CatalogConfigs to delete.
    */
   limit?: number
+}
+
+/**
+ * CatalogConfig.environment
+ */
+export type CatalogConfig$environmentArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the WorkspaceEnvironment
+   */
+  select?: Prisma.WorkspaceEnvironmentSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the WorkspaceEnvironment
+   */
+  omit?: Prisma.WorkspaceEnvironmentOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.WorkspaceEnvironmentInclude<ExtArgs> | null
+  where?: Prisma.WorkspaceEnvironmentWhereInput
 }
 
 /**

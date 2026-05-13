@@ -46,6 +46,8 @@ type TierLimits = {
   maxTeamMembers: number;
   maxFeatureFlags: number;
   maxChains: number;
+  maxDevelopmentEnvironments: number;
+  maxProductionEnvironments: number;
   platformFeeBps: number;
   gasDailyBudgetUsd: number;
 };
@@ -101,7 +103,7 @@ const TIER_CONFIG = {
     bgColor: "bg-muted/50",
     borderColor: "border-border",
     label: "Free",
-    description: "Get started with 1 workspace",
+    description: "2 dev + 2 prod environments",
   },
   PLUS: {
     icon: Crown,
@@ -109,7 +111,7 @@ const TIER_CONFIG = {
     bgColor: "bg-blue-500/10",
     borderColor: "border-blue-500/30",
     label: "Pro",
-    description: "Scale with advanced features",
+    description: "10 dev + 10 prod environments",
   },
   PRO: {
     icon: Rocket,
@@ -117,7 +119,7 @@ const TIER_CONFIG = {
     bgColor: "bg-purple-500/10",
     borderColor: "border-purple-500/30",
     label: "Enterprise",
-    description: "Full power with dedicated support",
+    description: "Unlimited environments and support",
   },
 };
 
@@ -289,13 +291,14 @@ export function BillingSection() {
               </p>
             </div>
             <div className="rounded-lg border p-3 space-y-1">
-              <p className="text-xs text-muted-foreground">Chains</p>
+              <p className="text-xs text-muted-foreground">Environments</p>
               <p className="text-lg font-semibold">
-                {currentTier?.limits.maxChains === 999
-                  ? "All"
-                  : (currentTier?.limits.maxChains ?? 1)}
+                {currentTier?.limits.maxDevelopmentEnvironments === 999 ||
+                currentTier?.limits.maxProductionEnvironments === 999
+                  ? "Unlimited"
+                  : `${currentTier?.limits.maxDevelopmentEnvironments ?? 2} dev / ${currentTier?.limits.maxProductionEnvironments ?? 2} prod`}
               </p>
-              <p className="text-[10px] text-muted-foreground">supported</p>
+              <p className="text-[10px] text-muted-foreground">workspace slots</p>
             </div>
           </div>
         </CardContent>
@@ -488,8 +491,12 @@ export function BillingSection() {
                       value={tierInfo.limits.maxTeamMembers}
                     />
                     <LimitRow
-                      label="Chains"
-                      value={tierInfo.limits.maxChains}
+                      label="Development envs"
+                      value={tierInfo.limits.maxDevelopmentEnvironments}
+                    />
+                    <LimitRow
+                      label="Production envs"
+                      value={tierInfo.limits.maxProductionEnvironments}
                     />
                     <div className="flex justify-between py-0.5">
                       <span className="text-muted-foreground">

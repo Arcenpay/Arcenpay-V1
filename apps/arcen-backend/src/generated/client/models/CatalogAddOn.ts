@@ -43,6 +43,7 @@ export type CatalogAddOnMinAggregateOutputType = {
   createdAt: Date | null
   updatedAt: Date | null
   teamId: string | null
+  environmentId: string | null
   environmentMode: $Enums.EnvironmentMode | null
   status: $Enums.CatalogStatus | null
   name: string | null
@@ -67,6 +68,7 @@ export type CatalogAddOnMaxAggregateOutputType = {
   createdAt: Date | null
   updatedAt: Date | null
   teamId: string | null
+  environmentId: string | null
   environmentMode: $Enums.EnvironmentMode | null
   status: $Enums.CatalogStatus | null
   name: string | null
@@ -91,6 +93,7 @@ export type CatalogAddOnCountAggregateOutputType = {
   createdAt: number
   updatedAt: number
   teamId: number
+  environmentId: number
   environmentMode: number
   status: number
   name: number
@@ -130,6 +133,7 @@ export type CatalogAddOnMinAggregateInputType = {
   createdAt?: true
   updatedAt?: true
   teamId?: true
+  environmentId?: true
   environmentMode?: true
   status?: true
   name?: true
@@ -154,6 +158,7 @@ export type CatalogAddOnMaxAggregateInputType = {
   createdAt?: true
   updatedAt?: true
   teamId?: true
+  environmentId?: true
   environmentMode?: true
   status?: true
   name?: true
@@ -178,6 +183,7 @@ export type CatalogAddOnCountAggregateInputType = {
   createdAt?: true
   updatedAt?: true
   teamId?: true
+  environmentId?: true
   environmentMode?: true
   status?: true
   name?: true
@@ -290,6 +296,7 @@ export type CatalogAddOnGroupByOutputType = {
   createdAt: Date
   updatedAt: Date
   teamId: string
+  environmentId: string | null
   environmentMode: $Enums.EnvironmentMode
   status: $Enums.CatalogStatus
   name: string
@@ -338,6 +345,7 @@ export type CatalogAddOnWhereInput = {
   createdAt?: Prisma.DateTimeFilter<"CatalogAddOn"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"CatalogAddOn"> | Date | string
   teamId?: Prisma.StringFilter<"CatalogAddOn"> | string
+  environmentId?: Prisma.StringNullableFilter<"CatalogAddOn"> | string | null
   environmentMode?: Prisma.EnumEnvironmentModeFilter<"CatalogAddOn"> | $Enums.EnvironmentMode
   status?: Prisma.EnumCatalogStatusFilter<"CatalogAddOn"> | $Enums.CatalogStatus
   name?: Prisma.StringFilter<"CatalogAddOn"> | string
@@ -357,6 +365,7 @@ export type CatalogAddOnWhereInput = {
   chainSyncError?: Prisma.StringNullableFilter<"CatalogAddOn"> | string | null
   chainSyncedAt?: Prisma.DateTimeNullableFilter<"CatalogAddOn"> | Date | string | null
   team?: Prisma.XOR<Prisma.TeamScalarRelationFilter, Prisma.TeamWhereInput>
+  environment?: Prisma.XOR<Prisma.WorkspaceEnvironmentNullableScalarRelationFilter, Prisma.WorkspaceEnvironmentWhereInput> | null
   companyGrants?: Prisma.CompanyAddOnGrantListRelationFilter
   paymentLinks?: Prisma.PaymentLinkListRelationFilter
   checkoutSessions?: Prisma.CheckoutSessionListRelationFilter
@@ -367,6 +376,7 @@ export type CatalogAddOnOrderByWithRelationInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrderInput | Prisma.SortOrder
   environmentMode?: Prisma.SortOrder
   status?: Prisma.SortOrder
   name?: Prisma.SortOrder
@@ -386,6 +396,7 @@ export type CatalogAddOnOrderByWithRelationInput = {
   chainSyncError?: Prisma.SortOrderInput | Prisma.SortOrder
   chainSyncedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   team?: Prisma.TeamOrderByWithRelationInput
+  environment?: Prisma.WorkspaceEnvironmentOrderByWithRelationInput
   companyGrants?: Prisma.CompanyAddOnGrantOrderByRelationAggregateInput
   paymentLinks?: Prisma.PaymentLinkOrderByRelationAggregateInput
   checkoutSessions?: Prisma.CheckoutSessionOrderByRelationAggregateInput
@@ -400,6 +411,7 @@ export type CatalogAddOnWhereUniqueInput = Prisma.AtLeast<{
   createdAt?: Prisma.DateTimeFilter<"CatalogAddOn"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"CatalogAddOn"> | Date | string
   teamId?: Prisma.StringFilter<"CatalogAddOn"> | string
+  environmentId?: Prisma.StringNullableFilter<"CatalogAddOn"> | string | null
   environmentMode?: Prisma.EnumEnvironmentModeFilter<"CatalogAddOn"> | $Enums.EnvironmentMode
   status?: Prisma.EnumCatalogStatusFilter<"CatalogAddOn"> | $Enums.CatalogStatus
   name?: Prisma.StringFilter<"CatalogAddOn"> | string
@@ -419,6 +431,7 @@ export type CatalogAddOnWhereUniqueInput = Prisma.AtLeast<{
   chainSyncError?: Prisma.StringNullableFilter<"CatalogAddOn"> | string | null
   chainSyncedAt?: Prisma.DateTimeNullableFilter<"CatalogAddOn"> | Date | string | null
   team?: Prisma.XOR<Prisma.TeamScalarRelationFilter, Prisma.TeamWhereInput>
+  environment?: Prisma.XOR<Prisma.WorkspaceEnvironmentNullableScalarRelationFilter, Prisma.WorkspaceEnvironmentWhereInput> | null
   companyGrants?: Prisma.CompanyAddOnGrantListRelationFilter
   paymentLinks?: Prisma.PaymentLinkListRelationFilter
   checkoutSessions?: Prisma.CheckoutSessionListRelationFilter
@@ -429,6 +442,7 @@ export type CatalogAddOnOrderByWithAggregationInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrderInput | Prisma.SortOrder
   environmentMode?: Prisma.SortOrder
   status?: Prisma.SortOrder
   name?: Prisma.SortOrder
@@ -462,6 +476,7 @@ export type CatalogAddOnScalarWhereWithAggregatesInput = {
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"CatalogAddOn"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"CatalogAddOn"> | Date | string
   teamId?: Prisma.StringWithAggregatesFilter<"CatalogAddOn"> | string
+  environmentId?: Prisma.StringNullableWithAggregatesFilter<"CatalogAddOn"> | string | null
   environmentMode?: Prisma.EnumEnvironmentModeWithAggregatesFilter<"CatalogAddOn"> | $Enums.EnvironmentMode
   status?: Prisma.EnumCatalogStatusWithAggregatesFilter<"CatalogAddOn"> | $Enums.CatalogStatus
   name?: Prisma.StringWithAggregatesFilter<"CatalogAddOn"> | string
@@ -505,6 +520,7 @@ export type CatalogAddOnCreateInput = {
   chainSyncError?: string | null
   chainSyncedAt?: Date | string | null
   team: Prisma.TeamCreateNestedOneWithoutCatalogAddOnsInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutCatalogAddOnsInput
   companyGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutCatalogAddOnInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutCatalogAddOnInput
   checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutCatalogAddOnInput
@@ -515,6 +531,7 @@ export type CatalogAddOnUncheckedCreateInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   teamId: string
+  environmentId?: string | null
   environmentMode?: $Enums.EnvironmentMode
   status?: $Enums.CatalogStatus
   name: string
@@ -561,6 +578,7 @@ export type CatalogAddOnUpdateInput = {
   chainSyncError?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   chainSyncedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   team?: Prisma.TeamUpdateOneRequiredWithoutCatalogAddOnsNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutCatalogAddOnsNestedInput
   companyGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutCatalogAddOnNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutCatalogAddOnNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutCatalogAddOnNestedInput
@@ -571,6 +589,7 @@ export type CatalogAddOnUncheckedUpdateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   status?: Prisma.EnumCatalogStatusFieldUpdateOperationsInput | $Enums.CatalogStatus
   name?: Prisma.StringFieldUpdateOperationsInput | string
@@ -599,6 +618,7 @@ export type CatalogAddOnCreateManyInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   teamId: string
+  environmentId?: string | null
   environmentMode?: $Enums.EnvironmentMode
   status?: $Enums.CatalogStatus
   name: string
@@ -648,6 +668,7 @@ export type CatalogAddOnUncheckedUpdateManyInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   status?: Prisma.EnumCatalogStatusFieldUpdateOperationsInput | $Enums.CatalogStatus
   name?: Prisma.StringFieldUpdateOperationsInput | string
@@ -689,6 +710,7 @@ export type CatalogAddOnCountOrderByAggregateInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrder
   environmentMode?: Prisma.SortOrder
   status?: Prisma.SortOrder
   name?: Prisma.SortOrder
@@ -720,6 +742,7 @@ export type CatalogAddOnMaxOrderByAggregateInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrder
   environmentMode?: Prisma.SortOrder
   status?: Prisma.SortOrder
   name?: Prisma.SortOrder
@@ -744,6 +767,7 @@ export type CatalogAddOnMinOrderByAggregateInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrder
   environmentMode?: Prisma.SortOrder
   status?: Prisma.SortOrder
   name?: Prisma.SortOrder
@@ -818,6 +842,48 @@ export type CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput = {
   connect?: Prisma.CatalogAddOnWhereUniqueInput | Prisma.CatalogAddOnWhereUniqueInput[]
   update?: Prisma.CatalogAddOnUpdateWithWhereUniqueWithoutTeamInput | Prisma.CatalogAddOnUpdateWithWhereUniqueWithoutTeamInput[]
   updateMany?: Prisma.CatalogAddOnUpdateManyWithWhereWithoutTeamInput | Prisma.CatalogAddOnUpdateManyWithWhereWithoutTeamInput[]
+  deleteMany?: Prisma.CatalogAddOnScalarWhereInput | Prisma.CatalogAddOnScalarWhereInput[]
+}
+
+export type CatalogAddOnCreateNestedManyWithoutEnvironmentInput = {
+  create?: Prisma.XOR<Prisma.CatalogAddOnCreateWithoutEnvironmentInput, Prisma.CatalogAddOnUncheckedCreateWithoutEnvironmentInput> | Prisma.CatalogAddOnCreateWithoutEnvironmentInput[] | Prisma.CatalogAddOnUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.CatalogAddOnCreateOrConnectWithoutEnvironmentInput | Prisma.CatalogAddOnCreateOrConnectWithoutEnvironmentInput[]
+  createMany?: Prisma.CatalogAddOnCreateManyEnvironmentInputEnvelope
+  connect?: Prisma.CatalogAddOnWhereUniqueInput | Prisma.CatalogAddOnWhereUniqueInput[]
+}
+
+export type CatalogAddOnUncheckedCreateNestedManyWithoutEnvironmentInput = {
+  create?: Prisma.XOR<Prisma.CatalogAddOnCreateWithoutEnvironmentInput, Prisma.CatalogAddOnUncheckedCreateWithoutEnvironmentInput> | Prisma.CatalogAddOnCreateWithoutEnvironmentInput[] | Prisma.CatalogAddOnUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.CatalogAddOnCreateOrConnectWithoutEnvironmentInput | Prisma.CatalogAddOnCreateOrConnectWithoutEnvironmentInput[]
+  createMany?: Prisma.CatalogAddOnCreateManyEnvironmentInputEnvelope
+  connect?: Prisma.CatalogAddOnWhereUniqueInput | Prisma.CatalogAddOnWhereUniqueInput[]
+}
+
+export type CatalogAddOnUpdateManyWithoutEnvironmentNestedInput = {
+  create?: Prisma.XOR<Prisma.CatalogAddOnCreateWithoutEnvironmentInput, Prisma.CatalogAddOnUncheckedCreateWithoutEnvironmentInput> | Prisma.CatalogAddOnCreateWithoutEnvironmentInput[] | Prisma.CatalogAddOnUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.CatalogAddOnCreateOrConnectWithoutEnvironmentInput | Prisma.CatalogAddOnCreateOrConnectWithoutEnvironmentInput[]
+  upsert?: Prisma.CatalogAddOnUpsertWithWhereUniqueWithoutEnvironmentInput | Prisma.CatalogAddOnUpsertWithWhereUniqueWithoutEnvironmentInput[]
+  createMany?: Prisma.CatalogAddOnCreateManyEnvironmentInputEnvelope
+  set?: Prisma.CatalogAddOnWhereUniqueInput | Prisma.CatalogAddOnWhereUniqueInput[]
+  disconnect?: Prisma.CatalogAddOnWhereUniqueInput | Prisma.CatalogAddOnWhereUniqueInput[]
+  delete?: Prisma.CatalogAddOnWhereUniqueInput | Prisma.CatalogAddOnWhereUniqueInput[]
+  connect?: Prisma.CatalogAddOnWhereUniqueInput | Prisma.CatalogAddOnWhereUniqueInput[]
+  update?: Prisma.CatalogAddOnUpdateWithWhereUniqueWithoutEnvironmentInput | Prisma.CatalogAddOnUpdateWithWhereUniqueWithoutEnvironmentInput[]
+  updateMany?: Prisma.CatalogAddOnUpdateManyWithWhereWithoutEnvironmentInput | Prisma.CatalogAddOnUpdateManyWithWhereWithoutEnvironmentInput[]
+  deleteMany?: Prisma.CatalogAddOnScalarWhereInput | Prisma.CatalogAddOnScalarWhereInput[]
+}
+
+export type CatalogAddOnUncheckedUpdateManyWithoutEnvironmentNestedInput = {
+  create?: Prisma.XOR<Prisma.CatalogAddOnCreateWithoutEnvironmentInput, Prisma.CatalogAddOnUncheckedCreateWithoutEnvironmentInput> | Prisma.CatalogAddOnCreateWithoutEnvironmentInput[] | Prisma.CatalogAddOnUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.CatalogAddOnCreateOrConnectWithoutEnvironmentInput | Prisma.CatalogAddOnCreateOrConnectWithoutEnvironmentInput[]
+  upsert?: Prisma.CatalogAddOnUpsertWithWhereUniqueWithoutEnvironmentInput | Prisma.CatalogAddOnUpsertWithWhereUniqueWithoutEnvironmentInput[]
+  createMany?: Prisma.CatalogAddOnCreateManyEnvironmentInputEnvelope
+  set?: Prisma.CatalogAddOnWhereUniqueInput | Prisma.CatalogAddOnWhereUniqueInput[]
+  disconnect?: Prisma.CatalogAddOnWhereUniqueInput | Prisma.CatalogAddOnWhereUniqueInput[]
+  delete?: Prisma.CatalogAddOnWhereUniqueInput | Prisma.CatalogAddOnWhereUniqueInput[]
+  connect?: Prisma.CatalogAddOnWhereUniqueInput | Prisma.CatalogAddOnWhereUniqueInput[]
+  update?: Prisma.CatalogAddOnUpdateWithWhereUniqueWithoutEnvironmentInput | Prisma.CatalogAddOnUpdateWithWhereUniqueWithoutEnvironmentInput[]
+  updateMany?: Prisma.CatalogAddOnUpdateManyWithWhereWithoutEnvironmentInput | Prisma.CatalogAddOnUpdateManyWithWhereWithoutEnvironmentInput[]
   deleteMany?: Prisma.CatalogAddOnScalarWhereInput | Prisma.CatalogAddOnScalarWhereInput[]
 }
 
@@ -905,6 +971,7 @@ export type CatalogAddOnCreateWithoutTeamInput = {
   chainTxHash?: string | null
   chainSyncError?: string | null
   chainSyncedAt?: Date | string | null
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutCatalogAddOnsInput
   companyGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutCatalogAddOnInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutCatalogAddOnInput
   checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutCatalogAddOnInput
@@ -914,6 +981,7 @@ export type CatalogAddOnUncheckedCreateWithoutTeamInput = {
   id?: string
   createdAt?: Date | string
   updatedAt?: Date | string
+  environmentId?: string | null
   environmentMode?: $Enums.EnvironmentMode
   status?: $Enums.CatalogStatus
   name: string
@@ -971,6 +1039,7 @@ export type CatalogAddOnScalarWhereInput = {
   createdAt?: Prisma.DateTimeFilter<"CatalogAddOn"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"CatalogAddOn"> | Date | string
   teamId?: Prisma.StringFilter<"CatalogAddOn"> | string
+  environmentId?: Prisma.StringNullableFilter<"CatalogAddOn"> | string | null
   environmentMode?: Prisma.EnumEnvironmentModeFilter<"CatalogAddOn"> | $Enums.EnvironmentMode
   status?: Prisma.EnumCatalogStatusFilter<"CatalogAddOn"> | $Enums.CatalogStatus
   name?: Prisma.StringFilter<"CatalogAddOn"> | string
@@ -989,6 +1058,88 @@ export type CatalogAddOnScalarWhereInput = {
   chainTxHash?: Prisma.StringNullableFilter<"CatalogAddOn"> | string | null
   chainSyncError?: Prisma.StringNullableFilter<"CatalogAddOn"> | string | null
   chainSyncedAt?: Prisma.DateTimeNullableFilter<"CatalogAddOn"> | Date | string | null
+}
+
+export type CatalogAddOnCreateWithoutEnvironmentInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  environmentMode?: $Enums.EnvironmentMode
+  status?: $Enums.CatalogStatus
+  name: string
+  code: string
+  description?: string | null
+  billingType?: $Enums.AddOnBillingType
+  saleMode?: $Enums.AddOnSaleMode
+  price: runtime.Decimal | runtime.DecimalJsLike | number | string
+  billingIntervalDays?: number | null
+  acceptedToken: string
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  active?: boolean
+  version?: number
+  publishedAt?: Date | string | null
+  chainSyncStatus?: $Enums.ChainSyncStatus
+  chainTxHash?: string | null
+  chainSyncError?: string | null
+  chainSyncedAt?: Date | string | null
+  team: Prisma.TeamCreateNestedOneWithoutCatalogAddOnsInput
+  companyGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutCatalogAddOnInput
+  paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutCatalogAddOnInput
+  checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutCatalogAddOnInput
+}
+
+export type CatalogAddOnUncheckedCreateWithoutEnvironmentInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  teamId: string
+  environmentMode?: $Enums.EnvironmentMode
+  status?: $Enums.CatalogStatus
+  name: string
+  code: string
+  description?: string | null
+  billingType?: $Enums.AddOnBillingType
+  saleMode?: $Enums.AddOnSaleMode
+  price: runtime.Decimal | runtime.DecimalJsLike | number | string
+  billingIntervalDays?: number | null
+  acceptedToken: string
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  active?: boolean
+  version?: number
+  publishedAt?: Date | string | null
+  chainSyncStatus?: $Enums.ChainSyncStatus
+  chainTxHash?: string | null
+  chainSyncError?: string | null
+  chainSyncedAt?: Date | string | null
+  companyGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutCatalogAddOnInput
+  paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutCatalogAddOnInput
+  checkoutSessions?: Prisma.CheckoutSessionUncheckedCreateNestedManyWithoutCatalogAddOnInput
+}
+
+export type CatalogAddOnCreateOrConnectWithoutEnvironmentInput = {
+  where: Prisma.CatalogAddOnWhereUniqueInput
+  create: Prisma.XOR<Prisma.CatalogAddOnCreateWithoutEnvironmentInput, Prisma.CatalogAddOnUncheckedCreateWithoutEnvironmentInput>
+}
+
+export type CatalogAddOnCreateManyEnvironmentInputEnvelope = {
+  data: Prisma.CatalogAddOnCreateManyEnvironmentInput | Prisma.CatalogAddOnCreateManyEnvironmentInput[]
+  skipDuplicates?: boolean
+}
+
+export type CatalogAddOnUpsertWithWhereUniqueWithoutEnvironmentInput = {
+  where: Prisma.CatalogAddOnWhereUniqueInput
+  update: Prisma.XOR<Prisma.CatalogAddOnUpdateWithoutEnvironmentInput, Prisma.CatalogAddOnUncheckedUpdateWithoutEnvironmentInput>
+  create: Prisma.XOR<Prisma.CatalogAddOnCreateWithoutEnvironmentInput, Prisma.CatalogAddOnUncheckedCreateWithoutEnvironmentInput>
+}
+
+export type CatalogAddOnUpdateWithWhereUniqueWithoutEnvironmentInput = {
+  where: Prisma.CatalogAddOnWhereUniqueInput
+  data: Prisma.XOR<Prisma.CatalogAddOnUpdateWithoutEnvironmentInput, Prisma.CatalogAddOnUncheckedUpdateWithoutEnvironmentInput>
+}
+
+export type CatalogAddOnUpdateManyWithWhereWithoutEnvironmentInput = {
+  where: Prisma.CatalogAddOnScalarWhereInput
+  data: Prisma.XOR<Prisma.CatalogAddOnUpdateManyMutationInput, Prisma.CatalogAddOnUncheckedUpdateManyWithoutEnvironmentInput>
 }
 
 export type CatalogAddOnCreateWithoutCompanyGrantsInput = {
@@ -1014,6 +1165,7 @@ export type CatalogAddOnCreateWithoutCompanyGrantsInput = {
   chainSyncError?: string | null
   chainSyncedAt?: Date | string | null
   team: Prisma.TeamCreateNestedOneWithoutCatalogAddOnsInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutCatalogAddOnsInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutCatalogAddOnInput
   checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutCatalogAddOnInput
 }
@@ -1023,6 +1175,7 @@ export type CatalogAddOnUncheckedCreateWithoutCompanyGrantsInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   teamId: string
+  environmentId?: string | null
   environmentMode?: $Enums.EnvironmentMode
   status?: $Enums.CatalogStatus
   name: string
@@ -1084,6 +1237,7 @@ export type CatalogAddOnUpdateWithoutCompanyGrantsInput = {
   chainSyncError?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   chainSyncedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   team?: Prisma.TeamUpdateOneRequiredWithoutCatalogAddOnsNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutCatalogAddOnsNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutCatalogAddOnNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutCatalogAddOnNestedInput
 }
@@ -1093,6 +1247,7 @@ export type CatalogAddOnUncheckedUpdateWithoutCompanyGrantsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   status?: Prisma.EnumCatalogStatusFieldUpdateOperationsInput | $Enums.CatalogStatus
   name?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1138,6 +1293,7 @@ export type CatalogAddOnCreateWithoutPaymentLinksInput = {
   chainSyncError?: string | null
   chainSyncedAt?: Date | string | null
   team: Prisma.TeamCreateNestedOneWithoutCatalogAddOnsInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutCatalogAddOnsInput
   companyGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutCatalogAddOnInput
   checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutCatalogAddOnInput
 }
@@ -1147,6 +1303,7 @@ export type CatalogAddOnUncheckedCreateWithoutPaymentLinksInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   teamId: string
+  environmentId?: string | null
   environmentMode?: $Enums.EnvironmentMode
   status?: $Enums.CatalogStatus
   name: string
@@ -1208,6 +1365,7 @@ export type CatalogAddOnUpdateWithoutPaymentLinksInput = {
   chainSyncError?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   chainSyncedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   team?: Prisma.TeamUpdateOneRequiredWithoutCatalogAddOnsNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutCatalogAddOnsNestedInput
   companyGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutCatalogAddOnNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutCatalogAddOnNestedInput
 }
@@ -1217,6 +1375,7 @@ export type CatalogAddOnUncheckedUpdateWithoutPaymentLinksInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   status?: Prisma.EnumCatalogStatusFieldUpdateOperationsInput | $Enums.CatalogStatus
   name?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1262,6 +1421,7 @@ export type CatalogAddOnCreateWithoutCheckoutSessionsInput = {
   chainSyncError?: string | null
   chainSyncedAt?: Date | string | null
   team: Prisma.TeamCreateNestedOneWithoutCatalogAddOnsInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutCatalogAddOnsInput
   companyGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutCatalogAddOnInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutCatalogAddOnInput
 }
@@ -1271,6 +1431,7 @@ export type CatalogAddOnUncheckedCreateWithoutCheckoutSessionsInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   teamId: string
+  environmentId?: string | null
   environmentMode?: $Enums.EnvironmentMode
   status?: $Enums.CatalogStatus
   name: string
@@ -1332,6 +1493,7 @@ export type CatalogAddOnUpdateWithoutCheckoutSessionsInput = {
   chainSyncError?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   chainSyncedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   team?: Prisma.TeamUpdateOneRequiredWithoutCatalogAddOnsNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutCatalogAddOnsNestedInput
   companyGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutCatalogAddOnNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutCatalogAddOnNestedInput
 }
@@ -1341,6 +1503,7 @@ export type CatalogAddOnUncheckedUpdateWithoutCheckoutSessionsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   status?: Prisma.EnumCatalogStatusFieldUpdateOperationsInput | $Enums.CatalogStatus
   name?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1367,6 +1530,7 @@ export type CatalogAddOnCreateManyTeamInput = {
   id?: string
   createdAt?: Date | string
   updatedAt?: Date | string
+  environmentId?: string | null
   environmentMode?: $Enums.EnvironmentMode
   status?: $Enums.CatalogStatus
   name: string
@@ -1409,6 +1573,7 @@ export type CatalogAddOnUpdateWithoutTeamInput = {
   chainTxHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   chainSyncError?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   chainSyncedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutCatalogAddOnsNestedInput
   companyGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutCatalogAddOnNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutCatalogAddOnNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutCatalogAddOnNestedInput
@@ -1418,6 +1583,7 @@ export type CatalogAddOnUncheckedUpdateWithoutTeamInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   status?: Prisma.EnumCatalogStatusFieldUpdateOperationsInput | $Enums.CatalogStatus
   name?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1445,6 +1611,113 @@ export type CatalogAddOnUncheckedUpdateManyWithoutTeamInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
+  status?: Prisma.EnumCatalogStatusFieldUpdateOperationsInput | $Enums.CatalogStatus
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  code?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  billingType?: Prisma.EnumAddOnBillingTypeFieldUpdateOperationsInput | $Enums.AddOnBillingType
+  saleMode?: Prisma.EnumAddOnSaleModeFieldUpdateOperationsInput | $Enums.AddOnSaleMode
+  price?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  billingIntervalDays?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  acceptedToken?: Prisma.StringFieldUpdateOperationsInput | string
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  active?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chainSyncStatus?: Prisma.EnumChainSyncStatusFieldUpdateOperationsInput | $Enums.ChainSyncStatus
+  chainTxHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chainSyncError?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chainSyncedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+}
+
+export type CatalogAddOnCreateManyEnvironmentInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  teamId: string
+  environmentMode?: $Enums.EnvironmentMode
+  status?: $Enums.CatalogStatus
+  name: string
+  code: string
+  description?: string | null
+  billingType?: $Enums.AddOnBillingType
+  saleMode?: $Enums.AddOnSaleMode
+  price: runtime.Decimal | runtime.DecimalJsLike | number | string
+  billingIntervalDays?: number | null
+  acceptedToken: string
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  active?: boolean
+  version?: number
+  publishedAt?: Date | string | null
+  chainSyncStatus?: $Enums.ChainSyncStatus
+  chainTxHash?: string | null
+  chainSyncError?: string | null
+  chainSyncedAt?: Date | string | null
+}
+
+export type CatalogAddOnUpdateWithoutEnvironmentInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
+  status?: Prisma.EnumCatalogStatusFieldUpdateOperationsInput | $Enums.CatalogStatus
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  code?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  billingType?: Prisma.EnumAddOnBillingTypeFieldUpdateOperationsInput | $Enums.AddOnBillingType
+  saleMode?: Prisma.EnumAddOnSaleModeFieldUpdateOperationsInput | $Enums.AddOnSaleMode
+  price?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  billingIntervalDays?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  acceptedToken?: Prisma.StringFieldUpdateOperationsInput | string
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  active?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chainSyncStatus?: Prisma.EnumChainSyncStatusFieldUpdateOperationsInput | $Enums.ChainSyncStatus
+  chainTxHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chainSyncError?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chainSyncedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  team?: Prisma.TeamUpdateOneRequiredWithoutCatalogAddOnsNestedInput
+  companyGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutCatalogAddOnNestedInput
+  paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutCatalogAddOnNestedInput
+  checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutCatalogAddOnNestedInput
+}
+
+export type CatalogAddOnUncheckedUpdateWithoutEnvironmentInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
+  status?: Prisma.EnumCatalogStatusFieldUpdateOperationsInput | $Enums.CatalogStatus
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  code?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  billingType?: Prisma.EnumAddOnBillingTypeFieldUpdateOperationsInput | $Enums.AddOnBillingType
+  saleMode?: Prisma.EnumAddOnSaleModeFieldUpdateOperationsInput | $Enums.AddOnSaleMode
+  price?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  billingIntervalDays?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  acceptedToken?: Prisma.StringFieldUpdateOperationsInput | string
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  active?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chainSyncStatus?: Prisma.EnumChainSyncStatusFieldUpdateOperationsInput | $Enums.ChainSyncStatus
+  chainTxHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chainSyncError?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chainSyncedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  companyGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutCatalogAddOnNestedInput
+  paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutCatalogAddOnNestedInput
+  checkoutSessions?: Prisma.CheckoutSessionUncheckedUpdateManyWithoutCatalogAddOnNestedInput
+}
+
+export type CatalogAddOnUncheckedUpdateManyWithoutEnvironmentInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamId?: Prisma.StringFieldUpdateOperationsInput | string
   environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   status?: Prisma.EnumCatalogStatusFieldUpdateOperationsInput | $Enums.CatalogStatus
   name?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1519,6 +1792,7 @@ export type CatalogAddOnSelect<ExtArgs extends runtime.Types.Extensions.Internal
   createdAt?: boolean
   updatedAt?: boolean
   teamId?: boolean
+  environmentId?: boolean
   environmentMode?: boolean
   status?: boolean
   name?: boolean
@@ -1538,6 +1812,7 @@ export type CatalogAddOnSelect<ExtArgs extends runtime.Types.Extensions.Internal
   chainSyncError?: boolean
   chainSyncedAt?: boolean
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.CatalogAddOn$environmentArgs<ExtArgs>
   companyGrants?: boolean | Prisma.CatalogAddOn$companyGrantsArgs<ExtArgs>
   paymentLinks?: boolean | Prisma.CatalogAddOn$paymentLinksArgs<ExtArgs>
   checkoutSessions?: boolean | Prisma.CatalogAddOn$checkoutSessionsArgs<ExtArgs>
@@ -1549,6 +1824,7 @@ export type CatalogAddOnSelectCreateManyAndReturn<ExtArgs extends runtime.Types.
   createdAt?: boolean
   updatedAt?: boolean
   teamId?: boolean
+  environmentId?: boolean
   environmentMode?: boolean
   status?: boolean
   name?: boolean
@@ -1568,6 +1844,7 @@ export type CatalogAddOnSelectCreateManyAndReturn<ExtArgs extends runtime.Types.
   chainSyncError?: boolean
   chainSyncedAt?: boolean
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.CatalogAddOn$environmentArgs<ExtArgs>
 }, ExtArgs["result"]["catalogAddOn"]>
 
 export type CatalogAddOnSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -1575,6 +1852,7 @@ export type CatalogAddOnSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.
   createdAt?: boolean
   updatedAt?: boolean
   teamId?: boolean
+  environmentId?: boolean
   environmentMode?: boolean
   status?: boolean
   name?: boolean
@@ -1594,6 +1872,7 @@ export type CatalogAddOnSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.
   chainSyncError?: boolean
   chainSyncedAt?: boolean
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.CatalogAddOn$environmentArgs<ExtArgs>
 }, ExtArgs["result"]["catalogAddOn"]>
 
 export type CatalogAddOnSelectScalar = {
@@ -1601,6 +1880,7 @@ export type CatalogAddOnSelectScalar = {
   createdAt?: boolean
   updatedAt?: boolean
   teamId?: boolean
+  environmentId?: boolean
   environmentMode?: boolean
   status?: boolean
   name?: boolean
@@ -1621,9 +1901,10 @@ export type CatalogAddOnSelectScalar = {
   chainSyncedAt?: boolean
 }
 
-export type CatalogAddOnOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "updatedAt" | "teamId" | "environmentMode" | "status" | "name" | "code" | "description" | "billingType" | "saleMode" | "price" | "billingIntervalDays" | "acceptedToken" | "metadata" | "active" | "version" | "publishedAt" | "chainSyncStatus" | "chainTxHash" | "chainSyncError" | "chainSyncedAt", ExtArgs["result"]["catalogAddOn"]>
+export type CatalogAddOnOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "updatedAt" | "teamId" | "environmentId" | "environmentMode" | "status" | "name" | "code" | "description" | "billingType" | "saleMode" | "price" | "billingIntervalDays" | "acceptedToken" | "metadata" | "active" | "version" | "publishedAt" | "chainSyncStatus" | "chainTxHash" | "chainSyncError" | "chainSyncedAt", ExtArgs["result"]["catalogAddOn"]>
 export type CatalogAddOnInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.CatalogAddOn$environmentArgs<ExtArgs>
   companyGrants?: boolean | Prisma.CatalogAddOn$companyGrantsArgs<ExtArgs>
   paymentLinks?: boolean | Prisma.CatalogAddOn$paymentLinksArgs<ExtArgs>
   checkoutSessions?: boolean | Prisma.CatalogAddOn$checkoutSessionsArgs<ExtArgs>
@@ -1631,15 +1912,18 @@ export type CatalogAddOnInclude<ExtArgs extends runtime.Types.Extensions.Interna
 }
 export type CatalogAddOnIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.CatalogAddOn$environmentArgs<ExtArgs>
 }
 export type CatalogAddOnIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.CatalogAddOn$environmentArgs<ExtArgs>
 }
 
 export type $CatalogAddOnPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "CatalogAddOn"
   objects: {
     team: Prisma.$TeamPayload<ExtArgs>
+    environment: Prisma.$WorkspaceEnvironmentPayload<ExtArgs> | null
     companyGrants: Prisma.$CompanyAddOnGrantPayload<ExtArgs>[]
     paymentLinks: Prisma.$PaymentLinkPayload<ExtArgs>[]
     checkoutSessions: Prisma.$CheckoutSessionPayload<ExtArgs>[]
@@ -1649,6 +1933,7 @@ export type $CatalogAddOnPayload<ExtArgs extends runtime.Types.Extensions.Intern
     createdAt: Date
     updatedAt: Date
     teamId: string
+    environmentId: string | null
     environmentMode: $Enums.EnvironmentMode
     status: $Enums.CatalogStatus
     name: string
@@ -2062,6 +2347,7 @@ readonly fields: CatalogAddOnFieldRefs;
 export interface Prisma__CatalogAddOnClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   team<T extends Prisma.TeamDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TeamDefaultArgs<ExtArgs>>): Prisma.Prisma__TeamClient<runtime.Types.Result.GetResult<Prisma.$TeamPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  environment<T extends Prisma.CatalogAddOn$environmentArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.CatalogAddOn$environmentArgs<ExtArgs>>): Prisma.Prisma__WorkspaceEnvironmentClient<runtime.Types.Result.GetResult<Prisma.$WorkspaceEnvironmentPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   companyGrants<T extends Prisma.CatalogAddOn$companyGrantsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.CatalogAddOn$companyGrantsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CompanyAddOnGrantPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   paymentLinks<T extends Prisma.CatalogAddOn$paymentLinksArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.CatalogAddOn$paymentLinksArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PaymentLinkPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   checkoutSessions<T extends Prisma.CatalogAddOn$checkoutSessionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.CatalogAddOn$checkoutSessionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CheckoutSessionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -2098,6 +2384,7 @@ export interface CatalogAddOnFieldRefs {
   readonly createdAt: Prisma.FieldRef<"CatalogAddOn", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"CatalogAddOn", 'DateTime'>
   readonly teamId: Prisma.FieldRef<"CatalogAddOn", 'String'>
+  readonly environmentId: Prisma.FieldRef<"CatalogAddOn", 'String'>
   readonly environmentMode: Prisma.FieldRef<"CatalogAddOn", 'EnvironmentMode'>
   readonly status: Prisma.FieldRef<"CatalogAddOn", 'CatalogStatus'>
   readonly name: Prisma.FieldRef<"CatalogAddOn", 'String'>
@@ -2509,6 +2796,25 @@ export type CatalogAddOnDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.
    * Limit how many CatalogAddOns to delete.
    */
   limit?: number
+}
+
+/**
+ * CatalogAddOn.environment
+ */
+export type CatalogAddOn$environmentArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the WorkspaceEnvironment
+   */
+  select?: Prisma.WorkspaceEnvironmentSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the WorkspaceEnvironment
+   */
+  omit?: Prisma.WorkspaceEnvironmentOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.WorkspaceEnvironmentInclude<ExtArgs> | null
+  where?: Prisma.WorkspaceEnvironmentWhereInput
 }
 
 /**

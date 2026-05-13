@@ -138,8 +138,9 @@ function SkeletonCard() {
 
 export function SessionsSection() {
   const { isConnected } = useAccount();
-  const { envMode, isLoading: envLoading } = useEnvironment();
-  const configuredChainId = resolveEnvironmentChainId(envMode);
+  const { envMode, activeEnvironment, isLoading: envLoading } = useEnvironment();
+  const configuredChainId = activeEnvironment?.chainId ?? resolveEnvironmentChainId(envMode);
+  const environmentKey = activeEnvironment?.id ?? envMode;
   const contractAddresses = useContractAddresses(configuredChainId);
 
   const [mounted, setMounted] = useState(false);
@@ -187,7 +188,7 @@ export function SessionsSection() {
     } finally {
       setSessionsLoading(false);
     }
-  }, [mounted, envLoading, effectiveChainId, envMode]);
+  }, [mounted, envLoading, effectiveChainId, envMode, environmentKey]);
 
   useEffect(() => {
     if (!mounted || envLoading) return;

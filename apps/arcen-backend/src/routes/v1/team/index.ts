@@ -12,6 +12,11 @@ import { switchTeam } from "./switch.js";
 import { inviteMember } from "./invite.js";
 import { acceptInvite } from "./invite-accept.js";
 import { listInvites, revokeInvite } from "./invites.js";
+import {
+  findResolvedActiveEnvironment,
+  listEnvironmentSummaries,
+  toEnvironmentSummary,
+} from "../../../lib/environments/workspace-environments.js";
 
 async function getTeam(c: Context) {
   try {
@@ -50,11 +55,23 @@ async function getTeam(c: Context) {
       joinedAt: m.createdAt,
     }));
 
+    const activeEnvironment = await findResolvedActiveEnvironment(session, team.id);
+    const environments = await listEnvironmentSummaries(
+      team.id,
+      activeEnvironment?.id ?? session.activeEnvironmentId,
+    );
+
     return c.json({
       id: team.id,
       name: team.name,
       slug: team.slug,
-      environmentMode: normalizeEnvironmentMode(team.environmentMode),
+      environmentMode: normalizeEnvironmentMode(
+        activeEnvironment?.mode ?? team.environmentMode,
+      ),
+      activeEnvironment: activeEnvironment
+        ? toEnvironmentSummary(activeEnvironment, activeEnvironment.id)
+        : null,
+      environments,
       createdAt: team.createdAt,
       members,
       myRole: teamCtx.teamRole,
@@ -134,10 +151,6 @@ async function updateTeam(c: Context) {
   }
 }
 
-const PatchSchema = z.object({
-  environmentMode: z.enum(["DEVELOPMENT", "PRODUCTION"]),
-});
-
 async function updateTeamEnvironment(c: Context) {
   try {
     const session = await getSessionFromCtx(c);
@@ -145,56 +158,11 @@ async function updateTeamEnvironment(c: Context) {
       return c.json({ ok: false, error: "Unauthorized", code: "UNAUTHORIZED" }, 401 as any);
     }
 
-    const teamCtx = await resolveTeamContext(session);
-    if (!teamCtx) {
-      return c.json({ ok: false, error: "No team found", code: "FORBIDDEN" }, 403 as any);
-    }
-
-    if (teamCtx.teamRole !== "OWNER" && teamCtx.teamRole !== "ADMIN") {
-      return c.json({ ok: false, error: "Forbidden", code: "FORBIDDEN" }, 403 as any);
-    }
-
-    const body = await c.req.json().catch(() => ({}));
-    const parsed = PatchSchema.safeParse(body);
-    if (!parsed.success) {
-      return c.json({
-          ok: false,
-          error: "Invalid request",
-          code: "BAD_REQUEST",
-          details: parsed.error.flatten().fieldErrors,
-        }, 400 as any);
-    }
-
-    const existing = await db.team.findUnique({
-      where: { id: teamCtx.teamId },
-      select: { id: true, environmentMode: true },
-    });
-    if (!existing) {
-      return c.json({ ok: false, error: "Team not found", code: "NOT_FOUND" }, 404 as any);
-    }
-
-    const team = await db.team.update({
-      where: { id: teamCtx.teamId },
-      data: { environmentMode: normalizeEnvironmentMode(parsed.data.environmentMode) },
-      select: { id: true, environmentMode: true },
-    });
-
-    await writeAuditEvent({
-      headers: { get: (name: string) => c.req.header(name) ?? null },
-      teamId: teamCtx.teamId,
-      userId: teamCtx.userId,
-      walletAddress: teamCtx.walletAddress,
-      action: "team.environment.update",
-      resourceType: "Team",
-      resourceId: team.id,
-      beforeData: existing,
-      afterData: team,
-    });
-
     return c.json({
-      ...team,
-      environmentMode: normalizeEnvironmentMode(team.environmentMode),
-    });
+      ok: false,
+      error: "Team-wide environment switching has been removed. Use /api/v1/environments/select instead.",
+      code: "GONE",
+    }, 410 as any);
   } catch (err) {
     console.error("[api/team PATCH]", err);
     return c.json({ ok: false, error: "Internal server error", code: "INTERNAL_ERROR" }, 500 as any);

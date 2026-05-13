@@ -39,6 +39,7 @@ export type CatalogVersionMinAggregateOutputType = {
   createdAt: Date | null
   publishedAt: Date | null
   teamId: string | null
+  environmentId: string | null
   environmentMode: $Enums.EnvironmentMode | null
   entityType: $Enums.CatalogEntityType | null
   entityId: string | null
@@ -51,6 +52,7 @@ export type CatalogVersionMaxAggregateOutputType = {
   createdAt: Date | null
   publishedAt: Date | null
   teamId: string | null
+  environmentId: string | null
   environmentMode: $Enums.EnvironmentMode | null
   entityType: $Enums.CatalogEntityType | null
   entityId: string | null
@@ -63,6 +65,7 @@ export type CatalogVersionCountAggregateOutputType = {
   createdAt: number
   publishedAt: number
   teamId: number
+  environmentId: number
   environmentMode: number
   entityType: number
   entityId: number
@@ -86,6 +89,7 @@ export type CatalogVersionMinAggregateInputType = {
   createdAt?: true
   publishedAt?: true
   teamId?: true
+  environmentId?: true
   environmentMode?: true
   entityType?: true
   entityId?: true
@@ -98,6 +102,7 @@ export type CatalogVersionMaxAggregateInputType = {
   createdAt?: true
   publishedAt?: true
   teamId?: true
+  environmentId?: true
   environmentMode?: true
   entityType?: true
   entityId?: true
@@ -110,6 +115,7 @@ export type CatalogVersionCountAggregateInputType = {
   createdAt?: true
   publishedAt?: true
   teamId?: true
+  environmentId?: true
   environmentMode?: true
   entityType?: true
   entityId?: true
@@ -210,6 +216,7 @@ export type CatalogVersionGroupByOutputType = {
   createdAt: Date
   publishedAt: Date | null
   teamId: string
+  environmentId: string | null
   environmentMode: $Enums.EnvironmentMode
   entityType: $Enums.CatalogEntityType
   entityId: string
@@ -246,6 +253,7 @@ export type CatalogVersionWhereInput = {
   createdAt?: Prisma.DateTimeFilter<"CatalogVersion"> | Date | string
   publishedAt?: Prisma.DateTimeNullableFilter<"CatalogVersion"> | Date | string | null
   teamId?: Prisma.StringFilter<"CatalogVersion"> | string
+  environmentId?: Prisma.StringNullableFilter<"CatalogVersion"> | string | null
   environmentMode?: Prisma.EnumEnvironmentModeFilter<"CatalogVersion"> | $Enums.EnvironmentMode
   entityType?: Prisma.EnumCatalogEntityTypeFilter<"CatalogVersion"> | $Enums.CatalogEntityType
   entityId?: Prisma.StringFilter<"CatalogVersion"> | string
@@ -253,6 +261,7 @@ export type CatalogVersionWhereInput = {
   status?: Prisma.EnumCatalogStatusFilter<"CatalogVersion"> | $Enums.CatalogStatus
   snapshot?: Prisma.JsonFilter<"CatalogVersion">
   team?: Prisma.XOR<Prisma.TeamScalarRelationFilter, Prisma.TeamWhereInput>
+  environment?: Prisma.XOR<Prisma.WorkspaceEnvironmentNullableScalarRelationFilter, Prisma.WorkspaceEnvironmentWhereInput> | null
 }
 
 export type CatalogVersionOrderByWithRelationInput = {
@@ -260,6 +269,7 @@ export type CatalogVersionOrderByWithRelationInput = {
   createdAt?: Prisma.SortOrder
   publishedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrderInput | Prisma.SortOrder
   environmentMode?: Prisma.SortOrder
   entityType?: Prisma.SortOrder
   entityId?: Prisma.SortOrder
@@ -267,6 +277,7 @@ export type CatalogVersionOrderByWithRelationInput = {
   status?: Prisma.SortOrder
   snapshot?: Prisma.SortOrder
   team?: Prisma.TeamOrderByWithRelationInput
+  environment?: Prisma.WorkspaceEnvironmentOrderByWithRelationInput
 }
 
 export type CatalogVersionWhereUniqueInput = Prisma.AtLeast<{
@@ -278,6 +289,7 @@ export type CatalogVersionWhereUniqueInput = Prisma.AtLeast<{
   createdAt?: Prisma.DateTimeFilter<"CatalogVersion"> | Date | string
   publishedAt?: Prisma.DateTimeNullableFilter<"CatalogVersion"> | Date | string | null
   teamId?: Prisma.StringFilter<"CatalogVersion"> | string
+  environmentId?: Prisma.StringNullableFilter<"CatalogVersion"> | string | null
   environmentMode?: Prisma.EnumEnvironmentModeFilter<"CatalogVersion"> | $Enums.EnvironmentMode
   entityType?: Prisma.EnumCatalogEntityTypeFilter<"CatalogVersion"> | $Enums.CatalogEntityType
   entityId?: Prisma.StringFilter<"CatalogVersion"> | string
@@ -285,6 +297,7 @@ export type CatalogVersionWhereUniqueInput = Prisma.AtLeast<{
   status?: Prisma.EnumCatalogStatusFilter<"CatalogVersion"> | $Enums.CatalogStatus
   snapshot?: Prisma.JsonFilter<"CatalogVersion">
   team?: Prisma.XOR<Prisma.TeamScalarRelationFilter, Prisma.TeamWhereInput>
+  environment?: Prisma.XOR<Prisma.WorkspaceEnvironmentNullableScalarRelationFilter, Prisma.WorkspaceEnvironmentWhereInput> | null
 }, "id" | "teamId_entityType_entityId_version">
 
 export type CatalogVersionOrderByWithAggregationInput = {
@@ -292,6 +305,7 @@ export type CatalogVersionOrderByWithAggregationInput = {
   createdAt?: Prisma.SortOrder
   publishedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrderInput | Prisma.SortOrder
   environmentMode?: Prisma.SortOrder
   entityType?: Prisma.SortOrder
   entityId?: Prisma.SortOrder
@@ -313,6 +327,7 @@ export type CatalogVersionScalarWhereWithAggregatesInput = {
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"CatalogVersion"> | Date | string
   publishedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"CatalogVersion"> | Date | string | null
   teamId?: Prisma.StringWithAggregatesFilter<"CatalogVersion"> | string
+  environmentId?: Prisma.StringNullableWithAggregatesFilter<"CatalogVersion"> | string | null
   environmentMode?: Prisma.EnumEnvironmentModeWithAggregatesFilter<"CatalogVersion"> | $Enums.EnvironmentMode
   entityType?: Prisma.EnumCatalogEntityTypeWithAggregatesFilter<"CatalogVersion"> | $Enums.CatalogEntityType
   entityId?: Prisma.StringWithAggregatesFilter<"CatalogVersion"> | string
@@ -332,6 +347,7 @@ export type CatalogVersionCreateInput = {
   status?: $Enums.CatalogStatus
   snapshot: Prisma.JsonNullValueInput | runtime.InputJsonValue
   team: Prisma.TeamCreateNestedOneWithoutCatalogVersionsInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutCatalogVersionsInput
 }
 
 export type CatalogVersionUncheckedCreateInput = {
@@ -339,6 +355,7 @@ export type CatalogVersionUncheckedCreateInput = {
   createdAt?: Date | string
   publishedAt?: Date | string | null
   teamId: string
+  environmentId?: string | null
   environmentMode?: $Enums.EnvironmentMode
   entityType: $Enums.CatalogEntityType
   entityId: string
@@ -358,6 +375,7 @@ export type CatalogVersionUpdateInput = {
   status?: Prisma.EnumCatalogStatusFieldUpdateOperationsInput | $Enums.CatalogStatus
   snapshot?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   team?: Prisma.TeamUpdateOneRequiredWithoutCatalogVersionsNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutCatalogVersionsNestedInput
 }
 
 export type CatalogVersionUncheckedUpdateInput = {
@@ -365,6 +383,7 @@ export type CatalogVersionUncheckedUpdateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   entityType?: Prisma.EnumCatalogEntityTypeFieldUpdateOperationsInput | $Enums.CatalogEntityType
   entityId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -378,6 +397,7 @@ export type CatalogVersionCreateManyInput = {
   createdAt?: Date | string
   publishedAt?: Date | string | null
   teamId: string
+  environmentId?: string | null
   environmentMode?: $Enums.EnvironmentMode
   entityType: $Enums.CatalogEntityType
   entityId: string
@@ -403,6 +423,7 @@ export type CatalogVersionUncheckedUpdateManyInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   entityType?: Prisma.EnumCatalogEntityTypeFieldUpdateOperationsInput | $Enums.CatalogEntityType
   entityId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -433,6 +454,7 @@ export type CatalogVersionCountOrderByAggregateInput = {
   createdAt?: Prisma.SortOrder
   publishedAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrder
   environmentMode?: Prisma.SortOrder
   entityType?: Prisma.SortOrder
   entityId?: Prisma.SortOrder
@@ -450,6 +472,7 @@ export type CatalogVersionMaxOrderByAggregateInput = {
   createdAt?: Prisma.SortOrder
   publishedAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrder
   environmentMode?: Prisma.SortOrder
   entityType?: Prisma.SortOrder
   entityId?: Prisma.SortOrder
@@ -462,6 +485,7 @@ export type CatalogVersionMinOrderByAggregateInput = {
   createdAt?: Prisma.SortOrder
   publishedAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrder
   environmentMode?: Prisma.SortOrder
   entityType?: Prisma.SortOrder
   entityId?: Prisma.SortOrder
@@ -515,6 +539,48 @@ export type CatalogVersionUncheckedUpdateManyWithoutTeamNestedInput = {
   deleteMany?: Prisma.CatalogVersionScalarWhereInput | Prisma.CatalogVersionScalarWhereInput[]
 }
 
+export type CatalogVersionCreateNestedManyWithoutEnvironmentInput = {
+  create?: Prisma.XOR<Prisma.CatalogVersionCreateWithoutEnvironmentInput, Prisma.CatalogVersionUncheckedCreateWithoutEnvironmentInput> | Prisma.CatalogVersionCreateWithoutEnvironmentInput[] | Prisma.CatalogVersionUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.CatalogVersionCreateOrConnectWithoutEnvironmentInput | Prisma.CatalogVersionCreateOrConnectWithoutEnvironmentInput[]
+  createMany?: Prisma.CatalogVersionCreateManyEnvironmentInputEnvelope
+  connect?: Prisma.CatalogVersionWhereUniqueInput | Prisma.CatalogVersionWhereUniqueInput[]
+}
+
+export type CatalogVersionUncheckedCreateNestedManyWithoutEnvironmentInput = {
+  create?: Prisma.XOR<Prisma.CatalogVersionCreateWithoutEnvironmentInput, Prisma.CatalogVersionUncheckedCreateWithoutEnvironmentInput> | Prisma.CatalogVersionCreateWithoutEnvironmentInput[] | Prisma.CatalogVersionUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.CatalogVersionCreateOrConnectWithoutEnvironmentInput | Prisma.CatalogVersionCreateOrConnectWithoutEnvironmentInput[]
+  createMany?: Prisma.CatalogVersionCreateManyEnvironmentInputEnvelope
+  connect?: Prisma.CatalogVersionWhereUniqueInput | Prisma.CatalogVersionWhereUniqueInput[]
+}
+
+export type CatalogVersionUpdateManyWithoutEnvironmentNestedInput = {
+  create?: Prisma.XOR<Prisma.CatalogVersionCreateWithoutEnvironmentInput, Prisma.CatalogVersionUncheckedCreateWithoutEnvironmentInput> | Prisma.CatalogVersionCreateWithoutEnvironmentInput[] | Prisma.CatalogVersionUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.CatalogVersionCreateOrConnectWithoutEnvironmentInput | Prisma.CatalogVersionCreateOrConnectWithoutEnvironmentInput[]
+  upsert?: Prisma.CatalogVersionUpsertWithWhereUniqueWithoutEnvironmentInput | Prisma.CatalogVersionUpsertWithWhereUniqueWithoutEnvironmentInput[]
+  createMany?: Prisma.CatalogVersionCreateManyEnvironmentInputEnvelope
+  set?: Prisma.CatalogVersionWhereUniqueInput | Prisma.CatalogVersionWhereUniqueInput[]
+  disconnect?: Prisma.CatalogVersionWhereUniqueInput | Prisma.CatalogVersionWhereUniqueInput[]
+  delete?: Prisma.CatalogVersionWhereUniqueInput | Prisma.CatalogVersionWhereUniqueInput[]
+  connect?: Prisma.CatalogVersionWhereUniqueInput | Prisma.CatalogVersionWhereUniqueInput[]
+  update?: Prisma.CatalogVersionUpdateWithWhereUniqueWithoutEnvironmentInput | Prisma.CatalogVersionUpdateWithWhereUniqueWithoutEnvironmentInput[]
+  updateMany?: Prisma.CatalogVersionUpdateManyWithWhereWithoutEnvironmentInput | Prisma.CatalogVersionUpdateManyWithWhereWithoutEnvironmentInput[]
+  deleteMany?: Prisma.CatalogVersionScalarWhereInput | Prisma.CatalogVersionScalarWhereInput[]
+}
+
+export type CatalogVersionUncheckedUpdateManyWithoutEnvironmentNestedInput = {
+  create?: Prisma.XOR<Prisma.CatalogVersionCreateWithoutEnvironmentInput, Prisma.CatalogVersionUncheckedCreateWithoutEnvironmentInput> | Prisma.CatalogVersionCreateWithoutEnvironmentInput[] | Prisma.CatalogVersionUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.CatalogVersionCreateOrConnectWithoutEnvironmentInput | Prisma.CatalogVersionCreateOrConnectWithoutEnvironmentInput[]
+  upsert?: Prisma.CatalogVersionUpsertWithWhereUniqueWithoutEnvironmentInput | Prisma.CatalogVersionUpsertWithWhereUniqueWithoutEnvironmentInput[]
+  createMany?: Prisma.CatalogVersionCreateManyEnvironmentInputEnvelope
+  set?: Prisma.CatalogVersionWhereUniqueInput | Prisma.CatalogVersionWhereUniqueInput[]
+  disconnect?: Prisma.CatalogVersionWhereUniqueInput | Prisma.CatalogVersionWhereUniqueInput[]
+  delete?: Prisma.CatalogVersionWhereUniqueInput | Prisma.CatalogVersionWhereUniqueInput[]
+  connect?: Prisma.CatalogVersionWhereUniqueInput | Prisma.CatalogVersionWhereUniqueInput[]
+  update?: Prisma.CatalogVersionUpdateWithWhereUniqueWithoutEnvironmentInput | Prisma.CatalogVersionUpdateWithWhereUniqueWithoutEnvironmentInput[]
+  updateMany?: Prisma.CatalogVersionUpdateManyWithWhereWithoutEnvironmentInput | Prisma.CatalogVersionUpdateManyWithWhereWithoutEnvironmentInput[]
+  deleteMany?: Prisma.CatalogVersionScalarWhereInput | Prisma.CatalogVersionScalarWhereInput[]
+}
+
 export type EnumCatalogEntityTypeFieldUpdateOperationsInput = {
   set?: $Enums.CatalogEntityType
 }
@@ -529,12 +595,14 @@ export type CatalogVersionCreateWithoutTeamInput = {
   version: number
   status?: $Enums.CatalogStatus
   snapshot: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutCatalogVersionsInput
 }
 
 export type CatalogVersionUncheckedCreateWithoutTeamInput = {
   id?: string
   createdAt?: Date | string
   publishedAt?: Date | string | null
+  environmentId?: string | null
   environmentMode?: $Enums.EnvironmentMode
   entityType: $Enums.CatalogEntityType
   entityId: string
@@ -577,6 +645,7 @@ export type CatalogVersionScalarWhereInput = {
   createdAt?: Prisma.DateTimeFilter<"CatalogVersion"> | Date | string
   publishedAt?: Prisma.DateTimeNullableFilter<"CatalogVersion"> | Date | string | null
   teamId?: Prisma.StringFilter<"CatalogVersion"> | string
+  environmentId?: Prisma.StringNullableFilter<"CatalogVersion"> | string | null
   environmentMode?: Prisma.EnumEnvironmentModeFilter<"CatalogVersion"> | $Enums.EnvironmentMode
   entityType?: Prisma.EnumCatalogEntityTypeFilter<"CatalogVersion"> | $Enums.CatalogEntityType
   entityId?: Prisma.StringFilter<"CatalogVersion"> | string
@@ -585,10 +654,63 @@ export type CatalogVersionScalarWhereInput = {
   snapshot?: Prisma.JsonFilter<"CatalogVersion">
 }
 
+export type CatalogVersionCreateWithoutEnvironmentInput = {
+  id?: string
+  createdAt?: Date | string
+  publishedAt?: Date | string | null
+  environmentMode?: $Enums.EnvironmentMode
+  entityType: $Enums.CatalogEntityType
+  entityId: string
+  version: number
+  status?: $Enums.CatalogStatus
+  snapshot: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  team: Prisma.TeamCreateNestedOneWithoutCatalogVersionsInput
+}
+
+export type CatalogVersionUncheckedCreateWithoutEnvironmentInput = {
+  id?: string
+  createdAt?: Date | string
+  publishedAt?: Date | string | null
+  teamId: string
+  environmentMode?: $Enums.EnvironmentMode
+  entityType: $Enums.CatalogEntityType
+  entityId: string
+  version: number
+  status?: $Enums.CatalogStatus
+  snapshot: Prisma.JsonNullValueInput | runtime.InputJsonValue
+}
+
+export type CatalogVersionCreateOrConnectWithoutEnvironmentInput = {
+  where: Prisma.CatalogVersionWhereUniqueInput
+  create: Prisma.XOR<Prisma.CatalogVersionCreateWithoutEnvironmentInput, Prisma.CatalogVersionUncheckedCreateWithoutEnvironmentInput>
+}
+
+export type CatalogVersionCreateManyEnvironmentInputEnvelope = {
+  data: Prisma.CatalogVersionCreateManyEnvironmentInput | Prisma.CatalogVersionCreateManyEnvironmentInput[]
+  skipDuplicates?: boolean
+}
+
+export type CatalogVersionUpsertWithWhereUniqueWithoutEnvironmentInput = {
+  where: Prisma.CatalogVersionWhereUniqueInput
+  update: Prisma.XOR<Prisma.CatalogVersionUpdateWithoutEnvironmentInput, Prisma.CatalogVersionUncheckedUpdateWithoutEnvironmentInput>
+  create: Prisma.XOR<Prisma.CatalogVersionCreateWithoutEnvironmentInput, Prisma.CatalogVersionUncheckedCreateWithoutEnvironmentInput>
+}
+
+export type CatalogVersionUpdateWithWhereUniqueWithoutEnvironmentInput = {
+  where: Prisma.CatalogVersionWhereUniqueInput
+  data: Prisma.XOR<Prisma.CatalogVersionUpdateWithoutEnvironmentInput, Prisma.CatalogVersionUncheckedUpdateWithoutEnvironmentInput>
+}
+
+export type CatalogVersionUpdateManyWithWhereWithoutEnvironmentInput = {
+  where: Prisma.CatalogVersionScalarWhereInput
+  data: Prisma.XOR<Prisma.CatalogVersionUpdateManyMutationInput, Prisma.CatalogVersionUncheckedUpdateManyWithoutEnvironmentInput>
+}
+
 export type CatalogVersionCreateManyTeamInput = {
   id?: string
   createdAt?: Date | string
   publishedAt?: Date | string | null
+  environmentId?: string | null
   environmentMode?: $Enums.EnvironmentMode
   entityType: $Enums.CatalogEntityType
   entityId: string
@@ -607,12 +729,14 @@ export type CatalogVersionUpdateWithoutTeamInput = {
   version?: Prisma.IntFieldUpdateOperationsInput | number
   status?: Prisma.EnumCatalogStatusFieldUpdateOperationsInput | $Enums.CatalogStatus
   snapshot?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutCatalogVersionsNestedInput
 }
 
 export type CatalogVersionUncheckedUpdateWithoutTeamInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   entityType?: Prisma.EnumCatalogEntityTypeFieldUpdateOperationsInput | $Enums.CatalogEntityType
   entityId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -625,6 +749,59 @@ export type CatalogVersionUncheckedUpdateManyWithoutTeamInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
+  entityType?: Prisma.EnumCatalogEntityTypeFieldUpdateOperationsInput | $Enums.CatalogEntityType
+  entityId?: Prisma.StringFieldUpdateOperationsInput | string
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  status?: Prisma.EnumCatalogStatusFieldUpdateOperationsInput | $Enums.CatalogStatus
+  snapshot?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+}
+
+export type CatalogVersionCreateManyEnvironmentInput = {
+  id?: string
+  createdAt?: Date | string
+  publishedAt?: Date | string | null
+  teamId: string
+  environmentMode?: $Enums.EnvironmentMode
+  entityType: $Enums.CatalogEntityType
+  entityId: string
+  version: number
+  status?: $Enums.CatalogStatus
+  snapshot: Prisma.JsonNullValueInput | runtime.InputJsonValue
+}
+
+export type CatalogVersionUpdateWithoutEnvironmentInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
+  entityType?: Prisma.EnumCatalogEntityTypeFieldUpdateOperationsInput | $Enums.CatalogEntityType
+  entityId?: Prisma.StringFieldUpdateOperationsInput | string
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  status?: Prisma.EnumCatalogStatusFieldUpdateOperationsInput | $Enums.CatalogStatus
+  snapshot?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  team?: Prisma.TeamUpdateOneRequiredWithoutCatalogVersionsNestedInput
+}
+
+export type CatalogVersionUncheckedUpdateWithoutEnvironmentInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
+  entityType?: Prisma.EnumCatalogEntityTypeFieldUpdateOperationsInput | $Enums.CatalogEntityType
+  entityId?: Prisma.StringFieldUpdateOperationsInput | string
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  status?: Prisma.EnumCatalogStatusFieldUpdateOperationsInput | $Enums.CatalogStatus
+  snapshot?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+}
+
+export type CatalogVersionUncheckedUpdateManyWithoutEnvironmentInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  teamId?: Prisma.StringFieldUpdateOperationsInput | string
   environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   entityType?: Prisma.EnumCatalogEntityTypeFieldUpdateOperationsInput | $Enums.CatalogEntityType
   entityId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -640,6 +817,7 @@ export type CatalogVersionSelect<ExtArgs extends runtime.Types.Extensions.Intern
   createdAt?: boolean
   publishedAt?: boolean
   teamId?: boolean
+  environmentId?: boolean
   environmentMode?: boolean
   entityType?: boolean
   entityId?: boolean
@@ -647,6 +825,7 @@ export type CatalogVersionSelect<ExtArgs extends runtime.Types.Extensions.Intern
   status?: boolean
   snapshot?: boolean
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.CatalogVersion$environmentArgs<ExtArgs>
 }, ExtArgs["result"]["catalogVersion"]>
 
 export type CatalogVersionSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -654,6 +833,7 @@ export type CatalogVersionSelectCreateManyAndReturn<ExtArgs extends runtime.Type
   createdAt?: boolean
   publishedAt?: boolean
   teamId?: boolean
+  environmentId?: boolean
   environmentMode?: boolean
   entityType?: boolean
   entityId?: boolean
@@ -661,6 +841,7 @@ export type CatalogVersionSelectCreateManyAndReturn<ExtArgs extends runtime.Type
   status?: boolean
   snapshot?: boolean
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.CatalogVersion$environmentArgs<ExtArgs>
 }, ExtArgs["result"]["catalogVersion"]>
 
 export type CatalogVersionSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -668,6 +849,7 @@ export type CatalogVersionSelectUpdateManyAndReturn<ExtArgs extends runtime.Type
   createdAt?: boolean
   publishedAt?: boolean
   teamId?: boolean
+  environmentId?: boolean
   environmentMode?: boolean
   entityType?: boolean
   entityId?: boolean
@@ -675,6 +857,7 @@ export type CatalogVersionSelectUpdateManyAndReturn<ExtArgs extends runtime.Type
   status?: boolean
   snapshot?: boolean
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.CatalogVersion$environmentArgs<ExtArgs>
 }, ExtArgs["result"]["catalogVersion"]>
 
 export type CatalogVersionSelectScalar = {
@@ -682,6 +865,7 @@ export type CatalogVersionSelectScalar = {
   createdAt?: boolean
   publishedAt?: boolean
   teamId?: boolean
+  environmentId?: boolean
   environmentMode?: boolean
   entityType?: boolean
   entityId?: boolean
@@ -690,27 +874,32 @@ export type CatalogVersionSelectScalar = {
   snapshot?: boolean
 }
 
-export type CatalogVersionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "publishedAt" | "teamId" | "environmentMode" | "entityType" | "entityId" | "version" | "status" | "snapshot", ExtArgs["result"]["catalogVersion"]>
+export type CatalogVersionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "publishedAt" | "teamId" | "environmentId" | "environmentMode" | "entityType" | "entityId" | "version" | "status" | "snapshot", ExtArgs["result"]["catalogVersion"]>
 export type CatalogVersionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.CatalogVersion$environmentArgs<ExtArgs>
 }
 export type CatalogVersionIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.CatalogVersion$environmentArgs<ExtArgs>
 }
 export type CatalogVersionIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.CatalogVersion$environmentArgs<ExtArgs>
 }
 
 export type $CatalogVersionPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "CatalogVersion"
   objects: {
     team: Prisma.$TeamPayload<ExtArgs>
+    environment: Prisma.$WorkspaceEnvironmentPayload<ExtArgs> | null
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
     createdAt: Date
     publishedAt: Date | null
     teamId: string
+    environmentId: string | null
     environmentMode: $Enums.EnvironmentMode
     entityType: $Enums.CatalogEntityType
     entityId: string
@@ -1112,6 +1301,7 @@ readonly fields: CatalogVersionFieldRefs;
 export interface Prisma__CatalogVersionClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   team<T extends Prisma.TeamDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TeamDefaultArgs<ExtArgs>>): Prisma.Prisma__TeamClient<runtime.Types.Result.GetResult<Prisma.$TeamPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  environment<T extends Prisma.CatalogVersion$environmentArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.CatalogVersion$environmentArgs<ExtArgs>>): Prisma.Prisma__WorkspaceEnvironmentClient<runtime.Types.Result.GetResult<Prisma.$WorkspaceEnvironmentPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1145,6 +1335,7 @@ export interface CatalogVersionFieldRefs {
   readonly createdAt: Prisma.FieldRef<"CatalogVersion", 'DateTime'>
   readonly publishedAt: Prisma.FieldRef<"CatalogVersion", 'DateTime'>
   readonly teamId: Prisma.FieldRef<"CatalogVersion", 'String'>
+  readonly environmentId: Prisma.FieldRef<"CatalogVersion", 'String'>
   readonly environmentMode: Prisma.FieldRef<"CatalogVersion", 'EnvironmentMode'>
   readonly entityType: Prisma.FieldRef<"CatalogVersion", 'CatalogEntityType'>
   readonly entityId: Prisma.FieldRef<"CatalogVersion", 'String'>
@@ -1544,6 +1735,25 @@ export type CatalogVersionDeleteManyArgs<ExtArgs extends runtime.Types.Extension
    * Limit how many CatalogVersions to delete.
    */
   limit?: number
+}
+
+/**
+ * CatalogVersion.environment
+ */
+export type CatalogVersion$environmentArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the WorkspaceEnvironment
+   */
+  select?: Prisma.WorkspaceEnvironmentSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the WorkspaceEnvironment
+   */
+  omit?: Prisma.WorkspaceEnvironmentOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.WorkspaceEnvironmentInclude<ExtArgs> | null
+  where?: Prisma.WorkspaceEnvironmentWhereInput
 }
 
 /**

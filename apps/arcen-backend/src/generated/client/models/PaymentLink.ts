@@ -41,6 +41,7 @@ export type PaymentLinkMinAggregateOutputType = {
   createdAt: Date | null
   updatedAt: Date | null
   teamId: string | null
+  environmentId: string | null
   kind: $Enums.PaymentLinkKind | null
   status: $Enums.PaymentLinkStatus | null
   name: string | null
@@ -64,6 +65,7 @@ export type PaymentLinkMaxAggregateOutputType = {
   createdAt: Date | null
   updatedAt: Date | null
   teamId: string | null
+  environmentId: string | null
   kind: $Enums.PaymentLinkKind | null
   status: $Enums.PaymentLinkStatus | null
   name: string | null
@@ -87,6 +89,7 @@ export type PaymentLinkCountAggregateOutputType = {
   createdAt: number
   updatedAt: number
   teamId: number
+  environmentId: number
   kind: number
   status: number
   name: number
@@ -123,6 +126,7 @@ export type PaymentLinkMinAggregateInputType = {
   createdAt?: true
   updatedAt?: true
   teamId?: true
+  environmentId?: true
   kind?: true
   status?: true
   name?: true
@@ -146,6 +150,7 @@ export type PaymentLinkMaxAggregateInputType = {
   createdAt?: true
   updatedAt?: true
   teamId?: true
+  environmentId?: true
   kind?: true
   status?: true
   name?: true
@@ -169,6 +174,7 @@ export type PaymentLinkCountAggregateInputType = {
   createdAt?: true
   updatedAt?: true
   teamId?: true
+  environmentId?: true
   kind?: true
   status?: true
   name?: true
@@ -280,6 +286,7 @@ export type PaymentLinkGroupByOutputType = {
   createdAt: Date
   updatedAt: Date
   teamId: string
+  environmentId: string | null
   kind: $Enums.PaymentLinkKind
   status: $Enums.PaymentLinkStatus
   name: string
@@ -327,6 +334,7 @@ export type PaymentLinkWhereInput = {
   createdAt?: Prisma.DateTimeFilter<"PaymentLink"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"PaymentLink"> | Date | string
   teamId?: Prisma.StringFilter<"PaymentLink"> | string
+  environmentId?: Prisma.StringNullableFilter<"PaymentLink"> | string | null
   kind?: Prisma.EnumPaymentLinkKindFilter<"PaymentLink"> | $Enums.PaymentLinkKind
   status?: Prisma.EnumPaymentLinkStatusFilter<"PaymentLink"> | $Enums.PaymentLinkStatus
   name?: Prisma.StringFilter<"PaymentLink"> | string
@@ -345,6 +353,7 @@ export type PaymentLinkWhereInput = {
   expiresAt?: Prisma.DateTimeNullableFilter<"PaymentLink"> | Date | string | null
   metadata?: Prisma.JsonNullableFilter<"PaymentLink">
   team?: Prisma.XOR<Prisma.TeamScalarRelationFilter, Prisma.TeamWhereInput>
+  environment?: Prisma.XOR<Prisma.WorkspaceEnvironmentNullableScalarRelationFilter, Prisma.WorkspaceEnvironmentWhereInput> | null
   company?: Prisma.XOR<Prisma.ArcenCompanyNullableScalarRelationFilter, Prisma.ArcenCompanyWhereInput> | null
   catalogAddOn?: Prisma.XOR<Prisma.CatalogAddOnNullableScalarRelationFilter, Prisma.CatalogAddOnWhereInput> | null
   invoice?: Prisma.XOR<Prisma.InvoiceNullableScalarRelationFilter, Prisma.InvoiceWhereInput> | null
@@ -356,6 +365,7 @@ export type PaymentLinkOrderByWithRelationInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrderInput | Prisma.SortOrder
   kind?: Prisma.SortOrder
   status?: Prisma.SortOrder
   name?: Prisma.SortOrder
@@ -374,6 +384,7 @@ export type PaymentLinkOrderByWithRelationInput = {
   expiresAt?: Prisma.SortOrderInput | Prisma.SortOrder
   metadata?: Prisma.SortOrderInput | Prisma.SortOrder
   team?: Prisma.TeamOrderByWithRelationInput
+  environment?: Prisma.WorkspaceEnvironmentOrderByWithRelationInput
   company?: Prisma.ArcenCompanyOrderByWithRelationInput
   catalogAddOn?: Prisma.CatalogAddOnOrderByWithRelationInput
   invoice?: Prisma.InvoiceOrderByWithRelationInput
@@ -389,6 +400,7 @@ export type PaymentLinkWhereUniqueInput = Prisma.AtLeast<{
   createdAt?: Prisma.DateTimeFilter<"PaymentLink"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"PaymentLink"> | Date | string
   teamId?: Prisma.StringFilter<"PaymentLink"> | string
+  environmentId?: Prisma.StringNullableFilter<"PaymentLink"> | string | null
   kind?: Prisma.EnumPaymentLinkKindFilter<"PaymentLink"> | $Enums.PaymentLinkKind
   status?: Prisma.EnumPaymentLinkStatusFilter<"PaymentLink"> | $Enums.PaymentLinkStatus
   name?: Prisma.StringFilter<"PaymentLink"> | string
@@ -406,6 +418,7 @@ export type PaymentLinkWhereUniqueInput = Prisma.AtLeast<{
   expiresAt?: Prisma.DateTimeNullableFilter<"PaymentLink"> | Date | string | null
   metadata?: Prisma.JsonNullableFilter<"PaymentLink">
   team?: Prisma.XOR<Prisma.TeamScalarRelationFilter, Prisma.TeamWhereInput>
+  environment?: Prisma.XOR<Prisma.WorkspaceEnvironmentNullableScalarRelationFilter, Prisma.WorkspaceEnvironmentWhereInput> | null
   company?: Prisma.XOR<Prisma.ArcenCompanyNullableScalarRelationFilter, Prisma.ArcenCompanyWhereInput> | null
   catalogAddOn?: Prisma.XOR<Prisma.CatalogAddOnNullableScalarRelationFilter, Prisma.CatalogAddOnWhereInput> | null
   invoice?: Prisma.XOR<Prisma.InvoiceNullableScalarRelationFilter, Prisma.InvoiceWhereInput> | null
@@ -417,6 +430,7 @@ export type PaymentLinkOrderByWithAggregationInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrderInput | Prisma.SortOrder
   kind?: Prisma.SortOrder
   status?: Prisma.SortOrder
   name?: Prisma.SortOrder
@@ -449,6 +463,7 @@ export type PaymentLinkScalarWhereWithAggregatesInput = {
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"PaymentLink"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"PaymentLink"> | Date | string
   teamId?: Prisma.StringWithAggregatesFilter<"PaymentLink"> | string
+  environmentId?: Prisma.StringNullableWithAggregatesFilter<"PaymentLink"> | string | null
   kind?: Prisma.EnumPaymentLinkKindWithAggregatesFilter<"PaymentLink"> | $Enums.PaymentLinkKind
   status?: Prisma.EnumPaymentLinkStatusWithAggregatesFilter<"PaymentLink"> | $Enums.PaymentLinkStatus
   name?: Prisma.StringWithAggregatesFilter<"PaymentLink"> | string
@@ -487,6 +502,7 @@ export type PaymentLinkCreateInput = {
   expiresAt?: Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   team: Prisma.TeamCreateNestedOneWithoutPaymentLinksInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutPaymentLinksInput
   company?: Prisma.ArcenCompanyCreateNestedOneWithoutPaymentLinksInput
   catalogAddOn?: Prisma.CatalogAddOnCreateNestedOneWithoutPaymentLinksInput
   invoice?: Prisma.InvoiceCreateNestedOneWithoutPaymentLinksInput
@@ -498,6 +514,7 @@ export type PaymentLinkUncheckedCreateInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   teamId: string
+  environmentId?: string | null
   kind: $Enums.PaymentLinkKind
   status?: $Enums.PaymentLinkStatus
   name: string
@@ -537,6 +554,7 @@ export type PaymentLinkUpdateInput = {
   expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   team?: Prisma.TeamUpdateOneRequiredWithoutPaymentLinksNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutPaymentLinksNestedInput
   company?: Prisma.ArcenCompanyUpdateOneWithoutPaymentLinksNestedInput
   catalogAddOn?: Prisma.CatalogAddOnUpdateOneWithoutPaymentLinksNestedInput
   invoice?: Prisma.InvoiceUpdateOneWithoutPaymentLinksNestedInput
@@ -548,6 +566,7 @@ export type PaymentLinkUncheckedUpdateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kind?: Prisma.EnumPaymentLinkKindFieldUpdateOperationsInput | $Enums.PaymentLinkKind
   status?: Prisma.EnumPaymentLinkStatusFieldUpdateOperationsInput | $Enums.PaymentLinkStatus
   name?: Prisma.StringFieldUpdateOperationsInput | string
@@ -573,6 +592,7 @@ export type PaymentLinkCreateManyInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   teamId: string
+  environmentId?: string | null
   kind: $Enums.PaymentLinkKind
   status?: $Enums.PaymentLinkStatus
   name: string
@@ -617,6 +637,7 @@ export type PaymentLinkUncheckedUpdateManyInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kind?: Prisma.EnumPaymentLinkKindFieldUpdateOperationsInput | $Enums.PaymentLinkKind
   status?: Prisma.EnumPaymentLinkStatusFieldUpdateOperationsInput | $Enums.PaymentLinkStatus
   name?: Prisma.StringFieldUpdateOperationsInput | string
@@ -651,6 +672,7 @@ export type PaymentLinkCountOrderByAggregateInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrder
   kind?: Prisma.SortOrder
   status?: Prisma.SortOrder
   name?: Prisma.SortOrder
@@ -680,6 +702,7 @@ export type PaymentLinkMaxOrderByAggregateInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrder
   kind?: Prisma.SortOrder
   status?: Prisma.SortOrder
   name?: Prisma.SortOrder
@@ -703,6 +726,7 @@ export type PaymentLinkMinOrderByAggregateInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrder
   kind?: Prisma.SortOrder
   status?: Prisma.SortOrder
   name?: Prisma.SortOrder
@@ -770,6 +794,48 @@ export type PaymentLinkUncheckedUpdateManyWithoutTeamNestedInput = {
   connect?: Prisma.PaymentLinkWhereUniqueInput | Prisma.PaymentLinkWhereUniqueInput[]
   update?: Prisma.PaymentLinkUpdateWithWhereUniqueWithoutTeamInput | Prisma.PaymentLinkUpdateWithWhereUniqueWithoutTeamInput[]
   updateMany?: Prisma.PaymentLinkUpdateManyWithWhereWithoutTeamInput | Prisma.PaymentLinkUpdateManyWithWhereWithoutTeamInput[]
+  deleteMany?: Prisma.PaymentLinkScalarWhereInput | Prisma.PaymentLinkScalarWhereInput[]
+}
+
+export type PaymentLinkCreateNestedManyWithoutEnvironmentInput = {
+  create?: Prisma.XOR<Prisma.PaymentLinkCreateWithoutEnvironmentInput, Prisma.PaymentLinkUncheckedCreateWithoutEnvironmentInput> | Prisma.PaymentLinkCreateWithoutEnvironmentInput[] | Prisma.PaymentLinkUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.PaymentLinkCreateOrConnectWithoutEnvironmentInput | Prisma.PaymentLinkCreateOrConnectWithoutEnvironmentInput[]
+  createMany?: Prisma.PaymentLinkCreateManyEnvironmentInputEnvelope
+  connect?: Prisma.PaymentLinkWhereUniqueInput | Prisma.PaymentLinkWhereUniqueInput[]
+}
+
+export type PaymentLinkUncheckedCreateNestedManyWithoutEnvironmentInput = {
+  create?: Prisma.XOR<Prisma.PaymentLinkCreateWithoutEnvironmentInput, Prisma.PaymentLinkUncheckedCreateWithoutEnvironmentInput> | Prisma.PaymentLinkCreateWithoutEnvironmentInput[] | Prisma.PaymentLinkUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.PaymentLinkCreateOrConnectWithoutEnvironmentInput | Prisma.PaymentLinkCreateOrConnectWithoutEnvironmentInput[]
+  createMany?: Prisma.PaymentLinkCreateManyEnvironmentInputEnvelope
+  connect?: Prisma.PaymentLinkWhereUniqueInput | Prisma.PaymentLinkWhereUniqueInput[]
+}
+
+export type PaymentLinkUpdateManyWithoutEnvironmentNestedInput = {
+  create?: Prisma.XOR<Prisma.PaymentLinkCreateWithoutEnvironmentInput, Prisma.PaymentLinkUncheckedCreateWithoutEnvironmentInput> | Prisma.PaymentLinkCreateWithoutEnvironmentInput[] | Prisma.PaymentLinkUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.PaymentLinkCreateOrConnectWithoutEnvironmentInput | Prisma.PaymentLinkCreateOrConnectWithoutEnvironmentInput[]
+  upsert?: Prisma.PaymentLinkUpsertWithWhereUniqueWithoutEnvironmentInput | Prisma.PaymentLinkUpsertWithWhereUniqueWithoutEnvironmentInput[]
+  createMany?: Prisma.PaymentLinkCreateManyEnvironmentInputEnvelope
+  set?: Prisma.PaymentLinkWhereUniqueInput | Prisma.PaymentLinkWhereUniqueInput[]
+  disconnect?: Prisma.PaymentLinkWhereUniqueInput | Prisma.PaymentLinkWhereUniqueInput[]
+  delete?: Prisma.PaymentLinkWhereUniqueInput | Prisma.PaymentLinkWhereUniqueInput[]
+  connect?: Prisma.PaymentLinkWhereUniqueInput | Prisma.PaymentLinkWhereUniqueInput[]
+  update?: Prisma.PaymentLinkUpdateWithWhereUniqueWithoutEnvironmentInput | Prisma.PaymentLinkUpdateWithWhereUniqueWithoutEnvironmentInput[]
+  updateMany?: Prisma.PaymentLinkUpdateManyWithWhereWithoutEnvironmentInput | Prisma.PaymentLinkUpdateManyWithWhereWithoutEnvironmentInput[]
+  deleteMany?: Prisma.PaymentLinkScalarWhereInput | Prisma.PaymentLinkScalarWhereInput[]
+}
+
+export type PaymentLinkUncheckedUpdateManyWithoutEnvironmentNestedInput = {
+  create?: Prisma.XOR<Prisma.PaymentLinkCreateWithoutEnvironmentInput, Prisma.PaymentLinkUncheckedCreateWithoutEnvironmentInput> | Prisma.PaymentLinkCreateWithoutEnvironmentInput[] | Prisma.PaymentLinkUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.PaymentLinkCreateOrConnectWithoutEnvironmentInput | Prisma.PaymentLinkCreateOrConnectWithoutEnvironmentInput[]
+  upsert?: Prisma.PaymentLinkUpsertWithWhereUniqueWithoutEnvironmentInput | Prisma.PaymentLinkUpsertWithWhereUniqueWithoutEnvironmentInput[]
+  createMany?: Prisma.PaymentLinkCreateManyEnvironmentInputEnvelope
+  set?: Prisma.PaymentLinkWhereUniqueInput | Prisma.PaymentLinkWhereUniqueInput[]
+  disconnect?: Prisma.PaymentLinkWhereUniqueInput | Prisma.PaymentLinkWhereUniqueInput[]
+  delete?: Prisma.PaymentLinkWhereUniqueInput | Prisma.PaymentLinkWhereUniqueInput[]
+  connect?: Prisma.PaymentLinkWhereUniqueInput | Prisma.PaymentLinkWhereUniqueInput[]
+  update?: Prisma.PaymentLinkUpdateWithWhereUniqueWithoutEnvironmentInput | Prisma.PaymentLinkUpdateWithWhereUniqueWithoutEnvironmentInput[]
+  updateMany?: Prisma.PaymentLinkUpdateManyWithWhereWithoutEnvironmentInput | Prisma.PaymentLinkUpdateManyWithWhereWithoutEnvironmentInput[]
   deleteMany?: Prisma.PaymentLinkScalarWhereInput | Prisma.PaymentLinkScalarWhereInput[]
 }
 
@@ -941,6 +1007,7 @@ export type PaymentLinkCreateWithoutTeamInput = {
   cancelUrl?: string | null
   expiresAt?: Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutPaymentLinksInput
   company?: Prisma.ArcenCompanyCreateNestedOneWithoutPaymentLinksInput
   catalogAddOn?: Prisma.CatalogAddOnCreateNestedOneWithoutPaymentLinksInput
   invoice?: Prisma.InvoiceCreateNestedOneWithoutPaymentLinksInput
@@ -951,6 +1018,7 @@ export type PaymentLinkUncheckedCreateWithoutTeamInput = {
   id?: string
   createdAt?: Date | string
   updatedAt?: Date | string
+  environmentId?: string | null
   kind: $Enums.PaymentLinkKind
   status?: $Enums.PaymentLinkStatus
   name: string
@@ -1005,6 +1073,7 @@ export type PaymentLinkScalarWhereInput = {
   createdAt?: Prisma.DateTimeFilter<"PaymentLink"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"PaymentLink"> | Date | string
   teamId?: Prisma.StringFilter<"PaymentLink"> | string
+  environmentId?: Prisma.StringNullableFilter<"PaymentLink"> | string | null
   kind?: Prisma.EnumPaymentLinkKindFilter<"PaymentLink"> | $Enums.PaymentLinkKind
   status?: Prisma.EnumPaymentLinkStatusFilter<"PaymentLink"> | $Enums.PaymentLinkStatus
   name?: Prisma.StringFilter<"PaymentLink"> | string
@@ -1022,6 +1091,82 @@ export type PaymentLinkScalarWhereInput = {
   cancelUrl?: Prisma.StringNullableFilter<"PaymentLink"> | string | null
   expiresAt?: Prisma.DateTimeNullableFilter<"PaymentLink"> | Date | string | null
   metadata?: Prisma.JsonNullableFilter<"PaymentLink">
+}
+
+export type PaymentLinkCreateWithoutEnvironmentInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  kind: $Enums.PaymentLinkKind
+  status?: $Enums.PaymentLinkStatus
+  name: string
+  slug: string
+  description?: string | null
+  currency?: string
+  amount: runtime.Decimal | runtime.DecimalJsLike | number | string
+  acceptedToken: string
+  chainId?: number
+  recipientWallet: string
+  successUrl?: string | null
+  cancelUrl?: string | null
+  expiresAt?: Date | string | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  team: Prisma.TeamCreateNestedOneWithoutPaymentLinksInput
+  company?: Prisma.ArcenCompanyCreateNestedOneWithoutPaymentLinksInput
+  catalogAddOn?: Prisma.CatalogAddOnCreateNestedOneWithoutPaymentLinksInput
+  invoice?: Prisma.InvoiceCreateNestedOneWithoutPaymentLinksInput
+  checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutPaymentLinkInput
+}
+
+export type PaymentLinkUncheckedCreateWithoutEnvironmentInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  teamId: string
+  kind: $Enums.PaymentLinkKind
+  status?: $Enums.PaymentLinkStatus
+  name: string
+  slug: string
+  description?: string | null
+  companyId?: string | null
+  catalogAddOnId?: string | null
+  invoiceId?: string | null
+  currency?: string
+  amount: runtime.Decimal | runtime.DecimalJsLike | number | string
+  acceptedToken: string
+  chainId?: number
+  recipientWallet: string
+  successUrl?: string | null
+  cancelUrl?: string | null
+  expiresAt?: Date | string | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  checkoutSessions?: Prisma.CheckoutSessionUncheckedCreateNestedManyWithoutPaymentLinkInput
+}
+
+export type PaymentLinkCreateOrConnectWithoutEnvironmentInput = {
+  where: Prisma.PaymentLinkWhereUniqueInput
+  create: Prisma.XOR<Prisma.PaymentLinkCreateWithoutEnvironmentInput, Prisma.PaymentLinkUncheckedCreateWithoutEnvironmentInput>
+}
+
+export type PaymentLinkCreateManyEnvironmentInputEnvelope = {
+  data: Prisma.PaymentLinkCreateManyEnvironmentInput | Prisma.PaymentLinkCreateManyEnvironmentInput[]
+  skipDuplicates?: boolean
+}
+
+export type PaymentLinkUpsertWithWhereUniqueWithoutEnvironmentInput = {
+  where: Prisma.PaymentLinkWhereUniqueInput
+  update: Prisma.XOR<Prisma.PaymentLinkUpdateWithoutEnvironmentInput, Prisma.PaymentLinkUncheckedUpdateWithoutEnvironmentInput>
+  create: Prisma.XOR<Prisma.PaymentLinkCreateWithoutEnvironmentInput, Prisma.PaymentLinkUncheckedCreateWithoutEnvironmentInput>
+}
+
+export type PaymentLinkUpdateWithWhereUniqueWithoutEnvironmentInput = {
+  where: Prisma.PaymentLinkWhereUniqueInput
+  data: Prisma.XOR<Prisma.PaymentLinkUpdateWithoutEnvironmentInput, Prisma.PaymentLinkUncheckedUpdateWithoutEnvironmentInput>
+}
+
+export type PaymentLinkUpdateManyWithWhereWithoutEnvironmentInput = {
+  where: Prisma.PaymentLinkScalarWhereInput
+  data: Prisma.XOR<Prisma.PaymentLinkUpdateManyMutationInput, Prisma.PaymentLinkUncheckedUpdateManyWithoutEnvironmentInput>
 }
 
 export type PaymentLinkCreateWithoutCatalogAddOnInput = {
@@ -1043,6 +1188,7 @@ export type PaymentLinkCreateWithoutCatalogAddOnInput = {
   expiresAt?: Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   team: Prisma.TeamCreateNestedOneWithoutPaymentLinksInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutPaymentLinksInput
   company?: Prisma.ArcenCompanyCreateNestedOneWithoutPaymentLinksInput
   invoice?: Prisma.InvoiceCreateNestedOneWithoutPaymentLinksInput
   checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutPaymentLinkInput
@@ -1053,6 +1199,7 @@ export type PaymentLinkUncheckedCreateWithoutCatalogAddOnInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   teamId: string
+  environmentId?: string | null
   kind: $Enums.PaymentLinkKind
   status?: $Enums.PaymentLinkStatus
   name: string
@@ -1117,6 +1264,7 @@ export type PaymentLinkCreateWithoutInvoiceInput = {
   expiresAt?: Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   team: Prisma.TeamCreateNestedOneWithoutPaymentLinksInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutPaymentLinksInput
   company?: Prisma.ArcenCompanyCreateNestedOneWithoutPaymentLinksInput
   catalogAddOn?: Prisma.CatalogAddOnCreateNestedOneWithoutPaymentLinksInput
   checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutPaymentLinkInput
@@ -1127,6 +1275,7 @@ export type PaymentLinkUncheckedCreateWithoutInvoiceInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   teamId: string
+  environmentId?: string | null
   kind: $Enums.PaymentLinkKind
   status?: $Enums.PaymentLinkStatus
   name: string
@@ -1191,6 +1340,7 @@ export type PaymentLinkCreateWithoutCompanyInput = {
   expiresAt?: Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   team: Prisma.TeamCreateNestedOneWithoutPaymentLinksInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutPaymentLinksInput
   catalogAddOn?: Prisma.CatalogAddOnCreateNestedOneWithoutPaymentLinksInput
   invoice?: Prisma.InvoiceCreateNestedOneWithoutPaymentLinksInput
   checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutPaymentLinkInput
@@ -1201,6 +1351,7 @@ export type PaymentLinkUncheckedCreateWithoutCompanyInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   teamId: string
+  environmentId?: string | null
   kind: $Enums.PaymentLinkKind
   status?: $Enums.PaymentLinkStatus
   name: string
@@ -1265,6 +1416,7 @@ export type PaymentLinkCreateWithoutCheckoutSessionsInput = {
   expiresAt?: Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   team: Prisma.TeamCreateNestedOneWithoutPaymentLinksInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutPaymentLinksInput
   company?: Prisma.ArcenCompanyCreateNestedOneWithoutPaymentLinksInput
   catalogAddOn?: Prisma.CatalogAddOnCreateNestedOneWithoutPaymentLinksInput
   invoice?: Prisma.InvoiceCreateNestedOneWithoutPaymentLinksInput
@@ -1275,6 +1427,7 @@ export type PaymentLinkUncheckedCreateWithoutCheckoutSessionsInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   teamId: string
+  environmentId?: string | null
   kind: $Enums.PaymentLinkKind
   status?: $Enums.PaymentLinkStatus
   name: string
@@ -1329,6 +1482,7 @@ export type PaymentLinkUpdateWithoutCheckoutSessionsInput = {
   expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   team?: Prisma.TeamUpdateOneRequiredWithoutPaymentLinksNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutPaymentLinksNestedInput
   company?: Prisma.ArcenCompanyUpdateOneWithoutPaymentLinksNestedInput
   catalogAddOn?: Prisma.CatalogAddOnUpdateOneWithoutPaymentLinksNestedInput
   invoice?: Prisma.InvoiceUpdateOneWithoutPaymentLinksNestedInput
@@ -1339,6 +1493,7 @@ export type PaymentLinkUncheckedUpdateWithoutCheckoutSessionsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kind?: Prisma.EnumPaymentLinkKindFieldUpdateOperationsInput | $Enums.PaymentLinkKind
   status?: Prisma.EnumPaymentLinkStatusFieldUpdateOperationsInput | $Enums.PaymentLinkStatus
   name?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1362,6 +1517,7 @@ export type PaymentLinkCreateManyTeamInput = {
   id?: string
   createdAt?: Date | string
   updatedAt?: Date | string
+  environmentId?: string | null
   kind: $Enums.PaymentLinkKind
   status?: $Enums.PaymentLinkStatus
   name: string
@@ -1399,6 +1555,7 @@ export type PaymentLinkUpdateWithoutTeamInput = {
   cancelUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutPaymentLinksNestedInput
   company?: Prisma.ArcenCompanyUpdateOneWithoutPaymentLinksNestedInput
   catalogAddOn?: Prisma.CatalogAddOnUpdateOneWithoutPaymentLinksNestedInput
   invoice?: Prisma.InvoiceUpdateOneWithoutPaymentLinksNestedInput
@@ -1409,6 +1566,7 @@ export type PaymentLinkUncheckedUpdateWithoutTeamInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kind?: Prisma.EnumPaymentLinkKindFieldUpdateOperationsInput | $Enums.PaymentLinkKind
   status?: Prisma.EnumPaymentLinkStatusFieldUpdateOperationsInput | $Enums.PaymentLinkStatus
   name?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1433,6 +1591,105 @@ export type PaymentLinkUncheckedUpdateManyWithoutTeamInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  kind?: Prisma.EnumPaymentLinkKindFieldUpdateOperationsInput | $Enums.PaymentLinkKind
+  status?: Prisma.EnumPaymentLinkStatusFieldUpdateOperationsInput | $Enums.PaymentLinkStatus
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  slug?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  companyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  catalogAddOnId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  invoiceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
+  amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  acceptedToken?: Prisma.StringFieldUpdateOperationsInput | string
+  chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  recipientWallet?: Prisma.StringFieldUpdateOperationsInput | string
+  successUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  cancelUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+}
+
+export type PaymentLinkCreateManyEnvironmentInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  teamId: string
+  kind: $Enums.PaymentLinkKind
+  status?: $Enums.PaymentLinkStatus
+  name: string
+  slug: string
+  description?: string | null
+  companyId?: string | null
+  catalogAddOnId?: string | null
+  invoiceId?: string | null
+  currency?: string
+  amount: runtime.Decimal | runtime.DecimalJsLike | number | string
+  acceptedToken: string
+  chainId?: number
+  recipientWallet: string
+  successUrl?: string | null
+  cancelUrl?: string | null
+  expiresAt?: Date | string | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+}
+
+export type PaymentLinkUpdateWithoutEnvironmentInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  kind?: Prisma.EnumPaymentLinkKindFieldUpdateOperationsInput | $Enums.PaymentLinkKind
+  status?: Prisma.EnumPaymentLinkStatusFieldUpdateOperationsInput | $Enums.PaymentLinkStatus
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  slug?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
+  amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  acceptedToken?: Prisma.StringFieldUpdateOperationsInput | string
+  chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  recipientWallet?: Prisma.StringFieldUpdateOperationsInput | string
+  successUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  cancelUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  team?: Prisma.TeamUpdateOneRequiredWithoutPaymentLinksNestedInput
+  company?: Prisma.ArcenCompanyUpdateOneWithoutPaymentLinksNestedInput
+  catalogAddOn?: Prisma.CatalogAddOnUpdateOneWithoutPaymentLinksNestedInput
+  invoice?: Prisma.InvoiceUpdateOneWithoutPaymentLinksNestedInput
+  checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutPaymentLinkNestedInput
+}
+
+export type PaymentLinkUncheckedUpdateWithoutEnvironmentInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  kind?: Prisma.EnumPaymentLinkKindFieldUpdateOperationsInput | $Enums.PaymentLinkKind
+  status?: Prisma.EnumPaymentLinkStatusFieldUpdateOperationsInput | $Enums.PaymentLinkStatus
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  slug?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  companyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  catalogAddOnId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  invoiceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
+  amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  acceptedToken?: Prisma.StringFieldUpdateOperationsInput | string
+  chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  recipientWallet?: Prisma.StringFieldUpdateOperationsInput | string
+  successUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  cancelUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  checkoutSessions?: Prisma.CheckoutSessionUncheckedUpdateManyWithoutPaymentLinkNestedInput
+}
+
+export type PaymentLinkUncheckedUpdateManyWithoutEnvironmentInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamId?: Prisma.StringFieldUpdateOperationsInput | string
   kind?: Prisma.EnumPaymentLinkKindFieldUpdateOperationsInput | $Enums.PaymentLinkKind
   status?: Prisma.EnumPaymentLinkStatusFieldUpdateOperationsInput | $Enums.PaymentLinkStatus
   name?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1457,6 +1714,7 @@ export type PaymentLinkCreateManyCatalogAddOnInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   teamId: string
+  environmentId?: string | null
   kind: $Enums.PaymentLinkKind
   status?: $Enums.PaymentLinkStatus
   name: string
@@ -1494,6 +1752,7 @@ export type PaymentLinkUpdateWithoutCatalogAddOnInput = {
   expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   team?: Prisma.TeamUpdateOneRequiredWithoutPaymentLinksNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutPaymentLinksNestedInput
   company?: Prisma.ArcenCompanyUpdateOneWithoutPaymentLinksNestedInput
   invoice?: Prisma.InvoiceUpdateOneWithoutPaymentLinksNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutPaymentLinkNestedInput
@@ -1504,6 +1763,7 @@ export type PaymentLinkUncheckedUpdateWithoutCatalogAddOnInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kind?: Prisma.EnumPaymentLinkKindFieldUpdateOperationsInput | $Enums.PaymentLinkKind
   status?: Prisma.EnumPaymentLinkStatusFieldUpdateOperationsInput | $Enums.PaymentLinkStatus
   name?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1528,6 +1788,7 @@ export type PaymentLinkUncheckedUpdateManyWithoutCatalogAddOnInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kind?: Prisma.EnumPaymentLinkKindFieldUpdateOperationsInput | $Enums.PaymentLinkKind
   status?: Prisma.EnumPaymentLinkStatusFieldUpdateOperationsInput | $Enums.PaymentLinkStatus
   name?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1551,6 +1812,7 @@ export type PaymentLinkCreateManyInvoiceInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   teamId: string
+  environmentId?: string | null
   kind: $Enums.PaymentLinkKind
   status?: $Enums.PaymentLinkStatus
   name: string
@@ -1588,6 +1850,7 @@ export type PaymentLinkUpdateWithoutInvoiceInput = {
   expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   team?: Prisma.TeamUpdateOneRequiredWithoutPaymentLinksNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutPaymentLinksNestedInput
   company?: Prisma.ArcenCompanyUpdateOneWithoutPaymentLinksNestedInput
   catalogAddOn?: Prisma.CatalogAddOnUpdateOneWithoutPaymentLinksNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutPaymentLinkNestedInput
@@ -1598,6 +1861,7 @@ export type PaymentLinkUncheckedUpdateWithoutInvoiceInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kind?: Prisma.EnumPaymentLinkKindFieldUpdateOperationsInput | $Enums.PaymentLinkKind
   status?: Prisma.EnumPaymentLinkStatusFieldUpdateOperationsInput | $Enums.PaymentLinkStatus
   name?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1622,6 +1886,7 @@ export type PaymentLinkUncheckedUpdateManyWithoutInvoiceInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kind?: Prisma.EnumPaymentLinkKindFieldUpdateOperationsInput | $Enums.PaymentLinkKind
   status?: Prisma.EnumPaymentLinkStatusFieldUpdateOperationsInput | $Enums.PaymentLinkStatus
   name?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1645,6 +1910,7 @@ export type PaymentLinkCreateManyCompanyInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   teamId: string
+  environmentId?: string | null
   kind: $Enums.PaymentLinkKind
   status?: $Enums.PaymentLinkStatus
   name: string
@@ -1682,6 +1948,7 @@ export type PaymentLinkUpdateWithoutCompanyInput = {
   expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   team?: Prisma.TeamUpdateOneRequiredWithoutPaymentLinksNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutPaymentLinksNestedInput
   catalogAddOn?: Prisma.CatalogAddOnUpdateOneWithoutPaymentLinksNestedInput
   invoice?: Prisma.InvoiceUpdateOneWithoutPaymentLinksNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutPaymentLinkNestedInput
@@ -1692,6 +1959,7 @@ export type PaymentLinkUncheckedUpdateWithoutCompanyInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kind?: Prisma.EnumPaymentLinkKindFieldUpdateOperationsInput | $Enums.PaymentLinkKind
   status?: Prisma.EnumPaymentLinkStatusFieldUpdateOperationsInput | $Enums.PaymentLinkStatus
   name?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1716,6 +1984,7 @@ export type PaymentLinkUncheckedUpdateManyWithoutCompanyInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kind?: Prisma.EnumPaymentLinkKindFieldUpdateOperationsInput | $Enums.PaymentLinkKind
   status?: Prisma.EnumPaymentLinkStatusFieldUpdateOperationsInput | $Enums.PaymentLinkStatus
   name?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1770,6 +2039,7 @@ export type PaymentLinkSelect<ExtArgs extends runtime.Types.Extensions.InternalA
   createdAt?: boolean
   updatedAt?: boolean
   teamId?: boolean
+  environmentId?: boolean
   kind?: boolean
   status?: boolean
   name?: boolean
@@ -1788,6 +2058,7 @@ export type PaymentLinkSelect<ExtArgs extends runtime.Types.Extensions.InternalA
   expiresAt?: boolean
   metadata?: boolean
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.PaymentLink$environmentArgs<ExtArgs>
   company?: boolean | Prisma.PaymentLink$companyArgs<ExtArgs>
   catalogAddOn?: boolean | Prisma.PaymentLink$catalogAddOnArgs<ExtArgs>
   invoice?: boolean | Prisma.PaymentLink$invoiceArgs<ExtArgs>
@@ -1800,6 +2071,7 @@ export type PaymentLinkSelectCreateManyAndReturn<ExtArgs extends runtime.Types.E
   createdAt?: boolean
   updatedAt?: boolean
   teamId?: boolean
+  environmentId?: boolean
   kind?: boolean
   status?: boolean
   name?: boolean
@@ -1818,6 +2090,7 @@ export type PaymentLinkSelectCreateManyAndReturn<ExtArgs extends runtime.Types.E
   expiresAt?: boolean
   metadata?: boolean
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.PaymentLink$environmentArgs<ExtArgs>
   company?: boolean | Prisma.PaymentLink$companyArgs<ExtArgs>
   catalogAddOn?: boolean | Prisma.PaymentLink$catalogAddOnArgs<ExtArgs>
   invoice?: boolean | Prisma.PaymentLink$invoiceArgs<ExtArgs>
@@ -1828,6 +2101,7 @@ export type PaymentLinkSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.E
   createdAt?: boolean
   updatedAt?: boolean
   teamId?: boolean
+  environmentId?: boolean
   kind?: boolean
   status?: boolean
   name?: boolean
@@ -1846,6 +2120,7 @@ export type PaymentLinkSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.E
   expiresAt?: boolean
   metadata?: boolean
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.PaymentLink$environmentArgs<ExtArgs>
   company?: boolean | Prisma.PaymentLink$companyArgs<ExtArgs>
   catalogAddOn?: boolean | Prisma.PaymentLink$catalogAddOnArgs<ExtArgs>
   invoice?: boolean | Prisma.PaymentLink$invoiceArgs<ExtArgs>
@@ -1856,6 +2131,7 @@ export type PaymentLinkSelectScalar = {
   createdAt?: boolean
   updatedAt?: boolean
   teamId?: boolean
+  environmentId?: boolean
   kind?: boolean
   status?: boolean
   name?: boolean
@@ -1875,9 +2151,10 @@ export type PaymentLinkSelectScalar = {
   metadata?: boolean
 }
 
-export type PaymentLinkOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "updatedAt" | "teamId" | "kind" | "status" | "name" | "slug" | "description" | "companyId" | "catalogAddOnId" | "invoiceId" | "currency" | "amount" | "acceptedToken" | "chainId" | "recipientWallet" | "successUrl" | "cancelUrl" | "expiresAt" | "metadata", ExtArgs["result"]["paymentLink"]>
+export type PaymentLinkOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "updatedAt" | "teamId" | "environmentId" | "kind" | "status" | "name" | "slug" | "description" | "companyId" | "catalogAddOnId" | "invoiceId" | "currency" | "amount" | "acceptedToken" | "chainId" | "recipientWallet" | "successUrl" | "cancelUrl" | "expiresAt" | "metadata", ExtArgs["result"]["paymentLink"]>
 export type PaymentLinkInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.PaymentLink$environmentArgs<ExtArgs>
   company?: boolean | Prisma.PaymentLink$companyArgs<ExtArgs>
   catalogAddOn?: boolean | Prisma.PaymentLink$catalogAddOnArgs<ExtArgs>
   invoice?: boolean | Prisma.PaymentLink$invoiceArgs<ExtArgs>
@@ -1886,12 +2163,14 @@ export type PaymentLinkInclude<ExtArgs extends runtime.Types.Extensions.Internal
 }
 export type PaymentLinkIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.PaymentLink$environmentArgs<ExtArgs>
   company?: boolean | Prisma.PaymentLink$companyArgs<ExtArgs>
   catalogAddOn?: boolean | Prisma.PaymentLink$catalogAddOnArgs<ExtArgs>
   invoice?: boolean | Prisma.PaymentLink$invoiceArgs<ExtArgs>
 }
 export type PaymentLinkIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.PaymentLink$environmentArgs<ExtArgs>
   company?: boolean | Prisma.PaymentLink$companyArgs<ExtArgs>
   catalogAddOn?: boolean | Prisma.PaymentLink$catalogAddOnArgs<ExtArgs>
   invoice?: boolean | Prisma.PaymentLink$invoiceArgs<ExtArgs>
@@ -1901,6 +2180,7 @@ export type $PaymentLinkPayload<ExtArgs extends runtime.Types.Extensions.Interna
   name: "PaymentLink"
   objects: {
     team: Prisma.$TeamPayload<ExtArgs>
+    environment: Prisma.$WorkspaceEnvironmentPayload<ExtArgs> | null
     company: Prisma.$ArcenCompanyPayload<ExtArgs> | null
     catalogAddOn: Prisma.$CatalogAddOnPayload<ExtArgs> | null
     invoice: Prisma.$InvoicePayload<ExtArgs> | null
@@ -1911,6 +2191,7 @@ export type $PaymentLinkPayload<ExtArgs extends runtime.Types.Extensions.Interna
     createdAt: Date
     updatedAt: Date
     teamId: string
+    environmentId: string | null
     kind: $Enums.PaymentLinkKind
     status: $Enums.PaymentLinkStatus
     name: string
@@ -2323,6 +2604,7 @@ readonly fields: PaymentLinkFieldRefs;
 export interface Prisma__PaymentLinkClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   team<T extends Prisma.TeamDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TeamDefaultArgs<ExtArgs>>): Prisma.Prisma__TeamClient<runtime.Types.Result.GetResult<Prisma.$TeamPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  environment<T extends Prisma.PaymentLink$environmentArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.PaymentLink$environmentArgs<ExtArgs>>): Prisma.Prisma__WorkspaceEnvironmentClient<runtime.Types.Result.GetResult<Prisma.$WorkspaceEnvironmentPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   company<T extends Prisma.PaymentLink$companyArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.PaymentLink$companyArgs<ExtArgs>>): Prisma.Prisma__ArcenCompanyClient<runtime.Types.Result.GetResult<Prisma.$ArcenCompanyPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   catalogAddOn<T extends Prisma.PaymentLink$catalogAddOnArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.PaymentLink$catalogAddOnArgs<ExtArgs>>): Prisma.Prisma__CatalogAddOnClient<runtime.Types.Result.GetResult<Prisma.$CatalogAddOnPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   invoice<T extends Prisma.PaymentLink$invoiceArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.PaymentLink$invoiceArgs<ExtArgs>>): Prisma.Prisma__InvoiceClient<runtime.Types.Result.GetResult<Prisma.$InvoicePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
@@ -2360,6 +2642,7 @@ export interface PaymentLinkFieldRefs {
   readonly createdAt: Prisma.FieldRef<"PaymentLink", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"PaymentLink", 'DateTime'>
   readonly teamId: Prisma.FieldRef<"PaymentLink", 'String'>
+  readonly environmentId: Prisma.FieldRef<"PaymentLink", 'String'>
   readonly kind: Prisma.FieldRef<"PaymentLink", 'PaymentLinkKind'>
   readonly status: Prisma.FieldRef<"PaymentLink", 'PaymentLinkStatus'>
   readonly name: Prisma.FieldRef<"PaymentLink", 'String'>
@@ -2770,6 +3053,25 @@ export type PaymentLinkDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.I
    * Limit how many PaymentLinks to delete.
    */
   limit?: number
+}
+
+/**
+ * PaymentLink.environment
+ */
+export type PaymentLink$environmentArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the WorkspaceEnvironment
+   */
+  select?: Prisma.WorkspaceEnvironmentSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the WorkspaceEnvironment
+   */
+  omit?: Prisma.WorkspaceEnvironmentOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.WorkspaceEnvironmentInclude<ExtArgs> | null
+  where?: Prisma.WorkspaceEnvironmentWhereInput
 }
 
 /**

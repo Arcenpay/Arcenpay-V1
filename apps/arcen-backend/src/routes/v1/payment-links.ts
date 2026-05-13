@@ -7,6 +7,7 @@ import { APP_URL } from "../../config.js";
 import { writeAuditEvent } from "../../lib/platform/audit.js";
 import { RUNTIME_CHAIN_ID } from "../../lib/platform/runtime-chain.js";
 import { getUsdcAddress } from "../../lib/platform/contracts.js";
+import { requireResolvedActiveEnvironment } from "../../lib/environments/workspace-environments.js";
 
 const createSchema = z
   .object({
@@ -58,7 +59,21 @@ export async function GET(c: Context) {
   const auth = await requireAnyAuth(c);
   if (isAnyAuthError(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any as any);
 
-  const paymentLinks = await listPaymentLinks(auth.teamId);
+  const activeEnvironment =
+    auth.source === "session" && auth.sessionId
+      ? await requireResolvedActiveEnvironment(
+          {
+            sessionId: auth.sessionId,
+            activeEnvironmentId: auth.activeEnvironmentId ?? null,
+          },
+          auth.teamId,
+        )
+      : null;
+
+  const paymentLinks = await listPaymentLinks(
+    auth.teamId,
+    activeEnvironment?.id ?? undefined,
+  );
   return c.json({
     paymentLinks: paymentLinks.map(withCheckoutUrl),
   });
@@ -74,9 +89,22 @@ export async function POST(c: Context) {
     return c.json({ error: "Invalid request", details: parsed.error.flatten().fieldErrors }, 400 as any);
   }
 
+  const activeEnvironment =
+    auth.source === "session" && auth.sessionId
+      ? await requireResolvedActiveEnvironment(
+          {
+            sessionId: auth.sessionId,
+            activeEnvironmentId: auth.activeEnvironmentId ?? null,
+          },
+          auth.teamId,
+        )
+      : null;
+
   let amount = parsed.data.amount;
   let acceptedToken = parsed.data.acceptedToken;
   let companyId = parsed.data.companyId ?? null;
+  let resolvedEnvironmentId = activeEnvironment?.id ?? null;
+  let resolvedChainId = activeEnvironment?.chainId ?? RUNTIME_CHAIN_ID;
 
   if (parsed.data.catalogAddOnId) {
     const addOn = await db.catalogAddOn.findFirst({
@@ -86,6 +114,12 @@ export async function POST(c: Context) {
         name: true,
         price: true,
         acceptedToken: true,
+        environmentId: true,
+        environment: {
+          select: {
+            chainId: true,
+          },
+        },
         billingType: true,
         saleMode: true,
         status: true,
@@ -105,6 +139,8 @@ export async function POST(c: Context) {
     }
     amount = Number(addOn.price);
     acceptedToken = addOn.acceptedToken;
+    resolvedEnvironmentId = addOn.environmentId ?? resolvedEnvironmentId;
+    resolvedChainId = addOn.environment?.chainId ?? resolvedChainId;
   }
 
   if (parsed.data.invoiceId) {
@@ -112,6 +148,12 @@ export async function POST(c: Context) {
       where: { id: parsed.data.invoiceId, teamId: auth.teamId },
       select: {
         id: true,
+        environmentId: true,
+        environment: {
+          select: {
+            chainId: true,
+          },
+        },
         customerEmail: true,
         customerWallet: true,
         amountOutstanding: true,
@@ -121,8 +163,10 @@ export async function POST(c: Context) {
     if (!invoice) {
       return c.json({ error: "Invoice not found" }, 404 as any);
     }
+    resolvedChainId = invoice.environment?.chainId ?? resolvedChainId;
     amount = Number(invoice.amountOutstanding);
-    acceptedToken = acceptedToken ?? getUsdcAddress(RUNTIME_CHAIN_ID);
+    acceptedToken = acceptedToken ?? getUsdcAddress(resolvedChainId);
+    resolvedEnvironmentId = invoice.environmentId ?? resolvedEnvironmentId;
     if (!companyId && (invoice.customerWallet || invoice.customerEmail)) {
       const company = await db.arcenCompany.findFirst({
         where: {
@@ -148,6 +192,7 @@ export async function POST(c: Context) {
 
   const paymentLink = await createPaymentLink({
     teamId: auth.teamId,
+    environmentId: resolvedEnvironmentId,
     kind: parsed.data.kind,
     name: parsed.data.name,
     description: parsed.data.description,
@@ -157,7 +202,7 @@ export async function POST(c: Context) {
     amount,
     currency: "USDC",
     acceptedToken,
-    chainId: RUNTIME_CHAIN_ID,
+    chainId: resolvedChainId,
     recipientWallet: parsed.data.recipientWallet,
     successUrl: parsed.data.successUrl,
     cancelUrl: parsed.data.cancelUrl,

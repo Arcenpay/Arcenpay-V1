@@ -47,6 +47,7 @@ export type CatalogPlanMinAggregateOutputType = {
   createdAt: Date | null
   updatedAt: Date | null
   teamId: string | null
+  environmentId: string | null
   environmentMode: $Enums.EnvironmentMode | null
   status: $Enums.CatalogStatus | null
   name: string | null
@@ -72,6 +73,7 @@ export type CatalogPlanMaxAggregateOutputType = {
   createdAt: Date | null
   updatedAt: Date | null
   teamId: string | null
+  environmentId: string | null
   environmentMode: $Enums.EnvironmentMode | null
   status: $Enums.CatalogStatus | null
   name: string | null
@@ -97,6 +99,7 @@ export type CatalogPlanCountAggregateOutputType = {
   createdAt: number
   updatedAt: number
   teamId: number
+  environmentId: number
   environmentMode: number
   status: number
   name: number
@@ -141,6 +144,7 @@ export type CatalogPlanMinAggregateInputType = {
   createdAt?: true
   updatedAt?: true
   teamId?: true
+  environmentId?: true
   environmentMode?: true
   status?: true
   name?: true
@@ -166,6 +170,7 @@ export type CatalogPlanMaxAggregateInputType = {
   createdAt?: true
   updatedAt?: true
   teamId?: true
+  environmentId?: true
   environmentMode?: true
   status?: true
   name?: true
@@ -191,6 +196,7 @@ export type CatalogPlanCountAggregateInputType = {
   createdAt?: true
   updatedAt?: true
   teamId?: true
+  environmentId?: true
   environmentMode?: true
   status?: true
   name?: true
@@ -304,6 +310,7 @@ export type CatalogPlanGroupByOutputType = {
   createdAt: Date
   updatedAt: Date
   teamId: string
+  environmentId: string | null
   environmentMode: $Enums.EnvironmentMode
   status: $Enums.CatalogStatus
   name: string
@@ -353,6 +360,7 @@ export type CatalogPlanWhereInput = {
   createdAt?: Prisma.DateTimeFilter<"CatalogPlan"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"CatalogPlan"> | Date | string
   teamId?: Prisma.StringFilter<"CatalogPlan"> | string
+  environmentId?: Prisma.StringNullableFilter<"CatalogPlan"> | string | null
   environmentMode?: Prisma.EnumEnvironmentModeFilter<"CatalogPlan"> | $Enums.EnvironmentMode
   status?: Prisma.EnumCatalogStatusFilter<"CatalogPlan"> | $Enums.CatalogStatus
   name?: Prisma.StringFilter<"CatalogPlan"> | string
@@ -373,6 +381,7 @@ export type CatalogPlanWhereInput = {
   chainSyncError?: Prisma.StringNullableFilter<"CatalogPlan"> | string | null
   chainSyncedAt?: Prisma.DateTimeNullableFilter<"CatalogPlan"> | Date | string | null
   team?: Prisma.XOR<Prisma.TeamScalarRelationFilter, Prisma.TeamWhereInput>
+  environment?: Prisma.XOR<Prisma.WorkspaceEnvironmentNullableScalarRelationFilter, Prisma.WorkspaceEnvironmentWhereInput> | null
 }
 
 export type CatalogPlanOrderByWithRelationInput = {
@@ -380,6 +389,7 @@ export type CatalogPlanOrderByWithRelationInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrderInput | Prisma.SortOrder
   environmentMode?: Prisma.SortOrder
   status?: Prisma.SortOrder
   name?: Prisma.SortOrder
@@ -400,6 +410,7 @@ export type CatalogPlanOrderByWithRelationInput = {
   chainSyncError?: Prisma.SortOrderInput | Prisma.SortOrder
   chainSyncedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   team?: Prisma.TeamOrderByWithRelationInput
+  environment?: Prisma.WorkspaceEnvironmentOrderByWithRelationInput
 }
 
 export type CatalogPlanWhereUniqueInput = Prisma.AtLeast<{
@@ -410,6 +421,7 @@ export type CatalogPlanWhereUniqueInput = Prisma.AtLeast<{
   createdAt?: Prisma.DateTimeFilter<"CatalogPlan"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"CatalogPlan"> | Date | string
   teamId?: Prisma.StringFilter<"CatalogPlan"> | string
+  environmentId?: Prisma.StringNullableFilter<"CatalogPlan"> | string | null
   environmentMode?: Prisma.EnumEnvironmentModeFilter<"CatalogPlan"> | $Enums.EnvironmentMode
   status?: Prisma.EnumCatalogStatusFilter<"CatalogPlan"> | $Enums.CatalogStatus
   name?: Prisma.StringFilter<"CatalogPlan"> | string
@@ -430,6 +442,7 @@ export type CatalogPlanWhereUniqueInput = Prisma.AtLeast<{
   chainSyncError?: Prisma.StringNullableFilter<"CatalogPlan"> | string | null
   chainSyncedAt?: Prisma.DateTimeNullableFilter<"CatalogPlan"> | Date | string | null
   team?: Prisma.XOR<Prisma.TeamScalarRelationFilter, Prisma.TeamWhereInput>
+  environment?: Prisma.XOR<Prisma.WorkspaceEnvironmentNullableScalarRelationFilter, Prisma.WorkspaceEnvironmentWhereInput> | null
 }, "id">
 
 export type CatalogPlanOrderByWithAggregationInput = {
@@ -437,6 +450,7 @@ export type CatalogPlanOrderByWithAggregationInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrderInput | Prisma.SortOrder
   environmentMode?: Prisma.SortOrder
   status?: Prisma.SortOrder
   name?: Prisma.SortOrder
@@ -471,6 +485,7 @@ export type CatalogPlanScalarWhereWithAggregatesInput = {
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"CatalogPlan"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"CatalogPlan"> | Date | string
   teamId?: Prisma.StringWithAggregatesFilter<"CatalogPlan"> | string
+  environmentId?: Prisma.StringNullableWithAggregatesFilter<"CatalogPlan"> | string | null
   environmentMode?: Prisma.EnumEnvironmentModeWithAggregatesFilter<"CatalogPlan"> | $Enums.EnvironmentMode
   status?: Prisma.EnumCatalogStatusWithAggregatesFilter<"CatalogPlan"> | $Enums.CatalogStatus
   name?: Prisma.StringWithAggregatesFilter<"CatalogPlan"> | string
@@ -516,6 +531,7 @@ export type CatalogPlanCreateInput = {
   chainSyncError?: string | null
   chainSyncedAt?: Date | string | null
   team: Prisma.TeamCreateNestedOneWithoutCatalogPlansInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutCatalogPlansInput
 }
 
 export type CatalogPlanUncheckedCreateInput = {
@@ -523,6 +539,7 @@ export type CatalogPlanUncheckedCreateInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   teamId: string
+  environmentId?: string | null
   environmentMode?: $Enums.EnvironmentMode
   status?: $Enums.CatalogStatus
   name: string
@@ -568,6 +585,7 @@ export type CatalogPlanUpdateInput = {
   chainSyncError?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   chainSyncedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   team?: Prisma.TeamUpdateOneRequiredWithoutCatalogPlansNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutCatalogPlansNestedInput
 }
 
 export type CatalogPlanUncheckedUpdateInput = {
@@ -575,6 +593,7 @@ export type CatalogPlanUncheckedUpdateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   status?: Prisma.EnumCatalogStatusFieldUpdateOperationsInput | $Enums.CatalogStatus
   name?: Prisma.StringFieldUpdateOperationsInput | string
@@ -601,6 +620,7 @@ export type CatalogPlanCreateManyInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   teamId: string
+  environmentId?: string | null
   environmentMode?: $Enums.EnvironmentMode
   status?: $Enums.CatalogStatus
   name: string
@@ -652,6 +672,7 @@ export type CatalogPlanUncheckedUpdateManyInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   status?: Prisma.EnumCatalogStatusFieldUpdateOperationsInput | $Enums.CatalogStatus
   name?: Prisma.StringFieldUpdateOperationsInput | string
@@ -688,6 +709,7 @@ export type CatalogPlanCountOrderByAggregateInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrder
   environmentMode?: Prisma.SortOrder
   status?: Prisma.SortOrder
   name?: Prisma.SortOrder
@@ -722,6 +744,7 @@ export type CatalogPlanMaxOrderByAggregateInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrder
   environmentMode?: Prisma.SortOrder
   status?: Prisma.SortOrder
   name?: Prisma.SortOrder
@@ -747,6 +770,7 @@ export type CatalogPlanMinOrderByAggregateInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrder
   environmentMode?: Prisma.SortOrder
   status?: Prisma.SortOrder
   name?: Prisma.SortOrder
@@ -817,6 +841,48 @@ export type CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput = {
   deleteMany?: Prisma.CatalogPlanScalarWhereInput | Prisma.CatalogPlanScalarWhereInput[]
 }
 
+export type CatalogPlanCreateNestedManyWithoutEnvironmentInput = {
+  create?: Prisma.XOR<Prisma.CatalogPlanCreateWithoutEnvironmentInput, Prisma.CatalogPlanUncheckedCreateWithoutEnvironmentInput> | Prisma.CatalogPlanCreateWithoutEnvironmentInput[] | Prisma.CatalogPlanUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.CatalogPlanCreateOrConnectWithoutEnvironmentInput | Prisma.CatalogPlanCreateOrConnectWithoutEnvironmentInput[]
+  createMany?: Prisma.CatalogPlanCreateManyEnvironmentInputEnvelope
+  connect?: Prisma.CatalogPlanWhereUniqueInput | Prisma.CatalogPlanWhereUniqueInput[]
+}
+
+export type CatalogPlanUncheckedCreateNestedManyWithoutEnvironmentInput = {
+  create?: Prisma.XOR<Prisma.CatalogPlanCreateWithoutEnvironmentInput, Prisma.CatalogPlanUncheckedCreateWithoutEnvironmentInput> | Prisma.CatalogPlanCreateWithoutEnvironmentInput[] | Prisma.CatalogPlanUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.CatalogPlanCreateOrConnectWithoutEnvironmentInput | Prisma.CatalogPlanCreateOrConnectWithoutEnvironmentInput[]
+  createMany?: Prisma.CatalogPlanCreateManyEnvironmentInputEnvelope
+  connect?: Prisma.CatalogPlanWhereUniqueInput | Prisma.CatalogPlanWhereUniqueInput[]
+}
+
+export type CatalogPlanUpdateManyWithoutEnvironmentNestedInput = {
+  create?: Prisma.XOR<Prisma.CatalogPlanCreateWithoutEnvironmentInput, Prisma.CatalogPlanUncheckedCreateWithoutEnvironmentInput> | Prisma.CatalogPlanCreateWithoutEnvironmentInput[] | Prisma.CatalogPlanUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.CatalogPlanCreateOrConnectWithoutEnvironmentInput | Prisma.CatalogPlanCreateOrConnectWithoutEnvironmentInput[]
+  upsert?: Prisma.CatalogPlanUpsertWithWhereUniqueWithoutEnvironmentInput | Prisma.CatalogPlanUpsertWithWhereUniqueWithoutEnvironmentInput[]
+  createMany?: Prisma.CatalogPlanCreateManyEnvironmentInputEnvelope
+  set?: Prisma.CatalogPlanWhereUniqueInput | Prisma.CatalogPlanWhereUniqueInput[]
+  disconnect?: Prisma.CatalogPlanWhereUniqueInput | Prisma.CatalogPlanWhereUniqueInput[]
+  delete?: Prisma.CatalogPlanWhereUniqueInput | Prisma.CatalogPlanWhereUniqueInput[]
+  connect?: Prisma.CatalogPlanWhereUniqueInput | Prisma.CatalogPlanWhereUniqueInput[]
+  update?: Prisma.CatalogPlanUpdateWithWhereUniqueWithoutEnvironmentInput | Prisma.CatalogPlanUpdateWithWhereUniqueWithoutEnvironmentInput[]
+  updateMany?: Prisma.CatalogPlanUpdateManyWithWhereWithoutEnvironmentInput | Prisma.CatalogPlanUpdateManyWithWhereWithoutEnvironmentInput[]
+  deleteMany?: Prisma.CatalogPlanScalarWhereInput | Prisma.CatalogPlanScalarWhereInput[]
+}
+
+export type CatalogPlanUncheckedUpdateManyWithoutEnvironmentNestedInput = {
+  create?: Prisma.XOR<Prisma.CatalogPlanCreateWithoutEnvironmentInput, Prisma.CatalogPlanUncheckedCreateWithoutEnvironmentInput> | Prisma.CatalogPlanCreateWithoutEnvironmentInput[] | Prisma.CatalogPlanUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.CatalogPlanCreateOrConnectWithoutEnvironmentInput | Prisma.CatalogPlanCreateOrConnectWithoutEnvironmentInput[]
+  upsert?: Prisma.CatalogPlanUpsertWithWhereUniqueWithoutEnvironmentInput | Prisma.CatalogPlanUpsertWithWhereUniqueWithoutEnvironmentInput[]
+  createMany?: Prisma.CatalogPlanCreateManyEnvironmentInputEnvelope
+  set?: Prisma.CatalogPlanWhereUniqueInput | Prisma.CatalogPlanWhereUniqueInput[]
+  disconnect?: Prisma.CatalogPlanWhereUniqueInput | Prisma.CatalogPlanWhereUniqueInput[]
+  delete?: Prisma.CatalogPlanWhereUniqueInput | Prisma.CatalogPlanWhereUniqueInput[]
+  connect?: Prisma.CatalogPlanWhereUniqueInput | Prisma.CatalogPlanWhereUniqueInput[]
+  update?: Prisma.CatalogPlanUpdateWithWhereUniqueWithoutEnvironmentInput | Prisma.CatalogPlanUpdateWithWhereUniqueWithoutEnvironmentInput[]
+  updateMany?: Prisma.CatalogPlanUpdateManyWithWhereWithoutEnvironmentInput | Prisma.CatalogPlanUpdateManyWithWhereWithoutEnvironmentInput[]
+  deleteMany?: Prisma.CatalogPlanScalarWhereInput | Prisma.CatalogPlanScalarWhereInput[]
+}
+
 export type EnumCatalogStatusFieldUpdateOperationsInput = {
   set?: $Enums.CatalogStatus
 }
@@ -864,12 +930,14 @@ export type CatalogPlanCreateWithoutTeamInput = {
   chainTxHash?: string | null
   chainSyncError?: string | null
   chainSyncedAt?: Date | string | null
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutCatalogPlansInput
 }
 
 export type CatalogPlanUncheckedCreateWithoutTeamInput = {
   id?: string
   createdAt?: Date | string
   updatedAt?: Date | string
+  environmentId?: string | null
   environmentMode?: $Enums.EnvironmentMode
   status?: $Enums.CatalogStatus
   name: string
@@ -925,6 +993,7 @@ export type CatalogPlanScalarWhereInput = {
   createdAt?: Prisma.DateTimeFilter<"CatalogPlan"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"CatalogPlan"> | Date | string
   teamId?: Prisma.StringFilter<"CatalogPlan"> | string
+  environmentId?: Prisma.StringNullableFilter<"CatalogPlan"> | string | null
   environmentMode?: Prisma.EnumEnvironmentModeFilter<"CatalogPlan"> | $Enums.EnvironmentMode
   status?: Prisma.EnumCatalogStatusFilter<"CatalogPlan"> | $Enums.CatalogStatus
   name?: Prisma.StringFilter<"CatalogPlan"> | string
@@ -946,10 +1015,89 @@ export type CatalogPlanScalarWhereInput = {
   chainSyncedAt?: Prisma.DateTimeNullableFilter<"CatalogPlan"> | Date | string | null
 }
 
+export type CatalogPlanCreateWithoutEnvironmentInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  environmentMode?: $Enums.EnvironmentMode
+  status?: $Enums.CatalogStatus
+  name: string
+  tier: string
+  description?: string | null
+  price: runtime.Decimal | runtime.DecimalJsLike | number | string
+  annualPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  billingInterval: number
+  acceptedToken: string
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  active?: boolean
+  version?: number
+  publishedAt?: Date | string | null
+  chainId?: number
+  onChainPlanId?: string | null
+  chainSyncStatus?: $Enums.ChainSyncStatus
+  chainTxHash?: string | null
+  chainSyncError?: string | null
+  chainSyncedAt?: Date | string | null
+  team: Prisma.TeamCreateNestedOneWithoutCatalogPlansInput
+}
+
+export type CatalogPlanUncheckedCreateWithoutEnvironmentInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  teamId: string
+  environmentMode?: $Enums.EnvironmentMode
+  status?: $Enums.CatalogStatus
+  name: string
+  tier: string
+  description?: string | null
+  price: runtime.Decimal | runtime.DecimalJsLike | number | string
+  annualPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  billingInterval: number
+  acceptedToken: string
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  active?: boolean
+  version?: number
+  publishedAt?: Date | string | null
+  chainId?: number
+  onChainPlanId?: string | null
+  chainSyncStatus?: $Enums.ChainSyncStatus
+  chainTxHash?: string | null
+  chainSyncError?: string | null
+  chainSyncedAt?: Date | string | null
+}
+
+export type CatalogPlanCreateOrConnectWithoutEnvironmentInput = {
+  where: Prisma.CatalogPlanWhereUniqueInput
+  create: Prisma.XOR<Prisma.CatalogPlanCreateWithoutEnvironmentInput, Prisma.CatalogPlanUncheckedCreateWithoutEnvironmentInput>
+}
+
+export type CatalogPlanCreateManyEnvironmentInputEnvelope = {
+  data: Prisma.CatalogPlanCreateManyEnvironmentInput | Prisma.CatalogPlanCreateManyEnvironmentInput[]
+  skipDuplicates?: boolean
+}
+
+export type CatalogPlanUpsertWithWhereUniqueWithoutEnvironmentInput = {
+  where: Prisma.CatalogPlanWhereUniqueInput
+  update: Prisma.XOR<Prisma.CatalogPlanUpdateWithoutEnvironmentInput, Prisma.CatalogPlanUncheckedUpdateWithoutEnvironmentInput>
+  create: Prisma.XOR<Prisma.CatalogPlanCreateWithoutEnvironmentInput, Prisma.CatalogPlanUncheckedCreateWithoutEnvironmentInput>
+}
+
+export type CatalogPlanUpdateWithWhereUniqueWithoutEnvironmentInput = {
+  where: Prisma.CatalogPlanWhereUniqueInput
+  data: Prisma.XOR<Prisma.CatalogPlanUpdateWithoutEnvironmentInput, Prisma.CatalogPlanUncheckedUpdateWithoutEnvironmentInput>
+}
+
+export type CatalogPlanUpdateManyWithWhereWithoutEnvironmentInput = {
+  where: Prisma.CatalogPlanScalarWhereInput
+  data: Prisma.XOR<Prisma.CatalogPlanUpdateManyMutationInput, Prisma.CatalogPlanUncheckedUpdateManyWithoutEnvironmentInput>
+}
+
 export type CatalogPlanCreateManyTeamInput = {
   id?: string
   createdAt?: Date | string
   updatedAt?: Date | string
+  environmentId?: string | null
   environmentMode?: $Enums.EnvironmentMode
   status?: $Enums.CatalogStatus
   name: string
@@ -994,12 +1142,14 @@ export type CatalogPlanUpdateWithoutTeamInput = {
   chainTxHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   chainSyncError?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   chainSyncedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutCatalogPlansNestedInput
 }
 
 export type CatalogPlanUncheckedUpdateWithoutTeamInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   status?: Prisma.EnumCatalogStatusFieldUpdateOperationsInput | $Enums.CatalogStatus
   name?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1025,6 +1175,111 @@ export type CatalogPlanUncheckedUpdateManyWithoutTeamInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
+  status?: Prisma.EnumCatalogStatusFieldUpdateOperationsInput | $Enums.CatalogStatus
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  tier?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  price?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  annualPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  billingInterval?: Prisma.IntFieldUpdateOperationsInput | number
+  acceptedToken?: Prisma.StringFieldUpdateOperationsInput | string
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  active?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  onChainPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chainSyncStatus?: Prisma.EnumChainSyncStatusFieldUpdateOperationsInput | $Enums.ChainSyncStatus
+  chainTxHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chainSyncError?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chainSyncedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+}
+
+export type CatalogPlanCreateManyEnvironmentInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  teamId: string
+  environmentMode?: $Enums.EnvironmentMode
+  status?: $Enums.CatalogStatus
+  name: string
+  tier: string
+  description?: string | null
+  price: runtime.Decimal | runtime.DecimalJsLike | number | string
+  annualPrice?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  billingInterval: number
+  acceptedToken: string
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  active?: boolean
+  version?: number
+  publishedAt?: Date | string | null
+  chainId?: number
+  onChainPlanId?: string | null
+  chainSyncStatus?: $Enums.ChainSyncStatus
+  chainTxHash?: string | null
+  chainSyncError?: string | null
+  chainSyncedAt?: Date | string | null
+}
+
+export type CatalogPlanUpdateWithoutEnvironmentInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
+  status?: Prisma.EnumCatalogStatusFieldUpdateOperationsInput | $Enums.CatalogStatus
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  tier?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  price?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  annualPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  billingInterval?: Prisma.IntFieldUpdateOperationsInput | number
+  acceptedToken?: Prisma.StringFieldUpdateOperationsInput | string
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  active?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  onChainPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chainSyncStatus?: Prisma.EnumChainSyncStatusFieldUpdateOperationsInput | $Enums.ChainSyncStatus
+  chainTxHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chainSyncError?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chainSyncedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  team?: Prisma.TeamUpdateOneRequiredWithoutCatalogPlansNestedInput
+}
+
+export type CatalogPlanUncheckedUpdateWithoutEnvironmentInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
+  status?: Prisma.EnumCatalogStatusFieldUpdateOperationsInput | $Enums.CatalogStatus
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  tier?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  price?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  annualPrice?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  billingInterval?: Prisma.IntFieldUpdateOperationsInput | number
+  acceptedToken?: Prisma.StringFieldUpdateOperationsInput | string
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  active?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  onChainPlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chainSyncStatus?: Prisma.EnumChainSyncStatusFieldUpdateOperationsInput | $Enums.ChainSyncStatus
+  chainTxHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chainSyncError?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  chainSyncedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+}
+
+export type CatalogPlanUncheckedUpdateManyWithoutEnvironmentInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamId?: Prisma.StringFieldUpdateOperationsInput | string
   environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   status?: Prisma.EnumCatalogStatusFieldUpdateOperationsInput | $Enums.CatalogStatus
   name?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1053,6 +1308,7 @@ export type CatalogPlanSelect<ExtArgs extends runtime.Types.Extensions.InternalA
   createdAt?: boolean
   updatedAt?: boolean
   teamId?: boolean
+  environmentId?: boolean
   environmentMode?: boolean
   status?: boolean
   name?: boolean
@@ -1073,6 +1329,7 @@ export type CatalogPlanSelect<ExtArgs extends runtime.Types.Extensions.InternalA
   chainSyncError?: boolean
   chainSyncedAt?: boolean
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.CatalogPlan$environmentArgs<ExtArgs>
 }, ExtArgs["result"]["catalogPlan"]>
 
 export type CatalogPlanSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -1080,6 +1337,7 @@ export type CatalogPlanSelectCreateManyAndReturn<ExtArgs extends runtime.Types.E
   createdAt?: boolean
   updatedAt?: boolean
   teamId?: boolean
+  environmentId?: boolean
   environmentMode?: boolean
   status?: boolean
   name?: boolean
@@ -1100,6 +1358,7 @@ export type CatalogPlanSelectCreateManyAndReturn<ExtArgs extends runtime.Types.E
   chainSyncError?: boolean
   chainSyncedAt?: boolean
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.CatalogPlan$environmentArgs<ExtArgs>
 }, ExtArgs["result"]["catalogPlan"]>
 
 export type CatalogPlanSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -1107,6 +1366,7 @@ export type CatalogPlanSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.E
   createdAt?: boolean
   updatedAt?: boolean
   teamId?: boolean
+  environmentId?: boolean
   environmentMode?: boolean
   status?: boolean
   name?: boolean
@@ -1127,6 +1387,7 @@ export type CatalogPlanSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.E
   chainSyncError?: boolean
   chainSyncedAt?: boolean
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.CatalogPlan$environmentArgs<ExtArgs>
 }, ExtArgs["result"]["catalogPlan"]>
 
 export type CatalogPlanSelectScalar = {
@@ -1134,6 +1395,7 @@ export type CatalogPlanSelectScalar = {
   createdAt?: boolean
   updatedAt?: boolean
   teamId?: boolean
+  environmentId?: boolean
   environmentMode?: boolean
   status?: boolean
   name?: boolean
@@ -1155,27 +1417,32 @@ export type CatalogPlanSelectScalar = {
   chainSyncedAt?: boolean
 }
 
-export type CatalogPlanOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "updatedAt" | "teamId" | "environmentMode" | "status" | "name" | "tier" | "description" | "price" | "annualPrice" | "billingInterval" | "acceptedToken" | "metadata" | "active" | "version" | "publishedAt" | "chainId" | "onChainPlanId" | "chainSyncStatus" | "chainTxHash" | "chainSyncError" | "chainSyncedAt", ExtArgs["result"]["catalogPlan"]>
+export type CatalogPlanOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "updatedAt" | "teamId" | "environmentId" | "environmentMode" | "status" | "name" | "tier" | "description" | "price" | "annualPrice" | "billingInterval" | "acceptedToken" | "metadata" | "active" | "version" | "publishedAt" | "chainId" | "onChainPlanId" | "chainSyncStatus" | "chainTxHash" | "chainSyncError" | "chainSyncedAt", ExtArgs["result"]["catalogPlan"]>
 export type CatalogPlanInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.CatalogPlan$environmentArgs<ExtArgs>
 }
 export type CatalogPlanIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.CatalogPlan$environmentArgs<ExtArgs>
 }
 export type CatalogPlanIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.CatalogPlan$environmentArgs<ExtArgs>
 }
 
 export type $CatalogPlanPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "CatalogPlan"
   objects: {
     team: Prisma.$TeamPayload<ExtArgs>
+    environment: Prisma.$WorkspaceEnvironmentPayload<ExtArgs> | null
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
     createdAt: Date
     updatedAt: Date
     teamId: string
+    environmentId: string | null
     environmentMode: $Enums.EnvironmentMode
     status: $Enums.CatalogStatus
     name: string
@@ -1590,6 +1857,7 @@ readonly fields: CatalogPlanFieldRefs;
 export interface Prisma__CatalogPlanClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   team<T extends Prisma.TeamDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TeamDefaultArgs<ExtArgs>>): Prisma.Prisma__TeamClient<runtime.Types.Result.GetResult<Prisma.$TeamPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  environment<T extends Prisma.CatalogPlan$environmentArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.CatalogPlan$environmentArgs<ExtArgs>>): Prisma.Prisma__WorkspaceEnvironmentClient<runtime.Types.Result.GetResult<Prisma.$WorkspaceEnvironmentPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1623,6 +1891,7 @@ export interface CatalogPlanFieldRefs {
   readonly createdAt: Prisma.FieldRef<"CatalogPlan", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"CatalogPlan", 'DateTime'>
   readonly teamId: Prisma.FieldRef<"CatalogPlan", 'String'>
+  readonly environmentId: Prisma.FieldRef<"CatalogPlan", 'String'>
   readonly environmentMode: Prisma.FieldRef<"CatalogPlan", 'EnvironmentMode'>
   readonly status: Prisma.FieldRef<"CatalogPlan", 'CatalogStatus'>
   readonly name: Prisma.FieldRef<"CatalogPlan", 'String'>
@@ -2035,6 +2304,25 @@ export type CatalogPlanDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.I
    * Limit how many CatalogPlans to delete.
    */
   limit?: number
+}
+
+/**
+ * CatalogPlan.environment
+ */
+export type CatalogPlan$environmentArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the WorkspaceEnvironment
+   */
+  select?: Prisma.WorkspaceEnvironmentSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the WorkspaceEnvironment
+   */
+  omit?: Prisma.WorkspaceEnvironmentOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.WorkspaceEnvironmentInclude<ExtArgs> | null
+  where?: Prisma.WorkspaceEnvironmentWhereInput
 }
 
 /**

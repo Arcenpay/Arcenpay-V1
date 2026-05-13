@@ -2,7 +2,7 @@ import type { Context } from "hono";
 import { z } from "zod";
 import { db } from "../../../db.js";
 import { isErrorResponse, requirePermission } from "../../../lib/auth/api-auth.js";
-import { normalizeEnvironmentMode } from "../../../lib/platform/default-chain.js";
+import { requireResolvedActiveEnvironment } from "../../../lib/environments/workspace-environments.js";
 
 const querySchema = z.object({
   months: z.coerce.number().int().min(1).max(24).optional(),
@@ -34,17 +34,14 @@ export async function getRevenueSeries(c: Context) {
     return c.json({ error: "Invalid query", details: parsed.error.flatten().fieldErrors }, 400 as any);
   }
 
-  const team = await db.team.findUnique({
-    where: { id: auth.team.teamId },
-    select: { environmentMode: true },
-  });
-  if (!team) {
-    return c.json({ error: "Team not found" }, 404 as any);
+  const activeEnvironment = await requireResolvedActiveEnvironment(
+    auth.session,
+    auth.team.teamId,
+  );
+  if (!activeEnvironment) {
+    return c.json({ error: "No workspace environment selected" }, 409 as any);
   }
 
-  const environmentMode = normalizeEnvironmentMode(
-    parsed.data.environmentMode || team.environmentMode,
-  );
   const months = parsed.data.months ?? 12;
 
   const now = new Date();
@@ -56,7 +53,7 @@ export async function getRevenueSeries(c: Context) {
   const invoices = await db.invoice.findMany({
     where: {
       teamId: auth.team.teamId,
-      environmentMode,
+      environmentId: activeEnvironment.id,
       status: "PAID",
       issuedAt: { gte: oldestMonth },
     },
@@ -90,7 +87,9 @@ export async function getRevenueSeries(c: Context) {
   return c.json({
     context: {
       teamId: auth.team.teamId,
-      environmentMode,
+      environmentId: activeEnvironment.id,
+      environmentMode: activeEnvironment.mode,
+      chainId: activeEnvironment.chainId,
     },
     points,
   });

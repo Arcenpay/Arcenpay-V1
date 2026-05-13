@@ -37,6 +37,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
+import { useEnvironment } from "@/contexts/environment-context";
 
 type InvoiceStatus = "DRAFT" | "ISSUED" | "PAID" | "VOID" | "OVERDUE";
 type DeliveryStatus = "PENDING" | "SENT" | "FAILED";
@@ -350,6 +351,8 @@ function InvoiceTable({
 }
 
 export function InvoicesSection() {
+  const { envMode, activeEnvironment } = useEnvironment();
+  const environmentKey = activeEnvironment?.id ?? envMode;
   const [invoices, setInvoices] = useState<InvoiceItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
@@ -375,7 +378,7 @@ export function InvoicesSection() {
     } finally {
       setLoading(false);
     }
-  }, [query, status]);
+  }, [environmentKey, query, status]);
 
   useEffect(() => {
     fetchInvoices();

@@ -17,6 +17,7 @@ export type DashboardSession = {
   clerkUserId: string;
   email: string | null;
   currentTeamId: string | null;
+  activeEnvironmentId: string | null;
   walletAddress: string | null;
   expiresAt: Date;
 };
@@ -84,6 +85,7 @@ export async function getSessionFromCtx(c: Context): Promise<DashboardSession | 
       clerkUserId: record.user.id,
       email: record.user.email ?? null,
       currentTeamId: record.user.currentTeamId ?? null,
+      activeEnvironmentId: record.activeEnvironmentId ?? null,
       walletAddress: record.user.walletAddress ?? null,
       expiresAt,
     };
@@ -95,6 +97,7 @@ export async function getSessionFromCtx(c: Context): Promise<DashboardSession | 
     clerkUserId: record.user.id,
     email: record.user.email ?? null,
     currentTeamId: record.user.currentTeamId ?? null,
+    activeEnvironmentId: record.activeEnvironmentId ?? null,
     walletAddress: record.user.walletAddress ?? null,
     expiresAt: record.expiresAt,
   };
@@ -147,6 +150,28 @@ export async function createSession(c: Context, userId: string): Promise<Dashboa
     throw new Error(`User ${userId} not found`);
   }
 
+  const currentTeamId = user.currentTeamId;
+  const activeEnvironmentId = currentTeamId
+    ? (
+        await withPrismaReconnect((client) =>
+          client.workspaceEnvironment.findFirst({
+            where: { teamId: currentTeamId },
+            orderBy: { createdAt: "asc" },
+            select: { id: true },
+          }),
+        )
+      )?.id ?? null
+    : null;
+
+  if (activeEnvironmentId) {
+    await withPrismaReconnect((client) =>
+      client.authSession.update({
+        where: { id: record.id },
+        data: { activeEnvironmentId },
+      }),
+    );
+  }
+
   setCookie(c, AUTH_COOKIE_NAME, token, buildCookieOptions(expiresAt));
 
   return {
@@ -155,6 +180,7 @@ export async function createSession(c: Context, userId: string): Promise<Dashboa
     clerkUserId: user.id,
     email: user.email ?? null,
     currentTeamId: user.currentTeamId ?? null,
+    activeEnvironmentId,
     walletAddress: user.walletAddress ?? null,
     expiresAt,
   };

@@ -74,7 +74,12 @@ const sectionDescriptions: Record<Section, string> = {
 
 export function Header({ activeSection }: HeaderProps) {
   const router = useRouter();
-  const { envMode } = useEnvironment();
+  const {
+    envMode,
+    activeEnvironment,
+    environments,
+    selectEnvironment,
+  } = useEnvironment();
   const chainId = useChainId();
   const [searchFocused, setSearchFocused] = useState(false);
   const { data: sessionData, refresh: refreshSessionData } = useDashboardSession();
@@ -94,7 +99,7 @@ export function Header({ activeSection }: HeaderProps) {
     reconnectWallet,
     switchToRequiredNetwork,
   } = useDashboardWallet(storedWallet);
-  const configuredChainId = resolveEnvironmentChainId(envMode);
+  const configuredChainId = activeEnvironment?.chainId ?? resolveEnvironmentChainId(envMode);
   const configuredChainLabel = getChainLabel(configuredChainId);
   const configuredEnvChainsLabel = formatChainLabelsForEnvironment(envMode);
   const isOnConfiguredNetwork = hasConnectedWallet && isChainAllowedForEnvironment(chainId, envMode);
@@ -102,14 +107,17 @@ export function Header({ activeSection }: HeaderProps) {
   // Notification bell state
   const [showNotifications, setShowNotifications] = useState(false);
   const [showWalletMenu, setShowWalletMenu] = useState(false);
+  const [showEnvironmentMenu, setShowEnvironmentMenu] = useState(false);
   const [showWorkspaceMenu, setShowWorkspaceMenu] = useState(false);
   const [showAccountMenu, setShowAccountMenu] = useState(false);
   const [isSwitchingTeam, setIsSwitchingTeam] = useState(false);
+  const [isSwitchingEnvironment, setIsSwitchingEnvironment] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [auditEvents, setAuditEvents] = useState<AuditEntry[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const bellRef = useRef<HTMLDivElement>(null);
   const walletRef = useRef<HTMLDivElement>(null);
+  const environmentRef = useRef<HTMLDivElement>(null);
   const workspaceRef = useRef<HTMLDivElement>(null);
   const accountRef = useRef<HTMLDivElement>(null);
 
@@ -143,6 +151,9 @@ export function Header({ activeSection }: HeaderProps) {
       if (walletRef.current && !walletRef.current.contains(e.target as Node)) {
         setShowWalletMenu(false);
       }
+      if (environmentRef.current && !environmentRef.current.contains(e.target as Node)) {
+        setShowEnvironmentMenu(false);
+      }
       if (workspaceRef.current && !workspaceRef.current.contains(e.target as Node)) {
         setShowWorkspaceMenu(false);
       }
@@ -150,11 +161,11 @@ export function Header({ activeSection }: HeaderProps) {
         setShowAccountMenu(false);
       }
     }
-    if (showNotifications || showWalletMenu || showWorkspaceMenu || showAccountMenu) {
+    if (showNotifications || showWalletMenu || showEnvironmentMenu || showWorkspaceMenu || showAccountMenu) {
       document.addEventListener("mousedown", handleClick);
       return () => document.removeEventListener("mousedown", handleClick);
     }
-  }, [showAccountMenu, showNotifications, showWalletMenu, showWorkspaceMenu]);
+  }, [showAccountMenu, showEnvironmentMenu, showNotifications, showWalletMenu, showWorkspaceMenu]);
 
   const markAllRead = useCallback(() => {
     localStorage.setItem("arcen_notif_last_viewed", new Date().toISOString());
@@ -200,6 +211,23 @@ export function Header({ activeSection }: HeaderProps) {
     }
   };
 
+  const handleSelectEnvironment = async (environmentId: string) => {
+    if (activeEnvironment?.id === environmentId) {
+      setShowEnvironmentMenu(false);
+      return;
+    }
+    setIsSwitchingEnvironment(true);
+    try {
+      const ok = await selectEnvironment(environmentId);
+      if (!ok) return;
+      setShowEnvironmentMenu(false);
+      await refreshSessionData();
+      window.location.reload();
+    } finally {
+      setIsSwitchingEnvironment(false);
+    }
+  };
+
   return (
     <header className="h-16 border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-30 flex items-center justify-between px-6">
       <div className="flex items-center gap-4">
@@ -212,16 +240,98 @@ export function Header({ activeSection }: HeaderProps) {
       </div>
 
       <div className="flex items-center gap-4">
-        {/* Environment Badge */}
-        <Badge
-          variant="outline"
-          className={cn(
-            "text-xs font-medium px-2.5 py-1",
-            "border-blue-400/50 text-blue-400 bg-blue-400/5",
-          )}
-        >
-          {configuredChainLabel}
-        </Badge>
+        <div ref={environmentRef} className="relative">
+          <button
+            type="button"
+            onClick={() => setShowEnvironmentMenu((open) => !open)}
+            className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-secondary px-3 text-xs font-medium text-foreground"
+          >
+            <span className="max-w-[9rem] truncate">
+              {activeEnvironment?.name ?? "Environment"}
+            </span>
+            <Badge
+              variant="outline"
+              className={cn(
+                "px-2 py-0.5 text-[10px] font-semibold",
+                activeEnvironment?.mode === "PRODUCTION"
+                  ? "border-rose-500/30 bg-rose-500/10 text-rose-400"
+                  : "border-amber-500/30 bg-amber-500/10 text-amber-400",
+              )}
+            >
+              {activeEnvironment?.mode === "PRODUCTION" ? "PROD" : "DEV"}
+            </Badge>
+            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+          </button>
+
+          {showEnvironmentMenu ? (
+            <div className="absolute right-0 top-11 z-50 w-80 rounded-2xl border border-border bg-popover p-2 shadow-lg">
+              <div className="px-3 pb-2 pt-1 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                Active environment
+              </div>
+              <div className="space-y-1">
+                {environments.map((environment) => (
+                  <button
+                    key={environment.id}
+                    type="button"
+                    disabled={isSwitchingEnvironment}
+                    onClick={() => void handleSelectEnvironment(environment.id)}
+                    className={cn(
+                      "flex w-full items-center justify-between rounded-xl px-3 py-2 text-left transition-colors",
+                      activeEnvironment?.id === environment.id
+                        ? "bg-secondary text-foreground"
+                        : "text-muted-foreground hover:bg-secondary/70 hover:text-foreground",
+                    )}
+                  >
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-medium">{environment.name}</div>
+                      <div className="truncate text-xs text-muted-foreground/80">
+                        {environment.chainLabel}
+                      </div>
+                    </div>
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        environment.mode === "PRODUCTION"
+                          ? "border-rose-500/30 bg-rose-500/10 text-rose-400"
+                          : "border-amber-500/30 bg-amber-500/10 text-amber-400",
+                      )}
+                    >
+                      {environment.mode === "PRODUCTION" ? "PROD" : "DEV"}
+                    </Badge>
+                  </button>
+                ))}
+              </div>
+              <div className="mt-2 border-t border-border pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEnvironmentMenu(false);
+                    router.push("/onboarding/environment");
+                  }}
+                  className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-secondary/70 hover:text-foreground"
+                >
+                  <span>Create environment</span>
+                  <span className="text-[11px] uppercase tracking-[0.14em]">
+                    New
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEnvironmentMenu(false);
+                    router.push("/?section=settings&tab=workspace", { scroll: false });
+                  }}
+                  className="mt-1 flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-secondary/70 hover:text-foreground"
+                >
+                  <span>Manage environments</span>
+                  <span className="text-[11px] uppercase tracking-[0.14em]">
+                    Settings
+                  </span>
+                </button>
+              </div>
+            </div>
+          ) : null}
+        </div>
 
         {/* Search */}
         <div

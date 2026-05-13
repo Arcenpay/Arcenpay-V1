@@ -9,6 +9,7 @@ import { ensureInvoicePdfForTeam } from "../../../lib/billing/invoice-documents.
 import { sendInvoiceEmail } from "../../../lib/billing/email.js";
 import { billingAddressSchema } from "../../../lib/billing/invoice-tax.js";
 import { deliverWebhook } from "../../../lib/webhooks/deliver-webhook.js";
+import { requireResolvedActiveEnvironment } from "../../../lib/environments/workspace-environments.js";
 
 const listSchema = z.object({
   status: z.enum(["DRAFT", "ISSUED", "PAID", "VOID", "OVERDUE"]).optional(),
@@ -52,12 +53,18 @@ export async function GET(c: Context) {
     return c.json({ error: "Invalid query", details: parsed.error.flatten().fieldErrors }, 400 as any);
   }
 
+  const activeEnvironment = await requireResolvedActiveEnvironment(
+    auth.session,
+    auth.team.teamId,
+  );
+  if (!activeEnvironment) {
+    return c.json({ error: "No workspace environment selected" }, 409 as any);
+  }
+
   const where = {
     teamId: auth.team.teamId,
+    environmentId: activeEnvironment.id,
     ...(parsed.data.status && { status: parsed.data.status }),
-    ...(parsed.data.environmentMode && {
-      environmentMode: parsed.data.environmentMode,
-    }),
     ...(parsed.data.q && {
       OR: [
         { number: { contains: parsed.data.q, mode: "insensitive" as const } },
@@ -110,6 +117,14 @@ export async function POST(c: Context) {
     return c.json({ error: "Invalid request", details: parsed.error.flatten().fieldErrors }, 400 as any);
   }
 
+  const activeEnvironment = await requireResolvedActiveEnvironment(
+    auth.session,
+    auth.team.teamId,
+  );
+  if (!activeEnvironment) {
+    return c.json({ error: "No workspace environment selected" }, 409 as any);
+  }
+
   const team = await db.team.findUnique({
     where: { id: auth.team.teamId },
     select: { slug: true, invoicePrefix: true },
@@ -148,7 +163,8 @@ export async function POST(c: Context) {
   const invoice = await db.invoice.create({
     data: {
       teamId: auth.team.teamId,
-      environmentMode: parsed.data.environmentMode,
+      environmentId: activeEnvironment.id,
+      environmentMode: activeEnvironment.mode,
       status: "ISSUED",
       number,
       currency: parsed.data.currency,

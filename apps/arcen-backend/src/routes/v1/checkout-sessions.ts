@@ -5,6 +5,7 @@ import { db } from "../../db.js";
 import { createCheckoutSession } from "../../lib/payments/checkout-sessions.js";
 import { getPaymentLinkById } from "../../lib/payments/payment-links.js";
 import { RUNTIME_CHAIN_ID } from "../../lib/platform/runtime-chain.js";
+import { requireResolvedActiveEnvironment } from "../../lib/environments/workspace-environments.js";
 
 const createSchema = z
   .object({
@@ -39,8 +40,22 @@ export async function GET(c: Context) {
   const auth = await requireAnyAuth(c);
   if (isAnyAuthError(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any as any);
 
+  const activeEnvironment =
+    auth.source === "session" && auth.sessionId
+      ? await requireResolvedActiveEnvironment(
+          {
+            sessionId: auth.sessionId,
+            activeEnvironmentId: auth.activeEnvironmentId ?? null,
+          },
+          auth.teamId,
+        )
+      : null;
+
   const checkoutSessions = await db.checkoutSession.findMany({
-    where: { teamId: auth.teamId },
+    where: {
+      teamId: auth.teamId,
+      ...(activeEnvironment ? { environmentId: activeEnvironment.id } : {}),
+    },
     include: {
       paymentLink: {
         select: { id: true, name: true, slug: true, kind: true },
@@ -69,6 +84,17 @@ export async function POST(c: Context) {
   const auth = await requireAnyAuth(c);
   if (isAnyAuthError(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any as any);
 
+  const activeEnvironment =
+    auth.source === "session" && auth.sessionId
+      ? await requireResolvedActiveEnvironment(
+          {
+            sessionId: auth.sessionId,
+            activeEnvironmentId: auth.activeEnvironmentId ?? null,
+          },
+          auth.teamId,
+        )
+      : null;
+
   const body = await c.req.json() .catch(() => ({}));
   const parsed = createSchema.safeParse(body);
   if (!parsed.success) {
@@ -83,6 +109,7 @@ export async function POST(c: Context) {
 
     const session = await createCheckoutSession({
       teamId: auth.teamId,
+      environmentId: paymentLink.environmentId ?? activeEnvironment?.id ?? null,
       purpose: paymentLink.kind,
       paymentLinkId: paymentLink.id,
       companyId: parsed.data.companyId ?? paymentLink.companyId ?? undefined,
@@ -122,6 +149,7 @@ export async function POST(c: Context) {
 
   const session = await createCheckoutSession({
     teamId: auth.teamId,
+    environmentId: activeEnvironment?.id ?? null,
     purpose: parsed.data.purpose!,
     companyId: parsed.data.companyId,
     catalogAddOnId: parsed.data.catalogAddOnId,
@@ -132,7 +160,7 @@ export async function POST(c: Context) {
     amount: parsed.data.amount!,
     currency: "USDC",
     acceptedToken: parsed.data.acceptedToken!,
-    chainId: RUNTIME_CHAIN_ID,
+    chainId: activeEnvironment?.chainId ?? RUNTIME_CHAIN_ID,
     recipientWallet: parsed.data.recipientWallet!,
     successUrl: parsed.data.successUrl,
     cancelUrl: parsed.data.cancelUrl,

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "../../../db.js";
 import { requirePermission, isErrorResponse } from "../../../lib/auth/api-auth.js";
 import { writeAuditEvent } from "../../../lib/platform/audit.js";
+import { requireResolvedActiveEnvironment } from "../../../lib/environments/workspace-environments.js";
 
 const createSchema = z.object({
   name: z.string().min(1),
@@ -37,15 +38,19 @@ export async function listCredits(c: Context) {
   const auth = await requirePermission(c, "catalog:read");
   if (isErrorResponse(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any as any);
 
-  const environmentMode = c.req.query("environmentMode") || undefined;
   const status = c.req.query("status") || undefined;
+  const activeEnvironment = await requireResolvedActiveEnvironment(
+    auth.session,
+    auth.team.teamId,
+  );
+  if (!activeEnvironment) {
+    return c.json({ error: "No workspace environment selected" }, 409 as any);
+  }
 
   const creditTypes = await db.catalogCreditType.findMany({
     where: {
       teamId: auth.team.teamId,
-      ...(environmentMode && {
-        environmentMode: environmentMode as "DEVELOPMENT" | "PRODUCTION",
-      }),
+      environmentId: activeEnvironment.id,
       ...(status && { status: status as "DRAFT" | "PUBLISHED" | "ARCHIVED" }),
     },
     orderBy: [{ updatedAt: "desc" }],
@@ -65,10 +70,18 @@ export async function createCredit(c: Context) {
   }
 
   const data = parsed.data;
+  const activeEnvironment = await requireResolvedActiveEnvironment(
+    auth.session,
+    auth.team.teamId,
+  );
+  if (!activeEnvironment) {
+    return c.json({ error: "No workspace environment selected" }, 409 as any);
+  }
   const creditType = await db.catalogCreditType.create({
     data: {
       teamId: auth.team.teamId,
-      environmentMode: data.environmentMode,
+      environmentId: activeEnvironment.id,
+      environmentMode: activeEnvironment.mode,
       name: data.name,
       code: data.code,
       unitName: data.unitName,
@@ -84,6 +97,7 @@ export async function createCredit(c: Context) {
   await db.catalogVersion.create({
     data: {
       teamId: auth.team.teamId,
+      environmentId: activeEnvironment.id,
       environmentMode: creditType.environmentMode,
       entityType: "CREDIT",
       entityId: creditType.id,
@@ -123,6 +137,9 @@ export async function updateCredit(c: Context) {
   if (!existing) {
     return c.json({ error: "Credit type not found" }, 404 as any);
   }
+  if (!existing.environmentId) {
+    return c.json({ error: "Legacy credit types without environments cannot be edited here." }, 409 as any);
+  }
 
   const updated = await db.catalogCreditType.update({
     where: { id: existing.id },
@@ -151,6 +168,7 @@ export async function updateCredit(c: Context) {
   await db.catalogVersion.create({
     data: {
       teamId: auth.team.teamId,
+      environmentId: existing.environmentId,
       environmentMode: updated.environmentMode,
       entityType: "CREDIT",
       entityId: updated.id,

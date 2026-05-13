@@ -241,6 +241,7 @@ model AuthSession {
   id        String   @id @default(cuid())
   createdAt DateTime @default(now())
   userId    String
+  activeEnvironmentId String?
 
   tokenHash String   @unique
   expiresAt DateTime
@@ -248,9 +249,11 @@ model AuthSession {
   revokedAt DateTime?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activeEnvironment WorkspaceEnvironment? @relation(fields: [activeEnvironmentId], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@index([expiresAt])
+  @@index([activeEnvironmentId])
 }
 
 model EmailAuthCode {
@@ -290,6 +293,7 @@ model Team {
   members         TeamMember[]
   providerProfile ProviderProfile?
   invitations     TeamInvitation[]
+  environments    WorkspaceEnvironment[]
 
   catalogPlans       CatalogPlan[]
   catalogAddOns      CatalogAddOn[]
@@ -330,6 +334,34 @@ model Team {
 
   @@index([slug])
   @@index([platformTier])
+}
+
+model WorkspaceEnvironment {
+  id        String          @id @default(cuid())
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  teamId    String
+  name      String
+  mode      EnvironmentMode
+  chainId   Int
+
+  team               Team              @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  authSessions       AuthSession[]
+  catalogPlans       CatalogPlan[]
+  catalogAddOns      CatalogAddOn[]
+  catalogCreditTypes CatalogCreditType[]
+  catalogVersions    CatalogVersion[]
+  catalogConfigs     CatalogConfig[]
+  templateInstalls   TemplateInstall[]
+  invoices           Invoice[]
+  subscriptionStates SubscriptionState[]
+  payments           Payment[]
+  paymentLinks       PaymentLink[]
+  checkoutSessions   CheckoutSession[]
+
+  @@unique([teamId, name])
+  @@index([teamId, mode])
+  @@index([teamId, chainId])
 }
 
 model TeamMember {
@@ -428,6 +460,7 @@ model CatalogPlan {
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
   teamId          String
+  environmentId   String?
   environmentMode EnvironmentMode @default(DEVELOPMENT)
   status          CatalogStatus   @default(DRAFT)
 
@@ -454,8 +487,10 @@ model CatalogPlan {
   chainSyncedAt   DateTime?
 
   team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  environment WorkspaceEnvironment? @relation(fields: [environmentId], references: [id], onDelete: SetNull)
 
   @@index([teamId, environmentMode, status])
+  @@index([teamId, environmentId, status])
   @@index([teamId, name])
   @@index([teamId, chainId, onChainPlanId])
 }
@@ -465,6 +500,7 @@ model CatalogAddOn {
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
   teamId          String
+  environmentId   String?
   environmentMode EnvironmentMode @default(DEVELOPMENT)
   status          CatalogStatus   @default(DRAFT)
 
@@ -487,12 +523,14 @@ model CatalogAddOn {
   chainSyncedAt   DateTime?
 
   team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  environment WorkspaceEnvironment? @relation(fields: [environmentId], references: [id], onDelete: SetNull)
   companyGrants CompanyAddOnGrant[]
   paymentLinks PaymentLink[]
   checkoutSessions CheckoutSession[]
 
   @@unique([teamId, code, environmentMode])
   @@index([teamId, environmentMode, status])
+  @@index([teamId, environmentId, status])
 }
 
 model CatalogCreditType {
@@ -500,6 +538,7 @@ model CatalogCreditType {
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
   teamId          String
+  environmentId   String?
   environmentMode EnvironmentMode @default(DEVELOPMENT)
   status          CatalogStatus   @default(DRAFT)
 
@@ -520,9 +559,11 @@ model CatalogCreditType {
   chainSyncedAt   DateTime?
 
   team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  environment WorkspaceEnvironment? @relation(fields: [environmentId], references: [id], onDelete: SetNull)
 
   @@unique([teamId, code, environmentMode])
   @@index([teamId, environmentMode, status])
+  @@index([teamId, environmentId, status])
 }
 
 model CatalogVersion {
@@ -530,6 +571,7 @@ model CatalogVersion {
   createdAt       DateTime        @default(now())
   publishedAt     DateTime?
   teamId          String
+  environmentId   String?
   environmentMode EnvironmentMode @default(DEVELOPMENT)
   entityType      CatalogEntityType
   entityId        String
@@ -538,9 +580,11 @@ model CatalogVersion {
   snapshot        Json
 
   team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  environment WorkspaceEnvironment? @relation(fields: [environmentId], references: [id], onDelete: SetNull)
 
   @@unique([teamId, entityType, entityId, version])
   @@index([teamId, environmentMode, status])
+  @@index([teamId, environmentId, status])
 }
 
 model CatalogConfig {
@@ -548,6 +592,7 @@ model CatalogConfig {
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
   teamId          String
+  environmentId   String?         @unique
   environmentMode EnvironmentMode @default(DEVELOPMENT)
 
   initialPlan                 String  @default("Free")
@@ -564,9 +609,11 @@ model CatalogConfig {
   disallowSelfServiceDowngrade Boolean @default(false)
 
   team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  environment WorkspaceEnvironment? @relation(fields: [environmentId], references: [id], onDelete: SetNull)
 
   @@unique([teamId, environmentMode])
   @@index([teamId, environmentMode])
+  @@index([teamId, environmentId])
 }
 
 model CatalogCoupon {
@@ -631,16 +678,19 @@ model TemplateInstall {
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
   teamId          String
+  environmentId   String?
   templateId      String
   installedVersion Int
   environmentMode EnvironmentMode     @default(DEVELOPMENT)
   chainId         Int
   status          TemplateInstallStatus @default(INSTALLED)
 
-  team     Team            @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  template BillingTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  team        Team                  @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  template    BillingTemplate       @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  environment WorkspaceEnvironment? @relation(fields: [environmentId], references: [id], onDelete: SetNull)
 
   @@index([teamId, environmentMode, status])
+  @@index([teamId, environmentId, status])
   @@unique([teamId, templateId, environmentMode, chainId])
 }
 
@@ -680,6 +730,7 @@ model Invoice {
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
   teamId          String
+  environmentId   String?
   environmentMode EnvironmentMode @default(DEVELOPMENT)
   status          InvoiceStatus   @default(DRAFT)
 
@@ -702,17 +753,19 @@ model Invoice {
   planId      String?
   metadata    Json?
 
-  team       Team              @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  lineItems  InvoiceLine[]
-  deliveries InvoiceDelivery[]
-  creditNotes CreditNote[]
-  payments   Payment[]
-  refunds    Refund[]
+  team         Team                  @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  environment  WorkspaceEnvironment? @relation(fields: [environmentId], references: [id], onDelete: SetNull)
+  lineItems    InvoiceLine[]
+  deliveries   InvoiceDelivery[]
+  creditNotes  CreditNote[]
+  payments     Payment[]
+  refunds      Refund[]
   paymentLinks PaymentLink[]
   checkoutSessions CheckoutSession[]
 
   @@index([teamId, status, issuedAt])
   @@index([teamId, environmentMode])
+  @@index([teamId, environmentId])
 }
 
 model InvoiceLine {
@@ -815,6 +868,7 @@ model SubscriptionState {
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
   teamId            String
+  environmentId     String?
   companyId         String             @unique
   walletAddress     String?
   status            SubscriptionStatus @default(ACTIVE)
@@ -835,8 +889,9 @@ model SubscriptionState {
   graceEndsAt       DateTime?
   metadata          Json?
 
-  team    Team         @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  company ArcenCompany @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  team    Team                  @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  environment WorkspaceEnvironment? @relation(fields: [environmentId], references: [id], onDelete: SetNull)
+  company ArcenCompany          @relation(fields: [companyId], references: [id], onDelete: Cascade)
   payments Payment[]
   billingAdjustments BillingAdjustment[]
   checkoutSessions CheckoutSession[]
@@ -844,6 +899,7 @@ model SubscriptionState {
   @@index([teamId, status])
   @@index([teamId, walletAddress])
   @@index([teamId, chainId])
+  @@index([teamId, environmentId])
 }
 
 model Payment {
@@ -851,6 +907,7 @@ model Payment {
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
   teamId              String
+  environmentId       String?
   companyId           String?
   invoiceId           String?
   subscriptionStateId String?
@@ -869,10 +926,11 @@ model Payment {
   failedAt            DateTime?
   metadata            Json?
 
-  team              Team              @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  company           ArcenCompany?     @relation(fields: [companyId], references: [id], onDelete: SetNull)
-  invoice           Invoice?          @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
-  subscriptionState SubscriptionState? @relation(fields: [subscriptionStateId], references: [id], onDelete: SetNull)
+  team              Team                  @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  environment       WorkspaceEnvironment? @relation(fields: [environmentId], references: [id], onDelete: SetNull)
+  company           ArcenCompany?         @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  invoice           Invoice?              @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  subscriptionState SubscriptionState?    @relation(fields: [subscriptionStateId], references: [id], onDelete: SetNull)
   attempts          PaymentAttempt[]
   billingAdjustments BillingAdjustment[]
   refunds           Refund[]
@@ -880,6 +938,7 @@ model Payment {
   addOnGrants CompanyAddOnGrant[]
 
   @@index([teamId, status, occurredAt])
+  @@index([teamId, environmentId])
   @@index([companyId, createdAt])
   @@index([invoiceId])
   @@index([subscriptionStateId])
@@ -1049,6 +1108,8 @@ model PlatformTierConfig {
   maxTeamMembers    Int     @default(1)
   maxFeatureFlags   Int     @default(3)
   maxChains         Int     @default(1)
+  maxDevelopmentEnvironments Int @default(2)
+  maxProductionEnvironments  Int @default(2)
   platformFeeBps    Int     @default(200)      // 2.0% for Free
   gasSponsored      Boolean @default(true)
   gasDailyBudgetUsd Decimal @default(0.50) @db.Decimal(10, 2)
@@ -1236,6 +1297,7 @@ model PaymentLink {
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
   teamId           String
+  environmentId    String?
   kind             PaymentLinkKind
   status           PaymentLinkStatus @default(ACTIVE)
   name             String
@@ -1254,13 +1316,15 @@ model PaymentLink {
   expiresAt        DateTime?
   metadata         Json?
 
-  team             Team              @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  company          ArcenCompany?     @relation(fields: [companyId], references: [id], onDelete: SetNull)
-  catalogAddOn     CatalogAddOn?     @relation(fields: [catalogAddOnId], references: [id], onDelete: SetNull)
-  invoice          Invoice?          @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  team             Team                  @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  environment      WorkspaceEnvironment? @relation(fields: [environmentId], references: [id], onDelete: SetNull)
+  company          ArcenCompany?         @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  catalogAddOn     CatalogAddOn?         @relation(fields: [catalogAddOnId], references: [id], onDelete: SetNull)
+  invoice          Invoice?              @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
   checkoutSessions CheckoutSession[]
 
   @@index([teamId, status, kind])
+  @@index([teamId, environmentId, status])
   @@index([teamId, companyId])
   @@index([teamId, catalogAddOnId])
   @@index([teamId, invoiceId])
@@ -1271,6 +1335,7 @@ model CheckoutSession {
   createdAt         DateTime               @default(now())
   updatedAt         DateTime               @updatedAt
   teamId            String
+  environmentId     String?
   paymentLinkId     String?
   companyId         String?
   catalogAddOnId    String?
@@ -1296,16 +1361,18 @@ model CheckoutSession {
   cancelledAt       DateTime?
   metadata          Json?
 
-  team             Team               @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  paymentLink      PaymentLink?       @relation(fields: [paymentLinkId], references: [id], onDelete: SetNull)
-  company          ArcenCompany?      @relation(fields: [companyId], references: [id], onDelete: SetNull)
-  catalogAddOn     CatalogAddOn?      @relation(fields: [catalogAddOnId], references: [id], onDelete: SetNull)
-  invoice          Invoice?           @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
-  payment          Payment?           @relation(fields: [paymentId], references: [id], onDelete: SetNull)
-  subscriptionState SubscriptionState? @relation(fields: [subscriptionStateId], references: [id], onDelete: SetNull)
+  team             Team                  @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  environment      WorkspaceEnvironment? @relation(fields: [environmentId], references: [id], onDelete: SetNull)
+  paymentLink      PaymentLink?          @relation(fields: [paymentLinkId], references: [id], onDelete: SetNull)
+  company          ArcenCompany?         @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  catalogAddOn     CatalogAddOn?         @relation(fields: [catalogAddOnId], references: [id], onDelete: SetNull)
+  invoice          Invoice?              @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  payment          Payment?              @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  subscriptionState SubscriptionState?   @relation(fields: [subscriptionStateId], references: [id], onDelete: SetNull)
   addOnGrants      CompanyAddOnGrant[]
 
   @@index([teamId, status, createdAt])
+  @@index([teamId, environmentId, status])
   @@index([teamId, paymentLinkId])
   @@index([teamId, companyId])
   @@index([teamId, catalogAddOnId])

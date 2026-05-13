@@ -24,9 +24,10 @@ type RevenuePoint = {
 
 interface RevenueChartProps {
   chainId: number;
+  environmentKey: string;
 }
 
-export function RevenueChart({ chainId }: RevenueChartProps) {
+export function RevenueChart({ chainId, environmentKey }: RevenueChartProps) {
   const [data, setData] = useState<RevenuePoint[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -72,7 +73,7 @@ export function RevenueChart({ chainId }: RevenueChartProps) {
       cancelled = true;
       clearInterval(interval);
     };
-  }, [chainId]);
+  }, [chainId, environmentKey]);
 
   return (
     <div className="bg-card border border-border rounded-xl p-5 h-[380px] animate-in fade-in slide-in-from-bottom-4 duration-500">

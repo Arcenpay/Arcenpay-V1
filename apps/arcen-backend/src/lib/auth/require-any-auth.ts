@@ -18,6 +18,8 @@ export type AnyAuthContext = {
   teamId: string;
   source: "api_key" | "session";
   apiKeyId?: string;
+  sessionId?: string;
+  activeEnvironmentId?: string | null;
 };
 
 export type AnyAuthError = { error: string; status: number };
@@ -58,5 +60,10 @@ export async function requireAnyAuth(
     return { error: "No team found", status: 403 };
   }
 
-  return { teamId: teamCtx.teamId, source: "session" };
+  return {
+    teamId: teamCtx.teamId,
+    source: "session",
+    sessionId: session.sessionId,
+    activeEnvironmentId: session.activeEnvironmentId,
+  };
 }

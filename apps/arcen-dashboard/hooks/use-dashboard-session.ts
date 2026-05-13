@@ -14,6 +14,22 @@ export type DashboardSessionPayload = {
     slug: string;
     role: string;
   } | null;
+  activeEnvironment: {
+    id: string;
+    name: string;
+    mode: "DEVELOPMENT" | "PRODUCTION";
+    chainId: number;
+    chainLabel: string;
+    isActive: boolean;
+  } | null;
+  environments: Array<{
+    id: string;
+    name: string;
+    mode: "DEVELOPMENT" | "PRODUCTION";
+    chainId: number;
+    chainLabel: string;
+    isActive: boolean;
+  }>;
   teams: Array<{
     id: string;
     name: string;

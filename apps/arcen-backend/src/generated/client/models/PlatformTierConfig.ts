@@ -33,6 +33,8 @@ export type PlatformTierConfigAvgAggregateOutputType = {
   maxTeamMembers: number | null
   maxFeatureFlags: number | null
   maxChains: number | null
+  maxDevelopmentEnvironments: number | null
+  maxProductionEnvironments: number | null
   platformFeeBps: number | null
   gasDailyBudgetUsd: runtime.Decimal | null
 }
@@ -44,6 +46,8 @@ export type PlatformTierConfigSumAggregateOutputType = {
   maxTeamMembers: number | null
   maxFeatureFlags: number | null
   maxChains: number | null
+  maxDevelopmentEnvironments: number | null
+  maxProductionEnvironments: number | null
   platformFeeBps: number | null
   gasDailyBudgetUsd: runtime.Decimal | null
 }
@@ -59,6 +63,8 @@ export type PlatformTierConfigMinAggregateOutputType = {
   maxTeamMembers: number | null
   maxFeatureFlags: number | null
   maxChains: number | null
+  maxDevelopmentEnvironments: number | null
+  maxProductionEnvironments: number | null
   platformFeeBps: number | null
   gasSponsored: boolean | null
   gasDailyBudgetUsd: runtime.Decimal | null
@@ -75,6 +81,8 @@ export type PlatformTierConfigMaxAggregateOutputType = {
   maxTeamMembers: number | null
   maxFeatureFlags: number | null
   maxChains: number | null
+  maxDevelopmentEnvironments: number | null
+  maxProductionEnvironments: number | null
   platformFeeBps: number | null
   gasSponsored: boolean | null
   gasDailyBudgetUsd: runtime.Decimal | null
@@ -91,6 +99,8 @@ export type PlatformTierConfigCountAggregateOutputType = {
   maxTeamMembers: number
   maxFeatureFlags: number
   maxChains: number
+  maxDevelopmentEnvironments: number
+  maxProductionEnvironments: number
   platformFeeBps: number
   gasSponsored: number
   gasDailyBudgetUsd: number
@@ -105,6 +115,8 @@ export type PlatformTierConfigAvgAggregateInputType = {
   maxTeamMembers?: true
   maxFeatureFlags?: true
   maxChains?: true
+  maxDevelopmentEnvironments?: true
+  maxProductionEnvironments?: true
   platformFeeBps?: true
   gasDailyBudgetUsd?: true
 }
@@ -116,6 +128,8 @@ export type PlatformTierConfigSumAggregateInputType = {
   maxTeamMembers?: true
   maxFeatureFlags?: true
   maxChains?: true
+  maxDevelopmentEnvironments?: true
+  maxProductionEnvironments?: true
   platformFeeBps?: true
   gasDailyBudgetUsd?: true
 }
@@ -131,6 +145,8 @@ export type PlatformTierConfigMinAggregateInputType = {
   maxTeamMembers?: true
   maxFeatureFlags?: true
   maxChains?: true
+  maxDevelopmentEnvironments?: true
+  maxProductionEnvironments?: true
   platformFeeBps?: true
   gasSponsored?: true
   gasDailyBudgetUsd?: true
@@ -147,6 +163,8 @@ export type PlatformTierConfigMaxAggregateInputType = {
   maxTeamMembers?: true
   maxFeatureFlags?: true
   maxChains?: true
+  maxDevelopmentEnvironments?: true
+  maxProductionEnvironments?: true
   platformFeeBps?: true
   gasSponsored?: true
   gasDailyBudgetUsd?: true
@@ -163,6 +181,8 @@ export type PlatformTierConfigCountAggregateInputType = {
   maxTeamMembers?: true
   maxFeatureFlags?: true
   maxChains?: true
+  maxDevelopmentEnvironments?: true
+  maxProductionEnvironments?: true
   platformFeeBps?: true
   gasSponsored?: true
   gasDailyBudgetUsd?: true
@@ -266,6 +286,8 @@ export type PlatformTierConfigGroupByOutputType = {
   maxTeamMembers: number
   maxFeatureFlags: number
   maxChains: number
+  maxDevelopmentEnvironments: number
+  maxProductionEnvironments: number
   platformFeeBps: number
   gasSponsored: boolean
   gasDailyBudgetUsd: runtime.Decimal
@@ -305,6 +327,8 @@ export type PlatformTierConfigWhereInput = {
   maxTeamMembers?: Prisma.IntFilter<"PlatformTierConfig"> | number
   maxFeatureFlags?: Prisma.IntFilter<"PlatformTierConfig"> | number
   maxChains?: Prisma.IntFilter<"PlatformTierConfig"> | number
+  maxDevelopmentEnvironments?: Prisma.IntFilter<"PlatformTierConfig"> | number
+  maxProductionEnvironments?: Prisma.IntFilter<"PlatformTierConfig"> | number
   platformFeeBps?: Prisma.IntFilter<"PlatformTierConfig"> | number
   gasSponsored?: Prisma.BoolFilter<"PlatformTierConfig"> | boolean
   gasDailyBudgetUsd?: Prisma.DecimalFilter<"PlatformTierConfig"> | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -321,6 +345,8 @@ export type PlatformTierConfigOrderByWithRelationInput = {
   maxTeamMembers?: Prisma.SortOrder
   maxFeatureFlags?: Prisma.SortOrder
   maxChains?: Prisma.SortOrder
+  maxDevelopmentEnvironments?: Prisma.SortOrder
+  maxProductionEnvironments?: Prisma.SortOrder
   platformFeeBps?: Prisma.SortOrder
   gasSponsored?: Prisma.SortOrder
   gasDailyBudgetUsd?: Prisma.SortOrder
@@ -340,6 +366,8 @@ export type PlatformTierConfigWhereUniqueInput = Prisma.AtLeast<{
   maxTeamMembers?: Prisma.IntFilter<"PlatformTierConfig"> | number
   maxFeatureFlags?: Prisma.IntFilter<"PlatformTierConfig"> | number
   maxChains?: Prisma.IntFilter<"PlatformTierConfig"> | number
+  maxDevelopmentEnvironments?: Prisma.IntFilter<"PlatformTierConfig"> | number
+  maxProductionEnvironments?: Prisma.IntFilter<"PlatformTierConfig"> | number
   platformFeeBps?: Prisma.IntFilter<"PlatformTierConfig"> | number
   gasSponsored?: Prisma.BoolFilter<"PlatformTierConfig"> | boolean
   gasDailyBudgetUsd?: Prisma.DecimalFilter<"PlatformTierConfig"> | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -356,6 +384,8 @@ export type PlatformTierConfigOrderByWithAggregationInput = {
   maxTeamMembers?: Prisma.SortOrder
   maxFeatureFlags?: Prisma.SortOrder
   maxChains?: Prisma.SortOrder
+  maxDevelopmentEnvironments?: Prisma.SortOrder
+  maxProductionEnvironments?: Prisma.SortOrder
   platformFeeBps?: Prisma.SortOrder
   gasSponsored?: Prisma.SortOrder
   gasDailyBudgetUsd?: Prisma.SortOrder
@@ -380,6 +410,8 @@ export type PlatformTierConfigScalarWhereWithAggregatesInput = {
   maxTeamMembers?: Prisma.IntWithAggregatesFilter<"PlatformTierConfig"> | number
   maxFeatureFlags?: Prisma.IntWithAggregatesFilter<"PlatformTierConfig"> | number
   maxChains?: Prisma.IntWithAggregatesFilter<"PlatformTierConfig"> | number
+  maxDevelopmentEnvironments?: Prisma.IntWithAggregatesFilter<"PlatformTierConfig"> | number
+  maxProductionEnvironments?: Prisma.IntWithAggregatesFilter<"PlatformTierConfig"> | number
   platformFeeBps?: Prisma.IntWithAggregatesFilter<"PlatformTierConfig"> | number
   gasSponsored?: Prisma.BoolWithAggregatesFilter<"PlatformTierConfig"> | boolean
   gasDailyBudgetUsd?: Prisma.DecimalWithAggregatesFilter<"PlatformTierConfig"> | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -396,6 +428,8 @@ export type PlatformTierConfigCreateInput = {
   maxTeamMembers?: number
   maxFeatureFlags?: number
   maxChains?: number
+  maxDevelopmentEnvironments?: number
+  maxProductionEnvironments?: number
   platformFeeBps?: number
   gasSponsored?: boolean
   gasDailyBudgetUsd?: runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -412,6 +446,8 @@ export type PlatformTierConfigUncheckedCreateInput = {
   maxTeamMembers?: number
   maxFeatureFlags?: number
   maxChains?: number
+  maxDevelopmentEnvironments?: number
+  maxProductionEnvironments?: number
   platformFeeBps?: number
   gasSponsored?: boolean
   gasDailyBudgetUsd?: runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -428,6 +464,8 @@ export type PlatformTierConfigUpdateInput = {
   maxTeamMembers?: Prisma.IntFieldUpdateOperationsInput | number
   maxFeatureFlags?: Prisma.IntFieldUpdateOperationsInput | number
   maxChains?: Prisma.IntFieldUpdateOperationsInput | number
+  maxDevelopmentEnvironments?: Prisma.IntFieldUpdateOperationsInput | number
+  maxProductionEnvironments?: Prisma.IntFieldUpdateOperationsInput | number
   platformFeeBps?: Prisma.IntFieldUpdateOperationsInput | number
   gasSponsored?: Prisma.BoolFieldUpdateOperationsInput | boolean
   gasDailyBudgetUsd?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -444,6 +482,8 @@ export type PlatformTierConfigUncheckedUpdateInput = {
   maxTeamMembers?: Prisma.IntFieldUpdateOperationsInput | number
   maxFeatureFlags?: Prisma.IntFieldUpdateOperationsInput | number
   maxChains?: Prisma.IntFieldUpdateOperationsInput | number
+  maxDevelopmentEnvironments?: Prisma.IntFieldUpdateOperationsInput | number
+  maxProductionEnvironments?: Prisma.IntFieldUpdateOperationsInput | number
   platformFeeBps?: Prisma.IntFieldUpdateOperationsInput | number
   gasSponsored?: Prisma.BoolFieldUpdateOperationsInput | boolean
   gasDailyBudgetUsd?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -460,6 +500,8 @@ export type PlatformTierConfigCreateManyInput = {
   maxTeamMembers?: number
   maxFeatureFlags?: number
   maxChains?: number
+  maxDevelopmentEnvironments?: number
+  maxProductionEnvironments?: number
   platformFeeBps?: number
   gasSponsored?: boolean
   gasDailyBudgetUsd?: runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -476,6 +518,8 @@ export type PlatformTierConfigUpdateManyMutationInput = {
   maxTeamMembers?: Prisma.IntFieldUpdateOperationsInput | number
   maxFeatureFlags?: Prisma.IntFieldUpdateOperationsInput | number
   maxChains?: Prisma.IntFieldUpdateOperationsInput | number
+  maxDevelopmentEnvironments?: Prisma.IntFieldUpdateOperationsInput | number
+  maxProductionEnvironments?: Prisma.IntFieldUpdateOperationsInput | number
   platformFeeBps?: Prisma.IntFieldUpdateOperationsInput | number
   gasSponsored?: Prisma.BoolFieldUpdateOperationsInput | boolean
   gasDailyBudgetUsd?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -492,6 +536,8 @@ export type PlatformTierConfigUncheckedUpdateManyInput = {
   maxTeamMembers?: Prisma.IntFieldUpdateOperationsInput | number
   maxFeatureFlags?: Prisma.IntFieldUpdateOperationsInput | number
   maxChains?: Prisma.IntFieldUpdateOperationsInput | number
+  maxDevelopmentEnvironments?: Prisma.IntFieldUpdateOperationsInput | number
+  maxProductionEnvironments?: Prisma.IntFieldUpdateOperationsInput | number
   platformFeeBps?: Prisma.IntFieldUpdateOperationsInput | number
   gasSponsored?: Prisma.BoolFieldUpdateOperationsInput | boolean
   gasDailyBudgetUsd?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -508,6 +554,8 @@ export type PlatformTierConfigCountOrderByAggregateInput = {
   maxTeamMembers?: Prisma.SortOrder
   maxFeatureFlags?: Prisma.SortOrder
   maxChains?: Prisma.SortOrder
+  maxDevelopmentEnvironments?: Prisma.SortOrder
+  maxProductionEnvironments?: Prisma.SortOrder
   platformFeeBps?: Prisma.SortOrder
   gasSponsored?: Prisma.SortOrder
   gasDailyBudgetUsd?: Prisma.SortOrder
@@ -520,6 +568,8 @@ export type PlatformTierConfigAvgOrderByAggregateInput = {
   maxTeamMembers?: Prisma.SortOrder
   maxFeatureFlags?: Prisma.SortOrder
   maxChains?: Prisma.SortOrder
+  maxDevelopmentEnvironments?: Prisma.SortOrder
+  maxProductionEnvironments?: Prisma.SortOrder
   platformFeeBps?: Prisma.SortOrder
   gasDailyBudgetUsd?: Prisma.SortOrder
 }
@@ -535,6 +585,8 @@ export type PlatformTierConfigMaxOrderByAggregateInput = {
   maxTeamMembers?: Prisma.SortOrder
   maxFeatureFlags?: Prisma.SortOrder
   maxChains?: Prisma.SortOrder
+  maxDevelopmentEnvironments?: Prisma.SortOrder
+  maxProductionEnvironments?: Prisma.SortOrder
   platformFeeBps?: Prisma.SortOrder
   gasSponsored?: Prisma.SortOrder
   gasDailyBudgetUsd?: Prisma.SortOrder
@@ -551,6 +603,8 @@ export type PlatformTierConfigMinOrderByAggregateInput = {
   maxTeamMembers?: Prisma.SortOrder
   maxFeatureFlags?: Prisma.SortOrder
   maxChains?: Prisma.SortOrder
+  maxDevelopmentEnvironments?: Prisma.SortOrder
+  maxProductionEnvironments?: Prisma.SortOrder
   platformFeeBps?: Prisma.SortOrder
   gasSponsored?: Prisma.SortOrder
   gasDailyBudgetUsd?: Prisma.SortOrder
@@ -563,6 +617,8 @@ export type PlatformTierConfigSumOrderByAggregateInput = {
   maxTeamMembers?: Prisma.SortOrder
   maxFeatureFlags?: Prisma.SortOrder
   maxChains?: Prisma.SortOrder
+  maxDevelopmentEnvironments?: Prisma.SortOrder
+  maxProductionEnvironments?: Prisma.SortOrder
   platformFeeBps?: Prisma.SortOrder
   gasDailyBudgetUsd?: Prisma.SortOrder
 }
@@ -580,6 +636,8 @@ export type PlatformTierConfigSelect<ExtArgs extends runtime.Types.Extensions.In
   maxTeamMembers?: boolean
   maxFeatureFlags?: boolean
   maxChains?: boolean
+  maxDevelopmentEnvironments?: boolean
+  maxProductionEnvironments?: boolean
   platformFeeBps?: boolean
   gasSponsored?: boolean
   gasDailyBudgetUsd?: boolean
@@ -596,6 +654,8 @@ export type PlatformTierConfigSelectCreateManyAndReturn<ExtArgs extends runtime.
   maxTeamMembers?: boolean
   maxFeatureFlags?: boolean
   maxChains?: boolean
+  maxDevelopmentEnvironments?: boolean
+  maxProductionEnvironments?: boolean
   platformFeeBps?: boolean
   gasSponsored?: boolean
   gasDailyBudgetUsd?: boolean
@@ -612,6 +672,8 @@ export type PlatformTierConfigSelectUpdateManyAndReturn<ExtArgs extends runtime.
   maxTeamMembers?: boolean
   maxFeatureFlags?: boolean
   maxChains?: boolean
+  maxDevelopmentEnvironments?: boolean
+  maxProductionEnvironments?: boolean
   platformFeeBps?: boolean
   gasSponsored?: boolean
   gasDailyBudgetUsd?: boolean
@@ -628,12 +690,14 @@ export type PlatformTierConfigSelectScalar = {
   maxTeamMembers?: boolean
   maxFeatureFlags?: boolean
   maxChains?: boolean
+  maxDevelopmentEnvironments?: boolean
+  maxProductionEnvironments?: boolean
   platformFeeBps?: boolean
   gasSponsored?: boolean
   gasDailyBudgetUsd?: boolean
 }
 
-export type PlatformTierConfigOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "updatedAt" | "tier" | "maxWorkspaces" | "maxPlans" | "maxSubscribers" | "maxTeamMembers" | "maxFeatureFlags" | "maxChains" | "platformFeeBps" | "gasSponsored" | "gasDailyBudgetUsd", ExtArgs["result"]["platformTierConfig"]>
+export type PlatformTierConfigOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "updatedAt" | "tier" | "maxWorkspaces" | "maxPlans" | "maxSubscribers" | "maxTeamMembers" | "maxFeatureFlags" | "maxChains" | "maxDevelopmentEnvironments" | "maxProductionEnvironments" | "platformFeeBps" | "gasSponsored" | "gasDailyBudgetUsd", ExtArgs["result"]["platformTierConfig"]>
 
 export type $PlatformTierConfigPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "PlatformTierConfig"
@@ -649,6 +713,8 @@ export type $PlatformTierConfigPayload<ExtArgs extends runtime.Types.Extensions.
     maxTeamMembers: number
     maxFeatureFlags: number
     maxChains: number
+    maxDevelopmentEnvironments: number
+    maxProductionEnvironments: number
     platformFeeBps: number
     gasSponsored: boolean
     gasDailyBudgetUsd: runtime.Decimal
@@ -1085,6 +1151,8 @@ export interface PlatformTierConfigFieldRefs {
   readonly maxTeamMembers: Prisma.FieldRef<"PlatformTierConfig", 'Int'>
   readonly maxFeatureFlags: Prisma.FieldRef<"PlatformTierConfig", 'Int'>
   readonly maxChains: Prisma.FieldRef<"PlatformTierConfig", 'Int'>
+  readonly maxDevelopmentEnvironments: Prisma.FieldRef<"PlatformTierConfig", 'Int'>
+  readonly maxProductionEnvironments: Prisma.FieldRef<"PlatformTierConfig", 'Int'>
   readonly platformFeeBps: Prisma.FieldRef<"PlatformTierConfig", 'Int'>
   readonly gasSponsored: Prisma.FieldRef<"PlatformTierConfig", 'Boolean'>
   readonly gasDailyBudgetUsd: Prisma.FieldRef<"PlatformTierConfig", 'Decimal'>

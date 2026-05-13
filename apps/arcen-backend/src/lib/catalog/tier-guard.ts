@@ -75,6 +75,8 @@ const DEFAULT_LIMITS: Record<
         maxTeamMembers: number;
         maxFeatureFlags: number;
         maxChains: number;
+        maxDevelopmentEnvironments: number;
+        maxProductionEnvironments: number;
         platformFeeBps: number;
         gasDailyBudgetUsd: number;
     }
@@ -86,6 +88,8 @@ const DEFAULT_LIMITS: Record<
         maxTeamMembers: 1,
         maxFeatureFlags: 5,
         maxChains: 1,
+        maxDevelopmentEnvironments: 2,
+        maxProductionEnvironments: 2,
         platformFeeBps: 200, // 2.0% — unified fee (replaces stacked on-chain + off-chain)
         gasDailyBudgetUsd: 1.0,
     },
@@ -96,6 +100,8 @@ const DEFAULT_LIMITS: Record<
         maxTeamMembers: 10,
         maxFeatureFlags: 999,
         maxChains: 3,
+        maxDevelopmentEnvironments: 10,
+        maxProductionEnvironments: 10,
         platformFeeBps: 100, // 1.0%
         gasDailyBudgetUsd: 10.0,
     },
@@ -106,6 +112,8 @@ const DEFAULT_LIMITS: Record<
         maxTeamMembers: 999,
         maxFeatureFlags: 999,
         maxChains: 999,
+        maxDevelopmentEnvironments: 999,
+        maxProductionEnvironments: 999,
         platformFeeBps: 50, // 0.5%
         gasDailyBudgetUsd: 100.0,
     },
@@ -125,6 +133,8 @@ export async function getTierLimits(tier: PlatformTier): Promise<TierLimits> {
         maxTeamMembers: row.maxTeamMembers,
         maxFeatureFlags: row.maxFeatureFlags,
         maxChains: row.maxChains,
+        maxDevelopmentEnvironments: row.maxDevelopmentEnvironments,
+        maxProductionEnvironments: row.maxProductionEnvironments,
         platformFeeBps: row.platformFeeBps,
         gasDailyBudgetUsd: Number(row.gasDailyBudgetUsd),
     };

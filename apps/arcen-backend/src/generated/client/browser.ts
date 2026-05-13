@@ -38,6 +38,11 @@ export type EmailAuthCode = Prisma.EmailAuthCodeModel
  */
 export type Team = Prisma.TeamModel
 /**
+ * Model WorkspaceEnvironment
+ * 
+ */
+export type WorkspaceEnvironment = Prisma.WorkspaceEnvironmentModel
+/**
  * Model TeamMember
  * 
  */

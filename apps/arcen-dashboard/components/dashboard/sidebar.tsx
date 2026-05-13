@@ -97,7 +97,7 @@ export function Sidebar({
   onCollapsedChange,
 }: SidebarProps) {
   const { address, isConnected } = useAccount();
-  const { envMode } = useEnvironment();
+  const { envMode, activeEnvironment } = useEnvironment();
   const { data: sessionData } = useDashboardSession();
   const [mounted, setMounted] = useState(false);
 
@@ -111,7 +111,7 @@ export function Sidebar({
     ? `${address.slice(0, 6)}…${address.slice(-4)}`
     : null;
 
-  const networkLabel = getChainLabel(resolveEnvironmentChainId(envMode));
+  const networkLabel = activeEnvironment?.chainLabel ?? getChainLabel(resolveEnvironmentChainId(envMode));
 
   return (
     <aside
@@ -243,7 +243,7 @@ export function Sidebar({
         </div>
         {mounted && isConnected && (
           <p className="text-[10px] text-muted-foreground/50 px-2.5 pb-2 -mt-1 truncate">
-            {networkLabel}
+            {activeEnvironment?.name ? `${activeEnvironment.name} · ${networkLabel}` : networkLabel}
           </p>
         )}
       </div>

@@ -55,6 +55,7 @@ export const ModelName = {
   AuthSession: 'AuthSession',
   EmailAuthCode: 'EmailAuthCode',
   Team: 'Team',
+  WorkspaceEnvironment: 'WorkspaceEnvironment',
   TeamMember: 'TeamMember',
   TeamInvitation: 'TeamInvitation',
   ProviderProfile: 'ProviderProfile',
@@ -140,6 +141,7 @@ export const AuthSessionScalarFieldEnum = {
   id: 'id',
   createdAt: 'createdAt',
   userId: 'userId',
+  activeEnvironmentId: 'activeEnvironmentId',
   tokenHash: 'tokenHash',
   expiresAt: 'expiresAt',
   lastSeenAt: 'lastSeenAt',
@@ -178,6 +180,19 @@ export const TeamScalarFieldEnum = {
 } as const
 
 export type TeamScalarFieldEnum = (typeof TeamScalarFieldEnum)[keyof typeof TeamScalarFieldEnum]
+
+
+export const WorkspaceEnvironmentScalarFieldEnum = {
+  id: 'id',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  teamId: 'teamId',
+  name: 'name',
+  mode: 'mode',
+  chainId: 'chainId'
+} as const
+
+export type WorkspaceEnvironmentScalarFieldEnum = (typeof WorkspaceEnvironmentScalarFieldEnum)[keyof typeof WorkspaceEnvironmentScalarFieldEnum]
 
 
 export const TeamMemberScalarFieldEnum = {
@@ -254,6 +269,7 @@ export const CatalogPlanScalarFieldEnum = {
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
   teamId: 'teamId',
+  environmentId: 'environmentId',
   environmentMode: 'environmentMode',
   status: 'status',
   name: 'name',
@@ -283,6 +299,7 @@ export const CatalogAddOnScalarFieldEnum = {
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
   teamId: 'teamId',
+  environmentId: 'environmentId',
   environmentMode: 'environmentMode',
   status: 'status',
   name: 'name',
@@ -311,6 +328,7 @@ export const CatalogCreditTypeScalarFieldEnum = {
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
   teamId: 'teamId',
+  environmentId: 'environmentId',
   environmentMode: 'environmentMode',
   status: 'status',
   name: 'name',
@@ -337,6 +355,7 @@ export const CatalogVersionScalarFieldEnum = {
   createdAt: 'createdAt',
   publishedAt: 'publishedAt',
   teamId: 'teamId',
+  environmentId: 'environmentId',
   environmentMode: 'environmentMode',
   entityType: 'entityType',
   entityId: 'entityId',
@@ -353,6 +372,7 @@ export const CatalogConfigScalarFieldEnum = {
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
   teamId: 'teamId',
+  environmentId: 'environmentId',
   environmentMode: 'environmentMode',
   initialPlan: 'initialPlan',
   fallbackPlan: 'fallbackPlan',
@@ -424,6 +444,7 @@ export const TemplateInstallScalarFieldEnum = {
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
   teamId: 'teamId',
+  environmentId: 'environmentId',
   templateId: 'templateId',
   installedVersion: 'installedVersion',
   environmentMode: 'environmentMode',
@@ -467,6 +488,7 @@ export const InvoiceScalarFieldEnum = {
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
   teamId: 'teamId',
+  environmentId: 'environmentId',
   environmentMode: 'environmentMode',
   status: 'status',
   number: 'number',
@@ -578,6 +600,7 @@ export const SubscriptionStateScalarFieldEnum = {
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
   teamId: 'teamId',
+  environmentId: 'environmentId',
   companyId: 'companyId',
   walletAddress: 'walletAddress',
   status: 'status',
@@ -605,6 +628,7 @@ export const PaymentScalarFieldEnum = {
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
   teamId: 'teamId',
+  environmentId: 'environmentId',
   companyId: 'companyId',
   invoiceId: 'invoiceId',
   subscriptionStateId: 'subscriptionStateId',
@@ -761,6 +785,8 @@ export const PlatformTierConfigScalarFieldEnum = {
   maxTeamMembers: 'maxTeamMembers',
   maxFeatureFlags: 'maxFeatureFlags',
   maxChains: 'maxChains',
+  maxDevelopmentEnvironments: 'maxDevelopmentEnvironments',
+  maxProductionEnvironments: 'maxProductionEnvironments',
   platformFeeBps: 'platformFeeBps',
   gasSponsored: 'gasSponsored',
   gasDailyBudgetUsd: 'gasDailyBudgetUsd'
@@ -892,6 +918,7 @@ export const PaymentLinkScalarFieldEnum = {
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
   teamId: 'teamId',
+  environmentId: 'environmentId',
   kind: 'kind',
   status: 'status',
   name: 'name',
@@ -919,6 +946,7 @@ export const CheckoutSessionScalarFieldEnum = {
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
   teamId: 'teamId',
+  environmentId: 'environmentId',
   paymentLinkId: 'paymentLinkId',
   companyId: 'companyId',
   catalogAddOnId: 'catalogAddOnId',

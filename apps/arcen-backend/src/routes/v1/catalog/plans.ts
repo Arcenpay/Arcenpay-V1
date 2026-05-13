@@ -6,6 +6,7 @@ import { writeAuditEvent } from "../../../lib/platform/audit.js";
 import { resolvePlanNetwork } from "../../../lib/catalog/plan-network.js";
 import { toPrismaNullableJson } from "../../../utils/prisma-json.js";
 import { assertCanCreatePlan } from "../../../lib/catalog/tier-guard.js";
+import { requireResolvedActiveEnvironment } from "../../../lib/environments/workspace-environments.js";
 
 const listSchema = z.object({
   environmentMode: z.enum(["DEVELOPMENT", "PRODUCTION"]).optional(),
@@ -95,12 +96,18 @@ export async function listPlans(c: Context) {
     return c.json({ error: "Invalid query", details: parsed.error.flatten().fieldErrors }, 400 as any);
   }
 
+  const activeEnvironment = await requireResolvedActiveEnvironment(
+    auth.session,
+    auth.team.teamId,
+  );
+  if (!activeEnvironment) {
+    return c.json({ error: "No workspace environment selected" }, 409 as any);
+  }
+
   const plans = await db.catalogPlan.findMany({
     where: {
       teamId: auth.team.teamId,
-      ...(parsed.data.environmentMode && {
-        environmentMode: parsed.data.environmentMode,
-      }),
+      environmentId: activeEnvironment.id,
       ...(parsed.data.status && { status: parsed.data.status }),
     },
     orderBy: [{ updatedAt: "desc" }],
@@ -167,10 +174,17 @@ export async function createPlan(c: Context) {
   }
 
   const data = parsed.data;
+  const activeEnvironment = await requireResolvedActiveEnvironment(
+    auth.session,
+    auth.team.teamId,
+  );
+  if (!activeEnvironment) {
+    return c.json({ error: "No workspace environment selected" }, 409 as any);
+  }
   const resolvedNetwork = resolvePlanNetwork({
-    environmentMode: data.environmentMode,
+    environmentMode: activeEnvironment.mode,
     acceptedToken: data.acceptedToken,
-    requestedChainId: data.chainId,
+    requestedChainId: activeEnvironment.chainId,
   });
   if (!resolvedNetwork) {
     return c.json({
@@ -195,7 +209,8 @@ export async function createPlan(c: Context) {
   const plan = await db.catalogPlan.create({
     data: {
       teamId: auth.team.teamId,
-      environmentMode: data.environmentMode,
+      environmentId: activeEnvironment.id,
+      environmentMode: activeEnvironment.mode,
       name: data.name,
       tier: data.tier,
       description: data.description,
@@ -205,7 +220,7 @@ export async function createPlan(c: Context) {
       }),
       billingInterval: data.billingInterval,
       acceptedToken: resolvedNetwork.acceptedToken,
-      chainId: resolvedNetwork.chainId,
+      chainId: activeEnvironment.chainId,
       metadata: toPrismaNullableJson(data.metadata),
       status: "DRAFT",
       active: true,
@@ -217,6 +232,7 @@ export async function createPlan(c: Context) {
   await db.catalogVersion.create({
     data: {
       teamId: auth.team.teamId,
+      environmentId: activeEnvironment.id,
       environmentMode: plan.environmentMode,
       entityType: "PLAN",
       entityId: plan.id,
@@ -255,6 +271,9 @@ export async function updatePlan(c: Context) {
   });
   if (!existing) {
     return c.json({ error: "Plan not found" }, 404 as any);
+  }
+  if (!existing.environmentId) {
+    return c.json({ error: "Legacy plans without environments cannot be edited here." }, 409 as any);
   }
 
   const nextVersion = existing.version + 1;
@@ -373,6 +392,7 @@ export async function updatePlan(c: Context) {
   await db.catalogVersion.create({
     data: {
       teamId: auth.team.teamId,
+      environmentId: existing.environmentId,
       environmentMode: updated.environmentMode,
       entityType: "PLAN",
       entityId: updated.id,
@@ -413,6 +433,9 @@ export async function deletePlan(c: Context) {
   });
   if (!existing) {
     return c.json({ error: "Plan not found" }, 404 as any);
+  }
+  if (!existing.environmentId) {
+    return c.json({ error: "Legacy plans without environments cannot be deleted here." }, 409 as any);
   }
 
   if (existing.status === "PUBLISHED") {

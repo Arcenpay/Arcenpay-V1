@@ -25,9 +25,10 @@ type ProofHistoryPayload = {
 
 interface RecentActivityProps {
     chainId: number;
+    environmentKey: string;
 }
 
-export function RecentActivity({ chainId }: RecentActivityProps) {
+export function RecentActivity({ chainId, environmentKey }: RecentActivityProps) {
     const [jobs, setJobs] = useState<ProofHistoryJob[]>([]);
     const [loading, setLoading] = useState(true);
     const [warning, setWarning] = useState<string | null>(null);
@@ -72,7 +73,7 @@ export function RecentActivity({ chainId }: RecentActivityProps) {
             cancelled = true;
             clearInterval(interval);
         };
-    }, [chainId]);
+    }, [chainId, environmentKey]);
 
     return (
         <div className="bg-card border border-border rounded-xl p-5 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-200">

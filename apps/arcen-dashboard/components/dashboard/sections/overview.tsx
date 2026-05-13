@@ -37,7 +37,7 @@ type OverviewPayload = {
 export function OverviewSection() {
   const { isConnected } = useAccount();
   const walletChainId = useChainId();
-  const { envMode, isLoading: envLoading } = useEnvironment();
+  const { envMode, activeEnvironment, isLoading: envLoading } = useEnvironment();
   const [mounted, setMounted] = useState(false);
   const [payload, setPayload] = useState<OverviewPayload | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -46,7 +46,8 @@ export function OverviewSection() {
     setMounted(true);
   }, []);
 
-  const effectiveChainId = resolveEnvironmentChainId(envMode);
+  const effectiveChainId = activeEnvironment?.chainId ?? resolveEnvironmentChainId(envMode);
+  const environmentKey = activeEnvironment?.id ?? envMode;
 
   useEffect(() => {
     if (!mounted || envLoading) return;
@@ -85,7 +86,7 @@ export function OverviewSection() {
       cancelled = true;
       clearInterval(interval);
     };
-  }, [mounted, envLoading, envMode, effectiveChainId]);
+  }, [mounted, envLoading, envMode, effectiveChainId, environmentKey]);
 
   const metrics = {
     activeSubscribers:
@@ -165,9 +166,15 @@ export function OverviewSection() {
       {/* Chart + Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          <RevenueChart chainId={effectiveChainId} />
+          <RevenueChart
+            chainId={effectiveChainId}
+            environmentKey={environmentKey}
+          />
         </div>
-        <RecentActivity chainId={effectiveChainId} />
+        <RecentActivity
+          chainId={effectiveChainId}
+          environmentKey={environmentKey}
+        />
       </div>
     </div>
   );

@@ -41,6 +41,7 @@ export type TemplateInstallMinAggregateOutputType = {
   createdAt: Date | null
   updatedAt: Date | null
   teamId: string | null
+  environmentId: string | null
   templateId: string | null
   installedVersion: number | null
   environmentMode: $Enums.EnvironmentMode | null
@@ -53,6 +54,7 @@ export type TemplateInstallMaxAggregateOutputType = {
   createdAt: Date | null
   updatedAt: Date | null
   teamId: string | null
+  environmentId: string | null
   templateId: string | null
   installedVersion: number | null
   environmentMode: $Enums.EnvironmentMode | null
@@ -65,6 +67,7 @@ export type TemplateInstallCountAggregateOutputType = {
   createdAt: number
   updatedAt: number
   teamId: number
+  environmentId: number
   templateId: number
   installedVersion: number
   environmentMode: number
@@ -89,6 +92,7 @@ export type TemplateInstallMinAggregateInputType = {
   createdAt?: true
   updatedAt?: true
   teamId?: true
+  environmentId?: true
   templateId?: true
   installedVersion?: true
   environmentMode?: true
@@ -101,6 +105,7 @@ export type TemplateInstallMaxAggregateInputType = {
   createdAt?: true
   updatedAt?: true
   teamId?: true
+  environmentId?: true
   templateId?: true
   installedVersion?: true
   environmentMode?: true
@@ -113,6 +118,7 @@ export type TemplateInstallCountAggregateInputType = {
   createdAt?: true
   updatedAt?: true
   teamId?: true
+  environmentId?: true
   templateId?: true
   installedVersion?: true
   environmentMode?: true
@@ -212,6 +218,7 @@ export type TemplateInstallGroupByOutputType = {
   createdAt: Date
   updatedAt: Date
   teamId: string
+  environmentId: string | null
   templateId: string
   installedVersion: number
   environmentMode: $Enums.EnvironmentMode
@@ -247,6 +254,7 @@ export type TemplateInstallWhereInput = {
   createdAt?: Prisma.DateTimeFilter<"TemplateInstall"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"TemplateInstall"> | Date | string
   teamId?: Prisma.StringFilter<"TemplateInstall"> | string
+  environmentId?: Prisma.StringNullableFilter<"TemplateInstall"> | string | null
   templateId?: Prisma.StringFilter<"TemplateInstall"> | string
   installedVersion?: Prisma.IntFilter<"TemplateInstall"> | number
   environmentMode?: Prisma.EnumEnvironmentModeFilter<"TemplateInstall"> | $Enums.EnvironmentMode
@@ -254,6 +262,7 @@ export type TemplateInstallWhereInput = {
   status?: Prisma.EnumTemplateInstallStatusFilter<"TemplateInstall"> | $Enums.TemplateInstallStatus
   team?: Prisma.XOR<Prisma.TeamScalarRelationFilter, Prisma.TeamWhereInput>
   template?: Prisma.XOR<Prisma.BillingTemplateScalarRelationFilter, Prisma.BillingTemplateWhereInput>
+  environment?: Prisma.XOR<Prisma.WorkspaceEnvironmentNullableScalarRelationFilter, Prisma.WorkspaceEnvironmentWhereInput> | null
 }
 
 export type TemplateInstallOrderByWithRelationInput = {
@@ -261,6 +270,7 @@ export type TemplateInstallOrderByWithRelationInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrderInput | Prisma.SortOrder
   templateId?: Prisma.SortOrder
   installedVersion?: Prisma.SortOrder
   environmentMode?: Prisma.SortOrder
@@ -268,6 +278,7 @@ export type TemplateInstallOrderByWithRelationInput = {
   status?: Prisma.SortOrder
   team?: Prisma.TeamOrderByWithRelationInput
   template?: Prisma.BillingTemplateOrderByWithRelationInput
+  environment?: Prisma.WorkspaceEnvironmentOrderByWithRelationInput
 }
 
 export type TemplateInstallWhereUniqueInput = Prisma.AtLeast<{
@@ -279,6 +290,7 @@ export type TemplateInstallWhereUniqueInput = Prisma.AtLeast<{
   createdAt?: Prisma.DateTimeFilter<"TemplateInstall"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"TemplateInstall"> | Date | string
   teamId?: Prisma.StringFilter<"TemplateInstall"> | string
+  environmentId?: Prisma.StringNullableFilter<"TemplateInstall"> | string | null
   templateId?: Prisma.StringFilter<"TemplateInstall"> | string
   installedVersion?: Prisma.IntFilter<"TemplateInstall"> | number
   environmentMode?: Prisma.EnumEnvironmentModeFilter<"TemplateInstall"> | $Enums.EnvironmentMode
@@ -286,6 +298,7 @@ export type TemplateInstallWhereUniqueInput = Prisma.AtLeast<{
   status?: Prisma.EnumTemplateInstallStatusFilter<"TemplateInstall"> | $Enums.TemplateInstallStatus
   team?: Prisma.XOR<Prisma.TeamScalarRelationFilter, Prisma.TeamWhereInput>
   template?: Prisma.XOR<Prisma.BillingTemplateScalarRelationFilter, Prisma.BillingTemplateWhereInput>
+  environment?: Prisma.XOR<Prisma.WorkspaceEnvironmentNullableScalarRelationFilter, Prisma.WorkspaceEnvironmentWhereInput> | null
 }, "id" | "teamId_templateId_environmentMode_chainId">
 
 export type TemplateInstallOrderByWithAggregationInput = {
@@ -293,6 +306,7 @@ export type TemplateInstallOrderByWithAggregationInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrderInput | Prisma.SortOrder
   templateId?: Prisma.SortOrder
   installedVersion?: Prisma.SortOrder
   environmentMode?: Prisma.SortOrder
@@ -313,6 +327,7 @@ export type TemplateInstallScalarWhereWithAggregatesInput = {
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"TemplateInstall"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"TemplateInstall"> | Date | string
   teamId?: Prisma.StringWithAggregatesFilter<"TemplateInstall"> | string
+  environmentId?: Prisma.StringNullableWithAggregatesFilter<"TemplateInstall"> | string | null
   templateId?: Prisma.StringWithAggregatesFilter<"TemplateInstall"> | string
   installedVersion?: Prisma.IntWithAggregatesFilter<"TemplateInstall"> | number
   environmentMode?: Prisma.EnumEnvironmentModeWithAggregatesFilter<"TemplateInstall"> | $Enums.EnvironmentMode
@@ -330,6 +345,7 @@ export type TemplateInstallCreateInput = {
   status?: $Enums.TemplateInstallStatus
   team: Prisma.TeamCreateNestedOneWithoutTemplateInstallsInput
   template: Prisma.BillingTemplateCreateNestedOneWithoutInstallsInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutTemplateInstallsInput
 }
 
 export type TemplateInstallUncheckedCreateInput = {
@@ -337,6 +353,7 @@ export type TemplateInstallUncheckedCreateInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   teamId: string
+  environmentId?: string | null
   templateId: string
   installedVersion: number
   environmentMode?: $Enums.EnvironmentMode
@@ -354,6 +371,7 @@ export type TemplateInstallUpdateInput = {
   status?: Prisma.EnumTemplateInstallStatusFieldUpdateOperationsInput | $Enums.TemplateInstallStatus
   team?: Prisma.TeamUpdateOneRequiredWithoutTemplateInstallsNestedInput
   template?: Prisma.BillingTemplateUpdateOneRequiredWithoutInstallsNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutTemplateInstallsNestedInput
 }
 
 export type TemplateInstallUncheckedUpdateInput = {
@@ -361,6 +379,7 @@ export type TemplateInstallUncheckedUpdateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   templateId?: Prisma.StringFieldUpdateOperationsInput | string
   installedVersion?: Prisma.IntFieldUpdateOperationsInput | number
   environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
@@ -373,6 +392,7 @@ export type TemplateInstallCreateManyInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   teamId: string
+  environmentId?: string | null
   templateId: string
   installedVersion: number
   environmentMode?: $Enums.EnvironmentMode
@@ -395,6 +415,7 @@ export type TemplateInstallUncheckedUpdateManyInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   templateId?: Prisma.StringFieldUpdateOperationsInput | string
   installedVersion?: Prisma.IntFieldUpdateOperationsInput | number
   environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
@@ -424,6 +445,7 @@ export type TemplateInstallCountOrderByAggregateInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrder
   templateId?: Prisma.SortOrder
   installedVersion?: Prisma.SortOrder
   environmentMode?: Prisma.SortOrder
@@ -441,6 +463,7 @@ export type TemplateInstallMaxOrderByAggregateInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrder
   templateId?: Prisma.SortOrder
   installedVersion?: Prisma.SortOrder
   environmentMode?: Prisma.SortOrder
@@ -453,6 +476,7 @@ export type TemplateInstallMinOrderByAggregateInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrder
   templateId?: Prisma.SortOrder
   installedVersion?: Prisma.SortOrder
   environmentMode?: Prisma.SortOrder
@@ -504,6 +528,48 @@ export type TemplateInstallUncheckedUpdateManyWithoutTeamNestedInput = {
   connect?: Prisma.TemplateInstallWhereUniqueInput | Prisma.TemplateInstallWhereUniqueInput[]
   update?: Prisma.TemplateInstallUpdateWithWhereUniqueWithoutTeamInput | Prisma.TemplateInstallUpdateWithWhereUniqueWithoutTeamInput[]
   updateMany?: Prisma.TemplateInstallUpdateManyWithWhereWithoutTeamInput | Prisma.TemplateInstallUpdateManyWithWhereWithoutTeamInput[]
+  deleteMany?: Prisma.TemplateInstallScalarWhereInput | Prisma.TemplateInstallScalarWhereInput[]
+}
+
+export type TemplateInstallCreateNestedManyWithoutEnvironmentInput = {
+  create?: Prisma.XOR<Prisma.TemplateInstallCreateWithoutEnvironmentInput, Prisma.TemplateInstallUncheckedCreateWithoutEnvironmentInput> | Prisma.TemplateInstallCreateWithoutEnvironmentInput[] | Prisma.TemplateInstallUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.TemplateInstallCreateOrConnectWithoutEnvironmentInput | Prisma.TemplateInstallCreateOrConnectWithoutEnvironmentInput[]
+  createMany?: Prisma.TemplateInstallCreateManyEnvironmentInputEnvelope
+  connect?: Prisma.TemplateInstallWhereUniqueInput | Prisma.TemplateInstallWhereUniqueInput[]
+}
+
+export type TemplateInstallUncheckedCreateNestedManyWithoutEnvironmentInput = {
+  create?: Prisma.XOR<Prisma.TemplateInstallCreateWithoutEnvironmentInput, Prisma.TemplateInstallUncheckedCreateWithoutEnvironmentInput> | Prisma.TemplateInstallCreateWithoutEnvironmentInput[] | Prisma.TemplateInstallUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.TemplateInstallCreateOrConnectWithoutEnvironmentInput | Prisma.TemplateInstallCreateOrConnectWithoutEnvironmentInput[]
+  createMany?: Prisma.TemplateInstallCreateManyEnvironmentInputEnvelope
+  connect?: Prisma.TemplateInstallWhereUniqueInput | Prisma.TemplateInstallWhereUniqueInput[]
+}
+
+export type TemplateInstallUpdateManyWithoutEnvironmentNestedInput = {
+  create?: Prisma.XOR<Prisma.TemplateInstallCreateWithoutEnvironmentInput, Prisma.TemplateInstallUncheckedCreateWithoutEnvironmentInput> | Prisma.TemplateInstallCreateWithoutEnvironmentInput[] | Prisma.TemplateInstallUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.TemplateInstallCreateOrConnectWithoutEnvironmentInput | Prisma.TemplateInstallCreateOrConnectWithoutEnvironmentInput[]
+  upsert?: Prisma.TemplateInstallUpsertWithWhereUniqueWithoutEnvironmentInput | Prisma.TemplateInstallUpsertWithWhereUniqueWithoutEnvironmentInput[]
+  createMany?: Prisma.TemplateInstallCreateManyEnvironmentInputEnvelope
+  set?: Prisma.TemplateInstallWhereUniqueInput | Prisma.TemplateInstallWhereUniqueInput[]
+  disconnect?: Prisma.TemplateInstallWhereUniqueInput | Prisma.TemplateInstallWhereUniqueInput[]
+  delete?: Prisma.TemplateInstallWhereUniqueInput | Prisma.TemplateInstallWhereUniqueInput[]
+  connect?: Prisma.TemplateInstallWhereUniqueInput | Prisma.TemplateInstallWhereUniqueInput[]
+  update?: Prisma.TemplateInstallUpdateWithWhereUniqueWithoutEnvironmentInput | Prisma.TemplateInstallUpdateWithWhereUniqueWithoutEnvironmentInput[]
+  updateMany?: Prisma.TemplateInstallUpdateManyWithWhereWithoutEnvironmentInput | Prisma.TemplateInstallUpdateManyWithWhereWithoutEnvironmentInput[]
+  deleteMany?: Prisma.TemplateInstallScalarWhereInput | Prisma.TemplateInstallScalarWhereInput[]
+}
+
+export type TemplateInstallUncheckedUpdateManyWithoutEnvironmentNestedInput = {
+  create?: Prisma.XOR<Prisma.TemplateInstallCreateWithoutEnvironmentInput, Prisma.TemplateInstallUncheckedCreateWithoutEnvironmentInput> | Prisma.TemplateInstallCreateWithoutEnvironmentInput[] | Prisma.TemplateInstallUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.TemplateInstallCreateOrConnectWithoutEnvironmentInput | Prisma.TemplateInstallCreateOrConnectWithoutEnvironmentInput[]
+  upsert?: Prisma.TemplateInstallUpsertWithWhereUniqueWithoutEnvironmentInput | Prisma.TemplateInstallUpsertWithWhereUniqueWithoutEnvironmentInput[]
+  createMany?: Prisma.TemplateInstallCreateManyEnvironmentInputEnvelope
+  set?: Prisma.TemplateInstallWhereUniqueInput | Prisma.TemplateInstallWhereUniqueInput[]
+  disconnect?: Prisma.TemplateInstallWhereUniqueInput | Prisma.TemplateInstallWhereUniqueInput[]
+  delete?: Prisma.TemplateInstallWhereUniqueInput | Prisma.TemplateInstallWhereUniqueInput[]
+  connect?: Prisma.TemplateInstallWhereUniqueInput | Prisma.TemplateInstallWhereUniqueInput[]
+  update?: Prisma.TemplateInstallUpdateWithWhereUniqueWithoutEnvironmentInput | Prisma.TemplateInstallUpdateWithWhereUniqueWithoutEnvironmentInput[]
+  updateMany?: Prisma.TemplateInstallUpdateManyWithWhereWithoutEnvironmentInput | Prisma.TemplateInstallUpdateManyWithWhereWithoutEnvironmentInput[]
   deleteMany?: Prisma.TemplateInstallScalarWhereInput | Prisma.TemplateInstallScalarWhereInput[]
 }
 
@@ -562,12 +628,14 @@ export type TemplateInstallCreateWithoutTeamInput = {
   chainId: number
   status?: $Enums.TemplateInstallStatus
   template: Prisma.BillingTemplateCreateNestedOneWithoutInstallsInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutTemplateInstallsInput
 }
 
 export type TemplateInstallUncheckedCreateWithoutTeamInput = {
   id?: string
   createdAt?: Date | string
   updatedAt?: Date | string
+  environmentId?: string | null
   templateId: string
   installedVersion: number
   environmentMode?: $Enums.EnvironmentMode
@@ -609,11 +677,62 @@ export type TemplateInstallScalarWhereInput = {
   createdAt?: Prisma.DateTimeFilter<"TemplateInstall"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"TemplateInstall"> | Date | string
   teamId?: Prisma.StringFilter<"TemplateInstall"> | string
+  environmentId?: Prisma.StringNullableFilter<"TemplateInstall"> | string | null
   templateId?: Prisma.StringFilter<"TemplateInstall"> | string
   installedVersion?: Prisma.IntFilter<"TemplateInstall"> | number
   environmentMode?: Prisma.EnumEnvironmentModeFilter<"TemplateInstall"> | $Enums.EnvironmentMode
   chainId?: Prisma.IntFilter<"TemplateInstall"> | number
   status?: Prisma.EnumTemplateInstallStatusFilter<"TemplateInstall"> | $Enums.TemplateInstallStatus
+}
+
+export type TemplateInstallCreateWithoutEnvironmentInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  installedVersion: number
+  environmentMode?: $Enums.EnvironmentMode
+  chainId: number
+  status?: $Enums.TemplateInstallStatus
+  team: Prisma.TeamCreateNestedOneWithoutTemplateInstallsInput
+  template: Prisma.BillingTemplateCreateNestedOneWithoutInstallsInput
+}
+
+export type TemplateInstallUncheckedCreateWithoutEnvironmentInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  teamId: string
+  templateId: string
+  installedVersion: number
+  environmentMode?: $Enums.EnvironmentMode
+  chainId: number
+  status?: $Enums.TemplateInstallStatus
+}
+
+export type TemplateInstallCreateOrConnectWithoutEnvironmentInput = {
+  where: Prisma.TemplateInstallWhereUniqueInput
+  create: Prisma.XOR<Prisma.TemplateInstallCreateWithoutEnvironmentInput, Prisma.TemplateInstallUncheckedCreateWithoutEnvironmentInput>
+}
+
+export type TemplateInstallCreateManyEnvironmentInputEnvelope = {
+  data: Prisma.TemplateInstallCreateManyEnvironmentInput | Prisma.TemplateInstallCreateManyEnvironmentInput[]
+  skipDuplicates?: boolean
+}
+
+export type TemplateInstallUpsertWithWhereUniqueWithoutEnvironmentInput = {
+  where: Prisma.TemplateInstallWhereUniqueInput
+  update: Prisma.XOR<Prisma.TemplateInstallUpdateWithoutEnvironmentInput, Prisma.TemplateInstallUncheckedUpdateWithoutEnvironmentInput>
+  create: Prisma.XOR<Prisma.TemplateInstallCreateWithoutEnvironmentInput, Prisma.TemplateInstallUncheckedCreateWithoutEnvironmentInput>
+}
+
+export type TemplateInstallUpdateWithWhereUniqueWithoutEnvironmentInput = {
+  where: Prisma.TemplateInstallWhereUniqueInput
+  data: Prisma.XOR<Prisma.TemplateInstallUpdateWithoutEnvironmentInput, Prisma.TemplateInstallUncheckedUpdateWithoutEnvironmentInput>
+}
+
+export type TemplateInstallUpdateManyWithWhereWithoutEnvironmentInput = {
+  where: Prisma.TemplateInstallScalarWhereInput
+  data: Prisma.XOR<Prisma.TemplateInstallUpdateManyMutationInput, Prisma.TemplateInstallUncheckedUpdateManyWithoutEnvironmentInput>
 }
 
 export type TemplateInstallCreateWithoutTemplateInput = {
@@ -625,6 +744,7 @@ export type TemplateInstallCreateWithoutTemplateInput = {
   chainId: number
   status?: $Enums.TemplateInstallStatus
   team: Prisma.TeamCreateNestedOneWithoutTemplateInstallsInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutTemplateInstallsInput
 }
 
 export type TemplateInstallUncheckedCreateWithoutTemplateInput = {
@@ -632,6 +752,7 @@ export type TemplateInstallUncheckedCreateWithoutTemplateInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   teamId: string
+  environmentId?: string | null
   installedVersion: number
   environmentMode?: $Enums.EnvironmentMode
   chainId: number
@@ -668,6 +789,7 @@ export type TemplateInstallCreateManyTeamInput = {
   id?: string
   createdAt?: Date | string
   updatedAt?: Date | string
+  environmentId?: string | null
   templateId: string
   installedVersion: number
   environmentMode?: $Enums.EnvironmentMode
@@ -684,12 +806,14 @@ export type TemplateInstallUpdateWithoutTeamInput = {
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
   status?: Prisma.EnumTemplateInstallStatusFieldUpdateOperationsInput | $Enums.TemplateInstallStatus
   template?: Prisma.BillingTemplateUpdateOneRequiredWithoutInstallsNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutTemplateInstallsNestedInput
 }
 
 export type TemplateInstallUncheckedUpdateWithoutTeamInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   templateId?: Prisma.StringFieldUpdateOperationsInput | string
   installedVersion?: Prisma.IntFieldUpdateOperationsInput | number
   environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
@@ -701,6 +825,55 @@ export type TemplateInstallUncheckedUpdateManyWithoutTeamInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  templateId?: Prisma.StringFieldUpdateOperationsInput | string
+  installedVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
+  chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  status?: Prisma.EnumTemplateInstallStatusFieldUpdateOperationsInput | $Enums.TemplateInstallStatus
+}
+
+export type TemplateInstallCreateManyEnvironmentInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  teamId: string
+  templateId: string
+  installedVersion: number
+  environmentMode?: $Enums.EnvironmentMode
+  chainId: number
+  status?: $Enums.TemplateInstallStatus
+}
+
+export type TemplateInstallUpdateWithoutEnvironmentInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  installedVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
+  chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  status?: Prisma.EnumTemplateInstallStatusFieldUpdateOperationsInput | $Enums.TemplateInstallStatus
+  team?: Prisma.TeamUpdateOneRequiredWithoutTemplateInstallsNestedInput
+  template?: Prisma.BillingTemplateUpdateOneRequiredWithoutInstallsNestedInput
+}
+
+export type TemplateInstallUncheckedUpdateWithoutEnvironmentInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  templateId?: Prisma.StringFieldUpdateOperationsInput | string
+  installedVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
+  chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  status?: Prisma.EnumTemplateInstallStatusFieldUpdateOperationsInput | $Enums.TemplateInstallStatus
+}
+
+export type TemplateInstallUncheckedUpdateManyWithoutEnvironmentInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamId?: Prisma.StringFieldUpdateOperationsInput | string
   templateId?: Prisma.StringFieldUpdateOperationsInput | string
   installedVersion?: Prisma.IntFieldUpdateOperationsInput | number
   environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
@@ -713,6 +886,7 @@ export type TemplateInstallCreateManyTemplateInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   teamId: string
+  environmentId?: string | null
   installedVersion: number
   environmentMode?: $Enums.EnvironmentMode
   chainId: number
@@ -728,6 +902,7 @@ export type TemplateInstallUpdateWithoutTemplateInput = {
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
   status?: Prisma.EnumTemplateInstallStatusFieldUpdateOperationsInput | $Enums.TemplateInstallStatus
   team?: Prisma.TeamUpdateOneRequiredWithoutTemplateInstallsNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutTemplateInstallsNestedInput
 }
 
 export type TemplateInstallUncheckedUpdateWithoutTemplateInput = {
@@ -735,6 +910,7 @@ export type TemplateInstallUncheckedUpdateWithoutTemplateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   installedVersion?: Prisma.IntFieldUpdateOperationsInput | number
   environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
@@ -746,6 +922,7 @@ export type TemplateInstallUncheckedUpdateManyWithoutTemplateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   installedVersion?: Prisma.IntFieldUpdateOperationsInput | number
   environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
   chainId?: Prisma.IntFieldUpdateOperationsInput | number
@@ -759,6 +936,7 @@ export type TemplateInstallSelect<ExtArgs extends runtime.Types.Extensions.Inter
   createdAt?: boolean
   updatedAt?: boolean
   teamId?: boolean
+  environmentId?: boolean
   templateId?: boolean
   installedVersion?: boolean
   environmentMode?: boolean
@@ -766,6 +944,7 @@ export type TemplateInstallSelect<ExtArgs extends runtime.Types.Extensions.Inter
   status?: boolean
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
   template?: boolean | Prisma.BillingTemplateDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.TemplateInstall$environmentArgs<ExtArgs>
 }, ExtArgs["result"]["templateInstall"]>
 
 export type TemplateInstallSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -773,6 +952,7 @@ export type TemplateInstallSelectCreateManyAndReturn<ExtArgs extends runtime.Typ
   createdAt?: boolean
   updatedAt?: boolean
   teamId?: boolean
+  environmentId?: boolean
   templateId?: boolean
   installedVersion?: boolean
   environmentMode?: boolean
@@ -780,6 +960,7 @@ export type TemplateInstallSelectCreateManyAndReturn<ExtArgs extends runtime.Typ
   status?: boolean
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
   template?: boolean | Prisma.BillingTemplateDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.TemplateInstall$environmentArgs<ExtArgs>
 }, ExtArgs["result"]["templateInstall"]>
 
 export type TemplateInstallSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -787,6 +968,7 @@ export type TemplateInstallSelectUpdateManyAndReturn<ExtArgs extends runtime.Typ
   createdAt?: boolean
   updatedAt?: boolean
   teamId?: boolean
+  environmentId?: boolean
   templateId?: boolean
   installedVersion?: boolean
   environmentMode?: boolean
@@ -794,6 +976,7 @@ export type TemplateInstallSelectUpdateManyAndReturn<ExtArgs extends runtime.Typ
   status?: boolean
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
   template?: boolean | Prisma.BillingTemplateDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.TemplateInstall$environmentArgs<ExtArgs>
 }, ExtArgs["result"]["templateInstall"]>
 
 export type TemplateInstallSelectScalar = {
@@ -801,6 +984,7 @@ export type TemplateInstallSelectScalar = {
   createdAt?: boolean
   updatedAt?: boolean
   teamId?: boolean
+  environmentId?: boolean
   templateId?: boolean
   installedVersion?: boolean
   environmentMode?: boolean
@@ -808,18 +992,21 @@ export type TemplateInstallSelectScalar = {
   status?: boolean
 }
 
-export type TemplateInstallOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "updatedAt" | "teamId" | "templateId" | "installedVersion" | "environmentMode" | "chainId" | "status", ExtArgs["result"]["templateInstall"]>
+export type TemplateInstallOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "updatedAt" | "teamId" | "environmentId" | "templateId" | "installedVersion" | "environmentMode" | "chainId" | "status", ExtArgs["result"]["templateInstall"]>
 export type TemplateInstallInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
   template?: boolean | Prisma.BillingTemplateDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.TemplateInstall$environmentArgs<ExtArgs>
 }
 export type TemplateInstallIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
   template?: boolean | Prisma.BillingTemplateDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.TemplateInstall$environmentArgs<ExtArgs>
 }
 export type TemplateInstallIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
   template?: boolean | Prisma.BillingTemplateDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.TemplateInstall$environmentArgs<ExtArgs>
 }
 
 export type $TemplateInstallPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -827,12 +1014,14 @@ export type $TemplateInstallPayload<ExtArgs extends runtime.Types.Extensions.Int
   objects: {
     team: Prisma.$TeamPayload<ExtArgs>
     template: Prisma.$BillingTemplatePayload<ExtArgs>
+    environment: Prisma.$WorkspaceEnvironmentPayload<ExtArgs> | null
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
     createdAt: Date
     updatedAt: Date
     teamId: string
+    environmentId: string | null
     templateId: string
     installedVersion: number
     environmentMode: $Enums.EnvironmentMode
@@ -1234,6 +1423,7 @@ export interface Prisma__TemplateInstallClient<T, Null = never, ExtArgs extends 
   readonly [Symbol.toStringTag]: "PrismaPromise"
   team<T extends Prisma.TeamDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TeamDefaultArgs<ExtArgs>>): Prisma.Prisma__TeamClient<runtime.Types.Result.GetResult<Prisma.$TeamPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   template<T extends Prisma.BillingTemplateDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.BillingTemplateDefaultArgs<ExtArgs>>): Prisma.Prisma__BillingTemplateClient<runtime.Types.Result.GetResult<Prisma.$BillingTemplatePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  environment<T extends Prisma.TemplateInstall$environmentArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TemplateInstall$environmentArgs<ExtArgs>>): Prisma.Prisma__WorkspaceEnvironmentClient<runtime.Types.Result.GetResult<Prisma.$WorkspaceEnvironmentPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1267,6 +1457,7 @@ export interface TemplateInstallFieldRefs {
   readonly createdAt: Prisma.FieldRef<"TemplateInstall", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"TemplateInstall", 'DateTime'>
   readonly teamId: Prisma.FieldRef<"TemplateInstall", 'String'>
+  readonly environmentId: Prisma.FieldRef<"TemplateInstall", 'String'>
   readonly templateId: Prisma.FieldRef<"TemplateInstall", 'String'>
   readonly installedVersion: Prisma.FieldRef<"TemplateInstall", 'Int'>
   readonly environmentMode: Prisma.FieldRef<"TemplateInstall", 'EnvironmentMode'>
@@ -1665,6 +1856,25 @@ export type TemplateInstallDeleteManyArgs<ExtArgs extends runtime.Types.Extensio
    * Limit how many TemplateInstalls to delete.
    */
   limit?: number
+}
+
+/**
+ * TemplateInstall.environment
+ */
+export type TemplateInstall$environmentArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the WorkspaceEnvironment
+   */
+  select?: Prisma.WorkspaceEnvironmentSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the WorkspaceEnvironment
+   */
+  omit?: Prisma.WorkspaceEnvironmentOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.WorkspaceEnvironmentInclude<ExtArgs> | null
+  where?: Prisma.WorkspaceEnvironmentWhereInput
 }
 
 /**

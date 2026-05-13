@@ -28,6 +28,7 @@ export type AuthSessionMinAggregateOutputType = {
   id: string | null
   createdAt: Date | null
   userId: string | null
+  activeEnvironmentId: string | null
   tokenHash: string | null
   expiresAt: Date | null
   lastSeenAt: Date | null
@@ -38,6 +39,7 @@ export type AuthSessionMaxAggregateOutputType = {
   id: string | null
   createdAt: Date | null
   userId: string | null
+  activeEnvironmentId: string | null
   tokenHash: string | null
   expiresAt: Date | null
   lastSeenAt: Date | null
@@ -48,6 +50,7 @@ export type AuthSessionCountAggregateOutputType = {
   id: number
   createdAt: number
   userId: number
+  activeEnvironmentId: number
   tokenHash: number
   expiresAt: number
   lastSeenAt: number
@@ -60,6 +63,7 @@ export type AuthSessionMinAggregateInputType = {
   id?: true
   createdAt?: true
   userId?: true
+  activeEnvironmentId?: true
   tokenHash?: true
   expiresAt?: true
   lastSeenAt?: true
@@ -70,6 +74,7 @@ export type AuthSessionMaxAggregateInputType = {
   id?: true
   createdAt?: true
   userId?: true
+  activeEnvironmentId?: true
   tokenHash?: true
   expiresAt?: true
   lastSeenAt?: true
@@ -80,6 +85,7 @@ export type AuthSessionCountAggregateInputType = {
   id?: true
   createdAt?: true
   userId?: true
+  activeEnvironmentId?: true
   tokenHash?: true
   expiresAt?: true
   lastSeenAt?: true
@@ -163,6 +169,7 @@ export type AuthSessionGroupByOutputType = {
   id: string
   createdAt: Date
   userId: string
+  activeEnvironmentId: string | null
   tokenHash: string
   expiresAt: Date
   lastSeenAt: Date
@@ -194,22 +201,26 @@ export type AuthSessionWhereInput = {
   id?: Prisma.StringFilter<"AuthSession"> | string
   createdAt?: Prisma.DateTimeFilter<"AuthSession"> | Date | string
   userId?: Prisma.StringFilter<"AuthSession"> | string
+  activeEnvironmentId?: Prisma.StringNullableFilter<"AuthSession"> | string | null
   tokenHash?: Prisma.StringFilter<"AuthSession"> | string
   expiresAt?: Prisma.DateTimeFilter<"AuthSession"> | Date | string
   lastSeenAt?: Prisma.DateTimeFilter<"AuthSession"> | Date | string
   revokedAt?: Prisma.DateTimeNullableFilter<"AuthSession"> | Date | string | null
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
+  activeEnvironment?: Prisma.XOR<Prisma.WorkspaceEnvironmentNullableScalarRelationFilter, Prisma.WorkspaceEnvironmentWhereInput> | null
 }
 
 export type AuthSessionOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   userId?: Prisma.SortOrder
+  activeEnvironmentId?: Prisma.SortOrderInput | Prisma.SortOrder
   tokenHash?: Prisma.SortOrder
   expiresAt?: Prisma.SortOrder
   lastSeenAt?: Prisma.SortOrder
   revokedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   user?: Prisma.UserOrderByWithRelationInput
+  activeEnvironment?: Prisma.WorkspaceEnvironmentOrderByWithRelationInput
 }
 
 export type AuthSessionWhereUniqueInput = Prisma.AtLeast<{
@@ -220,16 +231,19 @@ export type AuthSessionWhereUniqueInput = Prisma.AtLeast<{
   NOT?: Prisma.AuthSessionWhereInput | Prisma.AuthSessionWhereInput[]
   createdAt?: Prisma.DateTimeFilter<"AuthSession"> | Date | string
   userId?: Prisma.StringFilter<"AuthSession"> | string
+  activeEnvironmentId?: Prisma.StringNullableFilter<"AuthSession"> | string | null
   expiresAt?: Prisma.DateTimeFilter<"AuthSession"> | Date | string
   lastSeenAt?: Prisma.DateTimeFilter<"AuthSession"> | Date | string
   revokedAt?: Prisma.DateTimeNullableFilter<"AuthSession"> | Date | string | null
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
+  activeEnvironment?: Prisma.XOR<Prisma.WorkspaceEnvironmentNullableScalarRelationFilter, Prisma.WorkspaceEnvironmentWhereInput> | null
 }, "id" | "tokenHash">
 
 export type AuthSessionOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   userId?: Prisma.SortOrder
+  activeEnvironmentId?: Prisma.SortOrderInput | Prisma.SortOrder
   tokenHash?: Prisma.SortOrder
   expiresAt?: Prisma.SortOrder
   lastSeenAt?: Prisma.SortOrder
@@ -246,6 +260,7 @@ export type AuthSessionScalarWhereWithAggregatesInput = {
   id?: Prisma.StringWithAggregatesFilter<"AuthSession"> | string
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"AuthSession"> | Date | string
   userId?: Prisma.StringWithAggregatesFilter<"AuthSession"> | string
+  activeEnvironmentId?: Prisma.StringNullableWithAggregatesFilter<"AuthSession"> | string | null
   tokenHash?: Prisma.StringWithAggregatesFilter<"AuthSession"> | string
   expiresAt?: Prisma.DateTimeWithAggregatesFilter<"AuthSession"> | Date | string
   lastSeenAt?: Prisma.DateTimeWithAggregatesFilter<"AuthSession"> | Date | string
@@ -260,12 +275,14 @@ export type AuthSessionCreateInput = {
   lastSeenAt?: Date | string
   revokedAt?: Date | string | null
   user: Prisma.UserCreateNestedOneWithoutAuthSessionsInput
+  activeEnvironment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutAuthSessionsInput
 }
 
 export type AuthSessionUncheckedCreateInput = {
   id?: string
   createdAt?: Date | string
   userId: string
+  activeEnvironmentId?: string | null
   tokenHash: string
   expiresAt: Date | string
   lastSeenAt?: Date | string
@@ -280,12 +297,14 @@ export type AuthSessionUpdateInput = {
   lastSeenAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   revokedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   user?: Prisma.UserUpdateOneRequiredWithoutAuthSessionsNestedInput
+  activeEnvironment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutAuthSessionsNestedInput
 }
 
 export type AuthSessionUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   userId?: Prisma.StringFieldUpdateOperationsInput | string
+  activeEnvironmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenHash?: Prisma.StringFieldUpdateOperationsInput | string
   expiresAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastSeenAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -296,6 +315,7 @@ export type AuthSessionCreateManyInput = {
   id?: string
   createdAt?: Date | string
   userId: string
+  activeEnvironmentId?: string | null
   tokenHash: string
   expiresAt: Date | string
   lastSeenAt?: Date | string
@@ -315,6 +335,7 @@ export type AuthSessionUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   userId?: Prisma.StringFieldUpdateOperationsInput | string
+  activeEnvironmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenHash?: Prisma.StringFieldUpdateOperationsInput | string
   expiresAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastSeenAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -335,6 +356,7 @@ export type AuthSessionCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   userId?: Prisma.SortOrder
+  activeEnvironmentId?: Prisma.SortOrder
   tokenHash?: Prisma.SortOrder
   expiresAt?: Prisma.SortOrder
   lastSeenAt?: Prisma.SortOrder
@@ -345,6 +367,7 @@ export type AuthSessionMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   userId?: Prisma.SortOrder
+  activeEnvironmentId?: Prisma.SortOrder
   tokenHash?: Prisma.SortOrder
   expiresAt?: Prisma.SortOrder
   lastSeenAt?: Prisma.SortOrder
@@ -355,6 +378,7 @@ export type AuthSessionMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   userId?: Prisma.SortOrder
+  activeEnvironmentId?: Prisma.SortOrder
   tokenHash?: Prisma.SortOrder
   expiresAt?: Prisma.SortOrder
   lastSeenAt?: Prisma.SortOrder
@@ -407,6 +431,48 @@ export type NullableDateTimeFieldUpdateOperationsInput = {
   set?: Date | string | null
 }
 
+export type AuthSessionCreateNestedManyWithoutActiveEnvironmentInput = {
+  create?: Prisma.XOR<Prisma.AuthSessionCreateWithoutActiveEnvironmentInput, Prisma.AuthSessionUncheckedCreateWithoutActiveEnvironmentInput> | Prisma.AuthSessionCreateWithoutActiveEnvironmentInput[] | Prisma.AuthSessionUncheckedCreateWithoutActiveEnvironmentInput[]
+  connectOrCreate?: Prisma.AuthSessionCreateOrConnectWithoutActiveEnvironmentInput | Prisma.AuthSessionCreateOrConnectWithoutActiveEnvironmentInput[]
+  createMany?: Prisma.AuthSessionCreateManyActiveEnvironmentInputEnvelope
+  connect?: Prisma.AuthSessionWhereUniqueInput | Prisma.AuthSessionWhereUniqueInput[]
+}
+
+export type AuthSessionUncheckedCreateNestedManyWithoutActiveEnvironmentInput = {
+  create?: Prisma.XOR<Prisma.AuthSessionCreateWithoutActiveEnvironmentInput, Prisma.AuthSessionUncheckedCreateWithoutActiveEnvironmentInput> | Prisma.AuthSessionCreateWithoutActiveEnvironmentInput[] | Prisma.AuthSessionUncheckedCreateWithoutActiveEnvironmentInput[]
+  connectOrCreate?: Prisma.AuthSessionCreateOrConnectWithoutActiveEnvironmentInput | Prisma.AuthSessionCreateOrConnectWithoutActiveEnvironmentInput[]
+  createMany?: Prisma.AuthSessionCreateManyActiveEnvironmentInputEnvelope
+  connect?: Prisma.AuthSessionWhereUniqueInput | Prisma.AuthSessionWhereUniqueInput[]
+}
+
+export type AuthSessionUpdateManyWithoutActiveEnvironmentNestedInput = {
+  create?: Prisma.XOR<Prisma.AuthSessionCreateWithoutActiveEnvironmentInput, Prisma.AuthSessionUncheckedCreateWithoutActiveEnvironmentInput> | Prisma.AuthSessionCreateWithoutActiveEnvironmentInput[] | Prisma.AuthSessionUncheckedCreateWithoutActiveEnvironmentInput[]
+  connectOrCreate?: Prisma.AuthSessionCreateOrConnectWithoutActiveEnvironmentInput | Prisma.AuthSessionCreateOrConnectWithoutActiveEnvironmentInput[]
+  upsert?: Prisma.AuthSessionUpsertWithWhereUniqueWithoutActiveEnvironmentInput | Prisma.AuthSessionUpsertWithWhereUniqueWithoutActiveEnvironmentInput[]
+  createMany?: Prisma.AuthSessionCreateManyActiveEnvironmentInputEnvelope
+  set?: Prisma.AuthSessionWhereUniqueInput | Prisma.AuthSessionWhereUniqueInput[]
+  disconnect?: Prisma.AuthSessionWhereUniqueInput | Prisma.AuthSessionWhereUniqueInput[]
+  delete?: Prisma.AuthSessionWhereUniqueInput | Prisma.AuthSessionWhereUniqueInput[]
+  connect?: Prisma.AuthSessionWhereUniqueInput | Prisma.AuthSessionWhereUniqueInput[]
+  update?: Prisma.AuthSessionUpdateWithWhereUniqueWithoutActiveEnvironmentInput | Prisma.AuthSessionUpdateWithWhereUniqueWithoutActiveEnvironmentInput[]
+  updateMany?: Prisma.AuthSessionUpdateManyWithWhereWithoutActiveEnvironmentInput | Prisma.AuthSessionUpdateManyWithWhereWithoutActiveEnvironmentInput[]
+  deleteMany?: Prisma.AuthSessionScalarWhereInput | Prisma.AuthSessionScalarWhereInput[]
+}
+
+export type AuthSessionUncheckedUpdateManyWithoutActiveEnvironmentNestedInput = {
+  create?: Prisma.XOR<Prisma.AuthSessionCreateWithoutActiveEnvironmentInput, Prisma.AuthSessionUncheckedCreateWithoutActiveEnvironmentInput> | Prisma.AuthSessionCreateWithoutActiveEnvironmentInput[] | Prisma.AuthSessionUncheckedCreateWithoutActiveEnvironmentInput[]
+  connectOrCreate?: Prisma.AuthSessionCreateOrConnectWithoutActiveEnvironmentInput | Prisma.AuthSessionCreateOrConnectWithoutActiveEnvironmentInput[]
+  upsert?: Prisma.AuthSessionUpsertWithWhereUniqueWithoutActiveEnvironmentInput | Prisma.AuthSessionUpsertWithWhereUniqueWithoutActiveEnvironmentInput[]
+  createMany?: Prisma.AuthSessionCreateManyActiveEnvironmentInputEnvelope
+  set?: Prisma.AuthSessionWhereUniqueInput | Prisma.AuthSessionWhereUniqueInput[]
+  disconnect?: Prisma.AuthSessionWhereUniqueInput | Prisma.AuthSessionWhereUniqueInput[]
+  delete?: Prisma.AuthSessionWhereUniqueInput | Prisma.AuthSessionWhereUniqueInput[]
+  connect?: Prisma.AuthSessionWhereUniqueInput | Prisma.AuthSessionWhereUniqueInput[]
+  update?: Prisma.AuthSessionUpdateWithWhereUniqueWithoutActiveEnvironmentInput | Prisma.AuthSessionUpdateWithWhereUniqueWithoutActiveEnvironmentInput[]
+  updateMany?: Prisma.AuthSessionUpdateManyWithWhereWithoutActiveEnvironmentInput | Prisma.AuthSessionUpdateManyWithWhereWithoutActiveEnvironmentInput[]
+  deleteMany?: Prisma.AuthSessionScalarWhereInput | Prisma.AuthSessionScalarWhereInput[]
+}
+
 export type AuthSessionCreateWithoutUserInput = {
   id?: string
   createdAt?: Date | string
@@ -414,11 +480,13 @@ export type AuthSessionCreateWithoutUserInput = {
   expiresAt: Date | string
   lastSeenAt?: Date | string
   revokedAt?: Date | string | null
+  activeEnvironment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutAuthSessionsInput
 }
 
 export type AuthSessionUncheckedCreateWithoutUserInput = {
   id?: string
   createdAt?: Date | string
+  activeEnvironmentId?: string | null
   tokenHash: string
   expiresAt: Date | string
   lastSeenAt?: Date | string
@@ -458,15 +526,63 @@ export type AuthSessionScalarWhereInput = {
   id?: Prisma.StringFilter<"AuthSession"> | string
   createdAt?: Prisma.DateTimeFilter<"AuthSession"> | Date | string
   userId?: Prisma.StringFilter<"AuthSession"> | string
+  activeEnvironmentId?: Prisma.StringNullableFilter<"AuthSession"> | string | null
   tokenHash?: Prisma.StringFilter<"AuthSession"> | string
   expiresAt?: Prisma.DateTimeFilter<"AuthSession"> | Date | string
   lastSeenAt?: Prisma.DateTimeFilter<"AuthSession"> | Date | string
   revokedAt?: Prisma.DateTimeNullableFilter<"AuthSession"> | Date | string | null
 }
 
+export type AuthSessionCreateWithoutActiveEnvironmentInput = {
+  id?: string
+  createdAt?: Date | string
+  tokenHash: string
+  expiresAt: Date | string
+  lastSeenAt?: Date | string
+  revokedAt?: Date | string | null
+  user: Prisma.UserCreateNestedOneWithoutAuthSessionsInput
+}
+
+export type AuthSessionUncheckedCreateWithoutActiveEnvironmentInput = {
+  id?: string
+  createdAt?: Date | string
+  userId: string
+  tokenHash: string
+  expiresAt: Date | string
+  lastSeenAt?: Date | string
+  revokedAt?: Date | string | null
+}
+
+export type AuthSessionCreateOrConnectWithoutActiveEnvironmentInput = {
+  where: Prisma.AuthSessionWhereUniqueInput
+  create: Prisma.XOR<Prisma.AuthSessionCreateWithoutActiveEnvironmentInput, Prisma.AuthSessionUncheckedCreateWithoutActiveEnvironmentInput>
+}
+
+export type AuthSessionCreateManyActiveEnvironmentInputEnvelope = {
+  data: Prisma.AuthSessionCreateManyActiveEnvironmentInput | Prisma.AuthSessionCreateManyActiveEnvironmentInput[]
+  skipDuplicates?: boolean
+}
+
+export type AuthSessionUpsertWithWhereUniqueWithoutActiveEnvironmentInput = {
+  where: Prisma.AuthSessionWhereUniqueInput
+  update: Prisma.XOR<Prisma.AuthSessionUpdateWithoutActiveEnvironmentInput, Prisma.AuthSessionUncheckedUpdateWithoutActiveEnvironmentInput>
+  create: Prisma.XOR<Prisma.AuthSessionCreateWithoutActiveEnvironmentInput, Prisma.AuthSessionUncheckedCreateWithoutActiveEnvironmentInput>
+}
+
+export type AuthSessionUpdateWithWhereUniqueWithoutActiveEnvironmentInput = {
+  where: Prisma.AuthSessionWhereUniqueInput
+  data: Prisma.XOR<Prisma.AuthSessionUpdateWithoutActiveEnvironmentInput, Prisma.AuthSessionUncheckedUpdateWithoutActiveEnvironmentInput>
+}
+
+export type AuthSessionUpdateManyWithWhereWithoutActiveEnvironmentInput = {
+  where: Prisma.AuthSessionScalarWhereInput
+  data: Prisma.XOR<Prisma.AuthSessionUpdateManyMutationInput, Prisma.AuthSessionUncheckedUpdateManyWithoutActiveEnvironmentInput>
+}
+
 export type AuthSessionCreateManyUserInput = {
   id?: string
   createdAt?: Date | string
+  activeEnvironmentId?: string | null
   tokenHash: string
   expiresAt: Date | string
   lastSeenAt?: Date | string
@@ -480,11 +596,13 @@ export type AuthSessionUpdateWithoutUserInput = {
   expiresAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastSeenAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   revokedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  activeEnvironment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutAuthSessionsNestedInput
 }
 
 export type AuthSessionUncheckedUpdateWithoutUserInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  activeEnvironmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenHash?: Prisma.StringFieldUpdateOperationsInput | string
   expiresAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastSeenAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -494,6 +612,47 @@ export type AuthSessionUncheckedUpdateWithoutUserInput = {
 export type AuthSessionUncheckedUpdateManyWithoutUserInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  activeEnvironmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  tokenHash?: Prisma.StringFieldUpdateOperationsInput | string
+  expiresAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastSeenAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  revokedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+}
+
+export type AuthSessionCreateManyActiveEnvironmentInput = {
+  id?: string
+  createdAt?: Date | string
+  userId: string
+  tokenHash: string
+  expiresAt: Date | string
+  lastSeenAt?: Date | string
+  revokedAt?: Date | string | null
+}
+
+export type AuthSessionUpdateWithoutActiveEnvironmentInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  tokenHash?: Prisma.StringFieldUpdateOperationsInput | string
+  expiresAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastSeenAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  revokedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  user?: Prisma.UserUpdateOneRequiredWithoutAuthSessionsNestedInput
+}
+
+export type AuthSessionUncheckedUpdateWithoutActiveEnvironmentInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  userId?: Prisma.StringFieldUpdateOperationsInput | string
+  tokenHash?: Prisma.StringFieldUpdateOperationsInput | string
+  expiresAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastSeenAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  revokedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+}
+
+export type AuthSessionUncheckedUpdateManyWithoutActiveEnvironmentInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  userId?: Prisma.StringFieldUpdateOperationsInput | string
   tokenHash?: Prisma.StringFieldUpdateOperationsInput | string
   expiresAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastSeenAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -506,65 +665,77 @@ export type AuthSessionSelect<ExtArgs extends runtime.Types.Extensions.InternalA
   id?: boolean
   createdAt?: boolean
   userId?: boolean
+  activeEnvironmentId?: boolean
   tokenHash?: boolean
   expiresAt?: boolean
   lastSeenAt?: boolean
   revokedAt?: boolean
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+  activeEnvironment?: boolean | Prisma.AuthSession$activeEnvironmentArgs<ExtArgs>
 }, ExtArgs["result"]["authSession"]>
 
 export type AuthSessionSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   createdAt?: boolean
   userId?: boolean
+  activeEnvironmentId?: boolean
   tokenHash?: boolean
   expiresAt?: boolean
   lastSeenAt?: boolean
   revokedAt?: boolean
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+  activeEnvironment?: boolean | Prisma.AuthSession$activeEnvironmentArgs<ExtArgs>
 }, ExtArgs["result"]["authSession"]>
 
 export type AuthSessionSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   createdAt?: boolean
   userId?: boolean
+  activeEnvironmentId?: boolean
   tokenHash?: boolean
   expiresAt?: boolean
   lastSeenAt?: boolean
   revokedAt?: boolean
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+  activeEnvironment?: boolean | Prisma.AuthSession$activeEnvironmentArgs<ExtArgs>
 }, ExtArgs["result"]["authSession"]>
 
 export type AuthSessionSelectScalar = {
   id?: boolean
   createdAt?: boolean
   userId?: boolean
+  activeEnvironmentId?: boolean
   tokenHash?: boolean
   expiresAt?: boolean
   lastSeenAt?: boolean
   revokedAt?: boolean
 }
 
-export type AuthSessionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "userId" | "tokenHash" | "expiresAt" | "lastSeenAt" | "revokedAt", ExtArgs["result"]["authSession"]>
+export type AuthSessionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "userId" | "activeEnvironmentId" | "tokenHash" | "expiresAt" | "lastSeenAt" | "revokedAt", ExtArgs["result"]["authSession"]>
 export type AuthSessionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+  activeEnvironment?: boolean | Prisma.AuthSession$activeEnvironmentArgs<ExtArgs>
 }
 export type AuthSessionIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+  activeEnvironment?: boolean | Prisma.AuthSession$activeEnvironmentArgs<ExtArgs>
 }
 export type AuthSessionIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+  activeEnvironment?: boolean | Prisma.AuthSession$activeEnvironmentArgs<ExtArgs>
 }
 
 export type $AuthSessionPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "AuthSession"
   objects: {
     user: Prisma.$UserPayload<ExtArgs>
+    activeEnvironment: Prisma.$WorkspaceEnvironmentPayload<ExtArgs> | null
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
     createdAt: Date
     userId: string
+    activeEnvironmentId: string | null
     tokenHash: string
     expiresAt: Date
     lastSeenAt: Date
@@ -964,6 +1135,7 @@ readonly fields: AuthSessionFieldRefs;
 export interface Prisma__AuthSessionClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   user<T extends Prisma.UserDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.UserDefaultArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  activeEnvironment<T extends Prisma.AuthSession$activeEnvironmentArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.AuthSession$activeEnvironmentArgs<ExtArgs>>): Prisma.Prisma__WorkspaceEnvironmentClient<runtime.Types.Result.GetResult<Prisma.$WorkspaceEnvironmentPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -996,6 +1168,7 @@ export interface AuthSessionFieldRefs {
   readonly id: Prisma.FieldRef<"AuthSession", 'String'>
   readonly createdAt: Prisma.FieldRef<"AuthSession", 'DateTime'>
   readonly userId: Prisma.FieldRef<"AuthSession", 'String'>
+  readonly activeEnvironmentId: Prisma.FieldRef<"AuthSession", 'String'>
   readonly tokenHash: Prisma.FieldRef<"AuthSession", 'String'>
   readonly expiresAt: Prisma.FieldRef<"AuthSession", 'DateTime'>
   readonly lastSeenAt: Prisma.FieldRef<"AuthSession", 'DateTime'>
@@ -1393,6 +1566,25 @@ export type AuthSessionDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.I
    * Limit how many AuthSessions to delete.
    */
   limit?: number
+}
+
+/**
+ * AuthSession.activeEnvironment
+ */
+export type AuthSession$activeEnvironmentArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the WorkspaceEnvironment
+   */
+  select?: Prisma.WorkspaceEnvironmentSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the WorkspaceEnvironment
+   */
+  omit?: Prisma.WorkspaceEnvironmentOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.WorkspaceEnvironmentInclude<ExtArgs> | null
+  where?: Prisma.WorkspaceEnvironmentWhereInput
 }
 
 /**

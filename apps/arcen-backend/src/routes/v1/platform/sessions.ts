@@ -4,10 +4,7 @@ import { FACILITATOR_SECRET, FACILITATOR_URL } from "../../../config.js";
 import { getGraphUrl } from "../../../config.js";
 import { isErrorResponse, requirePermission } from "../../../lib/auth/api-auth.js";
 import { db } from "../../../db.js";
-import {
-  normalizeEnvironmentMode,
-  resolveEnvironmentChainId,
-} from "../../../lib/platform/default-chain.js";
+import { requireResolvedActiveEnvironment } from "../../../lib/environments/workspace-environments.js";
 import {
   RUNTIME_CHAIN_ID,
   RUNTIME_CHAIN_PROFILE,
@@ -218,21 +215,15 @@ export async function getSessions(c: Context) {
     return c.json({ error: "Invalid query", details: parsed.error.flatten().fieldErrors }, 400 as any);
   }
 
-  const team = await db.team.findUnique({
-    where: { id: auth.team.teamId },
-    select: { environmentMode: true },
-  });
-  if (!team) {
-    return c.json({ error: "Team not found" }, 404 as any);
+  const activeEnvironment = await requireResolvedActiveEnvironment(
+    auth.session,
+    auth.team.teamId,
+  );
+  if (!activeEnvironment) {
+    return c.json({ error: "No workspace environment selected" }, 409 as any);
   }
-
-  const environmentMode = normalizeEnvironmentMode(
-    parsed.data.environmentMode || team.environmentMode,
-  );
-  const chainId = resolveEnvironmentChainId(
-    environmentMode,
-    parsed.data.chainId,
-  );
+  const environmentMode = activeEnvironment.mode;
+  const chainId = activeEnvironment.chainId;
   const sessionLimit = parsed.data.sessionLimit || 50;
   const proofLimit = parsed.data.proofLimit || 20;
 

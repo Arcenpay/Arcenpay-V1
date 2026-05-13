@@ -3,6 +3,11 @@ import { randomBytes } from "node:crypto";
 import { setCookie, getCookie } from "hono/cookie";
 import { db } from "../../../db.js";
 import { getSessionFromCtx, refreshSession, createSession as createDbSession } from "../../../lib/auth/auth.server.js";
+import {
+  findResolvedActiveEnvironment,
+  listEnvironmentSummaries,
+  toEnvironmentSummary,
+} from "../../../lib/environments/workspace-environments.js";
 
 export async function getSession(c: Context) {
   const session = await getSessionFromCtx(c);
@@ -31,6 +36,13 @@ export async function getSession(c: Context) {
     memberships[0] ??
     null;
 
+  const activeEnvironment = currentTeam
+    ? await findResolvedActiveEnvironment(session, currentTeam.team.id)
+    : null;
+  const environments = currentTeam
+    ? await listEnvironmentSummaries(currentTeam.team.id, activeEnvironment?.id ?? session.activeEnvironmentId)
+    : [];
+
   return c.json({
     user: {
       id: session.userId,
@@ -45,6 +57,10 @@ export async function getSession(c: Context) {
           role: currentTeam.role,
         }
       : null,
+    activeEnvironment: activeEnvironment
+      ? toEnvironmentSummary(activeEnvironment, activeEnvironment.id)
+      : null,
+    environments,
     teams: memberships.map((membership) => ({
       id: membership.team.id,
       name: membership.team.name,
