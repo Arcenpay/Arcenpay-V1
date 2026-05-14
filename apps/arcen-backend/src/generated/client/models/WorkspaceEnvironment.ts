@@ -242,6 +242,7 @@ export type WorkspaceEnvironmentWhereInput = {
   templateInstalls?: Prisma.TemplateInstallListRelationFilter
   invoices?: Prisma.InvoiceListRelationFilter
   subscriptionStates?: Prisma.SubscriptionStateListRelationFilter
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestListRelationFilter
   payments?: Prisma.PaymentListRelationFilter
   paymentLinks?: Prisma.PaymentLinkListRelationFilter
   checkoutSessions?: Prisma.CheckoutSessionListRelationFilter
@@ -272,6 +273,7 @@ export type WorkspaceEnvironmentOrderByWithRelationInput = {
   templateInstalls?: Prisma.TemplateInstallOrderByRelationAggregateInput
   invoices?: Prisma.InvoiceOrderByRelationAggregateInput
   subscriptionStates?: Prisma.SubscriptionStateOrderByRelationAggregateInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestOrderByRelationAggregateInput
   payments?: Prisma.PaymentOrderByRelationAggregateInput
   paymentLinks?: Prisma.PaymentLinkOrderByRelationAggregateInput
   checkoutSessions?: Prisma.CheckoutSessionOrderByRelationAggregateInput
@@ -306,6 +308,7 @@ export type WorkspaceEnvironmentWhereUniqueInput = Prisma.AtLeast<{
   templateInstalls?: Prisma.TemplateInstallListRelationFilter
   invoices?: Prisma.InvoiceListRelationFilter
   subscriptionStates?: Prisma.SubscriptionStateListRelationFilter
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestListRelationFilter
   payments?: Prisma.PaymentListRelationFilter
   paymentLinks?: Prisma.PaymentLinkListRelationFilter
   checkoutSessions?: Prisma.CheckoutSessionListRelationFilter
@@ -363,6 +366,7 @@ export type WorkspaceEnvironmentCreateInput = {
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutEnvironmentInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutEnvironmentInput
   payments?: Prisma.PaymentCreateNestedManyWithoutEnvironmentInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutEnvironmentInput
   checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutEnvironmentInput
@@ -392,6 +396,7 @@ export type WorkspaceEnvironmentUncheckedCreateInput = {
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutEnvironmentInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutEnvironmentInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutEnvironmentInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutEnvironmentInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -421,6 +426,7 @@ export type WorkspaceEnvironmentUpdateInput = {
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutEnvironmentNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutEnvironmentNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutEnvironmentNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutEnvironmentNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutEnvironmentNestedInput
@@ -450,6 +456,7 @@ export type WorkspaceEnvironmentUncheckedUpdateInput = {
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutEnvironmentNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutEnvironmentNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutEnvironmentNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutEnvironmentNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -751,6 +758,22 @@ export type WorkspaceEnvironmentUpdateOneWithoutSubscriptionStatesNestedInput = 
   update?: Prisma.XOR<Prisma.XOR<Prisma.WorkspaceEnvironmentUpdateToOneWithWhereWithoutSubscriptionStatesInput, Prisma.WorkspaceEnvironmentUpdateWithoutSubscriptionStatesInput>, Prisma.WorkspaceEnvironmentUncheckedUpdateWithoutSubscriptionStatesInput>
 }
 
+export type WorkspaceEnvironmentCreateNestedOneWithoutSubscriptionChangeRequestsInput = {
+  create?: Prisma.XOR<Prisma.WorkspaceEnvironmentCreateWithoutSubscriptionChangeRequestsInput, Prisma.WorkspaceEnvironmentUncheckedCreateWithoutSubscriptionChangeRequestsInput>
+  connectOrCreate?: Prisma.WorkspaceEnvironmentCreateOrConnectWithoutSubscriptionChangeRequestsInput
+  connect?: Prisma.WorkspaceEnvironmentWhereUniqueInput
+}
+
+export type WorkspaceEnvironmentUpdateOneWithoutSubscriptionChangeRequestsNestedInput = {
+  create?: Prisma.XOR<Prisma.WorkspaceEnvironmentCreateWithoutSubscriptionChangeRequestsInput, Prisma.WorkspaceEnvironmentUncheckedCreateWithoutSubscriptionChangeRequestsInput>
+  connectOrCreate?: Prisma.WorkspaceEnvironmentCreateOrConnectWithoutSubscriptionChangeRequestsInput
+  upsert?: Prisma.WorkspaceEnvironmentUpsertWithoutSubscriptionChangeRequestsInput
+  disconnect?: Prisma.WorkspaceEnvironmentWhereInput | boolean
+  delete?: Prisma.WorkspaceEnvironmentWhereInput | boolean
+  connect?: Prisma.WorkspaceEnvironmentWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.WorkspaceEnvironmentUpdateToOneWithWhereWithoutSubscriptionChangeRequestsInput, Prisma.WorkspaceEnvironmentUpdateWithoutSubscriptionChangeRequestsInput>, Prisma.WorkspaceEnvironmentUncheckedUpdateWithoutSubscriptionChangeRequestsInput>
+}
+
 export type WorkspaceEnvironmentCreateNestedOneWithoutPaymentsInput = {
   create?: Prisma.XOR<Prisma.WorkspaceEnvironmentCreateWithoutPaymentsInput, Prisma.WorkspaceEnvironmentUncheckedCreateWithoutPaymentsInput>
   connectOrCreate?: Prisma.WorkspaceEnvironmentCreateOrConnectWithoutPaymentsInput
@@ -911,6 +934,7 @@ export type WorkspaceEnvironmentCreateWithoutAuthSessionsInput = {
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutEnvironmentInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutEnvironmentInput
   payments?: Prisma.PaymentCreateNestedManyWithoutEnvironmentInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutEnvironmentInput
   checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutEnvironmentInput
@@ -939,6 +963,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutAuthSessionsInput = {
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutEnvironmentInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutEnvironmentInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutEnvironmentInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutEnvironmentInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -983,6 +1008,7 @@ export type WorkspaceEnvironmentUpdateWithoutAuthSessionsInput = {
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutEnvironmentNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutEnvironmentNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutEnvironmentNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutEnvironmentNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutEnvironmentNestedInput
@@ -1011,6 +1037,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutAuthSessionsInput = {
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutEnvironmentNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutEnvironmentNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutEnvironmentNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutEnvironmentNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -1039,6 +1066,7 @@ export type WorkspaceEnvironmentCreateWithoutTeamInput = {
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutEnvironmentInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutEnvironmentInput
   payments?: Prisma.PaymentCreateNestedManyWithoutEnvironmentInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutEnvironmentInput
   checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutEnvironmentInput
@@ -1067,6 +1095,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutTeamInput = {
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutEnvironmentInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutEnvironmentInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutEnvironmentInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutEnvironmentInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -1135,6 +1164,7 @@ export type WorkspaceEnvironmentCreateWithoutProviderProfilesInput = {
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutEnvironmentInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutEnvironmentInput
   payments?: Prisma.PaymentCreateNestedManyWithoutEnvironmentInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutEnvironmentInput
   checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutEnvironmentInput
@@ -1163,6 +1193,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutProviderProfilesInput = {
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutEnvironmentInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutEnvironmentInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutEnvironmentInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutEnvironmentInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -1207,6 +1238,7 @@ export type WorkspaceEnvironmentUpdateWithoutProviderProfilesInput = {
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutEnvironmentNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutEnvironmentNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutEnvironmentNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutEnvironmentNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutEnvironmentNestedInput
@@ -1235,6 +1267,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutProviderProfilesInput = {
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutEnvironmentNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutEnvironmentNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutEnvironmentNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutEnvironmentNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -1262,6 +1295,7 @@ export type WorkspaceEnvironmentCreateWithoutCatalogPlansInput = {
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutEnvironmentInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutEnvironmentInput
   payments?: Prisma.PaymentCreateNestedManyWithoutEnvironmentInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutEnvironmentInput
   checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutEnvironmentInput
@@ -1290,6 +1324,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutCatalogPlansInput = {
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutEnvironmentInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutEnvironmentInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutEnvironmentInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutEnvironmentInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -1334,6 +1369,7 @@ export type WorkspaceEnvironmentUpdateWithoutCatalogPlansInput = {
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutEnvironmentNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutEnvironmentNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutEnvironmentNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutEnvironmentNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutEnvironmentNestedInput
@@ -1362,6 +1398,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutCatalogPlansInput = {
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutEnvironmentNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutEnvironmentNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutEnvironmentNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutEnvironmentNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -1390,6 +1427,7 @@ export type WorkspaceEnvironmentCreateWithoutCatalogAddOnsInput = {
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutEnvironmentInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutEnvironmentInput
   payments?: Prisma.PaymentCreateNestedManyWithoutEnvironmentInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutEnvironmentInput
   checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutEnvironmentInput
@@ -1418,6 +1456,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutCatalogAddOnsInput = {
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutEnvironmentInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutEnvironmentInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutEnvironmentInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutEnvironmentInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -1462,6 +1501,7 @@ export type WorkspaceEnvironmentUpdateWithoutCatalogAddOnsInput = {
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutEnvironmentNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutEnvironmentNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutEnvironmentNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutEnvironmentNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutEnvironmentNestedInput
@@ -1490,6 +1530,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutCatalogAddOnsInput = {
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutEnvironmentNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutEnvironmentNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutEnvironmentNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutEnvironmentNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -1518,6 +1559,7 @@ export type WorkspaceEnvironmentCreateWithoutCatalogCreditTypesInput = {
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutEnvironmentInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutEnvironmentInput
   payments?: Prisma.PaymentCreateNestedManyWithoutEnvironmentInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutEnvironmentInput
   checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutEnvironmentInput
@@ -1546,6 +1588,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutCatalogCreditTypesInput = 
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutEnvironmentInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutEnvironmentInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutEnvironmentInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutEnvironmentInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -1590,6 +1633,7 @@ export type WorkspaceEnvironmentUpdateWithoutCatalogCreditTypesInput = {
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutEnvironmentNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutEnvironmentNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutEnvironmentNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutEnvironmentNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutEnvironmentNestedInput
@@ -1618,6 +1662,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutCatalogCreditTypesInput = 
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutEnvironmentNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutEnvironmentNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutEnvironmentNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutEnvironmentNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -1646,6 +1691,7 @@ export type WorkspaceEnvironmentCreateWithoutCatalogVersionsInput = {
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutEnvironmentInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutEnvironmentInput
   payments?: Prisma.PaymentCreateNestedManyWithoutEnvironmentInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutEnvironmentInput
   checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutEnvironmentInput
@@ -1674,6 +1720,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutCatalogVersionsInput = {
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutEnvironmentInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutEnvironmentInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutEnvironmentInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutEnvironmentInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -1718,6 +1765,7 @@ export type WorkspaceEnvironmentUpdateWithoutCatalogVersionsInput = {
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutEnvironmentNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutEnvironmentNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutEnvironmentNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutEnvironmentNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutEnvironmentNestedInput
@@ -1746,6 +1794,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutCatalogVersionsInput = {
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutEnvironmentNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutEnvironmentNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutEnvironmentNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutEnvironmentNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -1774,6 +1823,7 @@ export type WorkspaceEnvironmentCreateWithoutCatalogConfigsInput = {
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutEnvironmentInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutEnvironmentInput
   payments?: Prisma.PaymentCreateNestedManyWithoutEnvironmentInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutEnvironmentInput
   checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutEnvironmentInput
@@ -1802,6 +1852,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutCatalogConfigsInput = {
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutEnvironmentInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutEnvironmentInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutEnvironmentInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutEnvironmentInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -1846,6 +1897,7 @@ export type WorkspaceEnvironmentUpdateWithoutCatalogConfigsInput = {
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutEnvironmentNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutEnvironmentNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutEnvironmentNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutEnvironmentNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutEnvironmentNestedInput
@@ -1874,6 +1926,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutCatalogConfigsInput = {
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutEnvironmentNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutEnvironmentNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutEnvironmentNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutEnvironmentNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -1902,6 +1955,7 @@ export type WorkspaceEnvironmentCreateWithoutTemplateInstallsInput = {
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutEnvironmentInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutEnvironmentInput
   payments?: Prisma.PaymentCreateNestedManyWithoutEnvironmentInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutEnvironmentInput
   checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutEnvironmentInput
@@ -1930,6 +1984,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutTemplateInstallsInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutEnvironmentInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutEnvironmentInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutEnvironmentInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutEnvironmentInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -1974,6 +2029,7 @@ export type WorkspaceEnvironmentUpdateWithoutTemplateInstallsInput = {
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutEnvironmentNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutEnvironmentNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutEnvironmentNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutEnvironmentNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutEnvironmentNestedInput
@@ -2002,6 +2058,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutTemplateInstallsInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutEnvironmentNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutEnvironmentNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutEnvironmentNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutEnvironmentNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -2030,6 +2087,7 @@ export type WorkspaceEnvironmentCreateWithoutInvoicesInput = {
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutEnvironmentInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutEnvironmentInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutEnvironmentInput
   payments?: Prisma.PaymentCreateNestedManyWithoutEnvironmentInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutEnvironmentInput
   checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutEnvironmentInput
@@ -2058,6 +2116,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutInvoicesInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutEnvironmentInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutEnvironmentInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutEnvironmentInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutEnvironmentInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutEnvironmentInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -2102,6 +2161,7 @@ export type WorkspaceEnvironmentUpdateWithoutInvoicesInput = {
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutEnvironmentNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutEnvironmentNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutEnvironmentNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutEnvironmentNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutEnvironmentNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutEnvironmentNestedInput
@@ -2130,6 +2190,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutInvoicesInput = {
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutEnvironmentNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutEnvironmentNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutEnvironmentNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutEnvironmentNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutEnvironmentNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -2158,6 +2219,7 @@ export type WorkspaceEnvironmentCreateWithoutSubscriptionStatesInput = {
   catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutEnvironmentInput
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutEnvironmentInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutEnvironmentInput
   payments?: Prisma.PaymentCreateNestedManyWithoutEnvironmentInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutEnvironmentInput
   checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutEnvironmentInput
@@ -2186,6 +2248,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutSubscriptionStatesInput = 
   catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutEnvironmentInput
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutEnvironmentInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutEnvironmentInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutEnvironmentInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutEnvironmentInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -2230,6 +2293,7 @@ export type WorkspaceEnvironmentUpdateWithoutSubscriptionStatesInput = {
   catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutEnvironmentNestedInput
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutEnvironmentNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutEnvironmentNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutEnvironmentNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutEnvironmentNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutEnvironmentNestedInput
@@ -2258,6 +2322,139 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutSubscriptionStatesInput = 
   catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutEnvironmentNestedInput
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutEnvironmentNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutEnvironmentNestedInput
+  payments?: Prisma.PaymentUncheckedUpdateManyWithoutEnvironmentNestedInput
+  paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutEnvironmentNestedInput
+  checkoutSessions?: Prisma.CheckoutSessionUncheckedUpdateManyWithoutEnvironmentNestedInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutEnvironmentNestedInput
+  arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutEnvironmentNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutEnvironmentNestedInput
+  embedComponents?: Prisma.EmbedComponentUncheckedUpdateManyWithoutEnvironmentNestedInput
+  arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutEnvironmentNestedInput
+  arcenUsers?: Prisma.ArcenUserUncheckedUpdateManyWithoutEnvironmentNestedInput
+  arcenEvents?: Prisma.ArcenEventUncheckedUpdateManyWithoutEnvironmentNestedInput
+}
+
+export type WorkspaceEnvironmentCreateWithoutSubscriptionChangeRequestsInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  name: string
+  mode: $Enums.EnvironmentMode
+  chainId: number
+  team: Prisma.TeamCreateNestedOneWithoutEnvironmentsInput
+  authSessions?: Prisma.AuthSessionCreateNestedManyWithoutActiveEnvironmentInput
+  catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutEnvironmentInput
+  catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutEnvironmentInput
+  catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutEnvironmentInput
+  catalogVersions?: Prisma.CatalogVersionCreateNestedManyWithoutEnvironmentInput
+  catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutEnvironmentInput
+  templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutEnvironmentInput
+  invoices?: Prisma.InvoiceCreateNestedManyWithoutEnvironmentInput
+  subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutEnvironmentInput
+  payments?: Prisma.PaymentCreateNestedManyWithoutEnvironmentInput
+  paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutEnvironmentInput
+  checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutEnvironmentInput
+  providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutEnvironmentInput
+  arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutEnvironmentInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutEnvironmentInput
+  embedComponents?: Prisma.EmbedComponentCreateNestedManyWithoutEnvironmentInput
+  arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutEnvironmentInput
+  arcenUsers?: Prisma.ArcenUserCreateNestedManyWithoutEnvironmentInput
+  arcenEvents?: Prisma.ArcenEventCreateNestedManyWithoutEnvironmentInput
+}
+
+export type WorkspaceEnvironmentUncheckedCreateWithoutSubscriptionChangeRequestsInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  teamId: string
+  name: string
+  mode: $Enums.EnvironmentMode
+  chainId: number
+  authSessions?: Prisma.AuthSessionUncheckedCreateNestedManyWithoutActiveEnvironmentInput
+  catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutEnvironmentInput
+  catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutEnvironmentInput
+  catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutEnvironmentInput
+  catalogVersions?: Prisma.CatalogVersionUncheckedCreateNestedManyWithoutEnvironmentInput
+  catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutEnvironmentInput
+  templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutEnvironmentInput
+  invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutEnvironmentInput
+  subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutEnvironmentInput
+  payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutEnvironmentInput
+  paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutEnvironmentInput
+  checkoutSessions?: Prisma.CheckoutSessionUncheckedCreateNestedManyWithoutEnvironmentInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutEnvironmentInput
+  arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutEnvironmentInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutEnvironmentInput
+  embedComponents?: Prisma.EmbedComponentUncheckedCreateNestedManyWithoutEnvironmentInput
+  arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutEnvironmentInput
+  arcenUsers?: Prisma.ArcenUserUncheckedCreateNestedManyWithoutEnvironmentInput
+  arcenEvents?: Prisma.ArcenEventUncheckedCreateNestedManyWithoutEnvironmentInput
+}
+
+export type WorkspaceEnvironmentCreateOrConnectWithoutSubscriptionChangeRequestsInput = {
+  where: Prisma.WorkspaceEnvironmentWhereUniqueInput
+  create: Prisma.XOR<Prisma.WorkspaceEnvironmentCreateWithoutSubscriptionChangeRequestsInput, Prisma.WorkspaceEnvironmentUncheckedCreateWithoutSubscriptionChangeRequestsInput>
+}
+
+export type WorkspaceEnvironmentUpsertWithoutSubscriptionChangeRequestsInput = {
+  update: Prisma.XOR<Prisma.WorkspaceEnvironmentUpdateWithoutSubscriptionChangeRequestsInput, Prisma.WorkspaceEnvironmentUncheckedUpdateWithoutSubscriptionChangeRequestsInput>
+  create: Prisma.XOR<Prisma.WorkspaceEnvironmentCreateWithoutSubscriptionChangeRequestsInput, Prisma.WorkspaceEnvironmentUncheckedCreateWithoutSubscriptionChangeRequestsInput>
+  where?: Prisma.WorkspaceEnvironmentWhereInput
+}
+
+export type WorkspaceEnvironmentUpdateToOneWithWhereWithoutSubscriptionChangeRequestsInput = {
+  where?: Prisma.WorkspaceEnvironmentWhereInput
+  data: Prisma.XOR<Prisma.WorkspaceEnvironmentUpdateWithoutSubscriptionChangeRequestsInput, Prisma.WorkspaceEnvironmentUncheckedUpdateWithoutSubscriptionChangeRequestsInput>
+}
+
+export type WorkspaceEnvironmentUpdateWithoutSubscriptionChangeRequestsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
+  chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  team?: Prisma.TeamUpdateOneRequiredWithoutEnvironmentsNestedInput
+  authSessions?: Prisma.AuthSessionUpdateManyWithoutActiveEnvironmentNestedInput
+  catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutEnvironmentNestedInput
+  catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutEnvironmentNestedInput
+  catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutEnvironmentNestedInput
+  catalogVersions?: Prisma.CatalogVersionUpdateManyWithoutEnvironmentNestedInput
+  catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutEnvironmentNestedInput
+  templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutEnvironmentNestedInput
+  invoices?: Prisma.InvoiceUpdateManyWithoutEnvironmentNestedInput
+  subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutEnvironmentNestedInput
+  payments?: Prisma.PaymentUpdateManyWithoutEnvironmentNestedInput
+  paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutEnvironmentNestedInput
+  checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutEnvironmentNestedInput
+  providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutEnvironmentNestedInput
+  arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutEnvironmentNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutEnvironmentNestedInput
+  embedComponents?: Prisma.EmbedComponentUpdateManyWithoutEnvironmentNestedInput
+  arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutEnvironmentNestedInput
+  arcenUsers?: Prisma.ArcenUserUpdateManyWithoutEnvironmentNestedInput
+  arcenEvents?: Prisma.ArcenEventUpdateManyWithoutEnvironmentNestedInput
+}
+
+export type WorkspaceEnvironmentUncheckedUpdateWithoutSubscriptionChangeRequestsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  mode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
+  chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  authSessions?: Prisma.AuthSessionUncheckedUpdateManyWithoutActiveEnvironmentNestedInput
+  catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutEnvironmentNestedInput
+  catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutEnvironmentNestedInput
+  catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutEnvironmentNestedInput
+  catalogVersions?: Prisma.CatalogVersionUncheckedUpdateManyWithoutEnvironmentNestedInput
+  catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutEnvironmentNestedInput
+  templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutEnvironmentNestedInput
+  invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutEnvironmentNestedInput
+  subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutEnvironmentNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutEnvironmentNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutEnvironmentNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -2287,6 +2484,7 @@ export type WorkspaceEnvironmentCreateWithoutPaymentsInput = {
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutEnvironmentInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutEnvironmentInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutEnvironmentInput
   checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutEnvironmentInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutEnvironmentInput
@@ -2315,6 +2513,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutPaymentsInput = {
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutEnvironmentInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutEnvironmentInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutEnvironmentInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedCreateNestedManyWithoutEnvironmentInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -2359,6 +2558,7 @@ export type WorkspaceEnvironmentUpdateWithoutPaymentsInput = {
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutEnvironmentNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutEnvironmentNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutEnvironmentNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutEnvironmentNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutEnvironmentNestedInput
@@ -2387,6 +2587,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutPaymentsInput = {
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutEnvironmentNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutEnvironmentNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutEnvironmentNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedUpdateManyWithoutEnvironmentNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -2415,6 +2616,7 @@ export type WorkspaceEnvironmentCreateWithoutArcenCompaniesInput = {
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutEnvironmentInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutEnvironmentInput
   payments?: Prisma.PaymentCreateNestedManyWithoutEnvironmentInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutEnvironmentInput
   checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutEnvironmentInput
@@ -2443,6 +2645,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutArcenCompaniesInput = {
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutEnvironmentInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutEnvironmentInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutEnvironmentInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutEnvironmentInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -2487,6 +2690,7 @@ export type WorkspaceEnvironmentUpdateWithoutArcenCompaniesInput = {
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutEnvironmentNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutEnvironmentNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutEnvironmentNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutEnvironmentNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutEnvironmentNestedInput
@@ -2515,6 +2719,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutArcenCompaniesInput = {
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutEnvironmentNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutEnvironmentNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutEnvironmentNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutEnvironmentNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -2543,6 +2748,7 @@ export type WorkspaceEnvironmentCreateWithoutArcenUsersInput = {
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutEnvironmentInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutEnvironmentInput
   payments?: Prisma.PaymentCreateNestedManyWithoutEnvironmentInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutEnvironmentInput
   checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutEnvironmentInput
@@ -2571,6 +2777,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutArcenUsersInput = {
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutEnvironmentInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutEnvironmentInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutEnvironmentInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutEnvironmentInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -2615,6 +2822,7 @@ export type WorkspaceEnvironmentUpdateWithoutArcenUsersInput = {
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutEnvironmentNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutEnvironmentNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutEnvironmentNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutEnvironmentNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutEnvironmentNestedInput
@@ -2643,6 +2851,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutArcenUsersInput = {
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutEnvironmentNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutEnvironmentNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutEnvironmentNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutEnvironmentNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -2671,6 +2880,7 @@ export type WorkspaceEnvironmentCreateWithoutArcenEventsInput = {
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutEnvironmentInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutEnvironmentInput
   payments?: Prisma.PaymentCreateNestedManyWithoutEnvironmentInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutEnvironmentInput
   checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutEnvironmentInput
@@ -2699,6 +2909,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutArcenEventsInput = {
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutEnvironmentInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutEnvironmentInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutEnvironmentInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutEnvironmentInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -2743,6 +2954,7 @@ export type WorkspaceEnvironmentUpdateWithoutArcenEventsInput = {
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutEnvironmentNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutEnvironmentNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutEnvironmentNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutEnvironmentNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutEnvironmentNestedInput
@@ -2771,6 +2983,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutArcenEventsInput = {
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutEnvironmentNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutEnvironmentNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutEnvironmentNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutEnvironmentNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -2799,6 +3012,7 @@ export type WorkspaceEnvironmentCreateWithoutPaymentLinksInput = {
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutEnvironmentInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutEnvironmentInput
   payments?: Prisma.PaymentCreateNestedManyWithoutEnvironmentInput
   checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutEnvironmentInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutEnvironmentInput
@@ -2827,6 +3041,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutPaymentLinksInput = {
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutEnvironmentInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutEnvironmentInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutEnvironmentInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedCreateNestedManyWithoutEnvironmentInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -2871,6 +3086,7 @@ export type WorkspaceEnvironmentUpdateWithoutPaymentLinksInput = {
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutEnvironmentNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutEnvironmentNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutEnvironmentNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutEnvironmentNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutEnvironmentNestedInput
@@ -2899,6 +3115,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutPaymentLinksInput = {
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutEnvironmentNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutEnvironmentNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutEnvironmentNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedUpdateManyWithoutEnvironmentNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -2927,6 +3144,7 @@ export type WorkspaceEnvironmentCreateWithoutCheckoutSessionsInput = {
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutEnvironmentInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutEnvironmentInput
   payments?: Prisma.PaymentCreateNestedManyWithoutEnvironmentInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutEnvironmentInput
   providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutEnvironmentInput
@@ -2955,6 +3173,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutCheckoutSessionsInput = {
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutEnvironmentInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutEnvironmentInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutEnvironmentInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutEnvironmentInput
   providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -2999,6 +3218,7 @@ export type WorkspaceEnvironmentUpdateWithoutCheckoutSessionsInput = {
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutEnvironmentNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutEnvironmentNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutEnvironmentNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutEnvironmentNestedInput
   providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutEnvironmentNestedInput
@@ -3027,6 +3247,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutCheckoutSessionsInput = {
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutEnvironmentNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutEnvironmentNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutEnvironmentNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutEnvironmentNestedInput
   providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -3055,6 +3276,7 @@ export type WorkspaceEnvironmentCreateWithoutEmbedAccessTokensInput = {
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutEnvironmentInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutEnvironmentInput
   payments?: Prisma.PaymentCreateNestedManyWithoutEnvironmentInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutEnvironmentInput
   checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutEnvironmentInput
@@ -3083,6 +3305,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutEmbedAccessTokensInput = {
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutEnvironmentInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutEnvironmentInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutEnvironmentInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutEnvironmentInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -3127,6 +3350,7 @@ export type WorkspaceEnvironmentUpdateWithoutEmbedAccessTokensInput = {
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutEnvironmentNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutEnvironmentNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutEnvironmentNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutEnvironmentNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutEnvironmentNestedInput
@@ -3155,6 +3379,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutEmbedAccessTokensInput = {
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutEnvironmentNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutEnvironmentNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutEnvironmentNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutEnvironmentNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -3183,6 +3408,7 @@ export type WorkspaceEnvironmentCreateWithoutArcenApiKeysInput = {
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutEnvironmentInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutEnvironmentInput
   payments?: Prisma.PaymentCreateNestedManyWithoutEnvironmentInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutEnvironmentInput
   checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutEnvironmentInput
@@ -3211,6 +3437,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutArcenApiKeysInput = {
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutEnvironmentInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutEnvironmentInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutEnvironmentInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutEnvironmentInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -3255,6 +3482,7 @@ export type WorkspaceEnvironmentUpdateWithoutArcenApiKeysInput = {
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutEnvironmentNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutEnvironmentNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutEnvironmentNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutEnvironmentNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutEnvironmentNestedInput
@@ -3283,6 +3511,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutArcenApiKeysInput = {
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutEnvironmentNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutEnvironmentNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutEnvironmentNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutEnvironmentNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -3311,6 +3540,7 @@ export type WorkspaceEnvironmentCreateWithoutEmbedComponentsInput = {
   templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutEnvironmentInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutEnvironmentInput
   payments?: Prisma.PaymentCreateNestedManyWithoutEnvironmentInput
   paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutEnvironmentInput
   checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutEnvironmentInput
@@ -3339,6 +3569,7 @@ export type WorkspaceEnvironmentUncheckedCreateWithoutEmbedComponentsInput = {
   templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutEnvironmentInput
   invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutEnvironmentInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutEnvironmentInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutEnvironmentInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutEnvironmentInput
   paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutEnvironmentInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedCreateNestedManyWithoutEnvironmentInput
@@ -3383,6 +3614,7 @@ export type WorkspaceEnvironmentUpdateWithoutEmbedComponentsInput = {
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutEnvironmentNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutEnvironmentNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutEnvironmentNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutEnvironmentNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutEnvironmentNestedInput
@@ -3411,6 +3643,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutEmbedComponentsInput = {
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutEnvironmentNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutEnvironmentNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutEnvironmentNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutEnvironmentNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -3447,6 +3680,7 @@ export type WorkspaceEnvironmentUpdateWithoutTeamInput = {
   templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutEnvironmentNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutEnvironmentNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutEnvironmentNestedInput
   paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutEnvironmentNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutEnvironmentNestedInput
@@ -3475,6 +3709,7 @@ export type WorkspaceEnvironmentUncheckedUpdateWithoutTeamInput = {
   templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutEnvironmentNestedInput
   invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutEnvironmentNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutEnvironmentNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutEnvironmentNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutEnvironmentNestedInput
   paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutEnvironmentNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedUpdateManyWithoutEnvironmentNestedInput
@@ -3511,6 +3746,7 @@ export type WorkspaceEnvironmentCountOutputType = {
   templateInstalls: number
   invoices: number
   subscriptionStates: number
+  subscriptionChangeRequests: number
   payments: number
   paymentLinks: number
   checkoutSessions: number
@@ -3533,6 +3769,7 @@ export type WorkspaceEnvironmentCountOutputTypeSelect<ExtArgs extends runtime.Ty
   templateInstalls?: boolean | WorkspaceEnvironmentCountOutputTypeCountTemplateInstallsArgs
   invoices?: boolean | WorkspaceEnvironmentCountOutputTypeCountInvoicesArgs
   subscriptionStates?: boolean | WorkspaceEnvironmentCountOutputTypeCountSubscriptionStatesArgs
+  subscriptionChangeRequests?: boolean | WorkspaceEnvironmentCountOutputTypeCountSubscriptionChangeRequestsArgs
   payments?: boolean | WorkspaceEnvironmentCountOutputTypeCountPaymentsArgs
   paymentLinks?: boolean | WorkspaceEnvironmentCountOutputTypeCountPaymentLinksArgs
   checkoutSessions?: boolean | WorkspaceEnvironmentCountOutputTypeCountCheckoutSessionsArgs
@@ -3616,6 +3853,13 @@ export type WorkspaceEnvironmentCountOutputTypeCountInvoicesArgs<ExtArgs extends
  */
 export type WorkspaceEnvironmentCountOutputTypeCountSubscriptionStatesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.SubscriptionStateWhereInput
+}
+
+/**
+ * WorkspaceEnvironmentCountOutputType without action
+ */
+export type WorkspaceEnvironmentCountOutputTypeCountSubscriptionChangeRequestsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.SubscriptionChangeRequestWhereInput
 }
 
 /**
@@ -3707,6 +3951,7 @@ export type WorkspaceEnvironmentSelect<ExtArgs extends runtime.Types.Extensions.
   templateInstalls?: boolean | Prisma.WorkspaceEnvironment$templateInstallsArgs<ExtArgs>
   invoices?: boolean | Prisma.WorkspaceEnvironment$invoicesArgs<ExtArgs>
   subscriptionStates?: boolean | Prisma.WorkspaceEnvironment$subscriptionStatesArgs<ExtArgs>
+  subscriptionChangeRequests?: boolean | Prisma.WorkspaceEnvironment$subscriptionChangeRequestsArgs<ExtArgs>
   payments?: boolean | Prisma.WorkspaceEnvironment$paymentsArgs<ExtArgs>
   paymentLinks?: boolean | Prisma.WorkspaceEnvironment$paymentLinksArgs<ExtArgs>
   checkoutSessions?: boolean | Prisma.WorkspaceEnvironment$checkoutSessionsArgs<ExtArgs>
@@ -3764,6 +4009,7 @@ export type WorkspaceEnvironmentInclude<ExtArgs extends runtime.Types.Extensions
   templateInstalls?: boolean | Prisma.WorkspaceEnvironment$templateInstallsArgs<ExtArgs>
   invoices?: boolean | Prisma.WorkspaceEnvironment$invoicesArgs<ExtArgs>
   subscriptionStates?: boolean | Prisma.WorkspaceEnvironment$subscriptionStatesArgs<ExtArgs>
+  subscriptionChangeRequests?: boolean | Prisma.WorkspaceEnvironment$subscriptionChangeRequestsArgs<ExtArgs>
   payments?: boolean | Prisma.WorkspaceEnvironment$paymentsArgs<ExtArgs>
   paymentLinks?: boolean | Prisma.WorkspaceEnvironment$paymentLinksArgs<ExtArgs>
   checkoutSessions?: boolean | Prisma.WorkspaceEnvironment$checkoutSessionsArgs<ExtArgs>
@@ -3796,6 +4042,7 @@ export type $WorkspaceEnvironmentPayload<ExtArgs extends runtime.Types.Extension
     templateInstalls: Prisma.$TemplateInstallPayload<ExtArgs>[]
     invoices: Prisma.$InvoicePayload<ExtArgs>[]
     subscriptionStates: Prisma.$SubscriptionStatePayload<ExtArgs>[]
+    subscriptionChangeRequests: Prisma.$SubscriptionChangeRequestPayload<ExtArgs>[]
     payments: Prisma.$PaymentPayload<ExtArgs>[]
     paymentLinks: Prisma.$PaymentLinkPayload<ExtArgs>[]
     checkoutSessions: Prisma.$CheckoutSessionPayload<ExtArgs>[]
@@ -4219,6 +4466,7 @@ export interface Prisma__WorkspaceEnvironmentClient<T, Null = never, ExtArgs ext
   templateInstalls<T extends Prisma.WorkspaceEnvironment$templateInstallsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.WorkspaceEnvironment$templateInstallsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TemplateInstallPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   invoices<T extends Prisma.WorkspaceEnvironment$invoicesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.WorkspaceEnvironment$invoicesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$InvoicePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   subscriptionStates<T extends Prisma.WorkspaceEnvironment$subscriptionStatesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.WorkspaceEnvironment$subscriptionStatesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SubscriptionStatePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  subscriptionChangeRequests<T extends Prisma.WorkspaceEnvironment$subscriptionChangeRequestsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.WorkspaceEnvironment$subscriptionChangeRequestsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SubscriptionChangeRequestPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   payments<T extends Prisma.WorkspaceEnvironment$paymentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.WorkspaceEnvironment$paymentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PaymentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   paymentLinks<T extends Prisma.WorkspaceEnvironment$paymentLinksArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.WorkspaceEnvironment$paymentLinksArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PaymentLinkPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   checkoutSessions<T extends Prisma.WorkspaceEnvironment$checkoutSessionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.WorkspaceEnvironment$checkoutSessionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CheckoutSessionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -4874,6 +5122,30 @@ export type WorkspaceEnvironment$subscriptionStatesArgs<ExtArgs extends runtime.
   take?: number
   skip?: number
   distinct?: Prisma.SubscriptionStateScalarFieldEnum | Prisma.SubscriptionStateScalarFieldEnum[]
+}
+
+/**
+ * WorkspaceEnvironment.subscriptionChangeRequests
+ */
+export type WorkspaceEnvironment$subscriptionChangeRequestsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the SubscriptionChangeRequest
+   */
+  select?: Prisma.SubscriptionChangeRequestSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the SubscriptionChangeRequest
+   */
+  omit?: Prisma.SubscriptionChangeRequestOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.SubscriptionChangeRequestInclude<ExtArgs> | null
+  where?: Prisma.SubscriptionChangeRequestWhereInput
+  orderBy?: Prisma.SubscriptionChangeRequestOrderByWithRelationInput | Prisma.SubscriptionChangeRequestOrderByWithRelationInput[]
+  cursor?: Prisma.SubscriptionChangeRequestWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.SubscriptionChangeRequestScalarFieldEnum | Prisma.SubscriptionChangeRequestScalarFieldEnum[]
 }
 
 /**

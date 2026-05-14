@@ -906,10 +906,73 @@ function getScheduledCancellationTransition(
   data: ComponentRenderData,
 ): ComponentSubscriptionTransition | null {
   const transition = getSubscriptionTransition(data);
-  if (transition?.mode !== "cancel_at_period_end") {
+  const isCancellation =
+    transition?.changeType === "cancellation" ||
+    transition?.mode === "cancel_at_period_end" ||
+    transition?.mode === "cancel_at_period_end_pending_verification";
+  if (
+    !isCancellation ||
+    transition?.stage === "applied" ||
+    transition?.stage === "failed" ||
+    transition?.stage === "reverted"
+  ) {
     return null;
   }
   return transition;
+}
+
+function getLifecycleBadge(
+  data: ComponentRenderData,
+): { label: string; background: string; color: string } {
+  const transition = getSubscriptionTransition(data);
+  if (!transition) {
+    return {
+      label: "Active",
+      background: "#dcfce7",
+      color: "#15803d",
+    };
+  }
+
+  if (transition.pendingRecovery || transition.stage === "pending_recovery") {
+    return {
+      label: "Pending recovery",
+      background: "#dbeafe",
+      color: "#1d4ed8",
+    };
+  }
+
+  if (
+    transition.pendingVerification ||
+    transition.stage === "pending_verification"
+  ) {
+    return {
+      label: "Pending verification",
+      background: "#fff7ed",
+      color: "#c2410c",
+    };
+  }
+
+  if (transition.changeType === "cancellation") {
+    return {
+      label: "Cancellation scheduled",
+      background: "#fff7ed",
+      color: "#c2410c",
+    };
+  }
+
+  if (transition.changeType === "downgrade") {
+    return {
+      label: "Downgrade scheduled",
+      background: "#fef3c7",
+      color: "#a16207",
+    };
+  }
+
+  return {
+    label: "Active",
+    background: "#dcfce7",
+    color: "#15803d",
+  };
 }
 
 type ResolvedBooleanFeature = {
@@ -2334,6 +2397,7 @@ export function renderElement(
     case "planManager": {
       const plan = data.activePlan;
       const priceNum = plan ? parseFloat(String(plan.price)) : 0;
+      const lifecycleBadge = getLifecycleBadge(data);
       return (
         <div
           key={index}
@@ -2383,15 +2447,15 @@ export function renderElement(
                     alignItems: "center",
                     gap: 4,
                     marginTop: 8,
-                    background: `${tokens.primary}18`,
-                    color: tokens.primary,
+                    background: lifecycleBadge.background,
+                    color: lifecycleBadge.color,
                     fontSize: 11,
                     fontWeight: 600,
                     padding: "3px 10px",
                     borderRadius: 999,
                   }}
                 >
-                  ✓ Active
+                  ✓ {lifecycleBadge.label}
                 </div>
               </div>
               <div style={{ textAlign: "right", flexShrink: 0 }}>
@@ -3474,6 +3538,7 @@ function PortalContent({
   const isPaid = plan ? parseFloat(String(plan.price)) > 0 : false;
   const price = plan ? parseFloat(String(plan.price)) : 0;
   const scheduledCancellation = getScheduledCancellationTransition(data);
+  const lifecycleBadge = getLifecycleBadge(data);
   const scheduledCancellationDate = formatDateLabel(
     scheduledCancellation?.effectiveAt ?? null,
   );
@@ -3663,15 +3728,15 @@ function PortalContent({
                         alignItems: "center",
                         gap: 4,
                         marginTop: 8,
-                        background: `${responsiveTokens.primary}18`,
-                        color: responsiveTokens.primary,
+                        background: lifecycleBadge.background,
+                        color: lifecycleBadge.color,
                         fontSize: 11,
                         fontWeight: 600,
                         padding: "3px 10px",
                         borderRadius: 999,
                       }}
                     >
-                      ✓ Active
+                      ✓ {lifecycleBadge.label}
                     </div>
                   </div>
                   <div style={{ textAlign: "right", flexShrink: 0 }}>
@@ -6096,7 +6161,7 @@ function PaymentContent({
       throw new Error("Select a destination plan before continuing.");
     }
 
-    const res = await fetch(`${apiBaseUrl}/api/v1/companies/plan`, {
+    const res = await fetch(`${apiBaseUrl}/api/v1/companies/plan/preview`, {
       method: "POST",
       signal,
       headers: {
@@ -6106,7 +6171,6 @@ function PaymentContent({
       body: JSON.stringify({
         planId: selectedPlanId,
         billingPeriod,
-        previewOnly: true,
         ...(normalizedCustomerName ? { customerName: normalizedCustomerName } : {}),
         ...(hasCustomerEmail ? { customerEmail: normalizedCustomerEmail } : {}),
       }),
@@ -8699,21 +8763,36 @@ export function ArcenEmbed({
     dispatch({ type: "OPEN_UNSUBSCRIBE" });
   }, [allowPortalCancellation]);
 
-  const handleResumeSubscription = useCallback(() => {
+  const handleResumeSubscription = useCallback(async () => {
     if (!allowPortalPlanChanges || !state.data?.activePlan?.id) {
       return;
     }
 
-    dispatch({ type: "SELECT_PLAN", planId: state.data.activePlan.id });
-    dispatch({
-      type: "SET_BILLING_PERIOD",
-      period: resolveActiveBillingPeriod({
-        billingPeriod: state.data.billingPeriod,
-        activePlan: state.data.activePlan,
-      }),
-    });
-    dispatch({ type: "OPEN_PAYMENT" });
-  }, [allowPortalPlanChanges, state.data]);
+    dispatch({ type: "PROCESSING_START" });
+    try {
+      const response = await callApi("/api/v1/companies/resume", {});
+      await fetchData();
+      const effectiveAt =
+        (response as { data?: { effectiveAt?: string | null } })?.data
+          ?.effectiveAt ?? null;
+      const effectiveAtLabel =
+        typeof effectiveAt === "string" ? formatDateLabel(effectiveAt) : null;
+
+      dispatch({
+        type: "GOTO_SUCCESS",
+        successMsg: effectiveAtLabel
+          ? `Subscription resumed. Future renewals remain active through ${effectiveAtLabel} and beyond.`
+          : "Subscription resumed. Future renewals are active again.",
+      });
+    } catch (e: unknown) {
+      const msg =
+        e instanceof Error ? e.message : "Failed to resume subscription";
+      dispatch({
+        type: msg === "__TOKEN_EXPIRED__" ? "FETCH_ERR" : "PROCESSING_ERR",
+        error: msg === "__TOKEN_EXPIRED__" ? "__TOKEN_EXPIRED__" : msg,
+      });
+    }
+  }, [allowPortalPlanChanges, callApi, fetchData, state.data]);
 
   // Guard: loading — show skeleton first
   if (loading) {

@@ -157,6 +157,9 @@ enum SubscriptionStatus {
 
 enum BillingRecoveryTaskKind {
   SUBSCRIPTION_ACTIVATION
+  SUBSCRIPTION_PLAN_CHANGE
+  SUBSCRIPTION_CANCELLATION
+  SUBSCRIPTION_RESUME
 }
 
 enum BillingRecoveryTaskStatus {
@@ -164,6 +167,30 @@ enum BillingRecoveryTaskStatus {
   PROCESSING
   COMPLETED
   FAILED
+}
+
+enum SubscriptionChangeType {
+  UPGRADE
+  DOWNGRADE
+  CANCELLATION
+  RESUME
+  BILLING_PERIOD_CHANGE
+}
+
+enum SubscriptionChangeStage {
+  REQUESTED
+  PENDING_VERIFICATION
+  PENDING_RECOVERY
+  APPLIED
+  FAILED
+  REVERTED
+}
+
+enum SubscriptionChangeSource {
+  SELF_SERVICE
+  ADMIN
+  RECOVERY
+  SYNC
 }
 
 enum BillingAdjustmentKind {
@@ -312,6 +339,7 @@ model Team {
   refunds          Refund[]
   billingAdjustments BillingAdjustment[]
   subscriptionStates SubscriptionState[]
+  subscriptionChangeRequests SubscriptionChangeRequest[]
   billingRecoveryTasks BillingRecoveryTask[]
   taxProfile       TaxProfile?
   invoiceSequences InvoiceSequence[]
@@ -356,6 +384,7 @@ model WorkspaceEnvironment {
   templateInstalls   TemplateInstall[]
   invoices           Invoice[]
   subscriptionStates SubscriptionState[]
+  subscriptionChangeRequests SubscriptionChangeRequest[]
   payments           Payment[]
   paymentLinks       PaymentLink[]
   checkoutSessions   CheckoutSession[]
@@ -922,6 +951,7 @@ model SubscriptionState {
   team    Team                  @relation(fields: [teamId], references: [id], onDelete: Cascade)
   environment WorkspaceEnvironment? @relation(fields: [environmentId], references: [id], onDelete: SetNull)
   company ArcenCompany          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  changeRequests SubscriptionChangeRequest[]
   payments Payment[]
   billingAdjustments BillingAdjustment[]
   checkoutSessions CheckoutSession[]
@@ -930,6 +960,49 @@ model SubscriptionState {
   @@index([teamId, walletAddress])
   @@index([teamId, chainId])
   @@index([teamId, environmentId])
+}
+
+model SubscriptionChangeRequest {
+  id                    String                   @id @default(cuid())
+  createdAt             DateTime                 @default(now())
+  updatedAt             DateTime                 @updatedAt
+  teamId                String
+  environmentId         String?
+  companyId             String
+  subscriptionStateId   String?
+  changeType            SubscriptionChangeType
+  stage                 SubscriptionChangeStage  @default(REQUESTED)
+  source                SubscriptionChangeSource @default(SELF_SERVICE)
+  previousPlanId        String?
+  targetPlanId          String?
+  previousBillingPeriod String?
+  targetBillingPeriod   String?
+  requestedAt           DateTime                 @default(now())
+  effectiveAt           DateTime?
+  appliedAt             DateTime?
+  failedAt              DateTime?
+  autopayConfigTxHash   String?
+  accessChangeTxHash    String?
+  paymentTxHash         String?
+  autopayControlTxHash  String?
+  recoveryTaskId        String?
+  pendingVerification   Boolean                  @default(false)
+  failureReason         String?
+  metadata              Json?
+
+  team              Team                  @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  environment       WorkspaceEnvironment? @relation(fields: [environmentId], references: [id], onDelete: SetNull)
+  company           ArcenCompany          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  subscriptionState SubscriptionState?    @relation(fields: [subscriptionStateId], references: [id], onDelete: SetNull)
+
+  @@index([teamId, environmentId, companyId, stage, requestedAt])
+  @@index([teamId, subscriptionStateId, createdAt])
+  @@index([companyId, createdAt])
+  @@index([recoveryTaskId])
+  @@index([autopayConfigTxHash])
+  @@index([accessChangeTxHash])
+  @@index([paymentTxHash])
+  @@index([autopayControlTxHash])
 }
 
 model Payment {
@@ -1239,6 +1312,7 @@ model ArcenCompany {
   refunds   Refund[]
   billingAdjustments BillingAdjustment[]
   billingRecoveryTasks BillingRecoveryTask[]
+  subscriptionChangeRequests SubscriptionChangeRequest[]
   addOnGrants CompanyAddOnGrant[]
   paymentLinks PaymentLink[]
   checkoutSessions CheckoutSession[]

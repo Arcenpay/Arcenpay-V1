@@ -241,6 +241,7 @@ export type TeamWhereInput = {
   refunds?: Prisma.RefundListRelationFilter
   billingAdjustments?: Prisma.BillingAdjustmentListRelationFilter
   subscriptionStates?: Prisma.SubscriptionStateListRelationFilter
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestListRelationFilter
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskListRelationFilter
   taxProfile?: Prisma.XOR<Prisma.TaxProfileNullableScalarRelationFilter, Prisma.TaxProfileWhereInput> | null
   invoiceSequences?: Prisma.InvoiceSequenceListRelationFilter
@@ -290,6 +291,7 @@ export type TeamOrderByWithRelationInput = {
   refunds?: Prisma.RefundOrderByRelationAggregateInput
   billingAdjustments?: Prisma.BillingAdjustmentOrderByRelationAggregateInput
   subscriptionStates?: Prisma.SubscriptionStateOrderByRelationAggregateInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestOrderByRelationAggregateInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskOrderByRelationAggregateInput
   taxProfile?: Prisma.TaxProfileOrderByWithRelationInput
   invoiceSequences?: Prisma.InvoiceSequenceOrderByRelationAggregateInput
@@ -342,6 +344,7 @@ export type TeamWhereUniqueInput = Prisma.AtLeast<{
   refunds?: Prisma.RefundListRelationFilter
   billingAdjustments?: Prisma.BillingAdjustmentListRelationFilter
   subscriptionStates?: Prisma.SubscriptionStateListRelationFilter
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestListRelationFilter
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskListRelationFilter
   taxProfile?: Prisma.XOR<Prisma.TaxProfileNullableScalarRelationFilter, Prisma.TaxProfileWhereInput> | null
   invoiceSequences?: Prisma.InvoiceSequenceListRelationFilter
@@ -423,6 +426,7 @@ export type TeamCreateInput = {
   refunds?: Prisma.RefundCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceCreateNestedManyWithoutTeamInput
@@ -472,6 +476,7 @@ export type TeamUncheckedCreateInput = {
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileUncheckedCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedCreateNestedManyWithoutTeamInput
@@ -521,6 +526,7 @@ export type TeamUpdateInput = {
   refunds?: Prisma.RefundUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUpdateManyWithoutTeamNestedInput
@@ -570,6 +576,7 @@ export type TeamUncheckedUpdateInput = {
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUncheckedUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedUpdateManyWithoutTeamNestedInput
@@ -918,6 +925,20 @@ export type TeamUpdateOneRequiredWithoutSubscriptionStatesNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.TeamUpdateToOneWithWhereWithoutSubscriptionStatesInput, Prisma.TeamUpdateWithoutSubscriptionStatesInput>, Prisma.TeamUncheckedUpdateWithoutSubscriptionStatesInput>
 }
 
+export type TeamCreateNestedOneWithoutSubscriptionChangeRequestsInput = {
+  create?: Prisma.XOR<Prisma.TeamCreateWithoutSubscriptionChangeRequestsInput, Prisma.TeamUncheckedCreateWithoutSubscriptionChangeRequestsInput>
+  connectOrCreate?: Prisma.TeamCreateOrConnectWithoutSubscriptionChangeRequestsInput
+  connect?: Prisma.TeamWhereUniqueInput
+}
+
+export type TeamUpdateOneRequiredWithoutSubscriptionChangeRequestsNestedInput = {
+  create?: Prisma.XOR<Prisma.TeamCreateWithoutSubscriptionChangeRequestsInput, Prisma.TeamUncheckedCreateWithoutSubscriptionChangeRequestsInput>
+  connectOrCreate?: Prisma.TeamCreateOrConnectWithoutSubscriptionChangeRequestsInput
+  upsert?: Prisma.TeamUpsertWithoutSubscriptionChangeRequestsInput
+  connect?: Prisma.TeamWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.TeamUpdateToOneWithWhereWithoutSubscriptionChangeRequestsInput, Prisma.TeamUpdateWithoutSubscriptionChangeRequestsInput>, Prisma.TeamUncheckedUpdateWithoutSubscriptionChangeRequestsInput>
+}
+
 export type TeamCreateNestedOneWithoutPaymentsInput = {
   create?: Prisma.XOR<Prisma.TeamCreateWithoutPaymentsInput, Prisma.TeamUncheckedCreateWithoutPaymentsInput>
   connectOrCreate?: Prisma.TeamCreateOrConnectWithoutPaymentsInput
@@ -1213,6 +1234,7 @@ export type TeamCreateWithoutEnvironmentsInput = {
   refunds?: Prisma.RefundCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceCreateNestedManyWithoutTeamInput
@@ -1261,6 +1283,7 @@ export type TeamUncheckedCreateWithoutEnvironmentsInput = {
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileUncheckedCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedCreateNestedManyWithoutTeamInput
@@ -1325,6 +1348,7 @@ export type TeamUpdateWithoutEnvironmentsInput = {
   refunds?: Prisma.RefundUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUpdateManyWithoutTeamNestedInput
@@ -1373,6 +1397,7 @@ export type TeamUncheckedUpdateWithoutEnvironmentsInput = {
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUncheckedUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedUpdateManyWithoutTeamNestedInput
@@ -1421,6 +1446,7 @@ export type TeamCreateWithoutMembersInput = {
   refunds?: Prisma.RefundCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceCreateNestedManyWithoutTeamInput
@@ -1469,6 +1495,7 @@ export type TeamUncheckedCreateWithoutMembersInput = {
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileUncheckedCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedCreateNestedManyWithoutTeamInput
@@ -1533,6 +1560,7 @@ export type TeamUpdateWithoutMembersInput = {
   refunds?: Prisma.RefundUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUpdateManyWithoutTeamNestedInput
@@ -1581,6 +1609,7 @@ export type TeamUncheckedUpdateWithoutMembersInput = {
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUncheckedUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedUpdateManyWithoutTeamNestedInput
@@ -1629,6 +1658,7 @@ export type TeamCreateWithoutInvitationsInput = {
   refunds?: Prisma.RefundCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceCreateNestedManyWithoutTeamInput
@@ -1677,6 +1707,7 @@ export type TeamUncheckedCreateWithoutInvitationsInput = {
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileUncheckedCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedCreateNestedManyWithoutTeamInput
@@ -1741,6 +1772,7 @@ export type TeamUpdateWithoutInvitationsInput = {
   refunds?: Prisma.RefundUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUpdateManyWithoutTeamNestedInput
@@ -1789,6 +1821,7 @@ export type TeamUncheckedUpdateWithoutInvitationsInput = {
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUncheckedUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedUpdateManyWithoutTeamNestedInput
@@ -1837,6 +1870,7 @@ export type TeamCreateWithoutProviderProfilesInput = {
   refunds?: Prisma.RefundCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceCreateNestedManyWithoutTeamInput
@@ -1885,6 +1919,7 @@ export type TeamUncheckedCreateWithoutProviderProfilesInput = {
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileUncheckedCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedCreateNestedManyWithoutTeamInput
@@ -1949,6 +1984,7 @@ export type TeamUpdateWithoutProviderProfilesInput = {
   refunds?: Prisma.RefundUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUpdateManyWithoutTeamNestedInput
@@ -1997,6 +2033,7 @@ export type TeamUncheckedUpdateWithoutProviderProfilesInput = {
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUncheckedUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedUpdateManyWithoutTeamNestedInput
@@ -2045,6 +2082,7 @@ export type TeamCreateWithoutCatalogPlansInput = {
   refunds?: Prisma.RefundCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceCreateNestedManyWithoutTeamInput
@@ -2093,6 +2131,7 @@ export type TeamUncheckedCreateWithoutCatalogPlansInput = {
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileUncheckedCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedCreateNestedManyWithoutTeamInput
@@ -2157,6 +2196,7 @@ export type TeamUpdateWithoutCatalogPlansInput = {
   refunds?: Prisma.RefundUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUpdateManyWithoutTeamNestedInput
@@ -2205,6 +2245,7 @@ export type TeamUncheckedUpdateWithoutCatalogPlansInput = {
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUncheckedUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedUpdateManyWithoutTeamNestedInput
@@ -2253,6 +2294,7 @@ export type TeamCreateWithoutCatalogAddOnsInput = {
   refunds?: Prisma.RefundCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceCreateNestedManyWithoutTeamInput
@@ -2301,6 +2343,7 @@ export type TeamUncheckedCreateWithoutCatalogAddOnsInput = {
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileUncheckedCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedCreateNestedManyWithoutTeamInput
@@ -2365,6 +2408,7 @@ export type TeamUpdateWithoutCatalogAddOnsInput = {
   refunds?: Prisma.RefundUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUpdateManyWithoutTeamNestedInput
@@ -2413,6 +2457,7 @@ export type TeamUncheckedUpdateWithoutCatalogAddOnsInput = {
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUncheckedUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedUpdateManyWithoutTeamNestedInput
@@ -2461,6 +2506,7 @@ export type TeamCreateWithoutCatalogCreditTypesInput = {
   refunds?: Prisma.RefundCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceCreateNestedManyWithoutTeamInput
@@ -2509,6 +2555,7 @@ export type TeamUncheckedCreateWithoutCatalogCreditTypesInput = {
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileUncheckedCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedCreateNestedManyWithoutTeamInput
@@ -2573,6 +2620,7 @@ export type TeamUpdateWithoutCatalogCreditTypesInput = {
   refunds?: Prisma.RefundUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUpdateManyWithoutTeamNestedInput
@@ -2621,6 +2669,7 @@ export type TeamUncheckedUpdateWithoutCatalogCreditTypesInput = {
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUncheckedUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedUpdateManyWithoutTeamNestedInput
@@ -2669,6 +2718,7 @@ export type TeamCreateWithoutCatalogVersionsInput = {
   refunds?: Prisma.RefundCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceCreateNestedManyWithoutTeamInput
@@ -2717,6 +2767,7 @@ export type TeamUncheckedCreateWithoutCatalogVersionsInput = {
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileUncheckedCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedCreateNestedManyWithoutTeamInput
@@ -2781,6 +2832,7 @@ export type TeamUpdateWithoutCatalogVersionsInput = {
   refunds?: Prisma.RefundUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUpdateManyWithoutTeamNestedInput
@@ -2829,6 +2881,7 @@ export type TeamUncheckedUpdateWithoutCatalogVersionsInput = {
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUncheckedUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedUpdateManyWithoutTeamNestedInput
@@ -2877,6 +2930,7 @@ export type TeamCreateWithoutCatalogConfigsInput = {
   refunds?: Prisma.RefundCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceCreateNestedManyWithoutTeamInput
@@ -2925,6 +2979,7 @@ export type TeamUncheckedCreateWithoutCatalogConfigsInput = {
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileUncheckedCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedCreateNestedManyWithoutTeamInput
@@ -2989,6 +3044,7 @@ export type TeamUpdateWithoutCatalogConfigsInput = {
   refunds?: Prisma.RefundUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUpdateManyWithoutTeamNestedInput
@@ -3037,6 +3093,7 @@ export type TeamUncheckedUpdateWithoutCatalogConfigsInput = {
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUncheckedUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedUpdateManyWithoutTeamNestedInput
@@ -3085,6 +3142,7 @@ export type TeamCreateWithoutBillingTemplatesInput = {
   refunds?: Prisma.RefundCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceCreateNestedManyWithoutTeamInput
@@ -3133,6 +3191,7 @@ export type TeamUncheckedCreateWithoutBillingTemplatesInput = {
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileUncheckedCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedCreateNestedManyWithoutTeamInput
@@ -3197,6 +3256,7 @@ export type TeamUpdateWithoutBillingTemplatesInput = {
   refunds?: Prisma.RefundUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUpdateManyWithoutTeamNestedInput
@@ -3245,6 +3305,7 @@ export type TeamUncheckedUpdateWithoutBillingTemplatesInput = {
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUncheckedUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedUpdateManyWithoutTeamNestedInput
@@ -3293,6 +3354,7 @@ export type TeamCreateWithoutTemplateInstallsInput = {
   refunds?: Prisma.RefundCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceCreateNestedManyWithoutTeamInput
@@ -3341,6 +3403,7 @@ export type TeamUncheckedCreateWithoutTemplateInstallsInput = {
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileUncheckedCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedCreateNestedManyWithoutTeamInput
@@ -3405,6 +3468,7 @@ export type TeamUpdateWithoutTemplateInstallsInput = {
   refunds?: Prisma.RefundUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUpdateManyWithoutTeamNestedInput
@@ -3453,6 +3517,7 @@ export type TeamUncheckedUpdateWithoutTemplateInstallsInput = {
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUncheckedUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedUpdateManyWithoutTeamNestedInput
@@ -3502,6 +3567,7 @@ export type TeamCreateWithoutTaxProfileInput = {
   refunds?: Prisma.RefundCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceCreateNestedManyWithoutTeamInput
   auditEvents?: Prisma.AuditEventCreateNestedManyWithoutTeamInput
@@ -3550,6 +3616,7 @@ export type TeamUncheckedCreateWithoutTaxProfileInput = {
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedCreateNestedManyWithoutTeamInput
   auditEvents?: Prisma.AuditEventUncheckedCreateNestedManyWithoutTeamInput
@@ -3614,6 +3681,7 @@ export type TeamUpdateWithoutTaxProfileInput = {
   refunds?: Prisma.RefundUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUpdateManyWithoutTeamNestedInput
   auditEvents?: Prisma.AuditEventUpdateManyWithoutTeamNestedInput
@@ -3662,6 +3730,7 @@ export type TeamUncheckedUpdateWithoutTaxProfileInput = {
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedUpdateManyWithoutTeamNestedInput
   auditEvents?: Prisma.AuditEventUncheckedUpdateManyWithoutTeamNestedInput
@@ -3710,6 +3779,7 @@ export type TeamCreateWithoutInvoiceSequencesInput = {
   refunds?: Prisma.RefundCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileCreateNestedOneWithoutTeamInput
   auditEvents?: Prisma.AuditEventCreateNestedManyWithoutTeamInput
@@ -3758,6 +3828,7 @@ export type TeamUncheckedCreateWithoutInvoiceSequencesInput = {
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileUncheckedCreateNestedOneWithoutTeamInput
   auditEvents?: Prisma.AuditEventUncheckedCreateNestedManyWithoutTeamInput
@@ -3822,6 +3893,7 @@ export type TeamUpdateWithoutInvoiceSequencesInput = {
   refunds?: Prisma.RefundUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUpdateOneWithoutTeamNestedInput
   auditEvents?: Prisma.AuditEventUpdateManyWithoutTeamNestedInput
@@ -3870,6 +3942,7 @@ export type TeamUncheckedUpdateWithoutInvoiceSequencesInput = {
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUncheckedUpdateOneWithoutTeamNestedInput
   auditEvents?: Prisma.AuditEventUncheckedUpdateManyWithoutTeamNestedInput
@@ -3917,6 +3990,7 @@ export type TeamCreateWithoutInvoicesInput = {
   refunds?: Prisma.RefundCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceCreateNestedManyWithoutTeamInput
@@ -3965,6 +4039,7 @@ export type TeamUncheckedCreateWithoutInvoicesInput = {
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileUncheckedCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedCreateNestedManyWithoutTeamInput
@@ -4029,6 +4104,7 @@ export type TeamUpdateWithoutInvoicesInput = {
   refunds?: Prisma.RefundUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUpdateManyWithoutTeamNestedInput
@@ -4077,6 +4153,7 @@ export type TeamUncheckedUpdateWithoutInvoicesInput = {
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUncheckedUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedUpdateManyWithoutTeamNestedInput
@@ -4126,6 +4203,7 @@ export type TeamCreateWithoutAuditEventsInput = {
   refunds?: Prisma.RefundCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceCreateNestedManyWithoutTeamInput
@@ -4174,6 +4252,7 @@ export type TeamUncheckedCreateWithoutAuditEventsInput = {
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileUncheckedCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedCreateNestedManyWithoutTeamInput
@@ -4238,6 +4317,7 @@ export type TeamUpdateWithoutAuditEventsInput = {
   refunds?: Prisma.RefundUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUpdateManyWithoutTeamNestedInput
@@ -4286,6 +4366,7 @@ export type TeamUncheckedUpdateWithoutAuditEventsInput = {
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUncheckedUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedUpdateManyWithoutTeamNestedInput
@@ -4334,6 +4415,7 @@ export type TeamCreateWithoutBillingEventsInput = {
   refunds?: Prisma.RefundCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceCreateNestedManyWithoutTeamInput
@@ -4382,6 +4464,7 @@ export type TeamUncheckedCreateWithoutBillingEventsInput = {
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileUncheckedCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedCreateNestedManyWithoutTeamInput
@@ -4446,6 +4529,7 @@ export type TeamUpdateWithoutBillingEventsInput = {
   refunds?: Prisma.RefundUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUpdateManyWithoutTeamNestedInput
@@ -4494,6 +4578,7 @@ export type TeamUncheckedUpdateWithoutBillingEventsInput = {
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUncheckedUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedUpdateManyWithoutTeamNestedInput
@@ -4541,6 +4626,7 @@ export type TeamCreateWithoutSubscriptionStatesInput = {
   billingBalances?: Prisma.BillingBalanceCreateNestedManyWithoutTeamInput
   refunds?: Prisma.RefundCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceCreateNestedManyWithoutTeamInput
@@ -4589,6 +4675,7 @@ export type TeamUncheckedCreateWithoutSubscriptionStatesInput = {
   billingBalances?: Prisma.BillingBalanceUncheckedCreateNestedManyWithoutTeamInput
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileUncheckedCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedCreateNestedManyWithoutTeamInput
@@ -4653,6 +4740,7 @@ export type TeamUpdateWithoutSubscriptionStatesInput = {
   billingBalances?: Prisma.BillingBalanceUpdateManyWithoutTeamNestedInput
   refunds?: Prisma.RefundUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUpdateManyWithoutTeamNestedInput
@@ -4701,6 +4789,219 @@ export type TeamUncheckedUpdateWithoutSubscriptionStatesInput = {
   billingBalances?: Prisma.BillingBalanceUncheckedUpdateManyWithoutTeamNestedInput
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutTeamNestedInput
+  billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutTeamNestedInput
+  taxProfile?: Prisma.TaxProfileUncheckedUpdateOneWithoutTeamNestedInput
+  invoiceSequences?: Prisma.InvoiceSequenceUncheckedUpdateManyWithoutTeamNestedInput
+  auditEvents?: Prisma.AuditEventUncheckedUpdateManyWithoutTeamNestedInput
+  billingEvents?: Prisma.BillingEventUncheckedUpdateManyWithoutTeamNestedInput
+  webhookDeliveries?: Prisma.WebhookDeliveryUncheckedUpdateManyWithoutTeamNestedInput
+  gasSpends?: Prisma.GasSpendUncheckedUpdateManyWithoutTeamNestedInput
+  tierHistory?: Prisma.TierUpgradeHistoryUncheckedUpdateManyWithoutTeamNestedInput
+  supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
+  arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
+  addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
+  featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
+  arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
+  embedComponents?: Prisma.EmbedComponentUncheckedUpdateManyWithoutTeamNestedInput
+  agentConfig?: Prisma.ArcenAgentConfigUncheckedUpdateOneWithoutTeamNestedInput
+  dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedUpdateManyWithoutTeamNestedInput
+}
+
+export type TeamCreateWithoutSubscriptionChangeRequestsInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  name: string
+  slug: string
+  environmentMode?: $Enums.EnvironmentMode
+  invoicePrefix?: string | null
+  platformTier?: $Enums.PlatformTier
+  tierExpiresAt?: Date | string | null
+  tierSubscriptionId?: string | null
+  members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
+  invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
+  catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
+  catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
+  catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
+  catalogVersions?: Prisma.CatalogVersionCreateNestedManyWithoutTeamInput
+  catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
+  billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
+  templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutTeamInput
+  invoices?: Prisma.InvoiceCreateNestedManyWithoutTeamInput
+  payments?: Prisma.PaymentCreateNestedManyWithoutTeamInput
+  paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutTeamInput
+  checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutTeamInput
+  billingBalances?: Prisma.BillingBalanceCreateNestedManyWithoutTeamInput
+  refunds?: Prisma.RefundCreateNestedManyWithoutTeamInput
+  billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutTeamInput
+  subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutTeamInput
+  billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutTeamInput
+  taxProfile?: Prisma.TaxProfileCreateNestedOneWithoutTeamInput
+  invoiceSequences?: Prisma.InvoiceSequenceCreateNestedManyWithoutTeamInput
+  auditEvents?: Prisma.AuditEventCreateNestedManyWithoutTeamInput
+  billingEvents?: Prisma.BillingEventCreateNestedManyWithoutTeamInput
+  webhookDeliveries?: Prisma.WebhookDeliveryCreateNestedManyWithoutTeamInput
+  gasSpends?: Prisma.GasSpendCreateNestedManyWithoutTeamInput
+  tierHistory?: Prisma.TierUpgradeHistoryCreateNestedManyWithoutTeamInput
+  supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
+  arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
+  addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
+  featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
+  arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
+  embedComponents?: Prisma.EmbedComponentCreateNestedManyWithoutTeamInput
+  agentConfig?: Prisma.ArcenAgentConfigCreateNestedOneWithoutTeamInput
+  dispatchRequests?: Prisma.ArcenDispatchRequestCreateNestedManyWithoutTeamInput
+}
+
+export type TeamUncheckedCreateWithoutSubscriptionChangeRequestsInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  name: string
+  slug: string
+  environmentMode?: $Enums.EnvironmentMode
+  invoicePrefix?: string | null
+  platformTier?: $Enums.PlatformTier
+  tierExpiresAt?: Date | string | null
+  tierSubscriptionId?: string | null
+  members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
+  invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
+  catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
+  catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
+  catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
+  catalogVersions?: Prisma.CatalogVersionUncheckedCreateNestedManyWithoutTeamInput
+  catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
+  billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
+  templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutTeamInput
+  invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutTeamInput
+  payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutTeamInput
+  paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutTeamInput
+  checkoutSessions?: Prisma.CheckoutSessionUncheckedCreateNestedManyWithoutTeamInput
+  billingBalances?: Prisma.BillingBalanceUncheckedCreateNestedManyWithoutTeamInput
+  refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutTeamInput
+  billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutTeamInput
+  subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutTeamInput
+  billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutTeamInput
+  taxProfile?: Prisma.TaxProfileUncheckedCreateNestedOneWithoutTeamInput
+  invoiceSequences?: Prisma.InvoiceSequenceUncheckedCreateNestedManyWithoutTeamInput
+  auditEvents?: Prisma.AuditEventUncheckedCreateNestedManyWithoutTeamInput
+  billingEvents?: Prisma.BillingEventUncheckedCreateNestedManyWithoutTeamInput
+  webhookDeliveries?: Prisma.WebhookDeliveryUncheckedCreateNestedManyWithoutTeamInput
+  gasSpends?: Prisma.GasSpendUncheckedCreateNestedManyWithoutTeamInput
+  tierHistory?: Prisma.TierUpgradeHistoryUncheckedCreateNestedManyWithoutTeamInput
+  supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
+  arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
+  addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
+  featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
+  arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
+  embedComponents?: Prisma.EmbedComponentUncheckedCreateNestedManyWithoutTeamInput
+  agentConfig?: Prisma.ArcenAgentConfigUncheckedCreateNestedOneWithoutTeamInput
+  dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedCreateNestedManyWithoutTeamInput
+}
+
+export type TeamCreateOrConnectWithoutSubscriptionChangeRequestsInput = {
+  where: Prisma.TeamWhereUniqueInput
+  create: Prisma.XOR<Prisma.TeamCreateWithoutSubscriptionChangeRequestsInput, Prisma.TeamUncheckedCreateWithoutSubscriptionChangeRequestsInput>
+}
+
+export type TeamUpsertWithoutSubscriptionChangeRequestsInput = {
+  update: Prisma.XOR<Prisma.TeamUpdateWithoutSubscriptionChangeRequestsInput, Prisma.TeamUncheckedUpdateWithoutSubscriptionChangeRequestsInput>
+  create: Prisma.XOR<Prisma.TeamCreateWithoutSubscriptionChangeRequestsInput, Prisma.TeamUncheckedCreateWithoutSubscriptionChangeRequestsInput>
+  where?: Prisma.TeamWhereInput
+}
+
+export type TeamUpdateToOneWithWhereWithoutSubscriptionChangeRequestsInput = {
+  where?: Prisma.TeamWhereInput
+  data: Prisma.XOR<Prisma.TeamUpdateWithoutSubscriptionChangeRequestsInput, Prisma.TeamUncheckedUpdateWithoutSubscriptionChangeRequestsInput>
+}
+
+export type TeamUpdateWithoutSubscriptionChangeRequestsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  slug?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
+  invoicePrefix?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
+  tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
+  invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
+  catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
+  catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
+  catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
+  catalogVersions?: Prisma.CatalogVersionUpdateManyWithoutTeamNestedInput
+  catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
+  billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
+  templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutTeamNestedInput
+  invoices?: Prisma.InvoiceUpdateManyWithoutTeamNestedInput
+  payments?: Prisma.PaymentUpdateManyWithoutTeamNestedInput
+  paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutTeamNestedInput
+  checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutTeamNestedInput
+  billingBalances?: Prisma.BillingBalanceUpdateManyWithoutTeamNestedInput
+  refunds?: Prisma.RefundUpdateManyWithoutTeamNestedInput
+  billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutTeamNestedInput
+  subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutTeamNestedInput
+  billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutTeamNestedInput
+  taxProfile?: Prisma.TaxProfileUpdateOneWithoutTeamNestedInput
+  invoiceSequences?: Prisma.InvoiceSequenceUpdateManyWithoutTeamNestedInput
+  auditEvents?: Prisma.AuditEventUpdateManyWithoutTeamNestedInput
+  billingEvents?: Prisma.BillingEventUpdateManyWithoutTeamNestedInput
+  webhookDeliveries?: Prisma.WebhookDeliveryUpdateManyWithoutTeamNestedInput
+  gasSpends?: Prisma.GasSpendUpdateManyWithoutTeamNestedInput
+  tierHistory?: Prisma.TierUpgradeHistoryUpdateManyWithoutTeamNestedInput
+  supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
+  arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
+  addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
+  featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
+  arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
+  embedComponents?: Prisma.EmbedComponentUpdateManyWithoutTeamNestedInput
+  agentConfig?: Prisma.ArcenAgentConfigUpdateOneWithoutTeamNestedInput
+  dispatchRequests?: Prisma.ArcenDispatchRequestUpdateManyWithoutTeamNestedInput
+}
+
+export type TeamUncheckedUpdateWithoutSubscriptionChangeRequestsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  slug?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
+  invoicePrefix?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
+  tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
+  invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
+  catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
+  catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
+  catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
+  catalogVersions?: Prisma.CatalogVersionUncheckedUpdateManyWithoutTeamNestedInput
+  catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
+  billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
+  templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutTeamNestedInput
+  invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutTeamNestedInput
+  payments?: Prisma.PaymentUncheckedUpdateManyWithoutTeamNestedInput
+  paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutTeamNestedInput
+  checkoutSessions?: Prisma.CheckoutSessionUncheckedUpdateManyWithoutTeamNestedInput
+  billingBalances?: Prisma.BillingBalanceUncheckedUpdateManyWithoutTeamNestedInput
+  refunds?: Prisma.RefundUncheckedUpdateManyWithoutTeamNestedInput
+  billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutTeamNestedInput
+  subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUncheckedUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedUpdateManyWithoutTeamNestedInput
@@ -4749,6 +5050,7 @@ export type TeamCreateWithoutPaymentsInput = {
   refunds?: Prisma.RefundCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceCreateNestedManyWithoutTeamInput
@@ -4797,6 +5099,7 @@ export type TeamUncheckedCreateWithoutPaymentsInput = {
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileUncheckedCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedCreateNestedManyWithoutTeamInput
@@ -4861,6 +5164,7 @@ export type TeamUpdateWithoutPaymentsInput = {
   refunds?: Prisma.RefundUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUpdateManyWithoutTeamNestedInput
@@ -4909,6 +5213,7 @@ export type TeamUncheckedUpdateWithoutPaymentsInput = {
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUncheckedUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedUpdateManyWithoutTeamNestedInput
@@ -4957,6 +5262,7 @@ export type TeamCreateWithoutBillingAdjustmentsInput = {
   billingBalances?: Prisma.BillingBalanceCreateNestedManyWithoutTeamInput
   refunds?: Prisma.RefundCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceCreateNestedManyWithoutTeamInput
@@ -5005,6 +5311,7 @@ export type TeamUncheckedCreateWithoutBillingAdjustmentsInput = {
   billingBalances?: Prisma.BillingBalanceUncheckedCreateNestedManyWithoutTeamInput
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileUncheckedCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedCreateNestedManyWithoutTeamInput
@@ -5069,6 +5376,7 @@ export type TeamUpdateWithoutBillingAdjustmentsInput = {
   billingBalances?: Prisma.BillingBalanceUpdateManyWithoutTeamNestedInput
   refunds?: Prisma.RefundUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUpdateManyWithoutTeamNestedInput
@@ -5117,6 +5425,7 @@ export type TeamUncheckedUpdateWithoutBillingAdjustmentsInput = {
   billingBalances?: Prisma.BillingBalanceUncheckedUpdateManyWithoutTeamNestedInput
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUncheckedUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedUpdateManyWithoutTeamNestedInput
@@ -5165,6 +5474,7 @@ export type TeamCreateWithoutBillingBalancesInput = {
   refunds?: Prisma.RefundCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceCreateNestedManyWithoutTeamInput
@@ -5213,6 +5523,7 @@ export type TeamUncheckedCreateWithoutBillingBalancesInput = {
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileUncheckedCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedCreateNestedManyWithoutTeamInput
@@ -5277,6 +5588,7 @@ export type TeamUpdateWithoutBillingBalancesInput = {
   refunds?: Prisma.RefundUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUpdateManyWithoutTeamNestedInput
@@ -5325,6 +5637,7 @@ export type TeamUncheckedUpdateWithoutBillingBalancesInput = {
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUncheckedUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedUpdateManyWithoutTeamNestedInput
@@ -5373,6 +5686,7 @@ export type TeamCreateWithoutRefundsInput = {
   billingBalances?: Prisma.BillingBalanceCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceCreateNestedManyWithoutTeamInput
@@ -5421,6 +5735,7 @@ export type TeamUncheckedCreateWithoutRefundsInput = {
   billingBalances?: Prisma.BillingBalanceUncheckedCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileUncheckedCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedCreateNestedManyWithoutTeamInput
@@ -5485,6 +5800,7 @@ export type TeamUpdateWithoutRefundsInput = {
   billingBalances?: Prisma.BillingBalanceUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUpdateManyWithoutTeamNestedInput
@@ -5533,6 +5849,7 @@ export type TeamUncheckedUpdateWithoutRefundsInput = {
   billingBalances?: Prisma.BillingBalanceUncheckedUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUncheckedUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedUpdateManyWithoutTeamNestedInput
@@ -5582,6 +5899,7 @@ export type TeamCreateWithoutBillingRecoveryTasksInput = {
   refunds?: Prisma.RefundCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceCreateNestedManyWithoutTeamInput
   auditEvents?: Prisma.AuditEventCreateNestedManyWithoutTeamInput
@@ -5630,6 +5948,7 @@ export type TeamUncheckedCreateWithoutBillingRecoveryTasksInput = {
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileUncheckedCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedCreateNestedManyWithoutTeamInput
   auditEvents?: Prisma.AuditEventUncheckedCreateNestedManyWithoutTeamInput
@@ -5694,6 +6013,7 @@ export type TeamUpdateWithoutBillingRecoveryTasksInput = {
   refunds?: Prisma.RefundUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUpdateManyWithoutTeamNestedInput
   auditEvents?: Prisma.AuditEventUpdateManyWithoutTeamNestedInput
@@ -5742,6 +6062,7 @@ export type TeamUncheckedUpdateWithoutBillingRecoveryTasksInput = {
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUncheckedUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedUpdateManyWithoutTeamNestedInput
   auditEvents?: Prisma.AuditEventUncheckedUpdateManyWithoutTeamNestedInput
@@ -5790,6 +6111,7 @@ export type TeamCreateWithoutWebhookDeliveriesInput = {
   refunds?: Prisma.RefundCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceCreateNestedManyWithoutTeamInput
@@ -5838,6 +6160,7 @@ export type TeamUncheckedCreateWithoutWebhookDeliveriesInput = {
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileUncheckedCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedCreateNestedManyWithoutTeamInput
@@ -5902,6 +6225,7 @@ export type TeamUpdateWithoutWebhookDeliveriesInput = {
   refunds?: Prisma.RefundUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUpdateManyWithoutTeamNestedInput
@@ -5950,6 +6274,7 @@ export type TeamUncheckedUpdateWithoutWebhookDeliveriesInput = {
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUncheckedUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedUpdateManyWithoutTeamNestedInput
@@ -5998,6 +6323,7 @@ export type TeamCreateWithoutGasSpendsInput = {
   refunds?: Prisma.RefundCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceCreateNestedManyWithoutTeamInput
@@ -6046,6 +6372,7 @@ export type TeamUncheckedCreateWithoutGasSpendsInput = {
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileUncheckedCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedCreateNestedManyWithoutTeamInput
@@ -6110,6 +6437,7 @@ export type TeamUpdateWithoutGasSpendsInput = {
   refunds?: Prisma.RefundUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUpdateManyWithoutTeamNestedInput
@@ -6158,6 +6486,7 @@ export type TeamUncheckedUpdateWithoutGasSpendsInput = {
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUncheckedUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedUpdateManyWithoutTeamNestedInput
@@ -6206,6 +6535,7 @@ export type TeamCreateWithoutTierHistoryInput = {
   refunds?: Prisma.RefundCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceCreateNestedManyWithoutTeamInput
@@ -6254,6 +6584,7 @@ export type TeamUncheckedCreateWithoutTierHistoryInput = {
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileUncheckedCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedCreateNestedManyWithoutTeamInput
@@ -6318,6 +6649,7 @@ export type TeamUpdateWithoutTierHistoryInput = {
   refunds?: Prisma.RefundUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUpdateManyWithoutTeamNestedInput
@@ -6366,6 +6698,7 @@ export type TeamUncheckedUpdateWithoutTierHistoryInput = {
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUncheckedUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedUpdateManyWithoutTeamNestedInput
@@ -6414,6 +6747,7 @@ export type TeamCreateWithoutSupportTicketsInput = {
   refunds?: Prisma.RefundCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceCreateNestedManyWithoutTeamInput
@@ -6462,6 +6796,7 @@ export type TeamUncheckedCreateWithoutSupportTicketsInput = {
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileUncheckedCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedCreateNestedManyWithoutTeamInput
@@ -6526,6 +6861,7 @@ export type TeamUpdateWithoutSupportTicketsInput = {
   refunds?: Prisma.RefundUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUpdateManyWithoutTeamNestedInput
@@ -6574,6 +6910,7 @@ export type TeamUncheckedUpdateWithoutSupportTicketsInput = {
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUncheckedUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedUpdateManyWithoutTeamNestedInput
@@ -6622,6 +6959,7 @@ export type TeamCreateWithoutArcenCompaniesInput = {
   refunds?: Prisma.RefundCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceCreateNestedManyWithoutTeamInput
@@ -6670,6 +7008,7 @@ export type TeamUncheckedCreateWithoutArcenCompaniesInput = {
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileUncheckedCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedCreateNestedManyWithoutTeamInput
@@ -6734,6 +7073,7 @@ export type TeamUpdateWithoutArcenCompaniesInput = {
   refunds?: Prisma.RefundUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUpdateManyWithoutTeamNestedInput
@@ -6782,6 +7122,7 @@ export type TeamUncheckedUpdateWithoutArcenCompaniesInput = {
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUncheckedUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedUpdateManyWithoutTeamNestedInput
@@ -6830,6 +7171,7 @@ export type TeamCreateWithoutAddOnGrantsInput = {
   refunds?: Prisma.RefundCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceCreateNestedManyWithoutTeamInput
@@ -6878,6 +7220,7 @@ export type TeamUncheckedCreateWithoutAddOnGrantsInput = {
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileUncheckedCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedCreateNestedManyWithoutTeamInput
@@ -6942,6 +7285,7 @@ export type TeamUpdateWithoutAddOnGrantsInput = {
   refunds?: Prisma.RefundUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUpdateManyWithoutTeamNestedInput
@@ -6990,6 +7334,7 @@ export type TeamUncheckedUpdateWithoutAddOnGrantsInput = {
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUncheckedUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedUpdateManyWithoutTeamNestedInput
@@ -7037,6 +7382,7 @@ export type TeamCreateWithoutPaymentLinksInput = {
   refunds?: Prisma.RefundCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceCreateNestedManyWithoutTeamInput
@@ -7085,6 +7431,7 @@ export type TeamUncheckedCreateWithoutPaymentLinksInput = {
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileUncheckedCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedCreateNestedManyWithoutTeamInput
@@ -7149,6 +7496,7 @@ export type TeamUpdateWithoutPaymentLinksInput = {
   refunds?: Prisma.RefundUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUpdateManyWithoutTeamNestedInput
@@ -7197,6 +7545,7 @@ export type TeamUncheckedUpdateWithoutPaymentLinksInput = {
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUncheckedUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedUpdateManyWithoutTeamNestedInput
@@ -7245,6 +7594,7 @@ export type TeamCreateWithoutCheckoutSessionsInput = {
   refunds?: Prisma.RefundCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceCreateNestedManyWithoutTeamInput
@@ -7293,6 +7643,7 @@ export type TeamUncheckedCreateWithoutCheckoutSessionsInput = {
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileUncheckedCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedCreateNestedManyWithoutTeamInput
@@ -7357,6 +7708,7 @@ export type TeamUpdateWithoutCheckoutSessionsInput = {
   refunds?: Prisma.RefundUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUpdateManyWithoutTeamNestedInput
@@ -7405,6 +7757,7 @@ export type TeamUncheckedUpdateWithoutCheckoutSessionsInput = {
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUncheckedUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedUpdateManyWithoutTeamNestedInput
@@ -7454,6 +7807,7 @@ export type TeamCreateWithoutFeatureFlagsInput = {
   refunds?: Prisma.RefundCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceCreateNestedManyWithoutTeamInput
@@ -7502,6 +7856,7 @@ export type TeamUncheckedCreateWithoutFeatureFlagsInput = {
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileUncheckedCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedCreateNestedManyWithoutTeamInput
@@ -7566,6 +7921,7 @@ export type TeamUpdateWithoutFeatureFlagsInput = {
   refunds?: Prisma.RefundUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUpdateManyWithoutTeamNestedInput
@@ -7614,6 +7970,7 @@ export type TeamUncheckedUpdateWithoutFeatureFlagsInput = {
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUncheckedUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedUpdateManyWithoutTeamNestedInput
@@ -7662,6 +8019,7 @@ export type TeamCreateWithoutEmbedAccessTokensInput = {
   refunds?: Prisma.RefundCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceCreateNestedManyWithoutTeamInput
@@ -7710,6 +8068,7 @@ export type TeamUncheckedCreateWithoutEmbedAccessTokensInput = {
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileUncheckedCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedCreateNestedManyWithoutTeamInput
@@ -7774,6 +8133,7 @@ export type TeamUpdateWithoutEmbedAccessTokensInput = {
   refunds?: Prisma.RefundUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUpdateManyWithoutTeamNestedInput
@@ -7822,6 +8182,7 @@ export type TeamUncheckedUpdateWithoutEmbedAccessTokensInput = {
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUncheckedUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedUpdateManyWithoutTeamNestedInput
@@ -7870,6 +8231,7 @@ export type TeamCreateWithoutArcenApiKeysInput = {
   refunds?: Prisma.RefundCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceCreateNestedManyWithoutTeamInput
@@ -7918,6 +8280,7 @@ export type TeamUncheckedCreateWithoutArcenApiKeysInput = {
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileUncheckedCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedCreateNestedManyWithoutTeamInput
@@ -7982,6 +8345,7 @@ export type TeamUpdateWithoutArcenApiKeysInput = {
   refunds?: Prisma.RefundUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUpdateManyWithoutTeamNestedInput
@@ -8030,6 +8394,7 @@ export type TeamUncheckedUpdateWithoutArcenApiKeysInput = {
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUncheckedUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedUpdateManyWithoutTeamNestedInput
@@ -8078,6 +8443,7 @@ export type TeamCreateWithoutEmbedComponentsInput = {
   refunds?: Prisma.RefundCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceCreateNestedManyWithoutTeamInput
@@ -8126,6 +8492,7 @@ export type TeamUncheckedCreateWithoutEmbedComponentsInput = {
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileUncheckedCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedCreateNestedManyWithoutTeamInput
@@ -8190,6 +8557,7 @@ export type TeamUpdateWithoutEmbedComponentsInput = {
   refunds?: Prisma.RefundUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUpdateManyWithoutTeamNestedInput
@@ -8238,6 +8606,7 @@ export type TeamUncheckedUpdateWithoutEmbedComponentsInput = {
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUncheckedUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedUpdateManyWithoutTeamNestedInput
@@ -8286,6 +8655,7 @@ export type TeamCreateWithoutAgentConfigInput = {
   refunds?: Prisma.RefundCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceCreateNestedManyWithoutTeamInput
@@ -8334,6 +8704,7 @@ export type TeamUncheckedCreateWithoutAgentConfigInput = {
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileUncheckedCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedCreateNestedManyWithoutTeamInput
@@ -8398,6 +8769,7 @@ export type TeamUpdateWithoutAgentConfigInput = {
   refunds?: Prisma.RefundUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUpdateManyWithoutTeamNestedInput
@@ -8446,6 +8818,7 @@ export type TeamUncheckedUpdateWithoutAgentConfigInput = {
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUncheckedUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedUpdateManyWithoutTeamNestedInput
@@ -8494,6 +8867,7 @@ export type TeamCreateWithoutDispatchRequestsInput = {
   refunds?: Prisma.RefundCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceCreateNestedManyWithoutTeamInput
@@ -8542,6 +8916,7 @@ export type TeamUncheckedCreateWithoutDispatchRequestsInput = {
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutTeamInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutTeamInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutTeamInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutTeamInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutTeamInput
   taxProfile?: Prisma.TaxProfileUncheckedCreateNestedOneWithoutTeamInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedCreateNestedManyWithoutTeamInput
@@ -8606,6 +8981,7 @@ export type TeamUpdateWithoutDispatchRequestsInput = {
   refunds?: Prisma.RefundUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUpdateManyWithoutTeamNestedInput
@@ -8654,6 +9030,7 @@ export type TeamUncheckedUpdateWithoutDispatchRequestsInput = {
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutTeamNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutTeamNestedInput
   subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutTeamNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutTeamNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutTeamNestedInput
   taxProfile?: Prisma.TaxProfileUncheckedUpdateOneWithoutTeamNestedInput
   invoiceSequences?: Prisma.InvoiceSequenceUncheckedUpdateManyWithoutTeamNestedInput
@@ -8697,6 +9074,7 @@ export type TeamCountOutputType = {
   refunds: number
   billingAdjustments: number
   subscriptionStates: number
+  subscriptionChangeRequests: number
   billingRecoveryTasks: number
   invoiceSequences: number
   auditEvents: number
@@ -8734,6 +9112,7 @@ export type TeamCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.I
   refunds?: boolean | TeamCountOutputTypeCountRefundsArgs
   billingAdjustments?: boolean | TeamCountOutputTypeCountBillingAdjustmentsArgs
   subscriptionStates?: boolean | TeamCountOutputTypeCountSubscriptionStatesArgs
+  subscriptionChangeRequests?: boolean | TeamCountOutputTypeCountSubscriptionChangeRequestsArgs
   billingRecoveryTasks?: boolean | TeamCountOutputTypeCountBillingRecoveryTasksArgs
   invoiceSequences?: boolean | TeamCountOutputTypeCountInvoiceSequencesArgs
   auditEvents?: boolean | TeamCountOutputTypeCountAuditEventsArgs
@@ -8897,6 +9276,13 @@ export type TeamCountOutputTypeCountSubscriptionStatesArgs<ExtArgs extends runti
 /**
  * TeamCountOutputType without action
  */
+export type TeamCountOutputTypeCountSubscriptionChangeRequestsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.SubscriptionChangeRequestWhereInput
+}
+
+/**
+ * TeamCountOutputType without action
+ */
 export type TeamCountOutputTypeCountBillingRecoveryTasksArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.BillingRecoveryTaskWhereInput
 }
@@ -9030,6 +9416,7 @@ export type TeamSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   refunds?: boolean | Prisma.Team$refundsArgs<ExtArgs>
   billingAdjustments?: boolean | Prisma.Team$billingAdjustmentsArgs<ExtArgs>
   subscriptionStates?: boolean | Prisma.Team$subscriptionStatesArgs<ExtArgs>
+  subscriptionChangeRequests?: boolean | Prisma.Team$subscriptionChangeRequestsArgs<ExtArgs>
   billingRecoveryTasks?: boolean | Prisma.Team$billingRecoveryTasksArgs<ExtArgs>
   taxProfile?: boolean | Prisma.Team$taxProfileArgs<ExtArgs>
   invoiceSequences?: boolean | Prisma.Team$invoiceSequencesArgs<ExtArgs>
@@ -9110,6 +9497,7 @@ export type TeamInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   refunds?: boolean | Prisma.Team$refundsArgs<ExtArgs>
   billingAdjustments?: boolean | Prisma.Team$billingAdjustmentsArgs<ExtArgs>
   subscriptionStates?: boolean | Prisma.Team$subscriptionStatesArgs<ExtArgs>
+  subscriptionChangeRequests?: boolean | Prisma.Team$subscriptionChangeRequestsArgs<ExtArgs>
   billingRecoveryTasks?: boolean | Prisma.Team$billingRecoveryTasksArgs<ExtArgs>
   taxProfile?: boolean | Prisma.Team$taxProfileArgs<ExtArgs>
   invoiceSequences?: boolean | Prisma.Team$invoiceSequencesArgs<ExtArgs>
@@ -9154,6 +9542,7 @@ export type $TeamPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     refunds: Prisma.$RefundPayload<ExtArgs>[]
     billingAdjustments: Prisma.$BillingAdjustmentPayload<ExtArgs>[]
     subscriptionStates: Prisma.$SubscriptionStatePayload<ExtArgs>[]
+    subscriptionChangeRequests: Prisma.$SubscriptionChangeRequestPayload<ExtArgs>[]
     billingRecoveryTasks: Prisma.$BillingRecoveryTaskPayload<ExtArgs>[]
     taxProfile: Prisma.$TaxProfilePayload<ExtArgs> | null
     invoiceSequences: Prisma.$InvoiceSequencePayload<ExtArgs>[]
@@ -9596,6 +9985,7 @@ export interface Prisma__TeamClient<T, Null = never, ExtArgs extends runtime.Typ
   refunds<T extends Prisma.Team$refundsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$refundsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$RefundPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   billingAdjustments<T extends Prisma.Team$billingAdjustmentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$billingAdjustmentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$BillingAdjustmentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   subscriptionStates<T extends Prisma.Team$subscriptionStatesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$subscriptionStatesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SubscriptionStatePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  subscriptionChangeRequests<T extends Prisma.Team$subscriptionChangeRequestsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$subscriptionChangeRequestsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SubscriptionChangeRequestPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   billingRecoveryTasks<T extends Prisma.Team$billingRecoveryTasksArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$billingRecoveryTasksArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$BillingRecoveryTaskPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   taxProfile<T extends Prisma.Team$taxProfileArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$taxProfileArgs<ExtArgs>>): Prisma.Prisma__TaxProfileClient<runtime.Types.Result.GetResult<Prisma.$TaxProfilePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   invoiceSequences<T extends Prisma.Team$invoiceSequencesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$invoiceSequencesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$InvoiceSequencePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -10493,6 +10883,30 @@ export type Team$subscriptionStatesArgs<ExtArgs extends runtime.Types.Extensions
   take?: number
   skip?: number
   distinct?: Prisma.SubscriptionStateScalarFieldEnum | Prisma.SubscriptionStateScalarFieldEnum[]
+}
+
+/**
+ * Team.subscriptionChangeRequests
+ */
+export type Team$subscriptionChangeRequestsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the SubscriptionChangeRequest
+   */
+  select?: Prisma.SubscriptionChangeRequestSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the SubscriptionChangeRequest
+   */
+  omit?: Prisma.SubscriptionChangeRequestOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.SubscriptionChangeRequestInclude<ExtArgs> | null
+  where?: Prisma.SubscriptionChangeRequestWhereInput
+  orderBy?: Prisma.SubscriptionChangeRequestOrderByWithRelationInput | Prisma.SubscriptionChangeRequestOrderByWithRelationInput[]
+  cursor?: Prisma.SubscriptionChangeRequestWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.SubscriptionChangeRequestScalarFieldEnum | Prisma.SubscriptionChangeRequestScalarFieldEnum[]
 }
 
 /**

@@ -40,6 +40,10 @@ import { GET as validateCoupon, OPTIONS as couponOptions } from "./coupons-valid
 import { POST as activateSubscription, OPTIONS as subOptions } from "./subscriptions-activate.js";
 import { POST as consumeUsage, OPTIONS as usageOptions } from "./usage-consume.js";
 import { POST as createAccessToken, OPTIONS as tokenOptions } from "./access-tokens.js";
+import { POST as companyPlanChange, OPTIONS as companyPlanOptions } from "./company-plan.js";
+import { POST as companyPlanPreview, OPTIONS as companyPlanPreviewOptions } from "./company-plan-preview.js";
+import { POST as companyUnsubscribe, OPTIONS as companyUnsubscribeOptions } from "./company-unsubscribe.js";
+import { POST as companyResume, OPTIONS as companyResumeOptions } from "./company-resume.js";
 import { GET as listApiKeys, POST as createApiKeySdk, DELETE as revokeApiKey } from "./api-keys.js";
 import { GET as getZkTlsProofs, POST as createZkTlsProof } from "./proofs-zktls.js";
 import { GET as getAgentPermissions, PUT as updateAgentPermissions } from "./agent-permissions.js";
@@ -110,6 +114,14 @@ export const v1Router = new Hono()
   .options("/coupons/validate", couponOptions)
   .post("/subscriptions/activate", activateSubscription)
   .options("/subscriptions/activate", subOptions)
+  .post("/companies/plan", companyPlanChange)
+  .options("/companies/plan", companyPlanOptions)
+  .post("/companies/plan/preview", companyPlanPreview)
+  .options("/companies/plan/preview", companyPlanPreviewOptions)
+  .post("/companies/unsubscribe", companyUnsubscribe)
+  .options("/companies/unsubscribe", companyUnsubscribeOptions)
+  .post("/companies/resume", companyResume)
+  .options("/companies/resume", companyResumeOptions)
   .post("/usage/consume", consumeUsage)
   .options("/usage/consume", usageOptions)
   .post("/access-tokens", createAccessToken)

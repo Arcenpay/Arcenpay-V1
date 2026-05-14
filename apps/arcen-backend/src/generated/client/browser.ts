@@ -158,6 +158,11 @@ export type BillingEvent = Prisma.BillingEventModel
  */
 export type SubscriptionState = Prisma.SubscriptionStateModel
 /**
+ * Model SubscriptionChangeRequest
+ * 
+ */
+export type SubscriptionChangeRequest = Prisma.SubscriptionChangeRequestModel
+/**
  * Model Payment
  * 
  */

@@ -213,7 +213,10 @@ export type SubscriptionStatus = (typeof SubscriptionStatus)[keyof typeof Subscr
 
 
 export const BillingRecoveryTaskKind = {
-  SUBSCRIPTION_ACTIVATION: 'SUBSCRIPTION_ACTIVATION'
+  SUBSCRIPTION_ACTIVATION: 'SUBSCRIPTION_ACTIVATION',
+  SUBSCRIPTION_PLAN_CHANGE: 'SUBSCRIPTION_PLAN_CHANGE',
+  SUBSCRIPTION_CANCELLATION: 'SUBSCRIPTION_CANCELLATION',
+  SUBSCRIPTION_RESUME: 'SUBSCRIPTION_RESUME'
 } as const
 
 export type BillingRecoveryTaskKind = (typeof BillingRecoveryTaskKind)[keyof typeof BillingRecoveryTaskKind]
@@ -227,6 +230,39 @@ export const BillingRecoveryTaskStatus = {
 } as const
 
 export type BillingRecoveryTaskStatus = (typeof BillingRecoveryTaskStatus)[keyof typeof BillingRecoveryTaskStatus]
+
+
+export const SubscriptionChangeType = {
+  UPGRADE: 'UPGRADE',
+  DOWNGRADE: 'DOWNGRADE',
+  CANCELLATION: 'CANCELLATION',
+  RESUME: 'RESUME',
+  BILLING_PERIOD_CHANGE: 'BILLING_PERIOD_CHANGE'
+} as const
+
+export type SubscriptionChangeType = (typeof SubscriptionChangeType)[keyof typeof SubscriptionChangeType]
+
+
+export const SubscriptionChangeStage = {
+  REQUESTED: 'REQUESTED',
+  PENDING_VERIFICATION: 'PENDING_VERIFICATION',
+  PENDING_RECOVERY: 'PENDING_RECOVERY',
+  APPLIED: 'APPLIED',
+  FAILED: 'FAILED',
+  REVERTED: 'REVERTED'
+} as const
+
+export type SubscriptionChangeStage = (typeof SubscriptionChangeStage)[keyof typeof SubscriptionChangeStage]
+
+
+export const SubscriptionChangeSource = {
+  SELF_SERVICE: 'SELF_SERVICE',
+  ADMIN: 'ADMIN',
+  RECOVERY: 'RECOVERY',
+  SYNC: 'SYNC'
+} as const
+
+export type SubscriptionChangeSource = (typeof SubscriptionChangeSource)[keyof typeof SubscriptionChangeSource]
 
 
 export const BillingAdjustmentKind = {

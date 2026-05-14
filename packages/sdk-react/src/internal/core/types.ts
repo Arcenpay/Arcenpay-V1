@@ -390,6 +390,22 @@ export interface ComponentPaymentMethod {
 }
 
 export interface ComponentSubscriptionTransition {
+  id?: string | null;
+  changeType?:
+    | "upgrade"
+    | "downgrade"
+    | "cancellation"
+    | "resume"
+    | "billing_period_change"
+    | null;
+  stage?:
+    | "requested"
+    | "pending_verification"
+    | "pending_recovery"
+    | "applied"
+    | "failed"
+    | "reverted"
+    | null;
   mode?: string | null;
   targetPlanId?: string | null;
   targetPlanName?: string | null;
@@ -399,6 +415,10 @@ export interface ComponentSubscriptionTransition {
   requestedAt?: string | null;
   effectiveAt?: string | null;
   source?: string | null;
+  pendingVerification?: boolean;
+  pendingRecovery?: boolean;
+  failureReason?: string | null;
+  transitionId?: string | null;
 }
 
 export interface ComponentElement {

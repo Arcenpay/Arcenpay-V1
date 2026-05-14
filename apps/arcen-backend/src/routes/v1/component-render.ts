@@ -26,6 +26,7 @@ import {
 } from "../../lib/entitlements/embed-access-token.js";
 import { ensureInvoicePdfForTeam } from "../../lib/billing/invoice-documents.js";
 import { upsertSubscriptionLedgerState } from "../../lib/billing/billing-ledger.js";
+import { getLatestSubscriptionChangeRequest } from "../../lib/billing/subscription-change-requests.js";
 import { corsHeaders } from "../../middleware/cors.js";
 
 // ─── Normalization helpers ────────────────────────────────────────────────────
@@ -311,9 +312,15 @@ export async function GET(c: Context) {
       };
 
       const traits = asRecord(company.traits);
-      const transition = asRecord(traits.subscriptionTransition);
-      if (Object.keys(transition).length > 0) {
-        subscriptionTransition = transition;
+      const latestChangeRequest = await getLatestSubscriptionChangeRequest({
+        teamId,
+        companyId: company.id,
+      });
+      const legacyTransition = asRecord(traits.subscriptionTransition);
+      if (latestChangeRequest) {
+        subscriptionTransition = latestChangeRequest;
+      } else if (Object.keys(legacyTransition).length > 0) {
+        subscriptionTransition = legacyTransition;
       }
 
       const effectiveActivePlanId =

@@ -7,65 +7,29 @@
 import type { Context } from "hono";
 import { db } from "../../db.js";
 import { deliverWebhook } from "../../lib/webhooks/deliver-webhook.js";
-import { createPublicClient, http, isAddress } from "viem";
-import {
-  ERC7579AutopayModuleABI,
-  getChain,
-  getContractAddresses,
-} from "@arcenpay/internal-core";
 import {
   extractEmbedAccessToken,
   resolveEmbedAccessToken,
 } from "../../lib/entitlements/embed-access-token.js";
 import { toPrismaJson } from "../../utils/prisma-json.js";
 import { upsertSubscriptionLedgerState } from "../../lib/billing/billing-ledger.js";
+import {
+  createSubscriptionChangeRequest,
+  findSimilarOpenSubscriptionChangeRequest,
+} from "../../lib/billing/subscription-change-requests.js";
 import { resolvePublishedFreePlan } from "../../lib/catalog/catalog-billing.js";
+import { readAutopayAccountState } from "../../lib/payments/autopay-state.js";
 import {
   normalizeTxHash,
   verifyAutopayCancellationControl,
 } from "../../lib/payments/onchain-payment-verification.js";
 import { SELF_SERVE_CANCELLATION_ENABLED } from "../../lib/platform/launch-flags.js";
 import { DEFAULT_CHAIN_ID } from "../../lib/platform/default-chain.js";
-import { getRpcUrl } from "../../config.js";
 import { corsHeaders } from "../../middleware/cors.js";
 
 function asRecord(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
   return value as Record<string, unknown>;
-}
-
-async function readAutopayShutdownState(
-  paymentAccount: string,
-  chainId: number,
-): Promise<"PAUSED" | "REVOKED" | null> {
-  if (!isAddress(paymentAccount)) return null;
-
-  const contracts = getContractAddresses(chainId);
-  const autopayAddress = contracts.autopayModule as `0x${string}` | undefined;
-  if (!autopayAddress || !isAddress(autopayAddress)) return null;
-
-  const publicClient = createPublicClient({
-    chain: getChain(chainId),
-    transport: http(getRpcUrl(chainId)),
-  });
-
-  const isInitialized = (await publicClient.readContract({
-    address: autopayAddress,
-    abi: ERC7579AutopayModuleABI,
-    functionName: "isInitialized",
-    args: [paymentAccount as `0x${string}`],
-  })) as boolean;
-
-  if (!isInitialized) return "REVOKED";
-
-  const isPaused = (await publicClient.readContract({
-    address: autopayAddress,
-    abi: ERC7579AutopayModuleABI,
-    functionName: "isAccountPaused",
-    args: [paymentAccount as `0x${string}`],
-  })) as boolean;
-
-  return isPaused ? "PAUSED" : null;
 }
 
 export async function OPTIONS(c: Context) {
@@ -132,11 +96,14 @@ export async function POST(c: Context) {
       where: { id: companyId },
       select: {
         id: true,
+        environmentId: true,
         activePlanId: true,
         traits: true,
         walletAddress: true,
         subscriptionState: {
           select: {
+            id: true,
+            environmentId: true,
             walletAddress: true,
             currentPeriodEnd: true,
             onChainPlanId: true,
@@ -223,8 +190,11 @@ export async function POST(c: Context) {
         });
         if (!verification.ok) {
           if (verification.status === 425) {
-            const control = await readAutopayShutdownState(companyPaymentAccount, subChainId);
-            if (!control) {
+            const state = await readAutopayAccountState(
+              companyPaymentAccount,
+              subChainId,
+            );
+            if (!state || state === "ACTIVE") {
               return c.json(
                 { error: verification.error },
                 verification.status as any,
@@ -234,7 +204,7 @@ export async function POST(c: Context) {
 
             pendingVerification = true;
             autopayControl = {
-              control,
+              control: state,
               txHash: normalizedAutopayTxHash,
             };
           } else {
@@ -252,8 +222,11 @@ export async function POST(c: Context) {
         }
       } else {
         const subChainId = company.subscriptionState?.chainId ?? DEFAULT_CHAIN_ID;
-        const control = await readAutopayShutdownState(companyPaymentAccount, subChainId);
-        if (!control) {
+        const state = await readAutopayAccountState(
+          companyPaymentAccount,
+          subChainId,
+        );
+        if (!state || state === "ACTIVE") {
           return c.json(
             {
               error:
@@ -263,12 +236,21 @@ export async function POST(c: Context) {
             corsHeaders(origin),
           );
         }
-        autopayControl = { control };
+        autopayControl = { control: state };
       }
     }
 
+    const existingRequest = await findSimilarOpenSubscriptionChangeRequest({
+      teamId,
+      companyId,
+      changeType: "cancellation",
+      targetPlanId: freePlan.id,
+    });
+
     const transition = {
       mode: "cancel_at_period_end",
+      changeType: "cancellation",
+      stage: pendingVerification ? "pending_verification" : "requested",
       targetPlanId: freePlan.id,
       targetPlanName: freePlan.name,
       previousPlanId: company.activePlanId,
@@ -277,11 +259,60 @@ export async function POST(c: Context) {
       source: "self_service",
     };
 
+    const changeRequest = existingRequest
+      ? await db.subscriptionChangeRequest.update({
+          where: { id: existingRequest.id },
+          data: {
+            stage: pendingVerification
+              ? "PENDING_VERIFICATION"
+              : "REQUESTED",
+            effectiveAt,
+            targetPlanId: freePlan.id,
+            autopayControlTxHash: normalizedAutopayTxHash ?? null,
+            pendingVerification,
+            failureReason: null,
+            metadata: toPrismaJson({
+              ...transition,
+              autopayControl: autopayControl
+                ? {
+                    control: autopayControl.control,
+                    txHash: autopayControl.txHash ?? null,
+                  }
+                : null,
+            }),
+          },
+        })
+      : await createSubscriptionChangeRequest({
+          teamId,
+          environmentId:
+            company.subscriptionState?.environmentId ?? company.environmentId ?? null,
+          companyId,
+          subscriptionStateId: company.subscriptionState?.id ?? null,
+          changeType: "cancellation",
+          stage: pendingVerification ? "pending_verification" : "requested",
+          previousPlanId: company.activePlanId ?? null,
+          targetPlanId: freePlan.id,
+          requestedAt: new Date(),
+          effectiveAt,
+          autopayControlTxHash: normalizedAutopayTxHash ?? null,
+          pendingVerification,
+          metadata: {
+            ...transition,
+            autopayControl: autopayControl
+              ? {
+                  control: autopayControl.control,
+                  txHash: autopayControl.txHash ?? null,
+                }
+              : null,
+          },
+        });
+
     await db.arcenCompany.update({
       where: { id: companyId },
       data: {
         traits: toPrismaJson({
           ...currentTraits,
+          pendingSubscriptionChangeRequestId: changeRequest.id,
           subscriptionTransition: transition,
         }),
       },
@@ -308,6 +339,7 @@ export async function POST(c: Context) {
       lastSourceTxHash: normalizedAutopayTxHash,
         metadata: {
           source: "self_service",
+          transitionId: changeRequest.id,
           fallbackPlanId: freePlan.id,
           previousCatalogPlanId: company.activePlanId,
           pendingVerification,
@@ -320,11 +352,21 @@ export async function POST(c: Context) {
       },
     });
 
-    deliverWebhook(teamId, "company.plan.cancelled", {
+    deliverWebhook(teamId, "company.plan.changed", {
       companyId,
+      environmentId:
+        company.subscriptionState?.environmentId ?? company.environmentId ?? null,
+      transitionId: changeRequest.id,
+      changeType: "cancellation",
+      stage: pendingVerification ? "pending_verification" : "requested",
       previousPlanId: company.activePlanId,
+      targetPlanId: freePlan.id,
+      planId: company.activePlanId,
+      planName: currentPlan?.name ?? null,
       fallbackPlanId: freePlan.id,
-      mode: "cancel_at_period_end",
+      mode: pendingVerification
+        ? "cancel_at_period_end_pending_verification"
+        : "cancel_at_period_end",
       scheduled: true,
         effectiveAt: effectiveAt.toISOString(),
         autopayControlTxHash: normalizedAutopayTxHash,
@@ -332,23 +374,13 @@ export async function POST(c: Context) {
         pendingVerification,
       }).catch(() => {});
 
-    deliverWebhook(teamId, "company.plan.changed", {
-      companyId,
-      previousPlanId: company.activePlanId,
-      planId: company.activePlanId,
-      planName: currentPlan?.name ?? null,
-      fallbackPlanId: freePlan.id,
-      mode: "cancel_at_period_end",
-      scheduled: true,
-        effectiveAt: effectiveAt.toISOString(),
-        cancellation: true,
-        pendingVerification,
-      }).catch(() => {});
-
     return c.json(
       {
         data: {
           success: true,
+          transitionId: changeRequest.id,
+          changeType: "cancellation",
+          stage: pendingVerification ? "pending_verification" : "requested",
           scheduled: true,
           mode: "cancel_at_period_end",
           planId: company.activePlanId,
@@ -357,6 +389,7 @@ export async function POST(c: Context) {
           autopayControlTxHash: normalizedAutopayTxHash,
           autopayControl: autopayControl?.control ?? null,
           pendingVerification,
+          pendingRecovery: false,
         },
       },
       pendingVerification ? 202 : 200,
@@ -381,9 +414,13 @@ export async function POST(c: Context) {
       {
         data: {
           success: true,
+          changeType: "cancellation",
+          stage: "applied",
           scheduled: false,
           mode: "already_free",
           planId: freePlan.id,
+          pendingVerification: false,
+          pendingRecovery: false,
         },
       },
       200,

@@ -412,6 +412,7 @@ export const ModelName = {
   AuditEvent: 'AuditEvent',
   BillingEvent: 'BillingEvent',
   SubscriptionState: 'SubscriptionState',
+  SubscriptionChangeRequest: 'SubscriptionChangeRequest',
   Payment: 'Payment',
   PaymentAttempt: 'PaymentAttempt',
   BillingAdjustment: 'BillingAdjustment',
@@ -454,7 +455,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "authSession" | "emailAuthCode" | "team" | "workspaceEnvironment" | "teamMember" | "teamInvitation" | "providerProfile" | "subscriberEmail" | "authNonce" | "catalogPlan" | "catalogAddOn" | "catalogCreditType" | "catalogVersion" | "catalogConfig" | "catalogCoupon" | "billingTemplate" | "billingTemplateVersion" | "templateInstall" | "taxProfile" | "invoiceSequence" | "invoice" | "invoiceLine" | "invoiceDelivery" | "creditNote" | "auditEvent" | "billingEvent" | "subscriptionState" | "payment" | "paymentAttempt" | "billingAdjustment" | "billingBalance" | "refund" | "billingRecoveryTask" | "webhookDelivery" | "platformTierConfig" | "gasSpend" | "tierUpgradeHistory" | "supportTicket" | "arcenCompany" | "arcenUser" | "arcenEvent" | "companyAddOnGrant" | "paymentLink" | "checkoutSession" | "catalogFeatureFlag" | "flagRule" | "flagRuleCondition" | "companyOverride" | "embedAccessToken" | "arcenApiKey" | "zkTlsProof" | "embedComponent" | "arcenAgentConfig" | "arcenDispatchRequest"
+    modelProps: "user" | "authSession" | "emailAuthCode" | "team" | "workspaceEnvironment" | "teamMember" | "teamInvitation" | "providerProfile" | "subscriberEmail" | "authNonce" | "catalogPlan" | "catalogAddOn" | "catalogCreditType" | "catalogVersion" | "catalogConfig" | "catalogCoupon" | "billingTemplate" | "billingTemplateVersion" | "templateInstall" | "taxProfile" | "invoiceSequence" | "invoice" | "invoiceLine" | "invoiceDelivery" | "creditNote" | "auditEvent" | "billingEvent" | "subscriptionState" | "subscriptionChangeRequest" | "payment" | "paymentAttempt" | "billingAdjustment" | "billingBalance" | "refund" | "billingRecoveryTask" | "webhookDelivery" | "platformTierConfig" | "gasSpend" | "tierUpgradeHistory" | "supportTicket" | "arcenCompany" | "arcenUser" | "arcenEvent" | "companyAddOnGrant" | "paymentLink" | "checkoutSession" | "catalogFeatureFlag" | "flagRule" | "flagRuleCondition" | "companyOverride" | "embedAccessToken" | "arcenApiKey" | "zkTlsProof" | "embedComponent" | "arcenAgentConfig" | "arcenDispatchRequest"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -2527,6 +2528,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.SubscriptionStateCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.SubscriptionStateCountAggregateOutputType> | number
+        }
+      }
+    }
+    SubscriptionChangeRequest: {
+      payload: Prisma.$SubscriptionChangeRequestPayload<ExtArgs>
+      fields: Prisma.SubscriptionChangeRequestFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.SubscriptionChangeRequestFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SubscriptionChangeRequestPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.SubscriptionChangeRequestFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SubscriptionChangeRequestPayload>
+        }
+        findFirst: {
+          args: Prisma.SubscriptionChangeRequestFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SubscriptionChangeRequestPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.SubscriptionChangeRequestFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SubscriptionChangeRequestPayload>
+        }
+        findMany: {
+          args: Prisma.SubscriptionChangeRequestFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SubscriptionChangeRequestPayload>[]
+        }
+        create: {
+          args: Prisma.SubscriptionChangeRequestCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SubscriptionChangeRequestPayload>
+        }
+        createMany: {
+          args: Prisma.SubscriptionChangeRequestCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.SubscriptionChangeRequestCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SubscriptionChangeRequestPayload>[]
+        }
+        delete: {
+          args: Prisma.SubscriptionChangeRequestDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SubscriptionChangeRequestPayload>
+        }
+        update: {
+          args: Prisma.SubscriptionChangeRequestUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SubscriptionChangeRequestPayload>
+        }
+        deleteMany: {
+          args: Prisma.SubscriptionChangeRequestDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.SubscriptionChangeRequestUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.SubscriptionChangeRequestUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SubscriptionChangeRequestPayload>[]
+        }
+        upsert: {
+          args: Prisma.SubscriptionChangeRequestUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SubscriptionChangeRequestPayload>
+        }
+        aggregate: {
+          args: Prisma.SubscriptionChangeRequestAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateSubscriptionChangeRequest>
+        }
+        groupBy: {
+          args: Prisma.SubscriptionChangeRequestGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.SubscriptionChangeRequestGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.SubscriptionChangeRequestCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.SubscriptionChangeRequestCountAggregateOutputType> | number
         }
       }
     }
@@ -5086,6 +5161,38 @@ export const SubscriptionStateScalarFieldEnum = {
 export type SubscriptionStateScalarFieldEnum = (typeof SubscriptionStateScalarFieldEnum)[keyof typeof SubscriptionStateScalarFieldEnum]
 
 
+export const SubscriptionChangeRequestScalarFieldEnum = {
+  id: 'id',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  teamId: 'teamId',
+  environmentId: 'environmentId',
+  companyId: 'companyId',
+  subscriptionStateId: 'subscriptionStateId',
+  changeType: 'changeType',
+  stage: 'stage',
+  source: 'source',
+  previousPlanId: 'previousPlanId',
+  targetPlanId: 'targetPlanId',
+  previousBillingPeriod: 'previousBillingPeriod',
+  targetBillingPeriod: 'targetBillingPeriod',
+  requestedAt: 'requestedAt',
+  effectiveAt: 'effectiveAt',
+  appliedAt: 'appliedAt',
+  failedAt: 'failedAt',
+  autopayConfigTxHash: 'autopayConfigTxHash',
+  accessChangeTxHash: 'accessChangeTxHash',
+  paymentTxHash: 'paymentTxHash',
+  autopayControlTxHash: 'autopayControlTxHash',
+  recoveryTaskId: 'recoveryTaskId',
+  pendingVerification: 'pendingVerification',
+  failureReason: 'failureReason',
+  metadata: 'metadata'
+} as const
+
+export type SubscriptionChangeRequestScalarFieldEnum = (typeof SubscriptionChangeRequestScalarFieldEnum)[keyof typeof SubscriptionChangeRequestScalarFieldEnum]
+
+
 export const PaymentScalarFieldEnum = {
   id: 'id',
   createdAt: 'createdAt',
@@ -5920,6 +6027,48 @@ export type ListEnumSubscriptionStatusFieldRefInput<$PrismaModel> = FieldRefInpu
 
 
 /**
+ * Reference to a field of type 'SubscriptionChangeType'
+ */
+export type EnumSubscriptionChangeTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'SubscriptionChangeType'>
+    
+
+
+/**
+ * Reference to a field of type 'SubscriptionChangeType[]'
+ */
+export type ListEnumSubscriptionChangeTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'SubscriptionChangeType[]'>
+    
+
+
+/**
+ * Reference to a field of type 'SubscriptionChangeStage'
+ */
+export type EnumSubscriptionChangeStageFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'SubscriptionChangeStage'>
+    
+
+
+/**
+ * Reference to a field of type 'SubscriptionChangeStage[]'
+ */
+export type ListEnumSubscriptionChangeStageFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'SubscriptionChangeStage[]'>
+    
+
+
+/**
+ * Reference to a field of type 'SubscriptionChangeSource'
+ */
+export type EnumSubscriptionChangeSourceFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'SubscriptionChangeSource'>
+    
+
+
+/**
+ * Reference to a field of type 'SubscriptionChangeSource[]'
+ */
+export type ListEnumSubscriptionChangeSourceFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'SubscriptionChangeSource[]'>
+    
+
+
+/**
  * Reference to a field of type 'PaymentKind'
  */
 export type EnumPaymentKindFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PaymentKind'>
@@ -6279,6 +6428,7 @@ export type GlobalOmitConfig = {
   auditEvent?: Prisma.AuditEventOmit
   billingEvent?: Prisma.BillingEventOmit
   subscriptionState?: Prisma.SubscriptionStateOmit
+  subscriptionChangeRequest?: Prisma.SubscriptionChangeRequestOmit
   payment?: Prisma.PaymentOmit
   paymentAttempt?: Prisma.PaymentAttemptOmit
   billingAdjustment?: Prisma.BillingAdjustmentOmit

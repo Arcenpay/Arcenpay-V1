@@ -79,6 +79,7 @@ export const ModelName = {
   AuditEvent: 'AuditEvent',
   BillingEvent: 'BillingEvent',
   SubscriptionState: 'SubscriptionState',
+  SubscriptionChangeRequest: 'SubscriptionChangeRequest',
   Payment: 'Payment',
   PaymentAttempt: 'PaymentAttempt',
   BillingAdjustment: 'BillingAdjustment',
@@ -641,6 +642,38 @@ export const SubscriptionStateScalarFieldEnum = {
 } as const
 
 export type SubscriptionStateScalarFieldEnum = (typeof SubscriptionStateScalarFieldEnum)[keyof typeof SubscriptionStateScalarFieldEnum]
+
+
+export const SubscriptionChangeRequestScalarFieldEnum = {
+  id: 'id',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  teamId: 'teamId',
+  environmentId: 'environmentId',
+  companyId: 'companyId',
+  subscriptionStateId: 'subscriptionStateId',
+  changeType: 'changeType',
+  stage: 'stage',
+  source: 'source',
+  previousPlanId: 'previousPlanId',
+  targetPlanId: 'targetPlanId',
+  previousBillingPeriod: 'previousBillingPeriod',
+  targetBillingPeriod: 'targetBillingPeriod',
+  requestedAt: 'requestedAt',
+  effectiveAt: 'effectiveAt',
+  appliedAt: 'appliedAt',
+  failedAt: 'failedAt',
+  autopayConfigTxHash: 'autopayConfigTxHash',
+  accessChangeTxHash: 'accessChangeTxHash',
+  paymentTxHash: 'paymentTxHash',
+  autopayControlTxHash: 'autopayControlTxHash',
+  recoveryTaskId: 'recoveryTaskId',
+  pendingVerification: 'pendingVerification',
+  failureReason: 'failureReason',
+  metadata: 'metadata'
+} as const
+
+export type SubscriptionChangeRequestScalarFieldEnum = (typeof SubscriptionChangeRequestScalarFieldEnum)[keyof typeof SubscriptionChangeRequestScalarFieldEnum]
 
 
 export const PaymentScalarFieldEnum = {

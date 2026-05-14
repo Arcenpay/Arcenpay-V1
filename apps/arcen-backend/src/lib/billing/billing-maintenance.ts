@@ -7,6 +7,7 @@ import { toPrismaJson } from "../../utils/prisma-json.js";
 import { recordBillingAdjustment } from "./billing-adjustments.js";
 import { deliverWebhook } from "../webhooks/deliver-webhook.js";
 import { computeProrationQuote } from "./billing-proration.js";
+import { getLatestSubscriptionChangeRequest } from "./subscription-change-requests.js";
 
 function asRecord(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
@@ -80,6 +81,7 @@ export async function applyScheduledSubscriptionTransitions(input: {
       company: {
         select: {
           id: true,
+          environmentId: true,
           activePlanId: true,
           traits: true,
         },
@@ -96,9 +98,12 @@ export async function applyScheduledSubscriptionTransitions(input: {
 
   for (const state of states) {
     const traits = asRecord(state.company.traits);
-    const transition = asRecord(traits.subscriptionTransition);
-    const mode =
-      typeof transition.mode === "string" ? transition.mode : null;
+    const changeRequest = await getLatestSubscriptionChangeRequest({
+      teamId: input.teamId,
+      companyId: state.companyId,
+    });
+    const transition = changeRequest ?? asRecord(traits.subscriptionTransition);
+    const mode = typeof transition.mode === "string" ? transition.mode : null;
 
     if (mode === "next_renewal_on_chain") {
       const transitionRequestedAtRaw =
@@ -119,6 +124,17 @@ export async function applyScheduledSubscriptionTransitions(input: {
         where: { id: state.companyId },
         data: { traits: toPrismaJson(nextTraits) },
       });
+
+      if (changeRequest?.id && !changeRequest.id.startsWith("legacy-")) {
+        await db.subscriptionChangeRequest.update({
+          where: { id: changeRequest.id },
+          data: {
+            stage: "FAILED",
+            failedAt: now,
+            failureReason: `on_chain_renewal_not_detected_staleness_hours:${Math.round(stalenessHours)}`,
+          },
+        });
+      }
 
       results.push({
         companyId: state.companyId,
@@ -279,8 +295,26 @@ export async function applyScheduledSubscriptionTransitions(input: {
       },
     });
 
+    if (changeRequest?.id && !changeRequest.id.startsWith("legacy-")) {
+      await db.subscriptionChangeRequest.update({
+        where: { id: changeRequest.id },
+        data: {
+          stage: "APPLIED",
+          appliedAt: now,
+          effectiveAt: now,
+          pendingVerification: false,
+          failureReason: null,
+        },
+      });
+    }
+
     deliverWebhook(input.teamId, "company.plan.changed", {
       companyId: state.companyId,
+      environmentId: state.company.environmentId ?? null,
+      transitionId: changeRequest?.id ?? null,
+      changeType:
+        mode === "cancel_at_period_end" ? "cancellation" : "downgrade",
+      stage: "applied",
       planId: targetPlan.id,
       planName: targetPlan.name,
       billingPeriod: targetBillingPeriod,
@@ -297,6 +331,10 @@ export async function applyScheduledSubscriptionTransitions(input: {
     if (mode === "cancel_at_period_end") {
       deliverWebhook(input.teamId, "company.plan.cancelled", {
         companyId: state.companyId,
+        environmentId: state.company.environmentId ?? null,
+        transitionId: changeRequest?.id ?? null,
+        changeType: "cancellation",
+        stage: "applied",
         previousPlanId: state.company.activePlanId ?? null,
         fallbackPlanId: targetPlan.id,
         mode: "cancellation_completed",

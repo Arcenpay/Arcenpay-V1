@@ -5,6 +5,7 @@ import { toPrismaJson } from "../../../utils/prisma-json.js";
 import { requireFacilitatorAuth } from "../../../lib/auth/facilitator-auth.js";
 import { resolvePublishedFreePlan } from "../../../lib/catalog/catalog-billing.js";
 import { upsertSubscriptionLedgerState } from "../../../lib/billing/billing-ledger.js";
+import { getLatestSubscriptionChangeRequest } from "../../../lib/billing/subscription-change-requests.js";
 
 function asRecord(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
@@ -127,6 +128,10 @@ export async function syncSubscription(c: Context) {
   };
 
   if (event === "cancelled") {
+    const latestChangeRequest = await getLatestSubscriptionChangeRequest({
+      teamId: company.teamId,
+      companyId: company.id,
+    });
     const transition = asRecord(traits.subscriptionTransition);
     const transitionTargetPlanId =
       typeof transition.targetPlanId === "string"
@@ -191,6 +196,19 @@ export async function syncSubscription(c: Context) {
       },
     });
 
+    if (latestChangeRequest?.id && !latestChangeRequest.id.startsWith("legacy-")) {
+      await db.subscriptionChangeRequest.update({
+        where: { id: latestChangeRequest.id },
+        data: {
+          stage: "APPLIED",
+          appliedAt: occurredAt ?? new Date(),
+          effectiveAt: occurredAt ?? new Date(),
+          pendingVerification: false,
+          failureReason: null,
+        },
+      });
+    }
+
     return c.json({
       ok: true,
       activePlanId: resolvedPlanId,
@@ -250,6 +268,23 @@ export async function syncSubscription(c: Context) {
       source: "sync-subscription",
     },
   });
+
+  const latestChangeRequest = await getLatestSubscriptionChangeRequest({
+    teamId: company.teamId,
+    companyId: company.id,
+  });
+  if (latestChangeRequest?.id && !latestChangeRequest.id.startsWith("legacy-")) {
+    await db.subscriptionChangeRequest.update({
+      where: { id: latestChangeRequest.id },
+      data: {
+        stage: "APPLIED",
+        appliedAt: occurredAt ?? new Date(),
+        effectiveAt: occurredAt ?? new Date(),
+        pendingVerification: false,
+        failureReason: null,
+      },
+    });
+  }
 
   return c.json({ ok: true, activePlanId: plan.id });
 }

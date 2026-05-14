@@ -596,6 +596,57 @@ export type EnumSubscriptionStatusWithAggregatesFilter<$PrismaModel = never> = {
   _max?: Prisma.NestedEnumSubscriptionStatusFilter<$PrismaModel>
 }
 
+export type EnumSubscriptionChangeTypeFilter<$PrismaModel = never> = {
+  equals?: $Enums.SubscriptionChangeType | Prisma.EnumSubscriptionChangeTypeFieldRefInput<$PrismaModel>
+  in?: $Enums.SubscriptionChangeType[] | Prisma.ListEnumSubscriptionChangeTypeFieldRefInput<$PrismaModel>
+  notIn?: $Enums.SubscriptionChangeType[] | Prisma.ListEnumSubscriptionChangeTypeFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumSubscriptionChangeTypeFilter<$PrismaModel> | $Enums.SubscriptionChangeType
+}
+
+export type EnumSubscriptionChangeStageFilter<$PrismaModel = never> = {
+  equals?: $Enums.SubscriptionChangeStage | Prisma.EnumSubscriptionChangeStageFieldRefInput<$PrismaModel>
+  in?: $Enums.SubscriptionChangeStage[] | Prisma.ListEnumSubscriptionChangeStageFieldRefInput<$PrismaModel>
+  notIn?: $Enums.SubscriptionChangeStage[] | Prisma.ListEnumSubscriptionChangeStageFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumSubscriptionChangeStageFilter<$PrismaModel> | $Enums.SubscriptionChangeStage
+}
+
+export type EnumSubscriptionChangeSourceFilter<$PrismaModel = never> = {
+  equals?: $Enums.SubscriptionChangeSource | Prisma.EnumSubscriptionChangeSourceFieldRefInput<$PrismaModel>
+  in?: $Enums.SubscriptionChangeSource[] | Prisma.ListEnumSubscriptionChangeSourceFieldRefInput<$PrismaModel>
+  notIn?: $Enums.SubscriptionChangeSource[] | Prisma.ListEnumSubscriptionChangeSourceFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumSubscriptionChangeSourceFilter<$PrismaModel> | $Enums.SubscriptionChangeSource
+}
+
+export type EnumSubscriptionChangeTypeWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.SubscriptionChangeType | Prisma.EnumSubscriptionChangeTypeFieldRefInput<$PrismaModel>
+  in?: $Enums.SubscriptionChangeType[] | Prisma.ListEnumSubscriptionChangeTypeFieldRefInput<$PrismaModel>
+  notIn?: $Enums.SubscriptionChangeType[] | Prisma.ListEnumSubscriptionChangeTypeFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumSubscriptionChangeTypeWithAggregatesFilter<$PrismaModel> | $Enums.SubscriptionChangeType
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumSubscriptionChangeTypeFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumSubscriptionChangeTypeFilter<$PrismaModel>
+}
+
+export type EnumSubscriptionChangeStageWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.SubscriptionChangeStage | Prisma.EnumSubscriptionChangeStageFieldRefInput<$PrismaModel>
+  in?: $Enums.SubscriptionChangeStage[] | Prisma.ListEnumSubscriptionChangeStageFieldRefInput<$PrismaModel>
+  notIn?: $Enums.SubscriptionChangeStage[] | Prisma.ListEnumSubscriptionChangeStageFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumSubscriptionChangeStageWithAggregatesFilter<$PrismaModel> | $Enums.SubscriptionChangeStage
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumSubscriptionChangeStageFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumSubscriptionChangeStageFilter<$PrismaModel>
+}
+
+export type EnumSubscriptionChangeSourceWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.SubscriptionChangeSource | Prisma.EnumSubscriptionChangeSourceFieldRefInput<$PrismaModel>
+  in?: $Enums.SubscriptionChangeSource[] | Prisma.ListEnumSubscriptionChangeSourceFieldRefInput<$PrismaModel>
+  notIn?: $Enums.SubscriptionChangeSource[] | Prisma.ListEnumSubscriptionChangeSourceFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumSubscriptionChangeSourceWithAggregatesFilter<$PrismaModel> | $Enums.SubscriptionChangeSource
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumSubscriptionChangeSourceFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumSubscriptionChangeSourceFilter<$PrismaModel>
+}
+
 export type EnumPaymentKindFilter<$PrismaModel = never> = {
   equals?: $Enums.PaymentKind | Prisma.EnumPaymentKindFieldRefInput<$PrismaModel>
   in?: $Enums.PaymentKind[] | Prisma.ListEnumPaymentKindFieldRefInput<$PrismaModel>
@@ -1434,6 +1485,57 @@ export type NestedEnumSubscriptionStatusWithAggregatesFilter<$PrismaModel = neve
   _count?: Prisma.NestedIntFilter<$PrismaModel>
   _min?: Prisma.NestedEnumSubscriptionStatusFilter<$PrismaModel>
   _max?: Prisma.NestedEnumSubscriptionStatusFilter<$PrismaModel>
+}
+
+export type NestedEnumSubscriptionChangeTypeFilter<$PrismaModel = never> = {
+  equals?: $Enums.SubscriptionChangeType | Prisma.EnumSubscriptionChangeTypeFieldRefInput<$PrismaModel>
+  in?: $Enums.SubscriptionChangeType[] | Prisma.ListEnumSubscriptionChangeTypeFieldRefInput<$PrismaModel>
+  notIn?: $Enums.SubscriptionChangeType[] | Prisma.ListEnumSubscriptionChangeTypeFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumSubscriptionChangeTypeFilter<$PrismaModel> | $Enums.SubscriptionChangeType
+}
+
+export type NestedEnumSubscriptionChangeStageFilter<$PrismaModel = never> = {
+  equals?: $Enums.SubscriptionChangeStage | Prisma.EnumSubscriptionChangeStageFieldRefInput<$PrismaModel>
+  in?: $Enums.SubscriptionChangeStage[] | Prisma.ListEnumSubscriptionChangeStageFieldRefInput<$PrismaModel>
+  notIn?: $Enums.SubscriptionChangeStage[] | Prisma.ListEnumSubscriptionChangeStageFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumSubscriptionChangeStageFilter<$PrismaModel> | $Enums.SubscriptionChangeStage
+}
+
+export type NestedEnumSubscriptionChangeSourceFilter<$PrismaModel = never> = {
+  equals?: $Enums.SubscriptionChangeSource | Prisma.EnumSubscriptionChangeSourceFieldRefInput<$PrismaModel>
+  in?: $Enums.SubscriptionChangeSource[] | Prisma.ListEnumSubscriptionChangeSourceFieldRefInput<$PrismaModel>
+  notIn?: $Enums.SubscriptionChangeSource[] | Prisma.ListEnumSubscriptionChangeSourceFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumSubscriptionChangeSourceFilter<$PrismaModel> | $Enums.SubscriptionChangeSource
+}
+
+export type NestedEnumSubscriptionChangeTypeWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.SubscriptionChangeType | Prisma.EnumSubscriptionChangeTypeFieldRefInput<$PrismaModel>
+  in?: $Enums.SubscriptionChangeType[] | Prisma.ListEnumSubscriptionChangeTypeFieldRefInput<$PrismaModel>
+  notIn?: $Enums.SubscriptionChangeType[] | Prisma.ListEnumSubscriptionChangeTypeFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumSubscriptionChangeTypeWithAggregatesFilter<$PrismaModel> | $Enums.SubscriptionChangeType
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumSubscriptionChangeTypeFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumSubscriptionChangeTypeFilter<$PrismaModel>
+}
+
+export type NestedEnumSubscriptionChangeStageWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.SubscriptionChangeStage | Prisma.EnumSubscriptionChangeStageFieldRefInput<$PrismaModel>
+  in?: $Enums.SubscriptionChangeStage[] | Prisma.ListEnumSubscriptionChangeStageFieldRefInput<$PrismaModel>
+  notIn?: $Enums.SubscriptionChangeStage[] | Prisma.ListEnumSubscriptionChangeStageFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumSubscriptionChangeStageWithAggregatesFilter<$PrismaModel> | $Enums.SubscriptionChangeStage
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumSubscriptionChangeStageFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumSubscriptionChangeStageFilter<$PrismaModel>
+}
+
+export type NestedEnumSubscriptionChangeSourceWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.SubscriptionChangeSource | Prisma.EnumSubscriptionChangeSourceFieldRefInput<$PrismaModel>
+  in?: $Enums.SubscriptionChangeSource[] | Prisma.ListEnumSubscriptionChangeSourceFieldRefInput<$PrismaModel>
+  notIn?: $Enums.SubscriptionChangeSource[] | Prisma.ListEnumSubscriptionChangeSourceFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumSubscriptionChangeSourceWithAggregatesFilter<$PrismaModel> | $Enums.SubscriptionChangeSource
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumSubscriptionChangeSourceFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumSubscriptionChangeSourceFilter<$PrismaModel>
 }
 
 export type NestedEnumPaymentKindFilter<$PrismaModel = never> = {

@@ -36,6 +36,11 @@ import {
 import { recordBillingAdjustment } from "../../lib/billing/billing-adjustments.js";
 import { computeProrationQuote } from "../../lib/billing/billing-proration.js";
 import {
+  createSubscriptionChangeRequest,
+  findSimilarOpenSubscriptionChangeRequest,
+  getLatestSubscriptionChangeRequest,
+} from "../../lib/billing/subscription-change-requests.js";
+import {
   normalizeTxHash,
   verifyAutopayPlanChange,
   verifyDirectErc20Transfer,
@@ -60,6 +65,9 @@ type SubscriptionTransition = {
     | "period_end_downgrade"
     | "cancel_at_period_end"
     | "next_renewal_on_chain";
+  changeType?: "upgrade" | "downgrade" | "cancellation" | "resume" | "billing_period_change";
+  stage?: "requested" | "pending_verification" | "pending_recovery" | "applied" | "failed" | "reverted";
+  transitionId?: string | null;
   targetPlanId: string | null;
   targetPlanName: string | null;
   targetBillingPeriod: "monthly" | "annual";
@@ -283,6 +291,38 @@ function microsToAmountString(value: bigint | number): string {
   return `${sign}${whole.toString()}.${fraction}`;
 }
 
+function buildLifecycleResponse(input: {
+  success?: boolean;
+  transitionId?: string | null;
+  changeType: "upgrade" | "downgrade" | "cancellation" | "resume" | "billing_period_change";
+  stage:
+    | "requested"
+    | "pending_verification"
+    | "pending_recovery"
+    | "applied"
+    | "failed"
+    | "reverted";
+  scheduled: boolean;
+  mode: string;
+  effectiveAt?: string | null;
+  pendingVerification?: boolean;
+  pendingRecovery?: boolean;
+  data?: Record<string, unknown>;
+}) {
+  return {
+    success: input.success ?? true,
+    transitionId: input.transitionId ?? null,
+    changeType: input.changeType,
+    stage: input.stage,
+    scheduled: input.scheduled,
+    mode: input.mode,
+    effectiveAt: input.effectiveAt ?? null,
+    pendingVerification: input.pendingVerification ?? false,
+    pendingRecovery: input.pendingRecovery ?? false,
+    ...(input.data ?? {}),
+  };
+}
+
 function createProrationSummary(params: {
   currentPlanName: string;
   targetPlanName: string;
@@ -438,7 +478,25 @@ export async function OPTIONS(c: Context) {
   return c.json(null, 204 as any, corsHeaders(c.req.header("origin")));
 }
 
-export async function POST(c: Context) {
+type CompanyPlanRequestBody = {
+  planId?: string;
+  billingPeriod?: string;
+  txHash?: string;
+  planChangeTxHash?: string;
+  autopayConfigTxHash?: string;
+  accessChangeTxHash?: string;
+  paymentTxHash?: string;
+  previewOnly?: boolean;
+  scheduleAtPeriodEnd?: boolean;
+  couponCode?: string;
+  customerName?: string;
+  customerEmail?: string;
+};
+
+export async function handleCompanyPlanRequest(
+  c: Context,
+  bodyOverride?: Partial<CompanyPlanRequestBody>,
+) {
   const origin = c.req.header("origin");
 
   if (!SELF_SERVE_PLAN_CHANGES_ENABLED) {
@@ -483,20 +541,7 @@ export async function POST(c: Context) {
       corsHeaders(origin),
     );
 
-  let body: {
-    planId?: string;
-    billingPeriod?: string;
-    txHash?: string;
-    planChangeTxHash?: string;
-    autopayConfigTxHash?: string;
-    accessChangeTxHash?: string;
-    paymentTxHash?: string;
-    previewOnly?: boolean;
-    scheduleAtPeriodEnd?: boolean;
-    couponCode?: string;
-    customerName?: string;
-    customerEmail?: string;
-  };
+  let body: CompanyPlanRequestBody;
   try {
     body = await c.req.json();
   } catch {
@@ -506,6 +551,10 @@ export async function POST(c: Context) {
       corsHeaders(origin),
     );
   }
+  body = {
+    ...body,
+    ...(bodyOverride ?? {}),
+  };
 
   const {
     planId,
@@ -554,6 +603,7 @@ export async function POST(c: Context) {
     where: { id: companyId },
     select: {
       id: true,
+      environmentId: true,
       activePlanId: true,
       name: true,
       traits: true,
@@ -698,17 +748,33 @@ export async function POST(c: Context) {
     deriveBillingPeriodFromPlan(currentPlan);
   const normalizedBillingPeriod =
     normalizeBillingPeriod(billingPeriod) ?? currentBillingPeriod;
+  const pendingLifecycleRequest = await getLatestSubscriptionChangeRequest({
+    teamId,
+    companyId,
+  });
+  const hasScheduledCancellation =
+    pendingLifecycleRequest?.changeType === "cancellation" &&
+    (pendingLifecycleRequest.stage === "requested" ||
+      pendingLifecycleRequest.stage === "pending_verification" ||
+      pendingLifecycleRequest.stage === "pending_recovery");
   if (
     previousPlanId === plan.id &&
-    currentBillingPeriod === normalizedBillingPeriod
+    currentBillingPeriod === normalizedBillingPeriod &&
+    !hasScheduledCancellation
   ) {
     return c.json(
       {
         data: {
-          success: true,
-          planId: plan.id,
-          planName: plan.name,
-          mode: "no_change",
+          ...buildLifecycleResponse({
+            changeType: "billing_period_change",
+            stage: "applied",
+            scheduled: false,
+            mode: "no_change",
+            data: {
+              planId: plan.id,
+              planName: plan.name,
+            },
+          }),
         },
       },
       200,
@@ -957,14 +1023,19 @@ export async function POST(c: Context) {
       return c.json(
         {
           data: {
-            success: true,
-            previewOnly: true,
-            scheduled: false,
-            mode: "immediate_prorated_upgrade_preview",
-            planId,
-            planName: plan.name,
-            previousPlanId: previousPlanId ?? null,
-            proration: proration.response,
+            ...buildLifecycleResponse({
+              changeType: "upgrade",
+              stage: "requested",
+              scheduled: false,
+              mode: "immediate_prorated_upgrade_preview",
+              data: {
+                previewOnly: true,
+                planId,
+                planName: plan.name,
+                previousPlanId: previousPlanId ?? null,
+                proration: proration.response,
+              },
+            }),
           },
         },
         200,
@@ -1139,7 +1210,11 @@ export async function POST(c: Context) {
         );
       }
 
-      let upgradeResult: { invoiceId: string | null; paymentId: string | null };
+      let upgradeResult: {
+        transitionId: string;
+        invoiceId: string | null;
+        paymentId: string | null;
+      };
       try {
         upgradeResult = await db.$transaction(
           async (tx) => {
@@ -1163,6 +1238,7 @@ export async function POST(c: Context) {
 
             const nextTraits: Record<string, unknown> = { ...latestTraits };
             delete nextTraits.subscriptionTransition;
+            delete nextTraits.pendingSubscriptionChangeRequestId;
             nextTraits.billingPeriod = normalizedBillingPeriod;
             nextTraits.billingVerifiedTxHashes = [
               ...latestConsumedPaymentTxHashes,
@@ -1207,6 +1283,38 @@ export async function POST(c: Context) {
                 autopayConfigTxHash: normalizedAutopayConfigTxHash,
                 accessChangeTxHash: accessChangeTxHashLocal,
                 paymentTxHash: normalizedPaymentTxHash,
+              },
+            }, tx);
+
+            const changeRequest = await createSubscriptionChangeRequest({
+              teamId,
+              environmentId:
+                company.subscriptionState?.environmentId ??
+                company.environmentId ??
+                plan.environmentId ??
+                null,
+              companyId,
+              subscriptionStateId: subscriptionState?.id ?? null,
+              changeType: "upgrade",
+              stage: "applied",
+              source: "self_service",
+              previousPlanId: previousPlanId ?? null,
+              targetPlanId: plan.id,
+              previousBillingPeriod: currentBillingPeriod,
+              targetBillingPeriod: normalizedBillingPeriod,
+              requestedAt: effectiveAt,
+              effectiveAt,
+              appliedAt: effectiveAt,
+              autopayConfigTxHash: normalizedAutopayConfigTxHash,
+              accessChangeTxHash: accessChangeTxHashLocal,
+              paymentTxHash: normalizedPaymentTxHash,
+              metadata: {
+                mode: "immediate_prorated_upgrade",
+                targetPlanName: plan.name,
+                previousPlanId: previousPlanId ?? null,
+                previousBillingPeriod: currentBillingPeriod,
+                targetBillingPeriod: normalizedBillingPeriod,
+                proration: proration.response,
               },
             }, tx);
 
@@ -1294,7 +1402,7 @@ export async function POST(c: Context) {
               }, tx);
             }
 
-            return { invoiceId, paymentId };
+            return { transitionId: changeRequest.id, invoiceId, paymentId };
           },
           { isolationLevel: "Serializable" },
         );
@@ -1317,10 +1425,18 @@ export async function POST(c: Context) {
         throw error;
       }
 
-      const { invoiceId, paymentId } = upgradeResult;
+      const { transitionId, invoiceId, paymentId } = upgradeResult;
 
       deliverWebhook(teamId, "company.plan.changed", {
         companyId,
+        environmentId:
+          company.subscriptionState?.environmentId ??
+          company.environmentId ??
+          plan.environmentId ??
+          null,
+        transitionId,
+        changeType: "upgrade",
+        stage: "applied",
         planId,
         planName: plan.name,
         billingPeriod: normalizedBillingPeriod,
@@ -1342,21 +1458,28 @@ export async function POST(c: Context) {
       return c.json(
         {
           data: {
-            success: true,
-            scheduled: false,
-            mode: "immediate_prorated_upgrade",
-            planId,
-            planName: plan.name,
-            previousPlanId: previousPlanId ?? null,
-            onChainPlanId: accessChange.onChainPlanId,
-            tokenId: accessChange.tokenId,
-            currentPeriodEnd: accessChange.currentPeriodEnd,
-            autopayConfigTxHash: normalizedAutopayConfigTxHash,
-            accessChangeTxHash: accessChangeTxHashLocal,
-            paymentTxHash: normalizedPaymentTxHash,
-            invoiceId,
-            paymentId,
-            proration: proration.response,
+            ...buildLifecycleResponse({
+              transitionId,
+              changeType: "upgrade",
+              stage: "applied",
+              scheduled: false,
+              mode: "immediate_prorated_upgrade",
+              effectiveAt: accessChange.currentPeriodEnd,
+              data: {
+                planId,
+                planName: plan.name,
+                previousPlanId: previousPlanId ?? null,
+                onChainPlanId: accessChange.onChainPlanId,
+                tokenId: accessChange.tokenId,
+                currentPeriodEnd: accessChange.currentPeriodEnd,
+                autopayConfigTxHash: normalizedAutopayConfigTxHash,
+                accessChangeTxHash: accessChangeTxHashLocal,
+                paymentTxHash: normalizedPaymentTxHash,
+                invoiceId,
+                paymentId,
+                proration: proration.response,
+              },
+            }),
           },
         },
         200,
@@ -1364,8 +1487,16 @@ export async function POST(c: Context) {
       );
     }
 
+    const scheduledChangeType = isDowngrade
+      ? "downgrade"
+      : "billing_period_change";
+    const scheduledMode = isDowngrade
+      ? "period_end_downgrade"
+      : "next_renewal_on_chain";
     const transition: SubscriptionTransition = {
-      mode: "next_renewal_on_chain",
+      mode: scheduledMode,
+      changeType: scheduledChangeType,
+      stage: "requested",
       targetPlanId: plan.id,
       targetPlanName: plan.name,
       targetBillingPeriod: normalizedBillingPeriod,
@@ -1380,6 +1511,33 @@ export async function POST(c: Context) {
     const effectiveCatalogPlanId = applyAccessPlanImmediately
       ? plan.id
       : currentPlan?.id ?? previousPlanId ?? null;
+    const changeRequest = await createSubscriptionChangeRequest({
+      teamId,
+      environmentId:
+        company.subscriptionState?.environmentId ??
+        company.environmentId ??
+        plan.environmentId ??
+        null,
+      companyId,
+      subscriptionStateId: company.subscriptionState?.id ?? null,
+      changeType: scheduledChangeType,
+      stage: "requested",
+      source: "self_service",
+      previousPlanId: previousPlanId ?? null,
+      targetPlanId: plan.id,
+      previousBillingPeriod: currentBillingPeriod,
+      targetBillingPeriod: normalizedBillingPeriod,
+      requestedAt: new Date(),
+      effectiveAt: new Date(verification.currentPeriodEnd),
+      autopayConfigTxHash: normalizedAutopayConfigTxHash,
+      metadata: {
+        mode: scheduledMode,
+        targetPlanName: plan.name,
+        accessPlanAppliedImmediately: applyAccessPlanImmediately,
+        pendingOnChainPlanId: verification.onChainPlanId,
+      },
+    });
+    transition.transitionId = changeRequest.id;
 
     const nextTraits: Record<string, unknown> = {
       ...currentTraits,
@@ -1390,6 +1548,7 @@ export async function POST(c: Context) {
         ...consumedPaymentTxHashes,
         normalizedAutopayConfigTxHash,
       ].slice(-20),
+      pendingSubscriptionChangeRequestId: changeRequest.id,
       subscriptionTransition: transition,
     };
 
@@ -1436,11 +1595,20 @@ export async function POST(c: Context) {
 
     deliverWebhook(teamId, "company.plan.changed", {
       companyId,
+      environmentId:
+        company.subscriptionState?.environmentId ??
+        company.environmentId ??
+        plan.environmentId ??
+        null,
+      transitionId: changeRequest.id,
+      changeType: scheduledChangeType,
+      stage: "requested",
       planId,
       planName: plan.name,
       billingPeriod: normalizedBillingPeriod,
       previousPlanId: previousPlanId ?? null,
-      mode: "next_renewal_on_chain",
+      targetPlanId: plan.id,
+      mode: scheduledMode,
       scheduled: true,
       txHash: normalizedAutopayConfigTxHash,
       onChainPlanId: verification.onChainPlanId,
@@ -1459,24 +1627,30 @@ export async function POST(c: Context) {
     return c.json(
       {
         data: {
-          success: true,
-          scheduled: true,
-          mode: "next_renewal_on_chain",
-          planId,
-          planName: plan.name,
-          previousPlanId: previousPlanId ?? null,
-          onChainPlanId: verification.onChainPlanId,
-          tokenId: verification.tokenId,
-          effectiveAt: verification.currentPeriodEnd,
-          currentPeriodEnd: verification.currentPeriodEnd,
-          accessPlanAppliedImmediately: applyAccessPlanImmediately,
-          proration: {
-            currency: "USDC",
-            amountDue: "0.000000",
-            amountPaid: "0.000000",
-            amountRemaining: "0.000000",
-            note: "Downgrade access changes at the current period end.",
-          },
+          ...buildLifecycleResponse({
+            transitionId: changeRequest.id,
+            changeType: scheduledChangeType,
+            stage: "requested",
+            scheduled: true,
+            mode: scheduledMode,
+            effectiveAt: verification.currentPeriodEnd,
+            data: {
+              planId,
+              planName: plan.name,
+              previousPlanId: previousPlanId ?? null,
+              onChainPlanId: verification.onChainPlanId,
+              tokenId: verification.tokenId,
+              currentPeriodEnd: verification.currentPeriodEnd,
+              accessPlanAppliedImmediately: applyAccessPlanImmediately,
+              proration: {
+                currency: "USDC",
+                amountDue: "0.000000",
+                amountPaid: "0.000000",
+                amountRemaining: "0.000000",
+                note: "Downgrade access changes at the current period end.",
+              },
+            },
+          }),
         },
       },
       200,
@@ -1536,8 +1710,16 @@ export async function POST(c: Context) {
   }
 
   if (shouldScheduleDowngrade) {
+    const existingRequest = await findSimilarOpenSubscriptionChangeRequest({
+      teamId,
+      companyId,
+      changeType: "downgrade",
+      targetPlanId: plan.id,
+    });
     const transition: SubscriptionTransition = {
       mode: "period_end_downgrade",
+      changeType: "downgrade",
+      stage: "requested",
       targetPlanId: plan.id,
       targetPlanName: plan.name,
       targetBillingPeriod: normalizedBillingPeriod,
@@ -1548,12 +1730,55 @@ export async function POST(c: Context) {
       source: "self_service",
     };
 
+    const changeRequest = existingRequest
+      ? await db.subscriptionChangeRequest.update({
+          where: { id: existingRequest.id },
+          data: {
+            stage: "REQUESTED",
+            targetPlanId: plan.id,
+            previousPlanId: previousPlanId ?? null,
+            previousBillingPeriod: currentBillingPeriod,
+            targetBillingPeriod: normalizedBillingPeriod,
+            effectiveAt: company.subscriptionState?.currentPeriodEnd ?? null,
+            failureReason: null,
+            metadata: toPrismaJson({
+              ...transition,
+              mode: "period_end_downgrade",
+            }),
+          },
+        })
+      : await createSubscriptionChangeRequest({
+          teamId,
+          environmentId:
+            company.subscriptionState?.environmentId ??
+            company.environmentId ??
+            plan.environmentId ??
+            null,
+          companyId,
+          subscriptionStateId: company.subscriptionState?.id ?? null,
+          changeType: "downgrade",
+          stage: "requested",
+          source: "self_service",
+          previousPlanId: previousPlanId ?? null,
+          targetPlanId: plan.id,
+          previousBillingPeriod: currentBillingPeriod,
+          targetBillingPeriod: normalizedBillingPeriod,
+          requestedAt: new Date(),
+          effectiveAt: company.subscriptionState?.currentPeriodEnd ?? null,
+          metadata: {
+            ...transition,
+            mode: "period_end_downgrade",
+          },
+        });
+    transition.transitionId = changeRequest.id;
+
     await db.arcenCompany.update({
       where: { id: companyId },
       data: {
         traits: toPrismaJson({
           ...currentTraits,
           billingPeriod: currentBillingPeriod,
+          pendingSubscriptionChangeRequestId: changeRequest.id,
           subscriptionTransition: transition,
         }),
       },
@@ -1561,10 +1786,19 @@ export async function POST(c: Context) {
 
     deliverWebhook(teamId, "company.plan.changed", {
       companyId,
+      environmentId:
+        company.subscriptionState?.environmentId ??
+        company.environmentId ??
+        plan.environmentId ??
+        null,
+      transitionId: changeRequest.id,
+      changeType: "downgrade",
+      stage: "requested",
       planId,
       planName: plan.name,
       billingPeriod: normalizedBillingPeriod,
       previousPlanId: previousPlanId ?? null,
+      targetPlanId: plan.id,
       mode: "period_end",
       scheduled: true,
       ...(normalizedCouponCode ? { couponCode: normalizedCouponCode } : {}),
@@ -1573,13 +1807,20 @@ export async function POST(c: Context) {
     return c.json(
       {
         data: {
-          success: true,
-          scheduled: true,
-          mode: "period_end",
-          planId,
-          planName: plan.name,
-          previousPlanId: previousPlanId ?? null,
-          effectiveAt: null,
+          ...buildLifecycleResponse({
+            transitionId: changeRequest.id,
+            changeType: "downgrade",
+            stage: "requested",
+            scheduled: true,
+            mode: "period_end",
+            effectiveAt:
+              company.subscriptionState?.currentPeriodEnd?.toISOString() ?? null,
+            data: {
+              planId,
+              planName: plan.name,
+              previousPlanId: previousPlanId ?? null,
+            },
+          }),
         },
       },
       200,
@@ -1589,6 +1830,7 @@ export async function POST(c: Context) {
 
   const nextTraits = { ...currentTraits };
   delete nextTraits.subscriptionTransition;
+  delete nextTraits.pendingSubscriptionChangeRequestId;
   nextTraits.billingPeriod = normalizedBillingPeriod;
   if (txHash) {
     const normalizedAppliedTxHash = normalizeTxHash(txHash);
@@ -1613,9 +1855,48 @@ export async function POST(c: Context) {
     await incrementCouponRedemption(teamId, normalizedCouponCode);
   }
 
+  const immediateChangeRequest = await createSubscriptionChangeRequest({
+    teamId,
+    environmentId:
+      company.subscriptionState?.environmentId ??
+      company.environmentId ??
+      plan.environmentId ??
+      null,
+    companyId,
+    subscriptionStateId: company.subscriptionState?.id ?? null,
+    changeType:
+      targetPlanAmountMicros > currentPlanAmountMicros
+        ? "upgrade"
+        : "billing_period_change",
+    stage: "applied",
+    source: "self_service",
+    previousPlanId: previousPlanId ?? null,
+    targetPlanId: plan.id,
+    previousBillingPeriod: currentBillingPeriod,
+    targetBillingPeriod: normalizedBillingPeriod,
+    requestedAt: new Date(),
+    appliedAt: new Date(),
+    metadata: {
+      mode: "immediate",
+      targetPlanName: plan.name,
+      chargedAmount: quoteResult.quote.finalAmount,
+    },
+  });
+
   // Fire outbound webhook (non-blocking)
   deliverWebhook(teamId, "company.plan.changed", {
     companyId,
+    environmentId:
+      company.subscriptionState?.environmentId ??
+      company.environmentId ??
+      plan.environmentId ??
+      null,
+    transitionId: immediateChangeRequest.id,
+    changeType:
+      targetPlanAmountMicros > currentPlanAmountMicros
+        ? "upgrade"
+        : "billing_period_change",
+    stage: "applied",
     planId,
     planName: plan.name,
     billingPeriod: normalizedBillingPeriod,
@@ -1630,15 +1911,28 @@ export async function POST(c: Context) {
   return c.json(
     {
       data: {
-        success: true,
-        scheduled: false,
-        mode: "immediate",
-        planId,
-        planName: plan.name,
-        previousPlanId: previousPlanId ?? null,
+        ...buildLifecycleResponse({
+          transitionId: immediateChangeRequest.id,
+          changeType:
+            targetPlanAmountMicros > currentPlanAmountMicros
+              ? "upgrade"
+              : "billing_period_change",
+          stage: "applied",
+          scheduled: false,
+          mode: "immediate",
+          data: {
+            planId,
+            planName: plan.name,
+            previousPlanId: previousPlanId ?? null,
+          },
+        }),
       },
     },
     200,
     corsHeaders(origin),
   );
+}
+
+export async function POST(c: Context) {
+  return handleCompanyPlanRequest(c);
 }

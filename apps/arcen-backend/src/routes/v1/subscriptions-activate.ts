@@ -39,6 +39,7 @@ import { Prisma } from "../../generated/client/client.js";
 import { db } from "../../db.js";
 import { getRpcUrl } from "../../config.js";
 import { DEFAULT_CHAIN_ID } from "../../lib/platform/default-chain.js";
+import { getLatestSubscriptionChangeRequest } from "../../lib/billing/subscription-change-requests.js";
 import { toPrismaJson } from "../../utils/prisma-json.js";
 import { requireAnyAuth, isAnyAuthError } from "../../lib/auth/require-any-auth.js";
 import { resolveCompany, type CompanyKeys } from "../../lib/entitlements/flag-engine.js";
@@ -142,7 +143,7 @@ async function clearScheduledCancellationTransition(
 ): Promise<boolean> {
   const company = await db.arcenCompany.findUnique({
     where: { id: companyId },
-    select: { traits: true },
+    select: { teamId: true, traits: true },
   });
   const currentTraits = asRecord(company?.traits);
   const transition = asRecord(currentTraits.subscriptionTransition);
@@ -159,6 +160,28 @@ async function clearScheduledCancellationTransition(
       traits: toPrismaJson(nextTraits),
     },
   });
+
+  if (company?.teamId) {
+    const latestChangeRequest = await getLatestSubscriptionChangeRequest({
+      teamId: company.teamId,
+      companyId,
+    });
+    if (
+      latestChangeRequest?.id &&
+      !latestChangeRequest.id.startsWith("legacy-") &&
+      latestChangeRequest.changeType === "cancellation"
+    ) {
+      await db.subscriptionChangeRequest.update({
+        where: { id: latestChangeRequest.id },
+        data: {
+          stage: "REVERTED",
+          appliedAt: new Date(),
+          pendingVerification: false,
+          failureReason: null,
+        },
+      });
+    }
+  }
 
   return true;
 }
