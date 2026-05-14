@@ -177,6 +177,30 @@ export function isPrefundError(error: unknown): boolean {
   );
 }
 
+export function isZeroDevInfrastructureError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  const lower = message.toLowerCase();
+
+  return (
+    lower.includes("chainid not found") ||
+    lower.includes("http request failed") ||
+    lower.includes("zerodev project") ||
+    lower.includes("does not recognize") ||
+    lower.includes("rpc.zerodev.app")
+  );
+}
+
+function isAlreadyDeployedSmartAccountError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  const lower = message.toLowerCase();
+
+  return (
+    lower.includes("smart account has already been deployed") ||
+    (lower.includes("already been deployed") &&
+      (lower.includes("factory") || lower.includes("factorydata")))
+  );
+}
+
 export async function getCounterfactualSmartAccountAddress(
   walletClient: WalletClient,
   chainId: number,
@@ -270,6 +294,7 @@ async function createKernelExecutionContext(config: {
   walletClient: WalletClient;
   bundlerUrl?: string;
   paymasterUrl?: string;
+  forceDeployed?: boolean;
 }) {
   const chain = CHAIN_MAP[config.chainId] || baseSepolia;
   const { bundlerUrl, paymasterUrl, hasConfiguredUrls } = resolveZeroDevUrls({
@@ -295,6 +320,14 @@ async function createKernelExecutionContext(config: {
     entryPoint: ENTRY_POINT as any,
     kernelVersion: KERNEL_VERSION,
   } as any);
+
+  if (config.forceDeployed) {
+    (kernelAccount as any).isDeployed = async () => true;
+    (kernelAccount as any).getFactoryArgs = async () => ({
+      factory: undefined,
+      factoryData: undefined,
+    });
+  }
 
   const paymasterClient = createZeroDevPaymasterClient({
     chain,
@@ -501,52 +534,64 @@ export async function sendSmartAccountTransaction(
   smartAccountAddress: `0x${string}`;
   txHash: `0x${string}`;
 }> {
-  const {
-    publicClient,
-    kernelAccount,
-    kernelClient,
-    bundlerUrl,
-    paymasterUrl,
-    hasConfiguredUrls,
-  } = await createKernelExecutionContext({
-    projectId: config.projectId,
-    chainId: config.chainId,
-    walletClient: config.walletClient,
-    bundlerUrl: config.bundlerUrl,
-    paymasterUrl: config.paymasterUrl,
-  });
-
-  if (
-    config.smartAccountAddress &&
-    kernelAccount.address.toLowerCase() !==
-      config.smartAccountAddress.toLowerCase()
-  ) {
-    throw new Error(
-      `Wallet account mismatch. Expected ${config.smartAccountAddress}, got ${kernelAccount.address}.`,
-    );
-  }
-
-  try {
-    const txHash = await (kernelClient as any).sendTransaction({
-      to: config.to,
-      data: config.data,
-      value: config.value ?? 0n,
-    });
-
-    await publicClient.waitForTransactionReceipt({ hash: txHash });
-
-    return {
-      smartAccountAddress: kernelAccount.address,
-      txHash,
-    };
-  } catch (error) {
-    throw normalizeZeroDevError(error, {
-      projectId: config.projectId,
-      chainId: config.chainId,
+  async function execute(forceDeployed = false) {
+    const {
+      publicClient,
+      kernelAccount,
+      kernelClient,
       bundlerUrl,
       paymasterUrl,
       hasConfiguredUrls,
+    } = await createKernelExecutionContext({
+      projectId: config.projectId,
+      chainId: config.chainId,
+      walletClient: config.walletClient,
+      bundlerUrl: config.bundlerUrl,
+      paymasterUrl: config.paymasterUrl,
+      forceDeployed,
     });
+
+    if (
+      config.smartAccountAddress &&
+      kernelAccount.address.toLowerCase() !==
+        config.smartAccountAddress.toLowerCase()
+    ) {
+      throw new Error(
+        `Wallet account mismatch. Expected ${config.smartAccountAddress}, got ${kernelAccount.address}.`,
+      );
+    }
+
+    try {
+      const txHash = await (kernelClient as any).sendTransaction({
+        to: config.to,
+        data: config.data,
+        value: config.value ?? 0n,
+      });
+
+      await publicClient.waitForTransactionReceipt({ hash: txHash });
+
+      return {
+        smartAccountAddress: kernelAccount.address,
+        txHash,
+      };
+    } catch (error) {
+      throw normalizeZeroDevError(error, {
+        projectId: config.projectId,
+        chainId: config.chainId,
+        bundlerUrl,
+        paymasterUrl,
+        hasConfiguredUrls,
+      });
+    }
+  }
+
+  try {
+    return await execute(false);
+  } catch (error) {
+    if (isAlreadyDeployedSmartAccountError(error)) {
+      return await execute(true);
+    }
+    throw error;
   }
 }
 

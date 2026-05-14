@@ -101,9 +101,9 @@ export const TOKENS = {
   8453: {
     USDC: { address: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as const, decimals: 6 },
   },
-  // Arc Testnet — canonical deployed USDC used by the current PlanFactory deployment.
+  // Arc Testnet — canonical default USDC.
   5042002: {
-    USDC: { address: '0xF9610c064FFD64255A1d509d17b2Af8733084e50' as const, decimals: 6 },
+    USDC: { address: '0x3600000000000000000000000000000000000000' as const, decimals: 6 },
   },
 } as const;
 

@@ -46,6 +46,7 @@ import {
   deploySmartAccount,
   getCounterfactualSmartAccountAddress,
   isPrefundError,
+  isZeroDevInfrastructureError,
   isRecoverableSmartAccountFundingError,
   sendSmartAccountTransaction,
   updateAutopayConfig,
@@ -5640,18 +5641,31 @@ function PaymentContent({
   }
 
   async function ensureBillingSmartAccount(): Promise<`0x${string}`> {
+    if (!chainId || !resolvedWalletClient || !finalAddress) {
+      throw new Error(
+        "A connected wallet on the target payment chain is required before activation.",
+      );
+    }
+
+    // For first-time activations, use the funded connected wallet directly as
+    // the recurring payment account. Only preserve a separate payment account
+    // when the backend has already bound one to this subscription.
+    if (!serverSmartAccountAddress) {
+      return finalAddress as `0x${string}`;
+    }
+
     if (smartAccountAddress && isAddress(smartAccountAddress)) {
       return smartAccountAddress as `0x${string}`;
     }
 
-    if (
-      !chainId ||
-      !resolvedWalletClient ||
-      (!zeroDevProjectId && !zeroDevConfig?.isReady) ||
-      !finalAddress
-    ) {
+    const canFallbackToWalletAccount = Boolean(finalAddress);
+
+    if (!zeroDevProjectId && !zeroDevConfig?.isReady) {
+      if (canFallbackToWalletAccount) {
+        return finalAddress as `0x${string}`;
+      }
       throw new Error(
-        "A connected wallet on the target payment chain is required before activation.",
+        "Automatic payment account setup is not configured for this subscription yet.",
       );
     }
 
@@ -5696,6 +5710,21 @@ function PaymentContent({
           paymasterUrl: zeroDevConfig?.paymasterUrl,
           error: error instanceof Error ? error.message : String(error ?? ""),
         });
+
+        if (
+          canFallbackToWalletAccount &&
+          isZeroDevInfrastructureError(error)
+        ) {
+          console.warn(
+            "[ArcenPay][Embed] Falling back to direct wallet payment account",
+            {
+              chainId,
+              chainLabel,
+              walletAddress: finalAddress,
+            },
+          );
+          return finalAddress as `0x${string}`;
+        }
 
         if (attempt === 0 && !forceSelfFunded && isPrefundError(error)) {
           continue;

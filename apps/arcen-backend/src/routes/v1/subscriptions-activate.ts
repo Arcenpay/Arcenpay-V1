@@ -343,11 +343,19 @@ async function upsertCompanyForActivation(
     name?: string;
     traits?: Record<string, unknown>;
   },
+  paymentAccount?: string | null,
 ): Promise<{ id: string; activePlanId: string | null; created: boolean }> {
-  const existing = await resolveCompany(teamId, {
-    ...keys,
-    environmentId,
-  });
+  const existing =
+    (await resolveCompany(teamId, {
+      ...keys,
+      environmentId,
+    })) ??
+    (paymentAccount
+      ? await resolveCompany(teamId, {
+          wallet: paymentAccount,
+          environmentId,
+        })
+      : null);
   if (existing) {
     const updates: Record<string, unknown> = {};
     if (keys.name?.trim()) updates.name = keys.name.trim();
@@ -534,6 +542,7 @@ export async function POST(c: Context) {
     teamId,
     catalogPlan.environmentId ?? null,
     activationCompanyInput,
+    paymentAccount,
   );
 
   // Use the chain the plan was registered on. Fall back to DEFAULT_CHAIN_ID for
@@ -896,6 +905,7 @@ export async function POST(c: Context) {
   const walletConflict = await db.arcenCompany.findFirst({
     where: {
       teamId,
+      environmentId: catalogPlan.environmentId ?? null,
       id: { not: company.id },
       OR: [
         { walletAddress: paymentAccount },
@@ -915,7 +925,7 @@ export async function POST(c: Context) {
     return c.json(
       {
         error:
-          "This payment account is already linked to a different company in your workspace. Reconcile the company mapping before activating the subscription.",
+          "This payment account is already linked to a different company in this workspace environment. Reconcile the company mapping before activating the subscription.",
       },
       409,
       corsHeaders(origin),

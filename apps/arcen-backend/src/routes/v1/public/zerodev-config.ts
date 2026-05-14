@@ -9,6 +9,8 @@ import { ZERODEV_PROJECT_ID } from "../../../config.js";
 import { DEFAULT_CHAIN_ID } from "../../../lib/platform/default-chain.js";
 import { corsHeaders } from "../../../middleware/cors.js";
 
+const ARC_TESTNET_CHAIN_ID = 5042002;
+
 function parseChainIdSet(raw: string | undefined): Set<number> {
   if (!raw) return new Set();
   return new Set(
@@ -17,6 +19,23 @@ function parseChainIdSet(raw: string | undefined): Set<number> {
       .map((value) => Number.parseInt(value.trim(), 10))
       .filter((value) => Number.isFinite(value) && value > 0),
   );
+}
+
+function getExplicitZeroDevOverride(chainId: number) {
+  const bundlerUrl =
+    process.env[`ZERODEV_BUNDLER_RPC_${chainId}`] ??
+    process.env.ZERODEV_BUNDLER_RPC ??
+    "";
+  const paymasterUrl =
+    process.env[`ZERODEV_PAYMASTER_RPC_${chainId}`] ??
+    process.env.ZERODEV_PAYMASTER_RPC ??
+    "";
+
+  return {
+    bundlerUrl: bundlerUrl.trim(),
+    paymasterUrl: paymasterUrl.trim(),
+    hasExplicitOverride: Boolean(bundlerUrl.trim() || paymasterUrl.trim()),
+  };
 }
 
 export async function OPTIONS(c: Context) {
@@ -56,17 +75,32 @@ export async function GET(c: Context) {
     process.env.ZERODEV_MODE === "self-funded" ||
     false;
 
+  const { bundlerUrl: overrideBundlerUrl, paymasterUrl: overridePaymasterUrl } =
+    getExplicitZeroDevOverride(chainId);
+
+  if (
+    chainId === ARC_TESTNET_CHAIN_ID &&
+    (!overrideBundlerUrl || !overridePaymasterUrl)
+  ) {
+    return c.json(
+      {
+        error:
+          "ZeroDev is not configured for Arc Testnet. Arc subscriptions can continue with direct-wallet autopay without a smart-account relay.",
+      },
+      404,
+      corsHeaders(origin),
+    );
+  }
+
   const baseUrl = `https://rpc.zerodev.app/api/v3/${ZERODEV_PROJECT_ID}/chain/${chainId}`;
   const suffix = isSelfFunded ? "?selfFunded=true" : "";
 
   const bundlerUrl =
-    process.env[`ZERODEV_BUNDLER_RPC_${chainId}`] ??
-    process.env.ZERODEV_BUNDLER_RPC ??
+    overrideBundlerUrl ||
     baseUrl + suffix;
 
   const paymasterUrl =
-    process.env[`ZERODEV_PAYMASTER_RPC_${chainId}`] ??
-    process.env.ZERODEV_PAYMASTER_RPC ??
+    overridePaymasterUrl ||
     baseUrl + suffix;
 
   const data = {
