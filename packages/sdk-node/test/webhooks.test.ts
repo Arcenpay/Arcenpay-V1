@@ -63,6 +63,44 @@ describe("WebhookService", () => {
       );
       expect(valid).toBe(false);
     });
+
+    it("should accept signatures with the sha256= header prefix", () => {
+      const body = JSON.stringify({ event: "test", timestamp: 123 });
+      const signature = createHmac("sha256", testConfig.secret)
+        .update(body)
+        .digest("hex");
+
+      const valid = WebhookService.verifySignature(
+        body,
+        `sha256=${signature}`,
+        testConfig.secret,
+      );
+      expect(valid).toBe(true);
+    });
+
+    it("should ignore surrounding whitespace on the secret and signature", () => {
+      const body = JSON.stringify({ event: "test", timestamp: 123 });
+      const signature = createHmac("sha256", testConfig.secret)
+        .update(body)
+        .digest("hex");
+
+      const valid = WebhookService.verifySignature(
+        body,
+        `  sha256=${signature}  `,
+        `  ${testConfig.secret}  `,
+      );
+      expect(valid).toBe(true);
+    });
+
+    it("should reject malformed signatures before comparing", () => {
+      const body = JSON.stringify({ event: "test", timestamp: 123 });
+      const valid = WebhookService.verifySignature(
+        body,
+        "sha256=not-hex",
+        testConfig.secret,
+      );
+      expect(valid).toBe(false);
+    });
   });
 
   describe("deliverEvent", () => {

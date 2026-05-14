@@ -1,4 +1,4 @@
-import { ArcenClient } from "@arcenpay/node";
+import { ArcenClient } from "@arcenpay/node/client";
 
 // Singleton ArcenClient for server-side usage
 // Initialized lazily so missing env vars only throw at runtime, not build time.

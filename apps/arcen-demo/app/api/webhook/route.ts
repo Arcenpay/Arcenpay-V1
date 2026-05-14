@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyWebhookSignature } from "@arcenpay/node";
+import { verifyWebhookSignature } from "@arcenpay/node/webhooks";
 
 /**
  * POST /api/webhook
@@ -12,27 +12,42 @@ import { verifyWebhookSignature } from "@arcenpay/node";
  *   X-ArcenPay-Event:     <event-type>
  *   X-ArcenPay-Timestamp: <unix-seconds>
  *
- * Set ARCENPAY_WEBHOOK_SECRET in .env.local. The whsec_ prefix is
- * stripped automatically before verifying.
+ * Set ARCENPAY_WEBHOOK_SECRET in .env.local using the exact secret shown in
+ * the dashboard. The handler also tolerates the common mistake of pasting only
+ * the raw value without the `whsec_` prefix.
  *
  * ⚠️ Webhooks are REJECTED with HTTP 500 if ARCENPAY_WEBHOOK_SECRET
  * is not configured. There is no bypass — this is intentional.
  */
 
 const MAX_TIMESTAMP_TOLERANCE_SEC = 300; // 5 minutes
+const SIGNATURE_PREFIX = "sha256=";
+const WEBHOOK_SECRET_PREFIX = "whsec_";
 
-function extractSecret(raw: string | undefined): string {
-  if (!raw) return "";
-  const trimmed = raw.trim();
-  return trimmed.startsWith("whsec_") ? trimmed.slice(6) : trimmed;
+function getSecretCandidates(raw: string | undefined): string[] {
+  const trimmed = raw?.trim() ?? "";
+  if (!trimmed) return [];
+
+  return trimmed.startsWith(WEBHOOK_SECRET_PREFIX)
+    ? [trimmed, trimmed.slice(WEBHOOK_SECRET_PREFIX.length)].filter(Boolean)
+    : [trimmed, `${WEBHOOK_SECRET_PREFIX}${trimmed}`];
+}
+
+function normalizeSignatureHeader(raw: string | null): string {
+  const trimmed = raw?.trim() ?? "";
+  return trimmed.startsWith(SIGNATURE_PREFIX)
+    ? trimmed.slice(SIGNATURE_PREFIX.length)
+    : trimmed;
 }
 
 export async function POST(req: NextRequest) {
   const rawBody = await req.text();
 
   // ── 1. Require webhook secret ────────────────────────────────────────────────
-  const secret = extractSecret(process.env.ARCENPAY_WEBHOOK_SECRET);
-  if (!secret) {
+  const secretCandidates = getSecretCandidates(
+    process.env.ARCENPAY_WEBHOOK_SECRET,
+  );
+  if (secretCandidates.length === 0) {
     console.error(
       "[webhook] ❌ ARCENPAY_WEBHOOK_SECRET not configured — rejecting all webhooks.",
     );
@@ -43,25 +58,42 @@ export async function POST(req: NextRequest) {
   }
 
   // ── 2. Require signature header ──────────────────────────────────────────────
-  const sigHeader = req.headers.get("x-arcenpay-signature") ?? "";
-  const sigHex = sigHeader.startsWith("sha256=")
-    ? sigHeader.slice("sha256=".length)
-    : sigHeader;
+  const sigHex = normalizeSignatureHeader(
+    req.headers.get("x-arcenpay-signature"),
+  );
 
   if (!sigHex) {
     console.warn("[webhook] ❌ Missing X-ArcenPay-Signature header — rejected.");
     return NextResponse.json({ error: "Missing signature" }, { status: 401 });
   }
 
+  if (!/^[0-9a-f]{64}$/i.test(sigHex)) {
+    console.warn("[webhook] ❌ Malformed X-ArcenPay-Signature header — rejected.");
+    return NextResponse.json({ error: "Malformed signature" }, { status: 401 });
+  }
+
   // ── 3. Verify HMAC-SHA256 signature ──────────────────────────────────────────
   try {
-    if (!verifyWebhookSignature(rawBody, sigHex, secret)) {
+    const matchedSecret = secretCandidates.find((secret) =>
+      verifyWebhookSignature(rawBody, sigHex, secret),
+    );
+
+    if (!matchedSecret) {
       console.warn("[webhook] ❌ Signature mismatch — rejected.");
       console.debug("[webhook] Headers:", Object.fromEntries(req.headers));
       console.debug("[webhook] Received sig (hex part):", sigHex);
       return NextResponse.json(
         { error: "Invalid signature" },
         { status: 401 },
+      );
+    }
+
+    if (
+      process.env.ARCENPAY_WEBHOOK_SECRET?.trim() &&
+      matchedSecret !== process.env.ARCENPAY_WEBHOOK_SECRET.trim()
+    ) {
+      console.warn(
+        "[webhook] Verified using a compatibility secret variant. Update ARCENPAY_WEBHOOK_SECRET to the full dashboard value.",
       );
     }
   } catch (err) {
@@ -73,12 +105,12 @@ export async function POST(req: NextRequest) {
   }
 
   // ── 4. Timestamp anti-replay check ───────────────────────────────────────────
-  const meapTs = req.headers.get("x-arcenpay-timestamp");
-  if (meapTs) {
-    const ts = Number.parseInt(meapTs, 10);
+  const arcenTs = req.headers.get("x-arcenpay-timestamp");
+  if (arcenTs) {
+    const ts = Number.parseInt(arcenTs, 10);
     const now = Math.floor(Date.now() / 1000);
     if (!Number.isInteger(ts) || ts <= 0) {
-      console.warn("[webhook] ❌ Invalid X-MEAP-Timestamp — rejected.");
+      console.warn("[webhook] ❌ Invalid X-ArcenPay-Timestamp — rejected.");
       return NextResponse.json(
         { error: "Invalid timestamp" },
         { status: 401 },
@@ -108,12 +140,12 @@ export async function POST(req: NextRequest) {
       ? (event as Record<string, unknown>).event
       : "unknown";
 
-  const meapEvent = req.headers.get("x-arcenpay-event") ?? String(eventType);
+  const arcenEvent = req.headers.get("x-arcenpay-event") ?? String(eventType);
 
   console.log(
-    `[webhook] ✅ Received: ${meapEvent}${meapTs ? ` (ts=${meapTs})` : ""}`,
+    `[webhook] ✅ Received: ${arcenEvent}${arcenTs ? ` (ts=${arcenTs})` : ""}`,
     JSON.stringify(event, null, 2),
   );
 
-  return NextResponse.json({ received: true, event: meapEvent });
+  return NextResponse.json({ received: true, event: arcenEvent });
 }

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { ARCENPAY_APP_URL } from "@arcenpay/node";
+import { ARCENPAY_APP_URL } from "@arcenpay/node/core";
 
 /**
  * GET /api/config

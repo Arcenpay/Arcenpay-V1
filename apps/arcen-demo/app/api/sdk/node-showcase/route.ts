@@ -4,15 +4,15 @@ import {
   buildEventIdempotencyKey,
   createProtocolEvent,
   mapProtocolEventToBillingType,
-  verifyWebhookSignature,
-} from "@arcenpay/node";
+} from "@arcenpay/node/event-contracts";
+import { verifyWebhookSignature } from "@arcenpay/node/webhooks";
 import {
   getDemoCompanyIdentity,
   getDemoCompanyKeys,
   getDemoUserIdentity,
   getDemoNodeClient,
 } from "@/lib/arcen-client";
-import { resolveArcenPayBaseUrl } from "@arcenpay/node";
+import { resolveArcenPayBaseUrl } from "@arcenpay/node/core";
 
 const FEATURE_KEYS = ["scan", "api-access", "export-pdf"] as const;
 

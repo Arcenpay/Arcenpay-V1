@@ -4,7 +4,7 @@
 //  PRD §9.3 — Provider Webhook System
 // ============================================================
 
-import { createHmac } from "crypto";
+import { createHmac, timingSafeEqual } from "crypto";
 import type { SubscriptionEventData } from "./events";
 
 export interface WebhookConfig {
@@ -231,8 +231,25 @@ export class WebhookService {
     signature: string,
     secret: string,
   ): boolean {
-    const expected = createHmac("sha256", secret).update(body).digest("hex");
-    return expected === signature;
+    const normalizedSecret = secret.trim();
+    const normalizedSignature = signature
+      .trim()
+      .replace(/^sha256=/i, "")
+      .toLowerCase();
+
+    if (!normalizedSecret) return false;
+    if (!/^[0-9a-f]{64}$/.test(normalizedSignature)) return false;
+
+    const expected = Buffer.from(
+      createHmac("sha256", normalizedSecret).update(body).digest("hex"),
+      "hex",
+    );
+    const received = Buffer.from(normalizedSignature, "hex");
+
+    return (
+      expected.length === received.length &&
+      timingSafeEqual(expected, received)
+    );
   }
 
   /**
