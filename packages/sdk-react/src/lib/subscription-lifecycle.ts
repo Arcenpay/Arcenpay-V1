@@ -8,6 +8,8 @@ type PlanChangeSuccessMessageInput = {
   effectiveAtLabel?: string | null;
   prorationAmountDue?: string | null;
   walletCreditCreated?: number;
+  pendingVerification?: boolean;
+  alreadyScheduled?: boolean;
 };
 
 type CancellationRequestBodyInput = {
@@ -33,6 +35,50 @@ export function buildPlanChangeSuccessMessage(
   const mode = input.mode ?? "";
   const targetBillingPeriodDisplay = billingPeriodLabel(input.targetBillingPeriod);
   const previousBillingPeriodDisplay = billingPeriodLabel(input.previousBillingPeriod);
+
+  if (input.alreadyScheduled) {
+    if (
+      mode === "next_renewal_on_chain" ||
+      mode === "period_end" ||
+      mode === "period_end_downgrade"
+    ) {
+      if (
+        input.targetBillingPeriod &&
+        input.previousBillingPeriod &&
+        input.targetBillingPeriod !== input.previousBillingPeriod
+      ) {
+        return `This plan change is already scheduled. ${targetBillingPeriodDisplay} billing will take effect${input.effectiveAtLabel ? ` on ${input.effectiveAtLabel}` : " at the next renewal"}.`;
+      }
+      return `This plan change is already scheduled${input.effectiveAtLabel ? ` for ${input.effectiveAtLabel}` : ""}.`;
+    }
+
+    if (mode === "immediate_prorated_upgrade") {
+      return input.pendingVerification
+        ? "This upgrade is already pending on-chain confirmation."
+        : "This upgrade request is already in progress.";
+    }
+  }
+
+  if (input.pendingVerification) {
+    if (mode === "immediate_prorated_upgrade") {
+      return `Upgrade submitted.${input.prorationAmountDue ? ` $${Number(input.prorationAmountDue).toFixed(2)} will be charged after on-chain verification.` : " We’re waiting for on-chain confirmations before applying the new plan."}`;
+    }
+
+    if (
+      mode === "next_renewal_on_chain" ||
+      mode === "period_end" ||
+      mode === "period_end_downgrade"
+    ) {
+      if (
+        input.targetBillingPeriod &&
+        input.previousBillingPeriod &&
+        input.targetBillingPeriod !== input.previousBillingPeriod
+      ) {
+        return `Plan change submitted. We’re waiting for on-chain confirmations, then ${targetBillingPeriodDisplay} billing will take effect${input.effectiveAtLabel ? ` on ${input.effectiveAtLabel}` : " at the next renewal"}.`;
+      }
+      return `Plan change submitted. We’re waiting for on-chain confirmations${input.effectiveAtLabel ? `, and the change will take effect on ${input.effectiveAtLabel}` : " before the scheduled change is applied"}.`;
+    }
+  }
 
   if (
     mode === "next_renewal_on_chain" ||

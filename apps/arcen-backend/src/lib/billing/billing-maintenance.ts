@@ -53,6 +53,14 @@ function microsToAmount(value: number): number {
   return value / 1_000_000;
 }
 
+function readTransitionMetadata(
+  transition: Record<string, unknown> | null | undefined,
+): Record<string, unknown> {
+  if (!transition) return {};
+  const metadata = asRecord(transition.metadata);
+  return Object.keys(metadata).length > 0 ? metadata : transition;
+}
+
 export async function applyScheduledSubscriptionTransitions(input: {
   teamId: string;
   limit?: number;
@@ -103,7 +111,23 @@ export async function applyScheduledSubscriptionTransitions(input: {
       companyId: state.companyId,
     });
     const transition = changeRequest ?? asRecord(traits.subscriptionTransition);
+    const transitionMetadata = readTransitionMetadata(
+      transition as Record<string, unknown>,
+    );
     const mode = typeof transition.mode === "string" ? transition.mode : null;
+    const pendingVerification = Boolean(
+      (transition as Record<string, unknown>).pendingVerification ??
+        transitionMetadata.pendingVerification,
+    );
+
+    if (pendingVerification) {
+      results.push({
+        companyId: state.companyId,
+        action: "skipped",
+        reason: "pending_verification",
+      });
+      continue;
+    }
 
     if (mode === "next_renewal_on_chain") {
       const transitionRequestedAtRaw =
@@ -168,6 +192,17 @@ export async function applyScheduledSubscriptionTransitions(input: {
         companyId: state.companyId,
         action: "skipped",
         reason: "missing_target_plan",
+      });
+      continue;
+    }
+
+    const requiresOnChainSync = Boolean(transitionMetadata.requiresOnChainSync);
+    if (mode === "period_end_downgrade" && requiresOnChainSync) {
+      results.push({
+        companyId: state.companyId,
+        action: "skipped",
+        reason: "awaiting_on_chain_sync",
+        targetPlanId,
       });
       continue;
     }

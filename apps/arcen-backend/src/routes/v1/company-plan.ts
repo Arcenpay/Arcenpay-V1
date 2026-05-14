@@ -64,7 +64,8 @@ type SubscriptionTransition = {
   mode:
     | "period_end_downgrade"
     | "cancel_at_period_end"
-    | "next_renewal_on_chain";
+    | "next_renewal_on_chain"
+    | "immediate_prorated_upgrade";
   changeType?: "upgrade" | "downgrade" | "cancellation" | "resume" | "billing_period_change";
   stage?: "requested" | "pending_verification" | "pending_recovery" | "applied" | "failed" | "reverted";
   transitionId?: string | null;
@@ -99,6 +100,48 @@ function deriveBillingPeriodFromPlan(
     plan.billingInterval >= 31_536_000
     ? "annual"
     : "monthly";
+}
+
+function isOpenLifecycleStage(
+  stage:
+    | "requested"
+    | "pending_verification"
+    | "pending_recovery"
+    | "applied"
+    | "failed"
+    | "reverted"
+    | null
+    | undefined,
+): boolean {
+  return (
+    stage === "requested" ||
+    stage === "pending_verification" ||
+    stage === "pending_recovery"
+  );
+}
+
+function readLifecycleResponseMode(input: {
+  mode?: string | null;
+  changeType?: "upgrade" | "downgrade" | "cancellation" | "resume" | "billing_period_change" | null;
+}): string {
+  if (typeof input.mode === "string" && input.mode.trim()) {
+    return input.mode.trim();
+  }
+
+  switch (input.changeType) {
+    case "upgrade":
+      return "immediate_prorated_upgrade";
+    case "downgrade":
+      return "period_end_downgrade";
+    case "billing_period_change":
+      return "next_renewal_on_chain";
+    case "resume":
+      return "resume_requested";
+    case "cancellation":
+      return "cancel_at_period_end";
+    default:
+      return "subscription_change";
+  }
 }
 
 function readConsumedPaymentTxHashes(
@@ -616,6 +659,7 @@ export async function handleCompanyPlanRequest(
           walletAddress: true,
           currentPeriodStart: true,
           currentPeriodEnd: true,
+          onChainPlanId: true,
           onChainTokenId: true,
           metadata: true,
           environmentId: true,
@@ -754,9 +798,7 @@ export async function handleCompanyPlanRequest(
   });
   const hasScheduledCancellation =
     pendingLifecycleRequest?.changeType === "cancellation" &&
-    (pendingLifecycleRequest.stage === "requested" ||
-      pendingLifecycleRequest.stage === "pending_verification" ||
-      pendingLifecycleRequest.stage === "pending_recovery");
+    isOpenLifecycleStage(pendingLifecycleRequest.stage);
   if (
     previousPlanId === plan.id &&
     currentBillingPeriod === normalizedBillingPeriod &&
@@ -782,11 +824,61 @@ export async function handleCompanyPlanRequest(
     );
   }
 
+  const hasMatchingOpenPlanChange =
+    pendingLifecycleRequest?.changeType !== "cancellation" &&
+    isOpenLifecycleStage(pendingLifecycleRequest?.stage) &&
+    pendingLifecycleRequest?.targetPlanId === plan.id &&
+    (pendingLifecycleRequest?.targetBillingPeriod ?? normalizedBillingPeriod) ===
+      normalizedBillingPeriod;
+
+  if (hasMatchingOpenPlanChange && pendingLifecycleRequest) {
+    return c.json(
+      {
+        data: {
+          ...buildLifecycleResponse({
+            transitionId: pendingLifecycleRequest.id,
+            changeType: pendingLifecycleRequest.changeType ?? "billing_period_change",
+            stage: pendingLifecycleRequest.stage ?? "requested",
+            scheduled: pendingLifecycleRequest.changeType !== "upgrade",
+            mode: readLifecycleResponseMode({
+              mode: pendingLifecycleRequest.mode,
+              changeType: pendingLifecycleRequest.changeType,
+            }),
+            effectiveAt: pendingLifecycleRequest.effectiveAt ?? null,
+            pendingVerification:
+              pendingLifecycleRequest.pendingVerification ?? false,
+            pendingRecovery: pendingLifecycleRequest.pendingRecovery ?? false,
+            data: {
+              planId: plan.id,
+              planName: plan.name,
+              previousPlanId:
+                pendingLifecycleRequest.previousPlanId ?? previousPlanId ?? null,
+              previousBillingPeriod:
+                pendingLifecycleRequest.previousBillingPeriod ??
+                currentBillingPeriod,
+              targetBillingPeriod:
+                pendingLifecycleRequest.targetBillingPeriod ??
+                normalizedBillingPeriod,
+              alreadyScheduled: true,
+              ...(asRecord(pendingLifecycleRequest.metadata).proration
+                ? {
+                    proration: asRecord(pendingLifecycleRequest.metadata)
+                      .proration,
+                  }
+                : {}),
+            },
+          }),
+        },
+      },
+      200,
+      corsHeaders(origin),
+    );
+  }
+
   const shouldScheduleDowngrade =
     !!currentPlan &&
     resolvePlanAmountMicros(plan, normalizedBillingPeriod) <
-      resolvePlanAmountMicros(currentPlan, currentBillingPeriod) &&
-    (scheduleAtPeriodEnd ?? !(catalogConfig?.downgradeImmediately ?? false));
+      resolvePlanAmountMicros(currentPlan, currentBillingPeriod);
   const currentPlanAmountMicros = currentPlan
     ? resolvePlanAmountMicros(currentPlan, currentBillingPeriod)
     : 0;
@@ -1076,6 +1168,200 @@ export async function handleCompanyPlanRequest(
       chainId: subChainId,
     });
     if (!verification.ok) {
+      if (verification.status === 425) {
+        const pendingChangeType = isUpgrade
+          ? "upgrade"
+          : isDowngrade
+            ? "downgrade"
+            : "billing_period_change";
+        const pendingMode = isUpgrade
+          ? "immediate_prorated_upgrade"
+          : isDowngrade
+            ? "period_end_downgrade"
+            : "next_renewal_on_chain";
+        const pendingEffectiveAt = isUpgrade
+          ? null
+          : company.subscriptionState?.currentPeriodEnd ?? null;
+        const pendingProration =
+          isUpgrade &&
+          company.subscriptionState?.currentPeriodStart &&
+          company.subscriptionState?.currentPeriodEnd &&
+          company.subscriptionState.currentPeriodEnd >
+            company.subscriptionState.currentPeriodStart
+            ? createProrationSummary({
+                currentPlanName: currentPlan?.name ?? "Current plan",
+                targetPlanName: plan.name,
+                currentPlanAmountMicros: BigInt(currentPlanAmountMicros),
+                targetPlanAmountMicros: BigInt(targetPlanAmountMicros),
+                currentPeriodStart: company.subscriptionState.currentPeriodStart,
+                currentPeriodEnd: company.subscriptionState.currentPeriodEnd,
+                effectiveAt: new Date(),
+              }).response
+            : null;
+        const existingRequest = await findSimilarOpenSubscriptionChangeRequest({
+          teamId,
+          companyId,
+          changeType: pendingChangeType,
+          targetPlanId: plan.id,
+        });
+        const transition: SubscriptionTransition = {
+          mode: pendingMode,
+          changeType: pendingChangeType,
+          stage: "pending_verification",
+          targetPlanId: plan.id,
+          targetPlanName: plan.name,
+          targetBillingPeriod: normalizedBillingPeriod,
+          previousPlanId: previousPlanId ?? null,
+          previousBillingPeriod: currentBillingPeriod,
+          requestedAt: new Date().toISOString(),
+          effectiveAt: pendingEffectiveAt?.toISOString() ?? null,
+          source: "self_service",
+        };
+
+        const transitionMetadata = {
+          ...transition,
+          autopayConfigTxHash: normalizedAutopayConfigTxHash,
+          pendingVerification: true,
+          requiresOnChainSync: true,
+          pendingOnChainPlanId: plan.onChainPlanId,
+          proration: pendingProration,
+        };
+
+        const changeRequest = existingRequest
+          ? await db.subscriptionChangeRequest.update({
+              where: { id: existingRequest.id },
+              data: {
+                stage: "PENDING_VERIFICATION",
+                previousPlanId: previousPlanId ?? null,
+                targetPlanId: plan.id,
+                previousBillingPeriod: currentBillingPeriod,
+                targetBillingPeriod: normalizedBillingPeriod,
+                effectiveAt: pendingEffectiveAt,
+                autopayConfigTxHash: normalizedAutopayConfigTxHash,
+                pendingVerification: true,
+                failureReason: null,
+                metadata: toPrismaJson(transitionMetadata),
+              },
+            })
+          : await createSubscriptionChangeRequest({
+              teamId,
+              environmentId:
+                company.subscriptionState?.environmentId ??
+                company.environmentId ??
+                plan.environmentId ??
+                null,
+              companyId,
+              subscriptionStateId: company.subscriptionState?.id ?? null,
+              changeType: pendingChangeType,
+              stage: "pending_verification",
+              source: "self_service",
+              previousPlanId: previousPlanId ?? null,
+              targetPlanId: plan.id,
+              previousBillingPeriod: currentBillingPeriod,
+              targetBillingPeriod: normalizedBillingPeriod,
+              requestedAt: new Date(),
+              effectiveAt: pendingEffectiveAt,
+              autopayConfigTxHash: normalizedAutopayConfigTxHash,
+              pendingVerification: true,
+              metadata: transitionMetadata,
+            });
+        transition.transitionId = changeRequest.id;
+
+        await db.arcenCompany.update({
+          where: { id: companyId },
+          data: {
+            traits: toPrismaJson({
+              ...currentTraits,
+              pendingSubscriptionChangeRequestId: changeRequest.id,
+              subscriptionTransition: transition,
+            }),
+          },
+        });
+
+        await upsertSubscriptionLedgerState({
+          teamId,
+          companyId,
+          walletAddress: companyPaymentAccount,
+          status: "ACTIVE",
+          catalogPlanId: currentPlan?.id ?? previousPlanId ?? null,
+          onChainPlanId:
+            company.subscriptionState?.onChainPlanId ??
+            currentPlan?.onChainPlanId ??
+            null,
+          onChainTokenId: company.subscriptionState?.onChainTokenId ?? null,
+          currentPeriodEnd: company.subscriptionState?.currentPeriodEnd ?? null,
+          cancelAtPeriodEnd: false,
+          cancelledAt: null,
+          pastDueAt: null,
+          graceEndsAt: null,
+          lastEvent: "subscription.plan_change_pending_verification",
+          lastEventAt: new Date(),
+          lastSourceTxHash: normalizedAutopayConfigTxHash,
+          metadata: {
+            source: "self_service",
+            transitionId: changeRequest.id,
+            billingPeriod: currentBillingPeriod,
+            previousBillingPeriod: currentBillingPeriod,
+            pendingBillingPeriod: normalizedBillingPeriod,
+            pendingCatalogPlanId: plan.id,
+            pendingOnChainPlanId: plan.onChainPlanId,
+            previousCatalogPlanId: previousPlanId ?? null,
+            pendingVerification: true,
+          },
+        });
+
+        deliverWebhook(teamId, "company.plan.changed", {
+          companyId,
+          environmentId:
+            company.subscriptionState?.environmentId ??
+            company.environmentId ??
+            plan.environmentId ??
+            null,
+          transitionId: changeRequest.id,
+          changeType: pendingChangeType,
+          stage: "pending_verification",
+          planId,
+          planName: plan.name,
+          billingPeriod: normalizedBillingPeriod,
+          previousPlanId: previousPlanId ?? null,
+          targetPlanId: plan.id,
+          mode: pendingMode,
+          scheduled: !isUpgrade,
+          txHash: normalizedAutopayConfigTxHash,
+          autopayConfigTxHash: normalizedAutopayConfigTxHash,
+          effectiveAt: pendingEffectiveAt?.toISOString() ?? null,
+          pendingVerification: true,
+          ...(pendingProration ? { proration: pendingProration } : {}),
+        }).catch(() => {});
+
+        return c.json(
+          {
+            data: {
+              ...buildLifecycleResponse({
+                transitionId: changeRequest.id,
+                changeType: pendingChangeType,
+                stage: "pending_verification",
+                scheduled: !isUpgrade,
+                mode: pendingMode,
+                effectiveAt: pendingEffectiveAt?.toISOString() ?? null,
+                pendingVerification: true,
+                data: {
+                  planId,
+                  planName: plan.name,
+                  previousPlanId: previousPlanId ?? null,
+                  autopayConfigTxHash: normalizedAutopayConfigTxHash,
+                  previousBillingPeriod: currentBillingPeriod,
+                  targetBillingPeriod: normalizedBillingPeriod,
+                  ...(pendingProration ? { proration: pendingProration } : {}),
+                },
+              }),
+            },
+          },
+          202,
+          corsHeaders(origin),
+        );
+      }
+
       return c.json(
         { error: verification.error },
         verification.status as any,
@@ -1534,6 +1820,7 @@ export async function handleCompanyPlanRequest(
         mode: scheduledMode,
         targetPlanName: plan.name,
         accessPlanAppliedImmediately: applyAccessPlanImmediately,
+        requiresOnChainSync: true,
         pendingOnChainPlanId: verification.onChainPlanId,
       },
     });
@@ -1744,6 +2031,7 @@ export async function handleCompanyPlanRequest(
             metadata: toPrismaJson({
               ...transition,
               mode: "period_end_downgrade",
+              requiresOnChainSync: false,
             }),
           },
         })
@@ -1768,6 +2056,7 @@ export async function handleCompanyPlanRequest(
           metadata: {
             ...transition,
             mode: "period_end_downgrade",
+            requiresOnChainSync: false,
           },
         });
     transition.transitionId = changeRequest.id;

@@ -49,7 +49,6 @@ import {
   isZeroDevInfrastructureError,
   isRecoverableSmartAccountFundingError,
   sendSmartAccountTransaction,
-  updateAutopayConfig,
 } from "../lib/zerodev";
 import type { SubscriptionCancellationIntent } from "../lib/subscription-lifecycle";
 import {
@@ -921,6 +920,68 @@ function getScheduledCancellationTransition(
   return transition;
 }
 
+function isOpenTransitionStage(
+  transition: ComponentSubscriptionTransition | null | undefined,
+): boolean {
+  if (!transition) return false;
+  return (
+    transition.stage === "requested" ||
+    transition.stage === "pending_verification" ||
+    transition.stage === "pending_recovery"
+  );
+}
+
+function matchesTransitionTarget(input: {
+  transition: ComponentSubscriptionTransition | null | undefined;
+  planId: string | null;
+  billingPeriod: "monthly" | "annual";
+}): boolean {
+  if (!input.transition || !input.planId) return false;
+  if (!isOpenTransitionStage(input.transition)) return false;
+  if (input.transition.changeType === "cancellation") return false;
+  if (input.transition.targetPlanId !== input.planId) return false;
+  return (
+    !input.transition.targetBillingPeriod ||
+    input.transition.targetBillingPeriod === input.billingPeriod
+  );
+}
+
+function getLifecycleNote(
+  data: ComponentRenderData,
+): string | null {
+  const transition = getSubscriptionTransition(data);
+  if (!transition || !isOpenTransitionStage(transition)) return null;
+
+  const effectiveAtLabel = formatDateLabel(transition.effectiveAt);
+
+  if (transition.pendingRecovery || transition.stage === "pending_recovery") {
+    return "The subscription change has been submitted, and ArcenPay is finishing the recovery steps now.";
+  }
+
+  if (transition.changeType === "downgrade") {
+    if (transition.pendingVerification || transition.stage === "pending_verification") {
+      return effectiveAtLabel
+        ? `Downgrade is scheduled for ${effectiveAtLabel}. We are still waiting for the chain confirmation that locks in the next renewal settings.`
+        : "Downgrade is scheduled. We are still waiting for the chain confirmation that locks in the next renewal settings.";
+    }
+    return effectiveAtLabel
+      ? `Your current plan stays active until ${effectiveAtLabel}. After that, renewals switch automatically to the lower plan and price.`
+      : "Your current plan stays active until the current billing period ends. After that, renewals switch automatically to the lower plan and price.";
+  }
+
+  if (transition.changeType === "cancellation") {
+    return effectiveAtLabel
+      ? `Cancellation is scheduled for ${effectiveAtLabel}. Your current plan stays active until then.`
+      : "Cancellation is scheduled. Your current plan stays active until the current billing period ends.";
+  }
+
+  if (transition.pendingVerification || transition.stage === "pending_verification") {
+    return "We are waiting for on-chain confirmations before finalizing this subscription change.";
+  }
+
+  return null;
+}
+
 function getLifecycleBadge(
   data: ComponentRenderData,
 ): { label: string; background: string; color: string } {
@@ -930,6 +991,30 @@ function getLifecycleBadge(
       label: "Active",
       background: "#dcfce7",
       color: "#15803d",
+    };
+  }
+
+  if (
+    transition.changeType === "downgrade" &&
+    isOpenTransitionStage(transition) &&
+    transition.stage !== "pending_recovery"
+  ) {
+    return {
+      label: "Downgrade scheduled",
+      background: "#fef3c7",
+      color: "#a16207",
+    };
+  }
+
+  if (
+    transition.changeType === "cancellation" &&
+    isOpenTransitionStage(transition) &&
+    transition.stage !== "pending_recovery"
+  ) {
+    return {
+      label: "Cancellation scheduled",
+      background: "#fff7ed",
+      color: "#c2410c",
     };
   }
 
@@ -949,22 +1034,6 @@ function getLifecycleBadge(
       label: "Pending verification",
       background: "#fff7ed",
       color: "#c2410c",
-    };
-  }
-
-  if (transition.changeType === "cancellation") {
-    return {
-      label: "Cancellation scheduled",
-      background: "#fff7ed",
-      color: "#c2410c",
-    };
-  }
-
-  if (transition.changeType === "downgrade") {
-    return {
-      label: "Downgrade scheduled",
-      background: "#fef3c7",
-      color: "#a16207",
     };
   }
 
@@ -2398,6 +2467,7 @@ export function renderElement(
       const plan = data.activePlan;
       const priceNum = plan ? parseFloat(String(plan.price)) : 0;
       const lifecycleBadge = getLifecycleBadge(data);
+      const lifecycleNote = getLifecycleNote(data);
       return (
         <div
           key={index}
@@ -2457,6 +2527,19 @@ export function renderElement(
                 >
                   ✓ {lifecycleBadge.label}
                 </div>
+                {lifecycleNote ? (
+                  <div
+                    style={{
+                      fontSize: 11,
+                      color: tokens.mutedColor,
+                      marginTop: 8,
+                      maxWidth: 420,
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    {lifecycleNote}
+                  </div>
+                ) : null}
               </div>
               <div style={{ textAlign: "right", flexShrink: 0 }}>
                 <div
@@ -3539,6 +3622,7 @@ function PortalContent({
   const price = plan ? parseFloat(String(plan.price)) : 0;
   const scheduledCancellation = getScheduledCancellationTransition(data);
   const lifecycleBadge = getLifecycleBadge(data);
+  const lifecycleNote = getLifecycleNote(data);
   const scheduledCancellationDate = formatDateLabel(
     scheduledCancellation?.effectiveAt ?? null,
   );
@@ -3934,16 +4018,29 @@ function PortalContent({
                             alignItems: "center",
                             gap: 4,
                             marginTop: 8,
-                            background: `${responsiveTokens.primary}18`,
-                            color: responsiveTokens.primary,
+                            background: lifecycleBadge.background,
+                            color: lifecycleBadge.color,
                             fontSize: 11,
                             fontWeight: 600,
                             padding: "3px 10px",
                             borderRadius: 999,
                           }}
                         >
-                          ✓ Active
+                          ✓ {lifecycleBadge.label}
                         </div>
+                        {lifecycleNote ? (
+                          <div
+                            style={{
+                              fontSize: 11,
+                              color: responsiveTokens.mutedColor,
+                              marginTop: 8,
+                              maxWidth: 420,
+                              lineHeight: 1.5,
+                            }}
+                          >
+                            {lifecycleNote}
+                          </div>
+                        ) : null}
                       </div>
                       <div style={{ textAlign: "right", flexShrink: 0 }}>
                         <div
@@ -4153,16 +4250,29 @@ function PortalContent({
                             alignItems: "center",
                             gap: 4,
                             marginTop: 8,
-                            background: `${tokens.primary}18`,
-                            color: tokens.primary,
+                            background: lifecycleBadge.background,
+                            color: lifecycleBadge.color,
                             fontSize: 11,
                             fontWeight: 600,
                             padding: "3px 10px",
                             borderRadius: 999,
                           }}
                         >
-                          ✓ Active
+                          ✓ {lifecycleBadge.label}
                         </div>
+                        {lifecycleNote ? (
+                          <div
+                            style={{
+                              fontSize: 11,
+                              color: tokens.mutedColor,
+                              marginTop: 8,
+                              maxWidth: 420,
+                              lineHeight: 1.5,
+                            }}
+                          >
+                            {lifecycleNote}
+                          </div>
+                        ) : null}
                       </div>
                       <div style={{ textAlign: "right", flexShrink: 0 }}>
                         <div
@@ -4470,6 +4580,7 @@ function CheckoutContent({
 
   const currentPlan = data.activePlan;
   const currentPlanId = currentPlan?.id;
+  const activeTransition = getSubscriptionTransition(data);
   const scheduledCancellation = getScheduledCancellationTransition(data);
   const currentBillingPeriod = resolveActiveBillingPeriod({
     billingPeriod: data.billingPeriod,
@@ -4523,8 +4634,19 @@ function CheckoutContent({
     const annual = plan.annualPrice ? parseFloat(String(plan.annualPrice)) : 0;
     return billingPeriod === "annual" && annual > 0 ? annual : monthly;
   };
+  const getDisplayPriceForPeriod = (
+    plan: ComponentPlanSummary,
+    period: "monthly" | "annual",
+  ) => {
+    const monthly = parseFloat(String(plan.price));
+    const annual = plan.annualPrice ? parseFloat(String(plan.annualPrice)) : 0;
+    return period === "annual" && annual > 0 ? annual : monthly;
+  };
 
   const selectedDisplayPrice = selectedPlan ? getDisplayPrice(selectedPlan) : 0;
+  const activeDisplayPrice = currentPlan
+    ? getDisplayPriceForPeriod(currentPlan, currentBillingPeriod)
+    : 0;
   const activeCouponQuote =
     couponQuote &&
     couponQuote.planId === selectedPlanId &&
@@ -4536,9 +4658,25 @@ function CheckoutContent({
     : selectedDisplayPrice;
   const immediateAmountDue =
     isAuthoritativeOnChainPlanChange &&
-    discountedPrice <= (currentPlan ? getDisplayPrice(currentPlan) : 0)
+    discountedPrice <= activeDisplayPrice
       ? 0
       : discountedPrice;
+  const selectedPlanAlreadyScheduled = matchesTransitionTarget({
+    transition: activeTransition,
+    planId: selectedPlanId,
+    billingPeriod,
+  });
+  const dueTodayAmount = selectedPlanAlreadyScheduled ? 0 : immediateAmountDue;
+  const scheduledSelectionNote =
+    selectedPlanAlreadyScheduled && selectedPlan
+      ? activeTransition?.changeType === "downgrade"
+        ? activeTransition.effectiveAt
+          ? `${selectedPlan.name} is already scheduled for ${formatDateLabel(activeTransition.effectiveAt)}. Your current plan stays active until then.`
+          : `${selectedPlan.name} is already scheduled as the next renewal plan.`
+        : activeTransition?.pendingVerification
+          ? `${selectedPlan.name} is already waiting for on-chain confirmation.`
+          : `${selectedPlan.name} is already queued as the next subscription change.`
+      : null;
   const normalizedCustomerName = normalizeCustomerName(customerName);
   const missingCustomerName = normalizedCustomerName.length === 0;
   const normalizedCustomerEmail = normalizeCustomerEmail(customerEmail);
@@ -5406,12 +5544,29 @@ function CheckoutContent({
                 }}
               >
                 $
-                {isCurrentPlanSelected ? "0.00" : immediateAmountDue.toFixed(2)}
+                {isCurrentPlanSelected ? "0.00" : dueTodayAmount.toFixed(2)}
               </span>
             </div>
 
             {/* CTA */}
-            {isCurrentPlanSelected && !isScheduledCancellationResume ? (
+            {selectedPlanAlreadyScheduled ? (
+              <button
+                onClick={onBack}
+                style={{
+                  width: "100%",
+                  padding: "12px 0",
+                  borderRadius: tokens.radius / 1.5,
+                  background: tokens.primary,
+                  color: isLightColor(tokens.primary) ? "#000" : "#fff",
+                  border: "none",
+                  cursor: "pointer",
+                  fontSize: tokens.size - 1,
+                  fontWeight: 700,
+                }}
+              >
+                Back to portal
+              </button>
+            ) : isCurrentPlanSelected && !isScheduledCancellationResume ? (
               <button
                 onClick={onBack}
                 style={{
@@ -5484,6 +5639,19 @@ function CheckoutContent({
                 {processing ? "Processing…" : "Subscribe and close"}
               </button>
             )}
+
+            {scheduledSelectionNote ? (
+              <div
+                style={{
+                  fontSize: 11,
+                  color: tokens.mutedColor,
+                  marginTop: 10,
+                  lineHeight: 1.5,
+                }}
+              >
+                {scheduledSelectionNote}
+              </div>
+            ) : null}
 
             {/* Billing fine print */}
             {isScheduledCancellationResume ? (
@@ -5612,7 +5780,11 @@ function PaymentContent({
     useState(false);
 
   const basePrice = getPlanDisplayPrice(selectedPlan, billingPeriod);
-  const activePlanPrice = getPlanDisplayPrice(activePlan, billingPeriod);
+  const activeBillingPeriod = resolveActiveBillingPeriod({
+    billingPeriod: data.billingPeriod,
+    activePlan,
+  });
+  const activePlanPrice = getPlanDisplayPrice(activePlan, activeBillingPeriod);
   const activeCouponQuote =
     couponQuote &&
     couponQuote.planId === selectedPlanId &&
@@ -5644,10 +5816,7 @@ function PaymentContent({
   const isCurrentPlanSelected = isCurrentBillingSelection({
     activePlanId: activePlan?.id ?? null,
     selectedPlanId,
-    activeBillingPeriod: resolveActiveBillingPeriod({
-      billingPeriod: data.billingPeriod,
-      activePlan,
-    }),
+    activeBillingPeriod,
     selectedBillingPeriod: billingPeriod,
   });
   const isScheduledCancellationResume = Boolean(
@@ -5658,12 +5827,12 @@ function PaymentContent({
   const isOnChainPlanChange = Boolean(
     selectedPlan &&
     activePlan &&
-    selectedPlan.id !== activePlan.id &&
     selectedOnChainPlanId &&
-    activeOnChainPlanId,
+    activeOnChainPlanId &&
+    !isCurrentPlanSelected,
   );
   const requiresHostedActivation = Boolean(
-    selectedOnChainPlanId && !activeOnChainPlanId,
+    selectedOnChainPlanId && !activeOnChainPlanId && !isCurrentPlanSelected,
   );
   const requiresResumeActivation = Boolean(isScheduledCancellationResume);
   const requiresBillingIdentity =
@@ -6406,26 +6575,42 @@ function PaymentContent({
         setPlanChangePreview(preview);
       }
 
-      const { txHash: autopayTxHash } = await updateAutopayConfig({
-        projectId: zeroDevProjectId,
-        bundlerUrl: zeroDevConfig?.bundlerUrl,
-        paymasterUrl: zeroDevConfig?.paymasterUrl,
-        chainId,
-        walletClient: resolvedWalletClient,
-        smartAccountAddress: smartAccountAddress as `0x${string}`,
-        merchant: targetPlan.provider as `0x${string}`,
-        maxAmount: BigInt(targetPlan.price ?? 0n),
-        token: targetPlan.acceptedToken as `0x${string}`,
-        interval: Number(targetPlan.billingInterval ?? 0),
-        startTime:
-          typeof currentConfig.startTime === "bigint"
-            ? currentConfig.startTime
-            : BigInt(Math.floor(Date.now() / 1000)),
-        planId: BigInt(selectedOnChainPlanId),
-        maxTotalAmount:
-          typeof currentConfig.maxTotalAmount === "bigint"
-            ? currentConfig.maxTotalAmount
-            : 0n,
+      const contracts = getContractAddresses(chainId);
+      if (!contracts.autopayModule) {
+        throw new Error(
+          "Automatic payment system address is not configured for this chain.",
+        );
+      }
+
+      const updateConfigData = encodeFunctionData({
+        abi: ERC7579AutopayModuleABI as any,
+        functionName: "updateConfig",
+        args: [
+          {
+            merchant: targetPlan.provider as `0x${string}`,
+            maxAmount: BigInt(targetPlan.price ?? 0n),
+            token: targetPlan.acceptedToken as `0x${string}`,
+            interval: Number(targetPlan.billingInterval ?? 0),
+            startTime:
+              typeof currentConfig.startTime === "bigint"
+                ? currentConfig.startTime
+                : BigInt(Math.floor(Date.now() / 1000)),
+            planId: BigInt(selectedOnChainPlanId),
+            maxTotalAmount:
+              typeof currentConfig.maxTotalAmount === "bigint"
+                ? currentConfig.maxTotalAmount
+                : 0n,
+          },
+        ],
+      });
+
+      const { txHash: autopayTxHash } = await submitPaymentAccountTransaction({
+        to: contracts.autopayModule as `0x${string}`,
+        data: updateConfigData,
+        smartAccountAddressOverride:
+          smartAccountAddress && isAddress(smartAccountAddress)
+            ? (smartAccountAddress as `0x${string}`)
+            : undefined,
       });
 
       let paymentTransferTxHash: `0x${string}` | undefined;
@@ -8606,6 +8791,14 @@ export function ArcenEmbed({
           (response as { data?: { walletCreditCreated?: string } })?.data
             ?.walletCreditCreated ?? 0,
         );
+        const pendingVerification = Boolean(
+          (response as { data?: { pendingVerification?: boolean } })?.data
+            ?.pendingVerification,
+        );
+        const alreadyScheduled = Boolean(
+          (response as { data?: { alreadyScheduled?: boolean } })?.data
+            ?.alreadyScheduled,
+        );
         const prorationAmountDue =
           (response as { data?: { proration?: { amountDue?: string } } })?.data
             ?.proration?.amountDue ?? null;
@@ -8614,14 +8807,22 @@ export function ArcenEmbed({
             ?.effectiveAt ?? null;
         const effectiveAtLabel =
           typeof effectiveAt === "string" ? formatDateLabel(effectiveAt) : null;
+        const previousBillingPeriod = resolveActiveBillingPeriod({
+          billingPeriod: state.data?.billingPeriod,
+          activePlan: state.data?.activePlan ?? null,
+        });
         dispatch({
           type: "GOTO_SUCCESS",
           successMsg: buildPlanChangeSuccessMessage({
             mode,
             selectedPlanName: selectedPlan?.name ?? null,
+            targetBillingPeriod: state.billingPeriod,
+            previousBillingPeriod,
             effectiveAtLabel,
             prorationAmountDue,
             walletCreditCreated,
+            pendingVerification,
+            alreadyScheduled,
           }),
           txHash: successTxHash,
         });
@@ -9050,7 +9251,16 @@ export function ArcenEmbed({
               onCouponQuoteChange={setCouponQuote}
               onSubscribeClose={() => {
                 const targetId = selectedPlanId ?? data.activePlan?.id ?? "";
-                if (targetId && targetId !== data.activePlan?.id) {
+                const hasBillingSelectionChange = !isCurrentBillingSelection({
+                  activePlanId: data.activePlan?.id ?? null,
+                  selectedPlanId,
+                  activeBillingPeriod: resolveActiveBillingPeriod({
+                    billingPeriod: data.billingPeriod,
+                    activePlan: data.activePlan,
+                  }),
+                  selectedBillingPeriod: billingPeriod,
+                });
+                if (targetId && hasBillingSelectionChange) {
                   handleSwitchPlan(targetId);
                 } else {
                   dispatch({ type: "GOTO_PORTAL" });
@@ -9152,7 +9362,16 @@ export function ArcenEmbed({
                   onSubscribeClose={() => {
                     const targetId =
                       selectedPlanId ?? data.activePlan?.id ?? "";
-                    if (targetId && targetId !== data.activePlan?.id) {
+                    const hasBillingSelectionChange = !isCurrentBillingSelection({
+                      activePlanId: data.activePlan?.id ?? null,
+                      selectedPlanId,
+                      activeBillingPeriod: resolveActiveBillingPeriod({
+                        billingPeriod: data.billingPeriod,
+                        activePlan: data.activePlan,
+                      }),
+                      selectedBillingPeriod: billingPeriod,
+                    });
+                    if (targetId && hasBillingSelectionChange) {
                       handleSwitchPlan(targetId);
                     } else {
                       dispatch({ type: "GOTO_PORTAL" });

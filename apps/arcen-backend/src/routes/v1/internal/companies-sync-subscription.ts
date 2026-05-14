@@ -71,13 +71,78 @@ export async function syncSubscription(c: Context) {
     sourceTokenId,
   } = parsed.data;
 
-  const company = await db.arcenCompany.findFirst({
-    where: {
-      walletAddress: wallet.toLowerCase(),
-      teamId,
+  const normalizedWallet = wallet.toLowerCase();
+
+  const resolvedPlan =
+    event === "cancelled"
+      ? null
+      : await db.catalogPlan.findFirst({
+          where: { onChainPlanId, teamId },
+          select: { id: true, billingInterval: true, environmentId: true },
+        });
+
+  if (event !== "cancelled" && !resolvedPlan) {
+    console.warn(
+      `[SyncSubscription] No CatalogPlan found for onChainPlanId=${onChainPlanId} teamId=${teamId}`,
+    );
+    return c.json(
+      { ok: false, error: "Plan not found for onChainPlanId" },
+      404 as any,
+    );
+  }
+
+  const companySelect = {
+    id: true,
+    teamId: true,
+    environmentId: true,
+    traits: true,
+    activePlanId: true,
+    subscriptionState: {
+      select: {
+        id: true,
+        walletAddress: true,
+        onChainTokenId: true,
+      },
     },
-    select: { id: true, teamId: true, traits: true, activePlanId: true },
-  });
+  } as const;
+
+  const environmentScopedWhere =
+    resolvedPlan?.environmentId
+      ? { environmentId: resolvedPlan.environmentId }
+      : {};
+
+  const company =
+    (sourceTokenId
+      ? await db.arcenCompany.findFirst({
+          where: {
+            teamId,
+            ...environmentScopedWhere,
+            subscriptionState: {
+              is: { onChainTokenId: sourceTokenId },
+            },
+          },
+          select: companySelect,
+        })
+      : null) ??
+    (await db.arcenCompany.findFirst({
+      where: {
+        teamId,
+        ...environmentScopedWhere,
+        OR: [
+          {
+            subscriptionState: {
+              is: {
+                walletAddress: { in: [normalizedWallet, wallet] },
+              },
+            },
+          },
+          {
+            walletAddress: { in: [normalizedWallet, wallet] },
+          },
+        ],
+      },
+      select: companySelect,
+    }));
 
   if (!company) {
     return c.json({ error: "Company not found for wallet" }, 404 as any);
@@ -216,16 +281,12 @@ export async function syncSubscription(c: Context) {
     });
   }
 
-  const plan = await db.catalogPlan.findFirst({
-    where: { onChainPlanId, teamId: company.teamId },
-    select: { id: true, billingInterval: true },
-  });
-
+  const plan = resolvedPlan;
   if (!plan) {
-    console.warn(
-      `[SyncSubscription] No CatalogPlan found for onChainPlanId=${onChainPlanId} teamId=${company.teamId}`,
+    return c.json(
+      { ok: false, error: "Plan not found for onChainPlanId" },
+      404 as any,
     );
-    return c.json({ ok: false, error: "Plan not found for onChainPlanId" }, 404 as any);
   }
 
   const nextTraits = { ...traits };
