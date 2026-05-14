@@ -86,16 +86,6 @@ export function resolvePlanAmountMicros(
   return priceToMicros(plan.price);
 }
 
-async function resolveTeamEnvironmentMode(
-  teamId: string,
-): Promise<"DEVELOPMENT" | "PRODUCTION"> {
-  const team = await db.team.findUnique({
-    where: { id: teamId },
-    select: { environmentMode: true },
-  });
-  return team?.environmentMode ?? "DEVELOPMENT";
-}
-
 type PublishedPlanIdentity = {
   id: string;
   name: string;
@@ -105,6 +95,7 @@ type PublishedPlanIdentity = {
 async function resolveConfiguredPublishedPlan(
   teamId: string,
   environmentMode: "DEVELOPMENT" | "PRODUCTION",
+  environmentId: string | null,
   preference: string | null | undefined,
   requireFree: boolean,
 ): Promise<PublishedPlanIdentity | null> {
@@ -115,6 +106,7 @@ async function resolveConfiguredPublishedPlan(
     where: {
       teamId,
       environmentMode,
+      ...(environmentId ? { environmentId } : {}),
       status: "PUBLISHED",
       active: true,
       ...(requireFree
@@ -127,24 +119,63 @@ async function resolveConfiguredPublishedPlan(
   });
 }
 
-export async function resolvePublishedInitialPlan(teamId: string): Promise<{
+async function resolveEnvironmentSelection(
+  teamId: string,
+  environmentId?: string | null,
+): Promise<{
+  environmentId: string | null;
+  environmentMode: "DEVELOPMENT" | "PRODUCTION";
+}> {
+  if (environmentId) {
+    const environment = await db.workspaceEnvironment.findFirst({
+      where: { id: environmentId, teamId },
+      select: { id: true, mode: true },
+    });
+    if (environment) {
+      return {
+        environmentId: environment.id,
+        environmentMode: environment.mode,
+      };
+    }
+  }
+
+  const team = await db.team.findUnique({
+    where: { id: teamId },
+    select: { environmentMode: true },
+  });
+
+  return {
+    environmentId: null,
+    environmentMode: team?.environmentMode ?? "DEVELOPMENT",
+  };
+}
+
+export async function resolvePublishedInitialPlan(
+  teamId: string,
+  environmentId?: string | null,
+): Promise<{
   id: string;
   name: string;
 } | null> {
-  const environmentMode = await resolveTeamEnvironmentMode(teamId);
-  const config = await db.catalogConfig.findUnique({
-    where: {
-      teamId_environmentMode: {
-        teamId,
-        environmentMode,
-      },
-    },
-    select: { initialPlan: true },
-  });
+  const selection = await resolveEnvironmentSelection(teamId, environmentId);
+  const config = selection.environmentId
+    ? await db.catalogConfig.findUnique({
+        where: { environmentId: selection.environmentId },
+        select: { initialPlan: true },
+      })
+    : await db.catalogConfig.findFirst({
+        where: {
+          teamId,
+          environmentMode: selection.environmentMode,
+        },
+        orderBy: { createdAt: "asc" },
+        select: { initialPlan: true },
+      });
 
   const configuredPlan = await resolveConfiguredPublishedPlan(
     teamId,
-    environmentMode,
+    selection.environmentMode,
+    selection.environmentId,
     config?.initialPlan,
     false,
   );
@@ -152,28 +183,36 @@ export async function resolvePublishedInitialPlan(teamId: string): Promise<{
     return { id: configuredPlan.id, name: configuredPlan.name };
   }
 
-  return resolvePublishedFreePlan(teamId);
+  return resolvePublishedFreePlan(teamId, selection.environmentId);
 }
 
-export async function resolvePublishedFreePlan(teamId: string): Promise<{
+export async function resolvePublishedFreePlan(
+  teamId: string,
+  environmentId?: string | null,
+): Promise<{
   id: string;
   name: string;
 } | null> {
-  const environmentMode = await resolveTeamEnvironmentMode(teamId);
-  const config = await db.catalogConfig.findUnique({
-    where: {
-      teamId_environmentMode: {
-        teamId,
-        environmentMode,
-      },
-    },
-    select: { fallbackPlan: true, initialPlan: true },
-  });
+  const selection = await resolveEnvironmentSelection(teamId, environmentId);
+  const config = selection.environmentId
+    ? await db.catalogConfig.findUnique({
+        where: { environmentId: selection.environmentId },
+        select: { fallbackPlan: true, initialPlan: true },
+      })
+    : await db.catalogConfig.findFirst({
+        where: {
+          teamId,
+          environmentMode: selection.environmentMode,
+        },
+        orderBy: { createdAt: "asc" },
+        select: { fallbackPlan: true, initialPlan: true },
+      });
 
   for (const preference of [config?.fallbackPlan, config?.initialPlan]) {
     const configuredFreePlan = await resolveConfiguredPublishedPlan(
       teamId,
-      environmentMode,
+      selection.environmentMode,
+      selection.environmentId,
       preference,
       true,
     );
@@ -185,10 +224,13 @@ export async function resolvePublishedFreePlan(teamId: string): Promise<{
   return db.catalogPlan.findFirst({
     where: {
       teamId,
-      environmentMode,
+      environmentMode: selection.environmentMode,
       status: "PUBLISHED",
       active: true,
       price: { equals: new Prisma.Decimal(0) },
+      ...(selection.environmentId
+        ? { environmentId: selection.environmentId }
+        : {}),
     },
     orderBy: [{ updatedAt: "desc" }, { createdAt: "asc" }],
     select: { id: true, name: true },

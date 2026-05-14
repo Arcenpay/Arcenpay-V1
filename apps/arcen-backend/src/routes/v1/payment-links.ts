@@ -171,6 +171,7 @@ export async function POST(c: Context) {
       const company = await db.arcenCompany.findFirst({
         where: {
           teamId: auth.teamId,
+          ...(resolvedEnvironmentId ? { environmentId: resolvedEnvironmentId } : {}),
           OR: [
             ...(invoice.customerWallet
               ? [{ walletAddress: invoice.customerWallet.toLowerCase() }]

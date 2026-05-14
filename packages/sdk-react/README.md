@@ -113,8 +113,8 @@ NEXT_PUBLIC_CHAIN_ID=84532
 NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=xxxxxxxxx
 ```
 
-The SDK uses a fixed default API URL of `http://localhost:3300`. Change the SDK
-constant manually when promoting to production.
+The SDK handles its internal routing defaults automatically. App code should
+not pass custom base URLs during normal usage.
 
 ## Boundary
 

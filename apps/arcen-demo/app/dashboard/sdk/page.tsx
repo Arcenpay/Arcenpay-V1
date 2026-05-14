@@ -29,7 +29,6 @@ type NodeShowcaseResponse = {
   ok: boolean;
   status: {
     hasApiKey: boolean;
-    baseUrl: string;
     componentId: string;
     company: { id?: string; wallet?: string; name?: string };
     user: { id?: string; wallet?: string; name?: string; email?: string };

@@ -358,7 +358,6 @@ export type CatalogConfigOrderByWithRelationInput = {
 export type CatalogConfigWhereUniqueInput = Prisma.AtLeast<{
   id?: string
   environmentId?: string
-  teamId_environmentMode?: Prisma.CatalogConfigTeamIdEnvironmentModeCompoundUniqueInput
   AND?: Prisma.CatalogConfigWhereInput | Prisma.CatalogConfigWhereInput[]
   OR?: Prisma.CatalogConfigWhereInput[]
   NOT?: Prisma.CatalogConfigWhereInput | Prisma.CatalogConfigWhereInput[]
@@ -386,7 +385,7 @@ export type CatalogConfigWhereUniqueInput = Prisma.AtLeast<{
   disallowSelfServiceDowngrade?: Prisma.BoolFilter<"CatalogConfig"> | boolean
   team?: Prisma.XOR<Prisma.TeamScalarRelationFilter, Prisma.TeamWhereInput>
   environment?: Prisma.XOR<Prisma.WorkspaceEnvironmentNullableScalarRelationFilter, Prisma.WorkspaceEnvironmentWhereInput> | null
-}, "id" | "environmentId" | "teamId_environmentMode">
+}, "id" | "environmentId">
 
 export type CatalogConfigOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
@@ -651,11 +650,6 @@ export type StringNullableListFilter<$PrismaModel = never> = {
   hasEvery?: string[] | Prisma.ListStringFieldRefInput<$PrismaModel>
   hasSome?: string[] | Prisma.ListStringFieldRefInput<$PrismaModel>
   isEmpty?: boolean
-}
-
-export type CatalogConfigTeamIdEnvironmentModeCompoundUniqueInput = {
-  teamId: string
-  environmentMode: $Enums.EnvironmentMode
 }
 
 export type CatalogConfigCountOrderByAggregateInput = {

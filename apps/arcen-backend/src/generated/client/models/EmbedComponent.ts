@@ -29,6 +29,7 @@ export type EmbedComponentMinAggregateOutputType = {
   createdAt: Date | null
   updatedAt: Date | null
   teamId: string | null
+  environmentId: string | null
   name: string | null
 }
 
@@ -37,6 +38,7 @@ export type EmbedComponentMaxAggregateOutputType = {
   createdAt: Date | null
   updatedAt: Date | null
   teamId: string | null
+  environmentId: string | null
   name: string | null
 }
 
@@ -45,6 +47,7 @@ export type EmbedComponentCountAggregateOutputType = {
   createdAt: number
   updatedAt: number
   teamId: number
+  environmentId: number
   name: number
   elements: number
   design: number
@@ -57,6 +60,7 @@ export type EmbedComponentMinAggregateInputType = {
   createdAt?: true
   updatedAt?: true
   teamId?: true
+  environmentId?: true
   name?: true
 }
 
@@ -65,6 +69,7 @@ export type EmbedComponentMaxAggregateInputType = {
   createdAt?: true
   updatedAt?: true
   teamId?: true
+  environmentId?: true
   name?: true
 }
 
@@ -73,6 +78,7 @@ export type EmbedComponentCountAggregateInputType = {
   createdAt?: true
   updatedAt?: true
   teamId?: true
+  environmentId?: true
   name?: true
   elements?: true
   design?: true
@@ -156,6 +162,7 @@ export type EmbedComponentGroupByOutputType = {
   createdAt: Date
   updatedAt: Date
   teamId: string
+  environmentId: string | null
   name: string
   elements: runtime.JsonValue
   design: runtime.JsonValue
@@ -187,10 +194,12 @@ export type EmbedComponentWhereInput = {
   createdAt?: Prisma.DateTimeFilter<"EmbedComponent"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"EmbedComponent"> | Date | string
   teamId?: Prisma.StringFilter<"EmbedComponent"> | string
+  environmentId?: Prisma.StringNullableFilter<"EmbedComponent"> | string | null
   name?: Prisma.StringFilter<"EmbedComponent"> | string
   elements?: Prisma.JsonFilter<"EmbedComponent">
   design?: Prisma.JsonFilter<"EmbedComponent">
   team?: Prisma.XOR<Prisma.TeamScalarRelationFilter, Prisma.TeamWhereInput>
+  environment?: Prisma.XOR<Prisma.WorkspaceEnvironmentNullableScalarRelationFilter, Prisma.WorkspaceEnvironmentWhereInput> | null
 }
 
 export type EmbedComponentOrderByWithRelationInput = {
@@ -198,10 +207,12 @@ export type EmbedComponentOrderByWithRelationInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrderInput | Prisma.SortOrder
   name?: Prisma.SortOrder
   elements?: Prisma.SortOrder
   design?: Prisma.SortOrder
   team?: Prisma.TeamOrderByWithRelationInput
+  environment?: Prisma.WorkspaceEnvironmentOrderByWithRelationInput
 }
 
 export type EmbedComponentWhereUniqueInput = Prisma.AtLeast<{
@@ -212,10 +223,12 @@ export type EmbedComponentWhereUniqueInput = Prisma.AtLeast<{
   createdAt?: Prisma.DateTimeFilter<"EmbedComponent"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"EmbedComponent"> | Date | string
   teamId?: Prisma.StringFilter<"EmbedComponent"> | string
+  environmentId?: Prisma.StringNullableFilter<"EmbedComponent"> | string | null
   name?: Prisma.StringFilter<"EmbedComponent"> | string
   elements?: Prisma.JsonFilter<"EmbedComponent">
   design?: Prisma.JsonFilter<"EmbedComponent">
   team?: Prisma.XOR<Prisma.TeamScalarRelationFilter, Prisma.TeamWhereInput>
+  environment?: Prisma.XOR<Prisma.WorkspaceEnvironmentNullableScalarRelationFilter, Prisma.WorkspaceEnvironmentWhereInput> | null
 }, "id">
 
 export type EmbedComponentOrderByWithAggregationInput = {
@@ -223,6 +236,7 @@ export type EmbedComponentOrderByWithAggregationInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrderInput | Prisma.SortOrder
   name?: Prisma.SortOrder
   elements?: Prisma.SortOrder
   design?: Prisma.SortOrder
@@ -239,6 +253,7 @@ export type EmbedComponentScalarWhereWithAggregatesInput = {
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"EmbedComponent"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"EmbedComponent"> | Date | string
   teamId?: Prisma.StringWithAggregatesFilter<"EmbedComponent"> | string
+  environmentId?: Prisma.StringNullableWithAggregatesFilter<"EmbedComponent"> | string | null
   name?: Prisma.StringWithAggregatesFilter<"EmbedComponent"> | string
   elements?: Prisma.JsonWithAggregatesFilter<"EmbedComponent">
   design?: Prisma.JsonWithAggregatesFilter<"EmbedComponent">
@@ -252,6 +267,7 @@ export type EmbedComponentCreateInput = {
   elements?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   design?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   team: Prisma.TeamCreateNestedOneWithoutEmbedComponentsInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutEmbedComponentsInput
 }
 
 export type EmbedComponentUncheckedCreateInput = {
@@ -259,6 +275,7 @@ export type EmbedComponentUncheckedCreateInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   teamId: string
+  environmentId?: string | null
   name: string
   elements?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   design?: Prisma.JsonNullValueInput | runtime.InputJsonValue
@@ -272,6 +289,7 @@ export type EmbedComponentUpdateInput = {
   elements?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   design?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   team?: Prisma.TeamUpdateOneRequiredWithoutEmbedComponentsNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutEmbedComponentsNestedInput
 }
 
 export type EmbedComponentUncheckedUpdateInput = {
@@ -279,6 +297,7 @@ export type EmbedComponentUncheckedUpdateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   name?: Prisma.StringFieldUpdateOperationsInput | string
   elements?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   design?: Prisma.JsonNullValueInput | runtime.InputJsonValue
@@ -289,6 +308,7 @@ export type EmbedComponentCreateManyInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   teamId: string
+  environmentId?: string | null
   name: string
   elements?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   design?: Prisma.JsonNullValueInput | runtime.InputJsonValue
@@ -308,6 +328,7 @@ export type EmbedComponentUncheckedUpdateManyInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   name?: Prisma.StringFieldUpdateOperationsInput | string
   elements?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   design?: Prisma.JsonNullValueInput | runtime.InputJsonValue
@@ -328,6 +349,7 @@ export type EmbedComponentCountOrderByAggregateInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrder
   name?: Prisma.SortOrder
   elements?: Prisma.SortOrder
   design?: Prisma.SortOrder
@@ -338,6 +360,7 @@ export type EmbedComponentMaxOrderByAggregateInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrder
   name?: Prisma.SortOrder
 }
 
@@ -346,6 +369,7 @@ export type EmbedComponentMinOrderByAggregateInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrder
   name?: Prisma.SortOrder
 }
 
@@ -391,6 +415,48 @@ export type EmbedComponentUncheckedUpdateManyWithoutTeamNestedInput = {
   deleteMany?: Prisma.EmbedComponentScalarWhereInput | Prisma.EmbedComponentScalarWhereInput[]
 }
 
+export type EmbedComponentCreateNestedManyWithoutEnvironmentInput = {
+  create?: Prisma.XOR<Prisma.EmbedComponentCreateWithoutEnvironmentInput, Prisma.EmbedComponentUncheckedCreateWithoutEnvironmentInput> | Prisma.EmbedComponentCreateWithoutEnvironmentInput[] | Prisma.EmbedComponentUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.EmbedComponentCreateOrConnectWithoutEnvironmentInput | Prisma.EmbedComponentCreateOrConnectWithoutEnvironmentInput[]
+  createMany?: Prisma.EmbedComponentCreateManyEnvironmentInputEnvelope
+  connect?: Prisma.EmbedComponentWhereUniqueInput | Prisma.EmbedComponentWhereUniqueInput[]
+}
+
+export type EmbedComponentUncheckedCreateNestedManyWithoutEnvironmentInput = {
+  create?: Prisma.XOR<Prisma.EmbedComponentCreateWithoutEnvironmentInput, Prisma.EmbedComponentUncheckedCreateWithoutEnvironmentInput> | Prisma.EmbedComponentCreateWithoutEnvironmentInput[] | Prisma.EmbedComponentUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.EmbedComponentCreateOrConnectWithoutEnvironmentInput | Prisma.EmbedComponentCreateOrConnectWithoutEnvironmentInput[]
+  createMany?: Prisma.EmbedComponentCreateManyEnvironmentInputEnvelope
+  connect?: Prisma.EmbedComponentWhereUniqueInput | Prisma.EmbedComponentWhereUniqueInput[]
+}
+
+export type EmbedComponentUpdateManyWithoutEnvironmentNestedInput = {
+  create?: Prisma.XOR<Prisma.EmbedComponentCreateWithoutEnvironmentInput, Prisma.EmbedComponentUncheckedCreateWithoutEnvironmentInput> | Prisma.EmbedComponentCreateWithoutEnvironmentInput[] | Prisma.EmbedComponentUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.EmbedComponentCreateOrConnectWithoutEnvironmentInput | Prisma.EmbedComponentCreateOrConnectWithoutEnvironmentInput[]
+  upsert?: Prisma.EmbedComponentUpsertWithWhereUniqueWithoutEnvironmentInput | Prisma.EmbedComponentUpsertWithWhereUniqueWithoutEnvironmentInput[]
+  createMany?: Prisma.EmbedComponentCreateManyEnvironmentInputEnvelope
+  set?: Prisma.EmbedComponentWhereUniqueInput | Prisma.EmbedComponentWhereUniqueInput[]
+  disconnect?: Prisma.EmbedComponentWhereUniqueInput | Prisma.EmbedComponentWhereUniqueInput[]
+  delete?: Prisma.EmbedComponentWhereUniqueInput | Prisma.EmbedComponentWhereUniqueInput[]
+  connect?: Prisma.EmbedComponentWhereUniqueInput | Prisma.EmbedComponentWhereUniqueInput[]
+  update?: Prisma.EmbedComponentUpdateWithWhereUniqueWithoutEnvironmentInput | Prisma.EmbedComponentUpdateWithWhereUniqueWithoutEnvironmentInput[]
+  updateMany?: Prisma.EmbedComponentUpdateManyWithWhereWithoutEnvironmentInput | Prisma.EmbedComponentUpdateManyWithWhereWithoutEnvironmentInput[]
+  deleteMany?: Prisma.EmbedComponentScalarWhereInput | Prisma.EmbedComponentScalarWhereInput[]
+}
+
+export type EmbedComponentUncheckedUpdateManyWithoutEnvironmentNestedInput = {
+  create?: Prisma.XOR<Prisma.EmbedComponentCreateWithoutEnvironmentInput, Prisma.EmbedComponentUncheckedCreateWithoutEnvironmentInput> | Prisma.EmbedComponentCreateWithoutEnvironmentInput[] | Prisma.EmbedComponentUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.EmbedComponentCreateOrConnectWithoutEnvironmentInput | Prisma.EmbedComponentCreateOrConnectWithoutEnvironmentInput[]
+  upsert?: Prisma.EmbedComponentUpsertWithWhereUniqueWithoutEnvironmentInput | Prisma.EmbedComponentUpsertWithWhereUniqueWithoutEnvironmentInput[]
+  createMany?: Prisma.EmbedComponentCreateManyEnvironmentInputEnvelope
+  set?: Prisma.EmbedComponentWhereUniqueInput | Prisma.EmbedComponentWhereUniqueInput[]
+  disconnect?: Prisma.EmbedComponentWhereUniqueInput | Prisma.EmbedComponentWhereUniqueInput[]
+  delete?: Prisma.EmbedComponentWhereUniqueInput | Prisma.EmbedComponentWhereUniqueInput[]
+  connect?: Prisma.EmbedComponentWhereUniqueInput | Prisma.EmbedComponentWhereUniqueInput[]
+  update?: Prisma.EmbedComponentUpdateWithWhereUniqueWithoutEnvironmentInput | Prisma.EmbedComponentUpdateWithWhereUniqueWithoutEnvironmentInput[]
+  updateMany?: Prisma.EmbedComponentUpdateManyWithWhereWithoutEnvironmentInput | Prisma.EmbedComponentUpdateManyWithWhereWithoutEnvironmentInput[]
+  deleteMany?: Prisma.EmbedComponentScalarWhereInput | Prisma.EmbedComponentScalarWhereInput[]
+}
+
 export type EmbedComponentCreateWithoutTeamInput = {
   id?: string
   createdAt?: Date | string
@@ -398,12 +464,14 @@ export type EmbedComponentCreateWithoutTeamInput = {
   name: string
   elements?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   design?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutEmbedComponentsInput
 }
 
 export type EmbedComponentUncheckedCreateWithoutTeamInput = {
   id?: string
   createdAt?: Date | string
   updatedAt?: Date | string
+  environmentId?: string | null
   name: string
   elements?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   design?: Prisma.JsonNullValueInput | runtime.InputJsonValue
@@ -443,15 +511,63 @@ export type EmbedComponentScalarWhereInput = {
   createdAt?: Prisma.DateTimeFilter<"EmbedComponent"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"EmbedComponent"> | Date | string
   teamId?: Prisma.StringFilter<"EmbedComponent"> | string
+  environmentId?: Prisma.StringNullableFilter<"EmbedComponent"> | string | null
   name?: Prisma.StringFilter<"EmbedComponent"> | string
   elements?: Prisma.JsonFilter<"EmbedComponent">
   design?: Prisma.JsonFilter<"EmbedComponent">
+}
+
+export type EmbedComponentCreateWithoutEnvironmentInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  name: string
+  elements?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  design?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  team: Prisma.TeamCreateNestedOneWithoutEmbedComponentsInput
+}
+
+export type EmbedComponentUncheckedCreateWithoutEnvironmentInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  teamId: string
+  name: string
+  elements?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  design?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+}
+
+export type EmbedComponentCreateOrConnectWithoutEnvironmentInput = {
+  where: Prisma.EmbedComponentWhereUniqueInput
+  create: Prisma.XOR<Prisma.EmbedComponentCreateWithoutEnvironmentInput, Prisma.EmbedComponentUncheckedCreateWithoutEnvironmentInput>
+}
+
+export type EmbedComponentCreateManyEnvironmentInputEnvelope = {
+  data: Prisma.EmbedComponentCreateManyEnvironmentInput | Prisma.EmbedComponentCreateManyEnvironmentInput[]
+  skipDuplicates?: boolean
+}
+
+export type EmbedComponentUpsertWithWhereUniqueWithoutEnvironmentInput = {
+  where: Prisma.EmbedComponentWhereUniqueInput
+  update: Prisma.XOR<Prisma.EmbedComponentUpdateWithoutEnvironmentInput, Prisma.EmbedComponentUncheckedUpdateWithoutEnvironmentInput>
+  create: Prisma.XOR<Prisma.EmbedComponentCreateWithoutEnvironmentInput, Prisma.EmbedComponentUncheckedCreateWithoutEnvironmentInput>
+}
+
+export type EmbedComponentUpdateWithWhereUniqueWithoutEnvironmentInput = {
+  where: Prisma.EmbedComponentWhereUniqueInput
+  data: Prisma.XOR<Prisma.EmbedComponentUpdateWithoutEnvironmentInput, Prisma.EmbedComponentUncheckedUpdateWithoutEnvironmentInput>
+}
+
+export type EmbedComponentUpdateManyWithWhereWithoutEnvironmentInput = {
+  where: Prisma.EmbedComponentScalarWhereInput
+  data: Prisma.XOR<Prisma.EmbedComponentUpdateManyMutationInput, Prisma.EmbedComponentUncheckedUpdateManyWithoutEnvironmentInput>
 }
 
 export type EmbedComponentCreateManyTeamInput = {
   id?: string
   createdAt?: Date | string
   updatedAt?: Date | string
+  environmentId?: string | null
   name: string
   elements?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   design?: Prisma.JsonNullValueInput | runtime.InputJsonValue
@@ -464,12 +580,14 @@ export type EmbedComponentUpdateWithoutTeamInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   elements?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   design?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutEmbedComponentsNestedInput
 }
 
 export type EmbedComponentUncheckedUpdateWithoutTeamInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   name?: Prisma.StringFieldUpdateOperationsInput | string
   elements?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   design?: Prisma.JsonNullValueInput | runtime.InputJsonValue
@@ -479,6 +597,47 @@ export type EmbedComponentUncheckedUpdateManyWithoutTeamInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  elements?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  design?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+}
+
+export type EmbedComponentCreateManyEnvironmentInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  teamId: string
+  name: string
+  elements?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  design?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+}
+
+export type EmbedComponentUpdateWithoutEnvironmentInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  elements?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  design?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  team?: Prisma.TeamUpdateOneRequiredWithoutEmbedComponentsNestedInput
+}
+
+export type EmbedComponentUncheckedUpdateWithoutEnvironmentInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  elements?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  design?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+}
+
+export type EmbedComponentUncheckedUpdateManyWithoutEnvironmentInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   elements?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   design?: Prisma.JsonNullValueInput | runtime.InputJsonValue
@@ -491,10 +650,12 @@ export type EmbedComponentSelect<ExtArgs extends runtime.Types.Extensions.Intern
   createdAt?: boolean
   updatedAt?: boolean
   teamId?: boolean
+  environmentId?: boolean
   name?: boolean
   elements?: boolean
   design?: boolean
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.EmbedComponent$environmentArgs<ExtArgs>
 }, ExtArgs["result"]["embedComponent"]>
 
 export type EmbedComponentSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -502,10 +663,12 @@ export type EmbedComponentSelectCreateManyAndReturn<ExtArgs extends runtime.Type
   createdAt?: boolean
   updatedAt?: boolean
   teamId?: boolean
+  environmentId?: boolean
   name?: boolean
   elements?: boolean
   design?: boolean
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.EmbedComponent$environmentArgs<ExtArgs>
 }, ExtArgs["result"]["embedComponent"]>
 
 export type EmbedComponentSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -513,10 +676,12 @@ export type EmbedComponentSelectUpdateManyAndReturn<ExtArgs extends runtime.Type
   createdAt?: boolean
   updatedAt?: boolean
   teamId?: boolean
+  environmentId?: boolean
   name?: boolean
   elements?: boolean
   design?: boolean
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.EmbedComponent$environmentArgs<ExtArgs>
 }, ExtArgs["result"]["embedComponent"]>
 
 export type EmbedComponentSelectScalar = {
@@ -524,32 +689,38 @@ export type EmbedComponentSelectScalar = {
   createdAt?: boolean
   updatedAt?: boolean
   teamId?: boolean
+  environmentId?: boolean
   name?: boolean
   elements?: boolean
   design?: boolean
 }
 
-export type EmbedComponentOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "updatedAt" | "teamId" | "name" | "elements" | "design", ExtArgs["result"]["embedComponent"]>
+export type EmbedComponentOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "updatedAt" | "teamId" | "environmentId" | "name" | "elements" | "design", ExtArgs["result"]["embedComponent"]>
 export type EmbedComponentInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.EmbedComponent$environmentArgs<ExtArgs>
 }
 export type EmbedComponentIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.EmbedComponent$environmentArgs<ExtArgs>
 }
 export type EmbedComponentIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.EmbedComponent$environmentArgs<ExtArgs>
 }
 
 export type $EmbedComponentPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "EmbedComponent"
   objects: {
     team: Prisma.$TeamPayload<ExtArgs>
+    environment: Prisma.$WorkspaceEnvironmentPayload<ExtArgs> | null
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
     createdAt: Date
     updatedAt: Date
     teamId: string
+    environmentId: string | null
     name: string
     elements: runtime.JsonValue
     design: runtime.JsonValue
@@ -948,6 +1119,7 @@ readonly fields: EmbedComponentFieldRefs;
 export interface Prisma__EmbedComponentClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   team<T extends Prisma.TeamDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TeamDefaultArgs<ExtArgs>>): Prisma.Prisma__TeamClient<runtime.Types.Result.GetResult<Prisma.$TeamPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  environment<T extends Prisma.EmbedComponent$environmentArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.EmbedComponent$environmentArgs<ExtArgs>>): Prisma.Prisma__WorkspaceEnvironmentClient<runtime.Types.Result.GetResult<Prisma.$WorkspaceEnvironmentPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -981,6 +1153,7 @@ export interface EmbedComponentFieldRefs {
   readonly createdAt: Prisma.FieldRef<"EmbedComponent", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"EmbedComponent", 'DateTime'>
   readonly teamId: Prisma.FieldRef<"EmbedComponent", 'String'>
+  readonly environmentId: Prisma.FieldRef<"EmbedComponent", 'String'>
   readonly name: Prisma.FieldRef<"EmbedComponent", 'String'>
   readonly elements: Prisma.FieldRef<"EmbedComponent", 'Json'>
   readonly design: Prisma.FieldRef<"EmbedComponent", 'Json'>
@@ -1377,6 +1550,25 @@ export type EmbedComponentDeleteManyArgs<ExtArgs extends runtime.Types.Extension
    * Limit how many EmbedComponents to delete.
    */
   limit?: number
+}
+
+/**
+ * EmbedComponent.environment
+ */
+export type EmbedComponent$environmentArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the WorkspaceEnvironment
+   */
+  select?: Prisma.WorkspaceEnvironmentSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the WorkspaceEnvironment
+   */
+  omit?: Prisma.WorkspaceEnvironmentOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.WorkspaceEnvironmentInclude<ExtArgs> | null
+  where?: Prisma.WorkspaceEnvironmentWhereInput
 }
 
 /**

@@ -30,6 +30,7 @@ export type ArcenCompanyMinAggregateOutputType = {
   updatedAt: Date | null
   lastSeenAt: Date | null
   teamId: string | null
+  environmentId: string | null
   name: string | null
   walletAddress: string | null
   email: string | null
@@ -44,6 +45,7 @@ export type ArcenCompanyMaxAggregateOutputType = {
   updatedAt: Date | null
   lastSeenAt: Date | null
   teamId: string | null
+  environmentId: string | null
   name: string | null
   walletAddress: string | null
   email: string | null
@@ -58,6 +60,7 @@ export type ArcenCompanyCountAggregateOutputType = {
   updatedAt: number
   lastSeenAt: number
   teamId: number
+  environmentId: number
   name: number
   walletAddress: number
   email: number
@@ -76,6 +79,7 @@ export type ArcenCompanyMinAggregateInputType = {
   updatedAt?: true
   lastSeenAt?: true
   teamId?: true
+  environmentId?: true
   name?: true
   walletAddress?: true
   email?: true
@@ -90,6 +94,7 @@ export type ArcenCompanyMaxAggregateInputType = {
   updatedAt?: true
   lastSeenAt?: true
   teamId?: true
+  environmentId?: true
   name?: true
   walletAddress?: true
   email?: true
@@ -104,6 +109,7 @@ export type ArcenCompanyCountAggregateInputType = {
   updatedAt?: true
   lastSeenAt?: true
   teamId?: true
+  environmentId?: true
   name?: true
   walletAddress?: true
   email?: true
@@ -193,6 +199,7 @@ export type ArcenCompanyGroupByOutputType = {
   updatedAt: Date
   lastSeenAt: Date
   teamId: string
+  environmentId: string | null
   name: string
   walletAddress: string | null
   email: string | null
@@ -230,6 +237,7 @@ export type ArcenCompanyWhereInput = {
   updatedAt?: Prisma.DateTimeFilter<"ArcenCompany"> | Date | string
   lastSeenAt?: Prisma.DateTimeFilter<"ArcenCompany"> | Date | string
   teamId?: Prisma.StringFilter<"ArcenCompany"> | string
+  environmentId?: Prisma.StringNullableFilter<"ArcenCompany"> | string | null
   name?: Prisma.StringFilter<"ArcenCompany"> | string
   walletAddress?: Prisma.StringNullableFilter<"ArcenCompany"> | string | null
   email?: Prisma.StringNullableFilter<"ArcenCompany"> | string | null
@@ -239,6 +247,7 @@ export type ArcenCompanyWhereInput = {
   activePlanId?: Prisma.StringNullableFilter<"ArcenCompany"> | string | null
   activeAddOnIds?: Prisma.JsonFilter<"ArcenCompany">
   team?: Prisma.XOR<Prisma.TeamScalarRelationFilter, Prisma.TeamWhereInput>
+  environment?: Prisma.XOR<Prisma.WorkspaceEnvironmentNullableScalarRelationFilter, Prisma.WorkspaceEnvironmentWhereInput> | null
   users?: Prisma.ArcenUserListRelationFilter
   overrides?: Prisma.CompanyOverrideListRelationFilter
   events?: Prisma.ArcenEventListRelationFilter
@@ -260,6 +269,7 @@ export type ArcenCompanyOrderByWithRelationInput = {
   updatedAt?: Prisma.SortOrder
   lastSeenAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrderInput | Prisma.SortOrder
   name?: Prisma.SortOrder
   walletAddress?: Prisma.SortOrderInput | Prisma.SortOrder
   email?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -269,6 +279,7 @@ export type ArcenCompanyOrderByWithRelationInput = {
   activePlanId?: Prisma.SortOrderInput | Prisma.SortOrder
   activeAddOnIds?: Prisma.SortOrder
   team?: Prisma.TeamOrderByWithRelationInput
+  environment?: Prisma.WorkspaceEnvironmentOrderByWithRelationInput
   users?: Prisma.ArcenUserOrderByRelationAggregateInput
   overrides?: Prisma.CompanyOverrideOrderByRelationAggregateInput
   events?: Prisma.ArcenEventOrderByRelationAggregateInput
@@ -286,8 +297,8 @@ export type ArcenCompanyOrderByWithRelationInput = {
 
 export type ArcenCompanyWhereUniqueInput = Prisma.AtLeast<{
   id?: string
-  teamId_walletAddress?: Prisma.ArcenCompanyTeamIdWalletAddressCompoundUniqueInput
-  teamId_externalId?: Prisma.ArcenCompanyTeamIdExternalIdCompoundUniqueInput
+  teamId_environmentId_walletAddress?: Prisma.ArcenCompanyTeamIdEnvironmentIdWalletAddressCompoundUniqueInput
+  teamId_environmentId_externalId?: Prisma.ArcenCompanyTeamIdEnvironmentIdExternalIdCompoundUniqueInput
   AND?: Prisma.ArcenCompanyWhereInput | Prisma.ArcenCompanyWhereInput[]
   OR?: Prisma.ArcenCompanyWhereInput[]
   NOT?: Prisma.ArcenCompanyWhereInput | Prisma.ArcenCompanyWhereInput[]
@@ -295,6 +306,7 @@ export type ArcenCompanyWhereUniqueInput = Prisma.AtLeast<{
   updatedAt?: Prisma.DateTimeFilter<"ArcenCompany"> | Date | string
   lastSeenAt?: Prisma.DateTimeFilter<"ArcenCompany"> | Date | string
   teamId?: Prisma.StringFilter<"ArcenCompany"> | string
+  environmentId?: Prisma.StringNullableFilter<"ArcenCompany"> | string | null
   name?: Prisma.StringFilter<"ArcenCompany"> | string
   walletAddress?: Prisma.StringNullableFilter<"ArcenCompany"> | string | null
   email?: Prisma.StringNullableFilter<"ArcenCompany"> | string | null
@@ -304,6 +316,7 @@ export type ArcenCompanyWhereUniqueInput = Prisma.AtLeast<{
   activePlanId?: Prisma.StringNullableFilter<"ArcenCompany"> | string | null
   activeAddOnIds?: Prisma.JsonFilter<"ArcenCompany">
   team?: Prisma.XOR<Prisma.TeamScalarRelationFilter, Prisma.TeamWhereInput>
+  environment?: Prisma.XOR<Prisma.WorkspaceEnvironmentNullableScalarRelationFilter, Prisma.WorkspaceEnvironmentWhereInput> | null
   users?: Prisma.ArcenUserListRelationFilter
   overrides?: Prisma.CompanyOverrideListRelationFilter
   events?: Prisma.ArcenEventListRelationFilter
@@ -317,7 +330,7 @@ export type ArcenCompanyWhereUniqueInput = Prisma.AtLeast<{
   addOnGrants?: Prisma.CompanyAddOnGrantListRelationFilter
   paymentLinks?: Prisma.PaymentLinkListRelationFilter
   checkoutSessions?: Prisma.CheckoutSessionListRelationFilter
-}, "id" | "teamId_walletAddress" | "teamId_externalId">
+}, "id" | "teamId_environmentId_walletAddress" | "teamId_environmentId_externalId">
 
 export type ArcenCompanyOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
@@ -325,6 +338,7 @@ export type ArcenCompanyOrderByWithAggregationInput = {
   updatedAt?: Prisma.SortOrder
   lastSeenAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrderInput | Prisma.SortOrder
   name?: Prisma.SortOrder
   walletAddress?: Prisma.SortOrderInput | Prisma.SortOrder
   email?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -347,6 +361,7 @@ export type ArcenCompanyScalarWhereWithAggregatesInput = {
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"ArcenCompany"> | Date | string
   lastSeenAt?: Prisma.DateTimeWithAggregatesFilter<"ArcenCompany"> | Date | string
   teamId?: Prisma.StringWithAggregatesFilter<"ArcenCompany"> | string
+  environmentId?: Prisma.StringNullableWithAggregatesFilter<"ArcenCompany"> | string | null
   name?: Prisma.StringWithAggregatesFilter<"ArcenCompany"> | string
   walletAddress?: Prisma.StringNullableWithAggregatesFilter<"ArcenCompany"> | string | null
   email?: Prisma.StringNullableWithAggregatesFilter<"ArcenCompany"> | string | null
@@ -371,6 +386,7 @@ export type ArcenCompanyCreateInput = {
   activePlanId?: string | null
   activeAddOnIds?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   team: Prisma.TeamCreateNestedOneWithoutArcenCompaniesInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutArcenCompaniesInput
   users?: Prisma.ArcenUserCreateNestedManyWithoutCompanyInput
   overrides?: Prisma.CompanyOverrideCreateNestedManyWithoutCompanyInput
   events?: Prisma.ArcenEventCreateNestedManyWithoutCompanyInput
@@ -392,6 +408,7 @@ export type ArcenCompanyUncheckedCreateInput = {
   updatedAt?: Date | string
   lastSeenAt?: Date | string
   teamId: string
+  environmentId?: string | null
   name: string
   walletAddress?: string | null
   email?: string | null
@@ -429,6 +446,7 @@ export type ArcenCompanyUpdateInput = {
   activePlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   activeAddOnIds?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   team?: Prisma.TeamUpdateOneRequiredWithoutArcenCompaniesNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutArcenCompaniesNestedInput
   users?: Prisma.ArcenUserUpdateManyWithoutCompanyNestedInput
   overrides?: Prisma.CompanyOverrideUpdateManyWithoutCompanyNestedInput
   events?: Prisma.ArcenEventUpdateManyWithoutCompanyNestedInput
@@ -450,6 +468,7 @@ export type ArcenCompanyUncheckedUpdateInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastSeenAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   name?: Prisma.StringFieldUpdateOperationsInput | string
   walletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -479,6 +498,7 @@ export type ArcenCompanyCreateManyInput = {
   updatedAt?: Date | string
   lastSeenAt?: Date | string
   teamId: string
+  environmentId?: string | null
   name: string
   walletAddress?: string | null
   email?: string | null
@@ -510,6 +530,7 @@ export type ArcenCompanyUncheckedUpdateManyInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastSeenAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   name?: Prisma.StringFieldUpdateOperationsInput | string
   walletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -540,13 +561,15 @@ export type ArcenCompanyNullableScalarRelationFilter = {
   isNot?: Prisma.ArcenCompanyWhereInput | null
 }
 
-export type ArcenCompanyTeamIdWalletAddressCompoundUniqueInput = {
+export type ArcenCompanyTeamIdEnvironmentIdWalletAddressCompoundUniqueInput = {
   teamId: string
+  environmentId: string
   walletAddress: string
 }
 
-export type ArcenCompanyTeamIdExternalIdCompoundUniqueInput = {
+export type ArcenCompanyTeamIdEnvironmentIdExternalIdCompoundUniqueInput = {
   teamId: string
+  environmentId: string
   externalId: string
 }
 
@@ -556,6 +579,7 @@ export type ArcenCompanyCountOrderByAggregateInput = {
   updatedAt?: Prisma.SortOrder
   lastSeenAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrder
   name?: Prisma.SortOrder
   walletAddress?: Prisma.SortOrder
   email?: Prisma.SortOrder
@@ -572,6 +596,7 @@ export type ArcenCompanyMaxOrderByAggregateInput = {
   updatedAt?: Prisma.SortOrder
   lastSeenAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrder
   name?: Prisma.SortOrder
   walletAddress?: Prisma.SortOrder
   email?: Prisma.SortOrder
@@ -586,6 +611,7 @@ export type ArcenCompanyMinOrderByAggregateInput = {
   updatedAt?: Prisma.SortOrder
   lastSeenAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrder
   name?: Prisma.SortOrder
   walletAddress?: Prisma.SortOrder
   email?: Prisma.SortOrder
@@ -633,6 +659,48 @@ export type ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput = {
   connect?: Prisma.ArcenCompanyWhereUniqueInput | Prisma.ArcenCompanyWhereUniqueInput[]
   update?: Prisma.ArcenCompanyUpdateWithWhereUniqueWithoutTeamInput | Prisma.ArcenCompanyUpdateWithWhereUniqueWithoutTeamInput[]
   updateMany?: Prisma.ArcenCompanyUpdateManyWithWhereWithoutTeamInput | Prisma.ArcenCompanyUpdateManyWithWhereWithoutTeamInput[]
+  deleteMany?: Prisma.ArcenCompanyScalarWhereInput | Prisma.ArcenCompanyScalarWhereInput[]
+}
+
+export type ArcenCompanyCreateNestedManyWithoutEnvironmentInput = {
+  create?: Prisma.XOR<Prisma.ArcenCompanyCreateWithoutEnvironmentInput, Prisma.ArcenCompanyUncheckedCreateWithoutEnvironmentInput> | Prisma.ArcenCompanyCreateWithoutEnvironmentInput[] | Prisma.ArcenCompanyUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.ArcenCompanyCreateOrConnectWithoutEnvironmentInput | Prisma.ArcenCompanyCreateOrConnectWithoutEnvironmentInput[]
+  createMany?: Prisma.ArcenCompanyCreateManyEnvironmentInputEnvelope
+  connect?: Prisma.ArcenCompanyWhereUniqueInput | Prisma.ArcenCompanyWhereUniqueInput[]
+}
+
+export type ArcenCompanyUncheckedCreateNestedManyWithoutEnvironmentInput = {
+  create?: Prisma.XOR<Prisma.ArcenCompanyCreateWithoutEnvironmentInput, Prisma.ArcenCompanyUncheckedCreateWithoutEnvironmentInput> | Prisma.ArcenCompanyCreateWithoutEnvironmentInput[] | Prisma.ArcenCompanyUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.ArcenCompanyCreateOrConnectWithoutEnvironmentInput | Prisma.ArcenCompanyCreateOrConnectWithoutEnvironmentInput[]
+  createMany?: Prisma.ArcenCompanyCreateManyEnvironmentInputEnvelope
+  connect?: Prisma.ArcenCompanyWhereUniqueInput | Prisma.ArcenCompanyWhereUniqueInput[]
+}
+
+export type ArcenCompanyUpdateManyWithoutEnvironmentNestedInput = {
+  create?: Prisma.XOR<Prisma.ArcenCompanyCreateWithoutEnvironmentInput, Prisma.ArcenCompanyUncheckedCreateWithoutEnvironmentInput> | Prisma.ArcenCompanyCreateWithoutEnvironmentInput[] | Prisma.ArcenCompanyUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.ArcenCompanyCreateOrConnectWithoutEnvironmentInput | Prisma.ArcenCompanyCreateOrConnectWithoutEnvironmentInput[]
+  upsert?: Prisma.ArcenCompanyUpsertWithWhereUniqueWithoutEnvironmentInput | Prisma.ArcenCompanyUpsertWithWhereUniqueWithoutEnvironmentInput[]
+  createMany?: Prisma.ArcenCompanyCreateManyEnvironmentInputEnvelope
+  set?: Prisma.ArcenCompanyWhereUniqueInput | Prisma.ArcenCompanyWhereUniqueInput[]
+  disconnect?: Prisma.ArcenCompanyWhereUniqueInput | Prisma.ArcenCompanyWhereUniqueInput[]
+  delete?: Prisma.ArcenCompanyWhereUniqueInput | Prisma.ArcenCompanyWhereUniqueInput[]
+  connect?: Prisma.ArcenCompanyWhereUniqueInput | Prisma.ArcenCompanyWhereUniqueInput[]
+  update?: Prisma.ArcenCompanyUpdateWithWhereUniqueWithoutEnvironmentInput | Prisma.ArcenCompanyUpdateWithWhereUniqueWithoutEnvironmentInput[]
+  updateMany?: Prisma.ArcenCompanyUpdateManyWithWhereWithoutEnvironmentInput | Prisma.ArcenCompanyUpdateManyWithWhereWithoutEnvironmentInput[]
+  deleteMany?: Prisma.ArcenCompanyScalarWhereInput | Prisma.ArcenCompanyScalarWhereInput[]
+}
+
+export type ArcenCompanyUncheckedUpdateManyWithoutEnvironmentNestedInput = {
+  create?: Prisma.XOR<Prisma.ArcenCompanyCreateWithoutEnvironmentInput, Prisma.ArcenCompanyUncheckedCreateWithoutEnvironmentInput> | Prisma.ArcenCompanyCreateWithoutEnvironmentInput[] | Prisma.ArcenCompanyUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.ArcenCompanyCreateOrConnectWithoutEnvironmentInput | Prisma.ArcenCompanyCreateOrConnectWithoutEnvironmentInput[]
+  upsert?: Prisma.ArcenCompanyUpsertWithWhereUniqueWithoutEnvironmentInput | Prisma.ArcenCompanyUpsertWithWhereUniqueWithoutEnvironmentInput[]
+  createMany?: Prisma.ArcenCompanyCreateManyEnvironmentInputEnvelope
+  set?: Prisma.ArcenCompanyWhereUniqueInput | Prisma.ArcenCompanyWhereUniqueInput[]
+  disconnect?: Prisma.ArcenCompanyWhereUniqueInput | Prisma.ArcenCompanyWhereUniqueInput[]
+  delete?: Prisma.ArcenCompanyWhereUniqueInput | Prisma.ArcenCompanyWhereUniqueInput[]
+  connect?: Prisma.ArcenCompanyWhereUniqueInput | Prisma.ArcenCompanyWhereUniqueInput[]
+  update?: Prisma.ArcenCompanyUpdateWithWhereUniqueWithoutEnvironmentInput | Prisma.ArcenCompanyUpdateWithWhereUniqueWithoutEnvironmentInput[]
+  updateMany?: Prisma.ArcenCompanyUpdateManyWithWhereWithoutEnvironmentInput | Prisma.ArcenCompanyUpdateManyWithWhereWithoutEnvironmentInput[]
   deleteMany?: Prisma.ArcenCompanyScalarWhereInput | Prisma.ArcenCompanyScalarWhereInput[]
 }
 
@@ -845,6 +913,7 @@ export type ArcenCompanyCreateWithoutTeamInput = {
   traits?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   activePlanId?: string | null
   activeAddOnIds?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutArcenCompaniesInput
   users?: Prisma.ArcenUserCreateNestedManyWithoutCompanyInput
   overrides?: Prisma.CompanyOverrideCreateNestedManyWithoutCompanyInput
   events?: Prisma.ArcenEventCreateNestedManyWithoutCompanyInput
@@ -865,6 +934,7 @@ export type ArcenCompanyUncheckedCreateWithoutTeamInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   lastSeenAt?: Date | string
+  environmentId?: string | null
   name: string
   walletAddress?: string | null
   email?: string | null
@@ -923,6 +993,7 @@ export type ArcenCompanyScalarWhereInput = {
   updatedAt?: Prisma.DateTimeFilter<"ArcenCompany"> | Date | string
   lastSeenAt?: Prisma.DateTimeFilter<"ArcenCompany"> | Date | string
   teamId?: Prisma.StringFilter<"ArcenCompany"> | string
+  environmentId?: Prisma.StringNullableFilter<"ArcenCompany"> | string | null
   name?: Prisma.StringFilter<"ArcenCompany"> | string
   walletAddress?: Prisma.StringNullableFilter<"ArcenCompany"> | string | null
   email?: Prisma.StringNullableFilter<"ArcenCompany"> | string | null
@@ -931,6 +1002,90 @@ export type ArcenCompanyScalarWhereInput = {
   traits?: Prisma.JsonFilter<"ArcenCompany">
   activePlanId?: Prisma.StringNullableFilter<"ArcenCompany"> | string | null
   activeAddOnIds?: Prisma.JsonFilter<"ArcenCompany">
+}
+
+export type ArcenCompanyCreateWithoutEnvironmentInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  lastSeenAt?: Date | string
+  name: string
+  walletAddress?: string | null
+  email?: string | null
+  externalId?: string | null
+  logoUrl?: string | null
+  traits?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  activePlanId?: string | null
+  activeAddOnIds?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  team: Prisma.TeamCreateNestedOneWithoutArcenCompaniesInput
+  users?: Prisma.ArcenUserCreateNestedManyWithoutCompanyInput
+  overrides?: Prisma.CompanyOverrideCreateNestedManyWithoutCompanyInput
+  events?: Prisma.ArcenEventCreateNestedManyWithoutCompanyInput
+  zkProofs?: Prisma.ZkTlsProofCreateNestedManyWithoutCompanyInput
+  subscriptionState?: Prisma.SubscriptionStateCreateNestedOneWithoutCompanyInput
+  billingBalance?: Prisma.BillingBalanceCreateNestedOneWithoutCompanyInput
+  payments?: Prisma.PaymentCreateNestedManyWithoutCompanyInput
+  refunds?: Prisma.RefundCreateNestedManyWithoutCompanyInput
+  billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutCompanyInput
+  billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutCompanyInput
+  addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutCompanyInput
+  paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutCompanyInput
+  checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutCompanyInput
+}
+
+export type ArcenCompanyUncheckedCreateWithoutEnvironmentInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  lastSeenAt?: Date | string
+  teamId: string
+  name: string
+  walletAddress?: string | null
+  email?: string | null
+  externalId?: string | null
+  logoUrl?: string | null
+  traits?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  activePlanId?: string | null
+  activeAddOnIds?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  users?: Prisma.ArcenUserUncheckedCreateNestedManyWithoutCompanyInput
+  overrides?: Prisma.CompanyOverrideUncheckedCreateNestedManyWithoutCompanyInput
+  events?: Prisma.ArcenEventUncheckedCreateNestedManyWithoutCompanyInput
+  zkProofs?: Prisma.ZkTlsProofUncheckedCreateNestedManyWithoutCompanyInput
+  subscriptionState?: Prisma.SubscriptionStateUncheckedCreateNestedOneWithoutCompanyInput
+  billingBalance?: Prisma.BillingBalanceUncheckedCreateNestedOneWithoutCompanyInput
+  payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutCompanyInput
+  refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutCompanyInput
+  billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutCompanyInput
+  billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutCompanyInput
+  addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutCompanyInput
+  paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutCompanyInput
+  checkoutSessions?: Prisma.CheckoutSessionUncheckedCreateNestedManyWithoutCompanyInput
+}
+
+export type ArcenCompanyCreateOrConnectWithoutEnvironmentInput = {
+  where: Prisma.ArcenCompanyWhereUniqueInput
+  create: Prisma.XOR<Prisma.ArcenCompanyCreateWithoutEnvironmentInput, Prisma.ArcenCompanyUncheckedCreateWithoutEnvironmentInput>
+}
+
+export type ArcenCompanyCreateManyEnvironmentInputEnvelope = {
+  data: Prisma.ArcenCompanyCreateManyEnvironmentInput | Prisma.ArcenCompanyCreateManyEnvironmentInput[]
+  skipDuplicates?: boolean
+}
+
+export type ArcenCompanyUpsertWithWhereUniqueWithoutEnvironmentInput = {
+  where: Prisma.ArcenCompanyWhereUniqueInput
+  update: Prisma.XOR<Prisma.ArcenCompanyUpdateWithoutEnvironmentInput, Prisma.ArcenCompanyUncheckedUpdateWithoutEnvironmentInput>
+  create: Prisma.XOR<Prisma.ArcenCompanyCreateWithoutEnvironmentInput, Prisma.ArcenCompanyUncheckedCreateWithoutEnvironmentInput>
+}
+
+export type ArcenCompanyUpdateWithWhereUniqueWithoutEnvironmentInput = {
+  where: Prisma.ArcenCompanyWhereUniqueInput
+  data: Prisma.XOR<Prisma.ArcenCompanyUpdateWithoutEnvironmentInput, Prisma.ArcenCompanyUncheckedUpdateWithoutEnvironmentInput>
+}
+
+export type ArcenCompanyUpdateManyWithWhereWithoutEnvironmentInput = {
+  where: Prisma.ArcenCompanyScalarWhereInput
+  data: Prisma.XOR<Prisma.ArcenCompanyUpdateManyMutationInput, Prisma.ArcenCompanyUncheckedUpdateManyWithoutEnvironmentInput>
 }
 
 export type ArcenCompanyCreateWithoutSubscriptionStateInput = {
@@ -947,6 +1102,7 @@ export type ArcenCompanyCreateWithoutSubscriptionStateInput = {
   activePlanId?: string | null
   activeAddOnIds?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   team: Prisma.TeamCreateNestedOneWithoutArcenCompaniesInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutArcenCompaniesInput
   users?: Prisma.ArcenUserCreateNestedManyWithoutCompanyInput
   overrides?: Prisma.CompanyOverrideCreateNestedManyWithoutCompanyInput
   events?: Prisma.ArcenEventCreateNestedManyWithoutCompanyInput
@@ -967,6 +1123,7 @@ export type ArcenCompanyUncheckedCreateWithoutSubscriptionStateInput = {
   updatedAt?: Date | string
   lastSeenAt?: Date | string
   teamId: string
+  environmentId?: string | null
   name: string
   walletAddress?: string | null
   email?: string | null
@@ -1019,6 +1176,7 @@ export type ArcenCompanyUpdateWithoutSubscriptionStateInput = {
   activePlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   activeAddOnIds?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   team?: Prisma.TeamUpdateOneRequiredWithoutArcenCompaniesNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutArcenCompaniesNestedInput
   users?: Prisma.ArcenUserUpdateManyWithoutCompanyNestedInput
   overrides?: Prisma.CompanyOverrideUpdateManyWithoutCompanyNestedInput
   events?: Prisma.ArcenEventUpdateManyWithoutCompanyNestedInput
@@ -1039,6 +1197,7 @@ export type ArcenCompanyUncheckedUpdateWithoutSubscriptionStateInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastSeenAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   name?: Prisma.StringFieldUpdateOperationsInput | string
   walletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1075,6 +1234,7 @@ export type ArcenCompanyCreateWithoutPaymentsInput = {
   activePlanId?: string | null
   activeAddOnIds?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   team: Prisma.TeamCreateNestedOneWithoutArcenCompaniesInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutArcenCompaniesInput
   users?: Prisma.ArcenUserCreateNestedManyWithoutCompanyInput
   overrides?: Prisma.CompanyOverrideCreateNestedManyWithoutCompanyInput
   events?: Prisma.ArcenEventCreateNestedManyWithoutCompanyInput
@@ -1095,6 +1255,7 @@ export type ArcenCompanyUncheckedCreateWithoutPaymentsInput = {
   updatedAt?: Date | string
   lastSeenAt?: Date | string
   teamId: string
+  environmentId?: string | null
   name: string
   walletAddress?: string | null
   email?: string | null
@@ -1147,6 +1308,7 @@ export type ArcenCompanyUpdateWithoutPaymentsInput = {
   activePlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   activeAddOnIds?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   team?: Prisma.TeamUpdateOneRequiredWithoutArcenCompaniesNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutArcenCompaniesNestedInput
   users?: Prisma.ArcenUserUpdateManyWithoutCompanyNestedInput
   overrides?: Prisma.CompanyOverrideUpdateManyWithoutCompanyNestedInput
   events?: Prisma.ArcenEventUpdateManyWithoutCompanyNestedInput
@@ -1167,6 +1329,7 @@ export type ArcenCompanyUncheckedUpdateWithoutPaymentsInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastSeenAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   name?: Prisma.StringFieldUpdateOperationsInput | string
   walletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1203,6 +1366,7 @@ export type ArcenCompanyCreateWithoutBillingAdjustmentsInput = {
   activePlanId?: string | null
   activeAddOnIds?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   team: Prisma.TeamCreateNestedOneWithoutArcenCompaniesInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutArcenCompaniesInput
   users?: Prisma.ArcenUserCreateNestedManyWithoutCompanyInput
   overrides?: Prisma.CompanyOverrideCreateNestedManyWithoutCompanyInput
   events?: Prisma.ArcenEventCreateNestedManyWithoutCompanyInput
@@ -1223,6 +1387,7 @@ export type ArcenCompanyUncheckedCreateWithoutBillingAdjustmentsInput = {
   updatedAt?: Date | string
   lastSeenAt?: Date | string
   teamId: string
+  environmentId?: string | null
   name: string
   walletAddress?: string | null
   email?: string | null
@@ -1275,6 +1440,7 @@ export type ArcenCompanyUpdateWithoutBillingAdjustmentsInput = {
   activePlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   activeAddOnIds?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   team?: Prisma.TeamUpdateOneRequiredWithoutArcenCompaniesNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutArcenCompaniesNestedInput
   users?: Prisma.ArcenUserUpdateManyWithoutCompanyNestedInput
   overrides?: Prisma.CompanyOverrideUpdateManyWithoutCompanyNestedInput
   events?: Prisma.ArcenEventUpdateManyWithoutCompanyNestedInput
@@ -1295,6 +1461,7 @@ export type ArcenCompanyUncheckedUpdateWithoutBillingAdjustmentsInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastSeenAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   name?: Prisma.StringFieldUpdateOperationsInput | string
   walletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1331,6 +1498,7 @@ export type ArcenCompanyCreateWithoutBillingBalanceInput = {
   activePlanId?: string | null
   activeAddOnIds?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   team: Prisma.TeamCreateNestedOneWithoutArcenCompaniesInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutArcenCompaniesInput
   users?: Prisma.ArcenUserCreateNestedManyWithoutCompanyInput
   overrides?: Prisma.CompanyOverrideCreateNestedManyWithoutCompanyInput
   events?: Prisma.ArcenEventCreateNestedManyWithoutCompanyInput
@@ -1351,6 +1519,7 @@ export type ArcenCompanyUncheckedCreateWithoutBillingBalanceInput = {
   updatedAt?: Date | string
   lastSeenAt?: Date | string
   teamId: string
+  environmentId?: string | null
   name: string
   walletAddress?: string | null
   email?: string | null
@@ -1403,6 +1572,7 @@ export type ArcenCompanyUpdateWithoutBillingBalanceInput = {
   activePlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   activeAddOnIds?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   team?: Prisma.TeamUpdateOneRequiredWithoutArcenCompaniesNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutArcenCompaniesNestedInput
   users?: Prisma.ArcenUserUpdateManyWithoutCompanyNestedInput
   overrides?: Prisma.CompanyOverrideUpdateManyWithoutCompanyNestedInput
   events?: Prisma.ArcenEventUpdateManyWithoutCompanyNestedInput
@@ -1423,6 +1593,7 @@ export type ArcenCompanyUncheckedUpdateWithoutBillingBalanceInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastSeenAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   name?: Prisma.StringFieldUpdateOperationsInput | string
   walletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1459,6 +1630,7 @@ export type ArcenCompanyCreateWithoutRefundsInput = {
   activePlanId?: string | null
   activeAddOnIds?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   team: Prisma.TeamCreateNestedOneWithoutArcenCompaniesInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutArcenCompaniesInput
   users?: Prisma.ArcenUserCreateNestedManyWithoutCompanyInput
   overrides?: Prisma.CompanyOverrideCreateNestedManyWithoutCompanyInput
   events?: Prisma.ArcenEventCreateNestedManyWithoutCompanyInput
@@ -1479,6 +1651,7 @@ export type ArcenCompanyUncheckedCreateWithoutRefundsInput = {
   updatedAt?: Date | string
   lastSeenAt?: Date | string
   teamId: string
+  environmentId?: string | null
   name: string
   walletAddress?: string | null
   email?: string | null
@@ -1531,6 +1704,7 @@ export type ArcenCompanyUpdateWithoutRefundsInput = {
   activePlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   activeAddOnIds?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   team?: Prisma.TeamUpdateOneRequiredWithoutArcenCompaniesNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutArcenCompaniesNestedInput
   users?: Prisma.ArcenUserUpdateManyWithoutCompanyNestedInput
   overrides?: Prisma.CompanyOverrideUpdateManyWithoutCompanyNestedInput
   events?: Prisma.ArcenEventUpdateManyWithoutCompanyNestedInput
@@ -1551,6 +1725,7 @@ export type ArcenCompanyUncheckedUpdateWithoutRefundsInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastSeenAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   name?: Prisma.StringFieldUpdateOperationsInput | string
   walletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1587,6 +1762,7 @@ export type ArcenCompanyCreateWithoutBillingRecoveryTasksInput = {
   activePlanId?: string | null
   activeAddOnIds?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   team: Prisma.TeamCreateNestedOneWithoutArcenCompaniesInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutArcenCompaniesInput
   users?: Prisma.ArcenUserCreateNestedManyWithoutCompanyInput
   overrides?: Prisma.CompanyOverrideCreateNestedManyWithoutCompanyInput
   events?: Prisma.ArcenEventCreateNestedManyWithoutCompanyInput
@@ -1607,6 +1783,7 @@ export type ArcenCompanyUncheckedCreateWithoutBillingRecoveryTasksInput = {
   updatedAt?: Date | string
   lastSeenAt?: Date | string
   teamId: string
+  environmentId?: string | null
   name: string
   walletAddress?: string | null
   email?: string | null
@@ -1659,6 +1836,7 @@ export type ArcenCompanyUpdateWithoutBillingRecoveryTasksInput = {
   activePlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   activeAddOnIds?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   team?: Prisma.TeamUpdateOneRequiredWithoutArcenCompaniesNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutArcenCompaniesNestedInput
   users?: Prisma.ArcenUserUpdateManyWithoutCompanyNestedInput
   overrides?: Prisma.CompanyOverrideUpdateManyWithoutCompanyNestedInput
   events?: Prisma.ArcenEventUpdateManyWithoutCompanyNestedInput
@@ -1679,6 +1857,7 @@ export type ArcenCompanyUncheckedUpdateWithoutBillingRecoveryTasksInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastSeenAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   name?: Prisma.StringFieldUpdateOperationsInput | string
   walletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1715,6 +1894,7 @@ export type ArcenCompanyCreateWithoutUsersInput = {
   activePlanId?: string | null
   activeAddOnIds?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   team: Prisma.TeamCreateNestedOneWithoutArcenCompaniesInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutArcenCompaniesInput
   overrides?: Prisma.CompanyOverrideCreateNestedManyWithoutCompanyInput
   events?: Prisma.ArcenEventCreateNestedManyWithoutCompanyInput
   zkProofs?: Prisma.ZkTlsProofCreateNestedManyWithoutCompanyInput
@@ -1735,6 +1915,7 @@ export type ArcenCompanyUncheckedCreateWithoutUsersInput = {
   updatedAt?: Date | string
   lastSeenAt?: Date | string
   teamId: string
+  environmentId?: string | null
   name: string
   walletAddress?: string | null
   email?: string | null
@@ -1787,6 +1968,7 @@ export type ArcenCompanyUpdateWithoutUsersInput = {
   activePlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   activeAddOnIds?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   team?: Prisma.TeamUpdateOneRequiredWithoutArcenCompaniesNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutArcenCompaniesNestedInput
   overrides?: Prisma.CompanyOverrideUpdateManyWithoutCompanyNestedInput
   events?: Prisma.ArcenEventUpdateManyWithoutCompanyNestedInput
   zkProofs?: Prisma.ZkTlsProofUpdateManyWithoutCompanyNestedInput
@@ -1807,6 +1989,7 @@ export type ArcenCompanyUncheckedUpdateWithoutUsersInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastSeenAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   name?: Prisma.StringFieldUpdateOperationsInput | string
   walletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1843,6 +2026,7 @@ export type ArcenCompanyCreateWithoutEventsInput = {
   activePlanId?: string | null
   activeAddOnIds?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   team: Prisma.TeamCreateNestedOneWithoutArcenCompaniesInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutArcenCompaniesInput
   users?: Prisma.ArcenUserCreateNestedManyWithoutCompanyInput
   overrides?: Prisma.CompanyOverrideCreateNestedManyWithoutCompanyInput
   zkProofs?: Prisma.ZkTlsProofCreateNestedManyWithoutCompanyInput
@@ -1863,6 +2047,7 @@ export type ArcenCompanyUncheckedCreateWithoutEventsInput = {
   updatedAt?: Date | string
   lastSeenAt?: Date | string
   teamId: string
+  environmentId?: string | null
   name: string
   walletAddress?: string | null
   email?: string | null
@@ -1915,6 +2100,7 @@ export type ArcenCompanyUpdateWithoutEventsInput = {
   activePlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   activeAddOnIds?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   team?: Prisma.TeamUpdateOneRequiredWithoutArcenCompaniesNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutArcenCompaniesNestedInput
   users?: Prisma.ArcenUserUpdateManyWithoutCompanyNestedInput
   overrides?: Prisma.CompanyOverrideUpdateManyWithoutCompanyNestedInput
   zkProofs?: Prisma.ZkTlsProofUpdateManyWithoutCompanyNestedInput
@@ -1935,6 +2121,7 @@ export type ArcenCompanyUncheckedUpdateWithoutEventsInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastSeenAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   name?: Prisma.StringFieldUpdateOperationsInput | string
   walletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1971,6 +2158,7 @@ export type ArcenCompanyCreateWithoutAddOnGrantsInput = {
   activePlanId?: string | null
   activeAddOnIds?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   team: Prisma.TeamCreateNestedOneWithoutArcenCompaniesInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutArcenCompaniesInput
   users?: Prisma.ArcenUserCreateNestedManyWithoutCompanyInput
   overrides?: Prisma.CompanyOverrideCreateNestedManyWithoutCompanyInput
   events?: Prisma.ArcenEventCreateNestedManyWithoutCompanyInput
@@ -1991,6 +2179,7 @@ export type ArcenCompanyUncheckedCreateWithoutAddOnGrantsInput = {
   updatedAt?: Date | string
   lastSeenAt?: Date | string
   teamId: string
+  environmentId?: string | null
   name: string
   walletAddress?: string | null
   email?: string | null
@@ -2043,6 +2232,7 @@ export type ArcenCompanyUpdateWithoutAddOnGrantsInput = {
   activePlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   activeAddOnIds?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   team?: Prisma.TeamUpdateOneRequiredWithoutArcenCompaniesNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutArcenCompaniesNestedInput
   users?: Prisma.ArcenUserUpdateManyWithoutCompanyNestedInput
   overrides?: Prisma.CompanyOverrideUpdateManyWithoutCompanyNestedInput
   events?: Prisma.ArcenEventUpdateManyWithoutCompanyNestedInput
@@ -2063,6 +2253,7 @@ export type ArcenCompanyUncheckedUpdateWithoutAddOnGrantsInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastSeenAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   name?: Prisma.StringFieldUpdateOperationsInput | string
   walletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2099,6 +2290,7 @@ export type ArcenCompanyCreateWithoutPaymentLinksInput = {
   activePlanId?: string | null
   activeAddOnIds?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   team: Prisma.TeamCreateNestedOneWithoutArcenCompaniesInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutArcenCompaniesInput
   users?: Prisma.ArcenUserCreateNestedManyWithoutCompanyInput
   overrides?: Prisma.CompanyOverrideCreateNestedManyWithoutCompanyInput
   events?: Prisma.ArcenEventCreateNestedManyWithoutCompanyInput
@@ -2119,6 +2311,7 @@ export type ArcenCompanyUncheckedCreateWithoutPaymentLinksInput = {
   updatedAt?: Date | string
   lastSeenAt?: Date | string
   teamId: string
+  environmentId?: string | null
   name: string
   walletAddress?: string | null
   email?: string | null
@@ -2171,6 +2364,7 @@ export type ArcenCompanyUpdateWithoutPaymentLinksInput = {
   activePlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   activeAddOnIds?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   team?: Prisma.TeamUpdateOneRequiredWithoutArcenCompaniesNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutArcenCompaniesNestedInput
   users?: Prisma.ArcenUserUpdateManyWithoutCompanyNestedInput
   overrides?: Prisma.CompanyOverrideUpdateManyWithoutCompanyNestedInput
   events?: Prisma.ArcenEventUpdateManyWithoutCompanyNestedInput
@@ -2191,6 +2385,7 @@ export type ArcenCompanyUncheckedUpdateWithoutPaymentLinksInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastSeenAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   name?: Prisma.StringFieldUpdateOperationsInput | string
   walletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2227,6 +2422,7 @@ export type ArcenCompanyCreateWithoutCheckoutSessionsInput = {
   activePlanId?: string | null
   activeAddOnIds?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   team: Prisma.TeamCreateNestedOneWithoutArcenCompaniesInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutArcenCompaniesInput
   users?: Prisma.ArcenUserCreateNestedManyWithoutCompanyInput
   overrides?: Prisma.CompanyOverrideCreateNestedManyWithoutCompanyInput
   events?: Prisma.ArcenEventCreateNestedManyWithoutCompanyInput
@@ -2247,6 +2443,7 @@ export type ArcenCompanyUncheckedCreateWithoutCheckoutSessionsInput = {
   updatedAt?: Date | string
   lastSeenAt?: Date | string
   teamId: string
+  environmentId?: string | null
   name: string
   walletAddress?: string | null
   email?: string | null
@@ -2299,6 +2496,7 @@ export type ArcenCompanyUpdateWithoutCheckoutSessionsInput = {
   activePlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   activeAddOnIds?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   team?: Prisma.TeamUpdateOneRequiredWithoutArcenCompaniesNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutArcenCompaniesNestedInput
   users?: Prisma.ArcenUserUpdateManyWithoutCompanyNestedInput
   overrides?: Prisma.CompanyOverrideUpdateManyWithoutCompanyNestedInput
   events?: Prisma.ArcenEventUpdateManyWithoutCompanyNestedInput
@@ -2319,6 +2517,7 @@ export type ArcenCompanyUncheckedUpdateWithoutCheckoutSessionsInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastSeenAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   name?: Prisma.StringFieldUpdateOperationsInput | string
   walletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2355,6 +2554,7 @@ export type ArcenCompanyCreateWithoutOverridesInput = {
   activePlanId?: string | null
   activeAddOnIds?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   team: Prisma.TeamCreateNestedOneWithoutArcenCompaniesInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutArcenCompaniesInput
   users?: Prisma.ArcenUserCreateNestedManyWithoutCompanyInput
   events?: Prisma.ArcenEventCreateNestedManyWithoutCompanyInput
   zkProofs?: Prisma.ZkTlsProofCreateNestedManyWithoutCompanyInput
@@ -2375,6 +2575,7 @@ export type ArcenCompanyUncheckedCreateWithoutOverridesInput = {
   updatedAt?: Date | string
   lastSeenAt?: Date | string
   teamId: string
+  environmentId?: string | null
   name: string
   walletAddress?: string | null
   email?: string | null
@@ -2427,6 +2628,7 @@ export type ArcenCompanyUpdateWithoutOverridesInput = {
   activePlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   activeAddOnIds?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   team?: Prisma.TeamUpdateOneRequiredWithoutArcenCompaniesNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutArcenCompaniesNestedInput
   users?: Prisma.ArcenUserUpdateManyWithoutCompanyNestedInput
   events?: Prisma.ArcenEventUpdateManyWithoutCompanyNestedInput
   zkProofs?: Prisma.ZkTlsProofUpdateManyWithoutCompanyNestedInput
@@ -2447,6 +2649,7 @@ export type ArcenCompanyUncheckedUpdateWithoutOverridesInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastSeenAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   name?: Prisma.StringFieldUpdateOperationsInput | string
   walletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2483,6 +2686,7 @@ export type ArcenCompanyCreateWithoutZkProofsInput = {
   activePlanId?: string | null
   activeAddOnIds?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   team: Prisma.TeamCreateNestedOneWithoutArcenCompaniesInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutArcenCompaniesInput
   users?: Prisma.ArcenUserCreateNestedManyWithoutCompanyInput
   overrides?: Prisma.CompanyOverrideCreateNestedManyWithoutCompanyInput
   events?: Prisma.ArcenEventCreateNestedManyWithoutCompanyInput
@@ -2503,6 +2707,7 @@ export type ArcenCompanyUncheckedCreateWithoutZkProofsInput = {
   updatedAt?: Date | string
   lastSeenAt?: Date | string
   teamId: string
+  environmentId?: string | null
   name: string
   walletAddress?: string | null
   email?: string | null
@@ -2555,6 +2760,7 @@ export type ArcenCompanyUpdateWithoutZkProofsInput = {
   activePlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   activeAddOnIds?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   team?: Prisma.TeamUpdateOneRequiredWithoutArcenCompaniesNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutArcenCompaniesNestedInput
   users?: Prisma.ArcenUserUpdateManyWithoutCompanyNestedInput
   overrides?: Prisma.CompanyOverrideUpdateManyWithoutCompanyNestedInput
   events?: Prisma.ArcenEventUpdateManyWithoutCompanyNestedInput
@@ -2575,6 +2781,7 @@ export type ArcenCompanyUncheckedUpdateWithoutZkProofsInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastSeenAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   name?: Prisma.StringFieldUpdateOperationsInput | string
   walletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2602,6 +2809,7 @@ export type ArcenCompanyCreateManyTeamInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   lastSeenAt?: Date | string
+  environmentId?: string | null
   name: string
   walletAddress?: string | null
   email?: string | null
@@ -2625,6 +2833,7 @@ export type ArcenCompanyUpdateWithoutTeamInput = {
   traits?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   activePlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   activeAddOnIds?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutArcenCompaniesNestedInput
   users?: Prisma.ArcenUserUpdateManyWithoutCompanyNestedInput
   overrides?: Prisma.CompanyOverrideUpdateManyWithoutCompanyNestedInput
   events?: Prisma.ArcenEventUpdateManyWithoutCompanyNestedInput
@@ -2645,6 +2854,7 @@ export type ArcenCompanyUncheckedUpdateWithoutTeamInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastSeenAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   name?: Prisma.StringFieldUpdateOperationsInput | string
   walletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2673,6 +2883,97 @@ export type ArcenCompanyUncheckedUpdateManyWithoutTeamInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastSeenAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  walletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  externalId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  logoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  traits?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  activePlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  activeAddOnIds?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+}
+
+export type ArcenCompanyCreateManyEnvironmentInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  lastSeenAt?: Date | string
+  teamId: string
+  name: string
+  walletAddress?: string | null
+  email?: string | null
+  externalId?: string | null
+  logoUrl?: string | null
+  traits?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  activePlanId?: string | null
+  activeAddOnIds?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+}
+
+export type ArcenCompanyUpdateWithoutEnvironmentInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastSeenAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  walletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  externalId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  logoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  traits?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  activePlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  activeAddOnIds?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  team?: Prisma.TeamUpdateOneRequiredWithoutArcenCompaniesNestedInput
+  users?: Prisma.ArcenUserUpdateManyWithoutCompanyNestedInput
+  overrides?: Prisma.CompanyOverrideUpdateManyWithoutCompanyNestedInput
+  events?: Prisma.ArcenEventUpdateManyWithoutCompanyNestedInput
+  zkProofs?: Prisma.ZkTlsProofUpdateManyWithoutCompanyNestedInput
+  subscriptionState?: Prisma.SubscriptionStateUpdateOneWithoutCompanyNestedInput
+  billingBalance?: Prisma.BillingBalanceUpdateOneWithoutCompanyNestedInput
+  payments?: Prisma.PaymentUpdateManyWithoutCompanyNestedInput
+  refunds?: Prisma.RefundUpdateManyWithoutCompanyNestedInput
+  billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutCompanyNestedInput
+  billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutCompanyNestedInput
+  addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutCompanyNestedInput
+  paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutCompanyNestedInput
+  checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutCompanyNestedInput
+}
+
+export type ArcenCompanyUncheckedUpdateWithoutEnvironmentInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastSeenAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  walletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  externalId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  logoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  traits?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  activePlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  activeAddOnIds?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  users?: Prisma.ArcenUserUncheckedUpdateManyWithoutCompanyNestedInput
+  overrides?: Prisma.CompanyOverrideUncheckedUpdateManyWithoutCompanyNestedInput
+  events?: Prisma.ArcenEventUncheckedUpdateManyWithoutCompanyNestedInput
+  zkProofs?: Prisma.ZkTlsProofUncheckedUpdateManyWithoutCompanyNestedInput
+  subscriptionState?: Prisma.SubscriptionStateUncheckedUpdateOneWithoutCompanyNestedInput
+  billingBalance?: Prisma.BillingBalanceUncheckedUpdateOneWithoutCompanyNestedInput
+  payments?: Prisma.PaymentUncheckedUpdateManyWithoutCompanyNestedInput
+  refunds?: Prisma.RefundUncheckedUpdateManyWithoutCompanyNestedInput
+  billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutCompanyNestedInput
+  billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutCompanyNestedInput
+  addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutCompanyNestedInput
+  paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutCompanyNestedInput
+  checkoutSessions?: Prisma.CheckoutSessionUncheckedUpdateManyWithoutCompanyNestedInput
+}
+
+export type ArcenCompanyUncheckedUpdateManyWithoutEnvironmentInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastSeenAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   walletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2810,6 +3111,7 @@ export type ArcenCompanySelect<ExtArgs extends runtime.Types.Extensions.Internal
   updatedAt?: boolean
   lastSeenAt?: boolean
   teamId?: boolean
+  environmentId?: boolean
   name?: boolean
   walletAddress?: boolean
   email?: boolean
@@ -2819,6 +3121,7 @@ export type ArcenCompanySelect<ExtArgs extends runtime.Types.Extensions.Internal
   activePlanId?: boolean
   activeAddOnIds?: boolean
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.ArcenCompany$environmentArgs<ExtArgs>
   users?: boolean | Prisma.ArcenCompany$usersArgs<ExtArgs>
   overrides?: boolean | Prisma.ArcenCompany$overridesArgs<ExtArgs>
   events?: boolean | Prisma.ArcenCompany$eventsArgs<ExtArgs>
@@ -2841,6 +3144,7 @@ export type ArcenCompanySelectCreateManyAndReturn<ExtArgs extends runtime.Types.
   updatedAt?: boolean
   lastSeenAt?: boolean
   teamId?: boolean
+  environmentId?: boolean
   name?: boolean
   walletAddress?: boolean
   email?: boolean
@@ -2850,6 +3154,7 @@ export type ArcenCompanySelectCreateManyAndReturn<ExtArgs extends runtime.Types.
   activePlanId?: boolean
   activeAddOnIds?: boolean
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.ArcenCompany$environmentArgs<ExtArgs>
 }, ExtArgs["result"]["arcenCompany"]>
 
 export type ArcenCompanySelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -2858,6 +3163,7 @@ export type ArcenCompanySelectUpdateManyAndReturn<ExtArgs extends runtime.Types.
   updatedAt?: boolean
   lastSeenAt?: boolean
   teamId?: boolean
+  environmentId?: boolean
   name?: boolean
   walletAddress?: boolean
   email?: boolean
@@ -2867,6 +3173,7 @@ export type ArcenCompanySelectUpdateManyAndReturn<ExtArgs extends runtime.Types.
   activePlanId?: boolean
   activeAddOnIds?: boolean
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.ArcenCompany$environmentArgs<ExtArgs>
 }, ExtArgs["result"]["arcenCompany"]>
 
 export type ArcenCompanySelectScalar = {
@@ -2875,6 +3182,7 @@ export type ArcenCompanySelectScalar = {
   updatedAt?: boolean
   lastSeenAt?: boolean
   teamId?: boolean
+  environmentId?: boolean
   name?: boolean
   walletAddress?: boolean
   email?: boolean
@@ -2885,9 +3193,10 @@ export type ArcenCompanySelectScalar = {
   activeAddOnIds?: boolean
 }
 
-export type ArcenCompanyOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "updatedAt" | "lastSeenAt" | "teamId" | "name" | "walletAddress" | "email" | "externalId" | "logoUrl" | "traits" | "activePlanId" | "activeAddOnIds", ExtArgs["result"]["arcenCompany"]>
+export type ArcenCompanyOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "updatedAt" | "lastSeenAt" | "teamId" | "environmentId" | "name" | "walletAddress" | "email" | "externalId" | "logoUrl" | "traits" | "activePlanId" | "activeAddOnIds", ExtArgs["result"]["arcenCompany"]>
 export type ArcenCompanyInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.ArcenCompany$environmentArgs<ExtArgs>
   users?: boolean | Prisma.ArcenCompany$usersArgs<ExtArgs>
   overrides?: boolean | Prisma.ArcenCompany$overridesArgs<ExtArgs>
   events?: boolean | Prisma.ArcenCompany$eventsArgs<ExtArgs>
@@ -2905,15 +3214,18 @@ export type ArcenCompanyInclude<ExtArgs extends runtime.Types.Extensions.Interna
 }
 export type ArcenCompanyIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.ArcenCompany$environmentArgs<ExtArgs>
 }
 export type ArcenCompanyIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.ArcenCompany$environmentArgs<ExtArgs>
 }
 
 export type $ArcenCompanyPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "ArcenCompany"
   objects: {
     team: Prisma.$TeamPayload<ExtArgs>
+    environment: Prisma.$WorkspaceEnvironmentPayload<ExtArgs> | null
     users: Prisma.$ArcenUserPayload<ExtArgs>[]
     overrides: Prisma.$CompanyOverridePayload<ExtArgs>[]
     events: Prisma.$ArcenEventPayload<ExtArgs>[]
@@ -2934,6 +3246,7 @@ export type $ArcenCompanyPayload<ExtArgs extends runtime.Types.Extensions.Intern
     updatedAt: Date
     lastSeenAt: Date
     teamId: string
+    environmentId: string | null
     name: string
     walletAddress: string | null
     email: string | null
@@ -3337,6 +3650,7 @@ readonly fields: ArcenCompanyFieldRefs;
 export interface Prisma__ArcenCompanyClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   team<T extends Prisma.TeamDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TeamDefaultArgs<ExtArgs>>): Prisma.Prisma__TeamClient<runtime.Types.Result.GetResult<Prisma.$TeamPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  environment<T extends Prisma.ArcenCompany$environmentArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ArcenCompany$environmentArgs<ExtArgs>>): Prisma.Prisma__WorkspaceEnvironmentClient<runtime.Types.Result.GetResult<Prisma.$WorkspaceEnvironmentPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   users<T extends Prisma.ArcenCompany$usersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ArcenCompany$usersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ArcenUserPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   overrides<T extends Prisma.ArcenCompany$overridesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ArcenCompany$overridesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CompanyOverridePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   events<T extends Prisma.ArcenCompany$eventsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ArcenCompany$eventsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ArcenEventPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -3384,6 +3698,7 @@ export interface ArcenCompanyFieldRefs {
   readonly updatedAt: Prisma.FieldRef<"ArcenCompany", 'DateTime'>
   readonly lastSeenAt: Prisma.FieldRef<"ArcenCompany", 'DateTime'>
   readonly teamId: Prisma.FieldRef<"ArcenCompany", 'String'>
+  readonly environmentId: Prisma.FieldRef<"ArcenCompany", 'String'>
   readonly name: Prisma.FieldRef<"ArcenCompany", 'String'>
   readonly walletAddress: Prisma.FieldRef<"ArcenCompany", 'String'>
   readonly email: Prisma.FieldRef<"ArcenCompany", 'String'>
@@ -3785,6 +4100,25 @@ export type ArcenCompanyDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.
    * Limit how many ArcenCompanies to delete.
    */
   limit?: number
+}
+
+/**
+ * ArcenCompany.environment
+ */
+export type ArcenCompany$environmentArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the WorkspaceEnvironment
+   */
+  select?: Prisma.WorkspaceEnvironmentSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the WorkspaceEnvironment
+   */
+  omit?: Prisma.WorkspaceEnvironmentOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.WorkspaceEnvironmentInclude<ExtArgs> | null
+  where?: Prisma.WorkspaceEnvironmentWhereInput
 }
 
 /**

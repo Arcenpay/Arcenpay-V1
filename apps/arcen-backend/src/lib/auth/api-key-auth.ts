@@ -14,6 +14,7 @@ import { aj, fixedWindow } from "./arcjet.js";
 export type ApiKeyContext = {
   teamId: string;
   apiKeyId: string;
+  environmentId: string | null;
 };
 
 export type ApiKeyError = { error: string; status: number };
@@ -86,7 +87,7 @@ export async function requireApiKey(
 
   const apiKey = await db.arcenApiKey.findUnique({
     where: { keyHash: hash },
-    select: { id: true, teamId: true },
+    select: { id: true, teamId: true, environmentId: true },
   });
 
   if (!apiKey) {
@@ -112,7 +113,11 @@ export async function requireApiKey(
     .update({ where: { id: apiKey.id }, data: { lastUsedAt: new Date() } })
     .catch(() => {});
 
-  return { teamId: apiKey.teamId, apiKeyId: apiKey.id };
+  return {
+    teamId: apiKey.teamId,
+    apiKeyId: apiKey.id,
+    environmentId: apiKey.environmentId ?? null,
+  };
 }
 
 export function isApiKeyError(val: unknown): val is ApiKeyError {

@@ -15,6 +15,10 @@ export async function GET(c: Context) {
   if (isAnyAuthError(ctx)) return c.json({ ok: false, error: ctx.error }, ctx.status as any);
 
   const { teamId } = ctx;
+  const environmentId = ctx.activeEnvironmentId;
+  if (!environmentId) {
+    return c.json({ error: "No workspace environment selected" }, 409 as any);
+  }
   const limit = Math.min(Number(c.req.query("limit") ?? 50), 200);
   const cursor = c.req.query("cursor");
   if (cursor !== null && cursor !== undefined && cursor.trim() === "") {
@@ -26,6 +30,7 @@ export async function GET(c: Context) {
   const users = await db.arcenUser.findMany({
     where: {
       teamId,
+      environmentId,
       ...(companyId ? { companyId } : {}),
       ...(search
         ? {
@@ -77,6 +82,10 @@ export async function POST(c: Context) {
   if (isAnyAuthError(ctx)) return c.json({ ok: false, error: ctx.error }, ctx.status as any);
 
   const { teamId } = ctx;
+  const environmentId = ctx.activeEnvironmentId;
+  if (!environmentId) {
+    return c.json({ error: "No workspace environment selected" }, 409 as any);
+  }
 
   let body: {
     companyId: string;
@@ -127,7 +136,7 @@ export async function POST(c: Context) {
 
   // Verify company belongs to team
   const company = await db.arcenCompany.findFirst({
-    where: { id: body.companyId, teamId },
+    where: { id: body.companyId, teamId, environmentId },
     select: { id: true },
   });
   if (!company) {
@@ -148,7 +157,16 @@ export async function POST(c: Context) {
   }
 
   if (where.length > 0) {
-    const existing = await db.arcenUser.findFirst({ where: { OR: where } });
+    const existing = await db.arcenUser.findFirst({
+      where: {
+        teamId,
+        environmentId,
+        OR: where.map((entry) => {
+          const { teamId: _teamId, ...rest } = entry as Record<string, unknown>;
+          return rest;
+        }),
+      },
+    });
     if (existing) {
       return c.json({ error: "User already exists", userId: existing.id }, 409 as any);
     }
@@ -157,6 +175,7 @@ export async function POST(c: Context) {
   const user = await db.arcenUser.create({
     data: {
       teamId,
+      environmentId,
       companyId: body.companyId,
       externalId: body.id,
       walletAddress,

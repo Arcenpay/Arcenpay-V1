@@ -11,6 +11,13 @@ export async function listCompanies(c: Context) {
   }
 
   const { teamId } = auth;
+  const environmentId = auth.activeEnvironmentId;
+  if (!environmentId) {
+    return apiError(c, "No workspace environment selected", {
+      status: 409,
+      code: "INVALID_INPUT",
+    });
+  }
   const url = new URL(c.req.url);
   const limit = Math.min(Number(url.searchParams.get("limit") ?? 50), 200);
   const cursor = url.searchParams.get("cursor");
@@ -19,6 +26,7 @@ export async function listCompanies(c: Context) {
   const companies = await db.arcenCompany.findMany({
     where: {
       teamId,
+      environmentId,
       ...(search
         ? {
             OR: [
@@ -62,6 +70,13 @@ export async function createCompany(c: Context) {
   }
 
   const { teamId } = auth;
+  const environmentId = auth.activeEnvironmentId;
+  if (!environmentId) {
+    return apiError(c, "No workspace environment selected", {
+      status: 409,
+      code: "INVALID_INPUT",
+    });
+  }
 
   let body: {
     name: string;
@@ -108,7 +123,13 @@ export async function createCompany(c: Context) {
 
   if (walletAddress) {
     const existing = await db.arcenCompany.findUnique({
-      where: { teamId_walletAddress: { teamId, walletAddress } },
+      where: {
+        teamId_environmentId_walletAddress: {
+          teamId,
+          environmentId,
+          walletAddress,
+        },
+      },
     });
     if (existing) {
       return apiError(c, "Company with this wallet already exists", {
@@ -121,6 +142,7 @@ export async function createCompany(c: Context) {
   const company = await db.arcenCompany.create({
     data: {
       teamId,
+      environmentId,
       name: body.name,
       walletAddress,
       email,

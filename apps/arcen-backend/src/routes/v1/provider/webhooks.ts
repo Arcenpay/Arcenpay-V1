@@ -6,6 +6,7 @@ import {
   requireTeamRoles,
   isErrorResponse,
 } from "../../../lib/auth/api-auth.js";
+import { requireResolvedActiveEnvironment } from "../../../lib/environments/workspace-environments.js";
 
 const EventSubSchema = z.object({
   id: z.string(),
@@ -35,9 +36,21 @@ export async function getWebhookConfig(c: Context) {
     return c.json({ ok: false, error: auth.error }, auth.status as any as any);
 
   const { team } = auth;
+  const activeEnvironment = await requireResolvedActiveEnvironment(
+    auth.session,
+    team.teamId,
+  );
+  if (!activeEnvironment) {
+    return c.json({ error: "No workspace environment selected" }, 409 as any);
+  }
 
   const profile = await db.providerProfile.findUnique({
-    where: { teamId: team.teamId },
+    where: {
+      teamId_environmentId: {
+        teamId: team.teamId,
+        environmentId: activeEnvironment.id,
+      },
+    },
     select: {
       webhookUrl: true,
       webhookSigningSecret: true,
@@ -94,9 +107,21 @@ export async function putWebhookConfig(c: Context) {
 
   const { team } = auth;
   const teamId = team.teamId;
+  const activeEnvironment = await requireResolvedActiveEnvironment(
+    auth.session,
+    teamId,
+  );
+  if (!activeEnvironment) {
+    return c.json({ error: "No workspace environment selected" }, 409 as any);
+  }
   const { webhookUrl, eventSubscriptions } = parsed.data;
   const existingProfile = await db.providerProfile.findUnique({
-    where: { teamId },
+    where: {
+      teamId_environmentId: {
+        teamId,
+        environmentId: activeEnvironment.id,
+      },
+    },
     select: {
       webhookSigningSecret: true,
       notificationPreferences: true,
@@ -159,14 +184,28 @@ export async function putWebhookConfig(c: Context) {
   }
 
   const before = await db.providerProfile.findUnique({
-    where: { teamId },
+    where: {
+      teamId_environmentId: {
+        teamId,
+        environmentId: activeEnvironment.id,
+      },
+    },
     select: { webhookUrl: true, notifyWebhook: true },
   });
 
   const profile = await db.providerProfile.upsert({
-    where: { teamId },
+    where: {
+      teamId_environmentId: {
+        teamId,
+        environmentId: activeEnvironment.id,
+      },
+    },
     update: updateData,
-    create: { teamId, ...updateData },
+    create: {
+      teamId,
+      environmentId: activeEnvironment.id,
+      ...updateData,
+    },
     select: { webhookUrl: true, notifyWebhook: true },
   });
 

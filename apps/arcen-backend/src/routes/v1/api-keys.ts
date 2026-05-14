@@ -10,15 +10,23 @@ import type { Context } from "hono";
 import { requirePermission, isErrorResponse } from "../../lib/auth/api-auth.js";
 import { generateApiKey } from "../../lib/auth/api-key-auth.js";
 import { db } from "../../db.js";
+import { requireResolvedActiveEnvironment } from "../../lib/environments/workspace-environments.js";
 
 export async function GET(c: Context) {
   const ctx = await requirePermission(c, "catalog:read");
   if (isErrorResponse(ctx)) return c.json({ ok: false, error: ctx.error }, ctx.status as any);
 
   const { team } = ctx;
+  const activeEnvironment = await requireResolvedActiveEnvironment(
+    ctx.session,
+    team.teamId,
+  );
+  if (!activeEnvironment) {
+    return c.json({ error: "No workspace environment selected" }, 409 as any);
+  }
 
   const keys = await db.arcenApiKey.findMany({
-    where: { teamId: team.teamId },
+    where: { teamId: team.teamId, environmentId: activeEnvironment.id },
     orderBy: { createdAt: "desc" },
     select: {
       id: true,
@@ -38,6 +46,13 @@ export async function POST(c: Context) {
   if (isErrorResponse(ctx)) return c.json({ ok: false, error: ctx.error }, ctx.status as any);
 
   const { team } = ctx;
+  const activeEnvironment = await requireResolvedActiveEnvironment(
+    ctx.session,
+    team.teamId,
+  );
+  if (!activeEnvironment) {
+    return c.json({ error: "No workspace environment selected" }, 409 as any);
+  }
 
   let body: { name: string; description?: string };
   try {
@@ -55,6 +70,7 @@ export async function POST(c: Context) {
   const apiKey = await db.arcenApiKey.create({
     data: {
       teamId: team.teamId,
+      environmentId: activeEnvironment.id,
       name: body.name.trim(),
       keyHash: hash,
       prefix,
@@ -80,6 +96,13 @@ export async function DELETE(c: Context) {
   if (isErrorResponse(ctx)) return c.json({ ok: false, error: ctx.error }, ctx.status as any);
 
   const { team } = ctx;
+  const activeEnvironment = await requireResolvedActiveEnvironment(
+    ctx.session,
+    team.teamId,
+  );
+  if (!activeEnvironment) {
+    return c.json({ error: "No workspace environment selected" }, 409 as any);
+  }
   const keyId = c.req.query("id");
 
   if (!keyId) {
@@ -87,7 +110,11 @@ export async function DELETE(c: Context) {
   }
 
   const key = await db.arcenApiKey.findFirst({
-    where: { id: keyId, teamId: team.teamId },
+    where: {
+      id: keyId,
+      teamId: team.teamId,
+      environmentId: activeEnvironment.id,
+    },
   });
 
   if (!key) {

@@ -64,6 +64,7 @@
   },
   "dependencies": {
     "@tanstack/react-query": "^5.62.0",
+    "lucide-react": "^0.454.0",
     "viem": "^2.21.0",
     "wagmi": "^2.14.0"
   },

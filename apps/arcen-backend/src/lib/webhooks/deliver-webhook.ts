@@ -14,6 +14,7 @@ import { toPrismaJson } from "../../utils/prisma-json.js";
 
 export interface SendWebhookDeliveryInput {
   teamId: string;
+  environmentId?: string | null;
   eventName: string;
   data: Record<string, unknown>;
   webhookUrl?: string | null;
@@ -34,18 +35,29 @@ async function resolveWebhookTarget(
   teamId: string,
   input: Pick<
     SendWebhookDeliveryInput,
-    "webhookUrl" | "signingSecret" | "eventName" | "force"
+    "webhookUrl" | "signingSecret" | "eventName" | "force" | "environmentId"
   >,
 ) {
-  const profile = await db.providerProfile.findUnique({
-    where: { teamId },
-    select: {
-      webhookUrl: true,
-      webhookSigningSecret: true,
-      notifyWebhook: true,
-      notificationPreferences: true,
-    },
-  });
+  const profile = input.environmentId
+    ? await db.providerProfile.findFirst({
+        where: { teamId, environmentId: input.environmentId },
+        select: {
+          webhookUrl: true,
+          webhookSigningSecret: true,
+          notifyWebhook: true,
+          notificationPreferences: true,
+        },
+      })
+    : await db.providerProfile.findFirst({
+        where: { teamId },
+        orderBy: { updatedAt: "desc" },
+        select: {
+          webhookUrl: true,
+          webhookSigningSecret: true,
+          notifyWebhook: true,
+          notificationPreferences: true,
+        },
+      });
 
   const webhookUrl = input.webhookUrl?.trim() || profile?.webhookUrl || null;
   const signingSecret =
@@ -167,6 +179,8 @@ export async function deliverWebhook(
 ): Promise<void> {
   await sendWebhookDelivery({
     teamId,
+    environmentId:
+      typeof data.environmentId === "string" ? data.environmentId : null,
     eventName,
     data,
   });

@@ -1,6 +1,7 @@
 import type { Context } from "hono";
 import { db } from "../../../db.js";
 import { requirePermission, isErrorResponse } from "../../../lib/auth/api-auth.js";
+import { requireResolvedActiveEnvironment } from "../../../lib/environments/workspace-environments.js";
 
 export async function getPlanCompanies(c: Context) {
   const auth = await requirePermission(c, "catalog:read");
@@ -8,10 +9,17 @@ export async function getPlanCompanies(c: Context) {
 
   const id = c.req.param("id");
   const teamId = auth.team.teamId;
+  const activeEnvironment = await requireResolvedActiveEnvironment(
+    auth.session,
+    teamId,
+  );
+  if (!activeEnvironment) {
+    return c.json({ error: "No workspace environment selected" }, 409 as any);
+  }
 
   const plan = await db.catalogPlan.findFirst({
-    where: { id, teamId },
-    select: { id: true, name: true },
+    where: { id, teamId, environmentId: activeEnvironment.id },
+    select: { id: true, name: true, environmentId: true },
   });
 
   if (!plan) {
@@ -23,6 +31,7 @@ export async function getPlanCompanies(c: Context) {
   const companies = await db.arcenCompany.findMany({
     where: {
       teamId,
+      environmentId: activeEnvironment.id,
       activePlanId: id,
       ...(search
         ? {

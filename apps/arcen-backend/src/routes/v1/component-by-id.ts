@@ -7,6 +7,7 @@ import type { Context } from "hono";
 import { z } from "zod";
 import { requirePermission, isErrorResponse } from "../../lib/auth/api-auth.js";
 import { db } from "../../db.js";
+import { requireResolvedActiveEnvironment } from "../../lib/environments/workspace-environments.js";
 
 const PatchSchema = z.object({
   name: z.string().min(1).max(120).optional(),
@@ -21,6 +22,13 @@ export async function PATCH(c: Context) {
   if (isErrorResponse(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any as any);
 
   const teamId = auth.team.teamId;
+  const activeEnvironment = await requireResolvedActiveEnvironment(
+    auth.session,
+    teamId,
+  );
+  if (!activeEnvironment) {
+    return c.json({ error: "No workspace environment selected" }, 409 as any);
+  }
 
   const body = await c.req.json() .catch(() => ({}));
   const parsed = PatchSchema.safeParse(body);
@@ -29,7 +37,7 @@ export async function PATCH(c: Context) {
   }
 
   const existing = await db.embedComponent.findFirst({
-    where: { id, teamId },
+    where: { id, teamId, environmentId: activeEnvironment.id },
   });
   if (!existing) {
     return c.json({ error: "Component not found" }, 404 as any);
@@ -63,9 +71,16 @@ export async function DELETE(c: Context) {
   if (isErrorResponse(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any as any);
 
   const teamId = auth.team.teamId;
+  const activeEnvironment = await requireResolvedActiveEnvironment(
+    auth.session,
+    teamId,
+  );
+  if (!activeEnvironment) {
+    return c.json({ error: "No workspace environment selected" }, 409 as any);
+  }
 
   const existing = await db.embedComponent.findFirst({
-    where: { id, teamId },
+    where: { id, teamId, environmentId: activeEnvironment.id },
   });
   if (!existing) {
     return c.json({ error: "Component not found" }, 404 as any);

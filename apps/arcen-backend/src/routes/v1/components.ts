@@ -7,6 +7,7 @@ import type { Context } from "hono";
 import { z } from "zod";
 import { requirePermission, isErrorResponse } from "../../lib/auth/api-auth.js";
 import { db } from "../../db.js";
+import { requireResolvedActiveEnvironment } from "../../lib/environments/workspace-environments.js";
 
 const ComponentSchema = z.object({
   name: z.string().min(1).max(120),
@@ -21,9 +22,16 @@ export async function GET(c: Context) {
   if (isErrorResponse(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any as any);
 
   const teamId = auth.team.teamId;
+  const activeEnvironment = await requireResolvedActiveEnvironment(
+    auth.session,
+    teamId,
+  );
+  if (!activeEnvironment) {
+    return c.json({ error: "No workspace environment selected" }, 409 as any);
+  }
 
   const components = await db.embedComponent.findMany({
-    where: { teamId },
+    where: { teamId, environmentId: activeEnvironment.id },
     orderBy: { updatedAt: "desc" },
     select: {
       id: true,
@@ -43,6 +51,13 @@ export async function POST(c: Context) {
   if (isErrorResponse(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any as any);
 
   const teamId = auth.team.teamId;
+  const activeEnvironment = await requireResolvedActiveEnvironment(
+    auth.session,
+    teamId,
+  );
+  if (!activeEnvironment) {
+    return c.json({ error: "No workspace environment selected" }, 409 as any);
+  }
 
   const body = await c.req.json() .catch(() => ({}));
   const parsed = ComponentSchema.safeParse(body);
@@ -55,6 +70,7 @@ export async function POST(c: Context) {
   const component = await db.embedComponent.create({
     data: {
       teamId,
+      environmentId: activeEnvironment.id,
       name,
       elements: elements as object[],
       design: design as object,

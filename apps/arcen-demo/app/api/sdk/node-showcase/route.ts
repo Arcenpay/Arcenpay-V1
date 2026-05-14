@@ -12,14 +12,12 @@ import {
   getDemoUserIdentity,
   getDemoNodeClient,
 } from "@/lib/arcen-client";
-import { resolveArcenPayBaseUrl } from "@arcenpay/node/core";
 
 const FEATURE_KEYS = ["scan", "api-access", "export-pdf"] as const;
 
 function getNodeStatus() {
   return {
     hasApiKey: !!process.env.ARCENPAY_API_KEY,
-    baseUrl: resolveArcenPayBaseUrl(),
     componentId: process.env.NEXT_PUBLIC_ARCENPAY_COMPONENT_ID ?? "",
     company: getDemoCompanyIdentity(),
     user: getDemoUserIdentity(),

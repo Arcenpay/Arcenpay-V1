@@ -2,11 +2,9 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import type { EntitlementResult } from "../sdk";
-import { resolveDashboardBaseUrl } from "../lib/api";
 import { useArcenPay } from "../providers/ArcenPayProvider";
 
 export interface UseEntitlementCheckOptions {
-  baseUrl?: string;
   cacheTtlMs?: number;
 }
 
@@ -29,10 +27,8 @@ export function useEntitlementCheck(
   featureKey: string,
   options: UseEntitlementCheckOptions = {},
 ): UseEntitlementCheckReturn {
-  const { session, baseUrl: providerBaseUrl } = useArcenPay();
+  const { session, baseUrl } = useArcenPay();
   const cacheTtlMs = options.cacheTtlMs ?? 30_000;
-
-  const baseUrl = resolveDashboardBaseUrl(options.baseUrl ?? providerBaseUrl);
 
   const [result, setResult] = useState<EntitlementResult | null>(null);
   const [loading, setLoading] = useState(true);

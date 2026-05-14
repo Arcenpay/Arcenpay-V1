@@ -158,8 +158,6 @@ export interface ArcenPayProviderProps {
   componentId?: string;
   /** @deprecated Use env vars or defaults. Auto-detected from NEXT_PUBLIC_CHAIN_ID, defaults to Base Sepolia. */
   chainId?: number;
-  /** @deprecated Auto-detected. Only pass for local or staging overrides. */
-  baseUrl?: string;
   /** @deprecated Auto-detected. */
   walletConnectProjectId?: string;
 }
@@ -181,7 +179,6 @@ export function ArcenPayProvider(props: ArcenPayProviderProps) {
     config: userConfig,
     publishableKey: pkProp,
     chainId: chainIdProp,
-    baseUrl: baseUrlProp,
     walletConnectProjectId: wcProp,
     componentId: cidProp,
   } = props;
@@ -190,7 +187,7 @@ export function ArcenPayProvider(props: ArcenPayProviderProps) {
   const publishableKey = pkProp ?? getPublishableKey() ?? "";
   const configuredChainId =
     chainIdProp && isSupportedChainId(chainIdProp) ? chainIdProp : getChainId();
-  const baseUrl = baseUrlProp ?? resolveDashboardBaseUrl();
+  const baseUrl = resolveDashboardBaseUrl();
   const wcProjectId = wcProp ?? getWalletConnectProjectId();
   const componentId =
     cidProp ??

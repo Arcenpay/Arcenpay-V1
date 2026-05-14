@@ -291,7 +291,7 @@ model Team {
   tierSubscriptionId String?      // On-chain subscription tokenId for self-billing
 
   members         TeamMember[]
-  providerProfile ProviderProfile?
+  providerProfiles ProviderProfile[]
   invitations     TeamInvitation[]
   environments    WorkspaceEnvironment[]
 
@@ -328,6 +328,7 @@ model Team {
   addOnGrants         CompanyAddOnGrant[]
   featureFlags        CatalogFeatureFlag[]
   arcenApiKeys        ArcenApiKey[]
+  embedAccessTokens   EmbedAccessToken[]
   embedComponents     EmbedComponent[]
   agentConfig         ArcenAgentConfig?
   dispatchRequests    ArcenDispatchRequest[]
@@ -358,6 +359,13 @@ model WorkspaceEnvironment {
   payments           Payment[]
   paymentLinks       PaymentLink[]
   checkoutSessions   CheckoutSession[]
+  providerProfiles   ProviderProfile[]
+  arcenApiKeys       ArcenApiKey[]
+  embedAccessTokens  EmbedAccessToken[]
+  embedComponents    EmbedComponent[]
+  arcenCompanies     ArcenCompany[]
+  arcenUsers         ArcenUser[]
+  arcenEvents        ArcenEvent[]
 
   @@unique([teamId, name])
   @@index([teamId, mode])
@@ -404,6 +412,7 @@ model ProviderProfile {
   id        String   @id @default(cuid())
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  environmentId String?
 
   providerName  String?
   website       String?
@@ -421,10 +430,13 @@ model ProviderProfile {
   apiKeyHash   String? @unique
   apiKeyPrefix String?
 
-  teamId String @unique
+  teamId String
   team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  environment WorkspaceEnvironment? @relation(fields: [environmentId], references: [id], onDelete: SetNull)
 
   @@index([teamId])
+  @@index([teamId, environmentId])
+  @@unique([teamId, environmentId])
 }
 
 // ─── Subscriber email registry ────────────────────────────────────────────────
@@ -617,7 +629,6 @@ model CatalogConfig {
   team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
   environment WorkspaceEnvironment? @relation(fields: [environmentId], references: [id], onDelete: SetNull)
 
-  @@unique([teamId, environmentMode])
   @@index([teamId, environmentMode])
   @@index([teamId, environmentId])
 }
@@ -1189,6 +1200,7 @@ model ArcenCompany {
   updatedAt     DateTime @updatedAt
   lastSeenAt    DateTime @default(now())
   teamId        String
+  environmentId String?
 
   name          String
   walletAddress String?  // Primary Web3 identity
@@ -1203,6 +1215,7 @@ model ArcenCompany {
   activeAddOnIds Json    @default("[]")
 
   team      Team             @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  environment WorkspaceEnvironment? @relation(fields: [environmentId], references: [id], onDelete: SetNull)
   users     ArcenUser[]
   overrides CompanyOverride[]
   events    ArcenEvent[]
@@ -1217,10 +1230,10 @@ model ArcenCompany {
   paymentLinks PaymentLink[]
   checkoutSessions CheckoutSession[]
 
-  @@unique([teamId, walletAddress])
-  @@unique([teamId, externalId])
-  @@index([teamId, email])
-  @@index([teamId, lastSeenAt])
+  @@unique([teamId, environmentId, walletAddress])
+  @@unique([teamId, environmentId, externalId])
+  @@index([teamId, environmentId, email])
+  @@index([teamId, environmentId, lastSeenAt])
   @@map("SchematicCompany")
 }
 
@@ -1230,6 +1243,7 @@ model ArcenUser {
   updatedAt     DateTime @updatedAt
   lastSeenAt    DateTime @default(now())
   teamId        String
+  environmentId String?
 
   companyId     String
   name          String?
@@ -1240,13 +1254,14 @@ model ArcenUser {
   traits        Json     @default("{}")
 
   company ArcenCompany @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  environment WorkspaceEnvironment? @relation(fields: [environmentId], references: [id], onDelete: SetNull)
   zkProofs ZkTlsProof[]
 
-  @@unique([teamId, walletAddress])
-  @@unique([teamId, clerkUserId])
-  @@index([teamId, companyId])
-  @@index([teamId, externalId])
-  @@index([teamId, email])
+  @@unique([teamId, environmentId, walletAddress])
+  @@unique([teamId, environmentId, clerkUserId])
+  @@index([teamId, environmentId, companyId])
+  @@index([teamId, environmentId, externalId])
+  @@index([teamId, environmentId, email])
   @@map("SchematicUser")
 }
 
@@ -1254,6 +1269,7 @@ model ArcenEvent {
   id        String   @id @default(cuid())
   sentAt    DateTime @default(now())
   teamId    String
+  environmentId String?
 
   eventType String   // "track" | "identify" | "flag_check"
   name      String?  // event key for track events (e.g., "scan")
@@ -1262,10 +1278,11 @@ model ArcenEvent {
   traits    Json     @default("{}")
 
   company ArcenCompany? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  environment WorkspaceEnvironment? @relation(fields: [environmentId], references: [id], onDelete: SetNull)
 
-  @@index([teamId, name, companyId, sentAt])
-  @@index([teamId, eventType, sentAt])
-  @@index([teamId, companyId, sentAt])
+  @@index([teamId, environmentId, name, companyId, sentAt])
+  @@index([teamId, environmentId, eventType, sentAt])
+  @@index([teamId, environmentId, companyId, sentAt])
   @@map("SchematicEvent")
 }
 
@@ -1482,13 +1499,18 @@ model EmbedAccessToken {
   id        String   @id @default(cuid())
   createdAt DateTime @default(now())
   teamId    String
+  environmentId String?
 
   tokenHash  String   @unique
   companyId  String?
   userId     String?
   expiresAt  DateTime
 
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  environment WorkspaceEnvironment? @relation(fields: [environmentId], references: [id], onDelete: SetNull)
+
   @@index([teamId])
+  @@index([teamId, environmentId])
   @@index([expiresAt])
 }
 
@@ -1498,6 +1520,7 @@ model ArcenApiKey {
   createdAt   DateTime  @default(now())
   lastUsedAt  DateTime?
   teamId      String
+  environmentId String?
 
   name        String
   keyHash     String    @unique  // argon2 hash of the actual key
@@ -1505,8 +1528,10 @@ model ArcenApiKey {
   description String?
 
   team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  environment WorkspaceEnvironment? @relation(fields: [environmentId], references: [id], onDelete: SetNull)
 
   @@index([teamId])
+  @@index([teamId, environmentId])
   @@map("SchematicApiKey")
 }
 
@@ -1538,6 +1563,7 @@ model EmbedComponent {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   teamId    String
+  environmentId String?
 
   name     String
   // JSON array of element configs (planManager, meteredFeatures, plansTable, etc.)
@@ -1546,8 +1572,10 @@ model EmbedComponent {
   design   Json    @default("{}")
 
   team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  environment WorkspaceEnvironment? @relation(fields: [environmentId], references: [id], onDelete: SetNull)
 
   @@index([teamId])
+  @@index([teamId, environmentId])
 }
 
 // ─── Agent Configuration & Dispatch ────────────────────────────────────────────

@@ -43,16 +43,6 @@ export { useTrack } from "./hooks/useTrack";
 export type { TrackEventInput } from "./hooks/useTrack";
 
 export { createPaymentLinkCheckoutUrl } from "./lib/api";
-export {
-  ARCENPAY_API_URL,
-  ARCENPAY_APP_URL,
-  resolveArcenPayAppUrl,
-  resolveArcenPayBaseUrl,
-} from "./sdk";
-export type {
-  ResolveArcenPayAppUrlOptions,
-  ResolveArcenPayBaseUrlOptions,
-} from "./sdk";
 
 // Shared public types — re-exported so app developers only need this package
 export type {

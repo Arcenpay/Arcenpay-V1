@@ -21,6 +21,7 @@ import React, {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
+import dynamicIconImports from "lucide-react/dynamicIconImports";
 import type {
   ComponentRenderData,
   ComponentElement,
@@ -350,6 +351,83 @@ function renderNamedFeatureIcon(name: string, size: number) {
   }
 }
 
+function NamedFeatureIcon({
+  iconToken,
+  size,
+}: {
+  iconToken: string;
+  size: number;
+}) {
+  const [IconComponent, setIconComponent] =
+    useState<React.ElementType | null>(null);
+  const normalizedName = normalizeNamedFeatureIconName(
+    extractNamedFeatureIconName(iconToken),
+  );
+
+  useEffect(() => {
+    let active = true;
+    const loader =
+      dynamicIconImports[
+        normalizedName as keyof typeof dynamicIconImports
+      ];
+
+    if (!loader) {
+      setIconComponent(null);
+      return () => {
+        active = false;
+      };
+    }
+
+    void loader()
+      .then((mod) => {
+        if (active) setIconComponent(() => mod.default);
+      })
+      .catch(() => {
+        if (active) setIconComponent(null);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [normalizedName]);
+
+  if (IconComponent) {
+    return (
+      <IconComponent
+        width={size}
+        height={size}
+        strokeWidth={1.8}
+        aria-hidden
+      />
+    );
+  }
+
+  const fallback = renderNamedFeatureIcon(normalizedName, size);
+  if (fallback) return fallback;
+
+  const initial = normalizedName.charAt(0).toUpperCase();
+  return (
+    <span
+      style={{
+        width: size,
+        height: size,
+        borderRadius: "50%",
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "#e5e7eb",
+        color: "#6b7280",
+        fontSize: size * 0.45,
+        fontWeight: 700,
+        flexShrink: 0,
+        lineHeight: 1,
+      }}
+    >
+      {initial}
+    </span>
+  );
+}
+
 /**
  * Lightweight feature icon renderer.
  * SVG icons rendered raw, icon-name tokens render internal lightweight SVGs,
@@ -362,30 +440,7 @@ function renderFeatureIconNode(
   if (!icon) return null;
 
   if (isNamedFeatureIconToken(icon)) {
-    const name = extractNamedFeatureIconName(icon);
-    const rendered = renderNamedFeatureIcon(name, size);
-    if (rendered) return rendered;
-    const initial = name.charAt(0).toUpperCase();
-    return (
-      <span
-        style={{
-          width: size,
-          height: size,
-          borderRadius: "50%",
-          display: "inline-flex",
-          alignItems: "center",
-          justifyContent: "center",
-          background: "#e5e7eb",
-          color: "#6b7280",
-          fontSize: size * 0.45,
-          fontWeight: 700,
-          flexShrink: 0,
-          lineHeight: 1,
-        }}
-      >
-        {initial}
-      </span>
-    );
+    return <NamedFeatureIcon iconToken={icon} size={size} />;
   }
 
   if (isSvgFeatureIcon(icon)) {
@@ -911,9 +966,7 @@ function getActivePlanBooleanFeatures(
         icon: entry.icon ?? null,
       }));
 
-    if (metadataBooleanFeatures.length > 0) {
-      return metadataBooleanFeatures;
-    }
+    return metadataBooleanFeatures;
   }
 
   return entitlements

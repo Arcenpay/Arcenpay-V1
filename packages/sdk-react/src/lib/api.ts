@@ -22,9 +22,8 @@ export function resolveOptionalDashboardBaseUrl(
 
 export function createPaymentLinkCheckoutUrl(
   slug: string,
-  baseUrl?: string,
 ): string {
-  const resolvedBaseUrl = resolveAppBaseUrl(baseUrl);
+  const resolvedBaseUrl = resolveAppBaseUrl();
   return `${resolvedBaseUrl.replace(/\/$/, "")}/pay/${encodeURIComponent(slug)}`;
 }
 

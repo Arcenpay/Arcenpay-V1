@@ -29,6 +29,7 @@ export type ArcenApiKeyMinAggregateOutputType = {
   createdAt: Date | null
   lastUsedAt: Date | null
   teamId: string | null
+  environmentId: string | null
   name: string | null
   keyHash: string | null
   prefix: string | null
@@ -40,6 +41,7 @@ export type ArcenApiKeyMaxAggregateOutputType = {
   createdAt: Date | null
   lastUsedAt: Date | null
   teamId: string | null
+  environmentId: string | null
   name: string | null
   keyHash: string | null
   prefix: string | null
@@ -51,6 +53,7 @@ export type ArcenApiKeyCountAggregateOutputType = {
   createdAt: number
   lastUsedAt: number
   teamId: number
+  environmentId: number
   name: number
   keyHash: number
   prefix: number
@@ -64,6 +67,7 @@ export type ArcenApiKeyMinAggregateInputType = {
   createdAt?: true
   lastUsedAt?: true
   teamId?: true
+  environmentId?: true
   name?: true
   keyHash?: true
   prefix?: true
@@ -75,6 +79,7 @@ export type ArcenApiKeyMaxAggregateInputType = {
   createdAt?: true
   lastUsedAt?: true
   teamId?: true
+  environmentId?: true
   name?: true
   keyHash?: true
   prefix?: true
@@ -86,6 +91,7 @@ export type ArcenApiKeyCountAggregateInputType = {
   createdAt?: true
   lastUsedAt?: true
   teamId?: true
+  environmentId?: true
   name?: true
   keyHash?: true
   prefix?: true
@@ -170,6 +176,7 @@ export type ArcenApiKeyGroupByOutputType = {
   createdAt: Date
   lastUsedAt: Date | null
   teamId: string
+  environmentId: string | null
   name: string
   keyHash: string
   prefix: string
@@ -202,11 +209,13 @@ export type ArcenApiKeyWhereInput = {
   createdAt?: Prisma.DateTimeFilter<"ArcenApiKey"> | Date | string
   lastUsedAt?: Prisma.DateTimeNullableFilter<"ArcenApiKey"> | Date | string | null
   teamId?: Prisma.StringFilter<"ArcenApiKey"> | string
+  environmentId?: Prisma.StringNullableFilter<"ArcenApiKey"> | string | null
   name?: Prisma.StringFilter<"ArcenApiKey"> | string
   keyHash?: Prisma.StringFilter<"ArcenApiKey"> | string
   prefix?: Prisma.StringFilter<"ArcenApiKey"> | string
   description?: Prisma.StringNullableFilter<"ArcenApiKey"> | string | null
   team?: Prisma.XOR<Prisma.TeamScalarRelationFilter, Prisma.TeamWhereInput>
+  environment?: Prisma.XOR<Prisma.WorkspaceEnvironmentNullableScalarRelationFilter, Prisma.WorkspaceEnvironmentWhereInput> | null
 }
 
 export type ArcenApiKeyOrderByWithRelationInput = {
@@ -214,11 +223,13 @@ export type ArcenApiKeyOrderByWithRelationInput = {
   createdAt?: Prisma.SortOrder
   lastUsedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrderInput | Prisma.SortOrder
   name?: Prisma.SortOrder
   keyHash?: Prisma.SortOrder
   prefix?: Prisma.SortOrder
   description?: Prisma.SortOrderInput | Prisma.SortOrder
   team?: Prisma.TeamOrderByWithRelationInput
+  environment?: Prisma.WorkspaceEnvironmentOrderByWithRelationInput
 }
 
 export type ArcenApiKeyWhereUniqueInput = Prisma.AtLeast<{
@@ -230,10 +241,12 @@ export type ArcenApiKeyWhereUniqueInput = Prisma.AtLeast<{
   createdAt?: Prisma.DateTimeFilter<"ArcenApiKey"> | Date | string
   lastUsedAt?: Prisma.DateTimeNullableFilter<"ArcenApiKey"> | Date | string | null
   teamId?: Prisma.StringFilter<"ArcenApiKey"> | string
+  environmentId?: Prisma.StringNullableFilter<"ArcenApiKey"> | string | null
   name?: Prisma.StringFilter<"ArcenApiKey"> | string
   prefix?: Prisma.StringFilter<"ArcenApiKey"> | string
   description?: Prisma.StringNullableFilter<"ArcenApiKey"> | string | null
   team?: Prisma.XOR<Prisma.TeamScalarRelationFilter, Prisma.TeamWhereInput>
+  environment?: Prisma.XOR<Prisma.WorkspaceEnvironmentNullableScalarRelationFilter, Prisma.WorkspaceEnvironmentWhereInput> | null
 }, "id" | "keyHash">
 
 export type ArcenApiKeyOrderByWithAggregationInput = {
@@ -241,6 +254,7 @@ export type ArcenApiKeyOrderByWithAggregationInput = {
   createdAt?: Prisma.SortOrder
   lastUsedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrderInput | Prisma.SortOrder
   name?: Prisma.SortOrder
   keyHash?: Prisma.SortOrder
   prefix?: Prisma.SortOrder
@@ -258,6 +272,7 @@ export type ArcenApiKeyScalarWhereWithAggregatesInput = {
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"ArcenApiKey"> | Date | string
   lastUsedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"ArcenApiKey"> | Date | string | null
   teamId?: Prisma.StringWithAggregatesFilter<"ArcenApiKey"> | string
+  environmentId?: Prisma.StringNullableWithAggregatesFilter<"ArcenApiKey"> | string | null
   name?: Prisma.StringWithAggregatesFilter<"ArcenApiKey"> | string
   keyHash?: Prisma.StringWithAggregatesFilter<"ArcenApiKey"> | string
   prefix?: Prisma.StringWithAggregatesFilter<"ArcenApiKey"> | string
@@ -273,6 +288,7 @@ export type ArcenApiKeyCreateInput = {
   prefix: string
   description?: string | null
   team: Prisma.TeamCreateNestedOneWithoutArcenApiKeysInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutArcenApiKeysInput
 }
 
 export type ArcenApiKeyUncheckedCreateInput = {
@@ -280,6 +296,7 @@ export type ArcenApiKeyUncheckedCreateInput = {
   createdAt?: Date | string
   lastUsedAt?: Date | string | null
   teamId: string
+  environmentId?: string | null
   name: string
   keyHash: string
   prefix: string
@@ -295,6 +312,7 @@ export type ArcenApiKeyUpdateInput = {
   prefix?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   team?: Prisma.TeamUpdateOneRequiredWithoutArcenApiKeysNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutArcenApiKeysNestedInput
 }
 
 export type ArcenApiKeyUncheckedUpdateInput = {
@@ -302,6 +320,7 @@ export type ArcenApiKeyUncheckedUpdateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastUsedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   name?: Prisma.StringFieldUpdateOperationsInput | string
   keyHash?: Prisma.StringFieldUpdateOperationsInput | string
   prefix?: Prisma.StringFieldUpdateOperationsInput | string
@@ -313,6 +332,7 @@ export type ArcenApiKeyCreateManyInput = {
   createdAt?: Date | string
   lastUsedAt?: Date | string | null
   teamId: string
+  environmentId?: string | null
   name: string
   keyHash: string
   prefix: string
@@ -334,6 +354,7 @@ export type ArcenApiKeyUncheckedUpdateManyInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastUsedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   name?: Prisma.StringFieldUpdateOperationsInput | string
   keyHash?: Prisma.StringFieldUpdateOperationsInput | string
   prefix?: Prisma.StringFieldUpdateOperationsInput | string
@@ -355,6 +376,7 @@ export type ArcenApiKeyCountOrderByAggregateInput = {
   createdAt?: Prisma.SortOrder
   lastUsedAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrder
   name?: Prisma.SortOrder
   keyHash?: Prisma.SortOrder
   prefix?: Prisma.SortOrder
@@ -366,6 +388,7 @@ export type ArcenApiKeyMaxOrderByAggregateInput = {
   createdAt?: Prisma.SortOrder
   lastUsedAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrder
   name?: Prisma.SortOrder
   keyHash?: Prisma.SortOrder
   prefix?: Prisma.SortOrder
@@ -377,6 +400,7 @@ export type ArcenApiKeyMinOrderByAggregateInput = {
   createdAt?: Prisma.SortOrder
   lastUsedAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrder
   name?: Prisma.SortOrder
   keyHash?: Prisma.SortOrder
   prefix?: Prisma.SortOrder
@@ -425,6 +449,48 @@ export type ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput = {
   deleteMany?: Prisma.ArcenApiKeyScalarWhereInput | Prisma.ArcenApiKeyScalarWhereInput[]
 }
 
+export type ArcenApiKeyCreateNestedManyWithoutEnvironmentInput = {
+  create?: Prisma.XOR<Prisma.ArcenApiKeyCreateWithoutEnvironmentInput, Prisma.ArcenApiKeyUncheckedCreateWithoutEnvironmentInput> | Prisma.ArcenApiKeyCreateWithoutEnvironmentInput[] | Prisma.ArcenApiKeyUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.ArcenApiKeyCreateOrConnectWithoutEnvironmentInput | Prisma.ArcenApiKeyCreateOrConnectWithoutEnvironmentInput[]
+  createMany?: Prisma.ArcenApiKeyCreateManyEnvironmentInputEnvelope
+  connect?: Prisma.ArcenApiKeyWhereUniqueInput | Prisma.ArcenApiKeyWhereUniqueInput[]
+}
+
+export type ArcenApiKeyUncheckedCreateNestedManyWithoutEnvironmentInput = {
+  create?: Prisma.XOR<Prisma.ArcenApiKeyCreateWithoutEnvironmentInput, Prisma.ArcenApiKeyUncheckedCreateWithoutEnvironmentInput> | Prisma.ArcenApiKeyCreateWithoutEnvironmentInput[] | Prisma.ArcenApiKeyUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.ArcenApiKeyCreateOrConnectWithoutEnvironmentInput | Prisma.ArcenApiKeyCreateOrConnectWithoutEnvironmentInput[]
+  createMany?: Prisma.ArcenApiKeyCreateManyEnvironmentInputEnvelope
+  connect?: Prisma.ArcenApiKeyWhereUniqueInput | Prisma.ArcenApiKeyWhereUniqueInput[]
+}
+
+export type ArcenApiKeyUpdateManyWithoutEnvironmentNestedInput = {
+  create?: Prisma.XOR<Prisma.ArcenApiKeyCreateWithoutEnvironmentInput, Prisma.ArcenApiKeyUncheckedCreateWithoutEnvironmentInput> | Prisma.ArcenApiKeyCreateWithoutEnvironmentInput[] | Prisma.ArcenApiKeyUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.ArcenApiKeyCreateOrConnectWithoutEnvironmentInput | Prisma.ArcenApiKeyCreateOrConnectWithoutEnvironmentInput[]
+  upsert?: Prisma.ArcenApiKeyUpsertWithWhereUniqueWithoutEnvironmentInput | Prisma.ArcenApiKeyUpsertWithWhereUniqueWithoutEnvironmentInput[]
+  createMany?: Prisma.ArcenApiKeyCreateManyEnvironmentInputEnvelope
+  set?: Prisma.ArcenApiKeyWhereUniqueInput | Prisma.ArcenApiKeyWhereUniqueInput[]
+  disconnect?: Prisma.ArcenApiKeyWhereUniqueInput | Prisma.ArcenApiKeyWhereUniqueInput[]
+  delete?: Prisma.ArcenApiKeyWhereUniqueInput | Prisma.ArcenApiKeyWhereUniqueInput[]
+  connect?: Prisma.ArcenApiKeyWhereUniqueInput | Prisma.ArcenApiKeyWhereUniqueInput[]
+  update?: Prisma.ArcenApiKeyUpdateWithWhereUniqueWithoutEnvironmentInput | Prisma.ArcenApiKeyUpdateWithWhereUniqueWithoutEnvironmentInput[]
+  updateMany?: Prisma.ArcenApiKeyUpdateManyWithWhereWithoutEnvironmentInput | Prisma.ArcenApiKeyUpdateManyWithWhereWithoutEnvironmentInput[]
+  deleteMany?: Prisma.ArcenApiKeyScalarWhereInput | Prisma.ArcenApiKeyScalarWhereInput[]
+}
+
+export type ArcenApiKeyUncheckedUpdateManyWithoutEnvironmentNestedInput = {
+  create?: Prisma.XOR<Prisma.ArcenApiKeyCreateWithoutEnvironmentInput, Prisma.ArcenApiKeyUncheckedCreateWithoutEnvironmentInput> | Prisma.ArcenApiKeyCreateWithoutEnvironmentInput[] | Prisma.ArcenApiKeyUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.ArcenApiKeyCreateOrConnectWithoutEnvironmentInput | Prisma.ArcenApiKeyCreateOrConnectWithoutEnvironmentInput[]
+  upsert?: Prisma.ArcenApiKeyUpsertWithWhereUniqueWithoutEnvironmentInput | Prisma.ArcenApiKeyUpsertWithWhereUniqueWithoutEnvironmentInput[]
+  createMany?: Prisma.ArcenApiKeyCreateManyEnvironmentInputEnvelope
+  set?: Prisma.ArcenApiKeyWhereUniqueInput | Prisma.ArcenApiKeyWhereUniqueInput[]
+  disconnect?: Prisma.ArcenApiKeyWhereUniqueInput | Prisma.ArcenApiKeyWhereUniqueInput[]
+  delete?: Prisma.ArcenApiKeyWhereUniqueInput | Prisma.ArcenApiKeyWhereUniqueInput[]
+  connect?: Prisma.ArcenApiKeyWhereUniqueInput | Prisma.ArcenApiKeyWhereUniqueInput[]
+  update?: Prisma.ArcenApiKeyUpdateWithWhereUniqueWithoutEnvironmentInput | Prisma.ArcenApiKeyUpdateWithWhereUniqueWithoutEnvironmentInput[]
+  updateMany?: Prisma.ArcenApiKeyUpdateManyWithWhereWithoutEnvironmentInput | Prisma.ArcenApiKeyUpdateManyWithWhereWithoutEnvironmentInput[]
+  deleteMany?: Prisma.ArcenApiKeyScalarWhereInput | Prisma.ArcenApiKeyScalarWhereInput[]
+}
+
 export type ArcenApiKeyCreateWithoutTeamInput = {
   id?: string
   createdAt?: Date | string
@@ -433,12 +499,14 @@ export type ArcenApiKeyCreateWithoutTeamInput = {
   keyHash: string
   prefix: string
   description?: string | null
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutArcenApiKeysInput
 }
 
 export type ArcenApiKeyUncheckedCreateWithoutTeamInput = {
   id?: string
   createdAt?: Date | string
   lastUsedAt?: Date | string | null
+  environmentId?: string | null
   name: string
   keyHash: string
   prefix: string
@@ -479,16 +547,66 @@ export type ArcenApiKeyScalarWhereInput = {
   createdAt?: Prisma.DateTimeFilter<"ArcenApiKey"> | Date | string
   lastUsedAt?: Prisma.DateTimeNullableFilter<"ArcenApiKey"> | Date | string | null
   teamId?: Prisma.StringFilter<"ArcenApiKey"> | string
+  environmentId?: Prisma.StringNullableFilter<"ArcenApiKey"> | string | null
   name?: Prisma.StringFilter<"ArcenApiKey"> | string
   keyHash?: Prisma.StringFilter<"ArcenApiKey"> | string
   prefix?: Prisma.StringFilter<"ArcenApiKey"> | string
   description?: Prisma.StringNullableFilter<"ArcenApiKey"> | string | null
 }
 
+export type ArcenApiKeyCreateWithoutEnvironmentInput = {
+  id?: string
+  createdAt?: Date | string
+  lastUsedAt?: Date | string | null
+  name: string
+  keyHash: string
+  prefix: string
+  description?: string | null
+  team: Prisma.TeamCreateNestedOneWithoutArcenApiKeysInput
+}
+
+export type ArcenApiKeyUncheckedCreateWithoutEnvironmentInput = {
+  id?: string
+  createdAt?: Date | string
+  lastUsedAt?: Date | string | null
+  teamId: string
+  name: string
+  keyHash: string
+  prefix: string
+  description?: string | null
+}
+
+export type ArcenApiKeyCreateOrConnectWithoutEnvironmentInput = {
+  where: Prisma.ArcenApiKeyWhereUniqueInput
+  create: Prisma.XOR<Prisma.ArcenApiKeyCreateWithoutEnvironmentInput, Prisma.ArcenApiKeyUncheckedCreateWithoutEnvironmentInput>
+}
+
+export type ArcenApiKeyCreateManyEnvironmentInputEnvelope = {
+  data: Prisma.ArcenApiKeyCreateManyEnvironmentInput | Prisma.ArcenApiKeyCreateManyEnvironmentInput[]
+  skipDuplicates?: boolean
+}
+
+export type ArcenApiKeyUpsertWithWhereUniqueWithoutEnvironmentInput = {
+  where: Prisma.ArcenApiKeyWhereUniqueInput
+  update: Prisma.XOR<Prisma.ArcenApiKeyUpdateWithoutEnvironmentInput, Prisma.ArcenApiKeyUncheckedUpdateWithoutEnvironmentInput>
+  create: Prisma.XOR<Prisma.ArcenApiKeyCreateWithoutEnvironmentInput, Prisma.ArcenApiKeyUncheckedCreateWithoutEnvironmentInput>
+}
+
+export type ArcenApiKeyUpdateWithWhereUniqueWithoutEnvironmentInput = {
+  where: Prisma.ArcenApiKeyWhereUniqueInput
+  data: Prisma.XOR<Prisma.ArcenApiKeyUpdateWithoutEnvironmentInput, Prisma.ArcenApiKeyUncheckedUpdateWithoutEnvironmentInput>
+}
+
+export type ArcenApiKeyUpdateManyWithWhereWithoutEnvironmentInput = {
+  where: Prisma.ArcenApiKeyScalarWhereInput
+  data: Prisma.XOR<Prisma.ArcenApiKeyUpdateManyMutationInput, Prisma.ArcenApiKeyUncheckedUpdateManyWithoutEnvironmentInput>
+}
+
 export type ArcenApiKeyCreateManyTeamInput = {
   id?: string
   createdAt?: Date | string
   lastUsedAt?: Date | string | null
+  environmentId?: string | null
   name: string
   keyHash: string
   prefix: string
@@ -503,12 +621,14 @@ export type ArcenApiKeyUpdateWithoutTeamInput = {
   keyHash?: Prisma.StringFieldUpdateOperationsInput | string
   prefix?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutArcenApiKeysNestedInput
 }
 
 export type ArcenApiKeyUncheckedUpdateWithoutTeamInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastUsedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   name?: Prisma.StringFieldUpdateOperationsInput | string
   keyHash?: Prisma.StringFieldUpdateOperationsInput | string
   prefix?: Prisma.StringFieldUpdateOperationsInput | string
@@ -519,6 +639,51 @@ export type ArcenApiKeyUncheckedUpdateManyWithoutTeamInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastUsedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  keyHash?: Prisma.StringFieldUpdateOperationsInput | string
+  prefix?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+}
+
+export type ArcenApiKeyCreateManyEnvironmentInput = {
+  id?: string
+  createdAt?: Date | string
+  lastUsedAt?: Date | string | null
+  teamId: string
+  name: string
+  keyHash: string
+  prefix: string
+  description?: string | null
+}
+
+export type ArcenApiKeyUpdateWithoutEnvironmentInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastUsedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  keyHash?: Prisma.StringFieldUpdateOperationsInput | string
+  prefix?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  team?: Prisma.TeamUpdateOneRequiredWithoutArcenApiKeysNestedInput
+}
+
+export type ArcenApiKeyUncheckedUpdateWithoutEnvironmentInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastUsedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  keyHash?: Prisma.StringFieldUpdateOperationsInput | string
+  prefix?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+}
+
+export type ArcenApiKeyUncheckedUpdateManyWithoutEnvironmentInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastUsedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  teamId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   keyHash?: Prisma.StringFieldUpdateOperationsInput | string
   prefix?: Prisma.StringFieldUpdateOperationsInput | string
@@ -532,11 +697,13 @@ export type ArcenApiKeySelect<ExtArgs extends runtime.Types.Extensions.InternalA
   createdAt?: boolean
   lastUsedAt?: boolean
   teamId?: boolean
+  environmentId?: boolean
   name?: boolean
   keyHash?: boolean
   prefix?: boolean
   description?: boolean
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.ArcenApiKey$environmentArgs<ExtArgs>
 }, ExtArgs["result"]["arcenApiKey"]>
 
 export type ArcenApiKeySelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -544,11 +711,13 @@ export type ArcenApiKeySelectCreateManyAndReturn<ExtArgs extends runtime.Types.E
   createdAt?: boolean
   lastUsedAt?: boolean
   teamId?: boolean
+  environmentId?: boolean
   name?: boolean
   keyHash?: boolean
   prefix?: boolean
   description?: boolean
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.ArcenApiKey$environmentArgs<ExtArgs>
 }, ExtArgs["result"]["arcenApiKey"]>
 
 export type ArcenApiKeySelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -556,11 +725,13 @@ export type ArcenApiKeySelectUpdateManyAndReturn<ExtArgs extends runtime.Types.E
   createdAt?: boolean
   lastUsedAt?: boolean
   teamId?: boolean
+  environmentId?: boolean
   name?: boolean
   keyHash?: boolean
   prefix?: boolean
   description?: boolean
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.ArcenApiKey$environmentArgs<ExtArgs>
 }, ExtArgs["result"]["arcenApiKey"]>
 
 export type ArcenApiKeySelectScalar = {
@@ -568,33 +739,39 @@ export type ArcenApiKeySelectScalar = {
   createdAt?: boolean
   lastUsedAt?: boolean
   teamId?: boolean
+  environmentId?: boolean
   name?: boolean
   keyHash?: boolean
   prefix?: boolean
   description?: boolean
 }
 
-export type ArcenApiKeyOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "lastUsedAt" | "teamId" | "name" | "keyHash" | "prefix" | "description", ExtArgs["result"]["arcenApiKey"]>
+export type ArcenApiKeyOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "lastUsedAt" | "teamId" | "environmentId" | "name" | "keyHash" | "prefix" | "description", ExtArgs["result"]["arcenApiKey"]>
 export type ArcenApiKeyInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.ArcenApiKey$environmentArgs<ExtArgs>
 }
 export type ArcenApiKeyIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.ArcenApiKey$environmentArgs<ExtArgs>
 }
 export type ArcenApiKeyIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.ArcenApiKey$environmentArgs<ExtArgs>
 }
 
 export type $ArcenApiKeyPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "ArcenApiKey"
   objects: {
     team: Prisma.$TeamPayload<ExtArgs>
+    environment: Prisma.$WorkspaceEnvironmentPayload<ExtArgs> | null
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
     createdAt: Date
     lastUsedAt: Date | null
     teamId: string
+    environmentId: string | null
     name: string
     keyHash: string
     prefix: string
@@ -994,6 +1171,7 @@ readonly fields: ArcenApiKeyFieldRefs;
 export interface Prisma__ArcenApiKeyClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   team<T extends Prisma.TeamDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TeamDefaultArgs<ExtArgs>>): Prisma.Prisma__TeamClient<runtime.Types.Result.GetResult<Prisma.$TeamPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  environment<T extends Prisma.ArcenApiKey$environmentArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ArcenApiKey$environmentArgs<ExtArgs>>): Prisma.Prisma__WorkspaceEnvironmentClient<runtime.Types.Result.GetResult<Prisma.$WorkspaceEnvironmentPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1027,6 +1205,7 @@ export interface ArcenApiKeyFieldRefs {
   readonly createdAt: Prisma.FieldRef<"ArcenApiKey", 'DateTime'>
   readonly lastUsedAt: Prisma.FieldRef<"ArcenApiKey", 'DateTime'>
   readonly teamId: Prisma.FieldRef<"ArcenApiKey", 'String'>
+  readonly environmentId: Prisma.FieldRef<"ArcenApiKey", 'String'>
   readonly name: Prisma.FieldRef<"ArcenApiKey", 'String'>
   readonly keyHash: Prisma.FieldRef<"ArcenApiKey", 'String'>
   readonly prefix: Prisma.FieldRef<"ArcenApiKey", 'String'>
@@ -1424,6 +1603,25 @@ export type ArcenApiKeyDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.I
    * Limit how many ArcenApiKeys to delete.
    */
   limit?: number
+}
+
+/**
+ * ArcenApiKey.environment
+ */
+export type ArcenApiKey$environmentArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the WorkspaceEnvironment
+   */
+  select?: Prisma.WorkspaceEnvironmentSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the WorkspaceEnvironment
+   */
+  omit?: Prisma.WorkspaceEnvironmentOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.WorkspaceEnvironmentInclude<ExtArgs> | null
+  where?: Prisma.WorkspaceEnvironmentWhereInput
 }
 
 /**

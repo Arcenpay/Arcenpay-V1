@@ -36,6 +36,7 @@ function deriveCheckoutDescription(input: {
 
 async function resolveOrCreateCompany(input: {
   teamId: string;
+  environmentId?: string | null;
   companyId?: string | null;
   customerWallet?: string | null;
   customerEmail?: string | null;
@@ -43,7 +44,11 @@ async function resolveOrCreateCompany(input: {
 }) {
   if (input.companyId) {
     return db.arcenCompany.findFirst({
-      where: { id: input.companyId, teamId: input.teamId },
+      where: {
+        id: input.companyId,
+        teamId: input.teamId,
+        ...(input.environmentId ? { environmentId: input.environmentId } : {}),
+      },
       select: { id: true },
     });
   }
@@ -55,6 +60,7 @@ async function resolveOrCreateCompany(input: {
   const existing = await db.arcenCompany.findFirst({
     where: {
       teamId: input.teamId,
+      ...(input.environmentId ? { environmentId: input.environmentId } : {}),
       OR: [
         ...(walletAddress ? [{ walletAddress }] : []),
         ...(customerEmail
@@ -69,6 +75,7 @@ async function resolveOrCreateCompany(input: {
   return db.arcenCompany.create({
     data: {
       teamId: input.teamId,
+      environmentId: input.environmentId ?? null,
       name: input.customerName?.trim() || customerEmail || walletAddress || "Hosted checkout customer",
       walletAddress,
       email: customerEmail,
@@ -223,6 +230,7 @@ export async function confirmCheckoutSessionPayment(input: {
 
   const company = await resolveOrCreateCompany({
     teamId: session.teamId,
+    environmentId: session.environmentId,
     companyId: session.companyId,
     customerWallet: session.customerWallet ?? verification.senderWallet,
     customerEmail: session.customerEmail,

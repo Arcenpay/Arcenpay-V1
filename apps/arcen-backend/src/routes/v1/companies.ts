@@ -9,31 +9,44 @@ import type { Context } from "hono";
 import { requireAnyAuth, isAnyAuthError } from "../../lib/auth/require-any-auth.js";
 import { db } from "../../db.js";
 import { Prisma } from "../../generated/client/client.js";
+import { getCompanyEnvironmentWhere } from "../../lib/environments/company-scope.js";
 
 export async function GET(c: Context) {
   const ctx = await requireAnyAuth(c);
   if (isAnyAuthError(ctx)) return c.json({ ok: false, error: ctx.error }, ctx.status as any);
 
   const { teamId } = ctx;
+  const environmentFilter = ctx.activeEnvironmentId
+    ? await getCompanyEnvironmentWhere(ctx.activeEnvironmentId)
+    : null;
   const limit = Math.min(Number(c.req.query("limit") ?? 50), 200);
   const cursor = c.req.query("cursor");
   if (cursor !== null && cursor !== undefined && cursor.trim() === "") {
     return c.json({ error: "cursor must be a non-empty string" }, 400 as any);
   }
   const search = c.req.query("search");
+  const searchFilter: Prisma.ArcenCompanyWhereInput | null = search
+    ? {
+        OR: [
+          { name: { contains: search, mode: Prisma.QueryMode.insensitive } },
+          { email: { contains: search, mode: Prisma.QueryMode.insensitive } },
+          {
+            walletAddress: {
+              contains: search,
+              mode: Prisma.QueryMode.insensitive,
+            },
+          },
+        ],
+      }
+    : null;
 
   const companies = await db.arcenCompany.findMany({
     where: {
       teamId,
-      ...(search
-        ? {
-            OR: [
-              { name: { contains: search, mode: "insensitive" } },
-              { email: { contains: search, mode: "insensitive" } },
-              { walletAddress: { contains: search, mode: "insensitive" } },
-            ],
-          }
-        : {}),
+      AND: [
+        ...(environmentFilter ? [environmentFilter] : []),
+        ...(searchFilter ? [searchFilter] : []),
+      ],
     },
     orderBy: { lastSeenAt: "desc" },
     take: limit + 1,
@@ -66,6 +79,10 @@ export async function POST(c: Context) {
   if (isAnyAuthError(ctx)) return c.json({ ok: false, error: ctx.error }, ctx.status as any);
 
   const { teamId } = ctx;
+  const environmentId = ctx.activeEnvironmentId;
+  if (!environmentId) {
+    return c.json({ error: "No workspace environment selected" }, 409 as any);
+  }
 
   let body: {
     name: string;
@@ -119,7 +136,13 @@ export async function POST(c: Context) {
   // Check for duplicates
   if (walletAddress) {
     const existing = await db.arcenCompany.findUnique({
-      where: { teamId_walletAddress: { teamId, walletAddress } },
+      where: {
+        teamId_environmentId_walletAddress: {
+          teamId,
+          environmentId,
+          walletAddress,
+        },
+      },
     });
     if (existing) {
       return c.json({
@@ -132,6 +155,7 @@ export async function POST(c: Context) {
   const company = await db.arcenCompany.create({
     data: {
       teamId,
+      environmentId,
       name: body.name,
       walletAddress,
       email,

@@ -28,6 +28,7 @@ export type ProviderProfileMinAggregateOutputType = {
   id: string | null
   createdAt: Date | null
   updatedAt: Date | null
+  environmentId: string | null
   providerName: string | null
   website: string | null
   contactEmail: string | null
@@ -44,6 +45,7 @@ export type ProviderProfileMaxAggregateOutputType = {
   id: string | null
   createdAt: Date | null
   updatedAt: Date | null
+  environmentId: string | null
   providerName: string | null
   website: string | null
   contactEmail: string | null
@@ -60,6 +62,7 @@ export type ProviderProfileCountAggregateOutputType = {
   id: number
   createdAt: number
   updatedAt: number
+  environmentId: number
   providerName: number
   website: number
   contactEmail: number
@@ -79,6 +82,7 @@ export type ProviderProfileMinAggregateInputType = {
   id?: true
   createdAt?: true
   updatedAt?: true
+  environmentId?: true
   providerName?: true
   website?: true
   contactEmail?: true
@@ -95,6 +99,7 @@ export type ProviderProfileMaxAggregateInputType = {
   id?: true
   createdAt?: true
   updatedAt?: true
+  environmentId?: true
   providerName?: true
   website?: true
   contactEmail?: true
@@ -111,6 +116,7 @@ export type ProviderProfileCountAggregateInputType = {
   id?: true
   createdAt?: true
   updatedAt?: true
+  environmentId?: true
   providerName?: true
   website?: true
   contactEmail?: true
@@ -201,6 +207,7 @@ export type ProviderProfileGroupByOutputType = {
   id: string
   createdAt: Date
   updatedAt: Date
+  environmentId: string | null
   providerName: string | null
   website: string | null
   contactEmail: string | null
@@ -239,6 +246,7 @@ export type ProviderProfileWhereInput = {
   id?: Prisma.StringFilter<"ProviderProfile"> | string
   createdAt?: Prisma.DateTimeFilter<"ProviderProfile"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"ProviderProfile"> | Date | string
+  environmentId?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
   providerName?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
   website?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
   contactEmail?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
@@ -251,12 +259,14 @@ export type ProviderProfileWhereInput = {
   apiKeyPrefix?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
   teamId?: Prisma.StringFilter<"ProviderProfile"> | string
   team?: Prisma.XOR<Prisma.TeamScalarRelationFilter, Prisma.TeamWhereInput>
+  environment?: Prisma.XOR<Prisma.WorkspaceEnvironmentNullableScalarRelationFilter, Prisma.WorkspaceEnvironmentWhereInput> | null
 }
 
 export type ProviderProfileOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrderInput | Prisma.SortOrder
   providerName?: Prisma.SortOrderInput | Prisma.SortOrder
   website?: Prisma.SortOrderInput | Prisma.SortOrder
   contactEmail?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -269,17 +279,19 @@ export type ProviderProfileOrderByWithRelationInput = {
   apiKeyPrefix?: Prisma.SortOrderInput | Prisma.SortOrder
   teamId?: Prisma.SortOrder
   team?: Prisma.TeamOrderByWithRelationInput
+  environment?: Prisma.WorkspaceEnvironmentOrderByWithRelationInput
 }
 
 export type ProviderProfileWhereUniqueInput = Prisma.AtLeast<{
   id?: string
   apiKeyHash?: string
-  teamId?: string
+  teamId_environmentId?: Prisma.ProviderProfileTeamIdEnvironmentIdCompoundUniqueInput
   AND?: Prisma.ProviderProfileWhereInput | Prisma.ProviderProfileWhereInput[]
   OR?: Prisma.ProviderProfileWhereInput[]
   NOT?: Prisma.ProviderProfileWhereInput | Prisma.ProviderProfileWhereInput[]
   createdAt?: Prisma.DateTimeFilter<"ProviderProfile"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"ProviderProfile"> | Date | string
+  environmentId?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
   providerName?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
   website?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
   contactEmail?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
@@ -289,13 +301,16 @@ export type ProviderProfileWhereUniqueInput = Prisma.AtLeast<{
   webhookSigningSecret?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
   notificationPreferences?: Prisma.JsonNullableFilter<"ProviderProfile">
   apiKeyPrefix?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
+  teamId?: Prisma.StringFilter<"ProviderProfile"> | string
   team?: Prisma.XOR<Prisma.TeamScalarRelationFilter, Prisma.TeamWhereInput>
-}, "id" | "apiKeyHash" | "teamId">
+  environment?: Prisma.XOR<Prisma.WorkspaceEnvironmentNullableScalarRelationFilter, Prisma.WorkspaceEnvironmentWhereInput> | null
+}, "id" | "apiKeyHash" | "teamId_environmentId">
 
 export type ProviderProfileOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrderInput | Prisma.SortOrder
   providerName?: Prisma.SortOrderInput | Prisma.SortOrder
   website?: Prisma.SortOrderInput | Prisma.SortOrder
   contactEmail?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -319,6 +334,7 @@ export type ProviderProfileScalarWhereWithAggregatesInput = {
   id?: Prisma.StringWithAggregatesFilter<"ProviderProfile"> | string
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"ProviderProfile"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"ProviderProfile"> | Date | string
+  environmentId?: Prisma.StringNullableWithAggregatesFilter<"ProviderProfile"> | string | null
   providerName?: Prisma.StringNullableWithAggregatesFilter<"ProviderProfile"> | string | null
   website?: Prisma.StringNullableWithAggregatesFilter<"ProviderProfile"> | string | null
   contactEmail?: Prisma.StringNullableWithAggregatesFilter<"ProviderProfile"> | string | null
@@ -346,13 +362,15 @@ export type ProviderProfileCreateInput = {
   notificationPreferences?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   apiKeyHash?: string | null
   apiKeyPrefix?: string | null
-  team: Prisma.TeamCreateNestedOneWithoutProviderProfileInput
+  team: Prisma.TeamCreateNestedOneWithoutProviderProfilesInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutProviderProfilesInput
 }
 
 export type ProviderProfileUncheckedCreateInput = {
   id?: string
   createdAt?: Date | string
   updatedAt?: Date | string
+  environmentId?: string | null
   providerName?: string | null
   website?: string | null
   contactEmail?: string | null
@@ -380,13 +398,15 @@ export type ProviderProfileUpdateInput = {
   notificationPreferences?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   apiKeyHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   apiKeyPrefix?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  team?: Prisma.TeamUpdateOneRequiredWithoutProviderProfileNestedInput
+  team?: Prisma.TeamUpdateOneRequiredWithoutProviderProfilesNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutProviderProfilesNestedInput
 }
 
 export type ProviderProfileUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   providerName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   contactEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -404,6 +424,7 @@ export type ProviderProfileCreateManyInput = {
   id?: string
   createdAt?: Date | string
   updatedAt?: Date | string
+  environmentId?: string | null
   providerName?: string | null
   website?: string | null
   contactEmail?: string | null
@@ -437,6 +458,7 @@ export type ProviderProfileUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   providerName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   contactEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -450,15 +472,26 @@ export type ProviderProfileUncheckedUpdateManyInput = {
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
 }
 
-export type ProviderProfileNullableScalarRelationFilter = {
-  is?: Prisma.ProviderProfileWhereInput | null
-  isNot?: Prisma.ProviderProfileWhereInput | null
+export type ProviderProfileListRelationFilter = {
+  every?: Prisma.ProviderProfileWhereInput
+  some?: Prisma.ProviderProfileWhereInput
+  none?: Prisma.ProviderProfileWhereInput
+}
+
+export type ProviderProfileOrderByRelationAggregateInput = {
+  _count?: Prisma.SortOrder
+}
+
+export type ProviderProfileTeamIdEnvironmentIdCompoundUniqueInput = {
+  teamId: string
+  environmentId: string
 }
 
 export type ProviderProfileCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrder
   providerName?: Prisma.SortOrder
   website?: Prisma.SortOrder
   contactEmail?: Prisma.SortOrder
@@ -476,6 +509,7 @@ export type ProviderProfileMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrder
   providerName?: Prisma.SortOrder
   website?: Prisma.SortOrder
   contactEmail?: Prisma.SortOrder
@@ -492,6 +526,7 @@ export type ProviderProfileMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrder
   providerName?: Prisma.SortOrder
   website?: Prisma.SortOrder
   contactEmail?: Prisma.SortOrder
@@ -504,36 +539,88 @@ export type ProviderProfileMinOrderByAggregateInput = {
   teamId?: Prisma.SortOrder
 }
 
-export type ProviderProfileCreateNestedOneWithoutTeamInput = {
-  create?: Prisma.XOR<Prisma.ProviderProfileCreateWithoutTeamInput, Prisma.ProviderProfileUncheckedCreateWithoutTeamInput>
-  connectOrCreate?: Prisma.ProviderProfileCreateOrConnectWithoutTeamInput
-  connect?: Prisma.ProviderProfileWhereUniqueInput
+export type ProviderProfileCreateNestedManyWithoutTeamInput = {
+  create?: Prisma.XOR<Prisma.ProviderProfileCreateWithoutTeamInput, Prisma.ProviderProfileUncheckedCreateWithoutTeamInput> | Prisma.ProviderProfileCreateWithoutTeamInput[] | Prisma.ProviderProfileUncheckedCreateWithoutTeamInput[]
+  connectOrCreate?: Prisma.ProviderProfileCreateOrConnectWithoutTeamInput | Prisma.ProviderProfileCreateOrConnectWithoutTeamInput[]
+  createMany?: Prisma.ProviderProfileCreateManyTeamInputEnvelope
+  connect?: Prisma.ProviderProfileWhereUniqueInput | Prisma.ProviderProfileWhereUniqueInput[]
 }
 
-export type ProviderProfileUncheckedCreateNestedOneWithoutTeamInput = {
-  create?: Prisma.XOR<Prisma.ProviderProfileCreateWithoutTeamInput, Prisma.ProviderProfileUncheckedCreateWithoutTeamInput>
-  connectOrCreate?: Prisma.ProviderProfileCreateOrConnectWithoutTeamInput
-  connect?: Prisma.ProviderProfileWhereUniqueInput
+export type ProviderProfileUncheckedCreateNestedManyWithoutTeamInput = {
+  create?: Prisma.XOR<Prisma.ProviderProfileCreateWithoutTeamInput, Prisma.ProviderProfileUncheckedCreateWithoutTeamInput> | Prisma.ProviderProfileCreateWithoutTeamInput[] | Prisma.ProviderProfileUncheckedCreateWithoutTeamInput[]
+  connectOrCreate?: Prisma.ProviderProfileCreateOrConnectWithoutTeamInput | Prisma.ProviderProfileCreateOrConnectWithoutTeamInput[]
+  createMany?: Prisma.ProviderProfileCreateManyTeamInputEnvelope
+  connect?: Prisma.ProviderProfileWhereUniqueInput | Prisma.ProviderProfileWhereUniqueInput[]
 }
 
-export type ProviderProfileUpdateOneWithoutTeamNestedInput = {
-  create?: Prisma.XOR<Prisma.ProviderProfileCreateWithoutTeamInput, Prisma.ProviderProfileUncheckedCreateWithoutTeamInput>
-  connectOrCreate?: Prisma.ProviderProfileCreateOrConnectWithoutTeamInput
-  upsert?: Prisma.ProviderProfileUpsertWithoutTeamInput
-  disconnect?: Prisma.ProviderProfileWhereInput | boolean
-  delete?: Prisma.ProviderProfileWhereInput | boolean
-  connect?: Prisma.ProviderProfileWhereUniqueInput
-  update?: Prisma.XOR<Prisma.XOR<Prisma.ProviderProfileUpdateToOneWithWhereWithoutTeamInput, Prisma.ProviderProfileUpdateWithoutTeamInput>, Prisma.ProviderProfileUncheckedUpdateWithoutTeamInput>
+export type ProviderProfileUpdateManyWithoutTeamNestedInput = {
+  create?: Prisma.XOR<Prisma.ProviderProfileCreateWithoutTeamInput, Prisma.ProviderProfileUncheckedCreateWithoutTeamInput> | Prisma.ProviderProfileCreateWithoutTeamInput[] | Prisma.ProviderProfileUncheckedCreateWithoutTeamInput[]
+  connectOrCreate?: Prisma.ProviderProfileCreateOrConnectWithoutTeamInput | Prisma.ProviderProfileCreateOrConnectWithoutTeamInput[]
+  upsert?: Prisma.ProviderProfileUpsertWithWhereUniqueWithoutTeamInput | Prisma.ProviderProfileUpsertWithWhereUniqueWithoutTeamInput[]
+  createMany?: Prisma.ProviderProfileCreateManyTeamInputEnvelope
+  set?: Prisma.ProviderProfileWhereUniqueInput | Prisma.ProviderProfileWhereUniqueInput[]
+  disconnect?: Prisma.ProviderProfileWhereUniqueInput | Prisma.ProviderProfileWhereUniqueInput[]
+  delete?: Prisma.ProviderProfileWhereUniqueInput | Prisma.ProviderProfileWhereUniqueInput[]
+  connect?: Prisma.ProviderProfileWhereUniqueInput | Prisma.ProviderProfileWhereUniqueInput[]
+  update?: Prisma.ProviderProfileUpdateWithWhereUniqueWithoutTeamInput | Prisma.ProviderProfileUpdateWithWhereUniqueWithoutTeamInput[]
+  updateMany?: Prisma.ProviderProfileUpdateManyWithWhereWithoutTeamInput | Prisma.ProviderProfileUpdateManyWithWhereWithoutTeamInput[]
+  deleteMany?: Prisma.ProviderProfileScalarWhereInput | Prisma.ProviderProfileScalarWhereInput[]
 }
 
-export type ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput = {
-  create?: Prisma.XOR<Prisma.ProviderProfileCreateWithoutTeamInput, Prisma.ProviderProfileUncheckedCreateWithoutTeamInput>
-  connectOrCreate?: Prisma.ProviderProfileCreateOrConnectWithoutTeamInput
-  upsert?: Prisma.ProviderProfileUpsertWithoutTeamInput
-  disconnect?: Prisma.ProviderProfileWhereInput | boolean
-  delete?: Prisma.ProviderProfileWhereInput | boolean
-  connect?: Prisma.ProviderProfileWhereUniqueInput
-  update?: Prisma.XOR<Prisma.XOR<Prisma.ProviderProfileUpdateToOneWithWhereWithoutTeamInput, Prisma.ProviderProfileUpdateWithoutTeamInput>, Prisma.ProviderProfileUncheckedUpdateWithoutTeamInput>
+export type ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput = {
+  create?: Prisma.XOR<Prisma.ProviderProfileCreateWithoutTeamInput, Prisma.ProviderProfileUncheckedCreateWithoutTeamInput> | Prisma.ProviderProfileCreateWithoutTeamInput[] | Prisma.ProviderProfileUncheckedCreateWithoutTeamInput[]
+  connectOrCreate?: Prisma.ProviderProfileCreateOrConnectWithoutTeamInput | Prisma.ProviderProfileCreateOrConnectWithoutTeamInput[]
+  upsert?: Prisma.ProviderProfileUpsertWithWhereUniqueWithoutTeamInput | Prisma.ProviderProfileUpsertWithWhereUniqueWithoutTeamInput[]
+  createMany?: Prisma.ProviderProfileCreateManyTeamInputEnvelope
+  set?: Prisma.ProviderProfileWhereUniqueInput | Prisma.ProviderProfileWhereUniqueInput[]
+  disconnect?: Prisma.ProviderProfileWhereUniqueInput | Prisma.ProviderProfileWhereUniqueInput[]
+  delete?: Prisma.ProviderProfileWhereUniqueInput | Prisma.ProviderProfileWhereUniqueInput[]
+  connect?: Prisma.ProviderProfileWhereUniqueInput | Prisma.ProviderProfileWhereUniqueInput[]
+  update?: Prisma.ProviderProfileUpdateWithWhereUniqueWithoutTeamInput | Prisma.ProviderProfileUpdateWithWhereUniqueWithoutTeamInput[]
+  updateMany?: Prisma.ProviderProfileUpdateManyWithWhereWithoutTeamInput | Prisma.ProviderProfileUpdateManyWithWhereWithoutTeamInput[]
+  deleteMany?: Prisma.ProviderProfileScalarWhereInput | Prisma.ProviderProfileScalarWhereInput[]
+}
+
+export type ProviderProfileCreateNestedManyWithoutEnvironmentInput = {
+  create?: Prisma.XOR<Prisma.ProviderProfileCreateWithoutEnvironmentInput, Prisma.ProviderProfileUncheckedCreateWithoutEnvironmentInput> | Prisma.ProviderProfileCreateWithoutEnvironmentInput[] | Prisma.ProviderProfileUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.ProviderProfileCreateOrConnectWithoutEnvironmentInput | Prisma.ProviderProfileCreateOrConnectWithoutEnvironmentInput[]
+  createMany?: Prisma.ProviderProfileCreateManyEnvironmentInputEnvelope
+  connect?: Prisma.ProviderProfileWhereUniqueInput | Prisma.ProviderProfileWhereUniqueInput[]
+}
+
+export type ProviderProfileUncheckedCreateNestedManyWithoutEnvironmentInput = {
+  create?: Prisma.XOR<Prisma.ProviderProfileCreateWithoutEnvironmentInput, Prisma.ProviderProfileUncheckedCreateWithoutEnvironmentInput> | Prisma.ProviderProfileCreateWithoutEnvironmentInput[] | Prisma.ProviderProfileUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.ProviderProfileCreateOrConnectWithoutEnvironmentInput | Prisma.ProviderProfileCreateOrConnectWithoutEnvironmentInput[]
+  createMany?: Prisma.ProviderProfileCreateManyEnvironmentInputEnvelope
+  connect?: Prisma.ProviderProfileWhereUniqueInput | Prisma.ProviderProfileWhereUniqueInput[]
+}
+
+export type ProviderProfileUpdateManyWithoutEnvironmentNestedInput = {
+  create?: Prisma.XOR<Prisma.ProviderProfileCreateWithoutEnvironmentInput, Prisma.ProviderProfileUncheckedCreateWithoutEnvironmentInput> | Prisma.ProviderProfileCreateWithoutEnvironmentInput[] | Prisma.ProviderProfileUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.ProviderProfileCreateOrConnectWithoutEnvironmentInput | Prisma.ProviderProfileCreateOrConnectWithoutEnvironmentInput[]
+  upsert?: Prisma.ProviderProfileUpsertWithWhereUniqueWithoutEnvironmentInput | Prisma.ProviderProfileUpsertWithWhereUniqueWithoutEnvironmentInput[]
+  createMany?: Prisma.ProviderProfileCreateManyEnvironmentInputEnvelope
+  set?: Prisma.ProviderProfileWhereUniqueInput | Prisma.ProviderProfileWhereUniqueInput[]
+  disconnect?: Prisma.ProviderProfileWhereUniqueInput | Prisma.ProviderProfileWhereUniqueInput[]
+  delete?: Prisma.ProviderProfileWhereUniqueInput | Prisma.ProviderProfileWhereUniqueInput[]
+  connect?: Prisma.ProviderProfileWhereUniqueInput | Prisma.ProviderProfileWhereUniqueInput[]
+  update?: Prisma.ProviderProfileUpdateWithWhereUniqueWithoutEnvironmentInput | Prisma.ProviderProfileUpdateWithWhereUniqueWithoutEnvironmentInput[]
+  updateMany?: Prisma.ProviderProfileUpdateManyWithWhereWithoutEnvironmentInput | Prisma.ProviderProfileUpdateManyWithWhereWithoutEnvironmentInput[]
+  deleteMany?: Prisma.ProviderProfileScalarWhereInput | Prisma.ProviderProfileScalarWhereInput[]
+}
+
+export type ProviderProfileUncheckedUpdateManyWithoutEnvironmentNestedInput = {
+  create?: Prisma.XOR<Prisma.ProviderProfileCreateWithoutEnvironmentInput, Prisma.ProviderProfileUncheckedCreateWithoutEnvironmentInput> | Prisma.ProviderProfileCreateWithoutEnvironmentInput[] | Prisma.ProviderProfileUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.ProviderProfileCreateOrConnectWithoutEnvironmentInput | Prisma.ProviderProfileCreateOrConnectWithoutEnvironmentInput[]
+  upsert?: Prisma.ProviderProfileUpsertWithWhereUniqueWithoutEnvironmentInput | Prisma.ProviderProfileUpsertWithWhereUniqueWithoutEnvironmentInput[]
+  createMany?: Prisma.ProviderProfileCreateManyEnvironmentInputEnvelope
+  set?: Prisma.ProviderProfileWhereUniqueInput | Prisma.ProviderProfileWhereUniqueInput[]
+  disconnect?: Prisma.ProviderProfileWhereUniqueInput | Prisma.ProviderProfileWhereUniqueInput[]
+  delete?: Prisma.ProviderProfileWhereUniqueInput | Prisma.ProviderProfileWhereUniqueInput[]
+  connect?: Prisma.ProviderProfileWhereUniqueInput | Prisma.ProviderProfileWhereUniqueInput[]
+  update?: Prisma.ProviderProfileUpdateWithWhereUniqueWithoutEnvironmentInput | Prisma.ProviderProfileUpdateWithWhereUniqueWithoutEnvironmentInput[]
+  updateMany?: Prisma.ProviderProfileUpdateManyWithWhereWithoutEnvironmentInput | Prisma.ProviderProfileUpdateManyWithWhereWithoutEnvironmentInput[]
+  deleteMany?: Prisma.ProviderProfileScalarWhereInput | Prisma.ProviderProfileScalarWhereInput[]
 }
 
 export type ProviderProfileCreateWithoutTeamInput = {
@@ -550,12 +637,14 @@ export type ProviderProfileCreateWithoutTeamInput = {
   notificationPreferences?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   apiKeyHash?: string | null
   apiKeyPrefix?: string | null
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutProviderProfilesInput
 }
 
 export type ProviderProfileUncheckedCreateWithoutTeamInput = {
   id?: string
   createdAt?: Date | string
   updatedAt?: Date | string
+  environmentId?: string | null
   providerName?: string | null
   website?: string | null
   contactEmail?: string | null
@@ -573,15 +662,123 @@ export type ProviderProfileCreateOrConnectWithoutTeamInput = {
   create: Prisma.XOR<Prisma.ProviderProfileCreateWithoutTeamInput, Prisma.ProviderProfileUncheckedCreateWithoutTeamInput>
 }
 
-export type ProviderProfileUpsertWithoutTeamInput = {
-  update: Prisma.XOR<Prisma.ProviderProfileUpdateWithoutTeamInput, Prisma.ProviderProfileUncheckedUpdateWithoutTeamInput>
-  create: Prisma.XOR<Prisma.ProviderProfileCreateWithoutTeamInput, Prisma.ProviderProfileUncheckedCreateWithoutTeamInput>
-  where?: Prisma.ProviderProfileWhereInput
+export type ProviderProfileCreateManyTeamInputEnvelope = {
+  data: Prisma.ProviderProfileCreateManyTeamInput | Prisma.ProviderProfileCreateManyTeamInput[]
+  skipDuplicates?: boolean
 }
 
-export type ProviderProfileUpdateToOneWithWhereWithoutTeamInput = {
-  where?: Prisma.ProviderProfileWhereInput
+export type ProviderProfileUpsertWithWhereUniqueWithoutTeamInput = {
+  where: Prisma.ProviderProfileWhereUniqueInput
+  update: Prisma.XOR<Prisma.ProviderProfileUpdateWithoutTeamInput, Prisma.ProviderProfileUncheckedUpdateWithoutTeamInput>
+  create: Prisma.XOR<Prisma.ProviderProfileCreateWithoutTeamInput, Prisma.ProviderProfileUncheckedCreateWithoutTeamInput>
+}
+
+export type ProviderProfileUpdateWithWhereUniqueWithoutTeamInput = {
+  where: Prisma.ProviderProfileWhereUniqueInput
   data: Prisma.XOR<Prisma.ProviderProfileUpdateWithoutTeamInput, Prisma.ProviderProfileUncheckedUpdateWithoutTeamInput>
+}
+
+export type ProviderProfileUpdateManyWithWhereWithoutTeamInput = {
+  where: Prisma.ProviderProfileScalarWhereInput
+  data: Prisma.XOR<Prisma.ProviderProfileUpdateManyMutationInput, Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamInput>
+}
+
+export type ProviderProfileScalarWhereInput = {
+  AND?: Prisma.ProviderProfileScalarWhereInput | Prisma.ProviderProfileScalarWhereInput[]
+  OR?: Prisma.ProviderProfileScalarWhereInput[]
+  NOT?: Prisma.ProviderProfileScalarWhereInput | Prisma.ProviderProfileScalarWhereInput[]
+  id?: Prisma.StringFilter<"ProviderProfile"> | string
+  createdAt?: Prisma.DateTimeFilter<"ProviderProfile"> | Date | string
+  updatedAt?: Prisma.DateTimeFilter<"ProviderProfile"> | Date | string
+  environmentId?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
+  providerName?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
+  website?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
+  contactEmail?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
+  notifyEmail?: Prisma.BoolFilter<"ProviderProfile"> | boolean
+  notifyWebhook?: Prisma.BoolFilter<"ProviderProfile"> | boolean
+  webhookUrl?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
+  webhookSigningSecret?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
+  notificationPreferences?: Prisma.JsonNullableFilter<"ProviderProfile">
+  apiKeyHash?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
+  apiKeyPrefix?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
+  teamId?: Prisma.StringFilter<"ProviderProfile"> | string
+}
+
+export type ProviderProfileCreateWithoutEnvironmentInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  providerName?: string | null
+  website?: string | null
+  contactEmail?: string | null
+  notifyEmail?: boolean
+  notifyWebhook?: boolean
+  webhookUrl?: string | null
+  webhookSigningSecret?: string | null
+  notificationPreferences?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  apiKeyHash?: string | null
+  apiKeyPrefix?: string | null
+  team: Prisma.TeamCreateNestedOneWithoutProviderProfilesInput
+}
+
+export type ProviderProfileUncheckedCreateWithoutEnvironmentInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  providerName?: string | null
+  website?: string | null
+  contactEmail?: string | null
+  notifyEmail?: boolean
+  notifyWebhook?: boolean
+  webhookUrl?: string | null
+  webhookSigningSecret?: string | null
+  notificationPreferences?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  apiKeyHash?: string | null
+  apiKeyPrefix?: string | null
+  teamId: string
+}
+
+export type ProviderProfileCreateOrConnectWithoutEnvironmentInput = {
+  where: Prisma.ProviderProfileWhereUniqueInput
+  create: Prisma.XOR<Prisma.ProviderProfileCreateWithoutEnvironmentInput, Prisma.ProviderProfileUncheckedCreateWithoutEnvironmentInput>
+}
+
+export type ProviderProfileCreateManyEnvironmentInputEnvelope = {
+  data: Prisma.ProviderProfileCreateManyEnvironmentInput | Prisma.ProviderProfileCreateManyEnvironmentInput[]
+  skipDuplicates?: boolean
+}
+
+export type ProviderProfileUpsertWithWhereUniqueWithoutEnvironmentInput = {
+  where: Prisma.ProviderProfileWhereUniqueInput
+  update: Prisma.XOR<Prisma.ProviderProfileUpdateWithoutEnvironmentInput, Prisma.ProviderProfileUncheckedUpdateWithoutEnvironmentInput>
+  create: Prisma.XOR<Prisma.ProviderProfileCreateWithoutEnvironmentInput, Prisma.ProviderProfileUncheckedCreateWithoutEnvironmentInput>
+}
+
+export type ProviderProfileUpdateWithWhereUniqueWithoutEnvironmentInput = {
+  where: Prisma.ProviderProfileWhereUniqueInput
+  data: Prisma.XOR<Prisma.ProviderProfileUpdateWithoutEnvironmentInput, Prisma.ProviderProfileUncheckedUpdateWithoutEnvironmentInput>
+}
+
+export type ProviderProfileUpdateManyWithWhereWithoutEnvironmentInput = {
+  where: Prisma.ProviderProfileScalarWhereInput
+  data: Prisma.XOR<Prisma.ProviderProfileUpdateManyMutationInput, Prisma.ProviderProfileUncheckedUpdateManyWithoutEnvironmentInput>
+}
+
+export type ProviderProfileCreateManyTeamInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  environmentId?: string | null
+  providerName?: string | null
+  website?: string | null
+  contactEmail?: string | null
+  notifyEmail?: boolean
+  notifyWebhook?: boolean
+  webhookUrl?: string | null
+  webhookSigningSecret?: string | null
+  notificationPreferences?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  apiKeyHash?: string | null
+  apiKeyPrefix?: string | null
 }
 
 export type ProviderProfileUpdateWithoutTeamInput = {
@@ -598,9 +795,61 @@ export type ProviderProfileUpdateWithoutTeamInput = {
   notificationPreferences?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   apiKeyHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   apiKeyPrefix?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutProviderProfilesNestedInput
 }
 
 export type ProviderProfileUncheckedUpdateWithoutTeamInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  providerName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  contactEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  notifyEmail?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  notifyWebhook?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  webhookUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  webhookSigningSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  notificationPreferences?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  apiKeyHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  apiKeyPrefix?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+}
+
+export type ProviderProfileUncheckedUpdateManyWithoutTeamInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  providerName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  contactEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  notifyEmail?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  notifyWebhook?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  webhookUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  webhookSigningSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  notificationPreferences?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  apiKeyHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  apiKeyPrefix?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+}
+
+export type ProviderProfileCreateManyEnvironmentInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  providerName?: string | null
+  website?: string | null
+  contactEmail?: string | null
+  notifyEmail?: boolean
+  notifyWebhook?: boolean
+  webhookUrl?: string | null
+  webhookSigningSecret?: string | null
+  notificationPreferences?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  apiKeyHash?: string | null
+  apiKeyPrefix?: string | null
+  teamId: string
+}
+
+export type ProviderProfileUpdateWithoutEnvironmentInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -614,6 +863,41 @@ export type ProviderProfileUncheckedUpdateWithoutTeamInput = {
   notificationPreferences?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   apiKeyHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   apiKeyPrefix?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  team?: Prisma.TeamUpdateOneRequiredWithoutProviderProfilesNestedInput
+}
+
+export type ProviderProfileUncheckedUpdateWithoutEnvironmentInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  providerName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  contactEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  notifyEmail?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  notifyWebhook?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  webhookUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  webhookSigningSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  notificationPreferences?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  apiKeyHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  apiKeyPrefix?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  teamId?: Prisma.StringFieldUpdateOperationsInput | string
+}
+
+export type ProviderProfileUncheckedUpdateManyWithoutEnvironmentInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  providerName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  contactEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  notifyEmail?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  notifyWebhook?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  webhookUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  webhookSigningSecret?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  notificationPreferences?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  apiKeyHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  apiKeyPrefix?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  teamId?: Prisma.StringFieldUpdateOperationsInput | string
 }
 
 
@@ -622,6 +906,7 @@ export type ProviderProfileSelect<ExtArgs extends runtime.Types.Extensions.Inter
   id?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  environmentId?: boolean
   providerName?: boolean
   website?: boolean
   contactEmail?: boolean
@@ -634,12 +919,14 @@ export type ProviderProfileSelect<ExtArgs extends runtime.Types.Extensions.Inter
   apiKeyPrefix?: boolean
   teamId?: boolean
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.ProviderProfile$environmentArgs<ExtArgs>
 }, ExtArgs["result"]["providerProfile"]>
 
 export type ProviderProfileSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  environmentId?: boolean
   providerName?: boolean
   website?: boolean
   contactEmail?: boolean
@@ -652,12 +939,14 @@ export type ProviderProfileSelectCreateManyAndReturn<ExtArgs extends runtime.Typ
   apiKeyPrefix?: boolean
   teamId?: boolean
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.ProviderProfile$environmentArgs<ExtArgs>
 }, ExtArgs["result"]["providerProfile"]>
 
 export type ProviderProfileSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  environmentId?: boolean
   providerName?: boolean
   website?: boolean
   contactEmail?: boolean
@@ -670,12 +959,14 @@ export type ProviderProfileSelectUpdateManyAndReturn<ExtArgs extends runtime.Typ
   apiKeyPrefix?: boolean
   teamId?: boolean
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.ProviderProfile$environmentArgs<ExtArgs>
 }, ExtArgs["result"]["providerProfile"]>
 
 export type ProviderProfileSelectScalar = {
   id?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  environmentId?: boolean
   providerName?: boolean
   website?: boolean
   contactEmail?: boolean
@@ -689,26 +980,31 @@ export type ProviderProfileSelectScalar = {
   teamId?: boolean
 }
 
-export type ProviderProfileOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "updatedAt" | "providerName" | "website" | "contactEmail" | "notifyEmail" | "notifyWebhook" | "webhookUrl" | "webhookSigningSecret" | "notificationPreferences" | "apiKeyHash" | "apiKeyPrefix" | "teamId", ExtArgs["result"]["providerProfile"]>
+export type ProviderProfileOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "updatedAt" | "environmentId" | "providerName" | "website" | "contactEmail" | "notifyEmail" | "notifyWebhook" | "webhookUrl" | "webhookSigningSecret" | "notificationPreferences" | "apiKeyHash" | "apiKeyPrefix" | "teamId", ExtArgs["result"]["providerProfile"]>
 export type ProviderProfileInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.ProviderProfile$environmentArgs<ExtArgs>
 }
 export type ProviderProfileIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.ProviderProfile$environmentArgs<ExtArgs>
 }
 export type ProviderProfileIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.ProviderProfile$environmentArgs<ExtArgs>
 }
 
 export type $ProviderProfilePayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "ProviderProfile"
   objects: {
     team: Prisma.$TeamPayload<ExtArgs>
+    environment: Prisma.$WorkspaceEnvironmentPayload<ExtArgs> | null
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
     createdAt: Date
     updatedAt: Date
+    environmentId: string | null
     providerName: string | null
     website: string | null
     contactEmail: string | null
@@ -1115,6 +1411,7 @@ readonly fields: ProviderProfileFieldRefs;
 export interface Prisma__ProviderProfileClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   team<T extends Prisma.TeamDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TeamDefaultArgs<ExtArgs>>): Prisma.Prisma__TeamClient<runtime.Types.Result.GetResult<Prisma.$TeamPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  environment<T extends Prisma.ProviderProfile$environmentArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ProviderProfile$environmentArgs<ExtArgs>>): Prisma.Prisma__WorkspaceEnvironmentClient<runtime.Types.Result.GetResult<Prisma.$WorkspaceEnvironmentPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1147,6 +1444,7 @@ export interface ProviderProfileFieldRefs {
   readonly id: Prisma.FieldRef<"ProviderProfile", 'String'>
   readonly createdAt: Prisma.FieldRef<"ProviderProfile", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"ProviderProfile", 'DateTime'>
+  readonly environmentId: Prisma.FieldRef<"ProviderProfile", 'String'>
   readonly providerName: Prisma.FieldRef<"ProviderProfile", 'String'>
   readonly website: Prisma.FieldRef<"ProviderProfile", 'String'>
   readonly contactEmail: Prisma.FieldRef<"ProviderProfile", 'String'>
@@ -1551,6 +1849,25 @@ export type ProviderProfileDeleteManyArgs<ExtArgs extends runtime.Types.Extensio
    * Limit how many ProviderProfiles to delete.
    */
   limit?: number
+}
+
+/**
+ * ProviderProfile.environment
+ */
+export type ProviderProfile$environmentArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the WorkspaceEnvironment
+   */
+  select?: Prisma.WorkspaceEnvironmentSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the WorkspaceEnvironment
+   */
+  omit?: Prisma.WorkspaceEnvironmentOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.WorkspaceEnvironmentInclude<ExtArgs> | null
+  where?: Prisma.WorkspaceEnvironmentWhereInput
 }
 
 /**

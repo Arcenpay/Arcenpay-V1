@@ -28,6 +28,7 @@ export type EmbedAccessTokenMinAggregateOutputType = {
   id: string | null
   createdAt: Date | null
   teamId: string | null
+  environmentId: string | null
   tokenHash: string | null
   companyId: string | null
   userId: string | null
@@ -38,6 +39,7 @@ export type EmbedAccessTokenMaxAggregateOutputType = {
   id: string | null
   createdAt: Date | null
   teamId: string | null
+  environmentId: string | null
   tokenHash: string | null
   companyId: string | null
   userId: string | null
@@ -48,6 +50,7 @@ export type EmbedAccessTokenCountAggregateOutputType = {
   id: number
   createdAt: number
   teamId: number
+  environmentId: number
   tokenHash: number
   companyId: number
   userId: number
@@ -60,6 +63,7 @@ export type EmbedAccessTokenMinAggregateInputType = {
   id?: true
   createdAt?: true
   teamId?: true
+  environmentId?: true
   tokenHash?: true
   companyId?: true
   userId?: true
@@ -70,6 +74,7 @@ export type EmbedAccessTokenMaxAggregateInputType = {
   id?: true
   createdAt?: true
   teamId?: true
+  environmentId?: true
   tokenHash?: true
   companyId?: true
   userId?: true
@@ -80,6 +85,7 @@ export type EmbedAccessTokenCountAggregateInputType = {
   id?: true
   createdAt?: true
   teamId?: true
+  environmentId?: true
   tokenHash?: true
   companyId?: true
   userId?: true
@@ -163,6 +169,7 @@ export type EmbedAccessTokenGroupByOutputType = {
   id: string
   createdAt: Date
   teamId: string
+  environmentId: string | null
   tokenHash: string
   companyId: string | null
   userId: string | null
@@ -194,20 +201,26 @@ export type EmbedAccessTokenWhereInput = {
   id?: Prisma.StringFilter<"EmbedAccessToken"> | string
   createdAt?: Prisma.DateTimeFilter<"EmbedAccessToken"> | Date | string
   teamId?: Prisma.StringFilter<"EmbedAccessToken"> | string
+  environmentId?: Prisma.StringNullableFilter<"EmbedAccessToken"> | string | null
   tokenHash?: Prisma.StringFilter<"EmbedAccessToken"> | string
   companyId?: Prisma.StringNullableFilter<"EmbedAccessToken"> | string | null
   userId?: Prisma.StringNullableFilter<"EmbedAccessToken"> | string | null
   expiresAt?: Prisma.DateTimeFilter<"EmbedAccessToken"> | Date | string
+  team?: Prisma.XOR<Prisma.TeamScalarRelationFilter, Prisma.TeamWhereInput>
+  environment?: Prisma.XOR<Prisma.WorkspaceEnvironmentNullableScalarRelationFilter, Prisma.WorkspaceEnvironmentWhereInput> | null
 }
 
 export type EmbedAccessTokenOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrderInput | Prisma.SortOrder
   tokenHash?: Prisma.SortOrder
   companyId?: Prisma.SortOrderInput | Prisma.SortOrder
   userId?: Prisma.SortOrderInput | Prisma.SortOrder
   expiresAt?: Prisma.SortOrder
+  team?: Prisma.TeamOrderByWithRelationInput
+  environment?: Prisma.WorkspaceEnvironmentOrderByWithRelationInput
 }
 
 export type EmbedAccessTokenWhereUniqueInput = Prisma.AtLeast<{
@@ -218,15 +231,19 @@ export type EmbedAccessTokenWhereUniqueInput = Prisma.AtLeast<{
   NOT?: Prisma.EmbedAccessTokenWhereInput | Prisma.EmbedAccessTokenWhereInput[]
   createdAt?: Prisma.DateTimeFilter<"EmbedAccessToken"> | Date | string
   teamId?: Prisma.StringFilter<"EmbedAccessToken"> | string
+  environmentId?: Prisma.StringNullableFilter<"EmbedAccessToken"> | string | null
   companyId?: Prisma.StringNullableFilter<"EmbedAccessToken"> | string | null
   userId?: Prisma.StringNullableFilter<"EmbedAccessToken"> | string | null
   expiresAt?: Prisma.DateTimeFilter<"EmbedAccessToken"> | Date | string
+  team?: Prisma.XOR<Prisma.TeamScalarRelationFilter, Prisma.TeamWhereInput>
+  environment?: Prisma.XOR<Prisma.WorkspaceEnvironmentNullableScalarRelationFilter, Prisma.WorkspaceEnvironmentWhereInput> | null
 }, "id" | "tokenHash">
 
 export type EmbedAccessTokenOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrderInput | Prisma.SortOrder
   tokenHash?: Prisma.SortOrder
   companyId?: Prisma.SortOrderInput | Prisma.SortOrder
   userId?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -243,6 +260,7 @@ export type EmbedAccessTokenScalarWhereWithAggregatesInput = {
   id?: Prisma.StringWithAggregatesFilter<"EmbedAccessToken"> | string
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"EmbedAccessToken"> | Date | string
   teamId?: Prisma.StringWithAggregatesFilter<"EmbedAccessToken"> | string
+  environmentId?: Prisma.StringNullableWithAggregatesFilter<"EmbedAccessToken"> | string | null
   tokenHash?: Prisma.StringWithAggregatesFilter<"EmbedAccessToken"> | string
   companyId?: Prisma.StringNullableWithAggregatesFilter<"EmbedAccessToken"> | string | null
   userId?: Prisma.StringNullableWithAggregatesFilter<"EmbedAccessToken"> | string | null
@@ -252,17 +270,19 @@ export type EmbedAccessTokenScalarWhereWithAggregatesInput = {
 export type EmbedAccessTokenCreateInput = {
   id?: string
   createdAt?: Date | string
-  teamId: string
   tokenHash: string
   companyId?: string | null
   userId?: string | null
   expiresAt: Date | string
+  team: Prisma.TeamCreateNestedOneWithoutEmbedAccessTokensInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutEmbedAccessTokensInput
 }
 
 export type EmbedAccessTokenUncheckedCreateInput = {
   id?: string
   createdAt?: Date | string
   teamId: string
+  environmentId?: string | null
   tokenHash: string
   companyId?: string | null
   userId?: string | null
@@ -272,17 +292,19 @@ export type EmbedAccessTokenUncheckedCreateInput = {
 export type EmbedAccessTokenUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  teamId?: Prisma.StringFieldUpdateOperationsInput | string
   tokenHash?: Prisma.StringFieldUpdateOperationsInput | string
   companyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   expiresAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  team?: Prisma.TeamUpdateOneRequiredWithoutEmbedAccessTokensNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutEmbedAccessTokensNestedInput
 }
 
 export type EmbedAccessTokenUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenHash?: Prisma.StringFieldUpdateOperationsInput | string
   companyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -293,6 +315,7 @@ export type EmbedAccessTokenCreateManyInput = {
   id?: string
   createdAt?: Date | string
   teamId: string
+  environmentId?: string | null
   tokenHash: string
   companyId?: string | null
   userId?: string | null
@@ -302,7 +325,6 @@ export type EmbedAccessTokenCreateManyInput = {
 export type EmbedAccessTokenUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  teamId?: Prisma.StringFieldUpdateOperationsInput | string
   tokenHash?: Prisma.StringFieldUpdateOperationsInput | string
   companyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -313,16 +335,28 @@ export type EmbedAccessTokenUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   tokenHash?: Prisma.StringFieldUpdateOperationsInput | string
   companyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   expiresAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
+export type EmbedAccessTokenListRelationFilter = {
+  every?: Prisma.EmbedAccessTokenWhereInput
+  some?: Prisma.EmbedAccessTokenWhereInput
+  none?: Prisma.EmbedAccessTokenWhereInput
+}
+
+export type EmbedAccessTokenOrderByRelationAggregateInput = {
+  _count?: Prisma.SortOrder
+}
+
 export type EmbedAccessTokenCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrder
   tokenHash?: Prisma.SortOrder
   companyId?: Prisma.SortOrder
   userId?: Prisma.SortOrder
@@ -333,6 +367,7 @@ export type EmbedAccessTokenMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrder
   tokenHash?: Prisma.SortOrder
   companyId?: Prisma.SortOrder
   userId?: Prisma.SortOrder
@@ -343,10 +378,281 @@ export type EmbedAccessTokenMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrder
   tokenHash?: Prisma.SortOrder
   companyId?: Prisma.SortOrder
   userId?: Prisma.SortOrder
   expiresAt?: Prisma.SortOrder
+}
+
+export type EmbedAccessTokenCreateNestedManyWithoutTeamInput = {
+  create?: Prisma.XOR<Prisma.EmbedAccessTokenCreateWithoutTeamInput, Prisma.EmbedAccessTokenUncheckedCreateWithoutTeamInput> | Prisma.EmbedAccessTokenCreateWithoutTeamInput[] | Prisma.EmbedAccessTokenUncheckedCreateWithoutTeamInput[]
+  connectOrCreate?: Prisma.EmbedAccessTokenCreateOrConnectWithoutTeamInput | Prisma.EmbedAccessTokenCreateOrConnectWithoutTeamInput[]
+  createMany?: Prisma.EmbedAccessTokenCreateManyTeamInputEnvelope
+  connect?: Prisma.EmbedAccessTokenWhereUniqueInput | Prisma.EmbedAccessTokenWhereUniqueInput[]
+}
+
+export type EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput = {
+  create?: Prisma.XOR<Prisma.EmbedAccessTokenCreateWithoutTeamInput, Prisma.EmbedAccessTokenUncheckedCreateWithoutTeamInput> | Prisma.EmbedAccessTokenCreateWithoutTeamInput[] | Prisma.EmbedAccessTokenUncheckedCreateWithoutTeamInput[]
+  connectOrCreate?: Prisma.EmbedAccessTokenCreateOrConnectWithoutTeamInput | Prisma.EmbedAccessTokenCreateOrConnectWithoutTeamInput[]
+  createMany?: Prisma.EmbedAccessTokenCreateManyTeamInputEnvelope
+  connect?: Prisma.EmbedAccessTokenWhereUniqueInput | Prisma.EmbedAccessTokenWhereUniqueInput[]
+}
+
+export type EmbedAccessTokenUpdateManyWithoutTeamNestedInput = {
+  create?: Prisma.XOR<Prisma.EmbedAccessTokenCreateWithoutTeamInput, Prisma.EmbedAccessTokenUncheckedCreateWithoutTeamInput> | Prisma.EmbedAccessTokenCreateWithoutTeamInput[] | Prisma.EmbedAccessTokenUncheckedCreateWithoutTeamInput[]
+  connectOrCreate?: Prisma.EmbedAccessTokenCreateOrConnectWithoutTeamInput | Prisma.EmbedAccessTokenCreateOrConnectWithoutTeamInput[]
+  upsert?: Prisma.EmbedAccessTokenUpsertWithWhereUniqueWithoutTeamInput | Prisma.EmbedAccessTokenUpsertWithWhereUniqueWithoutTeamInput[]
+  createMany?: Prisma.EmbedAccessTokenCreateManyTeamInputEnvelope
+  set?: Prisma.EmbedAccessTokenWhereUniqueInput | Prisma.EmbedAccessTokenWhereUniqueInput[]
+  disconnect?: Prisma.EmbedAccessTokenWhereUniqueInput | Prisma.EmbedAccessTokenWhereUniqueInput[]
+  delete?: Prisma.EmbedAccessTokenWhereUniqueInput | Prisma.EmbedAccessTokenWhereUniqueInput[]
+  connect?: Prisma.EmbedAccessTokenWhereUniqueInput | Prisma.EmbedAccessTokenWhereUniqueInput[]
+  update?: Prisma.EmbedAccessTokenUpdateWithWhereUniqueWithoutTeamInput | Prisma.EmbedAccessTokenUpdateWithWhereUniqueWithoutTeamInput[]
+  updateMany?: Prisma.EmbedAccessTokenUpdateManyWithWhereWithoutTeamInput | Prisma.EmbedAccessTokenUpdateManyWithWhereWithoutTeamInput[]
+  deleteMany?: Prisma.EmbedAccessTokenScalarWhereInput | Prisma.EmbedAccessTokenScalarWhereInput[]
+}
+
+export type EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput = {
+  create?: Prisma.XOR<Prisma.EmbedAccessTokenCreateWithoutTeamInput, Prisma.EmbedAccessTokenUncheckedCreateWithoutTeamInput> | Prisma.EmbedAccessTokenCreateWithoutTeamInput[] | Prisma.EmbedAccessTokenUncheckedCreateWithoutTeamInput[]
+  connectOrCreate?: Prisma.EmbedAccessTokenCreateOrConnectWithoutTeamInput | Prisma.EmbedAccessTokenCreateOrConnectWithoutTeamInput[]
+  upsert?: Prisma.EmbedAccessTokenUpsertWithWhereUniqueWithoutTeamInput | Prisma.EmbedAccessTokenUpsertWithWhereUniqueWithoutTeamInput[]
+  createMany?: Prisma.EmbedAccessTokenCreateManyTeamInputEnvelope
+  set?: Prisma.EmbedAccessTokenWhereUniqueInput | Prisma.EmbedAccessTokenWhereUniqueInput[]
+  disconnect?: Prisma.EmbedAccessTokenWhereUniqueInput | Prisma.EmbedAccessTokenWhereUniqueInput[]
+  delete?: Prisma.EmbedAccessTokenWhereUniqueInput | Prisma.EmbedAccessTokenWhereUniqueInput[]
+  connect?: Prisma.EmbedAccessTokenWhereUniqueInput | Prisma.EmbedAccessTokenWhereUniqueInput[]
+  update?: Prisma.EmbedAccessTokenUpdateWithWhereUniqueWithoutTeamInput | Prisma.EmbedAccessTokenUpdateWithWhereUniqueWithoutTeamInput[]
+  updateMany?: Prisma.EmbedAccessTokenUpdateManyWithWhereWithoutTeamInput | Prisma.EmbedAccessTokenUpdateManyWithWhereWithoutTeamInput[]
+  deleteMany?: Prisma.EmbedAccessTokenScalarWhereInput | Prisma.EmbedAccessTokenScalarWhereInput[]
+}
+
+export type EmbedAccessTokenCreateNestedManyWithoutEnvironmentInput = {
+  create?: Prisma.XOR<Prisma.EmbedAccessTokenCreateWithoutEnvironmentInput, Prisma.EmbedAccessTokenUncheckedCreateWithoutEnvironmentInput> | Prisma.EmbedAccessTokenCreateWithoutEnvironmentInput[] | Prisma.EmbedAccessTokenUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.EmbedAccessTokenCreateOrConnectWithoutEnvironmentInput | Prisma.EmbedAccessTokenCreateOrConnectWithoutEnvironmentInput[]
+  createMany?: Prisma.EmbedAccessTokenCreateManyEnvironmentInputEnvelope
+  connect?: Prisma.EmbedAccessTokenWhereUniqueInput | Prisma.EmbedAccessTokenWhereUniqueInput[]
+}
+
+export type EmbedAccessTokenUncheckedCreateNestedManyWithoutEnvironmentInput = {
+  create?: Prisma.XOR<Prisma.EmbedAccessTokenCreateWithoutEnvironmentInput, Prisma.EmbedAccessTokenUncheckedCreateWithoutEnvironmentInput> | Prisma.EmbedAccessTokenCreateWithoutEnvironmentInput[] | Prisma.EmbedAccessTokenUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.EmbedAccessTokenCreateOrConnectWithoutEnvironmentInput | Prisma.EmbedAccessTokenCreateOrConnectWithoutEnvironmentInput[]
+  createMany?: Prisma.EmbedAccessTokenCreateManyEnvironmentInputEnvelope
+  connect?: Prisma.EmbedAccessTokenWhereUniqueInput | Prisma.EmbedAccessTokenWhereUniqueInput[]
+}
+
+export type EmbedAccessTokenUpdateManyWithoutEnvironmentNestedInput = {
+  create?: Prisma.XOR<Prisma.EmbedAccessTokenCreateWithoutEnvironmentInput, Prisma.EmbedAccessTokenUncheckedCreateWithoutEnvironmentInput> | Prisma.EmbedAccessTokenCreateWithoutEnvironmentInput[] | Prisma.EmbedAccessTokenUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.EmbedAccessTokenCreateOrConnectWithoutEnvironmentInput | Prisma.EmbedAccessTokenCreateOrConnectWithoutEnvironmentInput[]
+  upsert?: Prisma.EmbedAccessTokenUpsertWithWhereUniqueWithoutEnvironmentInput | Prisma.EmbedAccessTokenUpsertWithWhereUniqueWithoutEnvironmentInput[]
+  createMany?: Prisma.EmbedAccessTokenCreateManyEnvironmentInputEnvelope
+  set?: Prisma.EmbedAccessTokenWhereUniqueInput | Prisma.EmbedAccessTokenWhereUniqueInput[]
+  disconnect?: Prisma.EmbedAccessTokenWhereUniqueInput | Prisma.EmbedAccessTokenWhereUniqueInput[]
+  delete?: Prisma.EmbedAccessTokenWhereUniqueInput | Prisma.EmbedAccessTokenWhereUniqueInput[]
+  connect?: Prisma.EmbedAccessTokenWhereUniqueInput | Prisma.EmbedAccessTokenWhereUniqueInput[]
+  update?: Prisma.EmbedAccessTokenUpdateWithWhereUniqueWithoutEnvironmentInput | Prisma.EmbedAccessTokenUpdateWithWhereUniqueWithoutEnvironmentInput[]
+  updateMany?: Prisma.EmbedAccessTokenUpdateManyWithWhereWithoutEnvironmentInput | Prisma.EmbedAccessTokenUpdateManyWithWhereWithoutEnvironmentInput[]
+  deleteMany?: Prisma.EmbedAccessTokenScalarWhereInput | Prisma.EmbedAccessTokenScalarWhereInput[]
+}
+
+export type EmbedAccessTokenUncheckedUpdateManyWithoutEnvironmentNestedInput = {
+  create?: Prisma.XOR<Prisma.EmbedAccessTokenCreateWithoutEnvironmentInput, Prisma.EmbedAccessTokenUncheckedCreateWithoutEnvironmentInput> | Prisma.EmbedAccessTokenCreateWithoutEnvironmentInput[] | Prisma.EmbedAccessTokenUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.EmbedAccessTokenCreateOrConnectWithoutEnvironmentInput | Prisma.EmbedAccessTokenCreateOrConnectWithoutEnvironmentInput[]
+  upsert?: Prisma.EmbedAccessTokenUpsertWithWhereUniqueWithoutEnvironmentInput | Prisma.EmbedAccessTokenUpsertWithWhereUniqueWithoutEnvironmentInput[]
+  createMany?: Prisma.EmbedAccessTokenCreateManyEnvironmentInputEnvelope
+  set?: Prisma.EmbedAccessTokenWhereUniqueInput | Prisma.EmbedAccessTokenWhereUniqueInput[]
+  disconnect?: Prisma.EmbedAccessTokenWhereUniqueInput | Prisma.EmbedAccessTokenWhereUniqueInput[]
+  delete?: Prisma.EmbedAccessTokenWhereUniqueInput | Prisma.EmbedAccessTokenWhereUniqueInput[]
+  connect?: Prisma.EmbedAccessTokenWhereUniqueInput | Prisma.EmbedAccessTokenWhereUniqueInput[]
+  update?: Prisma.EmbedAccessTokenUpdateWithWhereUniqueWithoutEnvironmentInput | Prisma.EmbedAccessTokenUpdateWithWhereUniqueWithoutEnvironmentInput[]
+  updateMany?: Prisma.EmbedAccessTokenUpdateManyWithWhereWithoutEnvironmentInput | Prisma.EmbedAccessTokenUpdateManyWithWhereWithoutEnvironmentInput[]
+  deleteMany?: Prisma.EmbedAccessTokenScalarWhereInput | Prisma.EmbedAccessTokenScalarWhereInput[]
+}
+
+export type EmbedAccessTokenCreateWithoutTeamInput = {
+  id?: string
+  createdAt?: Date | string
+  tokenHash: string
+  companyId?: string | null
+  userId?: string | null
+  expiresAt: Date | string
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutEmbedAccessTokensInput
+}
+
+export type EmbedAccessTokenUncheckedCreateWithoutTeamInput = {
+  id?: string
+  createdAt?: Date | string
+  environmentId?: string | null
+  tokenHash: string
+  companyId?: string | null
+  userId?: string | null
+  expiresAt: Date | string
+}
+
+export type EmbedAccessTokenCreateOrConnectWithoutTeamInput = {
+  where: Prisma.EmbedAccessTokenWhereUniqueInput
+  create: Prisma.XOR<Prisma.EmbedAccessTokenCreateWithoutTeamInput, Prisma.EmbedAccessTokenUncheckedCreateWithoutTeamInput>
+}
+
+export type EmbedAccessTokenCreateManyTeamInputEnvelope = {
+  data: Prisma.EmbedAccessTokenCreateManyTeamInput | Prisma.EmbedAccessTokenCreateManyTeamInput[]
+  skipDuplicates?: boolean
+}
+
+export type EmbedAccessTokenUpsertWithWhereUniqueWithoutTeamInput = {
+  where: Prisma.EmbedAccessTokenWhereUniqueInput
+  update: Prisma.XOR<Prisma.EmbedAccessTokenUpdateWithoutTeamInput, Prisma.EmbedAccessTokenUncheckedUpdateWithoutTeamInput>
+  create: Prisma.XOR<Prisma.EmbedAccessTokenCreateWithoutTeamInput, Prisma.EmbedAccessTokenUncheckedCreateWithoutTeamInput>
+}
+
+export type EmbedAccessTokenUpdateWithWhereUniqueWithoutTeamInput = {
+  where: Prisma.EmbedAccessTokenWhereUniqueInput
+  data: Prisma.XOR<Prisma.EmbedAccessTokenUpdateWithoutTeamInput, Prisma.EmbedAccessTokenUncheckedUpdateWithoutTeamInput>
+}
+
+export type EmbedAccessTokenUpdateManyWithWhereWithoutTeamInput = {
+  where: Prisma.EmbedAccessTokenScalarWhereInput
+  data: Prisma.XOR<Prisma.EmbedAccessTokenUpdateManyMutationInput, Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamInput>
+}
+
+export type EmbedAccessTokenScalarWhereInput = {
+  AND?: Prisma.EmbedAccessTokenScalarWhereInput | Prisma.EmbedAccessTokenScalarWhereInput[]
+  OR?: Prisma.EmbedAccessTokenScalarWhereInput[]
+  NOT?: Prisma.EmbedAccessTokenScalarWhereInput | Prisma.EmbedAccessTokenScalarWhereInput[]
+  id?: Prisma.StringFilter<"EmbedAccessToken"> | string
+  createdAt?: Prisma.DateTimeFilter<"EmbedAccessToken"> | Date | string
+  teamId?: Prisma.StringFilter<"EmbedAccessToken"> | string
+  environmentId?: Prisma.StringNullableFilter<"EmbedAccessToken"> | string | null
+  tokenHash?: Prisma.StringFilter<"EmbedAccessToken"> | string
+  companyId?: Prisma.StringNullableFilter<"EmbedAccessToken"> | string | null
+  userId?: Prisma.StringNullableFilter<"EmbedAccessToken"> | string | null
+  expiresAt?: Prisma.DateTimeFilter<"EmbedAccessToken"> | Date | string
+}
+
+export type EmbedAccessTokenCreateWithoutEnvironmentInput = {
+  id?: string
+  createdAt?: Date | string
+  tokenHash: string
+  companyId?: string | null
+  userId?: string | null
+  expiresAt: Date | string
+  team: Prisma.TeamCreateNestedOneWithoutEmbedAccessTokensInput
+}
+
+export type EmbedAccessTokenUncheckedCreateWithoutEnvironmentInput = {
+  id?: string
+  createdAt?: Date | string
+  teamId: string
+  tokenHash: string
+  companyId?: string | null
+  userId?: string | null
+  expiresAt: Date | string
+}
+
+export type EmbedAccessTokenCreateOrConnectWithoutEnvironmentInput = {
+  where: Prisma.EmbedAccessTokenWhereUniqueInput
+  create: Prisma.XOR<Prisma.EmbedAccessTokenCreateWithoutEnvironmentInput, Prisma.EmbedAccessTokenUncheckedCreateWithoutEnvironmentInput>
+}
+
+export type EmbedAccessTokenCreateManyEnvironmentInputEnvelope = {
+  data: Prisma.EmbedAccessTokenCreateManyEnvironmentInput | Prisma.EmbedAccessTokenCreateManyEnvironmentInput[]
+  skipDuplicates?: boolean
+}
+
+export type EmbedAccessTokenUpsertWithWhereUniqueWithoutEnvironmentInput = {
+  where: Prisma.EmbedAccessTokenWhereUniqueInput
+  update: Prisma.XOR<Prisma.EmbedAccessTokenUpdateWithoutEnvironmentInput, Prisma.EmbedAccessTokenUncheckedUpdateWithoutEnvironmentInput>
+  create: Prisma.XOR<Prisma.EmbedAccessTokenCreateWithoutEnvironmentInput, Prisma.EmbedAccessTokenUncheckedCreateWithoutEnvironmentInput>
+}
+
+export type EmbedAccessTokenUpdateWithWhereUniqueWithoutEnvironmentInput = {
+  where: Prisma.EmbedAccessTokenWhereUniqueInput
+  data: Prisma.XOR<Prisma.EmbedAccessTokenUpdateWithoutEnvironmentInput, Prisma.EmbedAccessTokenUncheckedUpdateWithoutEnvironmentInput>
+}
+
+export type EmbedAccessTokenUpdateManyWithWhereWithoutEnvironmentInput = {
+  where: Prisma.EmbedAccessTokenScalarWhereInput
+  data: Prisma.XOR<Prisma.EmbedAccessTokenUpdateManyMutationInput, Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutEnvironmentInput>
+}
+
+export type EmbedAccessTokenCreateManyTeamInput = {
+  id?: string
+  createdAt?: Date | string
+  environmentId?: string | null
+  tokenHash: string
+  companyId?: string | null
+  userId?: string | null
+  expiresAt: Date | string
+}
+
+export type EmbedAccessTokenUpdateWithoutTeamInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  tokenHash?: Prisma.StringFieldUpdateOperationsInput | string
+  companyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  expiresAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutEmbedAccessTokensNestedInput
+}
+
+export type EmbedAccessTokenUncheckedUpdateWithoutTeamInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  tokenHash?: Prisma.StringFieldUpdateOperationsInput | string
+  companyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  expiresAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+export type EmbedAccessTokenUncheckedUpdateManyWithoutTeamInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  tokenHash?: Prisma.StringFieldUpdateOperationsInput | string
+  companyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  expiresAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+export type EmbedAccessTokenCreateManyEnvironmentInput = {
+  id?: string
+  createdAt?: Date | string
+  teamId: string
+  tokenHash: string
+  companyId?: string | null
+  userId?: string | null
+  expiresAt: Date | string
+}
+
+export type EmbedAccessTokenUpdateWithoutEnvironmentInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  tokenHash?: Prisma.StringFieldUpdateOperationsInput | string
+  companyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  expiresAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  team?: Prisma.TeamUpdateOneRequiredWithoutEmbedAccessTokensNestedInput
+}
+
+export type EmbedAccessTokenUncheckedUpdateWithoutEnvironmentInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  tokenHash?: Prisma.StringFieldUpdateOperationsInput | string
+  companyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  expiresAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+export type EmbedAccessTokenUncheckedUpdateManyWithoutEnvironmentInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  tokenHash?: Prisma.StringFieldUpdateOperationsInput | string
+  companyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  expiresAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 
@@ -355,51 +661,77 @@ export type EmbedAccessTokenSelect<ExtArgs extends runtime.Types.Extensions.Inte
   id?: boolean
   createdAt?: boolean
   teamId?: boolean
+  environmentId?: boolean
   tokenHash?: boolean
   companyId?: boolean
   userId?: boolean
   expiresAt?: boolean
+  team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.EmbedAccessToken$environmentArgs<ExtArgs>
 }, ExtArgs["result"]["embedAccessToken"]>
 
 export type EmbedAccessTokenSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   createdAt?: boolean
   teamId?: boolean
+  environmentId?: boolean
   tokenHash?: boolean
   companyId?: boolean
   userId?: boolean
   expiresAt?: boolean
+  team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.EmbedAccessToken$environmentArgs<ExtArgs>
 }, ExtArgs["result"]["embedAccessToken"]>
 
 export type EmbedAccessTokenSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   createdAt?: boolean
   teamId?: boolean
+  environmentId?: boolean
   tokenHash?: boolean
   companyId?: boolean
   userId?: boolean
   expiresAt?: boolean
+  team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.EmbedAccessToken$environmentArgs<ExtArgs>
 }, ExtArgs["result"]["embedAccessToken"]>
 
 export type EmbedAccessTokenSelectScalar = {
   id?: boolean
   createdAt?: boolean
   teamId?: boolean
+  environmentId?: boolean
   tokenHash?: boolean
   companyId?: boolean
   userId?: boolean
   expiresAt?: boolean
 }
 
-export type EmbedAccessTokenOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "teamId" | "tokenHash" | "companyId" | "userId" | "expiresAt", ExtArgs["result"]["embedAccessToken"]>
+export type EmbedAccessTokenOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "teamId" | "environmentId" | "tokenHash" | "companyId" | "userId" | "expiresAt", ExtArgs["result"]["embedAccessToken"]>
+export type EmbedAccessTokenInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.EmbedAccessToken$environmentArgs<ExtArgs>
+}
+export type EmbedAccessTokenIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.EmbedAccessToken$environmentArgs<ExtArgs>
+}
+export type EmbedAccessTokenIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  environment?: boolean | Prisma.EmbedAccessToken$environmentArgs<ExtArgs>
+}
 
 export type $EmbedAccessTokenPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "EmbedAccessToken"
-  objects: {}
+  objects: {
+    team: Prisma.$TeamPayload<ExtArgs>
+    environment: Prisma.$WorkspaceEnvironmentPayload<ExtArgs> | null
+  }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
     createdAt: Date
     teamId: string
+    environmentId: string | null
     tokenHash: string
     companyId: string | null
     userId: string | null
@@ -798,6 +1130,8 @@ readonly fields: EmbedAccessTokenFieldRefs;
  */
 export interface Prisma__EmbedAccessTokenClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
+  team<T extends Prisma.TeamDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TeamDefaultArgs<ExtArgs>>): Prisma.Prisma__TeamClient<runtime.Types.Result.GetResult<Prisma.$TeamPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  environment<T extends Prisma.EmbedAccessToken$environmentArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.EmbedAccessToken$environmentArgs<ExtArgs>>): Prisma.Prisma__WorkspaceEnvironmentClient<runtime.Types.Result.GetResult<Prisma.$WorkspaceEnvironmentPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -830,6 +1164,7 @@ export interface EmbedAccessTokenFieldRefs {
   readonly id: Prisma.FieldRef<"EmbedAccessToken", 'String'>
   readonly createdAt: Prisma.FieldRef<"EmbedAccessToken", 'DateTime'>
   readonly teamId: Prisma.FieldRef<"EmbedAccessToken", 'String'>
+  readonly environmentId: Prisma.FieldRef<"EmbedAccessToken", 'String'>
   readonly tokenHash: Prisma.FieldRef<"EmbedAccessToken", 'String'>
   readonly companyId: Prisma.FieldRef<"EmbedAccessToken", 'String'>
   readonly userId: Prisma.FieldRef<"EmbedAccessToken", 'String'>
@@ -851,6 +1186,10 @@ export type EmbedAccessTokenFindUniqueArgs<ExtArgs extends runtime.Types.Extensi
    */
   omit?: Prisma.EmbedAccessTokenOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.EmbedAccessTokenInclude<ExtArgs> | null
+  /**
    * Filter, which EmbedAccessToken to fetch.
    */
   where: Prisma.EmbedAccessTokenWhereUniqueInput
@@ -869,6 +1208,10 @@ export type EmbedAccessTokenFindUniqueOrThrowArgs<ExtArgs extends runtime.Types.
    */
   omit?: Prisma.EmbedAccessTokenOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.EmbedAccessTokenInclude<ExtArgs> | null
+  /**
    * Filter, which EmbedAccessToken to fetch.
    */
   where: Prisma.EmbedAccessTokenWhereUniqueInput
@@ -886,6 +1229,10 @@ export type EmbedAccessTokenFindFirstArgs<ExtArgs extends runtime.Types.Extensio
    * Omit specific fields from the EmbedAccessToken
    */
   omit?: Prisma.EmbedAccessTokenOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.EmbedAccessTokenInclude<ExtArgs> | null
   /**
    * Filter, which EmbedAccessToken to fetch.
    */
@@ -935,6 +1282,10 @@ export type EmbedAccessTokenFindFirstOrThrowArgs<ExtArgs extends runtime.Types.E
    */
   omit?: Prisma.EmbedAccessTokenOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.EmbedAccessTokenInclude<ExtArgs> | null
+  /**
    * Filter, which EmbedAccessToken to fetch.
    */
   where?: Prisma.EmbedAccessTokenWhereInput
@@ -983,6 +1334,10 @@ export type EmbedAccessTokenFindManyArgs<ExtArgs extends runtime.Types.Extension
    */
   omit?: Prisma.EmbedAccessTokenOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.EmbedAccessTokenInclude<ExtArgs> | null
+  /**
    * Filter, which EmbedAccessTokens to fetch.
    */
   where?: Prisma.EmbedAccessTokenWhereInput
@@ -1026,6 +1381,10 @@ export type EmbedAccessTokenCreateArgs<ExtArgs extends runtime.Types.Extensions.
    */
   omit?: Prisma.EmbedAccessTokenOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.EmbedAccessTokenInclude<ExtArgs> | null
+  /**
    * The data needed to create a EmbedAccessToken.
    */
   data: Prisma.XOR<Prisma.EmbedAccessTokenCreateInput, Prisma.EmbedAccessTokenUncheckedCreateInput>
@@ -1059,6 +1418,10 @@ export type EmbedAccessTokenCreateManyAndReturnArgs<ExtArgs extends runtime.Type
    */
   data: Prisma.EmbedAccessTokenCreateManyInput | Prisma.EmbedAccessTokenCreateManyInput[]
   skipDuplicates?: boolean
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.EmbedAccessTokenIncludeCreateManyAndReturn<ExtArgs> | null
 }
 
 /**
@@ -1073,6 +1436,10 @@ export type EmbedAccessTokenUpdateArgs<ExtArgs extends runtime.Types.Extensions.
    * Omit specific fields from the EmbedAccessToken
    */
   omit?: Prisma.EmbedAccessTokenOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.EmbedAccessTokenInclude<ExtArgs> | null
   /**
    * The data needed to update a EmbedAccessToken.
    */
@@ -1125,6 +1492,10 @@ export type EmbedAccessTokenUpdateManyAndReturnArgs<ExtArgs extends runtime.Type
    * Limit how many EmbedAccessTokens to update.
    */
   limit?: number
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.EmbedAccessTokenIncludeUpdateManyAndReturn<ExtArgs> | null
 }
 
 /**
@@ -1139,6 +1510,10 @@ export type EmbedAccessTokenUpsertArgs<ExtArgs extends runtime.Types.Extensions.
    * Omit specific fields from the EmbedAccessToken
    */
   omit?: Prisma.EmbedAccessTokenOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.EmbedAccessTokenInclude<ExtArgs> | null
   /**
    * The filter to search for the EmbedAccessToken to update in case it exists.
    */
@@ -1166,6 +1541,10 @@ export type EmbedAccessTokenDeleteArgs<ExtArgs extends runtime.Types.Extensions.
    */
   omit?: Prisma.EmbedAccessTokenOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.EmbedAccessTokenInclude<ExtArgs> | null
+  /**
    * Filter which EmbedAccessToken to delete.
    */
   where: Prisma.EmbedAccessTokenWhereUniqueInput
@@ -1186,6 +1565,25 @@ export type EmbedAccessTokenDeleteManyArgs<ExtArgs extends runtime.Types.Extensi
 }
 
 /**
+ * EmbedAccessToken.environment
+ */
+export type EmbedAccessToken$environmentArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the WorkspaceEnvironment
+   */
+  select?: Prisma.WorkspaceEnvironmentSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the WorkspaceEnvironment
+   */
+  omit?: Prisma.WorkspaceEnvironmentOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.WorkspaceEnvironmentInclude<ExtArgs> | null
+  where?: Prisma.WorkspaceEnvironmentWhereInput
+}
+
+/**
  * EmbedAccessToken without action
  */
 export type EmbedAccessTokenDefaultArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1197,4 +1595,8 @@ export type EmbedAccessTokenDefaultArgs<ExtArgs extends runtime.Types.Extensions
    * Omit specific fields from the EmbedAccessToken
    */
   omit?: Prisma.EmbedAccessTokenOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.EmbedAccessTokenInclude<ExtArgs> | null
 }

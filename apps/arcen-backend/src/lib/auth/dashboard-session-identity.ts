@@ -20,6 +20,7 @@ function buildDisplayName(email: string | null): string | null {
 export async function resolveDashboardSessionIdentityDefaults(
   teamId: string,
   sessionUserId: string,
+  environmentId?: string | null,
 ): Promise<DashboardSessionIdentityDefaults | null> {
   const [team, dbUser, arcenUser] = await Promise.all([
     db.team.findUnique({
@@ -37,6 +38,7 @@ export async function resolveDashboardSessionIdentityDefaults(
     db.arcenUser.findFirst({
       where: {
         teamId,
+        ...(environmentId ? { environmentId } : {}),
         OR: [{ id: sessionUserId }, { clerkUserId: sessionUserId }],
       },
       select: { id: true },

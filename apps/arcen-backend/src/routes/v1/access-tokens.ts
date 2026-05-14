@@ -37,6 +37,7 @@ import { Prisma } from "../../generated/client/client.js";
 import { resolveDashboardSessionIdentityDefaults } from "../../lib/auth/dashboard-session-identity.js";
 import { getSession } from "../../lib/auth/auth.server.js";
 import { resolvePublishedInitialPlan } from "../../lib/catalog/catalog-billing.js";
+import { requireResolvedActiveEnvironment } from "../../lib/environments/workspace-environments.js";
 
 // ─── Simple JWT-like token (HMAC-SHA256, no external dep) ─────────────────────
 
@@ -74,10 +75,14 @@ function isPrismaUniqueError(error: unknown): boolean {
 
 async function upsertCompanyForToken(
   teamId: string,
+  environmentId: string,
   keys: CompanyKeys & { name?: string; traits?: Record<string, unknown> },
 ): Promise<{ id: string; activePlanId: string | null; created: boolean }> {
   // Try to find existing company first
-  const existing = await resolveCompany(teamId, keys);
+  const existing = await resolveCompany(teamId, {
+    ...keys,
+    environmentId,
+  });
   if (existing) {
     const updates: Record<string, unknown> = {};
     const nextName = toNullableTrimmed(keys.name);
@@ -111,6 +116,7 @@ async function upsertCompanyForToken(
     const created = await db.arcenCompany.create({
       data: {
         teamId,
+        environmentId,
         name: fallbackName,
         email,
         walletAddress: wallet,
@@ -125,6 +131,7 @@ async function upsertCompanyForToken(
     if (isPrismaUniqueError(error)) {
       const resolved = await resolveCompany(teamId, {
         ...keys,
+        environmentId,
         ...(externalId ? { id: externalId } : {}),
         ...(email ? { email } : {}),
         ...(wallet ? { wallet } : {}),
@@ -145,6 +152,7 @@ async function upsertCompanyForToken(
 
 async function upsertUserForToken(
   teamId: string,
+  environmentId: string,
   companyId: string,
   keys: UserKeys & {
     name?: string;
@@ -152,7 +160,10 @@ async function upsertUserForToken(
     traits?: Record<string, unknown>;
   },
 ): Promise<{ id: string; created: boolean }> {
-  const existing = await resolveUser(teamId, keys);
+  const existing = await resolveUser(teamId, {
+    ...keys,
+    environmentId,
+  });
   if (existing) {
     const updates: Record<string, unknown> = {};
     const nextName = toNullableTrimmed(keys.name);
@@ -191,6 +202,7 @@ async function upsertUserForToken(
     const created = await db.arcenUser.create({
       data: {
         teamId,
+        environmentId,
         companyId,
         walletAddress: wallet,
         clerkUserId,
@@ -206,6 +218,7 @@ async function upsertUserForToken(
     if (isPrismaUniqueError(error)) {
       const resolved = await resolveUser(teamId, {
         ...keys,
+        environmentId,
         ...(externalId ? { id: externalId } : {}),
         ...(wallet ? { wallet } : {}),
         ...(clerkUserId ? { clerkUserId } : {}),
@@ -229,6 +242,23 @@ export async function POST(c: Context) {
   if (isAnyAuthError(ctx)) return c.json({ ok: false, error: ctx.error }, ctx.status as any);
 
   const { teamId } = ctx;
+  const activeEnvironment = ctx.activeEnvironmentId
+    ? await requireResolvedActiveEnvironment(
+        {
+          sessionId: ctx.sessionId ?? "api-key",
+          activeEnvironmentId: ctx.activeEnvironmentId,
+        },
+        teamId,
+      )
+    : null;
+
+  if (!activeEnvironment) {
+    return c.json(
+      { error: "No workspace environment selected for this request" },
+      409 as any,
+      corsHeaders(origin),
+    );
+  }
 
   let body: {
     company?: CompanyKeys & { name?: string; traits?: Record<string, unknown> };
@@ -265,6 +295,7 @@ export async function POST(c: Context) {
       ? await resolveDashboardSessionIdentityDefaults(
           teamId,
           (session as any).clerkUserId,
+          activeEnvironment.id,
         )
       : null;
 
@@ -334,13 +365,20 @@ export async function POST(c: Context) {
     companyInput &&
     (companyInput.id || companyInput.wallet || companyInput.email)
   ) {
-    const companyResult = await upsertCompanyForToken(teamId, companyInput);
+    const companyResult = await upsertCompanyForToken(
+      teamId,
+      activeEnvironment.id,
+      companyInput,
+    );
     companyId = companyResult.id;
 
     // Auto-assign the owner-configured initial plan if no active plan
     let activePlanId = companyResult.activePlanId;
     if (!activePlanId) {
-      const initialPlan = await resolvePublishedInitialPlan(teamId);
+      const initialPlan = await resolvePublishedInitialPlan(
+        teamId,
+        activeEnvironment.id,
+      );
       if (initialPlan) {
         await db.arcenCompany.update({
           where: { id: companyId },
@@ -361,6 +399,7 @@ export async function POST(c: Context) {
         companyId,
         externalId: companyInput.id ?? null,
         source: "access_token",
+        environmentId: activeEnvironment.id,
       }).catch(() => {});
     }
   }
@@ -376,7 +415,12 @@ export async function POST(c: Context) {
       userInput.wallet ||
       userInput.email)
   ) {
-    const userResult = await upsertUserForToken(teamId, companyId, userInput);
+    const userResult = await upsertUserForToken(
+      teamId,
+      activeEnvironment.id,
+      companyId,
+      userInput,
+    );
     userId = userResult.id;
 
     if (userResult.created) {
@@ -384,6 +428,7 @@ export async function POST(c: Context) {
         userId,
         companyId,
         source: "access_token",
+        environmentId: activeEnvironment.id,
       }).catch(() => {});
     }
   }
@@ -397,6 +442,7 @@ export async function POST(c: Context) {
 
   const payload = {
     teamId,
+    environmentId: activeEnvironment.id,
     companyId,
     userId,
     exp: Math.floor(expiresAt.getTime() / 1000),
@@ -408,7 +454,14 @@ export async function POST(c: Context) {
   const tokenHash = createHash("sha256").update(token).digest("hex");
 
   await db.embedAccessToken.create({
-    data: { teamId, tokenHash, companyId, userId, expiresAt },
+    data: {
+      teamId,
+      environmentId: activeEnvironment.id,
+      tokenHash,
+      companyId,
+      userId,
+      expiresAt,
+    },
   });
 
   return c.json({

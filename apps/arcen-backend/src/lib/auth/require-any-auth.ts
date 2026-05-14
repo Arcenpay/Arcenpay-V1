@@ -46,7 +46,12 @@ export async function requireAnyAuth(
   if (looksLikeApiKey(c)) {
     const ctx = await requireApiKey(c.req.raw);
     if (isApiKeyError(ctx)) return ctx;
-    return { teamId: ctx.teamId, source: "api_key", apiKeyId: ctx.apiKeyId };
+    return {
+      teamId: ctx.teamId,
+      source: "api_key",
+      apiKeyId: ctx.apiKeyId,
+      activeEnvironmentId: ctx.environmentId ?? null,
+    };
   }
 
   // ── Session path ──────────────────────────────────────────────────────────

@@ -80,6 +80,7 @@ export async function POST(c: Context) {
     : "";
 
   let teamId: string;
+  let environmentId: string | null = null;
   let companyKeys: CompanyKeys;
   let userKeys: UserKeys | undefined;
 
@@ -92,6 +93,7 @@ export async function POST(c: Context) {
     }
 
     teamId = ctx.teamId;
+    environmentId = ctx.environmentId ?? null;
 
     const rawCompanyKeys = parseKeyHeader(c.req.header("x-arcen-company-keys") ?? null);
     const rawUserKeys = parseKeyHeader(c.req.header("x-arcen-user-keys") ?? null);
@@ -100,6 +102,7 @@ export async function POST(c: Context) {
       id: rawCompanyKeys.id,
       wallet: rawCompanyKeys.wallet ?? rawCompanyKeys.wallet_address,
       email: rawCompanyKeys.email,
+      environmentId,
     };
 
     if (!companyKeys.id && !companyKeys.wallet && !companyKeys.email) {
@@ -116,6 +119,7 @@ export async function POST(c: Context) {
             id: rawUserKeys.id,
             clerkUserId: rawUserKeys.clerk_user_id,
             wallet: rawUserKeys.wallet,
+            environmentId,
           }
         : undefined;
   } else if (bearerToken) {
@@ -137,8 +141,14 @@ export async function POST(c: Context) {
     }
 
     teamId = tokenCtx.teamId;
-    companyKeys = { internalId: tokenCtx.companyId };
-    userKeys = tokenCtx.userId ? { internalId: tokenCtx.userId } : undefined;
+    environmentId = tokenCtx.environmentId;
+    companyKeys = {
+      internalId: tokenCtx.companyId,
+      environmentId,
+    };
+    userKeys = tokenCtx.userId
+      ? { internalId: tokenCtx.userId, environmentId }
+      : undefined;
   } else {
     return jsonWithCors(c, { error: "Authorization required" }, 401);
   }

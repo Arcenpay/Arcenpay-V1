@@ -223,7 +223,7 @@ export type TeamWhereInput = {
   tierExpiresAt?: Prisma.DateTimeNullableFilter<"Team"> | Date | string | null
   tierSubscriptionId?: Prisma.StringNullableFilter<"Team"> | string | null
   members?: Prisma.TeamMemberListRelationFilter
-  providerProfile?: Prisma.XOR<Prisma.ProviderProfileNullableScalarRelationFilter, Prisma.ProviderProfileWhereInput> | null
+  providerProfiles?: Prisma.ProviderProfileListRelationFilter
   invitations?: Prisma.TeamInvitationListRelationFilter
   environments?: Prisma.WorkspaceEnvironmentListRelationFilter
   catalogPlans?: Prisma.CatalogPlanListRelationFilter
@@ -254,6 +254,7 @@ export type TeamWhereInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantListRelationFilter
   featureFlags?: Prisma.CatalogFeatureFlagListRelationFilter
   arcenApiKeys?: Prisma.ArcenApiKeyListRelationFilter
+  embedAccessTokens?: Prisma.EmbedAccessTokenListRelationFilter
   embedComponents?: Prisma.EmbedComponentListRelationFilter
   agentConfig?: Prisma.XOR<Prisma.ArcenAgentConfigNullableScalarRelationFilter, Prisma.ArcenAgentConfigWhereInput> | null
   dispatchRequests?: Prisma.ArcenDispatchRequestListRelationFilter
@@ -271,7 +272,7 @@ export type TeamOrderByWithRelationInput = {
   tierExpiresAt?: Prisma.SortOrderInput | Prisma.SortOrder
   tierSubscriptionId?: Prisma.SortOrderInput | Prisma.SortOrder
   members?: Prisma.TeamMemberOrderByRelationAggregateInput
-  providerProfile?: Prisma.ProviderProfileOrderByWithRelationInput
+  providerProfiles?: Prisma.ProviderProfileOrderByRelationAggregateInput
   invitations?: Prisma.TeamInvitationOrderByRelationAggregateInput
   environments?: Prisma.WorkspaceEnvironmentOrderByRelationAggregateInput
   catalogPlans?: Prisma.CatalogPlanOrderByRelationAggregateInput
@@ -302,6 +303,7 @@ export type TeamOrderByWithRelationInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantOrderByRelationAggregateInput
   featureFlags?: Prisma.CatalogFeatureFlagOrderByRelationAggregateInput
   arcenApiKeys?: Prisma.ArcenApiKeyOrderByRelationAggregateInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenOrderByRelationAggregateInput
   embedComponents?: Prisma.EmbedComponentOrderByRelationAggregateInput
   agentConfig?: Prisma.ArcenAgentConfigOrderByWithRelationInput
   dispatchRequests?: Prisma.ArcenDispatchRequestOrderByRelationAggregateInput
@@ -322,7 +324,7 @@ export type TeamWhereUniqueInput = Prisma.AtLeast<{
   tierExpiresAt?: Prisma.DateTimeNullableFilter<"Team"> | Date | string | null
   tierSubscriptionId?: Prisma.StringNullableFilter<"Team"> | string | null
   members?: Prisma.TeamMemberListRelationFilter
-  providerProfile?: Prisma.XOR<Prisma.ProviderProfileNullableScalarRelationFilter, Prisma.ProviderProfileWhereInput> | null
+  providerProfiles?: Prisma.ProviderProfileListRelationFilter
   invitations?: Prisma.TeamInvitationListRelationFilter
   environments?: Prisma.WorkspaceEnvironmentListRelationFilter
   catalogPlans?: Prisma.CatalogPlanListRelationFilter
@@ -353,6 +355,7 @@ export type TeamWhereUniqueInput = Prisma.AtLeast<{
   addOnGrants?: Prisma.CompanyAddOnGrantListRelationFilter
   featureFlags?: Prisma.CatalogFeatureFlagListRelationFilter
   arcenApiKeys?: Prisma.ArcenApiKeyListRelationFilter
+  embedAccessTokens?: Prisma.EmbedAccessTokenListRelationFilter
   embedComponents?: Prisma.EmbedComponentListRelationFilter
   agentConfig?: Prisma.XOR<Prisma.ArcenAgentConfigNullableScalarRelationFilter, Prisma.ArcenAgentConfigWhereInput> | null
   dispatchRequests?: Prisma.ArcenDispatchRequestListRelationFilter
@@ -402,7 +405,7 @@ export type TeamCreateInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
@@ -433,6 +436,7 @@ export type TeamCreateInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestCreateNestedManyWithoutTeamInput
@@ -450,7 +454,7 @@ export type TeamUncheckedCreateInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
@@ -481,6 +485,7 @@ export type TeamUncheckedCreateInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentUncheckedCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedCreateNestedManyWithoutTeamInput
@@ -498,7 +503,7 @@ export type TeamUpdateInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
@@ -529,6 +534,7 @@ export type TeamUpdateInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUpdateManyWithoutTeamNestedInput
@@ -546,7 +552,7 @@ export type TeamUncheckedUpdateInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
@@ -577,6 +583,7 @@ export type TeamUncheckedUpdateInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUncheckedUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedUpdateManyWithoutTeamNestedInput
@@ -715,18 +722,18 @@ export type TeamUpdateOneRequiredWithoutInvitationsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.TeamUpdateToOneWithWhereWithoutInvitationsInput, Prisma.TeamUpdateWithoutInvitationsInput>, Prisma.TeamUncheckedUpdateWithoutInvitationsInput>
 }
 
-export type TeamCreateNestedOneWithoutProviderProfileInput = {
-  create?: Prisma.XOR<Prisma.TeamCreateWithoutProviderProfileInput, Prisma.TeamUncheckedCreateWithoutProviderProfileInput>
-  connectOrCreate?: Prisma.TeamCreateOrConnectWithoutProviderProfileInput
+export type TeamCreateNestedOneWithoutProviderProfilesInput = {
+  create?: Prisma.XOR<Prisma.TeamCreateWithoutProviderProfilesInput, Prisma.TeamUncheckedCreateWithoutProviderProfilesInput>
+  connectOrCreate?: Prisma.TeamCreateOrConnectWithoutProviderProfilesInput
   connect?: Prisma.TeamWhereUniqueInput
 }
 
-export type TeamUpdateOneRequiredWithoutProviderProfileNestedInput = {
-  create?: Prisma.XOR<Prisma.TeamCreateWithoutProviderProfileInput, Prisma.TeamUncheckedCreateWithoutProviderProfileInput>
-  connectOrCreate?: Prisma.TeamCreateOrConnectWithoutProviderProfileInput
-  upsert?: Prisma.TeamUpsertWithoutProviderProfileInput
+export type TeamUpdateOneRequiredWithoutProviderProfilesNestedInput = {
+  create?: Prisma.XOR<Prisma.TeamCreateWithoutProviderProfilesInput, Prisma.TeamUncheckedCreateWithoutProviderProfilesInput>
+  connectOrCreate?: Prisma.TeamCreateOrConnectWithoutProviderProfilesInput
+  upsert?: Prisma.TeamUpsertWithoutProviderProfilesInput
   connect?: Prisma.TeamWhereUniqueInput
-  update?: Prisma.XOR<Prisma.XOR<Prisma.TeamUpdateToOneWithWhereWithoutProviderProfileInput, Prisma.TeamUpdateWithoutProviderProfileInput>, Prisma.TeamUncheckedUpdateWithoutProviderProfileInput>
+  update?: Prisma.XOR<Prisma.XOR<Prisma.TeamUpdateToOneWithWhereWithoutProviderProfilesInput, Prisma.TeamUpdateWithoutProviderProfilesInput>, Prisma.TeamUncheckedUpdateWithoutProviderProfilesInput>
 }
 
 export type TeamCreateNestedOneWithoutCatalogPlansInput = {
@@ -1107,6 +1114,20 @@ export type TeamUpdateOneRequiredWithoutFeatureFlagsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.TeamUpdateToOneWithWhereWithoutFeatureFlagsInput, Prisma.TeamUpdateWithoutFeatureFlagsInput>, Prisma.TeamUncheckedUpdateWithoutFeatureFlagsInput>
 }
 
+export type TeamCreateNestedOneWithoutEmbedAccessTokensInput = {
+  create?: Prisma.XOR<Prisma.TeamCreateWithoutEmbedAccessTokensInput, Prisma.TeamUncheckedCreateWithoutEmbedAccessTokensInput>
+  connectOrCreate?: Prisma.TeamCreateOrConnectWithoutEmbedAccessTokensInput
+  connect?: Prisma.TeamWhereUniqueInput
+}
+
+export type TeamUpdateOneRequiredWithoutEmbedAccessTokensNestedInput = {
+  create?: Prisma.XOR<Prisma.TeamCreateWithoutEmbedAccessTokensInput, Prisma.TeamUncheckedCreateWithoutEmbedAccessTokensInput>
+  connectOrCreate?: Prisma.TeamCreateOrConnectWithoutEmbedAccessTokensInput
+  upsert?: Prisma.TeamUpsertWithoutEmbedAccessTokensInput
+  connect?: Prisma.TeamWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.TeamUpdateToOneWithWhereWithoutEmbedAccessTokensInput, Prisma.TeamUpdateWithoutEmbedAccessTokensInput>, Prisma.TeamUncheckedUpdateWithoutEmbedAccessTokensInput>
+}
+
 export type TeamCreateNestedOneWithoutArcenApiKeysInput = {
   create?: Prisma.XOR<Prisma.TeamCreateWithoutArcenApiKeysInput, Prisma.TeamUncheckedCreateWithoutArcenApiKeysInput>
   connectOrCreate?: Prisma.TeamCreateOrConnectWithoutArcenApiKeysInput
@@ -1175,7 +1196,7 @@ export type TeamCreateWithoutEnvironmentsInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
@@ -1205,6 +1226,7 @@ export type TeamCreateWithoutEnvironmentsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestCreateNestedManyWithoutTeamInput
@@ -1222,7 +1244,7 @@ export type TeamUncheckedCreateWithoutEnvironmentsInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
@@ -1252,6 +1274,7 @@ export type TeamUncheckedCreateWithoutEnvironmentsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentUncheckedCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedCreateNestedManyWithoutTeamInput
@@ -1285,7 +1308,7 @@ export type TeamUpdateWithoutEnvironmentsInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
@@ -1315,6 +1338,7 @@ export type TeamUpdateWithoutEnvironmentsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUpdateManyWithoutTeamNestedInput
@@ -1332,7 +1356,7 @@ export type TeamUncheckedUpdateWithoutEnvironmentsInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
@@ -1362,6 +1386,7 @@ export type TeamUncheckedUpdateWithoutEnvironmentsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUncheckedUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedUpdateManyWithoutTeamNestedInput
@@ -1378,7 +1403,7 @@ export type TeamCreateWithoutMembersInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
-  providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
@@ -1409,6 +1434,7 @@ export type TeamCreateWithoutMembersInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestCreateNestedManyWithoutTeamInput
@@ -1425,7 +1451,7 @@ export type TeamUncheckedCreateWithoutMembersInput = {
   platformTier?: $Enums.PlatformTier
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
-  providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
@@ -1456,6 +1482,7 @@ export type TeamUncheckedCreateWithoutMembersInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentUncheckedCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedCreateNestedManyWithoutTeamInput
@@ -1488,7 +1515,7 @@ export type TeamUpdateWithoutMembersInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
@@ -1519,6 +1546,7 @@ export type TeamUpdateWithoutMembersInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUpdateManyWithoutTeamNestedInput
@@ -1535,7 +1563,7 @@ export type TeamUncheckedUpdateWithoutMembersInput = {
   platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
@@ -1566,6 +1594,7 @@ export type TeamUncheckedUpdateWithoutMembersInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUncheckedUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedUpdateManyWithoutTeamNestedInput
@@ -1583,7 +1612,7 @@ export type TeamCreateWithoutInvitationsInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
@@ -1613,6 +1642,7 @@ export type TeamCreateWithoutInvitationsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestCreateNestedManyWithoutTeamInput
@@ -1630,7 +1660,7 @@ export type TeamUncheckedCreateWithoutInvitationsInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
@@ -1660,6 +1690,7 @@ export type TeamUncheckedCreateWithoutInvitationsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentUncheckedCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedCreateNestedManyWithoutTeamInput
@@ -1693,7 +1724,7 @@ export type TeamUpdateWithoutInvitationsInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
@@ -1723,6 +1754,7 @@ export type TeamUpdateWithoutInvitationsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUpdateManyWithoutTeamNestedInput
@@ -1740,7 +1772,7 @@ export type TeamUncheckedUpdateWithoutInvitationsInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
@@ -1770,12 +1802,13 @@ export type TeamUncheckedUpdateWithoutInvitationsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUncheckedUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedUpdateManyWithoutTeamNestedInput
 }
 
-export type TeamCreateWithoutProviderProfileInput = {
+export type TeamCreateWithoutProviderProfilesInput = {
   id?: string
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1817,12 +1850,13 @@ export type TeamCreateWithoutProviderProfileInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestCreateNestedManyWithoutTeamInput
 }
 
-export type TeamUncheckedCreateWithoutProviderProfileInput = {
+export type TeamUncheckedCreateWithoutProviderProfilesInput = {
   id?: string
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1864,28 +1898,29 @@ export type TeamUncheckedCreateWithoutProviderProfileInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentUncheckedCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedCreateNestedManyWithoutTeamInput
 }
 
-export type TeamCreateOrConnectWithoutProviderProfileInput = {
+export type TeamCreateOrConnectWithoutProviderProfilesInput = {
   where: Prisma.TeamWhereUniqueInput
-  create: Prisma.XOR<Prisma.TeamCreateWithoutProviderProfileInput, Prisma.TeamUncheckedCreateWithoutProviderProfileInput>
+  create: Prisma.XOR<Prisma.TeamCreateWithoutProviderProfilesInput, Prisma.TeamUncheckedCreateWithoutProviderProfilesInput>
 }
 
-export type TeamUpsertWithoutProviderProfileInput = {
-  update: Prisma.XOR<Prisma.TeamUpdateWithoutProviderProfileInput, Prisma.TeamUncheckedUpdateWithoutProviderProfileInput>
-  create: Prisma.XOR<Prisma.TeamCreateWithoutProviderProfileInput, Prisma.TeamUncheckedCreateWithoutProviderProfileInput>
+export type TeamUpsertWithoutProviderProfilesInput = {
+  update: Prisma.XOR<Prisma.TeamUpdateWithoutProviderProfilesInput, Prisma.TeamUncheckedUpdateWithoutProviderProfilesInput>
+  create: Prisma.XOR<Prisma.TeamCreateWithoutProviderProfilesInput, Prisma.TeamUncheckedCreateWithoutProviderProfilesInput>
   where?: Prisma.TeamWhereInput
 }
 
-export type TeamUpdateToOneWithWhereWithoutProviderProfileInput = {
+export type TeamUpdateToOneWithWhereWithoutProviderProfilesInput = {
   where?: Prisma.TeamWhereInput
-  data: Prisma.XOR<Prisma.TeamUpdateWithoutProviderProfileInput, Prisma.TeamUncheckedUpdateWithoutProviderProfileInput>
+  data: Prisma.XOR<Prisma.TeamUpdateWithoutProviderProfilesInput, Prisma.TeamUncheckedUpdateWithoutProviderProfilesInput>
 }
 
-export type TeamUpdateWithoutProviderProfileInput = {
+export type TeamUpdateWithoutProviderProfilesInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1927,12 +1962,13 @@ export type TeamUpdateWithoutProviderProfileInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUpdateManyWithoutTeamNestedInput
 }
 
-export type TeamUncheckedUpdateWithoutProviderProfileInput = {
+export type TeamUncheckedUpdateWithoutProviderProfilesInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1974,6 +2010,7 @@ export type TeamUncheckedUpdateWithoutProviderProfileInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUncheckedUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedUpdateManyWithoutTeamNestedInput
@@ -1991,7 +2028,7 @@ export type TeamCreateWithoutCatalogPlansInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
@@ -2021,6 +2058,7 @@ export type TeamCreateWithoutCatalogPlansInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestCreateNestedManyWithoutTeamInput
@@ -2038,7 +2076,7 @@ export type TeamUncheckedCreateWithoutCatalogPlansInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
@@ -2068,6 +2106,7 @@ export type TeamUncheckedCreateWithoutCatalogPlansInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentUncheckedCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedCreateNestedManyWithoutTeamInput
@@ -2101,7 +2140,7 @@ export type TeamUpdateWithoutCatalogPlansInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
@@ -2131,6 +2170,7 @@ export type TeamUpdateWithoutCatalogPlansInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUpdateManyWithoutTeamNestedInput
@@ -2148,7 +2188,7 @@ export type TeamUncheckedUpdateWithoutCatalogPlansInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
@@ -2178,6 +2218,7 @@ export type TeamUncheckedUpdateWithoutCatalogPlansInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUncheckedUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedUpdateManyWithoutTeamNestedInput
@@ -2195,7 +2236,7 @@ export type TeamCreateWithoutCatalogAddOnsInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
@@ -2225,6 +2266,7 @@ export type TeamCreateWithoutCatalogAddOnsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestCreateNestedManyWithoutTeamInput
@@ -2242,7 +2284,7 @@ export type TeamUncheckedCreateWithoutCatalogAddOnsInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
@@ -2272,6 +2314,7 @@ export type TeamUncheckedCreateWithoutCatalogAddOnsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentUncheckedCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedCreateNestedManyWithoutTeamInput
@@ -2305,7 +2348,7 @@ export type TeamUpdateWithoutCatalogAddOnsInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
@@ -2335,6 +2378,7 @@ export type TeamUpdateWithoutCatalogAddOnsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUpdateManyWithoutTeamNestedInput
@@ -2352,7 +2396,7 @@ export type TeamUncheckedUpdateWithoutCatalogAddOnsInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
@@ -2382,6 +2426,7 @@ export type TeamUncheckedUpdateWithoutCatalogAddOnsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUncheckedUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedUpdateManyWithoutTeamNestedInput
@@ -2399,7 +2444,7 @@ export type TeamCreateWithoutCatalogCreditTypesInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
@@ -2429,6 +2474,7 @@ export type TeamCreateWithoutCatalogCreditTypesInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestCreateNestedManyWithoutTeamInput
@@ -2446,7 +2492,7 @@ export type TeamUncheckedCreateWithoutCatalogCreditTypesInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
@@ -2476,6 +2522,7 @@ export type TeamUncheckedCreateWithoutCatalogCreditTypesInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentUncheckedCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedCreateNestedManyWithoutTeamInput
@@ -2509,7 +2556,7 @@ export type TeamUpdateWithoutCatalogCreditTypesInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
@@ -2539,6 +2586,7 @@ export type TeamUpdateWithoutCatalogCreditTypesInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUpdateManyWithoutTeamNestedInput
@@ -2556,7 +2604,7 @@ export type TeamUncheckedUpdateWithoutCatalogCreditTypesInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
@@ -2586,6 +2634,7 @@ export type TeamUncheckedUpdateWithoutCatalogCreditTypesInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUncheckedUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedUpdateManyWithoutTeamNestedInput
@@ -2603,7 +2652,7 @@ export type TeamCreateWithoutCatalogVersionsInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
@@ -2633,6 +2682,7 @@ export type TeamCreateWithoutCatalogVersionsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestCreateNestedManyWithoutTeamInput
@@ -2650,7 +2700,7 @@ export type TeamUncheckedCreateWithoutCatalogVersionsInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
@@ -2680,6 +2730,7 @@ export type TeamUncheckedCreateWithoutCatalogVersionsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentUncheckedCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedCreateNestedManyWithoutTeamInput
@@ -2713,7 +2764,7 @@ export type TeamUpdateWithoutCatalogVersionsInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
@@ -2743,6 +2794,7 @@ export type TeamUpdateWithoutCatalogVersionsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUpdateManyWithoutTeamNestedInput
@@ -2760,7 +2812,7 @@ export type TeamUncheckedUpdateWithoutCatalogVersionsInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
@@ -2790,6 +2842,7 @@ export type TeamUncheckedUpdateWithoutCatalogVersionsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUncheckedUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedUpdateManyWithoutTeamNestedInput
@@ -2807,7 +2860,7 @@ export type TeamCreateWithoutCatalogConfigsInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
@@ -2837,6 +2890,7 @@ export type TeamCreateWithoutCatalogConfigsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestCreateNestedManyWithoutTeamInput
@@ -2854,7 +2908,7 @@ export type TeamUncheckedCreateWithoutCatalogConfigsInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
@@ -2884,6 +2938,7 @@ export type TeamUncheckedCreateWithoutCatalogConfigsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentUncheckedCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedCreateNestedManyWithoutTeamInput
@@ -2917,7 +2972,7 @@ export type TeamUpdateWithoutCatalogConfigsInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
@@ -2947,6 +3002,7 @@ export type TeamUpdateWithoutCatalogConfigsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUpdateManyWithoutTeamNestedInput
@@ -2964,7 +3020,7 @@ export type TeamUncheckedUpdateWithoutCatalogConfigsInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
@@ -2994,6 +3050,7 @@ export type TeamUncheckedUpdateWithoutCatalogConfigsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUncheckedUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedUpdateManyWithoutTeamNestedInput
@@ -3011,7 +3068,7 @@ export type TeamCreateWithoutBillingTemplatesInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
@@ -3041,6 +3098,7 @@ export type TeamCreateWithoutBillingTemplatesInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestCreateNestedManyWithoutTeamInput
@@ -3058,7 +3116,7 @@ export type TeamUncheckedCreateWithoutBillingTemplatesInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
@@ -3088,6 +3146,7 @@ export type TeamUncheckedCreateWithoutBillingTemplatesInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentUncheckedCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedCreateNestedManyWithoutTeamInput
@@ -3121,7 +3180,7 @@ export type TeamUpdateWithoutBillingTemplatesInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
@@ -3151,6 +3210,7 @@ export type TeamUpdateWithoutBillingTemplatesInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUpdateManyWithoutTeamNestedInput
@@ -3168,7 +3228,7 @@ export type TeamUncheckedUpdateWithoutBillingTemplatesInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
@@ -3198,6 +3258,7 @@ export type TeamUncheckedUpdateWithoutBillingTemplatesInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUncheckedUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedUpdateManyWithoutTeamNestedInput
@@ -3215,7 +3276,7 @@ export type TeamCreateWithoutTemplateInstallsInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
@@ -3245,6 +3306,7 @@ export type TeamCreateWithoutTemplateInstallsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestCreateNestedManyWithoutTeamInput
@@ -3262,7 +3324,7 @@ export type TeamUncheckedCreateWithoutTemplateInstallsInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
@@ -3292,6 +3354,7 @@ export type TeamUncheckedCreateWithoutTemplateInstallsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentUncheckedCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedCreateNestedManyWithoutTeamInput
@@ -3325,7 +3388,7 @@ export type TeamUpdateWithoutTemplateInstallsInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
@@ -3355,6 +3418,7 @@ export type TeamUpdateWithoutTemplateInstallsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUpdateManyWithoutTeamNestedInput
@@ -3372,7 +3436,7 @@ export type TeamUncheckedUpdateWithoutTemplateInstallsInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
@@ -3402,6 +3466,7 @@ export type TeamUncheckedUpdateWithoutTemplateInstallsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUncheckedUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedUpdateManyWithoutTeamNestedInput
@@ -3419,7 +3484,7 @@ export type TeamCreateWithoutTaxProfileInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
@@ -3449,6 +3514,7 @@ export type TeamCreateWithoutTaxProfileInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestCreateNestedManyWithoutTeamInput
@@ -3466,7 +3532,7 @@ export type TeamUncheckedCreateWithoutTaxProfileInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
@@ -3496,6 +3562,7 @@ export type TeamUncheckedCreateWithoutTaxProfileInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentUncheckedCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedCreateNestedManyWithoutTeamInput
@@ -3529,7 +3596,7 @@ export type TeamUpdateWithoutTaxProfileInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
@@ -3559,6 +3626,7 @@ export type TeamUpdateWithoutTaxProfileInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUpdateManyWithoutTeamNestedInput
@@ -3576,7 +3644,7 @@ export type TeamUncheckedUpdateWithoutTaxProfileInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
@@ -3606,6 +3674,7 @@ export type TeamUncheckedUpdateWithoutTaxProfileInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUncheckedUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedUpdateManyWithoutTeamNestedInput
@@ -3623,7 +3692,7 @@ export type TeamCreateWithoutInvoiceSequencesInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
@@ -3653,6 +3722,7 @@ export type TeamCreateWithoutInvoiceSequencesInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestCreateNestedManyWithoutTeamInput
@@ -3670,7 +3740,7 @@ export type TeamUncheckedCreateWithoutInvoiceSequencesInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
@@ -3700,6 +3770,7 @@ export type TeamUncheckedCreateWithoutInvoiceSequencesInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentUncheckedCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedCreateNestedManyWithoutTeamInput
@@ -3733,7 +3804,7 @@ export type TeamUpdateWithoutInvoiceSequencesInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
@@ -3763,6 +3834,7 @@ export type TeamUpdateWithoutInvoiceSequencesInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUpdateManyWithoutTeamNestedInput
@@ -3780,7 +3852,7 @@ export type TeamUncheckedUpdateWithoutInvoiceSequencesInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
@@ -3810,6 +3882,7 @@ export type TeamUncheckedUpdateWithoutInvoiceSequencesInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUncheckedUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedUpdateManyWithoutTeamNestedInput
@@ -3827,7 +3900,7 @@ export type TeamCreateWithoutInvoicesInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
@@ -3857,6 +3930,7 @@ export type TeamCreateWithoutInvoicesInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestCreateNestedManyWithoutTeamInput
@@ -3874,7 +3948,7 @@ export type TeamUncheckedCreateWithoutInvoicesInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
@@ -3904,6 +3978,7 @@ export type TeamUncheckedCreateWithoutInvoicesInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentUncheckedCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedCreateNestedManyWithoutTeamInput
@@ -3937,7 +4012,7 @@ export type TeamUpdateWithoutInvoicesInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
@@ -3967,6 +4042,7 @@ export type TeamUpdateWithoutInvoicesInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUpdateManyWithoutTeamNestedInput
@@ -3984,7 +4060,7 @@ export type TeamUncheckedUpdateWithoutInvoicesInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
@@ -4014,6 +4090,7 @@ export type TeamUncheckedUpdateWithoutInvoicesInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUncheckedUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedUpdateManyWithoutTeamNestedInput
@@ -4031,7 +4108,7 @@ export type TeamCreateWithoutAuditEventsInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
@@ -4061,6 +4138,7 @@ export type TeamCreateWithoutAuditEventsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestCreateNestedManyWithoutTeamInput
@@ -4078,7 +4156,7 @@ export type TeamUncheckedCreateWithoutAuditEventsInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
@@ -4108,6 +4186,7 @@ export type TeamUncheckedCreateWithoutAuditEventsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentUncheckedCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedCreateNestedManyWithoutTeamInput
@@ -4141,7 +4220,7 @@ export type TeamUpdateWithoutAuditEventsInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
@@ -4171,6 +4250,7 @@ export type TeamUpdateWithoutAuditEventsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUpdateManyWithoutTeamNestedInput
@@ -4188,7 +4268,7 @@ export type TeamUncheckedUpdateWithoutAuditEventsInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
@@ -4218,6 +4298,7 @@ export type TeamUncheckedUpdateWithoutAuditEventsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUncheckedUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedUpdateManyWithoutTeamNestedInput
@@ -4235,7 +4316,7 @@ export type TeamCreateWithoutBillingEventsInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
@@ -4265,6 +4346,7 @@ export type TeamCreateWithoutBillingEventsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestCreateNestedManyWithoutTeamInput
@@ -4282,7 +4364,7 @@ export type TeamUncheckedCreateWithoutBillingEventsInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
@@ -4312,6 +4394,7 @@ export type TeamUncheckedCreateWithoutBillingEventsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentUncheckedCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedCreateNestedManyWithoutTeamInput
@@ -4345,7 +4428,7 @@ export type TeamUpdateWithoutBillingEventsInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
@@ -4375,6 +4458,7 @@ export type TeamUpdateWithoutBillingEventsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUpdateManyWithoutTeamNestedInput
@@ -4392,7 +4476,7 @@ export type TeamUncheckedUpdateWithoutBillingEventsInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
@@ -4422,6 +4506,7 @@ export type TeamUncheckedUpdateWithoutBillingEventsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUncheckedUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedUpdateManyWithoutTeamNestedInput
@@ -4439,7 +4524,7 @@ export type TeamCreateWithoutSubscriptionStatesInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
@@ -4469,6 +4554,7 @@ export type TeamCreateWithoutSubscriptionStatesInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestCreateNestedManyWithoutTeamInput
@@ -4486,7 +4572,7 @@ export type TeamUncheckedCreateWithoutSubscriptionStatesInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
@@ -4516,6 +4602,7 @@ export type TeamUncheckedCreateWithoutSubscriptionStatesInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentUncheckedCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedCreateNestedManyWithoutTeamInput
@@ -4549,7 +4636,7 @@ export type TeamUpdateWithoutSubscriptionStatesInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
@@ -4579,6 +4666,7 @@ export type TeamUpdateWithoutSubscriptionStatesInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUpdateManyWithoutTeamNestedInput
@@ -4596,7 +4684,7 @@ export type TeamUncheckedUpdateWithoutSubscriptionStatesInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
@@ -4626,6 +4714,7 @@ export type TeamUncheckedUpdateWithoutSubscriptionStatesInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUncheckedUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedUpdateManyWithoutTeamNestedInput
@@ -4643,7 +4732,7 @@ export type TeamCreateWithoutPaymentsInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
@@ -4673,6 +4762,7 @@ export type TeamCreateWithoutPaymentsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestCreateNestedManyWithoutTeamInput
@@ -4690,7 +4780,7 @@ export type TeamUncheckedCreateWithoutPaymentsInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
@@ -4720,6 +4810,7 @@ export type TeamUncheckedCreateWithoutPaymentsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentUncheckedCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedCreateNestedManyWithoutTeamInput
@@ -4753,7 +4844,7 @@ export type TeamUpdateWithoutPaymentsInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
@@ -4783,6 +4874,7 @@ export type TeamUpdateWithoutPaymentsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUpdateManyWithoutTeamNestedInput
@@ -4800,7 +4892,7 @@ export type TeamUncheckedUpdateWithoutPaymentsInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
@@ -4830,6 +4922,7 @@ export type TeamUncheckedUpdateWithoutPaymentsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUncheckedUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedUpdateManyWithoutTeamNestedInput
@@ -4847,7 +4940,7 @@ export type TeamCreateWithoutBillingAdjustmentsInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
@@ -4877,6 +4970,7 @@ export type TeamCreateWithoutBillingAdjustmentsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestCreateNestedManyWithoutTeamInput
@@ -4894,7 +4988,7 @@ export type TeamUncheckedCreateWithoutBillingAdjustmentsInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
@@ -4924,6 +5018,7 @@ export type TeamUncheckedCreateWithoutBillingAdjustmentsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentUncheckedCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedCreateNestedManyWithoutTeamInput
@@ -4957,7 +5052,7 @@ export type TeamUpdateWithoutBillingAdjustmentsInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
@@ -4987,6 +5082,7 @@ export type TeamUpdateWithoutBillingAdjustmentsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUpdateManyWithoutTeamNestedInput
@@ -5004,7 +5100,7 @@ export type TeamUncheckedUpdateWithoutBillingAdjustmentsInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
@@ -5034,6 +5130,7 @@ export type TeamUncheckedUpdateWithoutBillingAdjustmentsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUncheckedUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedUpdateManyWithoutTeamNestedInput
@@ -5051,7 +5148,7 @@ export type TeamCreateWithoutBillingBalancesInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
@@ -5081,6 +5178,7 @@ export type TeamCreateWithoutBillingBalancesInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestCreateNestedManyWithoutTeamInput
@@ -5098,7 +5196,7 @@ export type TeamUncheckedCreateWithoutBillingBalancesInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
@@ -5128,6 +5226,7 @@ export type TeamUncheckedCreateWithoutBillingBalancesInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentUncheckedCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedCreateNestedManyWithoutTeamInput
@@ -5161,7 +5260,7 @@ export type TeamUpdateWithoutBillingBalancesInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
@@ -5191,6 +5290,7 @@ export type TeamUpdateWithoutBillingBalancesInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUpdateManyWithoutTeamNestedInput
@@ -5208,7 +5308,7 @@ export type TeamUncheckedUpdateWithoutBillingBalancesInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
@@ -5238,6 +5338,7 @@ export type TeamUncheckedUpdateWithoutBillingBalancesInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUncheckedUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedUpdateManyWithoutTeamNestedInput
@@ -5255,7 +5356,7 @@ export type TeamCreateWithoutRefundsInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
@@ -5285,6 +5386,7 @@ export type TeamCreateWithoutRefundsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestCreateNestedManyWithoutTeamInput
@@ -5302,7 +5404,7 @@ export type TeamUncheckedCreateWithoutRefundsInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
@@ -5332,6 +5434,7 @@ export type TeamUncheckedCreateWithoutRefundsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentUncheckedCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedCreateNestedManyWithoutTeamInput
@@ -5365,7 +5468,7 @@ export type TeamUpdateWithoutRefundsInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
@@ -5395,6 +5498,7 @@ export type TeamUpdateWithoutRefundsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUpdateManyWithoutTeamNestedInput
@@ -5412,7 +5516,7 @@ export type TeamUncheckedUpdateWithoutRefundsInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
@@ -5442,6 +5546,7 @@ export type TeamUncheckedUpdateWithoutRefundsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUncheckedUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedUpdateManyWithoutTeamNestedInput
@@ -5459,7 +5564,7 @@ export type TeamCreateWithoutBillingRecoveryTasksInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
@@ -5489,6 +5594,7 @@ export type TeamCreateWithoutBillingRecoveryTasksInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestCreateNestedManyWithoutTeamInput
@@ -5506,7 +5612,7 @@ export type TeamUncheckedCreateWithoutBillingRecoveryTasksInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
@@ -5536,6 +5642,7 @@ export type TeamUncheckedCreateWithoutBillingRecoveryTasksInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentUncheckedCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedCreateNestedManyWithoutTeamInput
@@ -5569,7 +5676,7 @@ export type TeamUpdateWithoutBillingRecoveryTasksInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
@@ -5599,6 +5706,7 @@ export type TeamUpdateWithoutBillingRecoveryTasksInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUpdateManyWithoutTeamNestedInput
@@ -5616,7 +5724,7 @@ export type TeamUncheckedUpdateWithoutBillingRecoveryTasksInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
@@ -5646,6 +5754,7 @@ export type TeamUncheckedUpdateWithoutBillingRecoveryTasksInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUncheckedUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedUpdateManyWithoutTeamNestedInput
@@ -5663,7 +5772,7 @@ export type TeamCreateWithoutWebhookDeliveriesInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
@@ -5693,6 +5802,7 @@ export type TeamCreateWithoutWebhookDeliveriesInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestCreateNestedManyWithoutTeamInput
@@ -5710,7 +5820,7 @@ export type TeamUncheckedCreateWithoutWebhookDeliveriesInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
@@ -5740,6 +5850,7 @@ export type TeamUncheckedCreateWithoutWebhookDeliveriesInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentUncheckedCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedCreateNestedManyWithoutTeamInput
@@ -5773,7 +5884,7 @@ export type TeamUpdateWithoutWebhookDeliveriesInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
@@ -5803,6 +5914,7 @@ export type TeamUpdateWithoutWebhookDeliveriesInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUpdateManyWithoutTeamNestedInput
@@ -5820,7 +5932,7 @@ export type TeamUncheckedUpdateWithoutWebhookDeliveriesInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
@@ -5850,6 +5962,7 @@ export type TeamUncheckedUpdateWithoutWebhookDeliveriesInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUncheckedUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedUpdateManyWithoutTeamNestedInput
@@ -5867,7 +5980,7 @@ export type TeamCreateWithoutGasSpendsInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
@@ -5897,6 +6010,7 @@ export type TeamCreateWithoutGasSpendsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestCreateNestedManyWithoutTeamInput
@@ -5914,7 +6028,7 @@ export type TeamUncheckedCreateWithoutGasSpendsInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
@@ -5944,6 +6058,7 @@ export type TeamUncheckedCreateWithoutGasSpendsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentUncheckedCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedCreateNestedManyWithoutTeamInput
@@ -5977,7 +6092,7 @@ export type TeamUpdateWithoutGasSpendsInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
@@ -6007,6 +6122,7 @@ export type TeamUpdateWithoutGasSpendsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUpdateManyWithoutTeamNestedInput
@@ -6024,7 +6140,7 @@ export type TeamUncheckedUpdateWithoutGasSpendsInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
@@ -6054,6 +6170,7 @@ export type TeamUncheckedUpdateWithoutGasSpendsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUncheckedUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedUpdateManyWithoutTeamNestedInput
@@ -6071,7 +6188,7 @@ export type TeamCreateWithoutTierHistoryInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
@@ -6101,6 +6218,7 @@ export type TeamCreateWithoutTierHistoryInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestCreateNestedManyWithoutTeamInput
@@ -6118,7 +6236,7 @@ export type TeamUncheckedCreateWithoutTierHistoryInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
@@ -6148,6 +6266,7 @@ export type TeamUncheckedCreateWithoutTierHistoryInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentUncheckedCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedCreateNestedManyWithoutTeamInput
@@ -6181,7 +6300,7 @@ export type TeamUpdateWithoutTierHistoryInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
@@ -6211,6 +6330,7 @@ export type TeamUpdateWithoutTierHistoryInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUpdateManyWithoutTeamNestedInput
@@ -6228,7 +6348,7 @@ export type TeamUncheckedUpdateWithoutTierHistoryInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
@@ -6258,6 +6378,7 @@ export type TeamUncheckedUpdateWithoutTierHistoryInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUncheckedUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedUpdateManyWithoutTeamNestedInput
@@ -6275,7 +6396,7 @@ export type TeamCreateWithoutSupportTicketsInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
@@ -6305,6 +6426,7 @@ export type TeamCreateWithoutSupportTicketsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestCreateNestedManyWithoutTeamInput
@@ -6322,7 +6444,7 @@ export type TeamUncheckedCreateWithoutSupportTicketsInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
@@ -6352,6 +6474,7 @@ export type TeamUncheckedCreateWithoutSupportTicketsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentUncheckedCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedCreateNestedManyWithoutTeamInput
@@ -6385,7 +6508,7 @@ export type TeamUpdateWithoutSupportTicketsInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
@@ -6415,6 +6538,7 @@ export type TeamUpdateWithoutSupportTicketsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUpdateManyWithoutTeamNestedInput
@@ -6432,7 +6556,7 @@ export type TeamUncheckedUpdateWithoutSupportTicketsInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
@@ -6462,6 +6586,7 @@ export type TeamUncheckedUpdateWithoutSupportTicketsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUncheckedUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedUpdateManyWithoutTeamNestedInput
@@ -6479,7 +6604,7 @@ export type TeamCreateWithoutArcenCompaniesInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
@@ -6509,6 +6634,7 @@ export type TeamCreateWithoutArcenCompaniesInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestCreateNestedManyWithoutTeamInput
@@ -6526,7 +6652,7 @@ export type TeamUncheckedCreateWithoutArcenCompaniesInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
@@ -6556,6 +6682,7 @@ export type TeamUncheckedCreateWithoutArcenCompaniesInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentUncheckedCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedCreateNestedManyWithoutTeamInput
@@ -6589,7 +6716,7 @@ export type TeamUpdateWithoutArcenCompaniesInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
@@ -6619,6 +6746,7 @@ export type TeamUpdateWithoutArcenCompaniesInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUpdateManyWithoutTeamNestedInput
@@ -6636,7 +6764,7 @@ export type TeamUncheckedUpdateWithoutArcenCompaniesInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
@@ -6666,6 +6794,7 @@ export type TeamUncheckedUpdateWithoutArcenCompaniesInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUncheckedUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedUpdateManyWithoutTeamNestedInput
@@ -6683,7 +6812,7 @@ export type TeamCreateWithoutAddOnGrantsInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
@@ -6713,6 +6842,7 @@ export type TeamCreateWithoutAddOnGrantsInput = {
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestCreateNestedManyWithoutTeamInput
@@ -6730,7 +6860,7 @@ export type TeamUncheckedCreateWithoutAddOnGrantsInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
@@ -6760,6 +6890,7 @@ export type TeamUncheckedCreateWithoutAddOnGrantsInput = {
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentUncheckedCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedCreateNestedManyWithoutTeamInput
@@ -6793,7 +6924,7 @@ export type TeamUpdateWithoutAddOnGrantsInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
@@ -6823,6 +6954,7 @@ export type TeamUpdateWithoutAddOnGrantsInput = {
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUpdateManyWithoutTeamNestedInput
@@ -6840,7 +6972,7 @@ export type TeamUncheckedUpdateWithoutAddOnGrantsInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
@@ -6870,6 +7002,7 @@ export type TeamUncheckedUpdateWithoutAddOnGrantsInput = {
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUncheckedUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedUpdateManyWithoutTeamNestedInput
@@ -6887,7 +7020,7 @@ export type TeamCreateWithoutPaymentLinksInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
@@ -6917,6 +7050,7 @@ export type TeamCreateWithoutPaymentLinksInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestCreateNestedManyWithoutTeamInput
@@ -6934,7 +7068,7 @@ export type TeamUncheckedCreateWithoutPaymentLinksInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
@@ -6964,6 +7098,7 @@ export type TeamUncheckedCreateWithoutPaymentLinksInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentUncheckedCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedCreateNestedManyWithoutTeamInput
@@ -6997,7 +7132,7 @@ export type TeamUpdateWithoutPaymentLinksInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
@@ -7027,6 +7162,7 @@ export type TeamUpdateWithoutPaymentLinksInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUpdateManyWithoutTeamNestedInput
@@ -7044,7 +7180,7 @@ export type TeamUncheckedUpdateWithoutPaymentLinksInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
@@ -7074,6 +7210,7 @@ export type TeamUncheckedUpdateWithoutPaymentLinksInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUncheckedUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedUpdateManyWithoutTeamNestedInput
@@ -7091,7 +7228,7 @@ export type TeamCreateWithoutCheckoutSessionsInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
@@ -7121,6 +7258,7 @@ export type TeamCreateWithoutCheckoutSessionsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestCreateNestedManyWithoutTeamInput
@@ -7138,7 +7276,7 @@ export type TeamUncheckedCreateWithoutCheckoutSessionsInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
@@ -7168,6 +7306,7 @@ export type TeamUncheckedCreateWithoutCheckoutSessionsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentUncheckedCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedCreateNestedManyWithoutTeamInput
@@ -7201,7 +7340,7 @@ export type TeamUpdateWithoutCheckoutSessionsInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
@@ -7231,6 +7370,7 @@ export type TeamUpdateWithoutCheckoutSessionsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUpdateManyWithoutTeamNestedInput
@@ -7248,7 +7388,7 @@ export type TeamUncheckedUpdateWithoutCheckoutSessionsInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
@@ -7278,6 +7418,7 @@ export type TeamUncheckedUpdateWithoutCheckoutSessionsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUncheckedUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedUpdateManyWithoutTeamNestedInput
@@ -7295,7 +7436,7 @@ export type TeamCreateWithoutFeatureFlagsInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
@@ -7325,6 +7466,7 @@ export type TeamCreateWithoutFeatureFlagsInput = {
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestCreateNestedManyWithoutTeamInput
@@ -7342,7 +7484,7 @@ export type TeamUncheckedCreateWithoutFeatureFlagsInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
@@ -7372,6 +7514,7 @@ export type TeamUncheckedCreateWithoutFeatureFlagsInput = {
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentUncheckedCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedCreateNestedManyWithoutTeamInput
@@ -7405,7 +7548,7 @@ export type TeamUpdateWithoutFeatureFlagsInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
@@ -7435,6 +7578,7 @@ export type TeamUpdateWithoutFeatureFlagsInput = {
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUpdateManyWithoutTeamNestedInput
@@ -7452,7 +7596,7 @@ export type TeamUncheckedUpdateWithoutFeatureFlagsInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
@@ -7482,12 +7626,13 @@ export type TeamUncheckedUpdateWithoutFeatureFlagsInput = {
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUncheckedUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedUpdateManyWithoutTeamNestedInput
 }
 
-export type TeamCreateWithoutArcenApiKeysInput = {
+export type TeamCreateWithoutEmbedAccessTokensInput = {
   id?: string
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -7499,7 +7644,7 @@ export type TeamCreateWithoutArcenApiKeysInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
@@ -7529,12 +7674,13 @@ export type TeamCreateWithoutArcenApiKeysInput = {
   arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
+  arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestCreateNestedManyWithoutTeamInput
 }
 
-export type TeamUncheckedCreateWithoutArcenApiKeysInput = {
+export type TeamUncheckedCreateWithoutEmbedAccessTokensInput = {
   id?: string
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -7546,7 +7692,7 @@ export type TeamUncheckedCreateWithoutArcenApiKeysInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
@@ -7576,6 +7722,215 @@ export type TeamUncheckedCreateWithoutArcenApiKeysInput = {
   arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
+  arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
+  embedComponents?: Prisma.EmbedComponentUncheckedCreateNestedManyWithoutTeamInput
+  agentConfig?: Prisma.ArcenAgentConfigUncheckedCreateNestedOneWithoutTeamInput
+  dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedCreateNestedManyWithoutTeamInput
+}
+
+export type TeamCreateOrConnectWithoutEmbedAccessTokensInput = {
+  where: Prisma.TeamWhereUniqueInput
+  create: Prisma.XOR<Prisma.TeamCreateWithoutEmbedAccessTokensInput, Prisma.TeamUncheckedCreateWithoutEmbedAccessTokensInput>
+}
+
+export type TeamUpsertWithoutEmbedAccessTokensInput = {
+  update: Prisma.XOR<Prisma.TeamUpdateWithoutEmbedAccessTokensInput, Prisma.TeamUncheckedUpdateWithoutEmbedAccessTokensInput>
+  create: Prisma.XOR<Prisma.TeamCreateWithoutEmbedAccessTokensInput, Prisma.TeamUncheckedCreateWithoutEmbedAccessTokensInput>
+  where?: Prisma.TeamWhereInput
+}
+
+export type TeamUpdateToOneWithWhereWithoutEmbedAccessTokensInput = {
+  where?: Prisma.TeamWhereInput
+  data: Prisma.XOR<Prisma.TeamUpdateWithoutEmbedAccessTokensInput, Prisma.TeamUncheckedUpdateWithoutEmbedAccessTokensInput>
+}
+
+export type TeamUpdateWithoutEmbedAccessTokensInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  slug?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
+  invoicePrefix?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
+  tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
+  invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
+  catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
+  catalogAddOns?: Prisma.CatalogAddOnUpdateManyWithoutTeamNestedInput
+  catalogCreditTypes?: Prisma.CatalogCreditTypeUpdateManyWithoutTeamNestedInput
+  catalogVersions?: Prisma.CatalogVersionUpdateManyWithoutTeamNestedInput
+  catalogConfigs?: Prisma.CatalogConfigUpdateManyWithoutTeamNestedInput
+  billingTemplates?: Prisma.BillingTemplateUpdateManyWithoutTeamNestedInput
+  templateInstalls?: Prisma.TemplateInstallUpdateManyWithoutTeamNestedInput
+  invoices?: Prisma.InvoiceUpdateManyWithoutTeamNestedInput
+  payments?: Prisma.PaymentUpdateManyWithoutTeamNestedInput
+  paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutTeamNestedInput
+  checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutTeamNestedInput
+  billingBalances?: Prisma.BillingBalanceUpdateManyWithoutTeamNestedInput
+  refunds?: Prisma.RefundUpdateManyWithoutTeamNestedInput
+  billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutTeamNestedInput
+  subscriptionStates?: Prisma.SubscriptionStateUpdateManyWithoutTeamNestedInput
+  billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutTeamNestedInput
+  taxProfile?: Prisma.TaxProfileUpdateOneWithoutTeamNestedInput
+  invoiceSequences?: Prisma.InvoiceSequenceUpdateManyWithoutTeamNestedInput
+  auditEvents?: Prisma.AuditEventUpdateManyWithoutTeamNestedInput
+  billingEvents?: Prisma.BillingEventUpdateManyWithoutTeamNestedInput
+  webhookDeliveries?: Prisma.WebhookDeliveryUpdateManyWithoutTeamNestedInput
+  gasSpends?: Prisma.GasSpendUpdateManyWithoutTeamNestedInput
+  tierHistory?: Prisma.TierUpgradeHistoryUpdateManyWithoutTeamNestedInput
+  supportTickets?: Prisma.SupportTicketUpdateManyWithoutTeamNestedInput
+  arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
+  addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
+  featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
+  arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
+  embedComponents?: Prisma.EmbedComponentUpdateManyWithoutTeamNestedInput
+  agentConfig?: Prisma.ArcenAgentConfigUpdateOneWithoutTeamNestedInput
+  dispatchRequests?: Prisma.ArcenDispatchRequestUpdateManyWithoutTeamNestedInput
+}
+
+export type TeamUncheckedUpdateWithoutEmbedAccessTokensInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  slug?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentMode?: Prisma.EnumEnvironmentModeFieldUpdateOperationsInput | $Enums.EnvironmentMode
+  invoicePrefix?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  platformTier?: Prisma.EnumPlatformTierFieldUpdateOperationsInput | $Enums.PlatformTier
+  tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
+  invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
+  catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
+  catalogAddOns?: Prisma.CatalogAddOnUncheckedUpdateManyWithoutTeamNestedInput
+  catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedUpdateManyWithoutTeamNestedInput
+  catalogVersions?: Prisma.CatalogVersionUncheckedUpdateManyWithoutTeamNestedInput
+  catalogConfigs?: Prisma.CatalogConfigUncheckedUpdateManyWithoutTeamNestedInput
+  billingTemplates?: Prisma.BillingTemplateUncheckedUpdateManyWithoutTeamNestedInput
+  templateInstalls?: Prisma.TemplateInstallUncheckedUpdateManyWithoutTeamNestedInput
+  invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutTeamNestedInput
+  payments?: Prisma.PaymentUncheckedUpdateManyWithoutTeamNestedInput
+  paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutTeamNestedInput
+  checkoutSessions?: Prisma.CheckoutSessionUncheckedUpdateManyWithoutTeamNestedInput
+  billingBalances?: Prisma.BillingBalanceUncheckedUpdateManyWithoutTeamNestedInput
+  refunds?: Prisma.RefundUncheckedUpdateManyWithoutTeamNestedInput
+  billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutTeamNestedInput
+  subscriptionStates?: Prisma.SubscriptionStateUncheckedUpdateManyWithoutTeamNestedInput
+  billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutTeamNestedInput
+  taxProfile?: Prisma.TaxProfileUncheckedUpdateOneWithoutTeamNestedInput
+  invoiceSequences?: Prisma.InvoiceSequenceUncheckedUpdateManyWithoutTeamNestedInput
+  auditEvents?: Prisma.AuditEventUncheckedUpdateManyWithoutTeamNestedInput
+  billingEvents?: Prisma.BillingEventUncheckedUpdateManyWithoutTeamNestedInput
+  webhookDeliveries?: Prisma.WebhookDeliveryUncheckedUpdateManyWithoutTeamNestedInput
+  gasSpends?: Prisma.GasSpendUncheckedUpdateManyWithoutTeamNestedInput
+  tierHistory?: Prisma.TierUpgradeHistoryUncheckedUpdateManyWithoutTeamNestedInput
+  supportTickets?: Prisma.SupportTicketUncheckedUpdateManyWithoutTeamNestedInput
+  arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
+  addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
+  featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
+  arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
+  embedComponents?: Prisma.EmbedComponentUncheckedUpdateManyWithoutTeamNestedInput
+  agentConfig?: Prisma.ArcenAgentConfigUncheckedUpdateOneWithoutTeamNestedInput
+  dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedUpdateManyWithoutTeamNestedInput
+}
+
+export type TeamCreateWithoutArcenApiKeysInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  name: string
+  slug: string
+  environmentMode?: $Enums.EnvironmentMode
+  invoicePrefix?: string | null
+  platformTier?: $Enums.PlatformTier
+  tierExpiresAt?: Date | string | null
+  tierSubscriptionId?: string | null
+  members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
+  invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
+  catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
+  catalogAddOns?: Prisma.CatalogAddOnCreateNestedManyWithoutTeamInput
+  catalogCreditTypes?: Prisma.CatalogCreditTypeCreateNestedManyWithoutTeamInput
+  catalogVersions?: Prisma.CatalogVersionCreateNestedManyWithoutTeamInput
+  catalogConfigs?: Prisma.CatalogConfigCreateNestedManyWithoutTeamInput
+  billingTemplates?: Prisma.BillingTemplateCreateNestedManyWithoutTeamInput
+  templateInstalls?: Prisma.TemplateInstallCreateNestedManyWithoutTeamInput
+  invoices?: Prisma.InvoiceCreateNestedManyWithoutTeamInput
+  payments?: Prisma.PaymentCreateNestedManyWithoutTeamInput
+  paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutTeamInput
+  checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutTeamInput
+  billingBalances?: Prisma.BillingBalanceCreateNestedManyWithoutTeamInput
+  refunds?: Prisma.RefundCreateNestedManyWithoutTeamInput
+  billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutTeamInput
+  subscriptionStates?: Prisma.SubscriptionStateCreateNestedManyWithoutTeamInput
+  billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutTeamInput
+  taxProfile?: Prisma.TaxProfileCreateNestedOneWithoutTeamInput
+  invoiceSequences?: Prisma.InvoiceSequenceCreateNestedManyWithoutTeamInput
+  auditEvents?: Prisma.AuditEventCreateNestedManyWithoutTeamInput
+  billingEvents?: Prisma.BillingEventCreateNestedManyWithoutTeamInput
+  webhookDeliveries?: Prisma.WebhookDeliveryCreateNestedManyWithoutTeamInput
+  gasSpends?: Prisma.GasSpendCreateNestedManyWithoutTeamInput
+  tierHistory?: Prisma.TierUpgradeHistoryCreateNestedManyWithoutTeamInput
+  supportTickets?: Prisma.SupportTicketCreateNestedManyWithoutTeamInput
+  arcenCompanies?: Prisma.ArcenCompanyCreateNestedManyWithoutTeamInput
+  addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
+  featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
+  embedComponents?: Prisma.EmbedComponentCreateNestedManyWithoutTeamInput
+  agentConfig?: Prisma.ArcenAgentConfigCreateNestedOneWithoutTeamInput
+  dispatchRequests?: Prisma.ArcenDispatchRequestCreateNestedManyWithoutTeamInput
+}
+
+export type TeamUncheckedCreateWithoutArcenApiKeysInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  name: string
+  slug: string
+  environmentMode?: $Enums.EnvironmentMode
+  invoicePrefix?: string | null
+  platformTier?: $Enums.PlatformTier
+  tierExpiresAt?: Date | string | null
+  tierSubscriptionId?: string | null
+  members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
+  invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
+  environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
+  catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
+  catalogAddOns?: Prisma.CatalogAddOnUncheckedCreateNestedManyWithoutTeamInput
+  catalogCreditTypes?: Prisma.CatalogCreditTypeUncheckedCreateNestedManyWithoutTeamInput
+  catalogVersions?: Prisma.CatalogVersionUncheckedCreateNestedManyWithoutTeamInput
+  catalogConfigs?: Prisma.CatalogConfigUncheckedCreateNestedManyWithoutTeamInput
+  billingTemplates?: Prisma.BillingTemplateUncheckedCreateNestedManyWithoutTeamInput
+  templateInstalls?: Prisma.TemplateInstallUncheckedCreateNestedManyWithoutTeamInput
+  invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutTeamInput
+  payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutTeamInput
+  paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutTeamInput
+  checkoutSessions?: Prisma.CheckoutSessionUncheckedCreateNestedManyWithoutTeamInput
+  billingBalances?: Prisma.BillingBalanceUncheckedCreateNestedManyWithoutTeamInput
+  refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutTeamInput
+  billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutTeamInput
+  subscriptionStates?: Prisma.SubscriptionStateUncheckedCreateNestedManyWithoutTeamInput
+  billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutTeamInput
+  taxProfile?: Prisma.TaxProfileUncheckedCreateNestedOneWithoutTeamInput
+  invoiceSequences?: Prisma.InvoiceSequenceUncheckedCreateNestedManyWithoutTeamInput
+  auditEvents?: Prisma.AuditEventUncheckedCreateNestedManyWithoutTeamInput
+  billingEvents?: Prisma.BillingEventUncheckedCreateNestedManyWithoutTeamInput
+  webhookDeliveries?: Prisma.WebhookDeliveryUncheckedCreateNestedManyWithoutTeamInput
+  gasSpends?: Prisma.GasSpendUncheckedCreateNestedManyWithoutTeamInput
+  tierHistory?: Prisma.TierUpgradeHistoryUncheckedCreateNestedManyWithoutTeamInput
+  supportTickets?: Prisma.SupportTicketUncheckedCreateNestedManyWithoutTeamInput
+  arcenCompanies?: Prisma.ArcenCompanyUncheckedCreateNestedManyWithoutTeamInput
+  addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
+  featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentUncheckedCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedCreateNestedManyWithoutTeamInput
@@ -7609,7 +7964,7 @@ export type TeamUpdateWithoutArcenApiKeysInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
@@ -7639,6 +7994,7 @@ export type TeamUpdateWithoutArcenApiKeysInput = {
   arcenCompanies?: Prisma.ArcenCompanyUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUpdateManyWithoutTeamNestedInput
@@ -7656,7 +8012,7 @@ export type TeamUncheckedUpdateWithoutArcenApiKeysInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
@@ -7686,6 +8042,7 @@ export type TeamUncheckedUpdateWithoutArcenApiKeysInput = {
   arcenCompanies?: Prisma.ArcenCompanyUncheckedUpdateManyWithoutTeamNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUncheckedUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedUpdateManyWithoutTeamNestedInput
@@ -7703,7 +8060,7 @@ export type TeamCreateWithoutEmbedComponentsInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
@@ -7734,6 +8091,7 @@ export type TeamCreateWithoutEmbedComponentsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestCreateNestedManyWithoutTeamInput
 }
@@ -7750,7 +8108,7 @@ export type TeamUncheckedCreateWithoutEmbedComponentsInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
@@ -7781,6 +8139,7 @@ export type TeamUncheckedCreateWithoutEmbedComponentsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedCreateNestedOneWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedCreateNestedManyWithoutTeamInput
 }
@@ -7813,7 +8172,7 @@ export type TeamUpdateWithoutEmbedComponentsInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
@@ -7844,6 +8203,7 @@ export type TeamUpdateWithoutEmbedComponentsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUpdateManyWithoutTeamNestedInput
 }
@@ -7860,7 +8220,7 @@ export type TeamUncheckedUpdateWithoutEmbedComponentsInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
@@ -7891,6 +8251,7 @@ export type TeamUncheckedUpdateWithoutEmbedComponentsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedUpdateOneWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedUpdateManyWithoutTeamNestedInput
 }
@@ -7907,7 +8268,7 @@ export type TeamCreateWithoutAgentConfigInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
@@ -7938,6 +8299,7 @@ export type TeamCreateWithoutAgentConfigInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentCreateNestedManyWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestCreateNestedManyWithoutTeamInput
 }
@@ -7954,7 +8316,7 @@ export type TeamUncheckedCreateWithoutAgentConfigInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
@@ -7985,6 +8347,7 @@ export type TeamUncheckedCreateWithoutAgentConfigInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentUncheckedCreateNestedManyWithoutTeamInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedCreateNestedManyWithoutTeamInput
 }
@@ -8017,7 +8380,7 @@ export type TeamUpdateWithoutAgentConfigInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
@@ -8048,6 +8411,7 @@ export type TeamUpdateWithoutAgentConfigInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUpdateManyWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUpdateManyWithoutTeamNestedInput
 }
@@ -8064,7 +8428,7 @@ export type TeamUncheckedUpdateWithoutAgentConfigInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
@@ -8095,6 +8459,7 @@ export type TeamUncheckedUpdateWithoutAgentConfigInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUncheckedUpdateManyWithoutTeamNestedInput
   dispatchRequests?: Prisma.ArcenDispatchRequestUncheckedUpdateManyWithoutTeamNestedInput
 }
@@ -8111,7 +8476,7 @@ export type TeamCreateWithoutDispatchRequestsInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanCreateNestedManyWithoutTeamInput
@@ -8142,6 +8507,7 @@ export type TeamCreateWithoutDispatchRequestsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigCreateNestedOneWithoutTeamInput
 }
@@ -8158,7 +8524,7 @@ export type TeamUncheckedCreateWithoutDispatchRequestsInput = {
   tierExpiresAt?: Date | string | null
   tierSubscriptionId?: string | null
   members?: Prisma.TeamMemberUncheckedCreateNestedManyWithoutTeamInput
-  providerProfile?: Prisma.ProviderProfileUncheckedCreateNestedOneWithoutTeamInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedCreateNestedManyWithoutTeamInput
   invitations?: Prisma.TeamInvitationUncheckedCreateNestedManyWithoutTeamInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedCreateNestedManyWithoutTeamInput
   catalogPlans?: Prisma.CatalogPlanUncheckedCreateNestedManyWithoutTeamInput
@@ -8189,6 +8555,7 @@ export type TeamUncheckedCreateWithoutDispatchRequestsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutTeamInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedCreateNestedManyWithoutTeamInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedCreateNestedManyWithoutTeamInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedCreateNestedManyWithoutTeamInput
   embedComponents?: Prisma.EmbedComponentUncheckedCreateNestedManyWithoutTeamInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedCreateNestedOneWithoutTeamInput
 }
@@ -8221,7 +8588,7 @@ export type TeamUpdateWithoutDispatchRequestsInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUpdateManyWithoutTeamNestedInput
@@ -8252,6 +8619,7 @@ export type TeamUpdateWithoutDispatchRequestsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUpdateOneWithoutTeamNestedInput
 }
@@ -8268,7 +8636,7 @@ export type TeamUncheckedUpdateWithoutDispatchRequestsInput = {
   tierExpiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   tierSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   members?: Prisma.TeamMemberUncheckedUpdateManyWithoutTeamNestedInput
-  providerProfile?: Prisma.ProviderProfileUncheckedUpdateOneWithoutTeamNestedInput
+  providerProfiles?: Prisma.ProviderProfileUncheckedUpdateManyWithoutTeamNestedInput
   invitations?: Prisma.TeamInvitationUncheckedUpdateManyWithoutTeamNestedInput
   environments?: Prisma.WorkspaceEnvironmentUncheckedUpdateManyWithoutTeamNestedInput
   catalogPlans?: Prisma.CatalogPlanUncheckedUpdateManyWithoutTeamNestedInput
@@ -8299,6 +8667,7 @@ export type TeamUncheckedUpdateWithoutDispatchRequestsInput = {
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutTeamNestedInput
   featureFlags?: Prisma.CatalogFeatureFlagUncheckedUpdateManyWithoutTeamNestedInput
   arcenApiKeys?: Prisma.ArcenApiKeyUncheckedUpdateManyWithoutTeamNestedInput
+  embedAccessTokens?: Prisma.EmbedAccessTokenUncheckedUpdateManyWithoutTeamNestedInput
   embedComponents?: Prisma.EmbedComponentUncheckedUpdateManyWithoutTeamNestedInput
   agentConfig?: Prisma.ArcenAgentConfigUncheckedUpdateOneWithoutTeamNestedInput
 }
@@ -8310,6 +8679,7 @@ export type TeamUncheckedUpdateWithoutDispatchRequestsInput = {
 
 export type TeamCountOutputType = {
   members: number
+  providerProfiles: number
   invitations: number
   environments: number
   catalogPlans: number
@@ -8339,12 +8709,14 @@ export type TeamCountOutputType = {
   addOnGrants: number
   featureFlags: number
   arcenApiKeys: number
+  embedAccessTokens: number
   embedComponents: number
   dispatchRequests: number
 }
 
 export type TeamCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   members?: boolean | TeamCountOutputTypeCountMembersArgs
+  providerProfiles?: boolean | TeamCountOutputTypeCountProviderProfilesArgs
   invitations?: boolean | TeamCountOutputTypeCountInvitationsArgs
   environments?: boolean | TeamCountOutputTypeCountEnvironmentsArgs
   catalogPlans?: boolean | TeamCountOutputTypeCountCatalogPlansArgs
@@ -8374,6 +8746,7 @@ export type TeamCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.I
   addOnGrants?: boolean | TeamCountOutputTypeCountAddOnGrantsArgs
   featureFlags?: boolean | TeamCountOutputTypeCountFeatureFlagsArgs
   arcenApiKeys?: boolean | TeamCountOutputTypeCountArcenApiKeysArgs
+  embedAccessTokens?: boolean | TeamCountOutputTypeCountEmbedAccessTokensArgs
   embedComponents?: boolean | TeamCountOutputTypeCountEmbedComponentsArgs
   dispatchRequests?: boolean | TeamCountOutputTypeCountDispatchRequestsArgs
 }
@@ -8393,6 +8766,13 @@ export type TeamCountOutputTypeDefaultArgs<ExtArgs extends runtime.Types.Extensi
  */
 export type TeamCountOutputTypeCountMembersArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.TeamMemberWhereInput
+}
+
+/**
+ * TeamCountOutputType without action
+ */
+export type TeamCountOutputTypeCountProviderProfilesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.ProviderProfileWhereInput
 }
 
 /**
@@ -8601,6 +8981,13 @@ export type TeamCountOutputTypeCountArcenApiKeysArgs<ExtArgs extends runtime.Typ
 /**
  * TeamCountOutputType without action
  */
+export type TeamCountOutputTypeCountEmbedAccessTokensArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.EmbedAccessTokenWhereInput
+}
+
+/**
+ * TeamCountOutputType without action
+ */
 export type TeamCountOutputTypeCountEmbedComponentsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.EmbedComponentWhereInput
 }
@@ -8625,7 +9012,7 @@ export type TeamSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   tierExpiresAt?: boolean
   tierSubscriptionId?: boolean
   members?: boolean | Prisma.Team$membersArgs<ExtArgs>
-  providerProfile?: boolean | Prisma.Team$providerProfileArgs<ExtArgs>
+  providerProfiles?: boolean | Prisma.Team$providerProfilesArgs<ExtArgs>
   invitations?: boolean | Prisma.Team$invitationsArgs<ExtArgs>
   environments?: boolean | Prisma.Team$environmentsArgs<ExtArgs>
   catalogPlans?: boolean | Prisma.Team$catalogPlansArgs<ExtArgs>
@@ -8656,6 +9043,7 @@ export type TeamSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   addOnGrants?: boolean | Prisma.Team$addOnGrantsArgs<ExtArgs>
   featureFlags?: boolean | Prisma.Team$featureFlagsArgs<ExtArgs>
   arcenApiKeys?: boolean | Prisma.Team$arcenApiKeysArgs<ExtArgs>
+  embedAccessTokens?: boolean | Prisma.Team$embedAccessTokensArgs<ExtArgs>
   embedComponents?: boolean | Prisma.Team$embedComponentsArgs<ExtArgs>
   agentConfig?: boolean | Prisma.Team$agentConfigArgs<ExtArgs>
   dispatchRequests?: boolean | Prisma.Team$dispatchRequestsArgs<ExtArgs>
@@ -8704,7 +9092,7 @@ export type TeamSelectScalar = {
 export type TeamOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "updatedAt" | "name" | "slug" | "environmentMode" | "invoicePrefix" | "platformTier" | "tierExpiresAt" | "tierSubscriptionId", ExtArgs["result"]["team"]>
 export type TeamInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   members?: boolean | Prisma.Team$membersArgs<ExtArgs>
-  providerProfile?: boolean | Prisma.Team$providerProfileArgs<ExtArgs>
+  providerProfiles?: boolean | Prisma.Team$providerProfilesArgs<ExtArgs>
   invitations?: boolean | Prisma.Team$invitationsArgs<ExtArgs>
   environments?: boolean | Prisma.Team$environmentsArgs<ExtArgs>
   catalogPlans?: boolean | Prisma.Team$catalogPlansArgs<ExtArgs>
@@ -8735,6 +9123,7 @@ export type TeamInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   addOnGrants?: boolean | Prisma.Team$addOnGrantsArgs<ExtArgs>
   featureFlags?: boolean | Prisma.Team$featureFlagsArgs<ExtArgs>
   arcenApiKeys?: boolean | Prisma.Team$arcenApiKeysArgs<ExtArgs>
+  embedAccessTokens?: boolean | Prisma.Team$embedAccessTokensArgs<ExtArgs>
   embedComponents?: boolean | Prisma.Team$embedComponentsArgs<ExtArgs>
   agentConfig?: boolean | Prisma.Team$agentConfigArgs<ExtArgs>
   dispatchRequests?: boolean | Prisma.Team$dispatchRequestsArgs<ExtArgs>
@@ -8747,7 +9136,7 @@ export type $TeamPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
   name: "Team"
   objects: {
     members: Prisma.$TeamMemberPayload<ExtArgs>[]
-    providerProfile: Prisma.$ProviderProfilePayload<ExtArgs> | null
+    providerProfiles: Prisma.$ProviderProfilePayload<ExtArgs>[]
     invitations: Prisma.$TeamInvitationPayload<ExtArgs>[]
     environments: Prisma.$WorkspaceEnvironmentPayload<ExtArgs>[]
     catalogPlans: Prisma.$CatalogPlanPayload<ExtArgs>[]
@@ -8778,6 +9167,7 @@ export type $TeamPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     addOnGrants: Prisma.$CompanyAddOnGrantPayload<ExtArgs>[]
     featureFlags: Prisma.$CatalogFeatureFlagPayload<ExtArgs>[]
     arcenApiKeys: Prisma.$ArcenApiKeyPayload<ExtArgs>[]
+    embedAccessTokens: Prisma.$EmbedAccessTokenPayload<ExtArgs>[]
     embedComponents: Prisma.$EmbedComponentPayload<ExtArgs>[]
     agentConfig: Prisma.$ArcenAgentConfigPayload<ExtArgs> | null
     dispatchRequests: Prisma.$ArcenDispatchRequestPayload<ExtArgs>[]
@@ -9188,7 +9578,7 @@ readonly fields: TeamFieldRefs;
 export interface Prisma__TeamClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   members<T extends Prisma.Team$membersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$membersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TeamMemberPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
-  providerProfile<T extends Prisma.Team$providerProfileArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$providerProfileArgs<ExtArgs>>): Prisma.Prisma__ProviderProfileClient<runtime.Types.Result.GetResult<Prisma.$ProviderProfilePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  providerProfiles<T extends Prisma.Team$providerProfilesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$providerProfilesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ProviderProfilePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   invitations<T extends Prisma.Team$invitationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$invitationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TeamInvitationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   environments<T extends Prisma.Team$environmentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$environmentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$WorkspaceEnvironmentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   catalogPlans<T extends Prisma.Team$catalogPlansArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$catalogPlansArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CatalogPlanPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -9219,6 +9609,7 @@ export interface Prisma__TeamClient<T, Null = never, ExtArgs extends runtime.Typ
   addOnGrants<T extends Prisma.Team$addOnGrantsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$addOnGrantsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CompanyAddOnGrantPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   featureFlags<T extends Prisma.Team$featureFlagsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$featureFlagsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CatalogFeatureFlagPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   arcenApiKeys<T extends Prisma.Team$arcenApiKeysArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$arcenApiKeysArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ArcenApiKeyPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  embedAccessTokens<T extends Prisma.Team$embedAccessTokensArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$embedAccessTokensArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$EmbedAccessTokenPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   embedComponents<T extends Prisma.Team$embedComponentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$embedComponentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$EmbedComponentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   agentConfig<T extends Prisma.Team$agentConfigArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$agentConfigArgs<ExtArgs>>): Prisma.Prisma__ArcenAgentConfigClient<runtime.Types.Result.GetResult<Prisma.$ArcenAgentConfigPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   dispatchRequests<T extends Prisma.Team$dispatchRequestsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$dispatchRequestsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ArcenDispatchRequestPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -9673,9 +10064,9 @@ export type Team$membersArgs<ExtArgs extends runtime.Types.Extensions.InternalAr
 }
 
 /**
- * Team.providerProfile
+ * Team.providerProfiles
  */
-export type Team$providerProfileArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+export type Team$providerProfilesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   /**
    * Select specific fields to fetch from the ProviderProfile
    */
@@ -9689,6 +10080,11 @@ export type Team$providerProfileArgs<ExtArgs extends runtime.Types.Extensions.In
    */
   include?: Prisma.ProviderProfileInclude<ExtArgs> | null
   where?: Prisma.ProviderProfileWhereInput
+  orderBy?: Prisma.ProviderProfileOrderByWithRelationInput | Prisma.ProviderProfileOrderByWithRelationInput[]
+  cursor?: Prisma.ProviderProfileWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.ProviderProfileScalarFieldEnum | Prisma.ProviderProfileScalarFieldEnum[]
 }
 
 /**
@@ -10404,6 +10800,30 @@ export type Team$arcenApiKeysArgs<ExtArgs extends runtime.Types.Extensions.Inter
   take?: number
   skip?: number
   distinct?: Prisma.ArcenApiKeyScalarFieldEnum | Prisma.ArcenApiKeyScalarFieldEnum[]
+}
+
+/**
+ * Team.embedAccessTokens
+ */
+export type Team$embedAccessTokensArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the EmbedAccessToken
+   */
+  select?: Prisma.EmbedAccessTokenSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the EmbedAccessToken
+   */
+  omit?: Prisma.EmbedAccessTokenOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.EmbedAccessTokenInclude<ExtArgs> | null
+  where?: Prisma.EmbedAccessTokenWhereInput
+  orderBy?: Prisma.EmbedAccessTokenOrderByWithRelationInput | Prisma.EmbedAccessTokenOrderByWithRelationInput[]
+  cursor?: Prisma.EmbedAccessTokenWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.EmbedAccessTokenScalarFieldEnum | Prisma.EmbedAccessTokenScalarFieldEnum[]
 }
 
 /**

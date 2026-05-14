@@ -2,6 +2,7 @@ import type { Context } from "hono";
 import { db } from "../../../db.js";
 import { writeAuditEvent } from "../../../lib/platform/audit.js";
 import { requireTeamRoles, isErrorResponse } from "../../../lib/auth/api-auth.js";
+import { requireResolvedActiveEnvironment } from "../../../lib/environments/workspace-environments.js";
 
 export async function revokeApiKeyById(c: Context) {
   const auth = await requireTeamRoles(c, ["OWNER", "ADMIN"]);
@@ -9,11 +10,18 @@ export async function revokeApiKeyById(c: Context) {
 
   const { team } = auth;
   const teamId = team.teamId;
+  const activeEnvironment = await requireResolvedActiveEnvironment(
+    auth.session,
+    teamId,
+  );
+  if (!activeEnvironment) {
+    return c.json({ error: "No workspace environment selected" }, 409 as any);
+  }
 
   const id = c.req.param("id");
 
   const keyRecord = await db.arcenApiKey.findFirst({
-    where: { id, teamId },
+    where: { id, teamId, environmentId: activeEnvironment.id },
     select: { id: true, prefix: true },
   });
 

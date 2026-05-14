@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "../../../db.js";
 import { writeAuditEvent } from "../../../lib/platform/audit.js";
 import { requireTeamRoles, isErrorResponse } from "../../../lib/auth/api-auth.js";
+import { requireResolvedActiveEnvironment } from "../../../lib/environments/workspace-environments.js";
 
 const EMPTY_PROFILE = {
   providerName: null,
@@ -34,9 +35,21 @@ export async function getProfile(c: Context) {
 
   const { team } = auth;
   const teamId = team.teamId;
+  const activeEnvironment = await requireResolvedActiveEnvironment(
+    auth.session,
+    teamId,
+  );
+  if (!activeEnvironment) {
+    return c.json({ error: "No workspace environment selected" }, 409 as any);
+  }
 
   const profile = await db.providerProfile.findUnique({
-    where: { teamId },
+    where: {
+      teamId_environmentId: {
+        teamId,
+        environmentId: activeEnvironment.id,
+      },
+    },
     select: {
       providerName: true,
       website: true,
@@ -63,6 +76,13 @@ export async function putProfile(c: Context) {
 
   const { team } = auth;
   const teamId = team.teamId;
+  const activeEnvironment = await requireResolvedActiveEnvironment(
+    auth.session,
+    teamId,
+  );
+  if (!activeEnvironment) {
+    return c.json({ error: "No workspace environment selected" }, 409 as any);
+  }
 
   const d = parsed.data;
   const data: Record<string, unknown> = {};
@@ -76,7 +96,12 @@ export async function putProfile(c: Context) {
     data.webhookSigningSecret = d.webhookSigningSecret;
 
   const before = await db.providerProfile.findUnique({
-    where: { teamId },
+    where: {
+      teamId_environmentId: {
+        teamId,
+        environmentId: activeEnvironment.id,
+      },
+    },
     select: {
       providerName: true,
       website: true,
@@ -89,9 +114,14 @@ export async function putProfile(c: Context) {
   });
 
   const profile = await db.providerProfile.upsert({
-    where: { teamId },
+    where: {
+      teamId_environmentId: {
+        teamId,
+        environmentId: activeEnvironment.id,
+      },
+    },
     update: data,
-    create: { teamId, ...data },
+    create: { teamId, environmentId: activeEnvironment.id, ...data },
     select: {
       providerName: true,
       website: true,

@@ -1,12 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ARCENPAY_APP_URL } from "@arcenpay/react";
 import styles from "./page.module.css";
 
 interface Config {
   componentId: string;
-  baseUrl: string;
   demoCompanyWallet: string;
   hasApiKey: boolean;
   hasPublishableKey: boolean;
@@ -15,7 +13,6 @@ interface Config {
 export default function SettingsPage() {
   const [config, setConfig] = useState<Config | null>(null);
   const [copied, setCopied] = useState(false);
-  const dashboardUrl = config?.baseUrl ?? ARCENPAY_APP_URL;
 
   useEffect(() => {
     fetch("/api/config")
@@ -93,10 +90,10 @@ export default function SettingsPage() {
             envVar="ARCENPAY_API_KEY"
           />
           <StatusItem
-            label="Dashboard URL"
-            status={config?.baseUrl ? "connected" : "missing"}
-            value={config?.baseUrl ?? "Not set"}
-            envVar="SDK default"
+            label="SDK Routing"
+            status="connected"
+            value="Handled automatically"
+            envVar="No config needed"
           />
           <StatusItem
             label="Component ID"
@@ -131,16 +128,8 @@ export default function SettingsPage() {
             <div className={styles.stepContent}>
               <div className={styles.stepTitle}>Get your API key</div>
               <p className={styles.stepDesc}>
-                Open your{" "}
-                <a
-                  href={dashboardUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={styles.link}
-                >
-                  ArcenPay dashboard
-                </a>{" "}
-                → Agent → API Keys → Create a new key. It starts with{" "}
+                Open your ArcenPay dashboard, go to Agent → API Keys, and
+                create a new key. It starts with{" "}
                 <code>api_</code>.
               </p>
             </div>
@@ -150,16 +139,8 @@ export default function SettingsPage() {
             <div className={styles.stepContent}>
               <div className={styles.stepTitle}>Add webhook URL (optional)</div>
               <p className={styles.stepDesc}>
-                Copy the webhook URL above and paste it into{" "}
-                <a
-                  href={dashboardUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={styles.link}
-                >
-                  Settings → Webhooks
-                </a>{" "}
-                in your dashboard.
+                Copy the webhook URL above and paste it into Settings →
+                Webhooks in your dashboard.
               </p>
             </div>
           </div>
@@ -170,16 +151,8 @@ export default function SettingsPage() {
                 Create a component (optional)
               </div>
               <p className={styles.stepDesc}>
-                Go to{" "}
-                <a
-                  href={dashboardUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={styles.link}
-                >
-                  Connections → Components
-                </a>{" "}
-                in the dashboard. Create a new component and copy its ID into{" "}
+                Go to Connections → Components in the dashboard. Create a new
+                component and copy its ID into{" "}
                 <code>NEXT_PUBLIC_ARCENPAY_COMPONENT_ID</code>.
               </p>
             </div>

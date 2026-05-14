@@ -24,6 +24,7 @@ export async function POST(c: Context) {
   if (isApiKeyError(ctx)) return c.json({ ok: false, error: ctx.error }, ctx.status as any);
 
   const { teamId } = ctx;
+  const environmentId = ctx.environmentId ?? null;
 
   let body: {
     proof: unknown;
@@ -68,8 +69,19 @@ export async function POST(c: Context) {
   }
 
   // Resolve company and user
-  const company = body.companyKeys ? await resolveCompany(teamId, body.companyKeys) : null;
-  const user = body.userKeys && company ? await resolveUser(teamId, body.userKeys) : null;
+  const company = body.companyKeys
+    ? await resolveCompany(teamId, {
+        ...body.companyKeys,
+        environmentId,
+      })
+    : null;
+  const user =
+    body.userKeys && company
+      ? await resolveUser(teamId, {
+          ...body.userKeys,
+          environmentId,
+        })
+      : null;
 
   const expiresAt = body.expiresIn
     ? new Date(Date.now() + body.expiresIn * 1000)

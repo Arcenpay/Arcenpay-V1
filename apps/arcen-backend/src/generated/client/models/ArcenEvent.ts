@@ -28,6 +28,7 @@ export type ArcenEventMinAggregateOutputType = {
   id: string | null
   sentAt: Date | null
   teamId: string | null
+  environmentId: string | null
   eventType: string | null
   name: string | null
   companyId: string | null
@@ -38,6 +39,7 @@ export type ArcenEventMaxAggregateOutputType = {
   id: string | null
   sentAt: Date | null
   teamId: string | null
+  environmentId: string | null
   eventType: string | null
   name: string | null
   companyId: string | null
@@ -48,6 +50,7 @@ export type ArcenEventCountAggregateOutputType = {
   id: number
   sentAt: number
   teamId: number
+  environmentId: number
   eventType: number
   name: number
   companyId: number
@@ -61,6 +64,7 @@ export type ArcenEventMinAggregateInputType = {
   id?: true
   sentAt?: true
   teamId?: true
+  environmentId?: true
   eventType?: true
   name?: true
   companyId?: true
@@ -71,6 +75,7 @@ export type ArcenEventMaxAggregateInputType = {
   id?: true
   sentAt?: true
   teamId?: true
+  environmentId?: true
   eventType?: true
   name?: true
   companyId?: true
@@ -81,6 +86,7 @@ export type ArcenEventCountAggregateInputType = {
   id?: true
   sentAt?: true
   teamId?: true
+  environmentId?: true
   eventType?: true
   name?: true
   companyId?: true
@@ -165,6 +171,7 @@ export type ArcenEventGroupByOutputType = {
   id: string
   sentAt: Date
   teamId: string
+  environmentId: string | null
   eventType: string
   name: string | null
   companyId: string | null
@@ -197,24 +204,28 @@ export type ArcenEventWhereInput = {
   id?: Prisma.StringFilter<"ArcenEvent"> | string
   sentAt?: Prisma.DateTimeFilter<"ArcenEvent"> | Date | string
   teamId?: Prisma.StringFilter<"ArcenEvent"> | string
+  environmentId?: Prisma.StringNullableFilter<"ArcenEvent"> | string | null
   eventType?: Prisma.StringFilter<"ArcenEvent"> | string
   name?: Prisma.StringNullableFilter<"ArcenEvent"> | string | null
   companyId?: Prisma.StringNullableFilter<"ArcenEvent"> | string | null
   userId?: Prisma.StringNullableFilter<"ArcenEvent"> | string | null
   traits?: Prisma.JsonFilter<"ArcenEvent">
   company?: Prisma.XOR<Prisma.ArcenCompanyNullableScalarRelationFilter, Prisma.ArcenCompanyWhereInput> | null
+  environment?: Prisma.XOR<Prisma.WorkspaceEnvironmentNullableScalarRelationFilter, Prisma.WorkspaceEnvironmentWhereInput> | null
 }
 
 export type ArcenEventOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   sentAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrderInput | Prisma.SortOrder
   eventType?: Prisma.SortOrder
   name?: Prisma.SortOrderInput | Prisma.SortOrder
   companyId?: Prisma.SortOrderInput | Prisma.SortOrder
   userId?: Prisma.SortOrderInput | Prisma.SortOrder
   traits?: Prisma.SortOrder
   company?: Prisma.ArcenCompanyOrderByWithRelationInput
+  environment?: Prisma.WorkspaceEnvironmentOrderByWithRelationInput
 }
 
 export type ArcenEventWhereUniqueInput = Prisma.AtLeast<{
@@ -224,18 +235,21 @@ export type ArcenEventWhereUniqueInput = Prisma.AtLeast<{
   NOT?: Prisma.ArcenEventWhereInput | Prisma.ArcenEventWhereInput[]
   sentAt?: Prisma.DateTimeFilter<"ArcenEvent"> | Date | string
   teamId?: Prisma.StringFilter<"ArcenEvent"> | string
+  environmentId?: Prisma.StringNullableFilter<"ArcenEvent"> | string | null
   eventType?: Prisma.StringFilter<"ArcenEvent"> | string
   name?: Prisma.StringNullableFilter<"ArcenEvent"> | string | null
   companyId?: Prisma.StringNullableFilter<"ArcenEvent"> | string | null
   userId?: Prisma.StringNullableFilter<"ArcenEvent"> | string | null
   traits?: Prisma.JsonFilter<"ArcenEvent">
   company?: Prisma.XOR<Prisma.ArcenCompanyNullableScalarRelationFilter, Prisma.ArcenCompanyWhereInput> | null
+  environment?: Prisma.XOR<Prisma.WorkspaceEnvironmentNullableScalarRelationFilter, Prisma.WorkspaceEnvironmentWhereInput> | null
 }, "id">
 
 export type ArcenEventOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   sentAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrderInput | Prisma.SortOrder
   eventType?: Prisma.SortOrder
   name?: Prisma.SortOrderInput | Prisma.SortOrder
   companyId?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -253,6 +267,7 @@ export type ArcenEventScalarWhereWithAggregatesInput = {
   id?: Prisma.StringWithAggregatesFilter<"ArcenEvent"> | string
   sentAt?: Prisma.DateTimeWithAggregatesFilter<"ArcenEvent"> | Date | string
   teamId?: Prisma.StringWithAggregatesFilter<"ArcenEvent"> | string
+  environmentId?: Prisma.StringNullableWithAggregatesFilter<"ArcenEvent"> | string | null
   eventType?: Prisma.StringWithAggregatesFilter<"ArcenEvent"> | string
   name?: Prisma.StringNullableWithAggregatesFilter<"ArcenEvent"> | string | null
   companyId?: Prisma.StringNullableWithAggregatesFilter<"ArcenEvent"> | string | null
@@ -269,12 +284,14 @@ export type ArcenEventCreateInput = {
   userId?: string | null
   traits?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   company?: Prisma.ArcenCompanyCreateNestedOneWithoutEventsInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutArcenEventsInput
 }
 
 export type ArcenEventUncheckedCreateInput = {
   id?: string
   sentAt?: Date | string
   teamId: string
+  environmentId?: string | null
   eventType: string
   name?: string | null
   companyId?: string | null
@@ -291,12 +308,14 @@ export type ArcenEventUpdateInput = {
   userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   traits?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   company?: Prisma.ArcenCompanyUpdateOneWithoutEventsNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutArcenEventsNestedInput
 }
 
 export type ArcenEventUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   sentAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   eventType?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   companyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -308,6 +327,7 @@ export type ArcenEventCreateManyInput = {
   id?: string
   sentAt?: Date | string
   teamId: string
+  environmentId?: string | null
   eventType: string
   name?: string | null
   companyId?: string | null
@@ -329,6 +349,7 @@ export type ArcenEventUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   sentAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   eventType?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   companyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -350,6 +371,7 @@ export type ArcenEventCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   sentAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrder
   eventType?: Prisma.SortOrder
   name?: Prisma.SortOrder
   companyId?: Prisma.SortOrder
@@ -361,6 +383,7 @@ export type ArcenEventMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
   sentAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrder
   eventType?: Prisma.SortOrder
   name?: Prisma.SortOrder
   companyId?: Prisma.SortOrder
@@ -371,10 +394,53 @@ export type ArcenEventMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
   sentAt?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrder
   eventType?: Prisma.SortOrder
   name?: Prisma.SortOrder
   companyId?: Prisma.SortOrder
   userId?: Prisma.SortOrder
+}
+
+export type ArcenEventCreateNestedManyWithoutEnvironmentInput = {
+  create?: Prisma.XOR<Prisma.ArcenEventCreateWithoutEnvironmentInput, Prisma.ArcenEventUncheckedCreateWithoutEnvironmentInput> | Prisma.ArcenEventCreateWithoutEnvironmentInput[] | Prisma.ArcenEventUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.ArcenEventCreateOrConnectWithoutEnvironmentInput | Prisma.ArcenEventCreateOrConnectWithoutEnvironmentInput[]
+  createMany?: Prisma.ArcenEventCreateManyEnvironmentInputEnvelope
+  connect?: Prisma.ArcenEventWhereUniqueInput | Prisma.ArcenEventWhereUniqueInput[]
+}
+
+export type ArcenEventUncheckedCreateNestedManyWithoutEnvironmentInput = {
+  create?: Prisma.XOR<Prisma.ArcenEventCreateWithoutEnvironmentInput, Prisma.ArcenEventUncheckedCreateWithoutEnvironmentInput> | Prisma.ArcenEventCreateWithoutEnvironmentInput[] | Prisma.ArcenEventUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.ArcenEventCreateOrConnectWithoutEnvironmentInput | Prisma.ArcenEventCreateOrConnectWithoutEnvironmentInput[]
+  createMany?: Prisma.ArcenEventCreateManyEnvironmentInputEnvelope
+  connect?: Prisma.ArcenEventWhereUniqueInput | Prisma.ArcenEventWhereUniqueInput[]
+}
+
+export type ArcenEventUpdateManyWithoutEnvironmentNestedInput = {
+  create?: Prisma.XOR<Prisma.ArcenEventCreateWithoutEnvironmentInput, Prisma.ArcenEventUncheckedCreateWithoutEnvironmentInput> | Prisma.ArcenEventCreateWithoutEnvironmentInput[] | Prisma.ArcenEventUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.ArcenEventCreateOrConnectWithoutEnvironmentInput | Prisma.ArcenEventCreateOrConnectWithoutEnvironmentInput[]
+  upsert?: Prisma.ArcenEventUpsertWithWhereUniqueWithoutEnvironmentInput | Prisma.ArcenEventUpsertWithWhereUniqueWithoutEnvironmentInput[]
+  createMany?: Prisma.ArcenEventCreateManyEnvironmentInputEnvelope
+  set?: Prisma.ArcenEventWhereUniqueInput | Prisma.ArcenEventWhereUniqueInput[]
+  disconnect?: Prisma.ArcenEventWhereUniqueInput | Prisma.ArcenEventWhereUniqueInput[]
+  delete?: Prisma.ArcenEventWhereUniqueInput | Prisma.ArcenEventWhereUniqueInput[]
+  connect?: Prisma.ArcenEventWhereUniqueInput | Prisma.ArcenEventWhereUniqueInput[]
+  update?: Prisma.ArcenEventUpdateWithWhereUniqueWithoutEnvironmentInput | Prisma.ArcenEventUpdateWithWhereUniqueWithoutEnvironmentInput[]
+  updateMany?: Prisma.ArcenEventUpdateManyWithWhereWithoutEnvironmentInput | Prisma.ArcenEventUpdateManyWithWhereWithoutEnvironmentInput[]
+  deleteMany?: Prisma.ArcenEventScalarWhereInput | Prisma.ArcenEventScalarWhereInput[]
+}
+
+export type ArcenEventUncheckedUpdateManyWithoutEnvironmentNestedInput = {
+  create?: Prisma.XOR<Prisma.ArcenEventCreateWithoutEnvironmentInput, Prisma.ArcenEventUncheckedCreateWithoutEnvironmentInput> | Prisma.ArcenEventCreateWithoutEnvironmentInput[] | Prisma.ArcenEventUncheckedCreateWithoutEnvironmentInput[]
+  connectOrCreate?: Prisma.ArcenEventCreateOrConnectWithoutEnvironmentInput | Prisma.ArcenEventCreateOrConnectWithoutEnvironmentInput[]
+  upsert?: Prisma.ArcenEventUpsertWithWhereUniqueWithoutEnvironmentInput | Prisma.ArcenEventUpsertWithWhereUniqueWithoutEnvironmentInput[]
+  createMany?: Prisma.ArcenEventCreateManyEnvironmentInputEnvelope
+  set?: Prisma.ArcenEventWhereUniqueInput | Prisma.ArcenEventWhereUniqueInput[]
+  disconnect?: Prisma.ArcenEventWhereUniqueInput | Prisma.ArcenEventWhereUniqueInput[]
+  delete?: Prisma.ArcenEventWhereUniqueInput | Prisma.ArcenEventWhereUniqueInput[]
+  connect?: Prisma.ArcenEventWhereUniqueInput | Prisma.ArcenEventWhereUniqueInput[]
+  update?: Prisma.ArcenEventUpdateWithWhereUniqueWithoutEnvironmentInput | Prisma.ArcenEventUpdateWithWhereUniqueWithoutEnvironmentInput[]
+  updateMany?: Prisma.ArcenEventUpdateManyWithWhereWithoutEnvironmentInput | Prisma.ArcenEventUpdateManyWithWhereWithoutEnvironmentInput[]
+  deleteMany?: Prisma.ArcenEventScalarWhereInput | Prisma.ArcenEventScalarWhereInput[]
 }
 
 export type ArcenEventCreateNestedManyWithoutCompanyInput = {
@@ -419,6 +485,69 @@ export type ArcenEventUncheckedUpdateManyWithoutCompanyNestedInput = {
   deleteMany?: Prisma.ArcenEventScalarWhereInput | Prisma.ArcenEventScalarWhereInput[]
 }
 
+export type ArcenEventCreateWithoutEnvironmentInput = {
+  id?: string
+  sentAt?: Date | string
+  teamId: string
+  eventType: string
+  name?: string | null
+  userId?: string | null
+  traits?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  company?: Prisma.ArcenCompanyCreateNestedOneWithoutEventsInput
+}
+
+export type ArcenEventUncheckedCreateWithoutEnvironmentInput = {
+  id?: string
+  sentAt?: Date | string
+  teamId: string
+  eventType: string
+  name?: string | null
+  companyId?: string | null
+  userId?: string | null
+  traits?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+}
+
+export type ArcenEventCreateOrConnectWithoutEnvironmentInput = {
+  where: Prisma.ArcenEventWhereUniqueInput
+  create: Prisma.XOR<Prisma.ArcenEventCreateWithoutEnvironmentInput, Prisma.ArcenEventUncheckedCreateWithoutEnvironmentInput>
+}
+
+export type ArcenEventCreateManyEnvironmentInputEnvelope = {
+  data: Prisma.ArcenEventCreateManyEnvironmentInput | Prisma.ArcenEventCreateManyEnvironmentInput[]
+  skipDuplicates?: boolean
+}
+
+export type ArcenEventUpsertWithWhereUniqueWithoutEnvironmentInput = {
+  where: Prisma.ArcenEventWhereUniqueInput
+  update: Prisma.XOR<Prisma.ArcenEventUpdateWithoutEnvironmentInput, Prisma.ArcenEventUncheckedUpdateWithoutEnvironmentInput>
+  create: Prisma.XOR<Prisma.ArcenEventCreateWithoutEnvironmentInput, Prisma.ArcenEventUncheckedCreateWithoutEnvironmentInput>
+}
+
+export type ArcenEventUpdateWithWhereUniqueWithoutEnvironmentInput = {
+  where: Prisma.ArcenEventWhereUniqueInput
+  data: Prisma.XOR<Prisma.ArcenEventUpdateWithoutEnvironmentInput, Prisma.ArcenEventUncheckedUpdateWithoutEnvironmentInput>
+}
+
+export type ArcenEventUpdateManyWithWhereWithoutEnvironmentInput = {
+  where: Prisma.ArcenEventScalarWhereInput
+  data: Prisma.XOR<Prisma.ArcenEventUpdateManyMutationInput, Prisma.ArcenEventUncheckedUpdateManyWithoutEnvironmentInput>
+}
+
+export type ArcenEventScalarWhereInput = {
+  AND?: Prisma.ArcenEventScalarWhereInput | Prisma.ArcenEventScalarWhereInput[]
+  OR?: Prisma.ArcenEventScalarWhereInput[]
+  NOT?: Prisma.ArcenEventScalarWhereInput | Prisma.ArcenEventScalarWhereInput[]
+  id?: Prisma.StringFilter<"ArcenEvent"> | string
+  sentAt?: Prisma.DateTimeFilter<"ArcenEvent"> | Date | string
+  teamId?: Prisma.StringFilter<"ArcenEvent"> | string
+  environmentId?: Prisma.StringNullableFilter<"ArcenEvent"> | string | null
+  eventType?: Prisma.StringFilter<"ArcenEvent"> | string
+  name?: Prisma.StringNullableFilter<"ArcenEvent"> | string | null
+  companyId?: Prisma.StringNullableFilter<"ArcenEvent"> | string | null
+  userId?: Prisma.StringNullableFilter<"ArcenEvent"> | string | null
+  traits?: Prisma.JsonFilter<"ArcenEvent">
+}
+
 export type ArcenEventCreateWithoutCompanyInput = {
   id?: string
   sentAt?: Date | string
@@ -427,12 +556,14 @@ export type ArcenEventCreateWithoutCompanyInput = {
   name?: string | null
   userId?: string | null
   traits?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutArcenEventsInput
 }
 
 export type ArcenEventUncheckedCreateWithoutCompanyInput = {
   id?: string
   sentAt?: Date | string
   teamId: string
+  environmentId?: string | null
   eventType: string
   name?: string | null
   userId?: string | null
@@ -465,24 +596,55 @@ export type ArcenEventUpdateManyWithWhereWithoutCompanyInput = {
   data: Prisma.XOR<Prisma.ArcenEventUpdateManyMutationInput, Prisma.ArcenEventUncheckedUpdateManyWithoutCompanyInput>
 }
 
-export type ArcenEventScalarWhereInput = {
-  AND?: Prisma.ArcenEventScalarWhereInput | Prisma.ArcenEventScalarWhereInput[]
-  OR?: Prisma.ArcenEventScalarWhereInput[]
-  NOT?: Prisma.ArcenEventScalarWhereInput | Prisma.ArcenEventScalarWhereInput[]
-  id?: Prisma.StringFilter<"ArcenEvent"> | string
-  sentAt?: Prisma.DateTimeFilter<"ArcenEvent"> | Date | string
-  teamId?: Prisma.StringFilter<"ArcenEvent"> | string
-  eventType?: Prisma.StringFilter<"ArcenEvent"> | string
-  name?: Prisma.StringNullableFilter<"ArcenEvent"> | string | null
-  companyId?: Prisma.StringNullableFilter<"ArcenEvent"> | string | null
-  userId?: Prisma.StringNullableFilter<"ArcenEvent"> | string | null
-  traits?: Prisma.JsonFilter<"ArcenEvent">
+export type ArcenEventCreateManyEnvironmentInput = {
+  id?: string
+  sentAt?: Date | string
+  teamId: string
+  eventType: string
+  name?: string | null
+  companyId?: string | null
+  userId?: string | null
+  traits?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+}
+
+export type ArcenEventUpdateWithoutEnvironmentInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  sentAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  eventType?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  traits?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  company?: Prisma.ArcenCompanyUpdateOneWithoutEventsNestedInput
+}
+
+export type ArcenEventUncheckedUpdateWithoutEnvironmentInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  sentAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  eventType?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  companyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  traits?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+}
+
+export type ArcenEventUncheckedUpdateManyWithoutEnvironmentInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  sentAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  eventType?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  companyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  traits?: Prisma.JsonNullValueInput | runtime.InputJsonValue
 }
 
 export type ArcenEventCreateManyCompanyInput = {
   id?: string
   sentAt?: Date | string
   teamId: string
+  environmentId?: string | null
   eventType: string
   name?: string | null
   userId?: string | null
@@ -497,12 +659,14 @@ export type ArcenEventUpdateWithoutCompanyInput = {
   name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   traits?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutArcenEventsNestedInput
 }
 
 export type ArcenEventUncheckedUpdateWithoutCompanyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   sentAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   eventType?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -513,6 +677,7 @@ export type ArcenEventUncheckedUpdateManyWithoutCompanyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   sentAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   eventType?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -525,42 +690,49 @@ export type ArcenEventSelect<ExtArgs extends runtime.Types.Extensions.InternalAr
   id?: boolean
   sentAt?: boolean
   teamId?: boolean
+  environmentId?: boolean
   eventType?: boolean
   name?: boolean
   companyId?: boolean
   userId?: boolean
   traits?: boolean
   company?: boolean | Prisma.ArcenEvent$companyArgs<ExtArgs>
+  environment?: boolean | Prisma.ArcenEvent$environmentArgs<ExtArgs>
 }, ExtArgs["result"]["arcenEvent"]>
 
 export type ArcenEventSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   sentAt?: boolean
   teamId?: boolean
+  environmentId?: boolean
   eventType?: boolean
   name?: boolean
   companyId?: boolean
   userId?: boolean
   traits?: boolean
   company?: boolean | Prisma.ArcenEvent$companyArgs<ExtArgs>
+  environment?: boolean | Prisma.ArcenEvent$environmentArgs<ExtArgs>
 }, ExtArgs["result"]["arcenEvent"]>
 
 export type ArcenEventSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   sentAt?: boolean
   teamId?: boolean
+  environmentId?: boolean
   eventType?: boolean
   name?: boolean
   companyId?: boolean
   userId?: boolean
   traits?: boolean
   company?: boolean | Prisma.ArcenEvent$companyArgs<ExtArgs>
+  environment?: boolean | Prisma.ArcenEvent$environmentArgs<ExtArgs>
 }, ExtArgs["result"]["arcenEvent"]>
 
 export type ArcenEventSelectScalar = {
   id?: boolean
   sentAt?: boolean
   teamId?: boolean
+  environmentId?: boolean
   eventType?: boolean
   name?: boolean
   companyId?: boolean
@@ -568,26 +740,31 @@ export type ArcenEventSelectScalar = {
   traits?: boolean
 }
 
-export type ArcenEventOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "sentAt" | "teamId" | "eventType" | "name" | "companyId" | "userId" | "traits", ExtArgs["result"]["arcenEvent"]>
+export type ArcenEventOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "sentAt" | "teamId" | "environmentId" | "eventType" | "name" | "companyId" | "userId" | "traits", ExtArgs["result"]["arcenEvent"]>
 export type ArcenEventInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   company?: boolean | Prisma.ArcenEvent$companyArgs<ExtArgs>
+  environment?: boolean | Prisma.ArcenEvent$environmentArgs<ExtArgs>
 }
 export type ArcenEventIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   company?: boolean | Prisma.ArcenEvent$companyArgs<ExtArgs>
+  environment?: boolean | Prisma.ArcenEvent$environmentArgs<ExtArgs>
 }
 export type ArcenEventIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   company?: boolean | Prisma.ArcenEvent$companyArgs<ExtArgs>
+  environment?: boolean | Prisma.ArcenEvent$environmentArgs<ExtArgs>
 }
 
 export type $ArcenEventPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "ArcenEvent"
   objects: {
     company: Prisma.$ArcenCompanyPayload<ExtArgs> | null
+    environment: Prisma.$WorkspaceEnvironmentPayload<ExtArgs> | null
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
     sentAt: Date
     teamId: string
+    environmentId: string | null
     eventType: string
     name: string | null
     companyId: string | null
@@ -988,6 +1165,7 @@ readonly fields: ArcenEventFieldRefs;
 export interface Prisma__ArcenEventClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   company<T extends Prisma.ArcenEvent$companyArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ArcenEvent$companyArgs<ExtArgs>>): Prisma.Prisma__ArcenCompanyClient<runtime.Types.Result.GetResult<Prisma.$ArcenCompanyPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  environment<T extends Prisma.ArcenEvent$environmentArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ArcenEvent$environmentArgs<ExtArgs>>): Prisma.Prisma__WorkspaceEnvironmentClient<runtime.Types.Result.GetResult<Prisma.$WorkspaceEnvironmentPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1020,6 +1198,7 @@ export interface ArcenEventFieldRefs {
   readonly id: Prisma.FieldRef<"ArcenEvent", 'String'>
   readonly sentAt: Prisma.FieldRef<"ArcenEvent", 'DateTime'>
   readonly teamId: Prisma.FieldRef<"ArcenEvent", 'String'>
+  readonly environmentId: Prisma.FieldRef<"ArcenEvent", 'String'>
   readonly eventType: Prisma.FieldRef<"ArcenEvent", 'String'>
   readonly name: Prisma.FieldRef<"ArcenEvent", 'String'>
   readonly companyId: Prisma.FieldRef<"ArcenEvent", 'String'>
@@ -1437,6 +1616,25 @@ export type ArcenEvent$companyArgs<ExtArgs extends runtime.Types.Extensions.Inte
    */
   include?: Prisma.ArcenCompanyInclude<ExtArgs> | null
   where?: Prisma.ArcenCompanyWhereInput
+}
+
+/**
+ * ArcenEvent.environment
+ */
+export type ArcenEvent$environmentArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the WorkspaceEnvironment
+   */
+  select?: Prisma.WorkspaceEnvironmentSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the WorkspaceEnvironment
+   */
+  omit?: Prisma.WorkspaceEnvironmentOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.WorkspaceEnvironmentInclude<ExtArgs> | null
+  where?: Prisma.WorkspaceEnvironmentWhereInput
 }
 
 /**

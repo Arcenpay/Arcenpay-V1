@@ -338,12 +338,16 @@ async function assertReceiptFinalized(params: {
 
 async function upsertCompanyForActivation(
   teamId: string,
+  environmentId: string | null,
   keys: CompanyKeys & {
     name?: string;
     traits?: Record<string, unknown>;
   },
 ): Promise<{ id: string; activePlanId: string | null; created: boolean }> {
-  const existing = await resolveCompany(teamId, keys);
+  const existing = await resolveCompany(teamId, {
+    ...keys,
+    environmentId,
+  });
   if (existing) {
     const updates: Record<string, unknown> = {};
     if (keys.name?.trim()) updates.name = keys.name.trim();
@@ -367,6 +371,7 @@ async function upsertCompanyForActivation(
   const created = await db.arcenCompany.create({
     data: {
       teamId,
+      environmentId,
       name: keys.name ?? keys.email ?? keys.id ?? "Unknown",
       email: keys.email ?? null,
       walletAddress: keys.wallet?.toLowerCase() ?? null,
@@ -452,6 +457,7 @@ export async function POST(c: Context) {
         sessionDefaults = await resolveDashboardSessionIdentityDefaults(
           teamId,
           (session as any).clerkUserId,
+          auth.activeEnvironmentId ?? null,
         );
       }
     }
@@ -497,11 +503,6 @@ export async function POST(c: Context) {
     }),
   };
 
-  const company = await upsertCompanyForActivation(
-    teamId,
-    activationCompanyInput,
-  );
-
   const catalogPlan = await db.catalogPlan.findFirst({
     where: {
       teamId,
@@ -509,7 +510,13 @@ export async function POST(c: Context) {
       status: "PUBLISHED",
       onChainPlanId: onChainPlanId.toString(),
     },
-    select: { id: true, name: true, acceptedToken: true, chainId: true },
+    select: {
+      id: true,
+      name: true,
+      acceptedToken: true,
+      chainId: true,
+      environmentId: true,
+    },
   });
 
   if (!catalogPlan) {
@@ -522,6 +529,12 @@ export async function POST(c: Context) {
       corsHeaders(origin),
     );
   }
+
+  const company = await upsertCompanyForActivation(
+    teamId,
+    catalogPlan.environmentId ?? null,
+    activationCompanyInput,
+  );
 
   // Use the chain the plan was registered on. Fall back to DEFAULT_CHAIN_ID for
   // legacy plans that pre-date the chainId column (they'll have the default 84532).

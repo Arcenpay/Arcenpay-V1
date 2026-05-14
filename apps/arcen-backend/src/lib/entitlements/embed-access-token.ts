@@ -3,6 +3,7 @@ import { db } from "../../db.js";
 
 export interface EmbedAccessTokenContext {
   teamId: string;
+  environmentId: string | null;
   companyId: string | null;
   userId: string | null;
   componentId?: string | null;
@@ -28,6 +29,7 @@ function verifySignedEmbedAccessToken(
     const payload = JSON.parse(Buffer.from(body, "base64url").toString()) as {
       exp?: number;
       teamId?: string;
+      environmentId?: string | null;
       companyId?: string | null;
       userId?: string | null;
       componentId?: string | null;
@@ -41,6 +43,7 @@ function verifySignedEmbedAccessToken(
 
     return {
       teamId: payload.teamId,
+      environmentId: payload.environmentId ?? null,
       companyId: payload.companyId ?? null,
       userId: payload.userId ?? null,
       componentId: payload.componentId ?? null,
@@ -84,12 +87,18 @@ export async function resolveEmbedAccessToken(
   const tokenHash = createHash("sha256").update(token).digest("hex");
   const record = await db.embedAccessToken.findFirst({
     where: { tokenHash, expiresAt: { gt: new Date() } },
-    select: { teamId: true, companyId: true, userId: true },
+    select: {
+      teamId: true,
+      environmentId: true,
+      companyId: true,
+      userId: true,
+    },
   });
 
   if (!record) return null;
   return {
     teamId: verified.teamId,
+    environmentId: record.environmentId ?? verified.environmentId ?? null,
     companyId: record.companyId,
     userId: record.userId,
     componentId: verified.componentId,

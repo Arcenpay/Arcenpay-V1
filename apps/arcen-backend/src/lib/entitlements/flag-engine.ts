@@ -78,6 +78,7 @@ async function resolveOnChainPlan(
   teamId: string,
   companyId: string,
   wallet: string,
+  environmentId?: string | null,
 ): Promise<string | null> {
   const client = getViemClient(DEFAULT_CHAIN_ID);
   if (!client) return null;
@@ -111,7 +112,11 @@ async function resolveOnChainPlan(
     });
 
     const plan = await db.catalogPlan.findFirst({
-      where: { onChainPlanId: String(onChainPlanId), teamId },
+      where: {
+        onChainPlanId: String(onChainPlanId),
+        teamId,
+        ...(environmentId ? { environmentId } : {}),
+      },
       select: { id: true },
     });
 
@@ -134,6 +139,7 @@ export interface CompanyKeys {
   internalId?: string; // ArcenCompany.id
   wallet?: string;    // wallet address (checksummed or lowercase)
   email?: string;
+  environmentId?: string | null;
 }
 
 export interface UserKeys {
@@ -142,6 +148,7 @@ export interface UserKeys {
   clerkUserId?: string;
   wallet?: string;
   email?: string;
+  environmentId?: string | null;
 }
 
 export interface FlagCheckResult {
@@ -161,18 +168,21 @@ export async function resolveCompany(
   if (!keys.id && !keys.internalId && !keys.wallet && !keys.email) return null;
 
   const where: Record<string, unknown>[] = [];
-  if (keys.internalId) where.push({ id: keys.internalId, teamId });
-  if (keys.id) where.push({ teamId, externalId: keys.id });
-  if (keys.wallet) where.push({ teamId, walletAddress: keys.wallet.toLowerCase() });
+  if (keys.internalId) where.push({ id: keys.internalId });
+  if (keys.id) where.push({ externalId: keys.id });
+  if (keys.wallet) where.push({ walletAddress: keys.wallet.toLowerCase() });
   if (keys.email) {
     where.push({
-      teamId,
       email: { equals: keys.email.trim(), mode: "insensitive" },
     });
   }
 
   const company = await db.arcenCompany.findFirst({
-    where: { OR: where },
+    where: {
+      teamId,
+      ...(keys.environmentId ? { environmentId: keys.environmentId } : {}),
+      OR: where,
+    },
     select: {
       id: true,
       traits: true,
@@ -222,7 +232,12 @@ export async function resolveCompany(
 
   // On-chain fallback: if activePlanId is null but we have a wallet, try to resolve from chain
   if (!activePlanId && keys.wallet && !company.subscriptionState) {
-    const onChainPlanId = await resolveOnChainPlan(teamId, company.id, keys.wallet.toLowerCase());
+    const onChainPlanId = await resolveOnChainPlan(
+      teamId,
+      company.id,
+      keys.wallet.toLowerCase(),
+      keys.environmentId,
+    );
     if (onChainPlanId) activePlanId = onChainPlanId;
   }
 
@@ -264,19 +279,22 @@ export async function resolveUser(
   }
 
   const where: Record<string, unknown>[] = [];
-  if (keys.internalId) where.push({ id: keys.internalId, teamId });
-  if (keys.id) where.push({ teamId, externalId: keys.id });
-  if (keys.clerkUserId) where.push({ teamId, clerkUserId: keys.clerkUserId });
-  if (keys.wallet) where.push({ teamId, walletAddress: keys.wallet.toLowerCase() });
+  if (keys.internalId) where.push({ id: keys.internalId });
+  if (keys.id) where.push({ externalId: keys.id });
+  if (keys.clerkUserId) where.push({ clerkUserId: keys.clerkUserId });
+  if (keys.wallet) where.push({ walletAddress: keys.wallet.toLowerCase() });
   if (keys.email) {
     where.push({
-      teamId,
       email: { equals: keys.email.trim(), mode: "insensitive" },
     });
   }
 
   const user = await db.arcenUser.findFirst({
-    where: { OR: where },
+    where: {
+      teamId,
+      ...(keys.environmentId ? { environmentId: keys.environmentId } : {}),
+      OR: where,
+    },
     select: { id: true, companyId: true, traits: true },
   });
 

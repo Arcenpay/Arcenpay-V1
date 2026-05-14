@@ -12,6 +12,7 @@ import { db } from "../../db.js";
 import { resolveEntitlementResults } from "../../lib/entitlements/entitlements.js";
 import type { Prisma } from "../../generated/client/client.js";
 import { getCompanyAddOnGrants } from "../../lib/companies/addon-grants.js";
+import { getCompanyEnvironmentWhere } from "../../lib/environments/company-scope.js";
 
 export async function GET(c: Context) {
   const ctx = await requireAnyAuth(c);
@@ -19,9 +20,12 @@ export async function GET(c: Context) {
 
   const id = c.req.param("id");
   const { teamId } = ctx;
+  const environmentFilter = ctx.activeEnvironmentId
+    ? await getCompanyEnvironmentWhere(ctx.activeEnvironmentId)
+    : null;
 
   const company = await db.arcenCompany.findFirst({
-    where: { id, teamId },
+    where: { id, teamId, ...(environmentFilter ?? {}) },
     include: {
       users: {
         select: {
@@ -65,14 +69,9 @@ export async function GET(c: Context) {
     });
   }
 
-  const companyKeys = {
-    id: company.externalId ?? undefined,
-    wallet: company.walletAddress ?? undefined,
-    email: company.email ?? undefined,
-  };
   const entitlementResults = await resolveEntitlementResults({
     teamId,
-    companyKeys,
+    companyKeys: { internalId: company.id },
   });
   const addOnGrants = await getCompanyAddOnGrants(teamId, company.id);
   const activeAddOnIds = [
@@ -134,6 +133,9 @@ export async function PATCH(c: Context) {
 
   const id = c.req.param("id");
   const { teamId } = ctx;
+  const environmentFilter = ctx.activeEnvironmentId
+    ? await getCompanyEnvironmentWhere(ctx.activeEnvironmentId)
+    : null;
 
   let body: {
     name?: string;
@@ -162,7 +164,7 @@ export async function PATCH(c: Context) {
   }
 
   const company = await db.arcenCompany.findFirst({
-    where: { id, teamId },
+    where: { id, teamId, ...(environmentFilter ?? {}) },
   });
 
   if (!company) {
@@ -199,8 +201,13 @@ export async function DELETE(c: Context) {
 
   const id = c.req.param("id");
   const { teamId } = ctx;
+  const environmentFilter = ctx.activeEnvironmentId
+    ? await getCompanyEnvironmentWhere(ctx.activeEnvironmentId)
+    : null;
 
-  const company = await db.arcenCompany.findFirst({ where: { id, teamId } });
+  const company = await db.arcenCompany.findFirst({
+    where: { id, teamId, ...(environmentFilter ?? {}) },
+  });
   if (!company) {
     return c.json({ error: "Company not found" }, 404 as any);
   }

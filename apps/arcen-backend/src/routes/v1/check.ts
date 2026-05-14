@@ -54,6 +54,7 @@ export async function GET(c: Context) {
   const bearerToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
 
   let teamId: string;
+  let environmentId: string | null = null;
   let companyId: string | null = null;
   let userId: string | null = null;
   let companyKeys: CompanyKeys | undefined;
@@ -65,6 +66,7 @@ export async function GET(c: Context) {
       return c.json({ ok: false, error: ctx.error }, ctx.status as any);
     }
     teamId = ctx.teamId;
+    environmentId = ctx.environmentId ?? null;
 
     const rawCompanyKeys = parseKeyHeader(c.req.header("x-arcen-company-keys") ?? null);
     const rawUserKeys = parseKeyHeader(c.req.header("x-arcen-user-keys") ?? null);
@@ -73,6 +75,7 @@ export async function GET(c: Context) {
       id: rawCompanyKeys["id"],
       wallet: rawCompanyKeys["wallet"] ?? rawCompanyKeys["wallet_address"],
       email: rawCompanyKeys["email"],
+      environmentId,
     };
 
     if (!companyKeys.id && !companyKeys.wallet && !companyKeys.email) {
@@ -85,18 +88,20 @@ export async function GET(c: Context) {
 
     userKeys =
       rawUserKeys["id"] || rawUserKeys["clerk_user_id"] || rawUserKeys["wallet"]
-      ? {
-          id: rawUserKeys["id"],
-          clerkUserId: rawUserKeys["clerk_user_id"],
-          wallet: rawUserKeys["wallet"],
-        }
-      : undefined;
+        ? {
+            id: rawUserKeys["id"],
+            clerkUserId: rawUserKeys["clerk_user_id"],
+            wallet: rawUserKeys["wallet"],
+            environmentId,
+          }
+        : undefined;
   } else if (bearerToken) {
     const tokenCtx = await resolveEmbedAccessToken(bearerToken);
     if (!tokenCtx) {
       return jsonWithCors(c, { error: "Invalid or expired token" }, 401);
     }
     teamId = tokenCtx.teamId;
+    environmentId = tokenCtx.environmentId;
     companyId = tokenCtx.companyId;
     userId = tokenCtx.userId;
   } else {
@@ -106,9 +111,10 @@ export async function GET(c: Context) {
   // Evaluate the flag
   const effectiveCompanyKeys: CompanyKeys = companyKeys ?? {
     internalId: companyId ?? undefined,
+    environmentId,
   };
   const effectiveUserKeys: UserKeys | undefined = userKeys ?? (userId
-    ? { internalId: userId }
+    ? { internalId: userId, environmentId }
     : undefined);
   const result = await resolveEntitlementResult({
     teamId,

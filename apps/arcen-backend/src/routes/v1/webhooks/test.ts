@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireTeamRoles, isErrorResponse } from "../../../lib/auth/api-auth.js";
 import { writeAuditEvent } from "../../../lib/platform/audit.js";
 import { sendWebhookDelivery } from "../../../lib/webhooks/deliver-webhook.js";
+import { requireResolvedActiveEnvironment } from "../../../lib/environments/workspace-environments.js";
 
 const testWebhookSchema = z.object({
   url: z
@@ -18,6 +19,13 @@ export async function testWebhook(c: Context) {
   const auth = await requireTeamRoles(c, ["OWNER", "ADMIN"]);
   if (isErrorResponse(auth)) {
     return c.json({ ok: false, error: auth.error }, auth.status as any);
+  }
+  const activeEnvironment = await requireResolvedActiveEnvironment(
+    auth.session,
+    auth.team.teamId,
+  );
+  if (!activeEnvironment) {
+    return c.json({ error: "No workspace environment selected" }, 409 as any);
   }
 
   const body = await c.req.json().catch(() => ({}));
@@ -36,6 +44,7 @@ export async function testWebhook(c: Context) {
   const { team } = auth;
   const result = await sendWebhookDelivery({
     teamId: team.teamId,
+    environmentId: activeEnvironment.id,
     webhookUrl: parsed.data.url,
     eventName: "webhook.test",
     force: true,

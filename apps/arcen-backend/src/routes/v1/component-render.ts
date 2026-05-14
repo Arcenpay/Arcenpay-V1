@@ -18,6 +18,7 @@ import { db } from "../../db.js";
 import { resolveEntitlementResults } from "../../lib/entitlements/entitlements.js";
 import { getRpcUrl } from "../../config.js";
 import { DEFAULT_CHAIN_ID } from "../../lib/platform/default-chain.js";
+import { listMetadataEntitlements } from "../../lib/catalog/catalog-entitlements.js";
 import { normalizeComponentDesign } from "../../lib/catalog/component-design.js";
 import {
   extractEmbedAccessToken,
@@ -84,6 +85,70 @@ function deriveVisiblePlanIds(config: {
   return Array.from(ids);
 }
 
+type ComponentPlanMetadataEntitlement = {
+  featureKey: string;
+  featureName?: string;
+  type?: "BOOLEAN" | "NUMERIC" | "UNLIMITED";
+  value?: boolean | number | null;
+  valueUnit?: string | null;
+  enabled?: boolean;
+  featureType?: "boolean" | "event" | "trait";
+  icon?: string | null;
+};
+
+function listComponentPlanMetadataEntitlements(
+  metadata: unknown,
+): ComponentPlanMetadataEntitlement[] {
+  return listMetadataEntitlements(metadata).map((entry) => {
+    const candidate = entry as unknown as Record<string, unknown>;
+
+    return {
+      featureKey: entry.featureKey,
+      featureName:
+        typeof candidate.featureName === "string"
+          ? candidate.featureName
+          : undefined,
+      type:
+        candidate.type === "NUMERIC" || candidate.type === "UNLIMITED"
+          ? candidate.type
+          : "BOOLEAN",
+      value:
+        typeof candidate.value === "number" || typeof candidate.value === "boolean"
+          ? candidate.value
+          : null,
+      valueUnit:
+        typeof candidate.valueUnit === "string" ? candidate.valueUnit : null,
+      enabled: entry.enabled ?? true,
+      featureType:
+        candidate.featureType === "event" || candidate.featureType === "trait"
+          ? candidate.featureType
+          : "boolean",
+      icon: typeof candidate.icon === "string" ? candidate.icon : null,
+    };
+  });
+}
+
+function resolveComponentEntitlementFeatureType(
+  flagFeatureType: string | null | undefined,
+  metadataEntitlement: ComponentPlanMetadataEntitlement,
+): "boolean" | "event_based" | "trait_based" {
+  if (metadataEntitlement.featureType === "trait") {
+    return "trait_based";
+  }
+  if (
+    metadataEntitlement.featureType === "event" ||
+    metadataEntitlement.type === "NUMERIC" ||
+    metadataEntitlement.type === "UNLIMITED" ||
+    flagFeatureType === "event_based"
+  ) {
+    return "event_based";
+  }
+  if (flagFeatureType === "trait_based") {
+    return "trait_based";
+  }
+  return "boolean";
+}
+
 // Handle CORS preflight requests from embedded apps
 export async function OPTIONS(c: Context) {
   return c.json(null, 204 as any, corsHeaders(c.req.header("origin")));
@@ -121,7 +186,8 @@ export async function GET(c: Context) {
     );
   }
 
-  const { teamId, companyId, userId, componentId, preview } = decoded;
+  const { teamId, environmentId, companyId, userId, componentId, preview } =
+    decoded;
   if (!teamId) {
     return c.json(
       { error: "Invalid access token context" },
@@ -140,11 +206,27 @@ export async function GET(c: Context) {
 
   // Load the component
   const component = await db.embedComponent.findFirst({
-    where: { id, teamId },
+    where: {
+      id,
+      teamId,
+      ...(environmentId ? { environmentId } : {}),
+    },
   });
 
   if (!component) {
     return c.json({ error: "Component not found" }, 404, corsHeaders(origin));
+  }
+
+  if (
+    environmentId &&
+    component.environmentId &&
+    component.environmentId !== environmentId
+  ) {
+    return c.json(
+      { error: "Component does not belong to this workspace environment" },
+      403,
+      corsHeaders(origin),
+    );
   }
 
   // Load company data
@@ -162,11 +244,16 @@ export async function GET(c: Context) {
   let liveCurrentPeriodEnd: string | null = null;
   let activeBillingPeriod: "monthly" | "annual" | null = null;
   let companyEnvironmentId: string | null = null;
+  const scopedEnvironmentId = component.environmentId ?? environmentId ?? null;
 
   if (companyId) {
     const [company, user] = await Promise.all([
       db.arcenCompany.findFirst({
-        where: { id: companyId, teamId },
+        where: {
+          id: companyId,
+          teamId,
+          ...(scopedEnvironmentId ? { environmentId: scopedEnvironmentId } : {}),
+        },
         select: {
           id: true,
           name: true,
@@ -189,7 +276,11 @@ export async function GET(c: Context) {
       }),
       userId
         ? db.arcenUser.findFirst({
-            where: { id: userId, teamId },
+            where: {
+              id: userId,
+              teamId,
+              ...(scopedEnvironmentId ? { environmentId: scopedEnvironmentId } : {}),
+            },
             select: {
               id: true,
               name: true,
@@ -286,27 +377,57 @@ export async function GET(c: Context) {
       ]);
 
       const flagMap = new Map(flags.map((flag) => [flag.featureKey, flag]));
+      const entitlementMap = new Map(
+        entitlementResults.entitlements.map((entitlement) => [
+          entitlement.key,
+          entitlement,
+        ]),
+      );
+      const activePlanEntitlements = listComponentPlanMetadataEntitlements(
+        activePlan?.metadata ?? null,
+      ).filter((entry) => entry.enabled !== false);
 
-      entitlements = entitlementResults.entitlements.map((entitlement) => {
-        const flag = flagMap.get(entitlement.key);
-        const featureType =
-          flag?.featureType ??
-          (entitlement.allocation !== null ? "event_based" : "boolean");
+      entitlements = activePlanEntitlements.map((entry) => {
+        const resolvedEntitlement = entitlementMap.get(entry.featureKey);
+        const flag = flagMap.get(entry.featureKey);
+        const featureType = resolveComponentEntitlementFeatureType(
+          flag?.featureType,
+          entry,
+        );
+
+        let value: boolean | number | string;
+        if (featureType === "event_based") {
+          value =
+            entry.type === "NUMERIC" && typeof entry.value === "number"
+              ? Number(entry.value)
+              : (resolvedEntitlement?.usage ?? 0);
+        } else if (featureType === "trait_based") {
+          value = resolvedEntitlement?.enabled ? "Included" : "Disabled";
+        } else {
+          value =
+            resolvedEntitlement?.enabled ??
+            (entry.enabled !== false && entry.value !== false);
+        }
 
         return {
-          featureKey: entitlement.key,
-          name: flag?.name ?? entitlement.key,
-          value:
-            featureType === "event_based"
-              ? (entitlement.allocation ?? entitlement.usage)
-              : entitlement.enabled,
+          featureKey: entry.featureKey,
+          name: entry.featureName ?? flag?.name ?? entry.featureKey,
+          value,
           featureType,
-          limit: entitlement.allocation ?? undefined,
-          usage: entitlement.usage,
-          exceeded: entitlement.exceeded,
-          unitSingular: flag?.unitSingular ?? null,
-          unitPlural: flag?.unitPlural ?? flag?.unitSingular ?? null,
-          icon: flag?.icon ?? null,
+          limit:
+            entry.type === "NUMERIC" && typeof entry.value === "number"
+              ? Number(entry.value)
+              : undefined,
+          usage: resolvedEntitlement?.usage ?? 0,
+          exceeded: resolvedEntitlement?.exceeded ?? false,
+          unitSingular:
+            entry.valueUnit ?? flag?.unitSingular ?? null,
+          unitPlural:
+            entry.valueUnit ??
+            flag?.unitPlural ??
+            flag?.unitSingular ??
+            null,
+          icon: entry.icon ?? flag?.icon ?? null,
         };
       });
 

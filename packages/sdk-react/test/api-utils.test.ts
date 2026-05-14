@@ -5,13 +5,10 @@ import {
 } from "../src/lib/api";
 
 describe("sdk-react api helpers", () => {
-  it("builds payment-link URLs from the resolved dashboard base URL", () => {
-    expect(
-      createPaymentLinkCheckoutUrl(
-        "starter plan",
-        "https://dashboard.example.com/",
-      ),
-    ).toBe("https://dashboard.example.com/pay/starter%20plan");
+  it("builds payment-link URLs from the internally resolved app URL", () => {
+    expect(createPaymentLinkCheckoutUrl("starter plan")).toBe(
+      "https://yak-included-currently.ngrok-free.app/pay/starter%20plan",
+    );
   });
 
   it("maps numeric entitlements to numeric feature values", () => {

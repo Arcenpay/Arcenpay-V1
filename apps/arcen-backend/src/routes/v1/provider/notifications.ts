@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "../../../db.js";
 import { writeAuditEvent } from "../../../lib/platform/audit.js";
 import { requireTeamRoles, isErrorResponse } from "../../../lib/auth/api-auth.js";
+import { requireResolvedActiveEnvironment } from "../../../lib/environments/workspace-environments.js";
 
 const NotificationEntrySchema = z.object({
   id: z.string().min(1),
@@ -21,9 +22,21 @@ export async function getNotifications(c: Context) {
   if (isErrorResponse(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any as any);
 
   const teamId = auth.team.teamId;
+  const activeEnvironment = await requireResolvedActiveEnvironment(
+    auth.session,
+    teamId,
+  );
+  if (!activeEnvironment) {
+    return c.json({ error: "No workspace environment selected" }, 409 as any);
+  }
 
   const profile = await db.providerProfile.findUnique({
-    where: { teamId },
+    where: {
+      teamId_environmentId: {
+        teamId,
+        environmentId: activeEnvironment.id,
+      },
+    },
     select: { notificationPreferences: true },
   });
 
@@ -46,13 +59,25 @@ export async function putNotifications(c: Context) {
 
   const { team } = auth;
   const teamId = team.teamId;
+  const activeEnvironment = await requireResolvedActiveEnvironment(
+    auth.session,
+    teamId,
+  );
+  if (!activeEnvironment) {
+    return c.json({ error: "No workspace environment selected" }, 409 as any);
+  }
   const { notifications } = parsed.data;
 
   const notifyEmail = notifications.some((n) => n.email);
   const notifyWebhook = notifications.some((n) => n.webhook);
 
   await db.providerProfile.upsert({
-    where: { teamId },
+    where: {
+      teamId_environmentId: {
+        teamId,
+        environmentId: activeEnvironment.id,
+      },
+    },
     update: {
       notificationPreferences: notifications,
       notifyEmail,
@@ -60,6 +85,7 @@ export async function putNotifications(c: Context) {
     },
     create: {
       teamId,
+      environmentId: activeEnvironment.id,
       notificationPreferences: notifications,
       notifyEmail,
       notifyWebhook,

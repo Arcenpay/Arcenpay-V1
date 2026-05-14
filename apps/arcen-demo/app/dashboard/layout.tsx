@@ -5,7 +5,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useAccount } from "wagmi";
-import { ARCENPAY_APP_URL } from "@arcenpay/react";
 import WalletChip from "./wallet-chip";
 import styles from "./layout.module.css";
 
@@ -17,7 +16,6 @@ export default function DashboardLayout({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const pathname = usePathname();
   const { isConnected } = useAccount();
-  const dashboardUrl = ARCENPAY_APP_URL;
 
   const isActive = (href: string) =>
     href === "/dashboard" ? pathname === href : pathname.startsWith(href);
@@ -86,14 +84,9 @@ export default function DashboardLayout({
 
         <div className={styles.sidebarFooter}>
           <WalletChip />
-          <a
-            href={dashboardUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.arcenBadge}
-          >
+          <div className={styles.arcenBadge}>
             <span className={styles.arcenBadgeMark}>⬡</span>Powered by ArcenPay
-          </a>
+          </div>
         </div>
       </aside>
 

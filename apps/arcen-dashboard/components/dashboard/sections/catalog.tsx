@@ -4679,13 +4679,21 @@ function ConfigurationTab() {
 
   useEffect(() => {
     let cancelled = false;
-    setLoadingConfig(true);
-    setConfigError(null);
-    fetch("/api/catalog/config", {
-      cache: "no-store",
-    })
-      .then((r) => r.json())
-      .then((data) => {
+    async function loadConfig() {
+      setLoadingConfig(true);
+      setConfigError(null);
+      try {
+        const response = await fetch("/api/catalog/config", {
+          cache: "no-store",
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(
+            typeof data?.error === "string"
+              ? data.error
+              : "Failed to load configuration",
+          );
+        }
         if (cancelled) return;
         const plans = Array.isArray(data.catalog?.plans)
           ? (data.catalog.plans as ConfigPlanOption[])
@@ -4735,16 +4743,21 @@ function ConfigurationTab() {
         setConfigCredits(creditTypes);
         setLoadedSettings(nextSettings);
         setSettings(nextSettings);
-      })
-      .catch((err: unknown) => {
-        if (!cancelled)
+      } catch (err: unknown) {
+        if (!cancelled) {
+          setCatalogPlans([]);
+          setConfigAddOns([]);
+          setConfigCredits([]);
           setConfigError(
             err instanceof Error ? err.message : "Failed to load configuration",
           );
-      })
-      .finally(() => {
+        }
+      } finally {
         if (!cancelled) setLoadingConfig(false);
-      });
+      }
+    }
+
+    void loadConfig();
     return () => {
       cancelled = true;
     };

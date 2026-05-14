@@ -34,6 +34,10 @@ export async function GET(c: Context) {
   if (isErrorResponse(ctx)) return c.json({ ok: false, error: ctx.error }, ctx.status as any);
 
   const { team } = ctx;
+  const environmentId = ctx.session.activeEnvironmentId;
+  if (!environmentId) {
+    return c.json({ error: "No workspace environment selected" }, 409 as any);
+  }
   const limit = Math.min(Number(c.req.query("limit") ?? 50), 200);
   const eventType = c.req.query("eventType");
   const companyId = c.req.query("companyId");
@@ -41,6 +45,7 @@ export async function GET(c: Context) {
   const events = await db.arcenEvent.findMany({
     where: {
       teamId: team.teamId,
+      environmentId,
       ...(eventType ? { eventType } : {}),
       ...(companyId ? { companyId } : {}),
     },
@@ -56,7 +61,11 @@ export async function GET(c: Context) {
   const userIds = [...new Set(events.map((event) => event.userId).filter((id): id is string => !!id))];
   const users = userIds.length
     ? await db.arcenUser.findMany({
-        where: { id: { in: userIds }, teamId: team.teamId },
+        where: {
+          id: { in: userIds },
+          teamId: team.teamId,
+          environmentId,
+        },
         select: {
           id: true,
           name: true,
@@ -112,6 +121,7 @@ type EventBody = TrackEventBody | IdentifyEventBody;
 
 async function upsertCompany(
   teamId: string,
+  environmentId: string,
   input: CompanyInput & { name?: string },
   traits?: Record<string, unknown>,
 ): Promise<{ id: string; created: boolean } | null> {
@@ -121,12 +131,12 @@ async function upsertCompany(
 
   // Find existing company
   const where: Record<string, unknown>[] = [];
-  if (input.id) where.push({ teamId, externalId: input.id });
-  if (walletAddress) where.push({ teamId, walletAddress });
-  if (input.email) where.push({ teamId, email: input.email });
+  if (input.id) where.push({ externalId: input.id });
+  if (walletAddress) where.push({ walletAddress });
+  if (input.email) where.push({ email: input.email });
 
   const existing = await db.arcenCompany.findFirst({
-    where: { OR: where },
+    where: { teamId, environmentId, OR: where },
     select: { id: true, traits: true },
   });
 
@@ -154,6 +164,7 @@ async function upsertCompany(
   const company = await db.arcenCompany.create({
     data: {
       teamId,
+      environmentId,
       name: input.name ?? input.email ?? input.wallet ?? input.id ?? "Unknown",
       walletAddress,
       email: input.email,
@@ -168,6 +179,7 @@ async function upsertCompany(
 
 async function upsertUser(
   teamId: string,
+  environmentId: string,
   companyId: string,
   input: UserInput & { name?: string; email?: string },
   traits?: Record<string, unknown>,
@@ -177,13 +189,13 @@ async function upsertUser(
   const walletAddress = input.wallet?.toLowerCase();
 
   const where: Record<string, unknown>[] = [];
-  if (input.id) where.push({ teamId, externalId: input.id });
-  if (input.clerk_user_id) where.push({ teamId, clerkUserId: input.clerk_user_id });
-  if (walletAddress) where.push({ teamId, walletAddress });
-  if (input.email) where.push({ teamId, email: input.email });
+  if (input.id) where.push({ externalId: input.id });
+  if (input.clerk_user_id) where.push({ clerkUserId: input.clerk_user_id });
+  if (walletAddress) where.push({ walletAddress });
+  if (input.email) where.push({ email: input.email });
 
   const existing = await db.arcenUser.findFirst({
-    where: { OR: where },
+    where: { teamId, environmentId, OR: where },
     select: { id: true, traits: true },
   });
 
@@ -211,6 +223,7 @@ async function upsertUser(
   const user = await db.arcenUser.create({
     data: {
       teamId,
+      environmentId,
       companyId,
       walletAddress,
       clerkUserId: input.clerk_user_id,
@@ -230,13 +243,13 @@ export async function POST(c: Context) {
   const bearerToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
 
   let ctx:
-    | {
-        teamId: string;
-        source: "api_key" | "session" | "access_token";
-        companyId?: string | null;
-        userId?: string | null;
-      }
-    | Response;
+    {
+      teamId: string;
+      source: "api_key" | "session" | "access_token";
+      companyId?: string | null;
+      userId?: string | null;
+      activeEnvironmentId?: string | null;
+    };
 
   if (bearerToken && !bearerToken.startsWith("api_")) {
     const accessToken = await resolveEmbedAccessToken(bearerToken);
@@ -245,10 +258,11 @@ export async function POST(c: Context) {
     }
     ctx = {
       teamId: accessToken.teamId,
-      source: "access_token",
-      companyId: accessToken.companyId,
-      userId: accessToken.userId,
-    };
+        source: "access_token",
+        companyId: accessToken.companyId,
+        userId: accessToken.userId,
+        activeEnvironmentId: accessToken.environmentId,
+      };
   } else {
     const result = await requireAnyAuth(c);
     if (isAnyAuthError(result)) {
@@ -354,6 +368,10 @@ export async function POST(c: Context) {
   }
 
   const { teamId } = ctx;
+  const environmentId = ctx.activeEnvironmentId ?? null;
+  if (!environmentId) {
+    return jsonWithCors(c, { error: "No workspace environment selected" }, 409);
+  }
 
   // ── identify ────────────────────────────────────────────────
   if (body.event_type === "identify") {
@@ -361,7 +379,12 @@ export async function POST(c: Context) {
     let companyId: string | null = null;
 
     if (b.company) {
-      const result = await upsertCompany(teamId, b.company, b.traits);
+      const result = await upsertCompany(
+        teamId,
+        environmentId,
+        b.company,
+        b.traits,
+      );
       companyId = result?.id ?? null;
       if (companyId) {
         invalidateFlagCache(`${teamId}:`);
@@ -369,6 +392,7 @@ export async function POST(c: Context) {
           deliverWebhook(teamId, "company.created", {
             companyId,
             externalId: b.company.id ?? null,
+            environmentId,
           }).catch(() => {});
         }
       }
@@ -376,10 +400,20 @@ export async function POST(c: Context) {
 
     let userId: string | null = null;
     if (b.user && companyId) {
-      const result = await upsertUser(teamId, companyId, b.user, b.traits);
+      const result = await upsertUser(
+        teamId,
+        environmentId,
+        companyId,
+        b.user,
+        b.traits,
+      );
       userId = result?.id ?? null;
       if (result?.created && companyId) {
-        deliverWebhook(teamId, "user.created", { userId, companyId }).catch(() => {});
+        deliverWebhook(teamId, "user.created", {
+          userId,
+          companyId,
+          environmentId,
+        }).catch(() => {});
       }
     }
 
@@ -392,10 +426,14 @@ export async function POST(c: Context) {
     return jsonWithCors(c, { error: "name is required for track events" }, 400);
   }
 
-  const companyResult = b.company ? await upsertCompany(teamId, b.company) : null;
+  const companyResult = b.company
+    ? await upsertCompany(teamId, environmentId, b.company)
+    : null;
   const companyId = companyResult?.id ?? ctx.companyId ?? null;
   const userResult =
-    b.user && companyId ? await upsertUser(teamId, companyId, b.user) : null;
+    b.user && companyId
+      ? await upsertUser(teamId, environmentId, companyId, b.user)
+      : null;
   const userId = userResult?.id ?? ctx.userId ?? null;
 
   const traits = {
@@ -427,7 +465,8 @@ export async function POST(c: Context) {
       const entitlement = await resolveEntitlementResult({
         teamId,
         companyKeys: {
-          id: companyId,
+          internalId: companyId,
+          environmentId,
           wallet: b.company?.wallet ?? undefined,
         },
         featureKey: trackedFeature.featureKey,
@@ -451,6 +490,7 @@ export async function POST(c: Context) {
   await db.arcenEvent.create({
     data: {
       teamId,
+      environmentId,
       eventType: "track",
       name: b.name,
       companyId,

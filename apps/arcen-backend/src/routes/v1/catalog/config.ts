@@ -148,6 +148,7 @@ async function loadEnvironmentScopedCatalog(teamId: string, environmentId: strin
     db.arcenCompany.findMany({
       where: {
         teamId,
+        environmentId,
         activePlanId: { not: null },
       },
       select: {
@@ -158,6 +159,9 @@ async function loadEnvironmentScopedCatalog(teamId: string, environmentId: strin
       where: {
         teamId,
         status: "ACTIVE",
+        company: {
+          environmentId,
+        },
       },
       select: {
         catalogAddOnId: true,

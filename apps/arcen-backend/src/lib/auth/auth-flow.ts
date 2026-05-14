@@ -240,7 +240,7 @@ export async function provisionUserForEmail(emailInput: string) {
             create: {
               name: workspaceName,
               slug,
-              providerProfile: {
+              providerProfiles: {
                 create: {
                   contactEmail: email,
                 },
