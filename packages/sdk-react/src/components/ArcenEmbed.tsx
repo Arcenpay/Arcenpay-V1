@@ -757,6 +757,10 @@ function normalizeCustomerEmail(value: string): string {
   return value.trim().toLowerCase();
 }
 
+function normalizeCustomerName(value: string): string {
+  return value.trim().replace(/\s+/g, " ");
+}
+
 function isValidCustomerEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizeCustomerEmail(value));
 }
@@ -4348,9 +4352,11 @@ function CheckoutContent({
   couponQuote,
   processing,
   tokens,
+  customerName,
   customerEmail,
   onSelectPlan,
   onBillingPeriodChange,
+  onCustomerNameChange,
   onCustomerEmailChange,
   onCouponQuoteChange,
   onSubscribeClose,
@@ -4366,9 +4372,11 @@ function CheckoutContent({
   couponQuote: AppliedCouponQuote | null;
   processing: boolean;
   tokens: Tokens;
+  customerName: string;
   customerEmail: string;
   onSelectPlan: (id: string) => void;
   onBillingPeriodChange: (p: "monthly" | "annual") => void;
+  onCustomerNameChange: (value: string) => void;
   onCustomerEmailChange: (value: string) => void;
   onCouponQuoteChange: (quote: AppliedCouponQuote | null) => void;
   onSubscribeClose: () => void;
@@ -4466,10 +4474,13 @@ function CheckoutContent({
     discountedPrice <= (currentPlan ? getDisplayPrice(currentPlan) : 0)
       ? 0
       : discountedPrice;
+  const normalizedCustomerName = normalizeCustomerName(customerName);
+  const missingCustomerName = normalizedCustomerName.length === 0;
   const normalizedCustomerEmail = normalizeCustomerEmail(customerEmail);
   const hasCustomerEmail = normalizedCustomerEmail.length > 0;
   const hasInvalidCustomerEmail =
     hasCustomerEmail && !isValidCustomerEmail(normalizedCustomerEmail);
+  const requiresBillingIdentity = needsPayment || requiresHostedActivation;
 
   useEffect(() => {
     setCouponApplied(
@@ -5200,6 +5211,53 @@ function CheckoutContent({
                   marginBottom: 6,
                 }}
               >
+                Full name
+              </div>
+              <input
+                value={customerName}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  onCustomerNameChange(e.target.value)
+                }
+                placeholder="Jane Doe"
+                autoComplete="name"
+                style={{
+                  width: "100%",
+                  padding: "8px 10px",
+                  borderRadius: 6,
+                  border: `1px solid ${missingCustomerName && requiresBillingIdentity ? "#fecaca" : "#e5e7eb"}`,
+                  fontSize: tokens.size - 1,
+                  outline: "none",
+                  fontFamily: tokens.font,
+                  boxSizing: "border-box",
+                }}
+              />
+              <div
+                style={{
+                  fontSize: tokens.size - 2,
+                  color:
+                    missingCustomerName && requiresBillingIdentity
+                      ? "#dc2626"
+                      : tokens.mutedColor,
+                  marginTop: 4,
+                  lineHeight: 1.5,
+                }}
+              >
+                {missingCustomerName && requiresBillingIdentity
+                  ? "Enter the customer's full name so invoices and receipts show the correct billing identity."
+                  : "This name appears on invoices, receipts, and billing records for the customer."}
+              </div>
+            </div>
+
+            <div style={S.divider} />
+
+            <div style={{ marginBottom: 12 }}>
+              <div
+                style={{
+                  fontSize: tokens.size - 2,
+                  color: tokens.mutedColor,
+                  marginBottom: 6,
+                }}
+              >
                 Billing email
               </div>
               <input
@@ -5319,12 +5377,14 @@ function CheckoutContent({
                   fontSize: tokens.size - 1,
                   fontWeight: 700,
                   opacity:
+                    (requiresBillingIdentity && missingCustomerName) ||
                     hasInvalidCustomerEmail ||
                     (requiresHostedActivation && !hasCustomerEmail)
                       ? 0.6
                       : 1,
                 }}
                 disabled={
+                  (requiresBillingIdentity && missingCustomerName) ||
                   hasInvalidCustomerEmail ||
                   (requiresHostedActivation && !hasCustomerEmail)
                 }
@@ -5424,7 +5484,9 @@ function PaymentContent({
   couponQuote,
   processing,
   tokens,
+  customerName,
   customerEmail,
+  onCustomerNameChange,
   onCustomerEmailChange,
   onConfirm,
   onActivationComplete,
@@ -5440,7 +5502,9 @@ function PaymentContent({
   couponQuote: AppliedCouponQuote | null;
   processing: boolean;
   tokens: Tokens;
+  customerName: string;
   customerEmail: string;
+  onCustomerNameChange: (value: string) => void;
   onCustomerEmailChange: (value: string) => void;
   onConfirm: (result?: PlanChangeConfirmation) => void;
   onActivationComplete: (result: {
@@ -5493,6 +5557,8 @@ function PaymentContent({
   const price = activeCouponQuote
     ? activeCouponQuote.discountedAmountMicros / 1_000_000
     : basePrice;
+  const normalizedCustomerName = normalizeCustomerName(customerName);
+  const missingCustomerName = normalizedCustomerName.length === 0;
   const normalizedCustomerEmail = normalizeCustomerEmail(customerEmail);
   const hasCustomerEmail = normalizedCustomerEmail.length > 0;
   const hasInvalidCustomerEmail =
@@ -5535,6 +5601,11 @@ function PaymentContent({
     selectedOnChainPlanId && !activeOnChainPlanId,
   );
   const requiresResumeActivation = Boolean(isScheduledCancellationResume);
+  const requiresBillingIdentity =
+    price > 0 ||
+    requiresResumeActivation ||
+    requiresHostedActivation ||
+    isOnChainPlanChange;
   const hasUnsupportedPaidFlow =
     price > 0 &&
     !requiresResumeActivation &&
@@ -6036,6 +6107,7 @@ function PaymentContent({
         planId: selectedPlanId,
         billingPeriod,
         previewOnly: true,
+        ...(normalizedCustomerName ? { customerName: normalizedCustomerName } : {}),
         ...(hasCustomerEmail ? { customerEmail: normalizedCustomerEmail } : {}),
       }),
     });
@@ -6138,6 +6210,12 @@ function PaymentContent({
         return;
       }
 
+      if (missingCustomerName && requiresBillingIdentity) {
+        setTxStatus("error");
+        setTxError("Enter the customer's full name before continuing.");
+        return;
+      }
+
       if (requiresHostedActivation && !hasCustomerEmail) {
         setTxStatus("error");
         setTxError("Enter a billing email before activating.");
@@ -6163,9 +6241,11 @@ function PaymentContent({
               company.walletAddress.trim()
                 ? String(company.walletAddress)
                 : readyPaymentAccount,
-            ...(typeof company?.name === "string" && company.name.trim()
-              ? { name: String(company.name) }
-              : {}),
+            ...(normalizedCustomerName
+              ? { name: normalizedCustomerName }
+              : typeof company?.name === "string" && company.name.trim()
+                ? { name: String(company.name) }
+                : {}),
             ...(hasCustomerEmail
               ? { email: normalizedCustomerEmail }
               : typeof company?.email === "string" && company.email.trim()
@@ -6789,6 +6869,51 @@ function PaymentContent({
                 {requiresResumeActivation
                   ? "This subscription is already active through the current billing period, but future renewals are turned off. Connect the customer wallet, confirm the payment account again, and we will restore automatic payments for the current plan."
                   : "This portal can activate the subscription directly from your app. Connect the customer wallet, confirm the payment account, and we will create the subscription for the selected plan."}
+              </div>
+
+              <div style={{ marginBottom: 16 }}>
+                <div
+                  style={{
+                    fontSize: tokens.size - 2,
+                    color: tokens.mutedColor,
+                    marginBottom: 6,
+                  }}
+                >
+                  Full name
+                </div>
+                <input
+                  value={customerName}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    onCustomerNameChange(e.target.value)
+                  }
+                  placeholder="Jane Doe"
+                  autoComplete="name"
+                  style={{
+                    width: "100%",
+                    padding: "8px 10px",
+                    borderRadius: 6,
+                    border: `1px solid ${missingCustomerName && requiresBillingIdentity ? "#fecaca" : "#e5e7eb"}`,
+                    fontSize: tokens.size - 1,
+                    outline: "none",
+                    fontFamily: tokens.font,
+                    boxSizing: "border-box",
+                  }}
+                />
+                <div
+                  style={{
+                    fontSize: tokens.size - 2,
+                    color:
+                      missingCustomerName && requiresBillingIdentity
+                        ? "#dc2626"
+                        : tokens.mutedColor,
+                    marginTop: 4,
+                    lineHeight: 1.5,
+                  }}
+                >
+                  {missingCustomerName && requiresBillingIdentity
+                    ? "Enter the customer's full name so billing documents are issued correctly."
+                    : "This name is used on invoices, receipts, and subscription billing records."}
+                </div>
               </div>
 
               <div style={{ marginBottom: 16 }}>
@@ -8207,6 +8332,7 @@ export function ArcenEmbed({
   const [couponQuote, setCouponQuote] = useState<AppliedCouponQuote | null>(
     null,
   );
+  const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
   const tokenRef = useRef(resolvedToken);
   const baseRef = useRef(resolvedBaseUrl);
@@ -8317,11 +8443,18 @@ export function ArcenEmbed({
   useEffect(() => {
     const company =
       (state.data?.company as Record<string, unknown> | null) ?? null;
+    const nextName =
+      typeof company?.name === "string"
+        ? normalizeCustomerName(company.name)
+        : "";
     const nextEmail =
       typeof company?.email === "string"
         ? normalizeCustomerEmail(company.email)
         : "";
 
+    if (nextName) {
+      setCustomerName((current) => current || nextName);
+    }
     if (!nextEmail) return;
     setCustomerEmail((current) => current || nextEmail);
   }, [state.data]);
@@ -8359,6 +8492,7 @@ export function ArcenEmbed({
     async (planId: string, confirmation?: PlanChangeConfirmation) => {
       dispatch({ type: "PROCESSING_START" });
       try {
+        const normalizedCustomerName = normalizeCustomerName(customerName);
         const normalizedCustomerEmail = normalizeCustomerEmail(customerEmail);
         const successTxHash =
           confirmation?.accessChangeTxHash ??
@@ -8371,6 +8505,9 @@ export function ArcenEmbed({
           {
             planId,
             billingPeriod: state.billingPeriod,
+            ...(normalizedCustomerName
+              ? { customerName: normalizedCustomerName }
+              : {}),
             ...(isValidCustomerEmail(normalizedCustomerEmail)
               ? { customerEmail: normalizedCustomerEmail }
               : {}),
@@ -8820,6 +8957,7 @@ export function ArcenEmbed({
               couponQuote={couponQuote}
               processing={processing}
               tokens={tokens}
+              customerName={customerName}
               customerEmail={customerEmail}
               containerWidth={effectiveContainerWidth}
               onSelectPlan={(planId) =>
@@ -8828,6 +8966,7 @@ export function ArcenEmbed({
               onBillingPeriodChange={(p) =>
                 dispatch({ type: "SET_BILLING_PERIOD", period: p })
               }
+              onCustomerNameChange={setCustomerName}
               onCustomerEmailChange={setCustomerEmail}
               onCouponQuoteChange={setCouponQuote}
               onSubscribeClose={() => {
@@ -8852,9 +8991,11 @@ export function ArcenEmbed({
               couponQuote={couponQuote}
               processing={processing}
               tokens={tokens}
+              customerName={customerName}
               customerEmail={customerEmail}
               containerWidth={effectiveContainerWidth}
               zeroDevConfig={providerZeroDev}
+              onCustomerNameChange={setCustomerName}
               onCustomerEmailChange={setCustomerEmail}
               onConfirm={(txHash) => {
                 if (selectedPlanId) handleSwitchPlan(selectedPlanId, txHash);
@@ -8917,6 +9058,7 @@ export function ArcenEmbed({
                   couponQuote={couponQuote}
                   processing={processing}
                   tokens={tokens}
+                  customerName={customerName}
                   customerEmail={customerEmail}
                   containerWidth={effectiveContainerWidth}
                   onSelectPlan={(planId) =>
@@ -8925,6 +9067,7 @@ export function ArcenEmbed({
                   onBillingPeriodChange={(p) =>
                     dispatch({ type: "SET_BILLING_PERIOD", period: p })
                   }
+                  onCustomerNameChange={setCustomerName}
                   onCustomerEmailChange={setCustomerEmail}
                   onCouponQuoteChange={setCouponQuote}
                   onSubscribeClose={() => {
@@ -8950,9 +9093,11 @@ export function ArcenEmbed({
                   couponQuote={couponQuote}
                   processing={processing}
                   tokens={tokens}
+                  customerName={customerName}
                   customerEmail={customerEmail}
                   containerWidth={effectiveContainerWidth}
                   zeroDevConfig={providerZeroDev}
+                  onCustomerNameChange={setCustomerName}
                   onCustomerEmailChange={setCustomerEmail}
                   onConfirm={(txHash) => {
                     if (selectedPlanId)

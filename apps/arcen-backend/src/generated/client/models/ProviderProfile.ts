@@ -32,6 +32,19 @@ export type ProviderProfileMinAggregateOutputType = {
   providerName: string | null
   website: string | null
   contactEmail: string | null
+  legalName: string | null
+  billingEmail: string | null
+  supportEmail: string | null
+  supportPhone: string | null
+  supportUrl: string | null
+  addressLine1: string | null
+  addressLine2: string | null
+  city: string | null
+  state: string | null
+  postalCode: string | null
+  country: string | null
+  taxId: string | null
+  gstin: string | null
   notifyEmail: boolean | null
   notifyWebhook: boolean | null
   webhookUrl: string | null
@@ -49,6 +62,19 @@ export type ProviderProfileMaxAggregateOutputType = {
   providerName: string | null
   website: string | null
   contactEmail: string | null
+  legalName: string | null
+  billingEmail: string | null
+  supportEmail: string | null
+  supportPhone: string | null
+  supportUrl: string | null
+  addressLine1: string | null
+  addressLine2: string | null
+  city: string | null
+  state: string | null
+  postalCode: string | null
+  country: string | null
+  taxId: string | null
+  gstin: string | null
   notifyEmail: boolean | null
   notifyWebhook: boolean | null
   webhookUrl: string | null
@@ -66,6 +92,19 @@ export type ProviderProfileCountAggregateOutputType = {
   providerName: number
   website: number
   contactEmail: number
+  legalName: number
+  billingEmail: number
+  supportEmail: number
+  supportPhone: number
+  supportUrl: number
+  addressLine1: number
+  addressLine2: number
+  city: number
+  state: number
+  postalCode: number
+  country: number
+  taxId: number
+  gstin: number
   notifyEmail: number
   notifyWebhook: number
   webhookUrl: number
@@ -86,6 +125,19 @@ export type ProviderProfileMinAggregateInputType = {
   providerName?: true
   website?: true
   contactEmail?: true
+  legalName?: true
+  billingEmail?: true
+  supportEmail?: true
+  supportPhone?: true
+  supportUrl?: true
+  addressLine1?: true
+  addressLine2?: true
+  city?: true
+  state?: true
+  postalCode?: true
+  country?: true
+  taxId?: true
+  gstin?: true
   notifyEmail?: true
   notifyWebhook?: true
   webhookUrl?: true
@@ -103,6 +155,19 @@ export type ProviderProfileMaxAggregateInputType = {
   providerName?: true
   website?: true
   contactEmail?: true
+  legalName?: true
+  billingEmail?: true
+  supportEmail?: true
+  supportPhone?: true
+  supportUrl?: true
+  addressLine1?: true
+  addressLine2?: true
+  city?: true
+  state?: true
+  postalCode?: true
+  country?: true
+  taxId?: true
+  gstin?: true
   notifyEmail?: true
   notifyWebhook?: true
   webhookUrl?: true
@@ -120,6 +185,19 @@ export type ProviderProfileCountAggregateInputType = {
   providerName?: true
   website?: true
   contactEmail?: true
+  legalName?: true
+  billingEmail?: true
+  supportEmail?: true
+  supportPhone?: true
+  supportUrl?: true
+  addressLine1?: true
+  addressLine2?: true
+  city?: true
+  state?: true
+  postalCode?: true
+  country?: true
+  taxId?: true
+  gstin?: true
   notifyEmail?: true
   notifyWebhook?: true
   webhookUrl?: true
@@ -211,6 +289,19 @@ export type ProviderProfileGroupByOutputType = {
   providerName: string | null
   website: string | null
   contactEmail: string | null
+  legalName: string | null
+  billingEmail: string | null
+  supportEmail: string | null
+  supportPhone: string | null
+  supportUrl: string | null
+  addressLine1: string | null
+  addressLine2: string | null
+  city: string | null
+  state: string | null
+  postalCode: string | null
+  country: string | null
+  taxId: string | null
+  gstin: string | null
   notifyEmail: boolean
   notifyWebhook: boolean
   webhookUrl: string | null
@@ -250,6 +341,19 @@ export type ProviderProfileWhereInput = {
   providerName?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
   website?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
   contactEmail?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
+  legalName?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
+  billingEmail?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
+  supportEmail?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
+  supportPhone?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
+  supportUrl?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
+  addressLine1?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
+  addressLine2?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
+  city?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
+  state?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
+  postalCode?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
+  country?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
+  taxId?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
+  gstin?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
   notifyEmail?: Prisma.BoolFilter<"ProviderProfile"> | boolean
   notifyWebhook?: Prisma.BoolFilter<"ProviderProfile"> | boolean
   webhookUrl?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
@@ -270,6 +374,19 @@ export type ProviderProfileOrderByWithRelationInput = {
   providerName?: Prisma.SortOrderInput | Prisma.SortOrder
   website?: Prisma.SortOrderInput | Prisma.SortOrder
   contactEmail?: Prisma.SortOrderInput | Prisma.SortOrder
+  legalName?: Prisma.SortOrderInput | Prisma.SortOrder
+  billingEmail?: Prisma.SortOrderInput | Prisma.SortOrder
+  supportEmail?: Prisma.SortOrderInput | Prisma.SortOrder
+  supportPhone?: Prisma.SortOrderInput | Prisma.SortOrder
+  supportUrl?: Prisma.SortOrderInput | Prisma.SortOrder
+  addressLine1?: Prisma.SortOrderInput | Prisma.SortOrder
+  addressLine2?: Prisma.SortOrderInput | Prisma.SortOrder
+  city?: Prisma.SortOrderInput | Prisma.SortOrder
+  state?: Prisma.SortOrderInput | Prisma.SortOrder
+  postalCode?: Prisma.SortOrderInput | Prisma.SortOrder
+  country?: Prisma.SortOrderInput | Prisma.SortOrder
+  taxId?: Prisma.SortOrderInput | Prisma.SortOrder
+  gstin?: Prisma.SortOrderInput | Prisma.SortOrder
   notifyEmail?: Prisma.SortOrder
   notifyWebhook?: Prisma.SortOrder
   webhookUrl?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -295,6 +412,19 @@ export type ProviderProfileWhereUniqueInput = Prisma.AtLeast<{
   providerName?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
   website?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
   contactEmail?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
+  legalName?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
+  billingEmail?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
+  supportEmail?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
+  supportPhone?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
+  supportUrl?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
+  addressLine1?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
+  addressLine2?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
+  city?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
+  state?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
+  postalCode?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
+  country?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
+  taxId?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
+  gstin?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
   notifyEmail?: Prisma.BoolFilter<"ProviderProfile"> | boolean
   notifyWebhook?: Prisma.BoolFilter<"ProviderProfile"> | boolean
   webhookUrl?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
@@ -314,6 +444,19 @@ export type ProviderProfileOrderByWithAggregationInput = {
   providerName?: Prisma.SortOrderInput | Prisma.SortOrder
   website?: Prisma.SortOrderInput | Prisma.SortOrder
   contactEmail?: Prisma.SortOrderInput | Prisma.SortOrder
+  legalName?: Prisma.SortOrderInput | Prisma.SortOrder
+  billingEmail?: Prisma.SortOrderInput | Prisma.SortOrder
+  supportEmail?: Prisma.SortOrderInput | Prisma.SortOrder
+  supportPhone?: Prisma.SortOrderInput | Prisma.SortOrder
+  supportUrl?: Prisma.SortOrderInput | Prisma.SortOrder
+  addressLine1?: Prisma.SortOrderInput | Prisma.SortOrder
+  addressLine2?: Prisma.SortOrderInput | Prisma.SortOrder
+  city?: Prisma.SortOrderInput | Prisma.SortOrder
+  state?: Prisma.SortOrderInput | Prisma.SortOrder
+  postalCode?: Prisma.SortOrderInput | Prisma.SortOrder
+  country?: Prisma.SortOrderInput | Prisma.SortOrder
+  taxId?: Prisma.SortOrderInput | Prisma.SortOrder
+  gstin?: Prisma.SortOrderInput | Prisma.SortOrder
   notifyEmail?: Prisma.SortOrder
   notifyWebhook?: Prisma.SortOrder
   webhookUrl?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -338,6 +481,19 @@ export type ProviderProfileScalarWhereWithAggregatesInput = {
   providerName?: Prisma.StringNullableWithAggregatesFilter<"ProviderProfile"> | string | null
   website?: Prisma.StringNullableWithAggregatesFilter<"ProviderProfile"> | string | null
   contactEmail?: Prisma.StringNullableWithAggregatesFilter<"ProviderProfile"> | string | null
+  legalName?: Prisma.StringNullableWithAggregatesFilter<"ProviderProfile"> | string | null
+  billingEmail?: Prisma.StringNullableWithAggregatesFilter<"ProviderProfile"> | string | null
+  supportEmail?: Prisma.StringNullableWithAggregatesFilter<"ProviderProfile"> | string | null
+  supportPhone?: Prisma.StringNullableWithAggregatesFilter<"ProviderProfile"> | string | null
+  supportUrl?: Prisma.StringNullableWithAggregatesFilter<"ProviderProfile"> | string | null
+  addressLine1?: Prisma.StringNullableWithAggregatesFilter<"ProviderProfile"> | string | null
+  addressLine2?: Prisma.StringNullableWithAggregatesFilter<"ProviderProfile"> | string | null
+  city?: Prisma.StringNullableWithAggregatesFilter<"ProviderProfile"> | string | null
+  state?: Prisma.StringNullableWithAggregatesFilter<"ProviderProfile"> | string | null
+  postalCode?: Prisma.StringNullableWithAggregatesFilter<"ProviderProfile"> | string | null
+  country?: Prisma.StringNullableWithAggregatesFilter<"ProviderProfile"> | string | null
+  taxId?: Prisma.StringNullableWithAggregatesFilter<"ProviderProfile"> | string | null
+  gstin?: Prisma.StringNullableWithAggregatesFilter<"ProviderProfile"> | string | null
   notifyEmail?: Prisma.BoolWithAggregatesFilter<"ProviderProfile"> | boolean
   notifyWebhook?: Prisma.BoolWithAggregatesFilter<"ProviderProfile"> | boolean
   webhookUrl?: Prisma.StringNullableWithAggregatesFilter<"ProviderProfile"> | string | null
@@ -355,6 +511,19 @@ export type ProviderProfileCreateInput = {
   providerName?: string | null
   website?: string | null
   contactEmail?: string | null
+  legalName?: string | null
+  billingEmail?: string | null
+  supportEmail?: string | null
+  supportPhone?: string | null
+  supportUrl?: string | null
+  addressLine1?: string | null
+  addressLine2?: string | null
+  city?: string | null
+  state?: string | null
+  postalCode?: string | null
+  country?: string | null
+  taxId?: string | null
+  gstin?: string | null
   notifyEmail?: boolean
   notifyWebhook?: boolean
   webhookUrl?: string | null
@@ -374,6 +543,19 @@ export type ProviderProfileUncheckedCreateInput = {
   providerName?: string | null
   website?: string | null
   contactEmail?: string | null
+  legalName?: string | null
+  billingEmail?: string | null
+  supportEmail?: string | null
+  supportPhone?: string | null
+  supportUrl?: string | null
+  addressLine1?: string | null
+  addressLine2?: string | null
+  city?: string | null
+  state?: string | null
+  postalCode?: string | null
+  country?: string | null
+  taxId?: string | null
+  gstin?: string | null
   notifyEmail?: boolean
   notifyWebhook?: boolean
   webhookUrl?: string | null
@@ -391,6 +573,19 @@ export type ProviderProfileUpdateInput = {
   providerName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   contactEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  legalName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  billingEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  supportEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  supportPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  supportUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  addressLine1?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  addressLine2?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  state?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  postalCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  country?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  taxId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  gstin?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   notifyEmail?: Prisma.BoolFieldUpdateOperationsInput | boolean
   notifyWebhook?: Prisma.BoolFieldUpdateOperationsInput | boolean
   webhookUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -410,6 +605,19 @@ export type ProviderProfileUncheckedUpdateInput = {
   providerName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   contactEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  legalName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  billingEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  supportEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  supportPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  supportUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  addressLine1?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  addressLine2?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  state?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  postalCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  country?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  taxId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  gstin?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   notifyEmail?: Prisma.BoolFieldUpdateOperationsInput | boolean
   notifyWebhook?: Prisma.BoolFieldUpdateOperationsInput | boolean
   webhookUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -428,6 +636,19 @@ export type ProviderProfileCreateManyInput = {
   providerName?: string | null
   website?: string | null
   contactEmail?: string | null
+  legalName?: string | null
+  billingEmail?: string | null
+  supportEmail?: string | null
+  supportPhone?: string | null
+  supportUrl?: string | null
+  addressLine1?: string | null
+  addressLine2?: string | null
+  city?: string | null
+  state?: string | null
+  postalCode?: string | null
+  country?: string | null
+  taxId?: string | null
+  gstin?: string | null
   notifyEmail?: boolean
   notifyWebhook?: boolean
   webhookUrl?: string | null
@@ -445,6 +666,19 @@ export type ProviderProfileUpdateManyMutationInput = {
   providerName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   contactEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  legalName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  billingEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  supportEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  supportPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  supportUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  addressLine1?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  addressLine2?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  state?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  postalCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  country?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  taxId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  gstin?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   notifyEmail?: Prisma.BoolFieldUpdateOperationsInput | boolean
   notifyWebhook?: Prisma.BoolFieldUpdateOperationsInput | boolean
   webhookUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -462,6 +696,19 @@ export type ProviderProfileUncheckedUpdateManyInput = {
   providerName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   contactEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  legalName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  billingEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  supportEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  supportPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  supportUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  addressLine1?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  addressLine2?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  state?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  postalCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  country?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  taxId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  gstin?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   notifyEmail?: Prisma.BoolFieldUpdateOperationsInput | boolean
   notifyWebhook?: Prisma.BoolFieldUpdateOperationsInput | boolean
   webhookUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -495,6 +742,19 @@ export type ProviderProfileCountOrderByAggregateInput = {
   providerName?: Prisma.SortOrder
   website?: Prisma.SortOrder
   contactEmail?: Prisma.SortOrder
+  legalName?: Prisma.SortOrder
+  billingEmail?: Prisma.SortOrder
+  supportEmail?: Prisma.SortOrder
+  supportPhone?: Prisma.SortOrder
+  supportUrl?: Prisma.SortOrder
+  addressLine1?: Prisma.SortOrder
+  addressLine2?: Prisma.SortOrder
+  city?: Prisma.SortOrder
+  state?: Prisma.SortOrder
+  postalCode?: Prisma.SortOrder
+  country?: Prisma.SortOrder
+  taxId?: Prisma.SortOrder
+  gstin?: Prisma.SortOrder
   notifyEmail?: Prisma.SortOrder
   notifyWebhook?: Prisma.SortOrder
   webhookUrl?: Prisma.SortOrder
@@ -513,6 +773,19 @@ export type ProviderProfileMaxOrderByAggregateInput = {
   providerName?: Prisma.SortOrder
   website?: Prisma.SortOrder
   contactEmail?: Prisma.SortOrder
+  legalName?: Prisma.SortOrder
+  billingEmail?: Prisma.SortOrder
+  supportEmail?: Prisma.SortOrder
+  supportPhone?: Prisma.SortOrder
+  supportUrl?: Prisma.SortOrder
+  addressLine1?: Prisma.SortOrder
+  addressLine2?: Prisma.SortOrder
+  city?: Prisma.SortOrder
+  state?: Prisma.SortOrder
+  postalCode?: Prisma.SortOrder
+  country?: Prisma.SortOrder
+  taxId?: Prisma.SortOrder
+  gstin?: Prisma.SortOrder
   notifyEmail?: Prisma.SortOrder
   notifyWebhook?: Prisma.SortOrder
   webhookUrl?: Prisma.SortOrder
@@ -530,6 +803,19 @@ export type ProviderProfileMinOrderByAggregateInput = {
   providerName?: Prisma.SortOrder
   website?: Prisma.SortOrder
   contactEmail?: Prisma.SortOrder
+  legalName?: Prisma.SortOrder
+  billingEmail?: Prisma.SortOrder
+  supportEmail?: Prisma.SortOrder
+  supportPhone?: Prisma.SortOrder
+  supportUrl?: Prisma.SortOrder
+  addressLine1?: Prisma.SortOrder
+  addressLine2?: Prisma.SortOrder
+  city?: Prisma.SortOrder
+  state?: Prisma.SortOrder
+  postalCode?: Prisma.SortOrder
+  country?: Prisma.SortOrder
+  taxId?: Prisma.SortOrder
+  gstin?: Prisma.SortOrder
   notifyEmail?: Prisma.SortOrder
   notifyWebhook?: Prisma.SortOrder
   webhookUrl?: Prisma.SortOrder
@@ -630,6 +916,19 @@ export type ProviderProfileCreateWithoutTeamInput = {
   providerName?: string | null
   website?: string | null
   contactEmail?: string | null
+  legalName?: string | null
+  billingEmail?: string | null
+  supportEmail?: string | null
+  supportPhone?: string | null
+  supportUrl?: string | null
+  addressLine1?: string | null
+  addressLine2?: string | null
+  city?: string | null
+  state?: string | null
+  postalCode?: string | null
+  country?: string | null
+  taxId?: string | null
+  gstin?: string | null
   notifyEmail?: boolean
   notifyWebhook?: boolean
   webhookUrl?: string | null
@@ -648,6 +947,19 @@ export type ProviderProfileUncheckedCreateWithoutTeamInput = {
   providerName?: string | null
   website?: string | null
   contactEmail?: string | null
+  legalName?: string | null
+  billingEmail?: string | null
+  supportEmail?: string | null
+  supportPhone?: string | null
+  supportUrl?: string | null
+  addressLine1?: string | null
+  addressLine2?: string | null
+  city?: string | null
+  state?: string | null
+  postalCode?: string | null
+  country?: string | null
+  taxId?: string | null
+  gstin?: string | null
   notifyEmail?: boolean
   notifyWebhook?: boolean
   webhookUrl?: string | null
@@ -694,6 +1006,19 @@ export type ProviderProfileScalarWhereInput = {
   providerName?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
   website?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
   contactEmail?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
+  legalName?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
+  billingEmail?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
+  supportEmail?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
+  supportPhone?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
+  supportUrl?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
+  addressLine1?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
+  addressLine2?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
+  city?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
+  state?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
+  postalCode?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
+  country?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
+  taxId?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
+  gstin?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
   notifyEmail?: Prisma.BoolFilter<"ProviderProfile"> | boolean
   notifyWebhook?: Prisma.BoolFilter<"ProviderProfile"> | boolean
   webhookUrl?: Prisma.StringNullableFilter<"ProviderProfile"> | string | null
@@ -711,6 +1036,19 @@ export type ProviderProfileCreateWithoutEnvironmentInput = {
   providerName?: string | null
   website?: string | null
   contactEmail?: string | null
+  legalName?: string | null
+  billingEmail?: string | null
+  supportEmail?: string | null
+  supportPhone?: string | null
+  supportUrl?: string | null
+  addressLine1?: string | null
+  addressLine2?: string | null
+  city?: string | null
+  state?: string | null
+  postalCode?: string | null
+  country?: string | null
+  taxId?: string | null
+  gstin?: string | null
   notifyEmail?: boolean
   notifyWebhook?: boolean
   webhookUrl?: string | null
@@ -728,6 +1066,19 @@ export type ProviderProfileUncheckedCreateWithoutEnvironmentInput = {
   providerName?: string | null
   website?: string | null
   contactEmail?: string | null
+  legalName?: string | null
+  billingEmail?: string | null
+  supportEmail?: string | null
+  supportPhone?: string | null
+  supportUrl?: string | null
+  addressLine1?: string | null
+  addressLine2?: string | null
+  city?: string | null
+  state?: string | null
+  postalCode?: string | null
+  country?: string | null
+  taxId?: string | null
+  gstin?: string | null
   notifyEmail?: boolean
   notifyWebhook?: boolean
   webhookUrl?: string | null
@@ -772,6 +1123,19 @@ export type ProviderProfileCreateManyTeamInput = {
   providerName?: string | null
   website?: string | null
   contactEmail?: string | null
+  legalName?: string | null
+  billingEmail?: string | null
+  supportEmail?: string | null
+  supportPhone?: string | null
+  supportUrl?: string | null
+  addressLine1?: string | null
+  addressLine2?: string | null
+  city?: string | null
+  state?: string | null
+  postalCode?: string | null
+  country?: string | null
+  taxId?: string | null
+  gstin?: string | null
   notifyEmail?: boolean
   notifyWebhook?: boolean
   webhookUrl?: string | null
@@ -788,6 +1152,19 @@ export type ProviderProfileUpdateWithoutTeamInput = {
   providerName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   contactEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  legalName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  billingEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  supportEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  supportPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  supportUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  addressLine1?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  addressLine2?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  state?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  postalCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  country?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  taxId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  gstin?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   notifyEmail?: Prisma.BoolFieldUpdateOperationsInput | boolean
   notifyWebhook?: Prisma.BoolFieldUpdateOperationsInput | boolean
   webhookUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -806,6 +1183,19 @@ export type ProviderProfileUncheckedUpdateWithoutTeamInput = {
   providerName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   contactEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  legalName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  billingEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  supportEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  supportPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  supportUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  addressLine1?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  addressLine2?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  state?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  postalCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  country?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  taxId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  gstin?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   notifyEmail?: Prisma.BoolFieldUpdateOperationsInput | boolean
   notifyWebhook?: Prisma.BoolFieldUpdateOperationsInput | boolean
   webhookUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -823,6 +1213,19 @@ export type ProviderProfileUncheckedUpdateManyWithoutTeamInput = {
   providerName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   contactEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  legalName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  billingEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  supportEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  supportPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  supportUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  addressLine1?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  addressLine2?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  state?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  postalCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  country?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  taxId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  gstin?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   notifyEmail?: Prisma.BoolFieldUpdateOperationsInput | boolean
   notifyWebhook?: Prisma.BoolFieldUpdateOperationsInput | boolean
   webhookUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -839,6 +1242,19 @@ export type ProviderProfileCreateManyEnvironmentInput = {
   providerName?: string | null
   website?: string | null
   contactEmail?: string | null
+  legalName?: string | null
+  billingEmail?: string | null
+  supportEmail?: string | null
+  supportPhone?: string | null
+  supportUrl?: string | null
+  addressLine1?: string | null
+  addressLine2?: string | null
+  city?: string | null
+  state?: string | null
+  postalCode?: string | null
+  country?: string | null
+  taxId?: string | null
+  gstin?: string | null
   notifyEmail?: boolean
   notifyWebhook?: boolean
   webhookUrl?: string | null
@@ -856,6 +1272,19 @@ export type ProviderProfileUpdateWithoutEnvironmentInput = {
   providerName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   contactEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  legalName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  billingEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  supportEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  supportPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  supportUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  addressLine1?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  addressLine2?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  state?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  postalCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  country?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  taxId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  gstin?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   notifyEmail?: Prisma.BoolFieldUpdateOperationsInput | boolean
   notifyWebhook?: Prisma.BoolFieldUpdateOperationsInput | boolean
   webhookUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -873,6 +1302,19 @@ export type ProviderProfileUncheckedUpdateWithoutEnvironmentInput = {
   providerName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   contactEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  legalName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  billingEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  supportEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  supportPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  supportUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  addressLine1?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  addressLine2?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  state?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  postalCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  country?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  taxId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  gstin?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   notifyEmail?: Prisma.BoolFieldUpdateOperationsInput | boolean
   notifyWebhook?: Prisma.BoolFieldUpdateOperationsInput | boolean
   webhookUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -890,6 +1332,19 @@ export type ProviderProfileUncheckedUpdateManyWithoutEnvironmentInput = {
   providerName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   website?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   contactEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  legalName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  billingEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  supportEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  supportPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  supportUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  addressLine1?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  addressLine2?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  state?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  postalCode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  country?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  taxId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  gstin?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   notifyEmail?: Prisma.BoolFieldUpdateOperationsInput | boolean
   notifyWebhook?: Prisma.BoolFieldUpdateOperationsInput | boolean
   webhookUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -910,6 +1365,19 @@ export type ProviderProfileSelect<ExtArgs extends runtime.Types.Extensions.Inter
   providerName?: boolean
   website?: boolean
   contactEmail?: boolean
+  legalName?: boolean
+  billingEmail?: boolean
+  supportEmail?: boolean
+  supportPhone?: boolean
+  supportUrl?: boolean
+  addressLine1?: boolean
+  addressLine2?: boolean
+  city?: boolean
+  state?: boolean
+  postalCode?: boolean
+  country?: boolean
+  taxId?: boolean
+  gstin?: boolean
   notifyEmail?: boolean
   notifyWebhook?: boolean
   webhookUrl?: boolean
@@ -930,6 +1398,19 @@ export type ProviderProfileSelectCreateManyAndReturn<ExtArgs extends runtime.Typ
   providerName?: boolean
   website?: boolean
   contactEmail?: boolean
+  legalName?: boolean
+  billingEmail?: boolean
+  supportEmail?: boolean
+  supportPhone?: boolean
+  supportUrl?: boolean
+  addressLine1?: boolean
+  addressLine2?: boolean
+  city?: boolean
+  state?: boolean
+  postalCode?: boolean
+  country?: boolean
+  taxId?: boolean
+  gstin?: boolean
   notifyEmail?: boolean
   notifyWebhook?: boolean
   webhookUrl?: boolean
@@ -950,6 +1431,19 @@ export type ProviderProfileSelectUpdateManyAndReturn<ExtArgs extends runtime.Typ
   providerName?: boolean
   website?: boolean
   contactEmail?: boolean
+  legalName?: boolean
+  billingEmail?: boolean
+  supportEmail?: boolean
+  supportPhone?: boolean
+  supportUrl?: boolean
+  addressLine1?: boolean
+  addressLine2?: boolean
+  city?: boolean
+  state?: boolean
+  postalCode?: boolean
+  country?: boolean
+  taxId?: boolean
+  gstin?: boolean
   notifyEmail?: boolean
   notifyWebhook?: boolean
   webhookUrl?: boolean
@@ -970,6 +1464,19 @@ export type ProviderProfileSelectScalar = {
   providerName?: boolean
   website?: boolean
   contactEmail?: boolean
+  legalName?: boolean
+  billingEmail?: boolean
+  supportEmail?: boolean
+  supportPhone?: boolean
+  supportUrl?: boolean
+  addressLine1?: boolean
+  addressLine2?: boolean
+  city?: boolean
+  state?: boolean
+  postalCode?: boolean
+  country?: boolean
+  taxId?: boolean
+  gstin?: boolean
   notifyEmail?: boolean
   notifyWebhook?: boolean
   webhookUrl?: boolean
@@ -980,7 +1487,7 @@ export type ProviderProfileSelectScalar = {
   teamId?: boolean
 }
 
-export type ProviderProfileOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "updatedAt" | "environmentId" | "providerName" | "website" | "contactEmail" | "notifyEmail" | "notifyWebhook" | "webhookUrl" | "webhookSigningSecret" | "notificationPreferences" | "apiKeyHash" | "apiKeyPrefix" | "teamId", ExtArgs["result"]["providerProfile"]>
+export type ProviderProfileOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "updatedAt" | "environmentId" | "providerName" | "website" | "contactEmail" | "legalName" | "billingEmail" | "supportEmail" | "supportPhone" | "supportUrl" | "addressLine1" | "addressLine2" | "city" | "state" | "postalCode" | "country" | "taxId" | "gstin" | "notifyEmail" | "notifyWebhook" | "webhookUrl" | "webhookSigningSecret" | "notificationPreferences" | "apiKeyHash" | "apiKeyPrefix" | "teamId", ExtArgs["result"]["providerProfile"]>
 export type ProviderProfileInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
   environment?: boolean | Prisma.ProviderProfile$environmentArgs<ExtArgs>
@@ -1008,6 +1515,19 @@ export type $ProviderProfilePayload<ExtArgs extends runtime.Types.Extensions.Int
     providerName: string | null
     website: string | null
     contactEmail: string | null
+    legalName: string | null
+    billingEmail: string | null
+    supportEmail: string | null
+    supportPhone: string | null
+    supportUrl: string | null
+    addressLine1: string | null
+    addressLine2: string | null
+    city: string | null
+    state: string | null
+    postalCode: string | null
+    country: string | null
+    taxId: string | null
+    gstin: string | null
     notifyEmail: boolean
     notifyWebhook: boolean
     webhookUrl: string | null
@@ -1448,6 +1968,19 @@ export interface ProviderProfileFieldRefs {
   readonly providerName: Prisma.FieldRef<"ProviderProfile", 'String'>
   readonly website: Prisma.FieldRef<"ProviderProfile", 'String'>
   readonly contactEmail: Prisma.FieldRef<"ProviderProfile", 'String'>
+  readonly legalName: Prisma.FieldRef<"ProviderProfile", 'String'>
+  readonly billingEmail: Prisma.FieldRef<"ProviderProfile", 'String'>
+  readonly supportEmail: Prisma.FieldRef<"ProviderProfile", 'String'>
+  readonly supportPhone: Prisma.FieldRef<"ProviderProfile", 'String'>
+  readonly supportUrl: Prisma.FieldRef<"ProviderProfile", 'String'>
+  readonly addressLine1: Prisma.FieldRef<"ProviderProfile", 'String'>
+  readonly addressLine2: Prisma.FieldRef<"ProviderProfile", 'String'>
+  readonly city: Prisma.FieldRef<"ProviderProfile", 'String'>
+  readonly state: Prisma.FieldRef<"ProviderProfile", 'String'>
+  readonly postalCode: Prisma.FieldRef<"ProviderProfile", 'String'>
+  readonly country: Prisma.FieldRef<"ProviderProfile", 'String'>
+  readonly taxId: Prisma.FieldRef<"ProviderProfile", 'String'>
+  readonly gstin: Prisma.FieldRef<"ProviderProfile", 'String'>
   readonly notifyEmail: Prisma.FieldRef<"ProviderProfile", 'Boolean'>
   readonly notifyWebhook: Prisma.FieldRef<"ProviderProfile", 'Boolean'>
   readonly webhookUrl: Prisma.FieldRef<"ProviderProfile", 'String'>

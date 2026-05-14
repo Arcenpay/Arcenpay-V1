@@ -1,6 +1,17 @@
 import { db } from "../../db.js";
 import { sendPaymentReceiptEmail } from "./email.js";
-import { ensureInvoicePdfForTeam } from "./invoice-documents.js";
+import {
+  ensureInvoicePdfForTeam,
+  ensureReceiptPdfForTeam,
+  readObject,
+} from "./invoice-documents.js";
+import {
+  getPaymentMethodLabel,
+  getProviderDisplayName,
+  getStoredReceiptNumber,
+  getSupportDetails,
+  loadInvoiceBillingContext,
+} from "./invoice-context.js";
 import { toPrismaJson } from "../../utils/prisma-json.js";
 
 function readMetadata(
@@ -17,29 +28,12 @@ export async function sendPaidInvoiceReceipt(input: {
   invoiceId: string;
   txHash?: string | null;
 }) {
-  const invoice = await db.invoice.findFirst({
-    where: {
-      id: input.invoiceId,
-      teamId: input.teamId,
-      status: "PAID",
-    },
-    select: {
-      id: true,
-      number: true,
-      teamId: true,
-      customerEmail: true,
-      total: true,
-      currency: true,
-      paidAt: true,
-      metadata: true,
-    },
-  });
-
-  if (!invoice?.customerEmail) {
+  const context = await loadInvoiceBillingContext(input.teamId, input.invoiceId);
+  if (!context || context.invoice.status !== "PAID" || !context.invoice.customerEmail) {
     return { sent: false as const, reason: "missing_customer_email" };
   }
 
-  const metadata = readMetadata(invoice.metadata);
+  const metadata = readMetadata(context.invoice.metadata);
   const receiptEmail = readMetadata(metadata.receiptEmail);
   const lastSentTxHash =
     typeof receiptEmail.txHash === "string" ? receiptEmail.txHash : null;
@@ -47,32 +41,92 @@ export async function sendPaidInvoiceReceipt(input: {
     return { sent: false as const, reason: "already_sent_for_payment" };
   }
 
-  const { downloadUrl } = await ensureInvoicePdfForTeam(
-    invoice.teamId,
-    invoice.id,
-  );
+  const [{ objectKey: invoiceObjectKey }, { objectKey: receiptObjectKey, filename: receiptFilename, receiptNumber }] =
+    await Promise.all([
+      ensureInvoicePdfForTeam(context.invoice.teamId, context.invoice.id),
+      ensureReceiptPdfForTeam(context.invoice.teamId, context.invoice.id),
+    ]);
 
-  await sendPaymentReceiptEmail({
-    to: invoice.customerEmail,
-    invoiceNumber: invoice.number || invoice.id,
-    total: String(invoice.total),
-    currency: invoice.currency,
-    paidAt: invoice.paidAt?.toISOString() ?? null,
-    downloadUrl,
-  });
+  const invoiceBytes = await readObject(invoiceObjectKey);
+  const receiptBytes = await readObject(receiptObjectKey);
+  if (!invoiceBytes || !receiptBytes) {
+    return { sent: false as const, reason: "missing_pdf_attachments" };
+  }
 
-  await db.invoice.update({
-    where: { id: invoice.id },
-    data: {
-      metadata: toPrismaJson({
-        ...metadata,
-        receiptEmail: {
-          sentAt: new Date().toISOString(),
-          txHash: input.txHash ?? null,
-        },
-      }),
-    },
-  });
+  const invoiceFilename = `${(context.invoice.number || context.invoice.id).replace(/[^a-zA-Z0-9_\-]/g, "_")}.pdf`;
+  const providerName = getProviderDisplayName(context);
+  const paymentMethod = getPaymentMethodLabel(context);
+  const support = getSupportDetails(context);
+  const amountPaid =
+    Number(context.invoice.amountPaid) > 0
+      ? String(context.invoice.amountPaid)
+      : String(context.invoice.total);
 
-  return { sent: true as const };
+  try {
+    const result = await sendPaymentReceiptEmail({
+      to: context.invoice.customerEmail,
+      invoiceNumber: context.invoice.number || context.invoice.id,
+      receiptNumber: receiptNumber || getStoredReceiptNumber(context),
+      total: amountPaid,
+      currency: context.invoice.currency,
+      paidAt: context.invoice.paidAt?.toISOString() ?? null,
+      providerName,
+      paymentMethod,
+      supportEmail: support.email,
+      supportUrl: support.url,
+      invoicePdf: {
+        filename: invoiceFilename,
+        contentBase64: invoiceBytes.toString("base64"),
+      },
+      receiptPdf: {
+        filename: receiptFilename,
+        contentBase64: receiptBytes.toString("base64"),
+      },
+    });
+
+    const delivery = await db.invoiceDelivery.create({
+      data: {
+        invoiceId: context.invoice.id,
+        provider: "resend",
+        method: "email",
+        status: "SENT",
+        attempts: 1,
+        externalMessageId: result.id ?? null,
+        sentAt: new Date(),
+      },
+    });
+
+    await db.invoice.update({
+      where: { id: context.invoice.id },
+      data: {
+        metadata: toPrismaJson({
+          ...metadata,
+          receiptEmail: {
+            sentAt: new Date().toISOString(),
+            txHash: input.txHash ?? null,
+            receiptNumber,
+            deliveryId: delivery.id,
+          },
+        }),
+      },
+    });
+
+    return { sent: true as const };
+  } catch (error) {
+    await db.invoiceDelivery.create({
+      data: {
+        invoiceId: context.invoice.id,
+        provider: "resend",
+        method: "email",
+        status: "FAILED",
+        attempts: 1,
+        errorMessage: error instanceof Error ? error.message : "send failed",
+      },
+    });
+
+    return {
+      sent: false as const,
+      reason: error instanceof Error ? error.message : "send_failed",
+    };
+  }
 }

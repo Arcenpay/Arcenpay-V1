@@ -75,22 +75,17 @@ async function resolveWebhookTarget(
         webhook?: boolean;
       }>)
     : [];
-  const hasExplicitWebhookPrefs = prefs.some(
-    (pref) => typeof pref?.webhook === "boolean",
-  );
 
-  if (
-    !input.force &&
-    profile &&
-    !profile.notifyWebhook &&
-    hasExplicitWebhookPrefs
-  ) {
+  if (!input.force && (!profile || !profile.notifyWebhook)) {
     return null;
   }
 
-  if (!input.force && prefs.length > 0) {
+  if (!input.force) {
+    if (prefs.length === 0) {
+      return null;
+    }
     const sub = prefs.find((p) => p.id === input.eventName);
-    if (sub && sub.webhook === false) return null;
+    if (!sub || sub.webhook !== true) return null;
   }
 
   return {

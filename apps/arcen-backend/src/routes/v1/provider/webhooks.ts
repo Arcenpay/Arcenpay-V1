@@ -7,9 +7,16 @@ import {
   isErrorResponse,
 } from "../../../lib/auth/api-auth.js";
 import { requireResolvedActiveEnvironment } from "../../../lib/environments/workspace-environments.js";
+import {
+  CANONICAL_WEBHOOK_EVENTS,
+  CANONICAL_WEBHOOK_EVENT_IDS,
+} from "../../../lib/webhooks/webhook-events.js";
 
 const EventSubSchema = z.object({
-  id: z.string(),
+  id: z.string().refine(
+    (value) => CANONICAL_WEBHOOK_EVENT_IDS.includes(value),
+    "Unsupported webhook event",
+  ),
   label: z.string().optional(),
   description: z.string().optional(),
   enabled: z.boolean(),
@@ -66,23 +73,16 @@ export async function getWebhookConfig(c: Context) {
     });
   }
 
-  let eventSubscriptions: z.infer<typeof EventSubSchema>[] = [];
-  try {
-    const prefs = profile.notificationPreferences as unknown;
-    if (Array.isArray(prefs)) {
-      eventSubscriptions = prefs
-        .filter(
-          (p): p is { id: string; webhook: boolean } =>
-            typeof p === "object" && p !== null && "id" in p,
-        )
-        .map((p) => ({
-          id: p.id,
-          enabled: p.webhook === true,
-        }));
-    }
-  } catch {
-    // ignore parse errors
-  }
+  const prefs = Array.isArray(profile.notificationPreferences)
+    ? (profile.notificationPreferences as Array<Record<string, unknown>>)
+    : [];
+  const eventSubscriptions = CANONICAL_WEBHOOK_EVENTS.map((event) => {
+    const pref = prefs.find((item) => item.id === event.id);
+    return {
+      ...event,
+      enabled: pref?.webhook === true,
+    };
+  });
 
   return c.json({
     webhookUrl: profile.webhookUrl ?? null,
@@ -123,6 +123,7 @@ export async function putWebhookConfig(c: Context) {
       },
     },
     select: {
+      webhookUrl: true,
       webhookSigningSecret: true,
       notificationPreferences: true,
     },
@@ -152,6 +153,34 @@ export async function putWebhookConfig(c: Context) {
     );
   }
 
+  if (
+    eventSubscriptions?.some((subscription) => subscription.enabled) &&
+    !webhookUrl &&
+    !existingProfile?.webhookUrl
+  ) {
+    return c.json(
+      {
+        error:
+          "Enter a webhook URL before enabling webhook events.",
+      },
+      400 as any,
+    );
+  }
+
+  if (
+    webhookUrl &&
+    eventSubscriptions !== undefined &&
+    !eventSubscriptions.some((subscription) => subscription.enabled)
+  ) {
+    return c.json(
+      {
+        error:
+          "Select at least one webhook event before saving the endpoint.",
+      },
+      400 as any,
+    );
+  }
+
   const updateData: Record<string, unknown> = {};
   if (webhookUrl !== undefined) updateData.webhookUrl = webhookUrl;
 
@@ -165,20 +194,16 @@ export async function putWebhookConfig(c: Context) {
           Record<string, unknown>
         >)
       : [];
-
-    const merged = existingPrefs.map((pref) => {
-      const updated = eventSubscriptions.find((e) => e.id === pref.id);
-      if (updated) {
-        return { ...pref, webhook: updated.enabled };
-      }
-      return pref;
+    const merged = CANONICAL_WEBHOOK_EVENTS.map((event) => {
+      const existingPref =
+        existingPrefs.find((pref) => pref.id === event.id) ?? {};
+      const updated = eventSubscriptions.find((sub) => sub.id === event.id);
+      return {
+        id: event.id,
+        email: existingPref.email === true,
+        webhook: updated?.enabled === true,
+      };
     });
-
-    for (const sub of eventSubscriptions) {
-      if (!merged.find((p) => p.id === sub.id)) {
-        merged.push({ id: sub.id, email: false, webhook: sub.enabled });
-      }
-    }
 
     updateData.notificationPreferences = merged;
   }

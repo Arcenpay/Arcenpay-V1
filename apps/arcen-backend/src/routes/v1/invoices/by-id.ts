@@ -36,8 +36,10 @@ export async function GET(c: Context) {
     auth.team.teamId,
     invoice.id,
   );
+  const requestUrl = new URL(c.req.url);
+  const iso20022DownloadUrl = `${requestUrl.origin}/api/v1/invoices/${invoice.id}/iso20022`;
 
-  return c.json({ invoice, downloadUrl });
+  return c.json({ invoice, downloadUrl, iso20022DownloadUrl });
 }
 
 const ALLOWED_TRANSITIONS: Record<string, string[]> = {

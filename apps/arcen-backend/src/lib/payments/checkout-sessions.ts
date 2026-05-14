@@ -49,7 +49,7 @@ async function resolveOrCreateCompany(input: {
         teamId: input.teamId,
         ...(input.environmentId ? { environmentId: input.environmentId } : {}),
       },
-      select: { id: true },
+      select: { id: true, name: true },
     });
   }
 
@@ -68,7 +68,7 @@ async function resolveOrCreateCompany(input: {
           : []),
       ],
     },
-    select: { id: true },
+    select: { id: true, name: true },
   });
   if (existing) return existing;
 
@@ -80,7 +80,7 @@ async function resolveOrCreateCompany(input: {
       walletAddress,
       email: customerEmail,
     },
-    select: { id: true },
+    select: { id: true, name: true },
   });
 }
 
@@ -249,6 +249,7 @@ export async function confirmCheckoutSessionPayment(input: {
         addOnName: session.catalogAddOn?.name ?? session.paymentLink?.catalogAddOn?.name,
       }),
       customerEmail: session.customerEmail ?? null,
+      customerName: session.customerName ?? company?.name ?? null,
       customerWallet: session.customerWallet ?? verification.senderWallet,
       metadata: {
         checkoutSessionId: session.id,

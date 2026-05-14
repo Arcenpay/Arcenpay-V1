@@ -20,7 +20,13 @@ async function resolveCompany(input: {
   if (input.companyId) {
     return client.arcenCompany.findFirst({
       where: { id: input.companyId, teamId: input.teamId },
-      select: { id: true, teamId: true, walletAddress: true, activePlanId: true },
+      select: {
+        id: true,
+        teamId: true,
+        environmentId: true,
+        walletAddress: true,
+        activePlanId: true,
+      },
     });
   }
 
@@ -29,7 +35,13 @@ async function resolveCompany(input: {
 
   const companyByIdentityWallet = await client.arcenCompany.findFirst({
     where: { teamId: input.teamId, walletAddress },
-    select: { id: true, teamId: true, walletAddress: true, activePlanId: true },
+    select: {
+      id: true,
+      teamId: true,
+      environmentId: true,
+      walletAddress: true,
+      activePlanId: true,
+    },
   });
   if (companyByIdentityWallet) {
     return companyByIdentityWallet;
@@ -42,6 +54,7 @@ async function resolveCompany(input: {
         select: {
           id: true,
           teamId: true,
+          environmentId: true,
           walletAddress: true,
           activePlanId: true,
         },
@@ -54,6 +67,7 @@ async function resolveCompany(input: {
 
 export async function upsertSubscriptionLedgerState(input: {
   teamId: string;
+  environmentId?: string | null;
   companyId?: string | null;
   walletAddress?: string | null;
   chainId?: number | null;
@@ -79,9 +93,14 @@ export async function upsertSubscriptionLedgerState(input: {
     input.catalogPlanId !== undefined
       ? input.catalogPlanId
       : company.activePlanId ?? null;
+  const resolvedEnvironmentId =
+    input.environmentId !== undefined
+      ? input.environmentId
+      : company.environmentId ?? null;
   const subscriptionState = await client.subscriptionState.upsert({
     where: { companyId: company.id },
     update: {
+      environmentId: resolvedEnvironmentId,
       walletAddress: normalizeWallet(input.walletAddress) ?? company.walletAddress ?? null,
       status: input.status,
       ...(input.chainId != null ? { chainId: input.chainId } : {}),
@@ -109,6 +128,7 @@ export async function upsertSubscriptionLedgerState(input: {
     },
     create: {
       teamId: input.teamId,
+      environmentId: resolvedEnvironmentId,
       companyId: company.id,
       walletAddress: normalizeWallet(input.walletAddress) ?? company.walletAddress ?? null,
       status: input.status,
@@ -163,6 +183,7 @@ async function resolvePaymentRecord(input: {
 export async function recordSuccessfulPayment(input: {
   idempotencyKey: string;
   teamId: string;
+  environmentId?: string | null;
   companyId?: string | null;
   walletAddress?: string | null;
   invoiceId?: string | null;
@@ -188,16 +209,20 @@ export async function recordSuccessfulPayment(input: {
   const company = await resolveCompany(input, client);
   const subscriptionState =
     input.subscriptionStateId
-      ? await client.subscriptionState.findUnique({
-          where: { id: input.subscriptionStateId },
-          select: { id: true },
-        })
+        ? await client.subscriptionState.findUnique({
+            where: { id: input.subscriptionStateId },
+            select: { id: true, environmentId: true },
+          })
         : company
         ? await client.subscriptionState.findUnique({
             where: { companyId: company.id },
-            select: { id: true },
+            select: { id: true, environmentId: true },
           })
         : null;
+  const resolvedEnvironmentId =
+    input.environmentId !== undefined
+      ? input.environmentId
+      : subscriptionState?.environmentId ?? company?.environmentId ?? null;
 
   const existing = await resolvePaymentRecord({
     idempotencyKey: input.idempotencyKey,
@@ -212,6 +237,7 @@ export async function recordSuccessfulPayment(input: {
           amount: toSix(input.amount),
           currency: input.currency ?? "USDC",
           teamId: input.teamId,
+          environmentId: resolvedEnvironmentId,
           companyId: company?.id ?? null,
           invoiceId: input.invoiceId ?? null,
           subscriptionStateId: subscriptionState?.id ?? null,
@@ -230,6 +256,7 @@ export async function recordSuccessfulPayment(input: {
         data: {
           idempotencyKey: input.idempotencyKey,
           teamId: input.teamId,
+          environmentId: resolvedEnvironmentId,
           companyId: company?.id ?? null,
           invoiceId: input.invoiceId ?? null,
           subscriptionStateId: subscriptionState?.id ?? null,

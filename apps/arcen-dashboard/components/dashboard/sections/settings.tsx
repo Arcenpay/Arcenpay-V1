@@ -197,6 +197,19 @@ export function SettingsSection() {
   const [providerName, setProviderName] = useState("");
   const [website, setWebsite] = useState("");
   const [contactEmail, setContactEmail] = useState("");
+  const [legalName, setLegalName] = useState("");
+  const [billingEmail, setBillingEmail] = useState("");
+  const [supportEmail, setSupportEmail] = useState("");
+  const [supportPhone, setSupportPhone] = useState("");
+  const [supportUrl, setSupportUrl] = useState("");
+  const [addressLine1, setAddressLine1] = useState("");
+  const [addressLine2, setAddressLine2] = useState("");
+  const [city, setCity] = useState("");
+  const [stateProvince, setStateProvince] = useState("");
+  const [postalCode, setPostalCode] = useState("");
+  const [country, setCountry] = useState("");
+  const [taxId, setTaxId] = useState("");
+  const [gstin, setGstin] = useState("");
 
   const [pendingDangerAction, setPendingDangerAction] = useState<{
     confirmTitle: string;
@@ -332,6 +345,19 @@ export function SettingsSection() {
         if (profile.providerName) setProviderName(profile.providerName);
         if (profile.website) setWebsite(profile.website);
         if (profile.contactEmail) setContactEmail(profile.contactEmail);
+        if (profile.legalName) setLegalName(profile.legalName);
+        if (profile.billingEmail) setBillingEmail(profile.billingEmail);
+        if (profile.supportEmail) setSupportEmail(profile.supportEmail);
+        if (profile.supportPhone) setSupportPhone(profile.supportPhone);
+        if (profile.supportUrl) setSupportUrl(profile.supportUrl);
+        if (profile.addressLine1) setAddressLine1(profile.addressLine1);
+        if (profile.addressLine2) setAddressLine2(profile.addressLine2);
+        if (profile.city) setCity(profile.city);
+        if (profile.state) setStateProvince(profile.state);
+        if (profile.postalCode) setPostalCode(profile.postalCode);
+        if (profile.country) setCountry(profile.country);
+        if (profile.taxId) setTaxId(profile.taxId);
+        if (profile.gstin) setGstin(profile.gstin);
       })
       .catch(() => {});
     // Load notification preferences from server (source of truth — not localStorage)
@@ -412,6 +438,19 @@ export function SettingsSection() {
           providerName: providerName || undefined,
           website: website || undefined,
           contactEmail: contactEmail || undefined,
+          legalName: legalName || undefined,
+          billingEmail: billingEmail || undefined,
+          supportEmail: supportEmail || undefined,
+          supportPhone: supportPhone || undefined,
+          supportUrl: supportUrl || undefined,
+          addressLine1: addressLine1 || undefined,
+          addressLine2: addressLine2 || undefined,
+          city: city || undefined,
+          state: stateProvince || undefined,
+          postalCode: postalCode || undefined,
+          country: country || undefined,
+          taxId: taxId || undefined,
+          gstin: gstin || undefined,
         }),
       });
       if (!res.ok) throw new Error("Save failed");
@@ -1394,6 +1433,58 @@ export function SettingsSection() {
                   />
                 </div>
                 <div className="space-y-2">
+                  <Label htmlFor="legalName">Legal Business Name</Label>
+                  <Input
+                    id="legalName"
+                    placeholder="Arcen Labs Private Limited"
+                    value={legalName}
+                    onChange={(e) => setLegalName(e.target.value)}
+                    className="bg-secondary border-border focus:border-accent"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="billingEmail">Billing Email</Label>
+                  <Input
+                    id="billingEmail"
+                    type="email"
+                    placeholder="accounts@example.com"
+                    value={billingEmail}
+                    onChange={(e) => setBillingEmail(e.target.value)}
+                    className="bg-secondary border-border focus:border-accent"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="supportEmail">Support Email</Label>
+                  <Input
+                    id="supportEmail"
+                    type="email"
+                    placeholder="support@example.com"
+                    value={supportEmail}
+                    onChange={(e) => setSupportEmail(e.target.value)}
+                    className="bg-secondary border-border focus:border-accent"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="supportPhone">Support Phone</Label>
+                  <Input
+                    id="supportPhone"
+                    placeholder="+91 98765 43210"
+                    value={supportPhone}
+                    onChange={(e) => setSupportPhone(e.target.value)}
+                    className="bg-secondary border-border focus:border-accent"
+                  />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="supportUrl">Support Site</Label>
+                  <Input
+                    id="supportUrl"
+                    placeholder="https://example.com/support"
+                    value={supportUrl}
+                    onChange={(e) => setSupportUrl(e.target.value)}
+                    className="bg-secondary border-border focus:border-accent"
+                  />
+                </div>
+                <div className="space-y-2">
                   <Label htmlFor="chainId">Network</Label>
                   <div className="flex items-center gap-2">
                     <Globe className="w-4 h-4 text-muted-foreground" />
@@ -1401,6 +1492,100 @@ export function SettingsSection() {
                       {getChainLabel(chainId)}{" "}
                       (Chain ID: {chainId})
                     </span>
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-4 rounded-lg border border-border bg-secondary/20 p-4">
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    Billing Identity
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    These details appear on invoice PDFs, receipt PDFs, and
+                    payment emails for this workspace environment.
+                  </p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="addressLine1">Address Line 1</Label>
+                    <Input
+                      id="addressLine1"
+                      placeholder="Street address"
+                      value={addressLine1}
+                      onChange={(e) => setAddressLine1(e.target.value)}
+                      className="bg-secondary border-border focus:border-accent"
+                    />
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="addressLine2">Address Line 2</Label>
+                    <Input
+                      id="addressLine2"
+                      placeholder="Suite, district, landmark"
+                      value={addressLine2}
+                      onChange={(e) => setAddressLine2(e.target.value)}
+                      className="bg-secondary border-border focus:border-accent"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="city">City</Label>
+                    <Input
+                      id="city"
+                      placeholder="Bhubaneswar"
+                      value={city}
+                      onChange={(e) => setCity(e.target.value)}
+                      className="bg-secondary border-border focus:border-accent"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="stateProvince">State / Province</Label>
+                    <Input
+                      id="stateProvince"
+                      placeholder="Odisha"
+                      value={stateProvince}
+                      onChange={(e) => setStateProvince(e.target.value)}
+                      className="bg-secondary border-border focus:border-accent"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="postalCode">Postal Code</Label>
+                    <Input
+                      id="postalCode"
+                      placeholder="752050"
+                      value={postalCode}
+                      onChange={(e) => setPostalCode(e.target.value)}
+                      className="bg-secondary border-border focus:border-accent"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="country">Country Code</Label>
+                    <Input
+                      id="country"
+                      placeholder="IN"
+                      value={country}
+                      onChange={(e) => setCountry(e.target.value.toUpperCase())}
+                      maxLength={2}
+                      className="bg-secondary border-border focus:border-accent uppercase"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="taxId">Tax ID</Label>
+                    <Input
+                      id="taxId"
+                      placeholder="Business tax identifier"
+                      value={taxId}
+                      onChange={(e) => setTaxId(e.target.value)}
+                      className="bg-secondary border-border focus:border-accent"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="gstin">GSTIN</Label>
+                    <Input
+                      id="gstin"
+                      placeholder="22AAAAA0000A1Z5"
+                      value={gstin}
+                      onChange={(e) => setGstin(e.target.value.toUpperCase())}
+                      className="bg-secondary border-border focus:border-accent uppercase"
+                    />
                   </div>
                 </div>
               </div>

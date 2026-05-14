@@ -20,6 +20,7 @@ const listSchema = z.object({
 const createSchema = z.object({
   environmentMode: z.enum(["DEVELOPMENT", "PRODUCTION"]).default("DEVELOPMENT"),
   customerEmail: z.string().email().optional(),
+  customerName: z.string().trim().min(1).optional(),
   customerWallet: z
     .string()
     .regex(/^0x[a-fA-F0-9]{40}$/)
@@ -63,7 +64,6 @@ export async function GET(c: Context) {
 
   const where = {
     teamId: auth.team.teamId,
-    environmentId: activeEnvironment.id,
     ...(parsed.data.status && { status: parsed.data.status }),
     ...(parsed.data.q && {
       OR: [
@@ -83,9 +83,35 @@ export async function GET(c: Context) {
       ],
     }),
   };
+  const activeEnvironmentPlanIds = (
+    await db.catalogPlan.findMany({
+      where: {
+        teamId: auth.team.teamId,
+        environmentId: activeEnvironment.id,
+      },
+      select: { id: true },
+    })
+  ).map((plan) => plan.id);
 
   const invoices = await db.invoice.findMany({
-    where,
+    where: {
+      ...where,
+      AND: [
+        {
+          OR: [
+            { environmentId: activeEnvironment.id },
+            ...(activeEnvironmentPlanIds.length > 0
+              ? [
+                  {
+                    environmentId: null,
+                    planId: { in: activeEnvironmentPlanIds },
+                  },
+                ]
+              : []),
+          ],
+        },
+      ],
+    },
     include: {
       lineItems: true,
       deliveries: { orderBy: { createdAt: "desc" }, take: 3 },
@@ -181,6 +207,7 @@ export async function POST(c: Context) {
       planId: parsed.data.planId,
       metadata: toPrismaNullableJson({
         ...parsed.data.metadata,
+        ...(parsed.data.customerName && { customerName: parsed.data.customerName }),
         ...(parsed.data.billingAddress && { billingAddress: parsed.data.billingAddress }),
       }),
       lineItems: {

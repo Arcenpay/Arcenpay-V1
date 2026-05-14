@@ -121,9 +121,11 @@ export interface CreateChargeInvoiceInput {
   description: string;
   customerEmail?: string | null;
   customerWallet?: string | null;
+  customerName?: string | null;
   planId?: string | null;
   issuedAt?: Date;
   metadata?: Record<string, unknown>;
+  sendInvoiceEmail?: boolean;
 }
 
 export async function createIssuedChargeInvoice(
@@ -159,7 +161,11 @@ export async function createIssuedChargeInvoice(
       amountOutstanding: toSix(input.amount),
       issuedAt: input.issuedAt ?? new Date(),
       planId: input.planId ?? undefined,
-      metadata: toPrismaJson(input.metadata ?? {}),
+      metadata: toPrismaJson({
+        ...(input.metadata ?? {}),
+        ...(input.customerName ? { customerName: input.customerName } : {}),
+        emailDeliveryStrategy: input.sendInvoiceEmail === true ? "invoice_email" : "receipt_only",
+      }),
       lineItems: {
         create: {
           description: input.description,
@@ -171,7 +177,7 @@ export async function createIssuedChargeInvoice(
           lineTotal: toSix(input.amount),
         },
       },
-      ...(input.customerEmail
+      ...(input.customerEmail && input.sendInvoiceEmail
         ? {
             deliveries: {
               create: {
@@ -203,7 +209,7 @@ export async function createIssuedChargeInvoice(
   }).catch(() => {});
 
   const pendingDelivery = invoice.deliveries[0];
-  if (pendingDelivery && invoice.customerEmail) {
+  if (input.sendInvoiceEmail && pendingDelivery && invoice.customerEmail) {
     try {
       await sendInvoiceEmail({
         to: invoice.customerEmail,
@@ -260,6 +266,10 @@ async function processStoredBillingEvent(
     !Array.isArray(event.payload)
       ? (event.payload as Record<string, unknown>)
       : {};
+  const payloadEnvironmentId =
+    typeof payload.environmentId === "string" && payload.environmentId.trim()
+      ? payload.environmentId.trim()
+      : null;
 
   const resolveExpirationDate = () => {
     const rawExpiration = payload.expiration;
@@ -301,9 +311,11 @@ async function processStoredBillingEvent(
     } else {
       const invoice = await createIssuedChargeInvoice({
         teamId: event.teamId,
+        environmentId: payloadEnvironmentId,
         amount,
         description: String(payload.description || options.canonicalEventName),
         customerEmail: typeof payload.email === "string" ? payload.email : null,
+        customerName: typeof payload.customerName === "string" ? payload.customerName : null,
         customerWallet:
           typeof payload.customerWallet === "string"
             ? payload.customerWallet
@@ -348,6 +360,7 @@ async function processStoredBillingEvent(
   ) {
     const subscriptionState = await upsertSubscriptionLedgerState({
       teamId: event.teamId,
+      environmentId: payloadEnvironmentId,
       companyId,
       walletAddress: customerWallet,
       status: "ACTIVE",
@@ -373,6 +386,7 @@ async function processStoredBillingEvent(
       await recordSuccessfulPayment({
         idempotencyKey: `payment:${event.idempotencyKey}`,
         teamId: event.teamId,
+        environmentId: payloadEnvironmentId,
         companyId,
         walletAddress: customerWallet,
         invoiceId,
@@ -400,6 +414,7 @@ async function processStoredBillingEvent(
   if (event.eventType === "PAYMENT_FAILED") {
     const subscriptionState = await upsertSubscriptionLedgerState({
       teamId: event.teamId,
+      environmentId: payloadEnvironmentId,
       companyId,
       walletAddress: customerWallet,
       status: "PAST_DUE",

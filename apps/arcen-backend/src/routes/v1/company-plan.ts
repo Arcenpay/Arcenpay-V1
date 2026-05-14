@@ -3,7 +3,7 @@
  *
  * Switch the authenticated company's active plan.
  * Auth: Bearer <embed_access_token>
- * Body: { planId: string, customerEmail?: string }
+ * Body: { planId: string, customerName?: string, customerEmail?: string }
  */
 import type { Context } from "hono";
 import { db } from "../../db.js";
@@ -329,6 +329,7 @@ function createProrationSummary(params: {
 async function createProrationInvoice(input: {
   teamId: string;
   companyId: string;
+  customerName?: string | null;
   customerEmail?: string | null;
   customerWallet?: string | null;
   planId: string;
@@ -369,7 +370,10 @@ async function createProrationInvoice(input: {
       amountOutstanding: amountDue,
       issuedAt: input.issuedAt,
       planId: input.planId,
-      metadata: toPrismaJson(input.metadata ?? {}),
+      metadata: toPrismaJson({
+        ...(input.metadata ?? {}),
+        ...(input.customerName ? { customerName: input.customerName } : {}),
+      }),
       lineItems: {
         create: [
           {
@@ -490,6 +494,7 @@ export async function POST(c: Context) {
     previewOnly?: boolean;
     scheduleAtPeriodEnd?: boolean;
     couponCode?: string;
+    customerName?: string;
     customerEmail?: string;
   };
   try {
@@ -513,6 +518,7 @@ export async function POST(c: Context) {
     previewOnly,
     scheduleAtPeriodEnd,
     couponCode,
+    customerName,
     customerEmail,
   } = body;
   if (!planId)
@@ -549,6 +555,7 @@ export async function POST(c: Context) {
     select: {
       id: true,
       activePlanId: true,
+      name: true,
       traits: true,
       walletAddress: true,
       email: true,
@@ -579,6 +586,11 @@ export async function POST(c: Context) {
 
   const normalizedCustomerEmail =
     typeof customerEmail === "string" ? customerEmail.trim() : "";
+  const normalizedCustomerName =
+    typeof customerName === "string"
+      ? customerName.trim().replace(/\s+/g, " ")
+      : "";
+  const hasCustomerName = normalizedCustomerName.length > 0;
   const hasCustomerEmail =
     normalizedCustomerEmail.length > 0 &&
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedCustomerEmail);
@@ -591,27 +603,38 @@ export async function POST(c: Context) {
     );
   }
 
+  const companyUpdates: { email?: string; name?: string } = {};
   if (hasCustomerEmail && company.email !== normalizedCustomerEmail) {
+    companyUpdates.email = normalizedCustomerEmail;
+  }
+  if (hasCustomerName && company.name !== normalizedCustomerName) {
+    companyUpdates.name = normalizedCustomerName;
+  }
+
+  if (companyUpdates.email || companyUpdates.name) {
     await db.arcenCompany.update({
       where: { id: company.id },
-      data: { email: normalizedCustomerEmail },
+      data: companyUpdates,
     });
 
-    if (companyPaymentAccount) {
+    if (companyPaymentAccount && companyUpdates.email) {
       await db.subscriberEmail.upsert({
         where: { walletAddress: companyPaymentAccount },
         update: {
-          email: normalizedCustomerEmail,
+          email: companyUpdates.email,
           planId: company.activePlanId ?? planId,
         },
         create: {
           walletAddress: companyPaymentAccount,
-          email: normalizedCustomerEmail,
+          email: companyUpdates.email,
           planId: company.activePlanId ?? planId,
         },
       });
     }
   }
+
+  const resolvedCompanyName = companyUpdates.name ?? company.name ?? null;
+  const resolvedCompanyEmail = companyUpdates.email ?? company.email ?? null;
 
   const currentPlan = company.activePlanId
     ? await db.catalogPlan.findFirst({
@@ -791,14 +814,14 @@ export async function POST(c: Context) {
     );
 
     if (targetNumericLimits.size > 0) {
-      const entitlementResults = await resolveEntitlementResults({
-        teamId,
-        companyKeys: {
-          internalId: company.id,
-          wallet: company.walletAddress ?? undefined,
-          email: company.email ?? undefined,
-        },
-      });
+        const entitlementResults = await resolveEntitlementResults({
+          teamId,
+          companyKeys: {
+            internalId: company.id,
+            wallet: company.walletAddress ?? undefined,
+            email: resolvedCompanyEmail ?? undefined,
+          },
+        });
 
       const overages = entitlementResults.entitlements
         .map((entitlement) => {
@@ -1193,7 +1216,8 @@ export async function POST(c: Context) {
               const invoice = await createProrationInvoice({
                 teamId,
                 companyId,
-                customerEmail: company.email,
+                customerName: resolvedCompanyName,
+                customerEmail: resolvedCompanyEmail,
                 customerWallet: companyPaymentAccount,
                 planId: plan.id,
                 currentPlanName: currentPlan?.name ?? "Current plan",

@@ -74,6 +74,15 @@ export async function getOverview(c: Context) {
   }
   const environmentMode = activeEnvironment.mode;
   const chainId = activeEnvironment.chainId;
+  const activeEnvironmentPlanIds = (
+    await db.catalogPlan.findMany({
+      where: {
+        teamId: auth.team.teamId,
+        environmentId: activeEnvironment.id,
+      },
+      select: { id: true },
+    })
+  ).map((plan) => plan.id);
 
   const [
     activePlans,
@@ -93,18 +102,38 @@ export async function getOverview(c: Context) {
       db.subscriptionState.count({
         where: {
           teamId: auth.team.teamId,
-          environmentId: activeEnvironment.id,
           status: { in: ["ACTIVE", "PAST_DUE"] },
+          OR: [
+            { environmentId: activeEnvironment.id },
+            {
+              environmentId: null,
+              company: {
+                is: {
+                  environmentId: activeEnvironment.id,
+                },
+              },
+            },
+          ],
         },
       }),
       db.invoice.aggregate({
         where: {
           teamId: auth.team.teamId,
-          environmentId: activeEnvironment.id,
           status: "PAID",
           issuedAt: {
             gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
           },
+          OR: [
+            { environmentId: activeEnvironment.id },
+            ...(activeEnvironmentPlanIds.length > 0
+              ? [
+                  {
+                    environmentId: null,
+                    planId: { in: activeEnvironmentPlanIds },
+                  },
+                ]
+              : []),
+          ],
         },
         _sum: { total: true },
       }),

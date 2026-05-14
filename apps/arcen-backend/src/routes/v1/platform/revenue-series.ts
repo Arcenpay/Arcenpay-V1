@@ -43,6 +43,15 @@ export async function getRevenueSeries(c: Context) {
   }
 
   const months = parsed.data.months ?? 12;
+  const activeEnvironmentPlanIds = (
+    await db.catalogPlan.findMany({
+      where: {
+        teamId: auth.team.teamId,
+        environmentId: activeEnvironment.id,
+      },
+      select: { id: true },
+    })
+  ).map((plan) => plan.id);
 
   const now = new Date();
   const currentMonth = monthStartUtc(now);
@@ -53,9 +62,19 @@ export async function getRevenueSeries(c: Context) {
   const invoices = await db.invoice.findMany({
     where: {
       teamId: auth.team.teamId,
-      environmentId: activeEnvironment.id,
       status: "PAID",
       issuedAt: { gte: oldestMonth },
+      OR: [
+        { environmentId: activeEnvironment.id },
+        ...(activeEnvironmentPlanIds.length > 0
+          ? [
+              {
+                environmentId: null,
+                planId: { in: activeEnvironmentPlanIds },
+              },
+            ]
+          : []),
+      ],
     },
     select: {
       total: true,

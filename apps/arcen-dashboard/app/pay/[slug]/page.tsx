@@ -79,6 +79,10 @@ function normalizeCustomerEmail(value: string) {
   return value.trim().toLowerCase();
 }
 
+function normalizeCustomerName(value: string) {
+  return value.trim().replace(/\s+/g, " ");
+}
+
 function isValidCustomerEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
@@ -199,6 +203,8 @@ function CheckoutContent() {
 
   const countdown = useExpiryCountdown(session?.expiresAt);
   const normalizedCustomerEmail = normalizeCustomerEmail(customerEmail);
+  const normalizedCustomerName = normalizeCustomerName(customerName);
+  const missingCustomerName = normalizedCustomerName.length === 0;
   const missingCustomerEmail = normalizedCustomerEmail.length === 0;
   const invalidCustomerEmail =
     normalizedCustomerEmail.length > 0 &&
@@ -217,6 +223,7 @@ function CheckoutContent() {
       normalizeWalletAddress(session?.recipientWallet);
   const canSubmitPayment =
     !isSending &&
+    !missingCustomerName &&
     !missingCustomerEmail &&
     !invalidCustomerEmail &&
     isCorrectNetwork &&
@@ -242,7 +249,7 @@ function CheckoutContent() {
       body: JSON.stringify({
         customerEmail: normalizedCustomerEmail,
         customerWallet: address ?? customerWallet ?? undefined,
-        customerName: customerName.trim() || undefined,
+        customerName: normalizedCustomerName || undefined,
       }),
     });
     const payload = (await res.json().catch(() => ({}))) as {
@@ -257,9 +264,9 @@ function CheckoutContent() {
     return payload.checkoutSession;
   }, [
     address,
-    customerName,
     customerWallet,
     normalizedCustomerEmail,
+    normalizedCustomerName,
     session,
   ]);
 
@@ -336,7 +343,7 @@ function CheckoutContent() {
             body: JSON.stringify({
               customerEmail: customerEmail || undefined,
               customerWallet: customerWallet || undefined,
-              customerName: customerName || undefined,
+              customerName: normalizedCustomerName || undefined,
             }),
           },
         );
@@ -372,6 +379,11 @@ function CheckoutContent() {
     try {
       if (missingCustomerEmail || invalidCustomerEmail) {
         setError("Enter a valid billing email before paying.");
+        return;
+      }
+
+      if (missingCustomerName) {
+        setError("Enter the billing name before paying.");
         return;
       }
 
@@ -424,7 +436,7 @@ function CheckoutContent() {
           body: JSON.stringify({
             customerEmail: normalizedCustomerEmail || undefined,
             customerWallet: address ?? customerWallet ?? undefined,
-            customerName: customerName.trim() || undefined,
+            customerName: normalizedCustomerName || undefined,
           }),
         },
       );
@@ -572,11 +584,33 @@ function CheckoutContent() {
 
             {/* Customer info */}
             <div className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
-              <p className="mb-4 text-sm font-medium text-neutral-900">Your details</p>
+              <p className="mb-4 text-sm font-medium text-neutral-900">Billing information</p>
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="space-y-1.5">
                   <span className="flex items-center gap-1.5 text-xs text-neutral-600">
-                    <User className="h-3.5 w-3.5" /> Email
+                    <User className="h-3.5 w-3.5" /> Full name
+                  </span>
+                  <input
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                    className="h-11 w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3 text-sm outline-none transition focus:border-neutral-400 focus:bg-white"
+                    placeholder="Aditya Moharana"
+                  />
+                  <p
+                    className={
+                      missingCustomerName
+                        ? "text-xs text-red-600"
+                        : "text-xs text-neutral-500"
+                    }
+                  >
+                    {missingCustomerName
+                      ? "Enter the billing name that should appear on the invoice and receipt."
+                      : "This name will appear on the invoice and receipt."}
+                  </p>
+                </label>
+                <label className="space-y-1.5">
+                  <span className="flex items-center gap-1.5 text-xs text-neutral-600">
+                    <User className="h-3.5 w-3.5" /> Billing email
                   </span>
                   <input
                     value={customerEmail}
@@ -595,17 +629,6 @@ function CheckoutContent() {
                       ? "Enter a valid billing email so we can send the invoice and receipt."
                       : "We’ll email the invoice and payment receipt to this address."}
                   </p>
-                </label>
-                <label className="space-y-1.5">
-                  <span className="flex items-center gap-1.5 text-xs text-neutral-600">
-                    <User className="h-3.5 w-3.5" /> Name
-                  </span>
-                  <input
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    className="h-11 w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3 text-sm outline-none transition focus:border-neutral-400 focus:bg-white"
-                    placeholder="Your name"
-                  />
                 </label>
               </div>
             </div>

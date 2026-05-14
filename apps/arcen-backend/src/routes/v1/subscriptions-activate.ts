@@ -1083,6 +1083,7 @@ export async function POST(c: Context) {
 
     const finalizationPayload = {
       companyId: company.id,
+      environmentId: catalogPlan.environmentId ?? null,
       walletAddress: paymentAccount,
       catalogPlanId: catalogPlan.id,
       catalogPlanName: catalogPlan.name,

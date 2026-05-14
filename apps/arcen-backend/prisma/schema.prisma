@@ -417,6 +417,19 @@ model ProviderProfile {
   providerName  String?
   website       String?
   contactEmail  String?
+  legalName     String?
+  billingEmail  String?
+  supportEmail  String?
+  supportPhone  String?
+  supportUrl    String?
+  addressLine1  String?
+  addressLine2  String?
+  city          String?
+  state         String?
+  postalCode    String?
+  country       String?
+  taxId         String?
+  gstin         String?
 
   notifyEmail         Boolean @default(true)
   notifyWebhook       Boolean @default(false)

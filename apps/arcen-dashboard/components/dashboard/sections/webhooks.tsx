@@ -11,8 +11,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -284,10 +284,36 @@ export function WebhooksSection() {
     webhookUrl.trim().length > 0 &&
     webhookUrl.trim().startsWith("http://") &&
     !webhookUrl.trim().startsWith("https://");
+  const enabledCount = events.filter((e) => e.enabled).length;
+  const normalizedWebhookUrl = webhookUrl.trim();
+  const canDisableWebhookSetup =
+    !normalizedWebhookUrl && enabledCount === 0;
+  const canSaveWebhookSetup =
+    canDisableWebhookSetup ||
+    (Boolean(normalizedWebhookUrl) &&
+      enabledCount > 0 &&
+      hasSecret &&
+      !urlIsHttp);
 
   const handleSave = async () => {
     if (urlIsHttp) {
       toast.error("Webhook URL must use HTTPS");
+      return;
+    }
+    if (!normalizedWebhookUrl) {
+      if (enabledCount === 0) {
+        // Allow clearing the webhook configuration.
+      } else {
+        toast.error("Enter a webhook URL first");
+        return;
+      }
+    }
+    if (enabledCount === 0 && normalizedWebhookUrl) {
+      toast.error("Select at least one webhook event");
+      return;
+    }
+    if (!hasSecret && normalizedWebhookUrl) {
+      toast.error("Generate a signing secret before saving webhook events");
       return;
     }
     setIsSaving(true);
@@ -296,7 +322,7 @@ export function WebhooksSection() {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          webhookUrl: webhookUrl.trim() || null,
+          webhookUrl: normalizedWebhookUrl || null,
           eventSubscriptions: events,
         }),
       });
@@ -387,102 +413,208 @@ export function WebhooksSection() {
     );
   };
 
-  const enabledCount = events.filter((e) => e.enabled).length;
-
   return (
     <div className="space-y-6">
-      {/* Endpoint + Test */}
+      {/* Endpoint + Events */}
       <Card className="border-border bg-card">
         <CardHeader>
           <CardTitle className="text-base font-medium flex items-center gap-2">
             <Webhook className="w-4 h-4" />
-            Webhook Endpoint
+            Webhook Setup
           </CardTitle>
           <CardDescription>
-            ArcenPay will send HTTP POST requests to this URL whenever
-            subscribed events occur. Each request is signed with HMAC-SHA256 via
-            the <code className="text-foreground">X-ArcenPay-Signature</code>{" "}
-            header.
+            Set the destination URL and explicitly tick which events ArcenPay
+            should deliver. Webhooks are only sent for the events selected here.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="webhookUrl">Endpoint URL</Label>
-            <div className="flex gap-2">
-              <Input
-                id="webhookUrl"
-                placeholder="https://api.yourapp.com/webhooks/arcenpay"
-                value={webhookUrl}
-                onChange={(e) => setWebhookUrl(e.target.value)}
-                className="bg-secondary border-border focus:border-accent font-mono text-sm flex-1"
-              />
-              {urlIsHttp && (
-                <p className="text-xs text-destructive flex items-center gap-1 mt-1">
-                  <AlertTriangle className="w-3 h-3" />
-                  Webhook URL must use HTTPS — http:// is not accepted
+        <CardContent className="space-y-5">
+          <div className="grid gap-6 lg:grid-cols-[1.15fr,0.85fr]">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="webhookUrl">Endpoint URL</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="webhookUrl"
+                    placeholder="https://api.yourapp.com/webhooks/arcenpay"
+                    value={webhookUrl}
+                    onChange={(e) => setWebhookUrl(e.target.value)}
+                    className="bg-secondary border-border focus:border-accent font-mono text-sm flex-1"
+                  />
+                  {webhookUrl && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="shrink-0"
+                      onClick={() => {
+                        navigator.clipboard.writeText(webhookUrl);
+                        setUrlCopied(true);
+                        setTimeout(() => setUrlCopied(false), 2000);
+                      }}
+                    >
+                      {urlCopied ? (
+                        <Check className="w-3.5 h-3.5 text-success" />
+                      ) : (
+                        <Copy className="w-3.5 h-3.5" />
+                      )}
+                    </Button>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  ArcenPay signs each POST with{" "}
+                  <code className="text-foreground">X-ArcenPay-Signature</code>{" "}
+                  and only delivers to HTTPS endpoints.
+                </p>
+                {urlIsHttp && (
+                  <p className="text-xs text-destructive flex items-center gap-1">
+                    <AlertTriangle className="w-3 h-3" />
+                    Webhook URL must use HTTPS — http:// is not accepted
+                  </p>
+                )}
+              </div>
+
+              <div className="rounded-xl border border-border bg-secondary/30 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">
+                      Delivery readiness
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      A webhook is active only when URL, signing secret, and at
+                      least one event are configured.
+                    </p>
+                  </div>
+                  <Badge
+                    variant="secondary"
+                    className={
+                      canDisableWebhookSetup || canSaveWebhookSetup
+                        ? "bg-success/10 text-success border-success/20"
+                        : "bg-warning/10 text-warning border-warning/20"
+                    }
+                  >
+                    {canDisableWebhookSetup
+                      ? "Disabled"
+                      : canSaveWebhookSetup
+                        ? "Ready"
+                        : "Setup needed"}
+                  </Badge>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3 pt-1">
+                <Button
+                  onClick={handleSave}
+                  disabled={isSaving || !canSaveWebhookSetup}
+                  size="sm"
+                >
+                  {isSaving ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 mr-2 animate-spin" />
+                      Saving…
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-3.5 h-3.5 mr-2" />
+                      Save Webhook Setup
+                    </>
+                  )}
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleTest}
+                  disabled={isTesting || !normalizedWebhookUrl || !hasSecret}
+                >
+                  {isTesting ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 mr-2 animate-spin" />
+                      Sending…
+                    </>
+                  ) : (
+                    <>
+                      <Play className="w-3.5 h-3.5 mr-2" />
+                      Send Test
+                    </>
+                  )}
+                </Button>
+              </div>
+              {!hasSecret && (
+                <p className="text-xs text-muted-foreground">
+                  Generate a signing secret before saving webhook events or
+                  sending test deliveries.
                 </p>
               )}
-              {webhookUrl && (
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-medium text-foreground">
+                    Select Events
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Tick the events that should trigger a delivery.
+                  </p>
+                </div>
+                <Badge variant="secondary">
+                  {enabledCount}/{events.length} selected
+                </Badge>
+              </div>
+
+              <div className="flex items-center gap-2">
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="shrink-0"
-                  onClick={() => {
-                    navigator.clipboard.writeText(webhookUrl);
-                    setUrlCopied(true);
-                    setTimeout(() => setUrlCopied(false), 2000);
-                  }}
+                  className="text-xs"
+                  onClick={() =>
+                    setEvents((prev) =>
+                      prev.map((e) => ({ ...e, enabled: true })),
+                    )
+                  }
                 >
-                  {urlCopied ? (
-                    <Check className="w-3.5 h-3.5 text-success" />
-                  ) : (
-                    <Copy className="w-3.5 h-3.5" />
-                  )}
+                  Select all
                 </Button>
-              )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs"
+                  onClick={() =>
+                    setEvents((prev) =>
+                      prev.map((e) => ({ ...e, enabled: false })),
+                    )
+                  }
+                >
+                  Clear all
+                </Button>
+              </div>
+
+              <div className="rounded-xl border border-border overflow-hidden">
+                {events.map((event, idx) => (
+                  <label
+                    key={event.id}
+                    className={`flex items-start gap-3 px-4 py-3 cursor-pointer bg-card hover:bg-secondary/30 transition-colors ${idx < events.length - 1 ? "border-b border-border/60" : ""}`}
+                  >
+                    <Checkbox
+                      checked={event.enabled}
+                      onCheckedChange={() => toggleEvent(event.id)}
+                      className="mt-0.5"
+                    />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-foreground">
+                        {event.label}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {event.description}
+                      </p>
+                      <code className="text-[11px] text-muted-foreground/70 mt-1 block">
+                        {event.id}
+                      </code>
+                    </div>
+                  </label>
+                ))}
+              </div>
             </div>
           </div>
-
-          <div className="flex items-center gap-3 pt-2">
-            <Button onClick={handleSave} disabled={isSaving} size="sm">
-              {isSaving ? (
-                <>
-                  <RefreshCw className="w-3.5 h-3.5 mr-2 animate-spin" />
-                  Saving…
-                </>
-              ) : (
-                <>
-                  <Check className="w-3.5 h-3.5 mr-2" />
-                  Save
-                </>
-              )}
-            </Button>
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleTest}
-              disabled={isTesting || !webhookUrl.trim() || !hasSecret}
-            >
-              {isTesting ? (
-                <>
-                  <RefreshCw className="w-3.5 h-3.5 mr-2 animate-spin" />
-                  Sending…
-                </>
-              ) : (
-                <>
-                  <Play className="w-3.5 h-3.5 mr-2" />
-                  Send Test
-                </>
-              )}
-            </Button>
-          </div>
-          {!hasSecret && (
-            <p className="text-xs text-muted-foreground">
-              Generate a signing secret before sending test deliveries or
-              enabling production webhook handling.
-            </p>
-          )}
 
           {/* Test result inline */}
           {testResult && (
@@ -671,106 +803,6 @@ const valid = sig === req.headers['x-arcenpay-signature'].replace('sha256=', '')
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Event Subscriptions */}
-      <Card className="border-border bg-card">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-base font-medium">
-                Event Subscriptions
-              </CardTitle>
-              <CardDescription>
-                Choose which events trigger a webhook delivery.{" "}
-                {enabledCount > 0 ? (
-                  <span className="text-foreground font-medium">
-                    {enabledCount} of {events.length} enabled
-                  </span>
-                ) : (
-                  "None enabled — no webhooks will be sent."
-                )}
-              </CardDescription>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-xs"
-                onClick={() =>
-                  setEvents((prev) =>
-                    prev.map((e) => ({ ...e, enabled: true })),
-                  )
-                }
-              >
-                All
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-xs"
-                onClick={() =>
-                  setEvents((prev) =>
-                    prev.map((e) => ({ ...e, enabled: false })),
-                  )
-                }
-              >
-                None
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-1">
-            <div className="grid grid-cols-[1fr,64px] gap-4 pb-3 border-b border-border text-xs text-muted-foreground font-medium">
-              <span>Event</span>
-              <span className="text-center">Send</span>
-            </div>
-            {events.map((event, idx) => (
-              <div
-                key={event.id}
-                className="grid grid-cols-[1fr,64px] gap-4 py-3.5 border-b border-border/50 last:border-0 animate-in fade-in slide-in-from-left-2 items-center"
-                style={{
-                  animationDelay: `${idx * 30}ms`,
-                  animationFillMode: "both",
-                }}
-              >
-                <div>
-                  <p className="text-sm font-medium text-foreground">
-                    {event.label}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {event.description}
-                  </p>
-                  <code className="text-xs text-muted-foreground/60 mt-0.5 block">
-                    {event.id}
-                  </code>
-                </div>
-                <div className="flex justify-center">
-                  <Switch
-                    checked={event.enabled}
-                    onCheckedChange={() => toggleEvent(event.id)}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="flex justify-end mt-4">
-            <Button size="sm" onClick={handleSave} disabled={isSaving}>
-              {isSaving ? (
-                <>
-                  <RefreshCw className="w-3.5 h-3.5 mr-2 animate-spin" />
-                  Saving…
-                </>
-              ) : (
-                <>
-                  <Check className="w-3.5 h-3.5 mr-2" />
-                  Save Subscriptions
-                </>
-              )}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Delivery Logs */}
       <Card className="border-border bg-card">
         <CardHeader className="flex flex-row items-center justify-between">
@@ -851,9 +883,9 @@ const valid = sig === req.headers['x-arcenpay-signature'].replace('sha256=', '')
               {`import { createHmac } from 'crypto';
 
 app.post('/webhooks/arcenpay', express.raw({ type: 'application/json' }), (req, res) => {
-  const signature = req.headers['x-arcen-signature']; // "sha256=<hex>"
-  const timestamp  = req.headers['x-arcen-timestamp'];
-  const event      = req.headers['x-arcen-event'];
+  const signature = req.headers['x-arcenpay-signature']; // "sha256=<hex>"
+  const timestamp  = req.headers['x-arcenpay-timestamp'];
+  const event      = req.headers['x-arcenpay-event'];
 
   // Verify signature
   const expected = 'sha256=' + createHmac('sha256', process.env.ARCENPAY_WEBHOOK_SECRET)
@@ -882,7 +914,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(req: NextRequest) {
   const rawBody = await req.text();
-  const signature = req.headers.get('x-arcen-signature') ?? '';
+  const signature = req.headers.get('x-arcenpay-signature') ?? '';
 
   const expected = 'sha256=' + createHmac('sha256', process.env.ARCENPAY_WEBHOOK_SECRET!)
     .update(rawBody)

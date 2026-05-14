@@ -35,13 +35,23 @@ async function sendWithResend(input: {
   to: string;
   subject: string;
   html: string;
+  attachments?: Array<{
+    filename: string;
+    content: string;
+    contentType?: string;
+  }>;
 }) {
   const result = await getResendClient().emails.send({
     from: FROM,
     to: input.to,
     subject: input.subject,
     html: input.html,
-  });
+    attachments: input.attachments?.map((attachment) => ({
+      filename: attachment.filename,
+      content: attachment.content,
+      contentType: attachment.contentType,
+    })),
+  } as any);
 
   if (result.error) {
     throw new Error(
@@ -186,10 +196,22 @@ type InvoiceEmailInput = {
 type ReceiptEmailInput = {
   to: string;
   invoiceNumber: string;
+  receiptNumber: string;
   total: string;
   currency: string;
   paidAt?: string | null;
-  downloadUrl?: string | null;
+  providerName: string;
+  paymentMethod: string;
+  supportEmail?: string | null;
+  supportUrl?: string | null;
+  invoicePdf: {
+    filename: string;
+    contentBase64: string;
+  };
+  receiptPdf: {
+    filename: string;
+    contentBase64: string;
+  };
 };
 
 type CreditNoteEmailInput = {
@@ -297,47 +319,66 @@ export async function sendInvoiceEmail(input: InvoiceEmailInput): Promise<void> 
 /** Sends a payment receipt email after an invoice has been paid */
 export async function sendPaymentReceiptEmail(
   input: ReceiptEmailInput,
-): Promise<void> {
+): Promise<{ id?: string }> {
   const paidAt = input.paidAt
     ? new Date(input.paidAt).toLocaleDateString()
     : new Date().toLocaleDateString();
-  const downloadUrl =
-    input.downloadUrl ||
-    `${APP_URL}/invoices/${encodeURIComponent(input.invoiceNumber)}`;
+  const supportLine = input.supportUrl
+    ? `Questions? Visit <a href="${input.supportUrl}" style="color:#8b5cf6;text-decoration:none;">our support site</a>`
+    : input.supportEmail
+      ? `Questions? Contact us at <a href="mailto:${input.supportEmail}" style="color:#8b5cf6;text-decoration:none;">${input.supportEmail}</a>`
+      : "Need help? Reply to this email and our team will take it from there.";
 
-  await sendWithResend({
+  const result = await sendWithResend({
     to: input.to,
-    subject: `Payment receipt for Invoice ${input.invoiceNumber}`,
+    subject: `Receipt from ${input.providerName} for ${input.total} ${input.currency}`,
     html: `
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Payment receipt for ${input.invoiceNumber}</title>
+  <title>Receipt for ${input.invoiceNumber}</title>
 </head>
-<body style="margin:0;padding:0;background:#f5f7fa;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 16px;">
+<body style="margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="padding:32px 16px;">
     <tr><td align="center">
-      <table width="520" cellpadding="0" cellspacing="0"
-             style="background:#ffffff;border:1px solid #d8dde6;border-radius:12px;padding:32px;">
+      <table width="560" cellpadding="0" cellspacing="0"
+             style="background:#171717;border-radius:24px;padding:32px;color:#f5f5f5;">
         <tr><td>
-          <p style="margin:0 0 24px;font-size:22px;font-weight:700;color:#0f172a;">ArcenPay</p>
-          <h1 style="margin:0 0 10px;font-size:20px;font-weight:600;color:#111827;">
-            Payment received
+          <p style="margin:0 0 18px;font-size:14px;color:#a3a3a3;">Receipt from ${input.providerName}</p>
+          <h1 style="margin:0;font-size:40px;line-height:1.05;font-weight:700;color:#ffffff;">
+            ${input.total} ${input.currency}
           </h1>
-          <p style="margin:0 0 20px;font-size:14px;color:#4b5563;">
-            We received <strong>${input.total} ${input.currency}</strong> for invoice
-            <strong>${input.invoiceNumber}</strong> on <strong>${paidAt}</strong>.
+          <p style="margin:12px 0 0;font-size:18px;color:#d4d4d8;">
+            Paid ${paidAt}
           </p>
-          <a href="${downloadUrl}"
-             style="display:inline-block;padding:11px 22px;background:#059669;color:#fff;
-                    text-decoration:none;border-radius:8px;font-size:14px;font-weight:600;">
-            Download receipt
-          </a>
-          <p style="margin:18px 0 0;font-size:12px;color:#6b7280;">
-            Need the invoice PDF too? Use the same link above or open:
-            <a href="${downloadUrl}" style="color:#059669;">${downloadUrl}</a>
+
+          <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:26px;border-top:1px solid #2f2f2f;padding-top:18px;">
+            <tr>
+              <td style="font-size:14px;color:#a3a3a3;padding:8px 0;">Receipt number</td>
+              <td align="right" style="font-size:15px;color:#ffffff;padding:8px 0;">${input.receiptNumber}</td>
+            </tr>
+            <tr>
+              <td style="font-size:14px;color:#a3a3a3;padding:8px 0;">Invoice number</td>
+              <td align="right" style="font-size:15px;color:#ffffff;padding:8px 0;">${input.invoiceNumber}</td>
+            </tr>
+            <tr>
+              <td style="font-size:14px;color:#a3a3a3;padding:8px 0;">Payment method</td>
+              <td align="right" style="font-size:15px;color:#ffffff;padding:8px 0;">${input.paymentMethod}</td>
+            </tr>
+          </table>
+
+          <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:28px;background:#202020;border-radius:18px;padding:18px 20px;">
+            <tr>
+              <td style="font-size:15px;line-height:1.6;color:#e4e4e7;">
+                Your invoice PDF and receipt PDF are attached to this email.
+              </td>
+            </tr>
+          </table>
+
+          <p style="margin:24px 0 0;font-size:14px;line-height:1.6;color:#a1a1aa;">
+            ${supportLine}
           </p>
         </td></tr>
       </table>
@@ -345,7 +386,21 @@ export async function sendPaymentReceiptEmail(
   </table>
 </body>
 </html>`,
+    attachments: [
+      {
+        filename: input.invoicePdf.filename,
+        content: input.invoicePdf.contentBase64,
+        contentType: "application/pdf",
+      },
+      {
+        filename: input.receiptPdf.filename,
+        content: input.receiptPdf.contentBase64,
+        contentType: "application/pdf",
+      },
+    ],
   });
+
+  return { id: (result.data as any)?.id };
 }
 
 /** Sends a welcome email to new ArcenPay providers on sign-up */

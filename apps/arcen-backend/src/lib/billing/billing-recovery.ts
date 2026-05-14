@@ -59,6 +59,7 @@ export function computeBillingRecoveryNextAttemptAt(
 
 interface SubscriptionActivationRecoveryPayload {
   companyId: string;
+  environmentId?: string | null;
   walletAddress: string;
   catalogPlanId: string;
   catalogPlanName: string;
@@ -122,6 +123,7 @@ function parseSubscriptionActivationPayload(
 export async function enqueueSubscriptionActivationRecovery(input: {
   teamId: string;
   companyId: string;
+  environmentId?: string | null;
   walletAddress: string;
   catalogPlanId: string;
   catalogPlanName: string;
@@ -154,6 +156,7 @@ export async function enqueueSubscriptionActivationRecovery(input: {
       walletAddress: normalizeWallet(input.walletAddress),
       payload: toPrismaJson({
         companyId: input.companyId,
+        environmentId: input.environmentId ?? null,
         walletAddress: normalizeWallet(input.walletAddress),
         catalogPlanId: input.catalogPlanId,
         catalogPlanName: input.catalogPlanName,
@@ -210,6 +213,7 @@ export async function finalizeSubscriptionActivation(
 
   const subscriptionState = await upsertSubscriptionLedgerState({
     teamId: input.teamId,
+    environmentId: input.payload.environmentId ?? null,
     companyId: input.payload.companyId,
     walletAddress: input.payload.walletAddress,
     status: "ACTIVE",
@@ -252,6 +256,7 @@ export async function finalizeSubscriptionActivation(
   await recordSuccessfulPayment({
     idempotencyKey: `payment:subscription.activate:${input.payload.txHash}`,
     teamId: input.teamId,
+    environmentId: input.payload.environmentId ?? null,
     companyId: input.payload.companyId,
     walletAddress: input.payload.walletAddress,
     subscriptionStateId: subscriptionState?.id,
@@ -286,6 +291,7 @@ export async function finalizeSubscriptionActivation(
       planId: input.payload.catalogPlanId,
       onChainPlanId: input.payload.onChainPlanId,
       companyId: input.payload.companyId,
+      environmentId: input.payload.environmentId ?? null,
       customerWallet: normalizeWallet(input.payload.walletAddress),
       subscriber: normalizeWallet(input.payload.walletAddress),
       amount: input.payload.amount,
