@@ -205,6 +205,7 @@ export async function recordSuccessfulPayment(input: {
   occurredAt?: Date | null;
   settledAt?: Date | null;
   metadata?: Record<string, unknown>;
+  preserveScheduledCancellation?: boolean;
 }, client: BillingLedgerDb = db) {
   const company = await resolveCompany(input, client);
   const subscriptionState =
@@ -298,15 +299,18 @@ export async function recordSuccessfulPayment(input: {
   }
 
   if (subscriptionState?.id) {
+    const updateData: Record<string, unknown> = {
+      status: "ACTIVE",
+      pastDueAt: null,
+      graceEndsAt: null,
+    };
+    if (!input.preserveScheduledCancellation) {
+      updateData["cancelAtPeriodEnd"] = false;
+      updateData["cancelledAt"] = null;
+    }
     await client.subscriptionState.update({
       where: { id: subscriptionState.id },
-      data: {
-        status: "ACTIVE",
-        cancelAtPeriodEnd: false,
-        cancelledAt: null,
-        pastDueAt: null,
-        graceEndsAt: null,
-      },
+      data: updateData,
     });
   }
 

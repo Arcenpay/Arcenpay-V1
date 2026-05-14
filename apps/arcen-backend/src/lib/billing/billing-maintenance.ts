@@ -198,13 +198,25 @@ export async function applyScheduledSubscriptionTransitions(input: {
 
     const requiresOnChainSync = Boolean(transitionMetadata.requiresOnChainSync);
     if (mode === "period_end_downgrade" && requiresOnChainSync) {
-      results.push({
-        companyId: state.companyId,
-        action: "skipped",
-        reason: "awaiting_on_chain_sync",
-        targetPlanId,
-      });
-      continue;
+      const transitionRequestedAtRaw =
+        typeof transition.requestedAt === "string"
+          ? transition.requestedAt
+          : null;
+      const requestedAt = transitionRequestedAtRaw
+        ? new Date(transitionRequestedAtRaw)
+        : null;
+      const stalenessHours = requestedAt
+        ? (now.getTime() - requestedAt.getTime()) / (1000 * 60 * 60)
+        : 0;
+      if (stalenessHours < 48) {
+        results.push({
+          companyId: state.companyId,
+          action: "skipped",
+          reason: "awaiting_on_chain_sync",
+          targetPlanId,
+        });
+        continue;
+      }
     }
 
     const targetPlan = await db.catalogPlan.findFirst({

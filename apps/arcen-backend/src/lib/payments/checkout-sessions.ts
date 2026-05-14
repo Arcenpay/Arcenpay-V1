@@ -283,6 +283,7 @@ export async function confirmCheckoutSessionPayment(input: {
     txHash: verification.txHash,
     occurredAt: new Date(),
     settledAt: new Date(),
+    preserveScheduledCancellation: true,
     metadata: {
       checkoutSessionId: session.id,
       paymentLinkId: session.paymentLinkId,

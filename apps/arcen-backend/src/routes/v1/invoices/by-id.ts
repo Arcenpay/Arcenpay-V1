@@ -202,6 +202,7 @@ export async function PATCH(c: Context) {
       txHash: verifiedPaymentProof.txHash,
       occurredAt: updated.paidAt ?? new Date(),
       settledAt: updated.paidAt ?? new Date(),
+      preserveScheduledCancellation: true,
       metadata: {
         source: "invoice.patch",
         invoiceId: invoice.id,

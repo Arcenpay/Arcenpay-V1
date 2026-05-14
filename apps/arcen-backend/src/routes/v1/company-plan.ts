@@ -383,11 +383,13 @@ function createProrationSummary(params: {
     effectiveAt: params.effectiveAt,
   });
   const amountDueMicros = quote.deltaMicros > 0n ? quote.deltaMicros : 0n;
+  const creditMicros = quote.deltaMicros < 0n ? -quote.deltaMicros : 0n;
   const unusedCreditMicros = -quote.currentRemainingMicros;
 
   return {
     quote,
     amountDueMicros,
+    creditMicros,
     response: {
       currency: "USDC",
       currentPlanName: params.currentPlanName,
@@ -404,7 +406,10 @@ function createProrationSummary(params: {
       unusedOldPlanCredit: microsToAmountString(unusedCreditMicros),
       amountDue: microsToAmountString(amountDueMicros),
       amountPaid: microsToAmountString(amountDueMicros),
-      amountRemaining: "0.000000",
+      amountRemaining: creditMicros > 0n
+        ? microsToAmountString(creditMicros)
+        : "0.000000",
+      hasCreditBalance: creditMicros > 0n,
     },
   };
 }
@@ -1290,8 +1295,6 @@ export async function handleCompanyPlanRequest(
             null,
           onChainTokenId: company.subscriptionState?.onChainTokenId ?? null,
           currentPeriodEnd: company.subscriptionState?.currentPeriodEnd ?? null,
-          cancelAtPeriodEnd: false,
-          cancelledAt: null,
           pastDueAt: null,
           graceEndsAt: null,
           lastEvent: "subscription.plan_change_pending_verification",
@@ -1551,8 +1554,8 @@ export async function handleCompanyPlanRequest(
               onChainTokenId: accessChange.tokenId,
               currentPeriodStart: periodStart,
               currentPeriodEnd: periodEnd,
-              cancelAtPeriodEnd: false,
-              cancelledAt: null,
+              cancelAtPeriodEnd: undefined,
+              cancelledAt: undefined,
               pastDueAt: null,
               graceEndsAt: null,
               lastEvent: "subscription.plan_upgraded",
@@ -1650,6 +1653,7 @@ export async function handleCompanyPlanRequest(
                 txHash: normalizedPaymentTxHash,
                 occurredAt: effectiveAt,
                 settledAt: effectiveAt,
+                preserveScheduledCancellation: true,
                 metadata: {
                   source: "self_service",
                   mode: "immediate_prorated_upgrade",
@@ -1683,6 +1687,31 @@ export async function handleCompanyPlanRequest(
                   autopayConfigTxHash: normalizedAutopayConfigTxHash,
                   accessChangeTxHash: accessChangeTxHashLocal,
                   paymentTxHash: normalizedPaymentTxHash,
+                  proration: proration.response,
+                },
+              }, tx);
+            }
+
+            if (proration.creditMicros > 0n) {
+              await recordBillingAdjustment({
+                teamId,
+                companyId,
+                subscriptionStateId: subscriptionState?.id,
+                kind: "DOWNGRADE_PRORATION_CREDIT",
+                status: "POSTED",
+                amount: microsToAmount(proration.creditMicros),
+                fromCatalogPlanId: previousPlanId ?? null,
+                toCatalogPlanId: plan.id,
+                periodStartedAt: periodStart,
+                periodEndsAt: periodEnd,
+                effectiveAt,
+                postedAt: effectiveAt,
+                metadata: {
+                  source: "self_service",
+                  billingPeriod: normalizedBillingPeriod,
+                  previousBillingPeriod: currentBillingPeriod,
+                  autopayConfigTxHash: normalizedAutopayConfigTxHash,
+                  accessChangeTxHash: accessChangeTxHashLocal,
                   proration: proration.response,
                 },
               }, tx);
@@ -1820,7 +1849,6 @@ export async function handleCompanyPlanRequest(
         mode: scheduledMode,
         targetPlanName: plan.name,
         accessPlanAppliedImmediately: applyAccessPlanImmediately,
-        requiresOnChainSync: true,
         pendingOnChainPlanId: verification.onChainPlanId,
       },
     });

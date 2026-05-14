@@ -297,6 +297,15 @@ export async function syncSubscription(c: Context) {
     ) ?? deriveBillingPeriodFromInterval(plan.billingInterval);
   nextTraits.subscriptionSyncMeta = nextSyncMeta;
 
+  const eventOccurredAt = occurredAt ?? new Date();
+  const isPeriodBoundaryEvent = event === "minted" || event === "renewed";
+  const nextPeriodStart = isPeriodBoundaryEvent
+    ? eventOccurredAt
+    : undefined;
+  const nextPeriodEnd = isPeriodBoundaryEvent && plan.billingInterval
+    ? new Date(eventOccurredAt.getTime() + plan.billingInterval * 1000)
+    : undefined;
+
   await db.arcenCompany.update({
     where: { id: company.id },
     data: {
@@ -313,8 +322,10 @@ export async function syncSubscription(c: Context) {
     catalogPlanId: plan.id,
     onChainPlanId,
     onChainTokenId: sourceTokenId ?? null,
-    cancelAtPeriodEnd: false,
-    cancelledAt: null,
+    ...(nextPeriodStart ? { currentPeriodStart: nextPeriodStart } : {}),
+    ...(nextPeriodEnd ? { currentPeriodEnd: nextPeriodEnd } : {}),
+    cancelAtPeriodEnd: isPeriodBoundaryEvent ? false : undefined,
+    cancelledAt: isPeriodBoundaryEvent ? null : undefined,
     pastDueAt: null,
     graceEndsAt: null,
     lastEvent:
@@ -323,7 +334,7 @@ export async function syncSubscription(c: Context) {
         : event === "renewed"
           ? "subscription.renewed"
           : "subscription.plan_changed",
-    lastEventAt: occurredAt ?? new Date(),
+    lastEventAt: eventOccurredAt,
     lastSourceTxHash: sourceTxHash ?? null,
     metadata: {
       source: "sync-subscription",

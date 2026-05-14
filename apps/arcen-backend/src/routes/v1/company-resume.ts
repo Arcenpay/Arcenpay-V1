@@ -121,6 +121,19 @@ export async function POST(c: Context) {
   const paymentAccount =
     company.subscriptionState?.walletAddress ?? company.walletAddress ?? null;
   const isOnChainSubscription = Boolean(company.subscriptionState?.onChainPlanId);
+
+  const currentPeriodEnd = company.subscriptionState?.currentPeriodEnd ?? null;
+  if (currentPeriodEnd && currentPeriodEnd <= new Date()) {
+    return c.json(
+      {
+        error:
+          "The current billing period has already ended. The subscription may have been cancelled. Start a new subscription through checkout.",
+      },
+      409,
+      corsHeaders(origin),
+    );
+  }
+
   if (isOnChainSubscription) {
     if (!paymentAccount) {
       return c.json(

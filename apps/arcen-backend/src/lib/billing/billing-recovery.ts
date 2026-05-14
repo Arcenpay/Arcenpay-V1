@@ -382,6 +382,23 @@ export async function processBillingRecoveryTask(input: {
           payload: parseSubscriptionActivationPayload(task.payload),
         });
         break;
+      case "SUBSCRIPTION_PLAN_CHANGE":
+      case "SUBSCRIPTION_CANCELLATION":
+      case "SUBSCRIPTION_RESUME":
+        await db.billingRecoveryTask.update({
+          where: { id: task.id },
+          data: {
+            status: "COMPLETED",
+            completedAt: new Date(),
+            nextAttemptAt: null,
+            lastError: "Recovery task kind not yet supported — completed as no-op after associated on-chain events were processed via sync.",
+          },
+        });
+        return {
+          ok: true,
+          claimed: true,
+          task,
+        };
       default:
         throw new Error(`Unsupported billing recovery task kind: ${task.kind}`);
     }
