@@ -103,7 +103,9 @@ export async function runBillingDunningSweep(options?: {
       mode: "dunning_enforced",
       reason: "grace_expired",
       effectiveAt: now.toISOString(),
-    }).catch(() => {});
+    }).catch((err) => {
+      console.warn("[billing-dunning] Failed to deliver webhook:", err);
+    });
 
     results.push({
       subscriptionStateId: state.id,

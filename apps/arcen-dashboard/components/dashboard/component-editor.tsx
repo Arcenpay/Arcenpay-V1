@@ -1744,35 +1744,7 @@ export function ComponentEditor({
           acceptedToken: p.acceptedToken,
           metadata: p.metadata ?? null,
         }))
-      : [
-          {
-            id: "free",
-            name: "Free",
-            tier: "free",
-            price: "0",
-            billingInterval: 2592000,
-            description: "Get started for free",
-            metadata: null,
-          },
-          {
-            id: "starter",
-            name: "Starter",
-            tier: "starter",
-            price: "9.00",
-            billingInterval: 2592000,
-            description: "",
-            metadata: null,
-          },
-          {
-            id: "pro",
-            name: "Pro",
-            tier: "pro",
-            price: "29.00",
-            billingInterval: 2592000,
-            description: "",
-            metadata: null,
-          },
-        ];
+      : [];
 
     const usageMap = new Map(
       (liveData?.usage ?? []).map((item) => [

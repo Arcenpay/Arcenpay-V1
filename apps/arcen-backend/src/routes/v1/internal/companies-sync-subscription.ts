@@ -2,7 +2,6 @@ import type { Context } from "hono";
 import { db } from "../../../db.js";
 import { z } from "zod";
 import { toPrismaJson } from "../../../utils/prisma-json.js";
-import { requireFacilitatorAuth } from "../../../lib/auth/facilitator-auth.js";
 import { resolvePublishedFreePlan } from "../../../lib/catalog/catalog-billing.js";
 import { upsertSubscriptionLedgerState } from "../../../lib/billing/billing-ledger.js";
 import { getLatestSubscriptionChangeRequest } from "../../../lib/billing/subscription-change-requests.js";
@@ -18,6 +17,8 @@ function normalizeBillingPeriod(
   if (typeof value !== "string") return null;
   const normalized = value.trim().toLowerCase();
   if (normalized === "annual" || normalized === "yearly") return "annual";
+  if (normalized === "quarterly" || normalized === "quarter") return "monthly";
+  if (normalized === "semi_annual" || normalized === "semi-annual" || normalized === "biannual") return "monthly";
   if (normalized === "monthly" || normalized === "month") return "monthly";
   return null;
 }
@@ -25,9 +26,10 @@ function normalizeBillingPeriod(
 function deriveBillingPeriodFromInterval(
   billingInterval: unknown,
 ): "monthly" | "annual" {
-  return typeof billingInterval === "number" && billingInterval >= 31_536_000
-    ? "annual"
-    : "monthly";
+  if (typeof billingInterval !== "number") return "monthly";
+  // Seconds thresholds: 30 days (monthly), 365 days (annual)
+  // Everything between is treated as monthly; custom intervals default to monthly
+  return billingInterval >= 31_536_000 ? "annual" : "monthly";
 }
 
 const bodySchema = z.object({
@@ -52,10 +54,10 @@ const bodySchema = z.object({
 });
 
 export async function syncSubscription(c: Context) {
-  const authError = requireFacilitatorAuth(c.req.raw.headers);
-  if (authError) return c.json({ error: authError.error }, authError.status as any as any as any);
-
-  const body = await c.req.json() .catch(() => ({}));
+  const body = await c.req.json().catch(() => null);
+  if (!body || typeof body !== "object") {
+    return c.json({ error: "Invalid request body" }, 400 as any);
+  }
   const parsed = bodySchema.safeParse(body);
   if (!parsed.success) {
     return c.json({ error: "Invalid request", details: parsed.error.flatten().fieldErrors }, 400 as any);
@@ -166,7 +168,7 @@ export async function syncSubscription(c: Context) {
       skipped: true,
       reason: "stale_event",
       activePlanId: company.activePlanId,
-    });
+    }, 208 as any);
   }
 
   if (
@@ -181,7 +183,7 @@ export async function syncSubscription(c: Context) {
       skipped: true,
       reason: "duplicate_event",
       activePlanId: company.activePlanId,
-    });
+    }, 208 as any);
   }
 
   const nextSyncMeta: Record<string, unknown> = {
@@ -234,44 +236,46 @@ export async function syncSubscription(c: Context) {
     delete nextTraits.billingPeriod;
     nextTraits.subscriptionSyncMeta = nextSyncMeta;
 
-    await db.arcenCompany.update({
-      where: { id: company.id },
-      data: {
-        activePlanId: resolvedPlanId,
-        traits: toPrismaJson(nextTraits),
-      },
-    });
-
-    await upsertSubscriptionLedgerState({
-      teamId: company.teamId,
-      companyId: company.id,
-      walletAddress: wallet,
-      status: "CANCELLED",
-      catalogPlanId: resolvedPlanId,
-      onChainPlanId: null,
-      onChainTokenId: sourceTokenId ?? null,
-      cancelAtPeriodEnd: false,
-      cancelledAt: occurredAt ?? new Date(),
-      lastEvent: "subscription.cancelled",
-      lastEventAt: occurredAt ?? new Date(),
-      lastSourceTxHash: sourceTxHash ?? null,
-      metadata: {
-        source: "sync-subscription",
-      },
-    });
-
-    if (latestChangeRequest?.id) {
-      await db.subscriptionChangeRequest.update({
-        where: { id: latestChangeRequest.id },
+    await db.$transaction(async (tx) => {
+      await tx.arcenCompany.update({
+        where: { id: company.id },
         data: {
-          stage: "APPLIED",
-          appliedAt: occurredAt ?? new Date(),
-          effectiveAt: occurredAt ?? new Date(),
-          pendingVerification: false,
-          failureReason: null,
+          activePlanId: resolvedPlanId,
+          traits: toPrismaJson(nextTraits),
         },
       });
-    }
+
+      await upsertSubscriptionLedgerState({
+        teamId: company.teamId,
+        companyId: company.id,
+        walletAddress: wallet,
+        status: "CANCELLED",
+        catalogPlanId: resolvedPlanId,
+        onChainPlanId: null,
+        onChainTokenId: sourceTokenId ?? null,
+        cancelAtPeriodEnd: false,
+        cancelledAt: occurredAt ?? new Date(),
+        lastEvent: "subscription.cancelled",
+        lastEventAt: occurredAt ?? new Date(),
+        lastSourceTxHash: sourceTxHash ?? null,
+        metadata: {
+          source: "sync-subscription",
+        },
+      }, tx);
+
+      if (latestChangeRequest?.id) {
+        await tx.subscriptionChangeRequest.update({
+          where: { id: latestChangeRequest.id },
+          data: {
+            stage: "APPLIED",
+            appliedAt: occurredAt ?? new Date(),
+            effectiveAt: occurredAt ?? new Date(),
+            pendingVerification: false,
+            failureReason: null,
+          },
+        });
+      }
+    });
 
     return c.json({
       ok: true,
@@ -308,53 +312,55 @@ export async function syncSubscription(c: Context) {
     ? new Date(eventOccurredAt.getTime() + plan.billingInterval * 1000)
     : undefined;
 
-  await db.arcenCompany.update({
-    where: { id: company.id },
-    data: {
-      activePlanId: plan.id,
-      traits: toPrismaJson(nextTraits),
-    },
-  });
-
-  await upsertSubscriptionLedgerState({
-    teamId: company.teamId,
-    companyId: company.id,
-    walletAddress: wallet,
-    status: "ACTIVE",
-    catalogPlanId: plan.id,
-    onChainPlanId,
-    onChainTokenId: sourceTokenId ?? null,
-    ...(nextPeriodStart ? { currentPeriodStart: nextPeriodStart } : {}),
-    ...(nextPeriodEnd ? { currentPeriodEnd: nextPeriodEnd } : {}),
-    cancelAtPeriodEnd: isPeriodBoundaryEvent ? false : undefined,
-    cancelledAt: isPeriodBoundaryEvent ? null : undefined,
-    pastDueAt: null,
-    graceEndsAt: null,
-    lastEvent:
-      event === "minted"
-        ? "subscription.minted"
-        : event === "renewed"
-          ? "subscription.renewed"
-          : "subscription.plan_changed",
-    lastEventAt: eventOccurredAt,
-    lastSourceTxHash: sourceTxHash ?? null,
-    metadata: {
-      source: "sync-subscription",
-    },
-  });
-
-  if (latestChangeRequest?.id) {
-    await db.subscriptionChangeRequest.update({
-      where: { id: latestChangeRequest.id },
+  await db.$transaction(async (tx) => {
+    await tx.arcenCompany.update({
+      where: { id: company.id },
       data: {
-        stage: "APPLIED",
-        appliedAt: occurredAt ?? new Date(),
-        effectiveAt: occurredAt ?? new Date(),
-        pendingVerification: false,
-        failureReason: null,
+        activePlanId: plan.id,
+        traits: toPrismaJson(nextTraits),
       },
     });
-  }
+
+    await upsertSubscriptionLedgerState({
+      teamId: company.teamId,
+      companyId: company.id,
+      walletAddress: wallet,
+      status: "ACTIVE",
+      catalogPlanId: plan.id,
+      onChainPlanId,
+      onChainTokenId: sourceTokenId ?? null,
+      ...(nextPeriodStart ? { currentPeriodStart: nextPeriodStart } : {}),
+      ...(nextPeriodEnd ? { currentPeriodEnd: nextPeriodEnd } : {}),
+      cancelAtPeriodEnd: isPeriodBoundaryEvent ? false : undefined,
+      cancelledAt: isPeriodBoundaryEvent ? null : undefined,
+      pastDueAt: null,
+      graceEndsAt: null,
+      lastEvent:
+        event === "minted"
+          ? "subscription.minted"
+          : event === "renewed"
+            ? "subscription.renewed"
+            : "subscription.plan_changed",
+      lastEventAt: eventOccurredAt,
+      lastSourceTxHash: sourceTxHash ?? null,
+      metadata: {
+        source: "sync-subscription",
+      },
+    }, tx);
+
+    if (latestChangeRequest?.id) {
+      await tx.subscriptionChangeRequest.update({
+        where: { id: latestChangeRequest.id },
+        data: {
+          stage: "APPLIED",
+          appliedAt: occurredAt ?? new Date(),
+          effectiveAt: occurredAt ?? new Date(),
+          pendingVerification: false,
+          failureReason: null,
+        },
+      });
+    }
+  });
 
   return c.json({ ok: true, activePlanId: plan.id });
 }

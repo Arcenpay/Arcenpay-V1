@@ -75,7 +75,10 @@ export function getUsdcAddress(chainId: number): `0x${string}` {
 
   const token = getTokenAddress(chainId, "USDC");
   if (isAddress(token)) return token;
-  return "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
+
+  throw new Error(
+    `No USDC address configured for chain ${chainId}. Set NEXT_PUBLIC_USDC_ADDRESS_${chainId} or NEXT_PUBLIC_USDC_ADDRESS.`,
+  );
 }
 
 const TESTNET_CHAIN_LIST: Array<{

@@ -24,13 +24,21 @@ async function handler(request: NextRequest) {
   headers["x-forwarded-port"] =
     url.port || (url.protocol === "https:" ? "443" : "80");
 
-  const res = await fetch(backendUrl, {
-    method: request.method,
-    headers,
-    body: request.method !== "GET" && request.method !== "HEAD"
-      ? await request.text()
-      : undefined,
-  });
+  let res: Response;
+  try {
+    res = await fetch(backendUrl, {
+      method: request.method,
+      headers,
+      body: request.method !== "GET" && request.method !== "HEAD"
+        ? await request.text()
+        : undefined,
+    });
+  } catch (err) {
+    return new Response(
+      JSON.stringify({ error: "Backend unreachable", details: String(err) }),
+      { status: 502, headers: { "Content-Type": "application/json" } },
+    );
+  }
 
   // Forward response
   const responseHeaders = new Headers();

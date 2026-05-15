@@ -206,7 +206,9 @@ export async function createIssuedChargeInvoice(
     currency: invoice.currency,
     status: invoice.status,
     planId: invoice.planId,
-  }).catch(() => {});
+  }).catch((err) => {
+    console.warn("[billing-events] Failed to deliver webhook for invoice payment:", err);
+  });
 
   const pendingDelivery = invoice.deliveries[0];
   if (input.sendInvoiceEmail && pendingDelivery && invoice.customerEmail) {
@@ -239,7 +241,9 @@ export async function createIssuedChargeInvoice(
         customerEmail: invoice.customerEmail,
         customerWallet: invoice.customerWallet,
         error: error?.message || "send failed",
-      }).catch(() => {});
+      }).catch((err) => {
+        console.warn("[billing-events] Failed to deliver webhook for invoice send error:", err);
+      });
     }
   }
 
@@ -490,7 +494,9 @@ async function processStoredBillingEvent(
       ...(typeof payload.error === "string" && payload.error.trim()
         ? { error: payload.error.trim() }
         : {}),
-    }).catch(() => {});
+    }).catch((err) => {
+      console.warn("[billing-events] Failed to deliver payment failed webhook:", err);
+    });
   }
 
   return {

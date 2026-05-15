@@ -155,7 +155,9 @@ export async function sendWebhookDelivery(
         payload: toPrismaJson(payloadObject),
       },
     })
-    .catch(() => {});
+    .catch((err) => {
+      console.warn("[deliverWebhook] Failed to persist delivery record:", err);
+    });
 
   return {
     deliveryId,

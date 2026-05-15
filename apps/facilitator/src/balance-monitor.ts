@@ -186,14 +186,14 @@ export class BalanceMonitor {
   }
 
   private async fetchAgentSessions(teamId: string): Promise<Array<{ agent: string; currentBalance: string }>> {
-    // Fetch sessions from the subgraph via dashboard API
+    // Fetch sessions for the specific team from the subgraph via dashboard API
     try {
       const headers: Record<string, string> = {};
       if (this.opts.facilitatorSecret) {
         headers.Authorization = `Bearer ${this.opts.facilitatorSecret}`;
       }
       const res = await fetch(
-        `${this.opts.dashboardUrl}/api/platform/sessions?sessionLimit=10`,
+        `${this.opts.dashboardUrl}/api/platform/sessions?sessionLimit=10&teamId=${encodeURIComponent(teamId)}`,
         { headers },
       );
       if (!res.ok) return [];

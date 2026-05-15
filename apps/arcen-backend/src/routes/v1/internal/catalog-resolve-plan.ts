@@ -1,7 +1,6 @@
 import type { Context } from "hono";
 import { z } from "zod";
 import { db } from "../../../db.js";
-import { requireFacilitatorAuth } from "../../../lib/auth/facilitator-auth.js";
 
 const querySchema = z.object({
   onChainPlanId: z.string().min(1),
@@ -10,9 +9,6 @@ const querySchema = z.object({
 });
 
 export async function resolvePlan(c: Context) {
-  const authError = requireFacilitatorAuth(c.req.raw.headers);
-  if (authError) return c.json({ error: authError.error }, authError.status as any as any as any);
-
   const parsed = querySchema.safeParse({
     onChainPlanId: c.req.query("onChainPlanId"),
     teamId: c.req.query("teamId") ?? undefined,

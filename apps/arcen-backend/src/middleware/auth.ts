@@ -245,7 +245,9 @@ export function requireApiKeyAuth() {
 
     withPrismaReconnect((client) =>
       client.arcenApiKey.update({ where: { id: apiKey.id }, data: { lastUsedAt: new Date() } }),
-    ).catch(() => {});
+    ).catch((err) => {
+      console.warn("[auth] Failed to update api key lastUsedAt:", err);
+    });
 
     c.set("apiKeyTeamId", apiKey.teamId);
     c.set("apiKeyId", apiKey.id);

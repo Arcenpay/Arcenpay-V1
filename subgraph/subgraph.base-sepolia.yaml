@@ -138,4 +138,8 @@ dataSources:
       eventHandlers:
         - event: FeeCollected(indexed address,uint256,uint256,string)
           handler: handleFeeCollected
+        - event: ProviderTierSynced(indexed address,uint16,uint256)
+          handler: handleProviderTierSynced
+        - event: ProviderFeeRateSet(indexed address,uint256)
+          handler: handleProviderFeeRateSet
       file: ./src/fee-collector.ts

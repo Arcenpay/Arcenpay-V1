@@ -595,7 +595,9 @@ export async function finalizeSubscriptionActivation(
       txHash: input.payload.txHash,
       source,
       invoiceId: billingEvent.invoiceId,
-    }).catch(() => {});
+    }).catch((err) => {
+      console.warn("[billing-recovery] Failed to deliver webhook:", err);
+    });
   }
 
   if (billingEvent.invoiceId) {
@@ -603,7 +605,9 @@ export async function finalizeSubscriptionActivation(
       teamId: input.teamId,
       invoiceId: billingEvent.invoiceId,
       txHash: input.payload.txHash,
-    }).catch(() => {});
+    }).catch((err) => {
+      console.warn("[billing-recovery] Failed to send invoice receipt:", err);
+    });
   }
 
   return {

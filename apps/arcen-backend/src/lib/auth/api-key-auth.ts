@@ -111,7 +111,9 @@ export async function requireApiKey(
   // Update lastUsedAt in background
   db.arcenApiKey
     .update({ where: { id: apiKey.id }, data: { lastUsedAt: new Date() } })
-    .catch(() => {});
+    .catch((err) => {
+      console.warn("[api-key-auth] Failed to update lastUsedAt:", err);
+    });
 
   return {
     teamId: apiKey.teamId,

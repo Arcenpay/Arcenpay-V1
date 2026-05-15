@@ -1,6 +1,5 @@
 import type { Context } from "hono";
 import { z } from "zod";
-import { requireFacilitatorAuth } from "../../../lib/auth/facilitator-auth.js";
 import { runBillingMaintenanceForAllTeams } from "../../../lib/billing/billing-maintenance.js";
 
 const bodySchema = z.object({
@@ -10,10 +9,10 @@ const bodySchema = z.object({
 });
 
 export async function runMaintenanceAll(c: Context) {
-  const authError = requireFacilitatorAuth(c.req.raw.headers);
-  if (authError) return c.json({ error: authError.error }, authError.status as any as any as any);
-
-  const body = await c.req.json() .catch(() => ({}));
+  const body = await c.req.json().catch(() => null);
+  if (!body || typeof body !== "object") {
+    return c.json({ error: "Invalid request body" }, 400 as any);
+  }
   const parsed = bodySchema.safeParse(body);
   if (!parsed.success) {
     return c.json({ error: "Invalid request", details: parsed.error.flatten().fieldErrors }, 400 as any);

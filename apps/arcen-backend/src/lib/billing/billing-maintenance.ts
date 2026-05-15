@@ -375,7 +375,9 @@ export async function applyScheduledSubscriptionTransitions(input: {
       scheduled: false,
       effectiveAt: now.toISOString(),
       source: "billing-maintenance",
-    }).catch(() => {});
+    }).catch((err) => {
+      console.warn("[billing-maintenance] Failed to deliver webhook:", err);
+    });
 
     if (mode === "cancel_at_period_end") {
       deliverWebhook(input.teamId, "company.plan.cancelled", {
@@ -390,7 +392,9 @@ export async function applyScheduledSubscriptionTransitions(input: {
         scheduled: false,
         effectiveAt: now.toISOString(),
         source: "billing-maintenance",
-      }).catch(() => {});
+      }).catch((err) => {
+        console.warn("[billing-maintenance] Failed to deliver cancellation webhook:", err);
+      });
     }
 
     results.push({

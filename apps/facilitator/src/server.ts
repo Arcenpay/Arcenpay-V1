@@ -2698,9 +2698,9 @@ app.use(
   },
   x402WalletLimiter,
   x402Middleware({
-    planId: "demo",
-    ratePerCall: "0.001",
-    network: "base-sepolia",
+    planId: process.env.X402_PLAN_ID || "demo",
+    ratePerCall: process.env.X402_RATE_PER_CALL || "0.001",
+    network: process.env.X402_NETWORK || "base-sepolia",
     failOpenOnBalanceCheck: process.env.X402_FAIL_OPEN_BALANCE_CHECK === "true",
     ...(settlementWriter
       ? {
@@ -2811,11 +2811,12 @@ app.get("/api/premium/data", (req, res) => {
   res.json({
     message: "Premium data accessed successfully",
     data: {
-      insights: [
-        { metric: "active_users", value: 15234, change: "+12.5%" },
-        { metric: "revenue_mrr", value: 45000, change: "+8.3%" },
-        { metric: "churn_rate", value: 2.1, change: "-0.4%" },
-      ],
+      insights: payment?.verified
+        ? [
+            { metric: "settled_amount", value: payment.settledAmount, change: null },
+            { metric: "usage_entries", value: aggregation?.totalEntries ?? 0, change: null },
+          ]
+        : [],
     },
     payment: {
       verified: payment?.verified,
@@ -3675,18 +3676,15 @@ app.post(
       "billing",
       "billing_event",
       {
-        pathname: "/api/billing/events",
-        payload: {
-          teamId,
-          eventType,
-          eventName,
-          schemaVersion,
-          occurredAt,
-          idempotencyKey,
-          payload,
-          triggerInvoice,
-          source,
-        },
+        teamId,
+        eventType,
+        eventName,
+        schemaVersion,
+        occurredAt,
+        idempotencyKey,
+        payload,
+        triggerInvoice,
+        source,
       },
       { idempotencyKey: `billing:${idempotencyKey}` },
     );
@@ -4336,6 +4334,7 @@ process.on("SIGTERM", () => {
   void redisUsageStore?.stop();
   jobQueue.stop();
   replayProtection.stop();
+  balanceMonitor.stop();
   process.exit(0);
 });
 
@@ -4349,6 +4348,7 @@ process.on("SIGINT", () => {
   void redisUsageStore?.stop();
   jobQueue.stop();
   replayProtection.stop();
+  balanceMonitor.stop();
   process.exit(0);
 });
 

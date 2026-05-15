@@ -9,6 +9,8 @@ export function handleBillingSettled(event: BillingSettled): void {
   session.totalSettled = session.totalSettled.plus(event.params.settlementAmount);
   if (session.currentBalance >= event.params.settlementAmount) {
     session.currentBalance = session.currentBalance.minus(event.params.settlementAmount);
+  } else {
+    session.currentBalance = BigInt.fromI32(0);
   }
   session.save();
 

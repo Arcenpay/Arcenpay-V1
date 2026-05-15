@@ -29,7 +29,9 @@ export async function generateNonce(): Promise<
   // Clean up expired nonces opportunistically (best effort)
   db.authNonce
     .deleteMany({ where: { expiresAt: { lt: new Date() } } })
-    .catch(() => {});
+    .catch((err) => {
+      console.warn("[nonce] Failed to clean up expired nonces:", err);
+    });
 
   return { nonce, issuedAt };
 }

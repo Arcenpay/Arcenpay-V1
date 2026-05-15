@@ -1,5 +1,5 @@
-export const ARCENPAY_API_URL = "http://localhost:3300";
-export const ARCENPAY_APP_URL = "https://yak-included-currently.ngrok-free.app";
+export const ARCENPAY_API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.BACKEND_URL || "http://localhost:3300";
+export const ARCENPAY_APP_URL = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || "http://localhost:3000";
 
 export interface ResolveArcenPayBaseUrlOptions {
   explicit?: string;

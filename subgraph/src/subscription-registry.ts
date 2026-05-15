@@ -1,4 +1,4 @@
-import { BigInt } from '@graphprotocol/graph-ts';
+import { BigInt, Bytes } from '@graphprotocol/graph-ts';
 import {
   SubscriptionMinted,
   SubscriptionRenewed,
@@ -7,6 +7,8 @@ import {
 import { BillingEvent, Plan, SubscriptionRecord } from '../generated/schema';
 import { eventId, getOrCreateStats, getOrCreateSubscriber } from './common';
 
+const ZERO_ADDRESS = Bytes.fromHexString('0x0000000000000000000000000000000000000000') as Bytes;
+
 export function handleSubscriptionMinted(event: SubscriptionMinted): void {
   const id = event.params.tokenId.toString();
   let sub = new SubscriptionRecord(id);
@@ -14,7 +16,7 @@ export function handleSubscriptionMinted(event: SubscriptionMinted): void {
   let plan = Plan.load(event.params.planId.toString());
   if (!plan) {
     plan = new Plan(event.params.planId.toString());
-    plan.provider = event.transaction.from;
+    plan.provider = ZERO_ADDRESS;
     plan.name = 'Unknown';
     plan.tier = 'Unknown';
     plan.price = BigInt.fromI32(0);

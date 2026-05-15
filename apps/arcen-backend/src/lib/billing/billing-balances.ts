@@ -46,6 +46,9 @@ export async function ensureBillingBalance(input: {
     create: {
       teamId: input.teamId,
       companyId: company.id,
+      availableCredit: 0,
+      totalCredited: 0,
+      totalDebited: 0,
       currency: input.currency ?? "USDC",
     },
   });
@@ -69,8 +72,8 @@ export async function postBillingCredit(input: {
   const balance = await ensureBillingBalance(input);
   if (!balance) return null;
 
-  return db.billingBalance.update({
-    where: { id: balance.id },
+  await db.billingBalance.updateMany({
+    where: { id: balance.id, availableCredit: balance.availableCredit },
     data: {
       availableCredit: toSix(Number(balance.availableCredit) + input.amount),
       totalCredited: toSix(Number(balance.totalCredited) + input.amount),
@@ -88,6 +91,8 @@ export async function postBillingCredit(input: {
         : {}),
     },
   });
+
+  return db.billingBalance.findUnique({ where: { id: balance.id } });
 }
 
 export async function consumeBillingCredit(input: {
@@ -110,8 +115,8 @@ export async function consumeBillingCredit(input: {
     return { appliedAmount: 0, balance };
   }
 
-  const updated = await db.billingBalance.update({
-    where: { id: balance.id },
+  const updated = await db.billingBalance.updateMany({
+    where: { id: balance.id, availableCredit: balance.availableCredit },
     data: {
       availableCredit: toSix(Math.max(0, available - appliedAmount)),
       totalDebited: toSix(Number(balance.totalDebited) + appliedAmount),
@@ -131,7 +136,8 @@ export async function consumeBillingCredit(input: {
     },
   });
 
-  return { appliedAmount, balance: updated };
+  const refreshed = await db.billingBalance.findUnique({ where: { id: balance.id } });
+  return { appliedAmount: updated.count > 0 ? appliedAmount : 0, balance: refreshed ?? balance };
 }
 
 export async function recomputeInvoiceBalance(
@@ -179,10 +185,13 @@ export async function applyInvoicePayment(input: {
   });
   if (!invoice) return null;
 
-  await client.invoice.update({
-    where: { id: invoice.id },
+  const previousAmountPaid = Number(invoice.amountPaid);
+  const nextAmountPaid = toSix(previousAmountPaid + input.amount);
+
+  await client.invoice.updateMany({
+    where: { id: invoice.id, amountPaid: invoice.amountPaid },
     data: {
-      amountPaid: toSix(Number(invoice.amountPaid) + input.amount),
+      amountPaid: nextAmountPaid,
     },
   });
 

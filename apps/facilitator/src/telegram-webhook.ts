@@ -125,7 +125,7 @@ async function answerCallback(
   if (!token) return;
 
   try {
-    await fetch(`https://api.telegram.org/bot${botToken}/answerCallbackQuery`, {
+    await fetch(`https://api.telegram.org/bot${token}/answerCallbackQuery`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

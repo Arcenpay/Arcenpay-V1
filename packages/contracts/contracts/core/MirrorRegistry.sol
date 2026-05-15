@@ -140,8 +140,9 @@ contract MirrorRegistry is Ownable, Pausable {
             uint256 sourceTokenId,
             uint256 planId,
             string memory planTier,
-            uint64 expiration
-        ) = abi.decode(payload, (address, uint256, uint256, string, uint64));
+            uint64 expiration,
+            uint64 sourceUpdatedAt
+        ) = abi.decode(payload, (address, uint256, uint256, string, uint64, uint64));
 
         _applyMirrorUpdate(
             subscriber,
@@ -150,7 +151,7 @@ contract MirrorRegistry is Ownable, Pausable {
             planTier,
             expiration,
             sourceChainId,
-            uint64(block.timestamp)
+            sourceUpdatedAt
         );
 
         emit RoutedMessageProcessed(messageId, 0);
