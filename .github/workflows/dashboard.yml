@@ -5,79 +5,82 @@ on:
     branches: [main]
     paths:
       - "apps/arcen-dashboard/**"
-      - "apps/docs/**"
-      - "packages/sdk-core/**"
+      - "apps/arcenpay-docs/**"
+      - "packages/internal-core/**"
+      - "packages/shared-types/**"
       - "packages/sdk-react/**"
+      - "package.json"
+      - "package-lock.json"
+      - "turbo.json"
   pull_request:
     branches: [main]
     paths:
       - "apps/arcen-dashboard/**"
-      - "apps/docs/**"
-      - "packages/sdk-core/**"
+      - "apps/arcenpay-docs/**"
+      - "packages/internal-core/**"
+      - "packages/shared-types/**"
       - "packages/sdk-react/**"
+      - "package.json"
+      - "package-lock.json"
+      - "turbo.json"
 
 jobs:
   dashboard:
-    name: Typecheck, Lint & Test
+    name: Typecheck, Test & Build
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: apps/arcen-dashboard
     env:
       SIWE_JWT_SECRET: ci-dev-secret
       NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID: ci-placeholder
       NEXT_PUBLIC_CHAIN_ID: "11155111"
+      DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 20
-          cache: npm
-          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
-        working-directory: .
         run: npm ci
 
-      - name: Build SDK dependencies
-        run: npx turbo run build --filter="./packages/sdk-core" --filter="./packages/sdk-react"
+      - name: Build dashboard dependencies
+        run: |
+          npm run build --workspace=@arcenpay/internal-core
+          npm run build --workspace=@arcenpay/react
 
       - name: Generate Prisma client
+        working-directory: apps/arcen-dashboard
         run: npx prisma generate
 
-      - name: TypeScript check
-        run: npx tsc --noEmit
+      - name: Typecheck dashboard
+        run: npm run typecheck --workspace=@arcenpay/dashboard
 
-      - name: Run tests
-        run: CI=true npx vitest run
+      - name: Run dashboard tests
+        run: npm run test --workspace=@arcenpay/dashboard
 
       - name: Build dashboard
-        run: npm run build
+        run: npm run build --workspace=@arcenpay/dashboard
         env:
           SKIP_ENV_VALIDATION: "true"
           DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
 
   docs:
-    name: Build Docs
+    name: Validate Docs
+    if: ${{ hashFiles('apps/arcenpay-docs/docs.json') != '' }}
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: apps/docs
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 20
-          cache: npm
-          cache-dependency-path: package-lock.json
 
-      - name: Install dependencies
-        working-directory: .
-        run: npm ci
+      - name: Validate Mintlify docs
+        working-directory: apps/arcenpay-docs
+        run: npx mint@latest validate
 
-      - name: Build docs
-        run: npm run build
+      - name: Check docs links
+        working-directory: apps/arcenpay-docs
+        run: npx mint@latest broken-links

@@ -7,45 +7,42 @@ on:
       - "apps/arcen-backend/**"
       - "packages/internal-core/**"
       - "packages/shared-types/**"
+      - "package.json"
+      - "package-lock.json"
+      - "turbo.json"
   pull_request:
     branches: [main]
     paths:
       - "apps/arcen-backend/**"
       - "packages/internal-core/**"
       - "packages/shared-types/**"
+      - "package.json"
+      - "package-lock.json"
+      - "turbo.json"
 
 jobs:
   backend:
-    name: Typecheck, Lint & Test
+    name: Typecheck, Test & Build
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: apps/arcen-backend
     env:
       SIWE_JWT_SECRET: ci-dev-secret
       DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 20
-          cache: npm
-          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
-        working-directory: .
         run: npm ci
 
-      - name: Build internal-core dependency
-        run: npm run prebuild
+      - name: Typecheck backend
+        run: npm run typecheck --workspace=@arcenpay/backend
 
-      - name: Generate Prisma client
-        run: npx prisma generate
+      - name: Run backend tests
+        run: npm run test --workspace=@arcenpay/backend
 
-      - name: TypeScript check
-        run: npx tsc --noEmit
-
-      - name: Run tests
-        run: CI=true npx vitest run
+      - name: Build backend
+        run: npm run build --workspace=@arcenpay/backend

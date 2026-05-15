@@ -4,11 +4,25 @@ on:
   push:
     branches: [main]
     paths:
-      - "packages/sdk-*/**"
+      - "packages/sdk-node/**"
+      - "packages/sdk-react/**"
+      - "packages/sdk-agent/**"
+      - "packages/internal-core/**"
+      - "scripts/sync-internal-core.mjs"
+      - "package.json"
+      - "package-lock.json"
+      - "turbo.json"
   pull_request:
     branches: [main]
     paths:
-      - "packages/sdk-*/**"
+      - "packages/sdk-node/**"
+      - "packages/sdk-react/**"
+      - "packages/sdk-agent/**"
+      - "packages/internal-core/**"
+      - "scripts/sync-internal-core.mjs"
+      - "package.json"
+      - "package-lock.json"
+      - "turbo.json"
 
 jobs:
   sdk:
@@ -16,29 +30,37 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 20
-          cache: npm
 
       - name: Install dependencies
         run: npm ci
 
-      - name: TypeScript check
-        run: npx turbo run typecheck --filter="./packages/sdk-*"
+      - name: Typecheck SDK packages
+        run: |
+          npm run typecheck --workspace=@arcenpay/node
+          npm run typecheck --workspace=@arcenpay/react
+          npm run typecheck --workspace=@arcenpay/agent
 
       - name: Build all SDKs
-        run: npx turbo run build --filter="./packages/sdk-*"
+        run: |
+          npm run build --workspace=@arcenpay/node
+          npm run build --workspace=@arcenpay/react
+          npm run build --workspace=@arcenpay/agent
 
-      - name: Run tests
-        run: npx turbo run test --filter="./packages/sdk-*"
+      - name: Run SDK tests
+        run: |
+          npm run test --workspace=@arcenpay/node
+          npm run test --workspace=@arcenpay/react
+          npm run test --workspace=@arcenpay/agent
 
       - name: Check bundle sizes
         run: |
           echo "=== SDK Bundle Sizes ==="
-          for pkg in sdk-core sdk-node sdk-react sdk-agent; do
+          for pkg in sdk-node sdk-react sdk-agent; do
             if [ -d "packages/$pkg/dist" ]; then
               echo "$pkg: $(du -sh packages/$pkg/dist/ | cut -f1)"
             fi
