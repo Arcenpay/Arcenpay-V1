@@ -293,6 +293,7 @@ export async function GET(c: Context) {
     ]);
 
     if (company) {
+      const companyTraits = asRecord(company.traits);
       const subscriberEmailRecord =
         company.subscriptionState?.walletAddress || company.walletAddress
           ? await db.subscriberEmail.findUnique({
@@ -311,16 +312,12 @@ export async function GET(c: Context) {
         email: company.email ?? subscriberEmailRecord?.email ?? null,
       };
 
-      const traits = asRecord(company.traits);
       const latestChangeRequest = await getLatestSubscriptionChangeRequest({
         teamId,
         companyId: company.id,
       });
-      const legacyTransition = asRecord(traits.subscriptionTransition);
       if (latestChangeRequest) {
         subscriptionTransition = latestChangeRequest;
-      } else if (Object.keys(legacyTransition).length > 0) {
-        subscriptionTransition = legacyTransition;
       }
 
       const effectiveActivePlanId =
@@ -354,7 +351,7 @@ export async function GET(c: Context) {
         normalizeBillingPeriod(
           asRecord(company.subscriptionState?.metadata).billingPeriod,
         ) ??
-        normalizeBillingPeriod(traits.billingPeriod) ??
+        normalizeBillingPeriod(companyTraits.billingPeriod) ??
         deriveBillingPeriodFromInterval(activePlan?.billingInterval);
 
       const companyKeys = {

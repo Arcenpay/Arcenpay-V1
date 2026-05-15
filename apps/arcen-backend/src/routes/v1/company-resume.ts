@@ -14,6 +14,7 @@ import {
 import {
   createSubscriptionChangeRequest,
   getLatestSubscriptionChangeRequest,
+  stripLegacySubscriptionLifecycleTraits,
   updateSubscriptionChangeRequestStage,
 } from "../../lib/billing/subscription-change-requests.js";
 import { readAutopayAccountState } from "../../lib/payments/autopay-state.js";
@@ -161,73 +162,86 @@ export async function POST(c: Context) {
   }
 
   const currentTraits = asRecord(company.traits);
-  const nextTraits = { ...currentTraits };
-  delete nextTraits.subscriptionTransition;
-  delete nextTraits.pendingSubscriptionChangeRequestId;
+  const nextTraits = stripLegacySubscriptionLifecycleTraits(currentTraits);
 
   const now = new Date();
 
-  await updateSubscriptionChangeRequestStage({
-    requestId: scheduledCancellation.id,
-    stage: "reverted",
-    appliedAt: now,
-    metadata: {
-      resumedAt: now.toISOString(),
-    },
-  });
+  const resumeRequest = await db.$transaction(async (tx) => {
+    await updateSubscriptionChangeRequestStage(
+      {
+        requestId: scheduledCancellation.id,
+        stage: "reverted",
+        appliedAt: now,
+        metadata: {
+          resumedAt: now.toISOString(),
+        },
+      },
+      tx,
+    );
 
-  const resumeRequest = await createSubscriptionChangeRequest({
-    teamId,
-    environmentId:
-      company.subscriptionState?.environmentId ?? company.environmentId ?? null,
-    companyId,
-    subscriptionStateId: company.subscriptionState?.id ?? null,
-    changeType: "resume",
-    stage: "applied",
-    source: "self_service",
-    previousPlanId: company.activePlanId ?? null,
-    targetPlanId: company.activePlanId ?? null,
-    requestedAt: now,
-    effectiveAt: company.subscriptionState?.currentPeriodEnd ?? null,
-    appliedAt: now,
-    metadata: {
-      mode: "resume_applied",
-      resumedCancellationRequestId: scheduledCancellation.id,
-    },
-  });
+    const nextResumeRequest = await createSubscriptionChangeRequest(
+      {
+        teamId,
+        environmentId:
+          company.subscriptionState?.environmentId ?? company.environmentId ?? null,
+        companyId,
+        subscriptionStateId: company.subscriptionState?.id ?? null,
+        changeType: "resume",
+        stage: "applied",
+        source: "self_service",
+        previousPlanId: company.activePlanId ?? null,
+        targetPlanId: company.activePlanId ?? null,
+        requestedAt: now,
+        effectiveAt: company.subscriptionState?.currentPeriodEnd ?? null,
+        appliedAt: now,
+        metadata: {
+          mode: "resume_applied",
+          resumedCancellationRequestId: scheduledCancellation.id,
+        },
+      },
+      tx,
+    );
 
-  await db.arcenCompany.update({
-    where: { id: companyId },
-    data: {
-      traits: toPrismaJson(nextTraits),
-    },
-  });
+    await tx.arcenCompany.update({
+      where: { id: companyId },
+      data: {
+        traits: toPrismaJson(nextTraits),
+      },
+    });
 
-  await upsertSubscriptionLedgerState({
-    teamId,
-    environmentId:
-      company.subscriptionState?.environmentId ?? company.environmentId ?? null,
-    companyId,
-    walletAddress: paymentAccount,
-    chainId: company.subscriptionState?.chainId ?? null,
-    status: "ACTIVE",
-    catalogPlanId: company.activePlanId ?? null,
-    onChainPlanId: company.subscriptionState?.onChainPlanId ?? null,
-    onChainTokenId: company.subscriptionState?.onChainTokenId ?? null,
-    currentPeriodStart: company.subscriptionState?.currentPeriodStart ?? undefined,
-    currentPeriodEnd: company.subscriptionState?.currentPeriodEnd ?? undefined,
-    cancelAtPeriodEnd: false,
-    cancelledAt: null,
-    pastDueAt: null,
-    graceEndsAt: null,
-    lastEvent: "subscription.resume_applied",
-    lastEventAt: now,
-    metadata: {
-      ...asRecord(company.subscriptionState?.metadata),
-      source: "self_service",
-      resumedCancellationRequestId: scheduledCancellation.id,
-      resumeRequestId: resumeRequest.id,
-    },
+    await upsertSubscriptionLedgerState(
+      {
+        teamId,
+        environmentId:
+          company.subscriptionState?.environmentId ?? company.environmentId ?? null,
+        companyId,
+        walletAddress: paymentAccount,
+        chainId: company.subscriptionState?.chainId ?? null,
+        status: "ACTIVE",
+        catalogPlanId: company.activePlanId ?? null,
+        onChainPlanId: company.subscriptionState?.onChainPlanId ?? null,
+        onChainTokenId: company.subscriptionState?.onChainTokenId ?? null,
+        currentPeriodStart:
+          company.subscriptionState?.currentPeriodStart ?? undefined,
+        currentPeriodEnd:
+          company.subscriptionState?.currentPeriodEnd ?? undefined,
+        cancelAtPeriodEnd: false,
+        cancelledAt: null,
+        pastDueAt: null,
+        graceEndsAt: null,
+        lastEvent: "subscription.resume_applied",
+        lastEventAt: now,
+        metadata: {
+          ...asRecord(company.subscriptionState?.metadata),
+          source: "self_service",
+          resumedCancellationRequestId: scheduledCancellation.id,
+          resumeRequestId: nextResumeRequest.id,
+        },
+      },
+      tx,
+    );
+
+    return nextResumeRequest;
   });
 
   deliverWebhook(teamId, "company.plan.changed", {

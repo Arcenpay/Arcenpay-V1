@@ -197,10 +197,9 @@ export async function syncSubscription(c: Context) {
       teamId: company.teamId,
       companyId: company.id,
     });
-    const transition = asRecord(traits.subscriptionTransition);
     const transitionTargetPlanId =
-      typeof transition.targetPlanId === "string"
-        ? transition.targetPlanId
+      typeof latestChangeRequest?.targetPlanId === "string"
+        ? latestChangeRequest.targetPlanId
         : null;
 
     let resolvedPlanId: string | null = null;
@@ -261,7 +260,7 @@ export async function syncSubscription(c: Context) {
       },
     });
 
-    if (latestChangeRequest?.id && !latestChangeRequest.id.startsWith("legacy-")) {
+    if (latestChangeRequest?.id) {
       await db.subscriptionChangeRequest.update({
         where: { id: latestChangeRequest.id },
         data: {
@@ -289,11 +288,14 @@ export async function syncSubscription(c: Context) {
     );
   }
 
+  const latestChangeRequest = await getLatestSubscriptionChangeRequest({
+    teamId: company.teamId,
+    companyId: company.id,
+  });
   const nextTraits = { ...traits };
-  delete nextTraits.subscriptionTransition;
   nextTraits.billingPeriod =
     normalizeBillingPeriod(
-      asRecord(traits.subscriptionTransition).targetBillingPeriod,
+      latestChangeRequest?.targetBillingPeriod,
     ) ?? deriveBillingPeriodFromInterval(plan.billingInterval);
   nextTraits.subscriptionSyncMeta = nextSyncMeta;
 
@@ -341,11 +343,7 @@ export async function syncSubscription(c: Context) {
     },
   });
 
-  const latestChangeRequest = await getLatestSubscriptionChangeRequest({
-    teamId: company.teamId,
-    companyId: company.id,
-  });
-  if (latestChangeRequest?.id && !latestChangeRequest.id.startsWith("legacy-")) {
+  if (latestChangeRequest?.id) {
     await db.subscriptionChangeRequest.update({
       where: { id: latestChangeRequest.id },
       data: {

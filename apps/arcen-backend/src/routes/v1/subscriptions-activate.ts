@@ -143,47 +143,29 @@ async function clearScheduledCancellationTransition(
 ): Promise<boolean> {
   const company = await db.arcenCompany.findUnique({
     where: { id: companyId },
-    select: { teamId: true, traits: true },
+    select: { teamId: true },
   });
-  const currentTraits = asRecord(company?.traits);
-  const transition = asRecord(currentTraits.subscriptionTransition);
-  if (transition.mode !== "cancel_at_period_end") {
+  if (!company?.teamId) {
     return false;
   }
 
-  const nextTraits = { ...currentTraits };
-  delete nextTraits.subscriptionTransition;
-
-  await db.arcenCompany.update({
-    where: { id: companyId },
-    data: {
-      traits: toPrismaJson(nextTraits),
-    },
+  const latestChangeRequest = await getLatestSubscriptionChangeRequest({
+    teamId: company.teamId,
+    companyId,
   });
-
-  if (company?.teamId) {
-    const latestChangeRequest = await getLatestSubscriptionChangeRequest({
-      teamId: company.teamId,
-      companyId,
+  if (latestChangeRequest?.id && latestChangeRequest.changeType === "cancellation") {
+    await db.subscriptionChangeRequest.update({
+      where: { id: latestChangeRequest.id },
+      data: {
+        stage: "REVERTED",
+        appliedAt: new Date(),
+        pendingVerification: false,
+        failureReason: null,
+      },
     });
-    if (
-      latestChangeRequest?.id &&
-      !latestChangeRequest.id.startsWith("legacy-") &&
-      latestChangeRequest.changeType === "cancellation"
-    ) {
-      await db.subscriptionChangeRequest.update({
-        where: { id: latestChangeRequest.id },
-        data: {
-          stage: "REVERTED",
-          appliedAt: new Date(),
-          pendingVerification: false,
-          failureReason: null,
-        },
-      });
-    }
+    return true;
   }
-
-  return true;
+  return false;
 }
 
 function normalizePrivateKey(raw: string | undefined): `0x${string}` | null {

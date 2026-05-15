@@ -9,6 +9,7 @@ import {
 } from "../../../config.js";
 import { checkSubgraphHealth } from "../../../lib/platform/graphql.js";
 import { getBillingReconciliationSummary } from "../../../lib/billing/billing-reconciliation.js";
+import { getBillingRuntimeSummary } from "../../../lib/billing/billing-runtime.js";
 import { SUBGRAPH_REQUIRED } from "../../../lib/platform/launch-flags.js";
 import { requireTeamRoles, isErrorResponse } from "../../../lib/auth/api-auth.js";
 
@@ -157,6 +158,55 @@ export async function getGaReadiness(c: Context) {
     detail:
       reconciliationIssues > 0
         ? JSON.stringify(reconciliation.counts)
+        : undefined,
+  });
+
+  const billingRuntime = await getBillingRuntimeSummary({
+    teamId: auth.team.teamId,
+    limit: 25,
+  });
+
+  const failedRecoveryTasks = billingRuntime.recoveryTasks.failed;
+  gates.push({
+    id: "billing_recovery_queue",
+    description: "No failed billing recovery tasks are waiting for manual intervention",
+    passed: failedRecoveryTasks === 0,
+    detail:
+      failedRecoveryTasks > 0
+        ? `${failedRecoveryTasks} failed recovery task(s). Check GET /api/v1/ops/billing/runtime.`
+        : undefined,
+  });
+
+  const staleLifecycleRequests = billingRuntime.failedLifecycleRequests.staleSync;
+  gates.push({
+    id: "billing_lifecycle_sync",
+    description: "No stale subscription lifecycle requests are waiting on missing chain sync",
+    passed: staleLifecycleRequests === 0,
+    detail:
+      staleLifecycleRequests > 0
+        ? `${staleLifecycleRequests} stale lifecycle request(s). Check GET /api/v1/ops/billing/runtime.`
+        : undefined,
+  });
+
+  const recentWebhookFailures = billingRuntime.webhookDeliveries.recentFailures24h;
+  gates.push({
+    id: "webhook_delivery",
+    description: "No webhook deliveries failed in the last 24 hours",
+    passed: recentWebhookFailures === 0,
+    detail:
+      recentWebhookFailures > 0
+        ? `${recentWebhookFailures} webhook delivery failure(s) in the last 24h. Check GET /api/v1/ops/billing/runtime.`
+        : undefined,
+  });
+
+  const remainingLegacyTransitions = billingRuntime.legacyTransitions.open;
+  gates.push({
+    id: "billing_legacy_lifecycle",
+    description: "No open legacy trait-based lifecycle transitions remain unmigrated",
+    passed: remainingLegacyTransitions === 0,
+    detail:
+      remainingLegacyTransitions > 0
+        ? `${remainingLegacyTransitions} open legacy transition(s) still need materialization. Check GET /api/v1/ops/billing/runtime.`
         : undefined,
   });
 

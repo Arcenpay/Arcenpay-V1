@@ -7,6 +7,9 @@ vi.mock("../../db.js", () => ({
       findUnique: vi.fn(),
       update: vi.fn(),
     },
+    subscriptionChangeRequest: {
+      update: vi.fn(),
+    },
     arcenCompany: {
       update: vi.fn(),
     },
@@ -110,6 +113,10 @@ vi.mock("./billing-adjustments.js", () => ({
   ),
 }));
 
+vi.mock("./subscription-change-requests.js", () => ({
+  getLatestSubscriptionChangeRequest: vi.fn(),
+}));
+
 vi.mock("../catalog/catalog-billing.js", () => ({
   resolvePublishedFreePlan: vi.fn(() =>
     Promise.resolve({
@@ -129,6 +136,7 @@ import { db } from "../../db.js";
 import { applyScheduledSubscriptionTransitions } from "./billing-maintenance.js";
 import { deliverWebhook } from "../webhooks/deliver-webhook.js";
 import { recordBillingAdjustment } from "./billing-adjustments.js";
+import { getLatestSubscriptionChangeRequest } from "./subscription-change-requests.js";
 
 const mockDb = db as any;
 
@@ -163,6 +171,7 @@ function makePlan(id: string, overrides: Record<string, unknown> = {}) {
 describe("applyScheduledSubscriptionTransitions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(getLatestSubscriptionChangeRequest).mockResolvedValue(null);
   });
 
   it("skips when no states have due transitions at period end", async () => {
@@ -177,7 +186,7 @@ describe("applyScheduledSubscriptionTransitions", () => {
     expect(result.skipped).toBe(0);
   });
 
-  it("skips a state that has no subscriptionTransition trait", async () => {
+  it("skips a state that has no open subscription change request", async () => {
     const state = makeDbSubscriptionState({
       currentPeriodEnd: new Date("2026-01-15"),
       companyTraits: {},
@@ -200,15 +209,35 @@ describe("applyScheduledSubscriptionTransitions", () => {
       currentPeriodEnd: new Date("2026-01-15"),
       cancelAtPeriodEnd: true,
       companyActivePlanId: "plan-paid",
-      companyTraits: {
-        subscriptionTransition: {
-          mode: "cancel_at_period_end",
-          targetPlanId: null,
-          requestedAt: new Date("2026-01-01").toISOString(),
-        },
-      },
+      companyTraits: {},
     });
     mockDb.subscriptionState.findMany.mockResolvedValue([state]);
+    vi.mocked(getLatestSubscriptionChangeRequest).mockResolvedValue({
+      id: "req-cancel-1",
+      companyId: "company-1",
+      changeType: "cancellation",
+      stage: "requested",
+      source: "self_service",
+      previousPlanId: "plan-paid",
+      targetPlanId: null,
+      previousBillingPeriod: "monthly",
+      targetBillingPeriod: "monthly",
+      requestedAt: new Date("2026-01-01").toISOString(),
+      effectiveAt: new Date("2026-01-15").toISOString(),
+      appliedAt: null,
+      failedAt: null,
+      autopayConfigTxHash: null,
+      accessChangeTxHash: null,
+      paymentTxHash: null,
+      autopayControlTxHash: null,
+      recoveryTaskId: null,
+      pendingVerification: false,
+      pendingRecovery: false,
+      failureReason: null,
+      metadata: { mode: "cancel_at_period_end" },
+      mode: "cancel_at_period_end",
+      targetPlanName: null,
+    } as any);
     const freePlan = makePlan("free-plan-id", { name: "Free", price: "0" });
     mockDb.catalogPlan.findFirst.mockImplementation((args: any) => {
       const id = args?.where?.id;
@@ -262,18 +291,35 @@ describe("applyScheduledSubscriptionTransitions", () => {
       companyActivePlanId: "plan-pro",
       companyTraits: {
         billingPeriod: "monthly",
-        subscriptionTransition: {
-          mode: "period_end_downgrade",
-          targetPlanId: "plan-starter",
-          targetPlanName: "Starter",
-          targetBillingPeriod: "monthly",
-          previousPlanId: "plan-pro",
-          previousBillingPeriod: "monthly",
-          requestedAt: new Date("2026-01-01").toISOString(),
-        },
       },
     });
     mockDb.subscriptionState.findMany.mockResolvedValue([state]);
+    vi.mocked(getLatestSubscriptionChangeRequest).mockResolvedValue({
+      id: "req-downgrade-1",
+      companyId: "company-1",
+      changeType: "downgrade",
+      stage: "requested",
+      source: "self_service",
+      previousPlanId: "plan-pro",
+      targetPlanId: "plan-starter",
+      previousBillingPeriod: "monthly",
+      targetBillingPeriod: "monthly",
+      requestedAt: new Date("2026-01-01").toISOString(),
+      effectiveAt: new Date("2026-01-15").toISOString(),
+      appliedAt: null,
+      failedAt: null,
+      autopayConfigTxHash: null,
+      accessChangeTxHash: null,
+      paymentTxHash: null,
+      autopayControlTxHash: null,
+      recoveryTaskId: null,
+      pendingVerification: false,
+      pendingRecovery: false,
+      failureReason: null,
+      metadata: { mode: "period_end_downgrade" },
+      mode: "period_end_downgrade",
+      targetPlanName: "Starter",
+    } as any);
 
     const targetPlan = makePlan("plan-starter", {
       name: "Starter",
@@ -316,18 +362,35 @@ describe("applyScheduledSubscriptionTransitions", () => {
       companyActivePlanId: "plan-pro",
       companyTraits: {
         billingPeriod: "monthly",
-        subscriptionTransition: {
-          mode: "period_end_downgrade",
-          targetPlanId: "plan-starter",
-          targetPlanName: "Starter",
-          targetBillingPeriod: "monthly",
-          previousPlanId: "plan-pro",
-          previousBillingPeriod: "monthly",
-          requestedAt: new Date("2026-01-01").toISOString(),
-        },
       },
     });
     mockDb.subscriptionState.findMany.mockResolvedValue([state]);
+    vi.mocked(getLatestSubscriptionChangeRequest).mockResolvedValue({
+      id: "req-downgrade-credit-1",
+      companyId: "company-1",
+      changeType: "downgrade",
+      stage: "requested",
+      source: "self_service",
+      previousPlanId: "plan-pro",
+      targetPlanId: "plan-starter",
+      previousBillingPeriod: "monthly",
+      targetBillingPeriod: "monthly",
+      requestedAt: new Date("2026-01-01").toISOString(),
+      effectiveAt: new Date("2026-01-31").toISOString(),
+      appliedAt: null,
+      failedAt: null,
+      autopayConfigTxHash: null,
+      accessChangeTxHash: null,
+      paymentTxHash: null,
+      autopayControlTxHash: null,
+      recoveryTaskId: null,
+      pendingVerification: false,
+      pendingRecovery: false,
+      failureReason: null,
+      metadata: { mode: "period_end_downgrade" },
+      mode: "period_end_downgrade",
+      targetPlanName: "Starter",
+    } as any);
 
     const targetPlan = makePlan("plan-starter", { name: "Starter", price: "9.99" });
     const previousPlan = makePlan("plan-pro", { name: "Pro", price: "29.99" });
@@ -362,15 +425,35 @@ describe("applyScheduledSubscriptionTransitions", () => {
       currentPeriodEnd: new Date("2026-01-15"),
       companyActivePlanId: "plan-pro",
       cancelAtPeriodEnd: false,
-      companyTraits: {
-        subscriptionTransition: {
-          mode: "next_renewal_on_chain",
-          targetPlanId: "plan-starter",
-          requestedAt: new Date("2026-01-01").toISOString(),
-        },
-      },
+      companyTraits: {},
     });
     mockDb.subscriptionState.findMany.mockResolvedValue([state]);
+    vi.mocked(getLatestSubscriptionChangeRequest).mockResolvedValue({
+      id: "req-renewal-1",
+      companyId: "company-1",
+      changeType: "billing_period_change",
+      stage: "requested",
+      source: "self_service",
+      previousPlanId: "plan-pro",
+      targetPlanId: "plan-starter",
+      previousBillingPeriod: "monthly",
+      targetBillingPeriod: "annual",
+      requestedAt: new Date("2026-01-01").toISOString(),
+      effectiveAt: new Date("2026-01-15").toISOString(),
+      appliedAt: null,
+      failedAt: null,
+      autopayConfigTxHash: null,
+      accessChangeTxHash: null,
+      paymentTxHash: null,
+      autopayControlTxHash: null,
+      recoveryTaskId: null,
+      pendingVerification: false,
+      pendingRecovery: false,
+      failureReason: null,
+      metadata: { mode: "next_renewal_on_chain" },
+      mode: "next_renewal_on_chain",
+      targetPlanName: "Starter",
+    } as any);
 
     const result = await applyScheduledSubscriptionTransitions({
       teamId: "team-1",
@@ -395,14 +478,35 @@ describe("applyScheduledSubscriptionTransitions", () => {
     const state = makeDbSubscriptionState({
       currentPeriodEnd: new Date("2026-01-15"),
       companyActivePlanId: "plan-paid",
-      companyTraits: {
-        subscriptionTransition: {
-          mode: "period_end_downgrade",
-          targetPlanId: "archived-plan",
-        },
-      },
+      companyTraits: {},
     });
     mockDb.subscriptionState.findMany.mockResolvedValue([state]);
+    vi.mocked(getLatestSubscriptionChangeRequest).mockResolvedValue({
+      id: "req-downgrade-missing-1",
+      companyId: "company-1",
+      changeType: "downgrade",
+      stage: "requested",
+      source: "self_service",
+      previousPlanId: "plan-paid",
+      targetPlanId: "archived-plan",
+      previousBillingPeriod: "monthly",
+      targetBillingPeriod: "monthly",
+      requestedAt: new Date("2026-01-01").toISOString(),
+      effectiveAt: new Date("2026-01-15").toISOString(),
+      appliedAt: null,
+      failedAt: null,
+      autopayConfigTxHash: null,
+      accessChangeTxHash: null,
+      paymentTxHash: null,
+      autopayControlTxHash: null,
+      recoveryTaskId: null,
+      pendingVerification: false,
+      pendingRecovery: false,
+      failureReason: null,
+      metadata: { mode: "period_end_downgrade" },
+      mode: "period_end_downgrade",
+      targetPlanName: null,
+    } as any);
     mockDb.catalogPlan.findFirst.mockResolvedValue(null);
 
     const result = await applyScheduledSubscriptionTransitions({
@@ -419,15 +523,35 @@ describe("applyScheduledSubscriptionTransitions", () => {
       currentPeriodEnd: new Date("2026-01-15"),
       cancelAtPeriodEnd: true,
       companyActivePlanId: "plan-paid",
-      companyTraits: {
-        subscriptionTransition: {
-          mode: "cancel_at_period_end",
-          targetPlanId: null,
-          requestedAt: new Date("2026-01-01").toISOString(),
-        },
-      },
+      companyTraits: {},
     });
     mockDb.subscriptionState.findMany.mockResolvedValue([state]);
+    vi.mocked(getLatestSubscriptionChangeRequest).mockResolvedValue({
+      id: "req-cancel-fallback-1",
+      companyId: "company-1",
+      changeType: "cancellation",
+      stage: "requested",
+      source: "self_service",
+      previousPlanId: "plan-paid",
+      targetPlanId: null,
+      previousBillingPeriod: "monthly",
+      targetBillingPeriod: "monthly",
+      requestedAt: new Date("2026-01-01").toISOString(),
+      effectiveAt: new Date("2026-01-15").toISOString(),
+      appliedAt: null,
+      failedAt: null,
+      autopayConfigTxHash: null,
+      accessChangeTxHash: null,
+      paymentTxHash: null,
+      autopayControlTxHash: null,
+      recoveryTaskId: null,
+      pendingVerification: false,
+      pendingRecovery: false,
+      failureReason: null,
+      metadata: { mode: "cancel_at_period_end" },
+      mode: "cancel_at_period_end",
+      targetPlanName: null,
+    } as any);
     const freePlan = makePlan("free-plan-id", { name: "Free", price: "0" });
     mockDb.catalogPlan.findFirst.mockImplementation((args: any) => {
       const id = args?.where?.id;

@@ -39,6 +39,7 @@ import {
   createSubscriptionChangeRequest,
   findSimilarOpenSubscriptionChangeRequest,
   getLatestSubscriptionChangeRequest,
+  stripLegacySubscriptionLifecycleTraits,
 } from "../../lib/billing/subscription-change-requests.js";
 import {
   normalizeTxHash,
@@ -1232,86 +1233,96 @@ export async function handleCompanyPlanRequest(
           proration: pendingProration,
         };
 
-        const changeRequest = existingRequest
-          ? await db.subscriptionChangeRequest.update({
-              where: { id: existingRequest.id },
-              data: {
-                stage: "PENDING_VERIFICATION",
-                previousPlanId: previousPlanId ?? null,
-                targetPlanId: plan.id,
-                previousBillingPeriod: currentBillingPeriod,
-                targetBillingPeriod: normalizedBillingPeriod,
-                effectiveAt: pendingEffectiveAt,
-                autopayConfigTxHash: normalizedAutopayConfigTxHash,
-                pendingVerification: true,
-                failureReason: null,
-                metadata: toPrismaJson(transitionMetadata),
-              },
-            })
-          : await createSubscriptionChangeRequest({
+        const now = new Date();
+        const changeRequest = await db.$transaction(async (tx) => {
+          const nextRequest = existingRequest
+            ? await tx.subscriptionChangeRequest.update({
+                where: { id: existingRequest.id },
+                data: {
+                  stage: "PENDING_VERIFICATION",
+                  previousPlanId: previousPlanId ?? null,
+                  targetPlanId: plan.id,
+                  previousBillingPeriod: currentBillingPeriod,
+                  targetBillingPeriod: normalizedBillingPeriod,
+                  effectiveAt: pendingEffectiveAt,
+                  autopayConfigTxHash: normalizedAutopayConfigTxHash,
+                  pendingVerification: true,
+                  failureReason: null,
+                  metadata: toPrismaJson(transitionMetadata),
+                },
+              })
+            : await createSubscriptionChangeRequest(
+                {
+                  teamId,
+                  environmentId:
+                    company.subscriptionState?.environmentId ??
+                    company.environmentId ??
+                    plan.environmentId ??
+                    null,
+                  companyId,
+                  subscriptionStateId: company.subscriptionState?.id ?? null,
+                  changeType: pendingChangeType,
+                  stage: "pending_verification",
+                  source: "self_service",
+                  previousPlanId: previousPlanId ?? null,
+                  targetPlanId: plan.id,
+                  previousBillingPeriod: currentBillingPeriod,
+                  targetBillingPeriod: normalizedBillingPeriod,
+                  requestedAt: now,
+                  effectiveAt: pendingEffectiveAt,
+                  autopayConfigTxHash: normalizedAutopayConfigTxHash,
+                  pendingVerification: true,
+                  metadata: transitionMetadata,
+                },
+                tx,
+              );
+
+          await tx.arcenCompany.update({
+            where: { id: companyId },
+            data: {
+              traits: toPrismaJson(
+                stripLegacySubscriptionLifecycleTraits(currentTraits),
+              ),
+            },
+          });
+
+          await upsertSubscriptionLedgerState(
+            {
               teamId,
-              environmentId:
-                company.subscriptionState?.environmentId ??
-                company.environmentId ??
-                plan.environmentId ??
-                null,
               companyId,
-              subscriptionStateId: company.subscriptionState?.id ?? null,
-              changeType: pendingChangeType,
-              stage: "pending_verification",
-              source: "self_service",
-              previousPlanId: previousPlanId ?? null,
-              targetPlanId: plan.id,
-              previousBillingPeriod: currentBillingPeriod,
-              targetBillingPeriod: normalizedBillingPeriod,
-              requestedAt: new Date(),
-              effectiveAt: pendingEffectiveAt,
-              autopayConfigTxHash: normalizedAutopayConfigTxHash,
-              pendingVerification: true,
-              metadata: transitionMetadata,
-            });
+              walletAddress: companyPaymentAccount,
+              status: "ACTIVE",
+              catalogPlanId: currentPlan?.id ?? previousPlanId ?? null,
+              onChainPlanId:
+                company.subscriptionState?.onChainPlanId ??
+                currentPlan?.onChainPlanId ??
+                null,
+              onChainTokenId: company.subscriptionState?.onChainTokenId ?? null,
+              currentPeriodEnd:
+                company.subscriptionState?.currentPeriodEnd ?? null,
+              pastDueAt: null,
+              graceEndsAt: null,
+              lastEvent: "subscription.plan_change_pending_verification",
+              lastEventAt: now,
+              lastSourceTxHash: normalizedAutopayConfigTxHash,
+              metadata: {
+                source: "self_service",
+                transitionId: nextRequest.id,
+                billingPeriod: currentBillingPeriod,
+                previousBillingPeriod: currentBillingPeriod,
+                pendingBillingPeriod: normalizedBillingPeriod,
+                pendingCatalogPlanId: plan.id,
+                pendingOnChainPlanId: plan.onChainPlanId,
+                previousCatalogPlanId: previousPlanId ?? null,
+                pendingVerification: true,
+              },
+            },
+            tx,
+          );
+
+          return nextRequest;
+        });
         transition.transitionId = changeRequest.id;
-
-        await db.arcenCompany.update({
-          where: { id: companyId },
-          data: {
-            traits: toPrismaJson({
-              ...currentTraits,
-              pendingSubscriptionChangeRequestId: changeRequest.id,
-              subscriptionTransition: transition,
-            }),
-          },
-        });
-
-        await upsertSubscriptionLedgerState({
-          teamId,
-          companyId,
-          walletAddress: companyPaymentAccount,
-          status: "ACTIVE",
-          catalogPlanId: currentPlan?.id ?? previousPlanId ?? null,
-          onChainPlanId:
-            company.subscriptionState?.onChainPlanId ??
-            currentPlan?.onChainPlanId ??
-            null,
-          onChainTokenId: company.subscriptionState?.onChainTokenId ?? null,
-          currentPeriodEnd: company.subscriptionState?.currentPeriodEnd ?? null,
-          pastDueAt: null,
-          graceEndsAt: null,
-          lastEvent: "subscription.plan_change_pending_verification",
-          lastEventAt: new Date(),
-          lastSourceTxHash: normalizedAutopayConfigTxHash,
-          metadata: {
-            source: "self_service",
-            transitionId: changeRequest.id,
-            billingPeriod: currentBillingPeriod,
-            previousBillingPeriod: currentBillingPeriod,
-            pendingBillingPeriod: normalizedBillingPeriod,
-            pendingCatalogPlanId: plan.id,
-            pendingOnChainPlanId: plan.onChainPlanId,
-            previousCatalogPlanId: previousPlanId ?? null,
-            pendingVerification: true,
-          },
-        });
 
         deliverWebhook(teamId, "company.plan.changed", {
           companyId,
@@ -1525,9 +1536,8 @@ export async function handleCompanyPlanRequest(
               throw new Error("PLAN_CHANGE_TX_REUSED");
             }
 
-            const nextTraits: Record<string, unknown> = { ...latestTraits };
-            delete nextTraits.subscriptionTransition;
-            delete nextTraits.pendingSubscriptionChangeRequestId;
+            const nextTraits: Record<string, unknown> =
+              stripLegacySubscriptionLifecycleTraits(latestTraits);
             nextTraits.billingPeriod = normalizedBillingPeriod;
             nextTraits.billingVerifiedTxHashes = [
               ...latestConsumedPaymentTxHashes,
@@ -1855,7 +1865,7 @@ export async function handleCompanyPlanRequest(
     transition.transitionId = changeRequest.id;
 
     const nextTraits: Record<string, unknown> = {
-      ...currentTraits,
+      ...stripLegacySubscriptionLifecycleTraits(currentTraits),
       billingPeriod: applyAccessPlanImmediately
         ? normalizedBillingPeriod
         : currentBillingPeriod,
@@ -1863,8 +1873,6 @@ export async function handleCompanyPlanRequest(
         ...consumedPaymentTxHashes,
         normalizedAutopayConfigTxHash,
       ].slice(-20),
-      pendingSubscriptionChangeRequestId: changeRequest.id,
-      subscriptionTransition: transition,
     };
 
     await db.arcenCompany.update({
@@ -2045,61 +2053,67 @@ export async function handleCompanyPlanRequest(
       source: "self_service",
     };
 
-    const changeRequest = existingRequest
-      ? await db.subscriptionChangeRequest.update({
-          where: { id: existingRequest.id },
-          data: {
-            stage: "REQUESTED",
-            targetPlanId: plan.id,
-            previousPlanId: previousPlanId ?? null,
-            previousBillingPeriod: currentBillingPeriod,
-            targetBillingPeriod: normalizedBillingPeriod,
-            effectiveAt: company.subscriptionState?.currentPeriodEnd ?? null,
-            failureReason: null,
-            metadata: toPrismaJson({
-              ...transition,
-              mode: "period_end_downgrade",
-              requiresOnChainSync: false,
-            }),
-          },
-        })
-      : await createSubscriptionChangeRequest({
-          teamId,
-          environmentId:
-            company.subscriptionState?.environmentId ??
-            company.environmentId ??
-            plan.environmentId ??
-            null,
-          companyId,
-          subscriptionStateId: company.subscriptionState?.id ?? null,
-          changeType: "downgrade",
-          stage: "requested",
-          source: "self_service",
-          previousPlanId: previousPlanId ?? null,
-          targetPlanId: plan.id,
-          previousBillingPeriod: currentBillingPeriod,
-          targetBillingPeriod: normalizedBillingPeriod,
-          requestedAt: new Date(),
-          effectiveAt: company.subscriptionState?.currentPeriodEnd ?? null,
-          metadata: {
-            ...transition,
-            mode: "period_end_downgrade",
-            requiresOnChainSync: false,
-          },
-        });
-    transition.transitionId = changeRequest.id;
+    const now = new Date();
+    const changeRequest = await db.$transaction(async (tx) => {
+      const nextRequest = existingRequest
+        ? await tx.subscriptionChangeRequest.update({
+            where: { id: existingRequest.id },
+            data: {
+              stage: "REQUESTED",
+              targetPlanId: plan.id,
+              previousPlanId: previousPlanId ?? null,
+              previousBillingPeriod: currentBillingPeriod,
+              targetBillingPeriod: normalizedBillingPeriod,
+              effectiveAt: company.subscriptionState?.currentPeriodEnd ?? null,
+              failureReason: null,
+              metadata: toPrismaJson({
+                ...transition,
+                mode: "period_end_downgrade",
+                requiresOnChainSync: false,
+              }),
+            },
+          })
+        : await createSubscriptionChangeRequest(
+            {
+              teamId,
+              environmentId:
+                company.subscriptionState?.environmentId ??
+                company.environmentId ??
+                plan.environmentId ??
+                null,
+              companyId,
+              subscriptionStateId: company.subscriptionState?.id ?? null,
+              changeType: "downgrade",
+              stage: "requested",
+              source: "self_service",
+              previousPlanId: previousPlanId ?? null,
+              targetPlanId: plan.id,
+              previousBillingPeriod: currentBillingPeriod,
+              targetBillingPeriod: normalizedBillingPeriod,
+              requestedAt: now,
+              effectiveAt: company.subscriptionState?.currentPeriodEnd ?? null,
+              metadata: {
+                ...transition,
+                mode: "period_end_downgrade",
+                requiresOnChainSync: false,
+              },
+            },
+            tx,
+          );
 
-    await db.arcenCompany.update({
-      where: { id: companyId },
-      data: {
-        traits: toPrismaJson({
-          ...currentTraits,
-          billingPeriod: currentBillingPeriod,
-          pendingSubscriptionChangeRequestId: changeRequest.id,
-          subscriptionTransition: transition,
-        }),
-      },
+      await tx.arcenCompany.update({
+        where: { id: companyId },
+        data: {
+          traits: toPrismaJson({
+            ...stripLegacySubscriptionLifecycleTraits(currentTraits),
+            billingPeriod: currentBillingPeriod,
+          }),
+        },
+      });
+
+      return nextRequest;
     });
+    transition.transitionId = changeRequest.id;
 
     deliverWebhook(teamId, "company.plan.changed", {
       companyId,
@@ -2145,9 +2159,7 @@ export async function handleCompanyPlanRequest(
     );
   }
 
-  const nextTraits = { ...currentTraits };
-  delete nextTraits.subscriptionTransition;
-  delete nextTraits.pendingSubscriptionChangeRequestId;
+  const nextTraits = stripLegacySubscriptionLifecycleTraits(currentTraits);
   nextTraits.billingPeriod = normalizedBillingPeriod;
   if (txHash) {
     const normalizedAppliedTxHash = normalizeTxHash(txHash);

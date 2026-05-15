@@ -2,6 +2,9 @@ import { db } from "../../db.js";
 import { toPrismaJson } from "../../utils/prisma-json.js";
 import { ingestBillingEvent } from "./billing-events.js";
 import {
+  updateSubscriptionChangeRequestStage,
+} from "./subscription-change-requests.js";
+import {
   recordSuccessfulPayment,
   upsertSubscriptionLedgerState,
 } from "./billing-ledger.js";
@@ -76,6 +79,20 @@ interface SubscriptionActivationRecoveryPayload {
   previousPlanId?: string | null;
 }
 
+interface SubscriptionLifecycleRecoveryPayload {
+  requestId: string;
+  companyId: string;
+  changeType?:
+    | "upgrade"
+    | "downgrade"
+    | "cancellation"
+    | "resume"
+    | "billing_period_change"
+    | null;
+  targetPlanId?: string | null;
+  effectiveAt?: string | null;
+}
+
 export interface FinalizeSubscriptionActivationInput {
   teamId: string;
   payload: SubscriptionActivationRecoveryPayload;
@@ -118,6 +135,65 @@ function parseSubscriptionActivationPayload(
     previousPlanId:
       typeof record.previousPlanId === "string" ? record.previousPlanId : null,
   };
+}
+
+function parseSubscriptionLifecyclePayload(
+  payload: unknown,
+): SubscriptionLifecycleRecoveryPayload {
+  const record = asRecord(payload);
+  return {
+    requestId: String(record.requestId ?? ""),
+    companyId: String(record.companyId ?? ""),
+    changeType:
+      typeof record.changeType === "string" ? record.changeType as any : null,
+    targetPlanId:
+      typeof record.targetPlanId === "string" ? record.targetPlanId : null,
+    effectiveAt:
+      typeof record.effectiveAt === "string" ? record.effectiveAt : null,
+  };
+}
+
+function isOpenLifecycleStage(stage: unknown): boolean {
+  return (
+    stage === "REQUESTED" ||
+    stage === "PENDING_VERIFICATION" ||
+    stage === "PENDING_RECOVERY"
+  );
+}
+
+async function clearPendingLifecycleTraits(input: {
+  companyId: string;
+  requestId: string;
+}) {
+  const company = await db.arcenCompany.findUnique({
+    where: { id: input.companyId },
+    select: { traits: true },
+  });
+  if (!company) return;
+
+  const traits = asRecord(company.traits);
+  const transition = asRecord(traits.subscriptionTransition);
+  const transitionId =
+    typeof transition.transitionId === "string" ? transition.transitionId : null;
+  const pendingId =
+    typeof traits.pendingSubscriptionChangeRequestId === "string"
+      ? traits.pendingSubscriptionChangeRequestId
+      : null;
+
+  if (transitionId !== input.requestId && pendingId !== input.requestId) {
+    return;
+  }
+
+  const nextTraits = { ...traits };
+  delete nextTraits.pendingSubscriptionChangeRequestId;
+  if (transitionId === input.requestId) {
+    delete nextTraits.subscriptionTransition;
+  }
+
+  await db.arcenCompany.update({
+    where: { id: input.companyId },
+    data: { traits: toPrismaJson(nextTraits) },
+  });
 }
 
 export async function enqueueSubscriptionActivationRecovery(input: {
@@ -187,6 +263,212 @@ async function processSubscriptionActivationTask(input: {
     payload: input.payload,
     source: "billing-recovery",
   });
+}
+
+async function processSubscriptionLifecycleTask(input: {
+  taskId: string;
+  teamId: string;
+  payload: SubscriptionLifecycleRecoveryPayload;
+  now: Date;
+}) {
+  const request = await db.subscriptionChangeRequest.findUnique({
+    where: { id: input.payload.requestId },
+    include: {
+      company: {
+        select: {
+          id: true,
+          environmentId: true,
+          activePlanId: true,
+          traits: true,
+          subscriptionState: {
+            select: {
+              id: true,
+              status: true,
+              catalogPlanId: true,
+              currentPeriodEnd: true,
+              cancelAtPeriodEnd: true,
+              cancelledAt: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!request || request.teamId !== input.teamId) {
+    throw new Error(
+      `Billing recovery request not found for lifecycle task ${input.taskId}`,
+    );
+  }
+
+  if (!isOpenLifecycleStage(request.stage)) {
+    return {
+      status: "already_terminal",
+      requestId: request.id,
+      stage: String(request.stage).toLowerCase(),
+    };
+  }
+
+  const company = request.company;
+  const subscriptionState = company?.subscriptionState ?? null;
+  const metadata = asRecord(request.metadata);
+  const targetPlanId = request.targetPlanId ?? input.payload.targetPlanId ?? null;
+  const effectiveAt =
+    request.effectiveAt ??
+    parseDate(input.payload.effectiveAt) ??
+    request.requestedAt;
+  const effectiveAgeHours = effectiveAt
+    ? (input.now.getTime() - effectiveAt.getTime()) / (1000 * 60 * 60)
+    : 0;
+
+  let shouldApply = false;
+  let shouldFail = false;
+  let failureReason: string | null = null;
+
+  switch (request.changeType) {
+    case "UPGRADE":
+    case "BILLING_PERIOD_CHANGE":
+      shouldApply =
+        Boolean(targetPlanId) &&
+        (company?.activePlanId === targetPlanId ||
+          subscriptionState?.catalogPlanId === targetPlanId);
+      if (!shouldApply && effectiveAgeHours >= 24) {
+        shouldFail = true;
+        failureReason = "recovery_failed:applied_upgrade_not_observed";
+      }
+      break;
+    case "DOWNGRADE":
+      shouldApply =
+        Boolean(targetPlanId) &&
+        company?.activePlanId === targetPlanId &&
+        subscriptionState?.catalogPlanId === targetPlanId;
+      if (!shouldApply && effectiveAgeHours >= 48) {
+        shouldFail = true;
+        failureReason = "stale_sync:downgrade_apply_not_observed";
+      }
+      break;
+    case "CANCELLATION":
+      shouldApply =
+        subscriptionState?.status === "CANCELLED" ||
+        (Boolean(targetPlanId) &&
+          company?.activePlanId === targetPlanId &&
+          Boolean(subscriptionState?.cancelledAt));
+      if (!shouldApply && effectiveAgeHours >= 48) {
+        shouldFail = true;
+        failureReason = "stale_sync:cancellation_apply_not_observed";
+      }
+      break;
+    case "RESUME":
+      shouldApply = subscriptionState?.cancelAtPeriodEnd === false;
+      if (!shouldApply && effectiveAgeHours >= 24) {
+        shouldFail = true;
+        failureReason = "recovery_failed:resume_apply_not_observed";
+      }
+      break;
+    default:
+      shouldFail = true;
+      failureReason = "recovery_failed:unsupported_change_type";
+      break;
+  }
+
+  if (shouldApply) {
+    await updateSubscriptionChangeRequestStage({
+      requestId: request.id,
+      stage: "applied",
+      effectiveAt: request.effectiveAt ?? input.now,
+      appliedAt: input.now,
+      recoveryTaskId: input.taskId,
+      pendingVerification: false,
+      failureReason: null,
+      metadata: {
+        ...metadata,
+        recoveryCompletedAt: input.now.toISOString(),
+        recoverySource: "billing-recovery",
+      },
+    });
+
+    await clearPendingLifecycleTraits({
+      companyId: request.companyId,
+      requestId: request.id,
+    });
+
+    const payload = {
+      companyId: request.companyId,
+      environmentId: request.environmentId ?? company?.environmentId ?? null,
+      transitionId: request.id,
+      changeType: String(request.changeType).toLowerCase(),
+      stage: "applied",
+      previousPlanId: request.previousPlanId ?? null,
+      targetPlanId: request.targetPlanId ?? null,
+      planId: company?.activePlanId ?? request.targetPlanId ?? null,
+      mode:
+        typeof metadata.mode === "string" && metadata.mode.trim()
+          ? metadata.mode.trim()
+          : "recovered",
+      scheduled:
+        request.changeType === "DOWNGRADE" || request.changeType === "CANCELLATION",
+      effectiveAt: (request.effectiveAt ?? input.now).toISOString(),
+      source: "billing-recovery",
+      recoveryTaskId: input.taskId,
+    } as Record<string, unknown>;
+
+    deliverWebhook(input.teamId, "company.plan.changed", payload).catch(
+      () => {},
+    );
+    if (request.changeType === "CANCELLATION") {
+      deliverWebhook(input.teamId, "company.plan.cancelled", payload).catch(
+        () => {},
+      );
+    }
+
+    return {
+      status: "applied",
+      requestId: request.id,
+    };
+  }
+
+  if (shouldFail) {
+    await updateSubscriptionChangeRequestStage({
+      requestId: request.id,
+      stage: "failed",
+      failedAt: input.now,
+      recoveryTaskId: input.taskId,
+      pendingVerification: false,
+      failureReason,
+      metadata: {
+        ...metadata,
+        recoveryFailedAt: input.now.toISOString(),
+        recoverySource: "billing-recovery",
+      },
+    });
+
+    await clearPendingLifecycleTraits({
+      companyId: request.companyId,
+      requestId: request.id,
+    });
+
+    return {
+      status: "failed",
+      requestId: request.id,
+      failureReason,
+    };
+  }
+
+  await updateSubscriptionChangeRequestStage({
+    requestId: request.id,
+    stage: "pending_recovery",
+    recoveryTaskId: input.taskId,
+    metadata: {
+      ...metadata,
+      recoveryObservedAt: input.now.toISOString(),
+      recoverySource: "billing-recovery",
+    },
+  });
+
+  return {
+    status: "pending_recovery",
+    requestId: request.id,
+  };
 }
 
 export async function finalizeSubscriptionActivation(
@@ -385,20 +667,13 @@ export async function processBillingRecoveryTask(input: {
       case "SUBSCRIPTION_PLAN_CHANGE":
       case "SUBSCRIPTION_CANCELLATION":
       case "SUBSCRIPTION_RESUME":
-        await db.billingRecoveryTask.update({
-          where: { id: task.id },
-          data: {
-            status: "COMPLETED",
-            completedAt: new Date(),
-            nextAttemptAt: null,
-            lastError: "Recovery task kind not yet supported — completed as no-op after associated on-chain events were processed via sync.",
-          },
+        await processSubscriptionLifecycleTask({
+          taskId: task.id,
+          teamId: task.teamId,
+          payload: parseSubscriptionLifecyclePayload(task.payload),
+          now,
         });
-        return {
-          ok: true,
-          claimed: true,
-          task,
-        };
+        break;
       default:
         throw new Error(`Unsupported billing recovery task kind: ${task.kind}`);
     }

@@ -90,6 +90,15 @@ function asRecord(value: unknown): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
+export function stripLegacySubscriptionLifecycleTraits(
+  traits: unknown,
+): Record<string, unknown> {
+  const nextTraits = { ...asRecord(traits) };
+  delete nextTraits.subscriptionTransition;
+  delete nextTraits.pendingSubscriptionChangeRequestId;
+  return nextTraits;
+}
+
 export function normalizeLifecycleBillingPeriod(
   value: unknown,
 ): SubscriptionLifecycleBillingPeriod | null {
@@ -252,7 +261,10 @@ export function serializeSubscriptionChangeRequest(
   const pendingVerification = Boolean(request.pendingVerification);
 
   return {
-    id: typeof request.id === "string" ? request.id : "legacy-transition",
+    id:
+      typeof request.id === "string" && request.id.trim()
+        ? request.id
+        : "subscription-change-request",
     teamId: typeof request.teamId === "string" ? request.teamId : null,
     environmentId:
       typeof request.environmentId === "string" ? request.environmentId : null,
@@ -423,6 +435,196 @@ function legacyTransitionToRequest(input: {
   };
 }
 
+function legacyTransitionToCreateInput(input: {
+  teamId: string;
+  environmentId?: string | null;
+  companyId: string;
+  subscriptionStateId?: string | null;
+  traits: unknown;
+}): SubscriptionChangeCreateInput | null {
+  const legacy = legacyTransitionToRequest(input);
+  if (!legacy) return null;
+
+  return {
+    teamId: input.teamId,
+    environmentId: input.environmentId ?? null,
+    companyId: input.companyId,
+    subscriptionStateId: input.subscriptionStateId ?? null,
+    changeType: legacy.changeType,
+    stage: legacy.stage,
+    source: legacy.source,
+    previousPlanId: legacy.previousPlanId,
+    targetPlanId: legacy.targetPlanId,
+    previousBillingPeriod: legacy.previousBillingPeriod,
+    targetBillingPeriod: legacy.targetBillingPeriod,
+    requestedAt: legacy.requestedAt ? new Date(legacy.requestedAt) : new Date(),
+    effectiveAt: legacy.effectiveAt ? new Date(legacy.effectiveAt) : null,
+    appliedAt: legacy.appliedAt ? new Date(legacy.appliedAt) : null,
+    failedAt: legacy.failedAt ? new Date(legacy.failedAt) : null,
+    autopayConfigTxHash: legacy.autopayConfigTxHash,
+    accessChangeTxHash: legacy.accessChangeTxHash,
+    paymentTxHash: legacy.paymentTxHash,
+    autopayControlTxHash: legacy.autopayControlTxHash,
+    pendingVerification: legacy.pendingVerification,
+    failureReason: legacy.failureReason,
+    metadata: {
+      ...legacy.metadata,
+      legacyMaterializedAt: new Date().toISOString(),
+      legacyMaterializedFromTraits: true,
+      legacyMaterializedMode: legacy.mode,
+    },
+  };
+}
+
+function isOpenLegacyStage(
+  stage: SubscriptionLifecycleStage | null | undefined,
+): boolean {
+  return (
+    stage === "requested" ||
+    stage === "pending_verification" ||
+    stage === "pending_recovery"
+  );
+}
+
+export async function countLegacySubscriptionTransitions(input: {
+  teamId: string;
+  client?: DbClient;
+}) {
+  const client = input.client ?? db;
+  const companies = await client.arcenCompany.findMany({
+    where: { teamId: input.teamId },
+    select: { traits: true },
+  });
+
+  let total = 0;
+  let open = 0;
+  for (const company of companies) {
+    const legacy = legacyTransitionToRequest({
+      teamId: input.teamId,
+      companyId: "",
+      traits: company.traits,
+    });
+    if (!legacy) continue;
+    total += 1;
+    if (isOpenLegacyStage(legacy.stage)) open += 1;
+  }
+
+  return { total, open };
+}
+
+export async function migrateLegacySubscriptionChangeRequests(input: {
+  teamId: string;
+  limit?: number;
+  client?: DbClient;
+}) {
+  const client = input.client ?? db;
+  const companies = await client.arcenCompany.findMany({
+    where: { teamId: input.teamId },
+    orderBy: { createdAt: "asc" },
+    take: input.limit,
+    select: {
+      id: true,
+      teamId: true,
+      environmentId: true,
+      traits: true,
+      subscriptionState: { select: { id: true } },
+    },
+  });
+
+  let scanned = 0;
+  let created = 0;
+  let cleaned = 0;
+  const results: Array<{
+    companyId: string;
+    action: "created_request" | "cleaned_traits" | "skipped";
+    requestId?: string | null;
+    reason?: string;
+  }> = [];
+
+  for (const company of companies) {
+    scanned += 1;
+    const currentTraits = asRecord(company.traits);
+    const legacy = legacyTransitionToRequest({
+      teamId: company.teamId,
+      environmentId: company.environmentId ?? null,
+      companyId: company.id,
+      subscriptionStateId: company.subscriptionState?.id ?? null,
+      traits: company.traits,
+    });
+    const hadLegacyFields =
+      Object.keys(asRecord(currentTraits.subscriptionTransition)).length > 0 ||
+      typeof currentTraits.pendingSubscriptionChangeRequestId === "string";
+
+    let requestId: string | null = null;
+    if (legacy) {
+      const existing = await client.subscriptionChangeRequest.findFirst({
+        where: {
+          teamId: company.teamId,
+          companyId: company.id,
+          changeType: toDbChangeType(legacy.changeType),
+          stage: toDbStage(legacy.stage),
+          ...(legacy.targetPlanId ? { targetPlanId: legacy.targetPlanId } : {}),
+        },
+        orderBy: [{ requestedAt: "desc" }, { createdAt: "desc" }],
+      });
+
+      if (existing) {
+        requestId = existing.id;
+      } else {
+        const createInput = legacyTransitionToCreateInput({
+          teamId: company.teamId,
+          environmentId: company.environmentId ?? null,
+          companyId: company.id,
+          subscriptionStateId: company.subscriptionState?.id ?? null,
+          traits: company.traits,
+        });
+        if (createInput) {
+          const createdRequest = await createSubscriptionChangeRequest(
+            createInput,
+            client,
+          );
+          requestId = createdRequest.id;
+          created += 1;
+          results.push({
+            companyId: company.id,
+            action: "created_request",
+            requestId,
+          });
+        }
+      }
+    }
+
+    if (hadLegacyFields) {
+      const nextTraits = { ...currentTraits };
+      delete nextTraits.subscriptionTransition;
+      delete nextTraits.pendingSubscriptionChangeRequestId;
+      await client.arcenCompany.update({
+        where: { id: company.id },
+        data: { traits: toPrismaJson(nextTraits) },
+      });
+      cleaned += 1;
+      results.push({
+        companyId: company.id,
+        action: "cleaned_traits",
+        requestId,
+      });
+    } else if (!legacy) {
+      results.push({
+        companyId: company.id,
+        action: "skipped",
+        reason: "no_legacy_transition",
+      });
+    }
+  }
+
+  return {
+    scanned,
+    created,
+    cleaned,
+    results,
+  };
+}
+
 export async function getLatestSubscriptionChangeRequest(input: {
   teamId: string;
   companyId: string;
@@ -452,25 +654,7 @@ export async function getLatestSubscriptionChangeRequest(input: {
   if (request) {
     return serializeSubscriptionChangeRequest(request);
   }
-
-  const company = await client.arcenCompany.findFirst({
-    where: { id: input.companyId, teamId: input.teamId },
-    select: {
-      teamId: true,
-      environmentId: true,
-      traits: true,
-      subscriptionState: { select: { id: true } },
-    },
-  });
-
-  if (!company) return null;
-  return legacyTransitionToRequest({
-    teamId: company.teamId,
-    environmentId: company.environmentId ?? null,
-    companyId: input.companyId,
-    subscriptionStateId: company.subscriptionState?.id ?? null,
-    traits: company.traits,
-  });
+  return null;
 }
 
 export async function createSubscriptionChangeRequest(
@@ -572,4 +756,3 @@ export async function findSimilarOpenSubscriptionChangeRequest(input: {
     orderBy: [{ requestedAt: "desc" }, { createdAt: "desc" }],
   });
 }
-

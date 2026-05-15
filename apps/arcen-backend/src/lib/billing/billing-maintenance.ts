@@ -110,13 +110,14 @@ export async function applyScheduledSubscriptionTransitions(input: {
       teamId: input.teamId,
       companyId: state.companyId,
     });
-    const transition = changeRequest ?? asRecord(traits.subscriptionTransition);
+    const transition = changeRequest;
     const transitionMetadata = readTransitionMetadata(
-      transition as Record<string, unknown>,
+      transition as Record<string, unknown> | null | undefined,
     );
-    const mode = typeof transition.mode === "string" ? transition.mode : null;
+    const mode = typeof transition?.mode === "string" ? transition.mode : null;
     const pendingVerification = Boolean(
-      (transition as Record<string, unknown>).pendingVerification ??
+      (transition as Record<string, unknown> | null | undefined)
+        ?.pendingVerification ??
         transitionMetadata.pendingVerification,
     );
 
@@ -131,7 +132,7 @@ export async function applyScheduledSubscriptionTransitions(input: {
 
     if (mode === "next_renewal_on_chain") {
       const transitionRequestedAtRaw =
-        typeof transition.requestedAt === "string"
+        typeof transition?.requestedAt === "string"
           ? transition.requestedAt
           : null;
       const requestedAt = transitionRequestedAtRaw
@@ -149,7 +150,7 @@ export async function applyScheduledSubscriptionTransitions(input: {
         data: { traits: toPrismaJson(nextTraits) },
       });
 
-      if (changeRequest?.id && !changeRequest.id.startsWith("legacy-")) {
+      if (changeRequest?.id) {
         await db.subscriptionChangeRequest.update({
           where: { id: changeRequest.id },
           data: {
@@ -179,7 +180,7 @@ export async function applyScheduledSubscriptionTransitions(input: {
     }
 
     let targetPlanId =
-      typeof transition.targetPlanId === "string"
+      typeof transition?.targetPlanId === "string"
         ? transition.targetPlanId
         : null;
     if (mode === "cancel_at_period_end" && !targetPlanId) {
@@ -199,7 +200,7 @@ export async function applyScheduledSubscriptionTransitions(input: {
     const requiresOnChainSync = Boolean(transitionMetadata.requiresOnChainSync);
     if (mode === "period_end_downgrade" && requiresOnChainSync) {
       const transitionRequestedAtRaw =
-        typeof transition.requestedAt === "string"
+        typeof transition?.requestedAt === "string"
           ? transition.requestedAt
           : null;
       const requestedAt = transitionRequestedAtRaw
@@ -252,12 +253,13 @@ export async function applyScheduledSubscriptionTransitions(input: {
     ]);
 
     const targetBillingPeriod =
-      normalizeBillingPeriod(transition.targetBillingPeriod) ??
+      normalizeBillingPeriod(transition?.targetBillingPeriod) ??
       deriveBillingPeriodFromInterval(targetPlan.billingInterval);
 
     const currentBillingPeriod =
       normalizeBillingPeriod(
-        (transition as Record<string, unknown>).previousBillingPeriod,
+        (transition as Record<string, unknown> | null | undefined)
+          ?.previousBillingPeriod,
       ) ?? deriveBillingPeriodFromInterval(previousPlan?.billingInterval);
 
     const nextTraits = { ...traits };
@@ -342,7 +344,7 @@ export async function applyScheduledSubscriptionTransitions(input: {
       },
     });
 
-    if (changeRequest?.id && !changeRequest.id.startsWith("legacy-")) {
+    if (changeRequest?.id) {
       await db.subscriptionChangeRequest.update({
         where: { id: changeRequest.id },
         data: {

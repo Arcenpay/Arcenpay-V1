@@ -16,6 +16,7 @@ import { upsertSubscriptionLedgerState } from "../../lib/billing/billing-ledger.
 import {
   createSubscriptionChangeRequest,
   findSimilarOpenSubscriptionChangeRequest,
+  stripLegacySubscriptionLifecycleTraits,
 } from "../../lib/billing/subscription-change-requests.js";
 import { resolvePublishedFreePlan } from "../../lib/catalog/catalog-billing.js";
 import { readAutopayAccountState } from "../../lib/payments/autopay-state.js";
@@ -259,45 +260,96 @@ export async function POST(c: Context) {
       source: "self_service",
     };
 
-    const changeRequest = existingRequest
-      ? await db.subscriptionChangeRequest.update({
-          where: { id: existingRequest.id },
-          data: {
-            stage: pendingVerification
-              ? "PENDING_VERIFICATION"
-              : "REQUESTED",
-            effectiveAt,
-            targetPlanId: freePlan.id,
-            autopayControlTxHash: normalizedAutopayTxHash ?? null,
-            pendingVerification,
-            failureReason: null,
-            metadata: toPrismaJson({
-              ...transition,
-              autopayControl: autopayControl
-                ? {
-                    control: autopayControl.control,
-                    txHash: autopayControl.txHash ?? null,
-                  }
-                : null,
-            }),
-          },
-        })
-      : await createSubscriptionChangeRequest({
+    const now = new Date();
+    const changeRequest = await db.$transaction(async (tx) => {
+      const nextRequest = existingRequest
+        ? await tx.subscriptionChangeRequest.update({
+            where: { id: existingRequest.id },
+            data: {
+              stage: pendingVerification
+                ? "PENDING_VERIFICATION"
+                : "REQUESTED",
+              effectiveAt,
+              targetPlanId: freePlan.id,
+              autopayControlTxHash: normalizedAutopayTxHash ?? null,
+              pendingVerification,
+              failureReason: null,
+              metadata: toPrismaJson({
+                ...transition,
+                autopayControl: autopayControl
+                  ? {
+                      control: autopayControl.control,
+                      txHash: autopayControl.txHash ?? null,
+                    }
+                  : null,
+              }),
+            },
+          })
+        : await createSubscriptionChangeRequest(
+            {
+              teamId,
+              environmentId:
+                company.subscriptionState?.environmentId ??
+                company.environmentId ??
+                null,
+              companyId,
+              subscriptionStateId: company.subscriptionState?.id ?? null,
+              changeType: "cancellation",
+              stage: pendingVerification ? "pending_verification" : "requested",
+              previousPlanId: company.activePlanId ?? null,
+              targetPlanId: freePlan.id,
+              requestedAt: now,
+              effectiveAt,
+              autopayControlTxHash: normalizedAutopayTxHash ?? null,
+              pendingVerification,
+              metadata: {
+                ...transition,
+                autopayControl: autopayControl
+                  ? {
+                      control: autopayControl.control,
+                      txHash: autopayControl.txHash ?? null,
+                    }
+                  : null,
+              },
+            },
+            tx,
+          );
+
+      await tx.arcenCompany.update({
+        where: { id: companyId },
+        data: {
+          traits: toPrismaJson(
+            stripLegacySubscriptionLifecycleTraits(currentTraits),
+          ),
+        },
+      });
+
+      await upsertSubscriptionLedgerState(
+        {
           teamId,
-          environmentId:
-            company.subscriptionState?.environmentId ?? company.environmentId ?? null,
           companyId,
-          subscriptionStateId: company.subscriptionState?.id ?? null,
-          changeType: "cancellation",
-          stage: pendingVerification ? "pending_verification" : "requested",
-          previousPlanId: company.activePlanId ?? null,
-          targetPlanId: freePlan.id,
-          requestedAt: new Date(),
-          effectiveAt,
-          autopayControlTxHash: normalizedAutopayTxHash ?? null,
-          pendingVerification,
+          walletAddress: companyPaymentAccount,
+          status: "ACTIVE",
+          catalogPlanId: company.activePlanId,
+          onChainPlanId:
+            company.subscriptionState?.onChainPlanId ??
+            currentPlan?.onChainPlanId ??
+            null,
+          onChainTokenId: company.subscriptionState?.onChainTokenId ?? null,
+          currentPeriodEnd: effectiveAt,
+          cancelAtPeriodEnd: true,
+          cancelledAt: null,
+          pastDueAt: null,
+          graceEndsAt: null,
+          lastEvent: "subscription.cancel_scheduled",
+          lastEventAt: now,
+          lastSourceTxHash: normalizedAutopayTxHash,
           metadata: {
-            ...transition,
+            source: "self_service",
+            transitionId: nextRequest.id,
+            fallbackPlanId: freePlan.id,
+            previousCatalogPlanId: company.activePlanId,
+            pendingVerification,
             autopayControl: autopayControl
               ? {
                   control: autopayControl.control,
@@ -305,51 +357,11 @@ export async function POST(c: Context) {
                 }
               : null,
           },
-        });
+        },
+        tx,
+      );
 
-    await db.arcenCompany.update({
-      where: { id: companyId },
-      data: {
-        traits: toPrismaJson({
-          ...currentTraits,
-          pendingSubscriptionChangeRequestId: changeRequest.id,
-          subscriptionTransition: transition,
-        }),
-      },
-    });
-
-    await upsertSubscriptionLedgerState({
-      teamId,
-      companyId,
-      walletAddress: companyPaymentAccount,
-      status: "ACTIVE",
-      catalogPlanId: company.activePlanId,
-      onChainPlanId:
-        company.subscriptionState?.onChainPlanId ??
-        currentPlan?.onChainPlanId ??
-        null,
-      onChainTokenId: company.subscriptionState?.onChainTokenId ?? null,
-      currentPeriodEnd: effectiveAt,
-      cancelAtPeriodEnd: true,
-      cancelledAt: null,
-      pastDueAt: null,
-      graceEndsAt: null,
-      lastEvent: "subscription.cancel_scheduled",
-      lastEventAt: new Date(),
-      lastSourceTxHash: normalizedAutopayTxHash,
-        metadata: {
-          source: "self_service",
-          transitionId: changeRequest.id,
-          fallbackPlanId: freePlan.id,
-          previousCatalogPlanId: company.activePlanId,
-          pendingVerification,
-          autopayControl: autopayControl
-            ? {
-              control: autopayControl.control,
-              txHash: autopayControl.txHash ?? null,
-            }
-          : null,
-      },
+      return nextRequest;
     });
 
     deliverWebhook(teamId, "company.plan.changed", {
@@ -398,8 +410,7 @@ export async function POST(c: Context) {
   }
 
   if (!company.activePlanId || company.activePlanId === freePlan.id) {
-    const nextTraits = { ...currentTraits };
-    delete nextTraits.subscriptionTransition;
+    const nextTraits = stripLegacySubscriptionLifecycleTraits(currentTraits);
     delete nextTraits.billingPeriod;
 
     await db.arcenCompany.update({
