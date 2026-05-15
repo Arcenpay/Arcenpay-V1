@@ -1,0 +1,119 @@
+"use client";
+
+import { cn } from "@/lib/utils";
+import { NetworkIcon, TokenIcon } from "@web3icons/react/dynamic";
+import { Network, Coins } from "lucide-react";
+
+// ── Chain ID → web3icons network mapping ─────────────────────────────────
+
+const chainIdToNetworkName: Record<number, string> = {
+  1: "ethereum",
+  8453: "base",
+  84532: "base-sepolia",
+  11155111: "sepolia",
+  5042002: "Arc",
+};
+
+const chainLabelToNetworkName: Record<string, string> = {
+  Base: "base",
+  "Base Sepolia": "base-sepolia",
+  Sepolia: "sepolia",
+  "Arc Testnet": "Arc",
+  Ethereum: "ethereum",
+};
+
+// ── Public component ──────────────────────────────────────────────────────
+
+interface Web3IconProps {
+  /** Chain ID (e.g. 8453 for Base) */
+  chainId?: number;
+  /** Chain label (e.g. "Base Sepolia") — alternative to chainId */
+  chainLabel?: string;
+  /** Token symbol (e.g. "USDC") */
+  token?: string;
+  /** Size class — defaults to w-5 h-5 */
+  size?: "sm" | "md" | "lg";
+  /** Custom class */
+  className?: string;
+}
+
+const sizeMap = {
+  sm: 16,
+  md: 20,
+  lg: 24,
+};
+
+export function Web3Icon({
+  chainId,
+  chainLabel,
+  token,
+  size = "md",
+  className,
+}: Web3IconProps) {
+  const iconSize = sizeMap[size] ?? 20;
+
+  // ── Token icon ──────────────────────────────────────────────────────
+  if (token) {
+    return (
+      <TokenIcon
+        symbol={token.toUpperCase()}
+        variant="branded"
+        size={iconSize}
+        className={cn("shrink-0", className)}
+        fallback={
+          <div
+            className={cn(
+              "shrink-0 rounded-full bg-accent/10 flex items-center justify-center",
+              size === "sm" ? "w-4 h-4" : size === "lg" ? "w-6 h-6" : "w-5 h-5",
+              className,
+            )}
+          >
+            <Coins className="w-3 h-3 text-accent" />
+          </div>
+        }
+      />
+    );
+  }
+
+  // ── Chain icon ──────────────────────────────────────────────────────
+  const resolvedName = chainId
+    ? chainIdToNetworkName[chainId]
+    : chainLabel
+      ? chainLabelToNetworkName[chainLabel]
+      : undefined;
+
+  if (resolvedName) {
+    return (
+      <NetworkIcon
+        name={resolvedName}
+        variant="branded"
+        size={iconSize}
+        className={cn("shrink-0", className)}
+        fallback={
+          <div
+            className={cn(
+              "shrink-0 rounded-full bg-accent/10 flex items-center justify-center",
+              size === "sm" ? "w-4 h-4" : size === "lg" ? "w-6 h-6" : "w-5 h-5",
+              className,
+            )}
+          >
+            <Network className="w-3 h-3 text-accent" />
+          </div>
+        }
+      />
+    );
+  }
+
+  // ── Fallback ────────────────────────────────────────────────────────
+  return (
+    <div
+      className={cn(
+        "shrink-0 rounded-full bg-muted flex items-center justify-center",
+        size === "sm" ? "w-4 h-4" : size === "lg" ? "w-6 h-6" : "w-5 h-5",
+        className,
+      )}
+    >
+      <Network className="w-3 h-3 text-muted-foreground" />
+    </div>
+  );
+}

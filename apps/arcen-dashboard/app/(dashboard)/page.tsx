@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { cn } from "@/lib/utils";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { Header } from "@/components/dashboard/header";
 import { OverviewSection } from "@/components/dashboard/sections/overview";
@@ -82,23 +83,23 @@ export default function Dashboard() {
   const searchParams = useSearchParams();
   const [activeSection, setActiveSection] = useState<Section>("overview");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
-  // Read section from URL on mount
   useEffect(() => {
-    const section = searchParams.get("section");
-    if (section === "docs") {
-      window.location.assign(DASHBOARD_DOCS_URL);
-      return;
-    }
-    if (section && isValidSection(section)) {
-      setActiveSection(section);
-    }
-  }, [searchParams]);
+    const saved = localStorage.getItem("sidebar_collapsed");
+    if (saved) setSidebarCollapsed(saved === "true");
+  }, []);
 
-  // Update URL when section changes
+  useEffect(() => {
+    localStorage.setItem("sidebar_collapsed", String(sidebarCollapsed));
+  }, [sidebarCollapsed]);
+
   const handleSectionChange = (section: Section) => {
+    const params = new URLSearchParams(window.location.search);
+    params.set("section", section);
+    window.history.replaceState(null, "", `?${params.toString()}`);
     setActiveSection(section);
-    router.push(`/?section=${section}`, { scroll: false });
+    setMobileSidebarOpen(false);
   };
 
   const renderSection = () => {
@@ -234,15 +235,22 @@ export default function Dashboard() {
           onSectionChange={handleSectionChange}
           collapsed={sidebarCollapsed}
           onCollapsedChange={setSidebarCollapsed}
+          mobileOpen={mobileSidebarOpen}
+          onMobileOpenChange={setMobileSidebarOpen}
         />
         <div
-          className={`flex-1 flex flex-col transition-all duration-300 ease-out ${
-            sidebarCollapsed ? "ml-[64px]" : "ml-[220px]"
-          }`}
+          className={cn(
+            "flex-1 flex flex-col transition-all duration-300 ease-out",
+            "lg:ml-0",
+            sidebarCollapsed ? "lg:ml-[64px]" : "lg:ml-[220px]",
+          )}
         >
-          <Header activeSection={activeSection} />
+          <Header
+            activeSection={activeSection}
+            onMobileMenuToggle={() => setMobileSidebarOpen((v) => !v)}
+          />
           <SubgraphLagBanner />
-          <main className="flex-1 p-6 overflow-auto">
+          <main className="flex-1 p-3 sm:p-4 lg:p-6 overflow-auto">
             <div
               key={activeSection}
               className="animate-in fade-in slide-in-from-bottom-4 duration-500"

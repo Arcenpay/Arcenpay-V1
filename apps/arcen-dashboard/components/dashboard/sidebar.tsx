@@ -27,17 +27,24 @@ import {
   Webhook,
   BookOpen,
   ArrowUpRight,
+  Sun,
+  Moon,
+  Monitor,
+  X,
 } from "lucide-react";
 import { useDashboardSession } from "@/hooks/use-dashboard-session";
 import { DASHBOARD_DOCS_URL } from "@/lib/docs-url";
 import { getChainLabel, resolveEnvironmentChainId } from "@/lib/default-chain";
 import { useEnvironment } from "@/contexts/environment-context";
+import { useTheme } from "next-themes";
 
 interface SidebarProps {
   activeSection: Section;
   onSectionChange: (section: Section) => void;
   collapsed: boolean;
   onCollapsedChange: (collapsed: boolean) => void;
+  mobileOpen?: boolean;
+  onMobileOpenChange?: (open: boolean) => void;
 }
 
 type NavItem = { id: Section; label: string; icon: React.ElementType };
@@ -95,11 +102,14 @@ export function Sidebar({
   onSectionChange,
   collapsed,
   onCollapsedChange,
+  mobileOpen = false,
+  onMobileOpenChange,
 }: SidebarProps) {
   const { address, isConnected } = useAccount();
   const { envMode, activeEnvironment } = useEnvironment();
   const { data: sessionData } = useDashboardSession();
   const [mounted, setMounted] = useState(false);
+  const { theme, setTheme } = useTheme();
 
   useEffect(() => {
     setMounted(true);
@@ -114,14 +124,47 @@ export function Sidebar({
   const networkLabel = activeEnvironment?.chainLabel ?? getChainLabel(resolveEnvironmentChainId(envMode));
 
   return (
-    <aside
-      className={cn(
-        "fixed left-0 top-0 z-40 h-screen bg-sidebar border-r border-sidebar-border transition-all duration-300 ease-out flex flex-col",
-        collapsed ? "w-[64px]" : "w-[220px]",
-      )}
-    >
-      {/* Logo */}
-      <div className="h-14 flex items-center px-3 border-b border-sidebar-border shrink-0">
+    <>
+      {/* Mobile overlay — must be above header (z-30) */}
+      {mobileOpen ? (
+        <div
+          className="fixed inset-0 z-[35] bg-black/60 lg:hidden"
+          onClick={() => onMobileOpenChange?.(false)}
+        />
+      ) : null}
+
+      <aside
+        className={cn(
+          "fixed left-0 top-0 z-50 h-screen bg-sidebar border-r border-sidebar-border transition-transform duration-300 ease-out flex flex-col shadow-2xl lg:shadow-none",
+          // Mobile: slide in/out
+          "max-lg:translate-x-[-100%]",
+          mobileOpen ? "max-lg:translate-x-0" : "",
+          // Width: mobile drawer is always wide; desktop respects collapsed
+          "w-[min(280px,85vw)] lg:w-[64px]",
+          !collapsed && "lg:w-[220px]",
+        )}
+      >
+      {/* Mobile drawer header */}
+      <div className="lg:hidden h-14 flex items-center justify-between px-4 border-b border-sidebar-border shrink-0">
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-gradient-to-br from-accent to-chart-1">
+            <Hexagon className="w-3.5 h-3.5 text-accent-foreground" />
+          </div>
+          <span className="font-semibold text-sm text-sidebar-foreground">
+            ArcenPay
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={() => onMobileOpenChange?.(false)}
+          className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors"
+        >
+          <X className="w-5 h-5" />
+        </button>
+      </div>
+
+      {/* Logo — desktop only */}
+      <div className="hidden lg:flex h-14 items-center px-3 border-b border-sidebar-border shrink-0">
         <div className="flex items-center gap-2.5">
           <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-gradient-to-br from-accent to-chart-1">
             <Hexagon className="w-3.5 h-3.5 text-accent-foreground" />
@@ -148,7 +191,7 @@ export function Sidebar({
               <p
                 className={cn(
                   "px-2 mb-1 text-[10px] font-semibold uppercase tracking-widest select-none transition-all duration-300",
-                  collapsed
+                  collapsed && !mobileOpen
                     ? "opacity-0 h-0 overflow-hidden mb-0"
                     : "opacity-100 text-muted-foreground/60",
                 )}
@@ -157,7 +200,7 @@ export function Sidebar({
               </p>
             )}
             {/* Divider in collapsed state (only for labelled groups) */}
-            {group.label && collapsed && (
+            {group.label && collapsed && !mobileOpen && (
               <div className="mx-2 h-px bg-sidebar-border mb-2" />
             )}
 
@@ -170,7 +213,7 @@ export function Sidebar({
                   <button
                     key={item.id}
                     onClick={() => onSectionChange(item.id)}
-                    title={collapsed ? item.label : undefined}
+                    title={collapsed && !mobileOpen ? item.label : undefined}
                     className={cn(
                       "w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md text-sm font-medium transition-all duration-150 relative",
                       isActive
@@ -188,13 +231,15 @@ export function Sidebar({
                     <Icon
                       className={cn(
                         "w-4 h-4 shrink-0",
-                        isActive ? "text-accent" : "",
+                        isActive
+                          ? "text-sidebar-foreground"
+                          : "text-muted-foreground",
                       )}
                     />
                     <span
                       className={cn(
                         "whitespace-nowrap text-xs transition-all duration-300",
-                        collapsed
+                        collapsed && !mobileOpen
                           ? "opacity-0 w-0 overflow-hidden"
                           : "opacity-100",
                       )}
@@ -209,10 +254,10 @@ export function Sidebar({
         ))}
       </nav>
 
-      {/* Team + Wallet status */}
+      {/* Team + Wallet status — hidden on mobile to save drawer space */}
       <div
         className={cn(
-          "mx-2 mb-2 rounded-md bg-secondary/50 border border-border transition-all duration-300",
+          "hidden lg:block mx-2 mb-2 rounded-md bg-secondary/50 border border-border transition-all duration-300",
           collapsed
             ? "opacity-0 pointer-events-none h-0 mb-0 overflow-hidden"
             : "opacity-100",
@@ -249,31 +294,84 @@ export function Sidebar({
       </div>
 
       <div className="border-t border-sidebar-border px-2 py-2">
+        {/* Theme toggle */}
+        {mounted ? (
+          <div
+            className={cn(
+              "flex items-center gap-1 rounded-md bg-sidebar-accent/50 mb-2 transition-all duration-300",
+              collapsed && !mobileOpen ? "justify-center p-1.5" : "p-1",
+            )}
+          >
+            <button
+              onClick={() => setTheme("light")}
+              title="Light mode"
+              className={cn(
+                "flex items-center justify-center rounded transition-colors",
+                collapsed && !mobileOpen ? "w-8 h-8" : "flex-1 h-7",
+                theme === "light"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <Sun className="w-3.5 h-3.5" />
+              {!(collapsed && !mobileOpen) && <span className="ml-1.5 text-[10px] font-medium">Light</span>}
+            </button>
+            <button
+              onClick={() => setTheme("dark")}
+              title="Dark mode"
+              className={cn(
+                "flex items-center justify-center rounded transition-colors",
+                collapsed && !mobileOpen ? "w-8 h-8" : "flex-1 h-7",
+                theme === "dark"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <Moon className="w-3.5 h-3.5" />
+              {!(collapsed && !mobileOpen) && <span className="ml-1.5 text-[10px] font-medium">Dark</span>}
+            </button>
+            <button
+              onClick={() => setTheme("system")}
+              title="System theme"
+              className={cn(
+                "flex items-center justify-center rounded transition-colors",
+                collapsed && !mobileOpen ? "w-8 h-8" : "flex-1 h-7",
+                theme === "system"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <Monitor className="w-3.5 h-3.5" />
+              {!(collapsed && !mobileOpen) && <span className="ml-1.5 text-[10px] font-medium">Auto</span>}
+            </button>
+          </div>
+        ) : null}
+
         <a
           href={DASHBOARD_DOCS_URL}
           target="_blank"
           rel="noreferrer"
-          title={collapsed ? "Open docs" : undefined}
+          title={collapsed && !mobileOpen ? "Open docs" : undefined}
           className={cn(
             "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium text-muted-foreground transition hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
-            collapsed ? "justify-center" : "",
+            collapsed && !mobileOpen ? "justify-center" : "",
           )}
         >
           <BookOpen className="h-4 w-4 shrink-0" />
           <span
             className={cn(
               "whitespace-nowrap text-xs transition-all duration-300",
-              collapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100",
+              collapsed && !mobileOpen ? "opacity-0 w-0 overflow-hidden" : "opacity-100",
             )}
           >
             Open Docs
           </span>
-          {!collapsed && <ArrowUpRight className="ml-auto h-3.5 w-3.5" />}
+          {!(collapsed && !mobileOpen) && <ArrowUpRight className="ml-auto h-3.5 w-3.5" />}
         </a>
       </div>
 
-      {/* Collapse button */}
-      <div className="p-2 border-t border-sidebar-border">
+      {/* Collapse button — desktop only */}
+      <div className="hidden lg:block p-2 border-t border-sidebar-border">
         <button
           onClick={() => onCollapsedChange(!collapsed)}
           className="w-full flex items-center justify-center gap-2 px-2 py-1.5 rounded-md text-xs text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-all duration-150"
@@ -288,6 +386,7 @@ export function Sidebar({
           )}
         </button>
       </div>
-    </aside>
+      </aside>
+    </>
   );
 }

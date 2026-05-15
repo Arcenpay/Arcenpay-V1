@@ -110,26 +110,30 @@ export function RevenueChart({ chainId, environmentKey }: RevenueChartProps) {
         <div className="h-[280px]">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={data}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis dataKey="time" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+              <XAxis dataKey="time" stroke="var(--muted-foreground)" fontSize={12} />
               <YAxis
-                stroke="hsl(var(--muted-foreground))"
+                stroke="var(--muted-foreground)"
                 fontSize={12}
                 tickFormatter={(value) => `$${Number(value).toFixed(2)}`}
               />
               <Tooltip
                 formatter={(value: number) => [`$${Number(value).toFixed(2)}`, "Revenue"]}
                 contentStyle={{
-                  backgroundColor: "hsl(var(--card))",
-                  border: "1px solid hsl(var(--border))",
+                  backgroundColor: "var(--card)",
+                  border: "1px solid var(--border)",
                   borderRadius: "8px",
+                  color: "var(--foreground)",
                 }}
+                itemStyle={{ color: "var(--foreground)" }}
+                labelStyle={{ color: "var(--muted-foreground)" }}
               />
               <Area
                 type="monotone"
                 dataKey="revenue"
-                stroke="hsl(var(--chart-1))"
-                fill="hsl(var(--chart-1) / 0.2)"
+                stroke="var(--chart-1)"
+                fill="var(--chart-1)"
+                fillOpacity={0.2}
                 strokeWidth={2}
               />
             </AreaChart>

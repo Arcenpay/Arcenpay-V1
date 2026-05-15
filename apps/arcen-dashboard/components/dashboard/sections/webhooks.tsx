@@ -111,7 +111,7 @@ function DeliveryRow({ entry }: { entry: DeliveryEntry }) {
   return (
     <div className="border-b border-border/50 last:border-0">
       <button
-        className="w-full grid grid-cols-[20px,1fr,90px,60px,80px,60px] gap-3 py-3 px-1 text-sm items-center hover:bg-secondary/30 transition-colors rounded-sm text-left"
+        className="w-full grid grid-cols-[20px,1fr,auto,auto] sm:grid-cols-[20px,1fr,90px,60px,80px,60px] gap-3 py-3 px-1 text-sm items-center hover:bg-secondary/30 transition-colors rounded-sm text-left"
         onClick={() => setExpanded((e) => !e)}
       >
         <span className="text-muted-foreground">
@@ -130,13 +130,13 @@ function DeliveryRow({ entry }: { entry: DeliveryEntry }) {
         >
           {entry.status}
         </Badge>
-        <span className="text-xs text-muted-foreground text-center">
+        <span className="text-xs text-muted-foreground text-center hidden sm:block">
           {entry.statusCode ?? "—"}
         </span>
-        <span className="text-xs text-muted-foreground text-right">
+        <span className="text-xs text-muted-foreground text-right hidden sm:block">
           {relTime}
         </span>
-        <span className="text-xs text-muted-foreground text-right">
+        <span className="text-xs text-muted-foreground text-right hidden sm:block">
           {entry.attemptNumber > 1 ? (
             <span className="text-warning">
               {entry.attemptNumber - 1} retries
@@ -428,7 +428,7 @@ export function WebhooksSection() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
-          <div className="grid gap-6 lg:grid-cols-[1.15fr,0.85fr]">
+          <div className="grid gap-6 xl:grid-cols-[1.15fr,0.85fr]">
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="webhookUrl">Endpoint URL</Label>
@@ -538,6 +538,43 @@ export function WebhooksSection() {
                   )}
                 </Button>
               </div>
+
+              {/* Test result — immediately visible below the buttons */}
+              {testResult && (
+                <div
+                  className={`flex items-start gap-3 p-4 rounded-lg border text-sm ${
+                    testResult.ok
+                      ? "bg-success/5 border-success/20"
+                      : "bg-destructive/5 border-destructive/20"
+                  }`}
+                >
+                  {testResult.ok ? (
+                    <Check className="w-4 h-4 text-success shrink-0 mt-0.5" />
+                  ) : (
+                    <AlertTriangle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+                  )}
+                  <div className="space-y-1 min-w-0">
+                    <p
+                      className={
+                        testResult.ok ? "text-success" : "text-destructive"
+                      }
+                    >
+                      {testResult.ok
+                        ? `Delivered — HTTP ${testResult.status ?? 200}`
+                        : (testResult.message ??
+                          testResult.error ??
+                          "Delivery failed")}
+                    </p>
+                    {testResult.ok && (
+                      <p className="text-xs text-muted-foreground">
+                        Check your server logs or expand the delivery below to see
+                        the request details.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {!hasSecret && (
                 <p className="text-xs text-muted-foreground">
                   Generate a signing secret before saving webhook events or
@@ -615,42 +652,6 @@ export function WebhooksSection() {
               </div>
             </div>
           </div>
-
-          {/* Test result inline */}
-          {testResult && (
-            <div
-              className={`flex items-start gap-3 p-4 rounded-lg border text-sm ${
-                testResult.ok
-                  ? "bg-success/5 border-success/20"
-                  : "bg-destructive/5 border-destructive/20"
-              }`}
-            >
-              {testResult.ok ? (
-                <Check className="w-4 h-4 text-success shrink-0 mt-0.5" />
-              ) : (
-                <AlertTriangle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
-              )}
-              <div className="space-y-1 min-w-0">
-                <p
-                  className={
-                    testResult.ok ? "text-success" : "text-destructive"
-                  }
-                >
-                  {testResult.ok
-                    ? `Delivered — HTTP ${testResult.status ?? 200}`
-                    : (testResult.message ??
-                      testResult.error ??
-                      "Delivery failed")}
-                </p>
-                {testResult.ok && (
-                  <p className="text-xs text-muted-foreground">
-                    Check your server logs or expand the delivery below to see
-                    the request details.
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
         </CardContent>
       </Card>
 
@@ -845,13 +846,14 @@ const valid = sig === req.headers['x-arcenpay-signature'].replace('sha256=', '')
           ) : (
             <div>
               {/* Table header */}
-              <div className="grid grid-cols-[20px,1fr,90px,60px,80px,60px] gap-3 pb-2 border-b border-border text-xs text-muted-foreground font-medium px-1">
+              <div className="grid grid-cols-[20px,1fr,auto,auto] sm:grid-cols-[20px,1fr,90px,60px,80px,60px] gap-3 pb-2 border-b border-border text-xs text-muted-foreground font-medium px-1">
                 <span />
                 <span>Event</span>
                 <span>Status</span>
-                <span className="text-center">HTTP</span>
-                <span className="text-right">Time</span>
-                <span className="text-right">Retries</span>
+                <span className="sm:hidden" />
+                <span className="hidden sm:block text-center">HTTP</span>
+                <span className="hidden sm:block text-right">Time</span>
+                <span className="hidden sm:block text-right">Retries</span>
               </div>
               <div>
                 {deliveries.map((entry) => (

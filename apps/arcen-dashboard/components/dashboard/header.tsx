@@ -2,7 +2,8 @@
 
 import { cn } from "@/lib/utils";
 import type { Section } from "@/app/(dashboard)/page";
-import { Bell, Search, ChevronDown, LogOut, UserRound, Wallet } from "lucide-react";
+import { Bell, Search, ChevronDown, LogOut, UserRound, Wallet, Building2 } from "lucide-react";
+import { Web3Icon } from "@/components/web3-icon";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useChainId } from "wagmi";
@@ -26,6 +27,7 @@ type AuditEntry = {
 
 interface HeaderProps {
   activeSection: Section;
+  onMobileMenuToggle?: () => void;
 }
 
 const sectionTitles: Record<Section, string> = {
@@ -72,7 +74,7 @@ const sectionDescriptions: Record<Section, string> = {
   webhooks: "Configure endpoints, signing secrets, and delivery logs",
 };
 
-export function Header({ activeSection }: HeaderProps) {
+export function Header({ activeSection, onMobileMenuToggle }: HeaderProps) {
   const router = useRouter();
   const {
     envMode,
@@ -228,9 +230,21 @@ export function Header({ activeSection }: HeaderProps) {
   };
 
   return (
-    <header className="h-16 border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-30 flex items-center justify-between px-6">
-      <div className="flex items-center gap-4">
-        <h1 className="text-xl font-semibold text-foreground">
+    <header className="h-16 border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-30 flex items-center justify-between px-4 md:px-6">
+      <div className="flex items-center gap-3">
+        {/* Mobile hamburger */}
+        {onMobileMenuToggle && (
+          <button
+            type="button"
+            onClick={onMobileMenuToggle}
+            className="lg:hidden inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-secondary text-foreground"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+        )}
+        <h1 className="text-lg md:text-xl font-semibold text-foreground truncate max-w-[160px] md:max-w-none">
           {sectionTitles[activeSection]}
         </h1>
         <span className="hidden md:block text-sm text-muted-foreground">
@@ -238,13 +252,16 @@ export function Header({ activeSection }: HeaderProps) {
         </span>
       </div>
 
-      <div className="flex items-center gap-4">
-        <div ref={environmentRef} className="relative">
+      <div className="flex items-center gap-2 md:gap-4">
+        <div ref={environmentRef} className="relative hidden sm:block">
           <button
             type="button"
             onClick={() => setShowEnvironmentMenu((open) => !open)}
             className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-secondary px-3 text-xs font-medium text-foreground"
           >
+            {activeEnvironment?.chainLabel && (
+              <Web3Icon chainLabel={activeEnvironment.chainLabel} size="sm" />
+            )}
             <span className="max-w-[9rem] truncate">
               {activeEnvironment?.name ?? "Environment"}
             </span>
@@ -263,7 +280,7 @@ export function Header({ activeSection }: HeaderProps) {
           </button>
 
           {showEnvironmentMenu ? (
-            <div className="absolute right-0 top-11 z-50 w-80 rounded-2xl border border-border bg-popover p-2 shadow-lg">
+            <div className="absolute right-0 top-11 z-50 w-[min(20rem,calc(100vw-1rem))] rounded-2xl border border-border bg-popover p-2 shadow-lg">
               <div className="px-3 pb-2 pt-1 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
                 Active environment
               </div>
@@ -281,10 +298,15 @@ export function Header({ activeSection }: HeaderProps) {
                         : "text-muted-foreground hover:bg-secondary/70 hover:text-foreground",
                     )}
                   >
-                    <div className="min-w-0">
-                      <div className="truncate text-sm font-medium">{environment.name}</div>
-                      <div className="truncate text-xs text-muted-foreground/80">
-                        {environment.chainLabel}
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      {environment.chainLabel && (
+                        <Web3Icon chainLabel={environment.chainLabel} size="sm" />
+                      )}
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-medium">{environment.name}</div>
+                        <div className="truncate text-xs text-muted-foreground/80">
+                          {environment.chainLabel}
+                        </div>
                       </div>
                     </div>
                     <Badge
@@ -332,10 +354,10 @@ export function Header({ activeSection }: HeaderProps) {
           ) : null}
         </div>
 
-        {/* Search */}
+        {/* Search — hidden on small mobile */}
         <div
           className={cn(
-            "relative flex items-center transition-all duration-300",
+            "relative flex items-center transition-all duration-300 hidden md:flex",
             searchFocused ? "w-64" : "w-48",
           )}
         >
@@ -365,7 +387,7 @@ export function Header({ activeSection }: HeaderProps) {
           </button>
 
           {showNotifications && (
-            <div className="absolute right-0 top-11 w-80 max-h-96 overflow-y-auto rounded-xl border border-border bg-popover shadow-lg z-50">
+            <div className="absolute right-0 top-11 w-[min(20rem,calc(100vw-1rem))] max-h-96 overflow-y-auto rounded-xl border border-border bg-popover shadow-lg z-50">
               <div className="flex items-center justify-between px-4 py-3 border-b border-border">
                 <span className="text-sm font-medium text-foreground">
                   Recent Activity
@@ -411,18 +433,20 @@ export function Header({ activeSection }: HeaderProps) {
             variant="ghost"
             size="sm"
             onClick={() => setShowWalletMenu((open) => !open)}
-            className="h-9 gap-2 px-3 font-mono text-xs text-muted-foreground hover:text-foreground"
+            className="h-9 gap-1.5 sm:gap-2 px-2 sm:px-3 font-mono text-xs text-muted-foreground hover:text-foreground"
             title={storedWallet ? `Provider wallet: ${storedWallet}` : "Provider wallet"}
           >
             <Wallet className="h-3.5 w-3.5" />
-            {storedWallet
-              ? `${storedWallet.slice(0, 6)}…${storedWallet.slice(-4)}`
-              : "Wallet"}
-            <ChevronDown className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">
+              {storedWallet
+                ? `${storedWallet.slice(0, 6)}…${storedWallet.slice(-4)}`
+                : "Wallet"}
+            </span>
+            <ChevronDown className="h-3.5 w-3.5 hidden sm:block" />
           </Button>
 
           {showWalletMenu ? (
-            <div className="absolute right-0 top-11 z-50 w-80 rounded-2xl border border-border bg-popover p-2 shadow-lg">
+            <div className="absolute right-0 top-11 z-50 w-[min(20rem,calc(100vw-1rem))] rounded-2xl border border-border bg-popover p-2 shadow-lg">
               <div className="rounded-xl bg-secondary/70 px-3 py-3">
                 <p className="text-sm font-medium text-foreground">Provider wallet</p>
                 <p className="mt-1 break-all font-mono text-xs text-muted-foreground">
@@ -536,16 +560,18 @@ export function Header({ activeSection }: HeaderProps) {
           <button
             type="button"
             onClick={() => setShowWorkspaceMenu((open) => !open)}
-            className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-secondary px-3 text-xs font-medium text-foreground"
+            className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-secondary px-2 sm:px-3 text-xs font-medium text-foreground"
+            title={sessionData?.currentTeam?.name ?? "Workspace"}
           >
-            <span className="max-w-[11rem] truncate">
+            <Building2 className="h-4 w-4 sm:hidden text-muted-foreground" />
+            <span className="max-w-[11rem] truncate hidden sm:inline">
               {sessionData?.currentTeam?.name ?? "Workspace"}
             </span>
-            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground hidden sm:block" />
           </button>
 
           {showWorkspaceMenu && sessionData ? (
-            <div className="absolute right-0 top-11 z-50 w-72 rounded-2xl border border-border bg-popover p-2 shadow-lg">
+            <div className="absolute right-0 top-11 z-50 w-[min(18rem,calc(100vw-1rem))] rounded-2xl border border-border bg-popover p-2 shadow-lg">
               <div className="px-3 pb-2 pt-1 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
                 Switch workspace
               </div>
@@ -600,20 +626,37 @@ export function Header({ activeSection }: HeaderProps) {
           <button
             type="button"
             onClick={() => setShowAccountMenu((open) => !open)}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-secondary text-foreground"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-secondary text-foreground overflow-hidden"
           >
-            <UserRound className="h-4 w-4" />
+            {sessionData?.user?.email ? (
+              <img
+                src={`https://api.dicebear.com/9.x/dylan/svg?seed=${encodeURIComponent(sessionData.user.email)}`}
+                alt="avatar"
+                className="h-full w-full"
+              />
+            ) : (
+              <UserRound className="h-4 w-4" />
+            )}
           </button>
 
           {showAccountMenu && sessionData ? (
-            <div className="absolute right-0 top-11 z-50 w-72 rounded-2xl border border-border bg-popover p-2 shadow-lg">
-              <div className="rounded-xl bg-secondary/70 px-3 py-3">
-                <p className="text-sm font-medium text-foreground">
-                  {sessionData.currentTeam?.name ?? "ArcenPay"}
-                </p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {sessionData.user.email ?? "No email"}
-                </p>
+            <div className="absolute right-0 top-11 z-50 w-[min(18rem,calc(100vw-1rem))] rounded-2xl border border-border bg-popover p-2 shadow-lg">
+              <div className="flex items-center gap-3 rounded-xl bg-secondary/70 px-3 py-3">
+                {sessionData.user.email && (
+                  <img
+                    src={`https://api.dicebear.com/9.x/dylan/svg?seed=${encodeURIComponent(sessionData.user.email)}`}
+                    alt="avatar"
+                    className="h-9 w-9 rounded-full border border-border bg-background shrink-0"
+                  />
+                )}
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-foreground truncate">
+                    {sessionData.currentTeam?.name ?? "ArcenPay"}
+                  </p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {sessionData.user.email ?? "No email"}
+                  </p>
+                </div>
               </div>
               <button
                 type="button"

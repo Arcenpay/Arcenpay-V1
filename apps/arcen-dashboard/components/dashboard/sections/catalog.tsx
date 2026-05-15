@@ -70,10 +70,12 @@ import {
   List,
   Edit2,
   Edit,
+  Puzzle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEnvironment } from "@/contexts/environment-context";
 import { FeatureAvatar } from "./features";
+import { Web3Icon } from "@/components/web3-icon";
 import {
   useAccount,
   useChainId,
@@ -311,6 +313,21 @@ function EnvBadge({ mode }: { mode: EnvMode }) {
     >
       {mode === "PRODUCTION" ? "PROD" : "DEV"}
     </Badge>
+  );
+}
+
+function EmptyState({
+  title,
+  description,
+}: {
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="rounded-xl border border-dashed border-border bg-secondary/5 px-4 py-8 text-center">
+      <p className="text-sm font-medium text-foreground">{title}</p>
+      <p className="mt-1 text-xs text-muted-foreground">{description}</p>
+    </div>
   );
 }
 
@@ -800,13 +817,11 @@ function CreatePlanDialog({
                                     className={`flex items-center justify-between gap-3 py-2.5 ${!isConn ? "opacity-40 cursor-not-allowed" : ""}`}
                                   >
                                     <div className="flex items-center gap-2.5">
-                                      <div
-                                        className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 border ${isConn ? "bg-foreground text-background border-foreground" : "bg-secondary text-muted-foreground border-border"}`}
-                                      >
-                                        <span className="text-[10px] font-bold">
-                                          {chainInitial(opt)}
-                                        </span>
-                                      </div>
+                                      <Web3Icon
+                                        chainId={opt.chainId}
+                                        size="sm"
+                                        className={!isConn ? "opacity-40" : ""}
+                                      />
                                       <div>
                                         <div className="flex items-center gap-1.5">
                                           <p className="text-sm font-medium">
@@ -865,13 +880,11 @@ function CreatePlanDialog({
                                     className={`flex items-center justify-between gap-3 py-2.5 ${!isConn ? "opacity-40 cursor-not-allowed" : ""}`}
                                   >
                                     <div className="flex items-center gap-2.5">
-                                      <div
-                                        className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 border ${isConn ? "bg-foreground text-background border-foreground" : "bg-secondary text-muted-foreground border-border"}`}
-                                      >
-                                        <span className="text-[10px] font-bold">
-                                          {chainInitial(opt)}
-                                        </span>
-                                      </div>
+                                      <Web3Icon
+                                        chainId={opt.chainId}
+                                        size="sm"
+                                        className={!isConn ? "opacity-40" : ""}
+                                      />
                                       <div>
                                         <div className="flex items-center gap-1.5">
                                           <p className="text-sm font-medium">
@@ -1748,13 +1761,11 @@ function CreateAddOnDialog({
                                     className={`flex items-center justify-between gap-3 py-2.5 ${!isConn ? "opacity-40 cursor-not-allowed" : ""}`}
                                   >
                                     <div className="flex items-center gap-2.5">
-                                      <div
-                                        className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 border ${isConn ? "bg-foreground text-background border-foreground" : "bg-secondary text-muted-foreground border-border"}`}
-                                      >
-                                        <span className="text-[10px] font-bold">
-                                          {chainInitial(opt)}
-                                        </span>
-                                      </div>
+                                      <Web3Icon
+                                        chainId={opt.chainId}
+                                        size="sm"
+                                        className={!isConn ? "opacity-40" : ""}
+                                      />
                                       <div>
                                         <div className="flex items-center gap-1.5">
                                           <p className="text-sm font-medium">
@@ -1813,13 +1824,11 @@ function CreateAddOnDialog({
                                     className={`flex items-center justify-between gap-3 py-2.5 ${!isConn ? "opacity-40 cursor-not-allowed" : ""}`}
                                   >
                                     <div className="flex items-center gap-2.5">
-                                      <div
-                                        className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 border ${isConn ? "bg-foreground text-background border-foreground" : "bg-secondary text-muted-foreground border-border"}`}
-                                      >
-                                        <span className="text-[10px] font-bold">
-                                          {chainInitial(opt)}
-                                        </span>
-                                      </div>
+                                      <Web3Icon
+                                        chainId={opt.chainId}
+                                        size="sm"
+                                        className={!isConn ? "opacity-40" : ""}
+                                      />
                                       <div>
                                         <div className="flex items-center gap-1.5">
                                           <p className="text-sm font-medium">
@@ -2419,13 +2428,11 @@ function CreateCreditTypeDialog({
                                   className={`flex items-center justify-between gap-3 py-2.5 ${!isConn ? "opacity-40 cursor-not-allowed" : ""}`}
                                 >
                                   <div className="flex items-center gap-2.5">
-                                    <div
-                                      className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 border ${isConn ? "bg-foreground text-background border-foreground" : "bg-secondary text-muted-foreground border-border"}`}
-                                    >
-                                      <span className="text-[10px] font-bold">
-                                        {chainInitial(opt)}
-                                      </span>
-                                    </div>
+                                    <Web3Icon
+                                        chainId={opt.chainId}
+                                        size="sm"
+                                        className={!isConn ? "opacity-40" : ""}
+                                      />
                                     <div>
                                       <div className="flex items-center gap-1.5">
                                         <p className="text-sm font-medium">
@@ -2483,13 +2490,11 @@ function CreateCreditTypeDialog({
                                   className={`flex items-center justify-between gap-3 py-2.5 ${!isConn ? "opacity-40 cursor-not-allowed" : ""}`}
                                 >
                                   <div className="flex items-center gap-2.5">
-                                    <div
-                                      className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 border ${isConn ? "bg-foreground text-background border-foreground" : "bg-secondary text-muted-foreground border-border"}`}
-                                    >
-                                      <span className="text-[10px] font-bold">
-                                        {chainInitial(opt)}
-                                      </span>
-                                    </div>
+                                    <Web3Icon
+                                        chainId={opt.chainId}
+                                        size="sm"
+                                        className={!isConn ? "opacity-40" : ""}
+                                      />
                                     <div>
                                       <div className="flex items-center gap-1.5">
                                         <p className="text-sm font-medium">
@@ -2793,9 +2798,7 @@ function EditCreditTypeDialog({
                   >
                     {selectedChainOpt ? (
                       <div className="flex items-center gap-2.5">
-                        <div className="w-7 h-7 rounded-full bg-foreground text-background flex items-center justify-center text-[10px] font-bold">
-                          {chainInitial(selectedChainOpt)}
-                        </div>
+                        <Web3Icon chainId={selectedChainOpt.chainId} size="sm" />
                         <div className="text-left">
                           <p className="text-sm font-medium leading-none">
                             {chainName(selectedChainOpt)}
@@ -2829,13 +2832,11 @@ function EditCreditTypeDialog({
                         className={`flex items-center justify-between gap-3 py-2.5 ${!isConn ? "opacity-40 cursor-not-allowed" : ""}`}
                       >
                         <div className="flex items-center gap-2.5">
-                          <div
-                            className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 border ${isConn ? "bg-foreground text-background border-foreground" : "bg-secondary text-muted-foreground border-border"}`}
-                          >
-                            <span className="text-[10px] font-bold">
-                              {chainInitial(opt)}
-                            </span>
-                          </div>
+                          <Web3Icon
+                                        chainId={opt.chainId}
+                                        size="sm"
+                                        className={!isConn ? "opacity-40" : ""}
+                                      />
                           <div>
                             <p className="text-sm font-medium">
                               {chainName(opt)}
@@ -3351,9 +3352,17 @@ function PlansTable({
                   </TableCell>
                   <TableCell className="text-xs">
                     {isFree ? (
-                      <span className="text-muted-foreground">—</span>
+                      <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+                        <div className="w-4 h-4 rounded-full bg-muted flex items-center justify-center shrink-0">
+                          <span className="text-[8px] font-bold text-muted-foreground">∞</span>
+                        </div>
+                        Free
+                      </span>
                     ) : (
-                      tokenLabel(plan.acceptedToken)
+                      <span className="inline-flex items-center gap-1.5">
+                        <Web3Icon token="USDC" size="sm" />
+                        {tokenLabel(plan.acceptedToken)}
+                      </span>
                     )}
                   </TableCell>
                   <TableCell>
@@ -4854,56 +4863,48 @@ function ConfigurationTab() {
   const configuredChainLabel = getChainLabel(configuredChainId);
 
   return (
-    <div className="max-w-3xl space-y-6">
-      {/* Active environment status bar */}
-      <div className="rounded-xl border border-border bg-card p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="max-w-5xl space-y-6">
+      {/* Top status bar */}
+      <div className="rounded-xl border border-border bg-card p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div
-            className={`w-2.5 h-2.5 rounded-full shrink-0 ${
-              envMode === "DEVELOPMENT" ? "bg-zinc-400" : "bg-emerald-500"
-            }`}
-          />
+          <div className={cn(
+            "w-2.5 h-2.5 rounded-full shrink-0",
+            envMode === "DEVELOPMENT" ? "bg-zinc-400" : "bg-emerald-500",
+          )} />
           <div>
-            <p className="text-sm font-bold text-foreground leading-tight">
+            <p className="text-sm font-bold text-foreground">
               {activeEnvironment?.name ?? envLabel}
             </p>
-            <p className="text-xs text-muted-foreground mt-0.5">
+            <p className="text-xs text-muted-foreground">
               {configuredChainLabel}
             </p>
           </div>
-          <span className="text-[9px] font-bold uppercase px-2 py-0.5 rounded-full border border-border text-muted-foreground">
+          <Badge variant="outline" className="text-[10px]">
             {envTag}
-          </span>
+          </Badge>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
           {isConnected ? (
-            <div className="flex items-center gap-2">
-              <div
-                className={`w-2 h-2 rounded-full ${
-                  walletOnConfiguredChain
-                    ? "bg-green-500"
-                    : walletOnSupportedChain
-                      ? "bg-orange-500"
-                      : "bg-red-500"
-                }`}
-              />
-              <p className="text-xs text-muted-foreground">
+            <>
+              <div className={cn(
+                "w-2 h-2 rounded-full",
+                walletOnConfiguredChain ? "bg-green-500" : walletOnSupportedChain ? "bg-orange-500" : "bg-red-500",
+              )} />
+              <span>
                 {walletOnConfiguredChain
-                  ? "Wallet on configured chain"
+                  ? "Wallet connected"
                   : walletOnSupportedChain
                     ? `Wallet on ${getChainLabel(chainId)}`
-                    : "Wallet on unsupported chain"}
+                    : "Unsupported chain"}
                 {address && (
                   <span className="ml-1 font-mono">
                     {address.slice(0, 6)}…{address.slice(-4)}
                   </span>
                 )}
-              </p>
-            </div>
+              </span>
+            </>
           ) : (
-            <p className="text-xs text-muted-foreground">
-              Wallet not connected
-            </p>
+            "Wallet not connected"
           )}
         </div>
       </div>
@@ -4914,31 +4915,29 @@ function ConfigurationTab() {
         </div>
       )}
 
-      {/* ── Default Plans ─────────────────────────────────────── */}
-      <div className="rounded-xl border border-border bg-card overflow-hidden">
-        <div className="px-5 py-4 border-b border-border bg-secondary/20">
-          <h3 className="text-sm font-bold text-foreground">Default Plans</h3>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Plans automatically assigned to new subscribers on sign-up.
-          </p>
+      {/* ── 1. Default Plans ── */}
+      <section className="rounded-xl border border-border bg-card overflow-hidden">
+        <div className="px-5 py-4 border-b border-border bg-secondary/20 flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center shrink-0">
+            <Package className="w-4 h-4 text-accent" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-foreground">Default Plans</h3>
+            <p className="text-xs text-muted-foreground">
+              Auto-assign plans to new or lapsed subscribers
+            </p>
+          </div>
         </div>
         <div className="p-5 space-y-5">
           {!hasPublishedPlans ? (
-            <div className="rounded-xl border border-dashed border-border bg-secondary/5 px-4 py-6">
-              <p className="text-sm font-medium text-foreground">
-                Publish a plan first
-              </p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Default and live plan settings appear after this environment has at least one published plan.
-              </p>
-            </div>
+            <EmptyState
+              title="Publish a plan first"
+              description="Default plan settings appear after this environment has at least one published plan."
+            />
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               <div className="space-y-2">
-                <Label
-                  htmlFor="initial-plan"
-                  className="text-sm font-semibold text-foreground"
-                >
+                <Label htmlFor="initial-plan" className="text-sm font-semibold text-foreground">
                   Initial Plan
                 </Label>
                 <Select
@@ -4948,16 +4947,11 @@ function ConfigurationTab() {
                       ...current,
                       initialPlan: v,
                       livePlanIds:
-                        v === "none"
-                          ? current.livePlanIds
-                          : addUniqueId(current.livePlanIds, v),
+                        v === "none" ? current.livePlanIds : addUniqueId(current.livePlanIds, v),
                     }))
                   }
                 >
-                  <SelectTrigger
-                    id="initial-plan"
-                    className="h-11 bg-background border-border"
-                  >
+                  <SelectTrigger id="initial-plan" className="h-11 bg-background border-border">
                     <SelectValue placeholder="Select a plan…" />
                   </SelectTrigger>
                   <SelectContent>
@@ -4967,9 +4961,7 @@ function ConfigurationTab() {
                         <div className="flex items-center gap-2">
                           <span>{p.name}</span>
                           <span className="text-xs text-muted-foreground">
-                            {parseFloat(p.price) === 0
-                              ? "Free"
-                              : `$${parseFloat(p.price).toFixed(2)} USDC`}
+                            {parseFloat(p.price) === 0 ? "Free" : `$${parseFloat(p.price).toFixed(2)} USDC`}
                           </span>
                         </div>
                       </SelectItem>
@@ -4981,10 +4973,7 @@ function ConfigurationTab() {
                 </p>
               </div>
               <div className="space-y-2">
-                <Label
-                  htmlFor="fallback-plan"
-                  className="text-sm font-semibold text-foreground"
-                >
+                <Label htmlFor="fallback-plan" className="text-sm font-semibold text-foreground">
                   Fallback Plan
                 </Label>
                 <Select
@@ -4994,16 +4983,11 @@ function ConfigurationTab() {
                       ...current,
                       fallbackPlan: v,
                       livePlanIds:
-                        v === "none"
-                          ? current.livePlanIds
-                          : addUniqueId(current.livePlanIds, v),
+                        v === "none" ? current.livePlanIds : addUniqueId(current.livePlanIds, v),
                     }))
                   }
                 >
-                  <SelectTrigger
-                    id="fallback-plan"
-                    className="h-11 bg-background border-border"
-                  >
+                  <SelectTrigger id="fallback-plan" className="h-11 bg-background border-border">
                     <SelectValue placeholder="No fallback" />
                   </SelectTrigger>
                   <SelectContent>
@@ -5024,21 +5008,30 @@ function ConfigurationTab() {
             </div>
           )}
         </div>
-      </div>
+      </section>
 
-      <div className="rounded-xl border border-border bg-card overflow-hidden">
-        <div className="px-5 py-4 border-b border-border bg-secondary/20">
-          <h3 className="text-sm font-bold text-foreground">Live Plans</h3>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            These published plans are exposed in checkout and the billing
-            portal for this environment.
-          </p>
+      {/* ── 2. Live Plans ── */}
+      <section className="rounded-xl border border-border bg-card overflow-hidden">
+        <div className="px-5 py-4 border-b border-border bg-secondary/20 flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-chart-1/10 flex items-center justify-center shrink-0">
+            <List className="w-4 h-4 text-chart-1" />
+          </div>
+          <div className="flex-1">
+            <h3 className="text-sm font-bold text-foreground">Live Plans</h3>
+            <p className="text-xs text-muted-foreground">
+              Exposed in checkout and the billing portal
+            </p>
+          </div>
+          <Badge variant="outline" className="text-[10px]">
+            {selectedLivePlans.length} live
+          </Badge>
         </div>
         <div className="p-5 space-y-4">
           {selectedLivePlans.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-border bg-secondary/5 px-4 py-6 text-sm text-muted-foreground">
-              No plans are currently live in this environment.
-            </div>
+            <EmptyState
+              title="No live plans"
+              description="Choose published plans below to make them visible to customers."
+            />
           ) : (
             <div className="grid gap-3 sm:grid-cols-2">
               {selectedLivePlans.map((plan) => {
@@ -5047,76 +5040,67 @@ function ConfigurationTab() {
                 return (
                   <div
                     key={plan.id}
-                    className="rounded-xl border border-border bg-background p-4"
+                    className="rounded-xl border border-border bg-background p-4 flex items-start justify-between gap-3"
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-semibold text-foreground">
-                          {plan.name}
-                        </p>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          {planPriceLabel(plan)}
-                        </p>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-foreground truncate">
+                        {plan.name}
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {planPriceLabel(plan)}
+                      </p>
+                      <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground">
+                        <span>{plan.companyCount} compan{plan.companyCount === 1 ? "y" : "ies"}</span>
+                        {lockedByDefault && (
+                          <span className="rounded-full border border-border px-1.5 py-0.5 font-semibold uppercase tracking-wide text-foreground bg-secondary/50">
+                            Default
+                          </span>
+                        )}
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 shrink-0"
-                        disabled={lockedByDefault}
-                        onClick={() =>
-                          setSettings((current) => ({
-                            ...current,
-                            livePlanIds: removeSelectedId(current.livePlanIds, plan.id),
-                          }))
-                        }
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
                     </div>
-                    <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                      <span>{plan.companyCount} compan{plan.companyCount === 1 ? "y" : "ies"}</span>
-                      {plan.annualPrice && (
-                        <span>${parseFloat(plan.annualPrice).toFixed(2)}/yr</span>
-                      )}
-                      {lockedByDefault && (
-                        <span className="rounded-full border border-border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-foreground">
-                          Default
-                        </span>
-                      )}
-                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 shrink-0"
+                      disabled={lockedByDefault}
+                      onClick={() =>
+                        setSettings((current) => ({
+                          ...current,
+                          livePlanIds: removeSelectedId(current.livePlanIds, plan.id),
+                        }))
+                      }
+                      title={lockedByDefault ? "Locked by default plan" : "Remove from live"}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
                   </div>
                 );
               })}
             </div>
           )}
+          {/* Available to add */}
           <div className="rounded-xl border border-border bg-secondary/5 p-4">
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center justify-between gap-3 mb-3">
               <div>
-                <p className="text-sm font-medium text-foreground">
-                  Add published plans
-                </p>
+                <p className="text-sm font-medium text-foreground">Add plans</p>
                 <p className="text-xs text-muted-foreground">
-                  Only published plans on {getChainLabel(configuredChainId)} can go live here.
+                  Published plans on {getChainLabel(configuredChainId)}
                 </p>
               </div>
-              <Badge variant="outline">{availableLivePlans.length} available</Badge>
+              <Badge variant="outline">{availableLivePlans.length}</Badge>
             </div>
             {!hasPublishedPlans ? (
-              <p className="mt-3 text-xs text-muted-foreground">
-                Publish a plan to start choosing which plans go live.
-              </p>
+              <p className="text-xs text-muted-foreground">Publish a plan first.</p>
             ) : availableLivePlans.length === 0 ? (
-              <p className="mt-3 text-xs text-muted-foreground">
-                All published plans in this environment are already live.
-              </p>
+              <p className="text-xs text-muted-foreground">All published plans are live.</p>
             ) : (
-              <div className="mt-3 flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2">
                 {availableLivePlans.map((plan) => (
                   <Button
                     key={plan.id}
                     variant="outline"
                     size="sm"
-                    className="gap-2"
+                    className="gap-1.5"
                     onClick={() =>
                       setSettings((current) => ({
                         ...current,
@@ -5132,88 +5116,90 @@ function ConfigurationTab() {
             )}
           </div>
         </div>
-      </div>
+      </section>
 
-      <div className="rounded-xl border border-border bg-card overflow-hidden">
-        <div className="px-5 py-4 border-b border-border bg-secondary/20">
-          <h3 className="text-sm font-bold text-foreground">Live Add-Ons</h3>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Choose which published add-ons customers can discover in this
-            environment.
-          </p>
+      {/* ── 3. Live Add-Ons ── */}
+      <section className="rounded-xl border border-border bg-card overflow-hidden">
+        <div className="px-5 py-4 border-b border-border bg-secondary/20 flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-chart-2/10 flex items-center justify-center shrink-0">
+            <Puzzle className="w-4 h-4 text-chart-2" />
+          </div>
+          <div className="flex-1">
+            <h3 className="text-sm font-bold text-foreground">Live Add-Ons</h3>
+            <p className="text-xs text-muted-foreground">
+              Extras customers can purchase alongside plans
+            </p>
+          </div>
+          <Badge variant="outline" className="text-[10px]">
+            {selectedLiveAddOns.length} live
+          </Badge>
         </div>
         <div className="p-5 space-y-4">
           {selectedLiveAddOns.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-border bg-secondary/5 px-4 py-6 text-sm text-muted-foreground">
-              No add-ons are currently live in this environment.
-            </div>
+            <EmptyState
+              title="No live add-ons"
+              description="Choose published add-ons to make them discoverable."
+            />
           ) : (
             <div className="grid gap-3 sm:grid-cols-2">
               {selectedLiveAddOns.map((addOn) => (
                 <div
                   key={addOn.id}
-                  className="rounded-xl border border-border bg-background p-4"
+                  className="rounded-xl border border-border bg-background p-4 flex items-start justify-between gap-3"
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold text-foreground">
-                        {addOn.name}
-                      </p>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {addOnPriceLabel(addOn)}
-                      </p>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-foreground truncate">
+                      {addOn.name}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {addOnPriceLabel(addOn)}
+                    </p>
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground">
+                      <span>{addOn.code}</span>
+                      <span className="capitalize">{addOn.saleMode.toLowerCase().replace(/_/g, " ")}</span>
+                      <span>{addOn.grantCount} grant{addOn.grantCount === 1 ? "" : "s"}</span>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 shrink-0"
-                      onClick={() =>
-                        setSettings((current) => ({
-                          ...current,
-                          liveAddOnIds: removeSelectedId(current.liveAddOnIds, addOn.id),
-                        }))
-                      }
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
                   </div>
-                  <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                    <span>{addOn.code}</span>
-                    <span>{addOn.saleMode.toLowerCase().replace(/_/g, " ")}</span>
-                    <span>{addOn.grantCount} active grant{addOn.grantCount === 1 ? "" : "s"}</span>
-                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 shrink-0"
+                    onClick={() =>
+                      setSettings((current) => ({
+                        ...current,
+                        liveAddOnIds: removeSelectedId(current.liveAddOnIds, addOn.id),
+                      }))
+                    }
+                    title="Remove from live"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
                 </div>
               ))}
             </div>
           )}
           <div className="rounded-xl border border-border bg-secondary/5 p-4">
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center justify-between gap-3 mb-3">
               <div>
-                <p className="text-sm font-medium text-foreground">
-                  Add published add-ons
-                </p>
+                <p className="text-sm font-medium text-foreground">Add add-ons</p>
                 <p className="text-xs text-muted-foreground">
-                  Standalone and upsell add-ons stay pinned to this environment&apos;s chain.
+                  Published add-ons pinned to {getChainLabel(configuredChainId)}
                 </p>
               </div>
-              <Badge variant="outline">{availableLiveAddOns.length} available</Badge>
+              <Badge variant="outline">{availableLiveAddOns.length}</Badge>
             </div>
             {!hasPublishedAddOns ? (
-              <p className="mt-3 text-xs text-muted-foreground">
-                Publish an add-on to make it available here.
-              </p>
+              <p className="text-xs text-muted-foreground">Publish an add-on first.</p>
             ) : availableLiveAddOns.length === 0 ? (
-              <p className="mt-3 text-xs text-muted-foreground">
-                All published add-ons in this environment are already live.
-              </p>
+              <p className="text-xs text-muted-foreground">All published add-ons are live.</p>
             ) : (
-              <div className="mt-3 flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2">
                 {availableLiveAddOns.map((addOn) => (
                   <Button
                     key={addOn.id}
                     variant="outline"
                     size="sm"
-                    className="gap-2"
+                    className="gap-1.5"
                     onClick={() =>
                       setSettings((current) => ({
                         ...current,
@@ -5229,96 +5215,96 @@ function ConfigurationTab() {
             )}
           </div>
         </div>
-      </div>
+      </section>
 
-      <div className="rounded-xl border border-border bg-card overflow-hidden">
-        <div className="px-5 py-4 border-b border-border bg-secondary/20">
-          <h3 className="text-sm font-bold text-foreground">
-            Live Credit Bundles
-          </h3>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Control which published credit bundle products appear to customers
-            in this environment.
-          </p>
+      {/* ── 4. Live Credit Bundles ── */}
+      <section className="rounded-xl border border-border bg-card overflow-hidden">
+        <div className="px-5 py-4 border-b border-border bg-secondary/20 flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-chart-3/10 flex items-center justify-center shrink-0">
+            <Coins className="w-4 h-4 text-chart-3" />
+          </div>
+          <div className="flex-1">
+            <h3 className="text-sm font-bold text-foreground">Live Credit Bundles</h3>
+            <p className="text-xs text-muted-foreground">
+              Usage-based credit packs visible in checkout
+            </p>
+          </div>
+          <Badge variant="outline" className="text-[10px]">
+            {selectedLiveCredits.length} live
+          </Badge>
         </div>
         <div className="p-5 space-y-4">
           {selectedLiveCredits.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-border bg-secondary/5 px-4 py-6 text-sm text-muted-foreground">
-              No credit bundles are currently live in this environment.
-            </div>
+            <EmptyState
+              title="No live credit bundles"
+              description="Choose credit types with bundles to make them available."
+            />
           ) : (
             <div className="grid gap-3 sm:grid-cols-2">
               {selectedLiveCredits.map((creditType) => (
                 <div
                   key={creditType.id}
-                  className="rounded-xl border border-border bg-background p-4"
+                  className="rounded-xl border border-border bg-background p-4 flex items-start justify-between gap-3"
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold text-foreground">
-                        {creditType.name}
-                      </p>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {creditBundlePriceLabel(creditType)}
-                      </p>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-foreground truncate">
+                      {creditType.name}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {creditBundlePriceLabel(creditType)}
+                    </p>
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground">
+                      <span>{creditType.bundleCount} bundle option{creditType.bundleCount === 1 ? "" : "s"}</span>
+                      <span>{creditType.code}</span>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 shrink-0"
-                      onClick={() =>
-                        setSettings((current) => ({
-                          ...current,
-                          liveCreditTypeIds: removeSelectedId(
-                            current.liveCreditTypeIds,
-                            creditType.id,
-                          ),
-                        }))
-                      }
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
                   </div>
-                  <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                    <span>{creditType.bundleCount} bundle option{creditType.bundleCount === 1 ? "" : "s"}</span>
-                    <span>{creditType.code}</span>
-                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 shrink-0"
+                    onClick={() =>
+                      setSettings((current) => ({
+                        ...current,
+                        liveCreditTypeIds: removeSelectedId(
+                          current.liveCreditTypeIds,
+                          creditType.id,
+                        ),
+                      }))
+                    }
+                    title="Remove from live"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
                 </div>
               ))}
             </div>
           )}
           <div className="rounded-xl border border-border bg-secondary/5 p-4">
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center justify-between gap-3 mb-3">
               <div>
-                <p className="text-sm font-medium text-foreground">
-                  Add published credit bundles
-                </p>
+                <p className="text-sm font-medium text-foreground">Add credit bundles</p>
                 <p className="text-xs text-muted-foreground">
-                  Only credit types with at least one configured bundle can go live here.
+                  Credit types with at least one bundle option
                 </p>
               </div>
-              <Badge variant="outline">{availableLiveCredits.length} available</Badge>
+              <Badge variant="outline">{availableLiveCredits.length}</Badge>
             </div>
             {configCredits.length > 0 && !hasPublishedCreditBundles ? (
-              <p className="mt-3 text-xs text-muted-foreground">
-                Publish a credit type and add bundle options before it can appear in checkout.
+              <p className="text-xs text-muted-foreground">
+                Publish a credit type and add bundle options first.
               </p>
             ) : !hasPublishedCreditBundles ? (
-              <p className="mt-3 text-xs text-muted-foreground">
-                Publish a credit bundle to make it available here.
-              </p>
+              <p className="text-xs text-muted-foreground">Publish a credit bundle first.</p>
             ) : availableLiveCredits.length === 0 ? (
-              <p className="mt-3 text-xs text-muted-foreground">
-                All configured credit bundles in this environment are already live.
-              </p>
+              <p className="text-xs text-muted-foreground">All credit bundles are live.</p>
             ) : (
-              <div className="mt-3 flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2">
                 {availableLiveCredits.map((creditType) => (
                   <Button
                     key={creditType.id}
                     variant="outline"
                     size="sm"
-                    className="gap-2"
+                    className="gap-1.5"
                     onClick={() =>
                       setSettings((current) => ({
                         ...current,
@@ -5337,7 +5323,7 @@ function ConfigurationTab() {
             )}
           </div>
         </div>
-      </div>
+      </section>
 
       {/* Sticky save bar */}
       <div className="sticky bottom-0 -mx-1 px-1 pb-4 pt-2 bg-gradient-to-t from-background to-transparent">
@@ -5345,7 +5331,7 @@ function ConfigurationTab() {
           <p className="text-xs text-muted-foreground">
             {loadingConfig
               ? "Loading configuration…"
-              : "Catalog visibility is saved per environment"}
+              : "Changes are saved per environment"}
           </p>
           <div className="flex items-center gap-2">
             <Button
@@ -6498,13 +6484,11 @@ function EditPlanDialog({
                                     className={`flex items-center justify-between gap-3 py-2.5 ${!isConn ? "opacity-40 cursor-not-allowed" : ""}`}
                                   >
                                     <div className="flex items-center gap-2.5">
-                                      <div
-                                        className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 border ${isConn ? "bg-foreground text-background border-foreground" : "bg-secondary text-muted-foreground border-border"}`}
-                                      >
-                                        <span className="text-[10px] font-bold">
-                                          {chainInitial(opt)}
-                                        </span>
-                                      </div>
+                                      <Web3Icon
+                                        chainId={opt.chainId}
+                                        size="sm"
+                                        className={!isConn ? "opacity-40" : ""}
+                                      />
                                       <div>
                                         <div className="flex items-center gap-1.5">
                                           <p className="text-sm font-medium">
@@ -6563,13 +6547,11 @@ function EditPlanDialog({
                                     className={`flex items-center justify-between gap-3 py-2.5 ${!isConn ? "opacity-40 cursor-not-allowed" : ""}`}
                                   >
                                     <div className="flex items-center gap-2.5">
-                                      <div
-                                        className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 border ${isConn ? "bg-foreground text-background border-foreground" : "bg-secondary text-muted-foreground border-border"}`}
-                                      >
-                                        <span className="text-[10px] font-bold">
-                                          {chainInitial(opt)}
-                                        </span>
-                                      </div>
+                                      <Web3Icon
+                                        chainId={opt.chainId}
+                                        size="sm"
+                                        className={!isConn ? "opacity-40" : ""}
+                                      />
                                       <div>
                                         <div className="flex items-center gap-1.5">
                                           <p className="text-sm font-medium">
@@ -8089,11 +8071,19 @@ function PlanDetailView({
               </div>
               <div>
                 <p className="text-xs text-muted-foreground mb-1.5">Token</p>
-                <p className="text-sm font-medium">USDC</p>
-                <p className="text-xs font-mono text-muted-foreground">
-                  {plan.acceptedToken.slice(0, 6)}…
-                  {plan.acceptedToken.slice(-4)}
+                <p className="text-sm font-medium">
+                  {isFree
+                    ? "Free"
+                    : TOKEN_OPTIONS.find(
+                        (t) => t.address.toLowerCase() === plan.acceptedToken?.toLowerCase(),
+                      )?.symbol ?? "Token"}
                 </p>
+                {!isFree && (
+                  <p className="text-xs font-mono text-muted-foreground">
+                    {plan.acceptedToken?.slice(0, 6)}…
+                    {plan.acceptedToken?.slice(-4)}
+                  </p>
+                )}
               </div>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 pt-2 border-t border-border">

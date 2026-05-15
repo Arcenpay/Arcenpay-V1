@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Building2, CheckCircle2, Loader2, PlusCircle } from "lucide-react";
+import { Web3Icon } from "@/components/web3-icon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -117,9 +118,12 @@ export default function EnvironmentOnboardingPage() {
                   className="rounded-2xl border border-border bg-background/70 px-4 py-3"
                 >
                   <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-medium text-foreground">{environment.name}</p>
-                      <p className="text-xs text-muted-foreground">{environment.chainLabel}</p>
+                    <div className="flex items-center gap-2.5">
+                      <Web3Icon chainLabel={environment.chainLabel} size="sm" />
+                      <div>
+                        <p className="text-sm font-medium text-foreground">{environment.name}</p>
+                        <p className="text-xs text-muted-foreground">{environment.chainLabel}</p>
+                      </div>
                     </div>
                     <Badge variant="secondary">
                       {environment.mode === "DEVELOPMENT" ? "DEV" : "PROD"}
@@ -184,7 +188,10 @@ export default function EnvironmentOnboardingPage() {
                   <SelectContent>
                     {chainOptions.map((chain) => (
                       <SelectItem key={chain.chainId} value={String(chain.chainId)}>
-                        {chain.label}
+                        <span className="flex items-center gap-2">
+                          <Web3Icon chainId={chain.chainId} size="sm" />
+                          {chain.label}
+                        </span>
                       </SelectItem>
                     ))}
                   </SelectContent>

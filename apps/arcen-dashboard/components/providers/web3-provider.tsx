@@ -3,7 +3,8 @@
 import { defaultNetwork, networks, wagmiAdapter, projectId } from "@/lib/wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createAppKit } from "@reown/appkit/react";
-import React, { type ReactNode } from "react";
+import { useTheme } from "next-themes";
+import React, { useEffect, type ReactNode } from "react";
 import { cookieToInitialState, WagmiProvider, type Config } from "wagmi";
 import { ApolloProvider } from "@apollo/client";
 import { Toaster } from "sonner";
@@ -19,7 +20,7 @@ const getMetadataUrl = () => {
   return process.env.NEXT_PUBLIC_APP_URL || "https://arcenpay.xyz";
 };
 
-// Initialize AppKit once at module scope
+// Initialize AppKit once at module scope — themeMode updated dynamically below
 createAppKit({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   adapters: [wagmiAdapter as any],
@@ -36,9 +37,9 @@ createAppKit({
   features: {
     analytics: true,
   },
-  themeMode: "light" as const,
+  themeMode: "light",
   themeVariables: {
-    "--w3m-accent": "#0000ff",
+    "--w3m-accent": "#6366f1",
     "--w3m-border-radius-master": "2px",
   },
 });
@@ -59,12 +60,32 @@ export function Web3Provider({
     >
       <QueryClientProvider client={queryClient}>
         <ApolloProvider client={apolloClient}>
+          <ThemeSync />
           {children}
           <Toaster richColors position="bottom-right" />
         </ApolloProvider>
       </QueryClientProvider>
     </WagmiProvider>
   );
+}
+
+/** Syncs the next-themes resolved theme to the AppKit wallet modal. */
+function ThemeSync() {
+  const { resolvedTheme } = useTheme();
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      // AppKit reads a data attribute for dark mode; toggle the html class accordingly
+      const root = document.documentElement;
+      if (resolvedTheme === "dark") {
+        root.setAttribute("data-wallet-theme", "dark");
+      } else {
+        root.setAttribute("data-wallet-theme", "light");
+      }
+    }
+  }, [resolvedTheme]);
+
+  return null;
 }
 
 function decodeCookieValues(cookieHeader: string): string {
