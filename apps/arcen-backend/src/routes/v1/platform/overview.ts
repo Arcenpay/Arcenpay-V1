@@ -13,8 +13,11 @@ const querySchema = z.object({
   environmentMode: z.enum(["DEVELOPMENT", "PRODUCTION"]).optional(),
 });
 
-function decimalUsdcToMicroString(value: unknown): string | null {
-  if (value == null) return null;
+function decimalUsdcToMicroString(
+  value: unknown,
+  fallbackMicroValue: string | null = null,
+): string | null {
+  if (value == null) return fallbackMicroValue;
   const numeric = Number(String(value));
   if (!Number.isFinite(numeric)) return null;
   return String(Math.round(numeric * 1_000_000));
@@ -156,7 +159,7 @@ export async function getOverview(c: Context) {
       activePlans,
       activeSubscribers,
       paidInvoiceRevenue30dRaw:
-        decimalUsdcToMicroString(invoiceTotals._sum.total),
+        decimalUsdcToMicroString(invoiceTotals._sum.total, "0"),
       protocolFeesRaw: feesRaw,
     },
   });

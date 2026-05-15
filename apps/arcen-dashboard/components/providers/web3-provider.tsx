@@ -1,6 +1,7 @@
 "use client";
 
 import { defaultNetwork, networks, wagmiAdapter, projectId } from "@/lib/wagmi";
+import { DASHBOARD_APP_URL } from "@/lib/site-config";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createAppKit } from "@reown/appkit/react";
 import { useTheme } from "next-themes";
@@ -17,7 +18,7 @@ const getMetadataUrl = () => {
   if (typeof window !== "undefined") {
     return window.location.origin;
   }
-  return process.env.NEXT_PUBLIC_APP_URL || "https://arcenpay.xyz";
+  return DASHBOARD_APP_URL;
 };
 
 // Initialize AppKit once at module scope — themeMode updated dynamically below

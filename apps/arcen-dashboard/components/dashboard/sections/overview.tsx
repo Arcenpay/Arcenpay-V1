@@ -29,7 +29,7 @@ type OverviewPayload = {
   metrics: {
     activePlans: number;
     activeSubscribers: number;
-    paidInvoiceRevenue30dRaw: string | null;
+    paidInvoiceRevenue30dRaw: string;
     protocolFeesRaw: string | null;
   };
 };

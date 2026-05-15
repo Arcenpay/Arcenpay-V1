@@ -1,6 +1,15 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { EmailAuthFlow } from "@/components/auth/email-auth-flow";
 import { getSession } from "@/lib/auth.server";
+import { createPageMetadata } from "@/lib/seo";
+
+export const metadata: Metadata = createPageMetadata({
+  title: "Login",
+  description:
+    "Access the ArcenPay provider dashboard to manage subscriptions, invoices, and environments.",
+  path: "/login",
+});
 
 export default async function LoginPage({
   searchParams,

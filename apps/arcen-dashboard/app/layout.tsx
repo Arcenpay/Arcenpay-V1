@@ -1,15 +1,13 @@
 import React from "react";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
+import { DashboardStructuredData } from "@/components/seo/dashboard-structured-data";
 import { Web3Provider } from "@/components/providers/web3-provider";
 import { ThemeProvider } from "@/components/theme-provider";
+import { rootMetadata } from "@/lib/seo";
 import "./globals.css";
 
-export const metadata: Metadata = {
-  title: "ArcenPay Dashboard",
-  description:
-    "ArcenPay Provider Dashboard — Subscription Management & Protocol Analytics",
-};
+export const metadata: Metadata = rootMetadata;
 
 export default async function RootLayout({
   children,
@@ -22,6 +20,7 @@ export default async function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className="font-sans antialiased">
+        <DashboardStructuredData />
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
