@@ -1,8 +1,11 @@
 import * as Sentry from "@sentry/nextjs";
 import type { Breadcrumb, ErrorEvent } from "@sentry/nextjs";
 
+const sentryDsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
+const sentryEnabled = process.env.NODE_ENV === "production" && !!sentryDsn;
+
 Sentry.init({
-  dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
+  dsn: sentryDsn,
   tracesSampleRate: process.env.NODE_ENV === "production" ? 0.2 : 1.0,
   replaysSessionSampleRate: 0.1,
   replaysOnErrorSampleRate: 1.0,
@@ -13,7 +16,7 @@ Sentry.init({
     }),
   ],
   environment: process.env.NODE_ENV,
-  enabled: !!process.env.NEXT_PUBLIC_SENTRY_DSN,
+  enabled: sentryEnabled,
   beforeSend(event: ErrorEvent) {
     if (event.breadcrumbs) {
       event.breadcrumbs = event.breadcrumbs.map((breadcrumb: Breadcrumb) => ({

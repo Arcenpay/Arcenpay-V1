@@ -384,14 +384,14 @@ export async function registerPlanOnChain(c: Context) {
       action: "catalog.plan.chain_sync_prepared",
       resourceType: "CatalogPlan",
       resourceId: planId,
-      metadata: {
-        onChainPlanId: plan.onChainPlanId,
-        planOwner: providerAddress,
-        registrationMode: "user_controlled_update",
-        transport: "prepared_call",
-        target: planFactoryAddress,
-      },
-    });
+    metadata: {
+      onChainPlanId: plan.onChainPlanId,
+      planOwner: providerAddress,
+      registrationMode: "user_controlled_update",
+      transport: "prepared_call",
+      target: planFactoryAddress,
+    },
+  });
 
     return c.json({
       ok: true,
@@ -400,14 +400,15 @@ export async function registerPlanOnChain(c: Context) {
       planOwner: providerAddress,
       providerAddress,
       signingRequired: true,
-      preparedTransaction: {
-        target: planFactoryAddress,
-        value: "0",
-        data: updatePlanForCalldata,
-        functionSignature:
-          "updatePlanFor(address,uint256,uint256,string,uint256,bytes)",
-      },
-    });
+    preparedTransaction: {
+      target: planFactoryAddress,
+      value: "0",
+      data: updatePlanForCalldata,
+      executionMode: "smart-account",
+      functionSignature:
+        "updatePlanFor(address,uint256,uint256,string,uint256,bytes)",
+    },
+  });
   }
 
   let nonce: bigint | null = null;
@@ -505,6 +506,7 @@ export async function registerPlanOnChain(c: Context) {
       target: planFactoryAddress,
       value: "0",
       data: createPlanForCalldata,
+      executionMode: "smart-account",
       functionSignature:
         "createPlanFor(address,string,string,uint256,uint32,address,string,uint256,bytes)",
     },

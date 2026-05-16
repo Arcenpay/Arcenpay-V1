@@ -46,10 +46,10 @@ import {
   deploySmartAccount,
   getCounterfactualSmartAccountAddress,
   isPrefundError,
-  isZeroDevInfrastructureError,
+  isSmartAccountInfrastructureError,
   isRecoverableSmartAccountFundingError,
   sendSmartAccountTransaction,
-} from "../lib/zerodev";
+} from "../lib/smart-account";
 import type { SubscriptionCancellationIntent } from "../lib/subscription-lifecycle";
 import {
   buildCancellationFeedback,
@@ -123,6 +123,11 @@ function normalizeNamedFeatureIconName(name: string): string {
   };
 
   return aliasMap[normalized] ?? normalized;
+}
+
+function getSmartAccountProviderLabel(provider?: "pimlico") {
+  if (provider === "pimlico") return "Pimlico";
+  return "smart-account";
 }
 
 function renderNamedFeatureIcon(name: string, size: number) {
@@ -5748,6 +5753,7 @@ function PaymentContent({
   onBack: () => void;
   containerWidth: number;
   zeroDevConfig?: {
+    provider?: "pimlico";
     bundlerUrl: string;
     paymasterUrl: string;
     isReady: boolean;
@@ -5808,9 +5814,10 @@ function PaymentContent({
       : null;
   const smartAccountAddress =
     provisionedSmartAccountAddress ?? serverSmartAccountAddress;
-  const zeroDevProjectId = zeroDevConfig?.bundlerUrl
-    ? undefined
-    : (process.env.NEXT_PUBLIC_ZERODEV_PROJECT_ID ?? undefined);
+  const zeroDevProjectId = undefined;
+  const smartAccountProviderLabel = getSmartAccountProviderLabel(
+    zeroDevConfig?.provider,
+  );
   const selectedOnChainPlanId = selectedPlan?.onChainPlanId ?? null;
   const activeOnChainPlanId = activePlan?.onChainPlanId ?? null;
   const isCurrentPlanSelected = isCurrentBillingSelection({
@@ -6006,28 +6013,10 @@ function PaymentContent({
         setProvisionedSmartAccountAddress(result.smartAccountAddress);
         return result.smartAccountAddress;
       } catch (error) {
-        console.error("[ArcenPay][Embed] ensureBillingSmartAccount:error", {
-          attempt,
-          chainId,
-          chainLabel,
-          selfFunded: Boolean(forceSelfFunded),
-          bundlerUrl: zeroDevConfig?.bundlerUrl,
-          paymasterUrl: zeroDevConfig?.paymasterUrl,
-          error: error instanceof Error ? error.message : String(error ?? ""),
-        });
-
         if (
           canFallbackToWalletAccount &&
-          isZeroDevInfrastructureError(error)
+          isSmartAccountInfrastructureError(error)
         ) {
-          console.warn(
-            "[ArcenPay][Embed] Falling back to direct wallet payment account",
-            {
-              chainId,
-              chainLabel,
-              walletAddress: finalAddress,
-            },
-          );
           return finalAddress as `0x${string}`;
         }
 
@@ -6039,7 +6028,7 @@ function PaymentContent({
           const detail =
             error instanceof Error ? error.message : String(error ?? "");
           throw new Error(
-            `ZeroDev self-funded sponsorship was not approved for ${chainLabel}. Verify the sponsorship paymaster for chain ${chainId} has enough native gas balance and that your ZeroDev policy allows this UserOperation. (${detail})`,
+            `${smartAccountProviderLabel} self-funded sponsorship was not approved for ${chainLabel}. Verify the sponsorship paymaster for chain ${chainId} has enough native gas balance and that your ${smartAccountProviderLabel} policy allows this UserOperation. (${detail})`,
           );
         }
 
@@ -6047,7 +6036,7 @@ function PaymentContent({
           const detail =
             error instanceof Error ? error.message : String(error ?? "");
           throw new Error(
-            `Gas sponsorship was not approved for ${chainLabel}. Verify the ZeroDev paymaster and bundler are enabled for chain ${chainId}, then retry. (${detail})`,
+            `Gas sponsorship was not approved for ${chainLabel}. Verify the ${smartAccountProviderLabel} paymaster and bundler are enabled for chain ${chainId}, then retry. (${detail})`,
           );
         }
 
@@ -6057,7 +6046,7 @@ function PaymentContent({
 
     throw new Error(
       forceSelfFunded
-        ? `Could not set up the subscription smart account with ZeroDev self-funded sponsorship on ${chainLabel}. Verify the sponsorship paymaster deposit and policy, then try again.`
+        ? `Could not set up the subscription smart account with ${smartAccountProviderLabel} self-funded sponsorship on ${chainLabel}. Verify the sponsorship paymaster deposit and policy, then try again.`
         : `Could not set up your subscription wallet. Ensure the connected wallet has a small amount of ${nativeSymbol} on ${chainLabel} and try again.`,
     );
   }
@@ -7669,6 +7658,7 @@ function UnsubscribeContent({
   onBack: () => void;
   containerWidth: number;
   zeroDevConfig?: {
+    provider?: "pimlico";
     bundlerUrl: string;
     paymasterUrl: string;
     isReady: boolean;
@@ -7700,9 +7690,7 @@ function UnsubscribeContent({
     typeof paymentMethod?.walletAddress === "string"
       ? paymentMethod.walletAddress
       : null;
-  const zeroDevProjectId = zeroDevConfig?.bundlerUrl
-    ? undefined
-    : (process.env.NEXT_PUBLIC_ZERODEV_PROJECT_ID ?? undefined);
+  const zeroDevProjectId = undefined;
   const finalAddress = address || localAddress;
   const finalConnected = isConnected || !!localAddress;
   const resolvedWalletClient =
@@ -8144,7 +8132,7 @@ function UnsubscribeContent({
             }}
           >
             {requiresSmartAccountCancellationExecution
-              ? "This embed needs a wallet client and ZeroDev config to submit the smart-account autopay shutdown transaction."
+              ? "This embed needs a wallet client and smart-account provider config to submit the smart-account autopay shutdown transaction."
               : "This embed needs a wallet client to submit the autopay shutdown transaction."}
           </div>
         )}
@@ -8537,7 +8525,8 @@ export function ArcenEmbed({
   let providerToken: string | null = null;
   let providerCid: string | null = null;
   let providerBaseUrl: string | null = null;
-  let providerZeroDev: {
+  let providerSmartAccount: {
+    provider?: "pimlico";
     bundlerUrl: string;
     paymasterUrl: string;
     isReady: boolean;
@@ -8548,7 +8537,7 @@ export function ArcenEmbed({
     providerToken = arcen.session.token;
     providerCid = arcen.componentId;
     providerBaseUrl = arcen.baseUrl;
-    providerZeroDev = arcen.zeroDev;
+    providerSmartAccount = arcen.smartAccount;
   } catch {
     // Provider not available — fall through
   }
@@ -9283,7 +9272,7 @@ export function ArcenEmbed({
               customerName={customerName}
               customerEmail={customerEmail}
               containerWidth={effectiveContainerWidth}
-              zeroDevConfig={providerZeroDev}
+              zeroDevConfig={providerSmartAccount}
               onCustomerNameChange={setCustomerName}
               onCustomerEmailChange={setCustomerEmail}
               onConfirm={(txHash) => {
@@ -9299,7 +9288,7 @@ export function ArcenEmbed({
               processing={processing}
               tokens={tokens}
               containerWidth={effectiveContainerWidth}
-              zeroDevConfig={providerZeroDev}
+              zeroDevConfig={providerSmartAccount}
               onConfirm={(confirmation) => handleUnsubscribe(confirmation)}
               onBack={() => dispatch({ type: "GOTO_PORTAL" })}
             />
@@ -9394,7 +9383,7 @@ export function ArcenEmbed({
                   customerName={customerName}
                   customerEmail={customerEmail}
                   containerWidth={effectiveContainerWidth}
-                  zeroDevConfig={providerZeroDev}
+                  zeroDevConfig={providerSmartAccount}
                   onCustomerNameChange={setCustomerName}
                   onCustomerEmailChange={setCustomerEmail}
                   onConfirm={(txHash) => {
@@ -9411,7 +9400,7 @@ export function ArcenEmbed({
                   processing={processing}
                   tokens={tokens}
                   containerWidth={effectiveContainerWidth}
-                  zeroDevConfig={providerZeroDev}
+                  zeroDevConfig={providerSmartAccount}
                   onConfirm={(confirmation) => handleUnsubscribe(confirmation)}
                   onBack={() => dispatch({ type: "GOTO_PORTAL" })}
                 />

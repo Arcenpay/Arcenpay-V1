@@ -76,9 +76,7 @@ import {
   createSubscriptionRouteStore,
   resolveRoutingTeamId as resolveSubscriptionRoutingTeamId,
 } from "./subscription-routing.js";
-import {
-  microsToDecimalString,
-} from "./renewal-amount.js";
+import { microsToDecimalString } from "./renewal-amount.js";
 import { BalanceMonitor } from "./balance-monitor.js";
 import {
   handleTelegramWebhook,
@@ -167,15 +165,19 @@ const BILLING_MAINTENANCE_LIMIT_PER_TEAM = Number(
 );
 const DEFAULT_ERC4337_ENTRYPOINT_V07 =
   "0x0000000071727de22e5e9d8baf0edac6f37da032";
-const ZERODEV_PROJECT_ID = (
-  process.env.ZERODEV_PROJECT_ID ||
-  process.env.NEXT_PUBLIC_ZERODEV_PROJECT_ID ||
-  process.env.ZERO_DEV_PROJECT_ID ||
+const PIMLICO_API_KEY = (
+  process.env.PIMLICO_API_KEY ||
+  process.env.NEXT_PUBLIC_PIMLICO_API_KEY ||
+  ""
+).trim();
+const PIMLICO_RPC_URL = (
+  process.env.PIMLICO_RPC ||
+  process.env.NEXT_PUBLIC_PIMLICO_RPC ||
   ""
 ).trim();
 const PAYMASTER_RPC_URL = (
   process.env.PAYMASTER_RPC_URL ||
-  process.env.ZERODEV_PAYMASTER_RPC ||
+  process.env.PIMLICO_RPC ||
   ""
 ).trim();
 const PAYMASTER_RPC_METHOD = (
@@ -216,21 +218,37 @@ function parseChainIdSet(raw: string): Set<number> {
   return new Set(values);
 }
 
-function buildZeroDevPaymasterUrl(chainId: number): string {
-  if (!ZERODEV_PROJECT_ID) return "";
-  return `https://rpc.zerodev.app/api/v3/${ZERODEV_PROJECT_ID}/chain/${chainId}`;
+function buildPimlicoPaymasterUrl(chainId: number): string {
+  const specific = (
+    process.env[`PIMLICO_RPC_${chainId}`] ||
+    process.env[`NEXT_PUBLIC_PIMLICO_RPC_${chainId}`] ||
+    ""
+  ).trim();
+  if (specific) return specific;
+
+  if (PIMLICO_RPC_URL) return PIMLICO_RPC_URL;
+
+  const specificApiKey = (
+    process.env[`PIMLICO_API_KEY_${chainId}`] ||
+    process.env[`NEXT_PUBLIC_PIMLICO_API_KEY_${chainId}`] ||
+    ""
+  ).trim();
+  const apiKey = specificApiKey || PIMLICO_API_KEY;
+  if (!apiKey) return "";
+
+  return `https://api.pimlico.io/v2/${chainId}/rpc?apikey=${apiKey}`;
 }
 
 function getPaymasterRpcUrl(chainId: number): string {
   const specific = (
     process.env[`PAYMASTER_RPC_URL_${chainId}`] ||
-    process.env[`ZERODEV_PAYMASTER_RPC_${chainId}`] ||
+    process.env[`PIMLICO_RPC_${chainId}`] ||
     ""
   ).trim();
   if (specific) return specific;
 
-  const derived = buildZeroDevPaymasterUrl(chainId);
-  if (derived) return derived;
+  const pimlico = buildPimlicoPaymasterUrl(chainId);
+  if (pimlico) return pimlico;
 
   return PAYMASTER_RPC_URL;
 }
@@ -293,7 +311,7 @@ function validateRuntimeConfig(): void {
     for (const chainId of PAYMASTER_CHAIN_IDS) {
       if (!getPaymasterRpcUrl(chainId)) {
         errors.push(
-          `A paymaster RPC URL is required for chain ${chainId}. Set PAYMASTER_RPC_URL_${chainId}, ZERODEV_PAYMASTER_RPC_${chainId}, or ZERODEV_PROJECT_ID.`,
+          `A paymaster RPC URL is required for chain ${chainId}. Set PAYMASTER_RPC_URL_${chainId}, PIMLICO_RPC_${chainId}, or PIMLICO_API_KEY.`,
         );
       }
     }
@@ -496,10 +514,7 @@ const aj = arcjet({
     shield({ mode: "LIVE" }),
     detectBot({
       mode: "LIVE",
-      allow: [
-        "CATEGORY:SEARCH_ENGINE",
-        "CATEGORY:MONITOR",
-      ],
+      allow: ["CATEGORY:SEARCH_ENGINE", "CATEGORY:MONITOR"],
     }),
     fixedWindow({
       mode: "LIVE",
@@ -848,9 +863,7 @@ async function buildSubscriptionSyncRequest(
 // Workers process enqueued jobs with exponential backoff.
 // Subscription/billing jobs resolve team scope at execution time so unresolved
 // events can retry and eventually dead-letter instead of being dropped.
-jobQueue.startWorker<
-  BillingEventJobPayload | SubscriptionSyncJobPayload
->(
+jobQueue.startWorker<BillingEventJobPayload | SubscriptionSyncJobPayload>(
   "billing",
   async (job) => {
     if (!DASHBOARD_URL) return;
@@ -1884,8 +1897,7 @@ eventListener.on("renewed", async (event) => {
   const tokenId = event.tokenId.toString();
   const existingRouteState = await subscriptionRouteStore.read(tokenId);
   const renewedSubscriberWallet =
-    existingRouteState?.wallet ||
-    (await getTokenOwner(event.tokenId));
+    existingRouteState?.wallet || (await getTokenOwner(event.tokenId));
   // Resolve the on-chain planId for this token so sync-subscription can set activePlanId
   let renewedPlanId: bigint | null = null;
   try {
@@ -1969,7 +1981,8 @@ eventListener.on("billing_executed", async (event) => {
   const tokenId = event.tokenId.toString();
   const billingReason = Number(event.billingReason ?? 0n);
   const onChainPlanId = event.planId?.toString() ?? null;
-  const subscriberWallet = event.account ?? (await getTokenOwner(event.tokenId));
+  const subscriberWallet =
+    event.account ?? (await getTokenOwner(event.tokenId));
   const subscriberEmail = subscriberWallet
     ? await lookupSubscriberEmail(subscriberWallet)
     : null;
@@ -1977,9 +1990,13 @@ eventListener.on("billing_executed", async (event) => {
   const amount = microsToDecimalString(amountMicros);
   const merchantAmount = microsToDecimalString(event.merchantAmount ?? 0n);
   const protocolFee = microsToDecimalString(event.protocolFee ?? 0n);
-  const occurredAtMs = event.timestamp ? Number(event.timestamp) * 1000 : undefined;
+  const occurredAtMs = event.timestamp
+    ? Number(event.timestamp) * 1000
+    : undefined;
   const occurredAtIso =
-    occurredAtMs !== undefined ? new Date(occurredAtMs).toISOString() : undefined;
+    occurredAtMs !== undefined
+      ? new Date(occurredAtMs).toISOString()
+      : undefined;
   const planScope = onChainPlanId
     ? await resolvePlanScopeFromDashboard(onChainPlanId).catch((err) => {
         console.error(
@@ -2050,7 +2067,12 @@ eventListener.on("billing_executed", async (event) => {
     },
   );
 
-  if (emailService && billingReason === 1 && subscriberWallet && subscriberEmail) {
+  if (
+    emailService &&
+    billingReason === 1 &&
+    subscriberWallet &&
+    subscriberEmail
+  ) {
     try {
       await emailService.sendTemplate(
         "renewal_receipt" as any,
@@ -2113,7 +2135,10 @@ eventListener.on("plan_changed", async (event) => {
     sourceTxHash: event.transactionHash,
     sourceTokenId: tokenId,
   }).catch((err) =>
-    console.error("[Facilitator] sync-subscription (plan_changed) failed:", err),
+    console.error(
+      "[Facilitator] sync-subscription (plan_changed) failed:",
+      err,
+    ),
   );
 });
 
@@ -2189,18 +2214,18 @@ eventListener.on("cancelled", async (event) => {
   }
   // Sync subscription to dashboard DB so flag evaluation uses the correct plan
   enqueueSubscriptionSync({
-      teamId: cancelledTeamId,
-      wallet: cancelledSubscriberWallet,
-      onChainPlanId: null,
-      event: "cancelled",
-      occurredAt: event.timestamp
-        ? new Date(Number(event.timestamp) * 1000).toISOString()
-        : undefined,
-      sourceTxHash: event.transactionHash,
-      sourceTokenId: tokenId,
-    }).catch((err) =>
-      console.error("[Facilitator] sync-subscription (cancelled) failed:", err),
-    );
+    teamId: cancelledTeamId,
+    wallet: cancelledSubscriberWallet,
+    onChainPlanId: null,
+    event: "cancelled",
+    occurredAt: event.timestamp
+      ? new Date(Number(event.timestamp) * 1000).toISOString()
+      : undefined,
+    sourceTxHash: event.transactionHash,
+    sourceTokenId: tokenId,
+  }).catch((err) =>
+    console.error("[Facilitator] sync-subscription (cancelled) failed:", err),
+  );
 });
 
 // Watch for cross-chain dispatch requests and relay via Axelar/CCIP (PRD §7.2)
@@ -2364,7 +2389,8 @@ const balanceMonitor = new BalanceMonitor({
 
     // Send Telegram message
     if (provider.type === "telegram" && provider.botToken && provider.chatId) {
-      const message = `<b>💰 ArcenPay Agent — Top-Up Request</b>\n\n` +
+      const message =
+        `<b>💰 ArcenPay Agent — Top-Up Request</b>\n\n` +
         `<b>Agent:</b> <code>${record.agentAddress.slice(0, 6)}…${record.agentAddress.slice(-4)}</code>\n` +
         `<b>Amount:</b> $${(Number(record.amount) / 1_000_000).toFixed(2)} USDC\n` +
         `<b>Reason:</b> Balance below threshold\n` +
@@ -2372,21 +2398,32 @@ const balanceMonitor = new BalanceMonitor({
         `<i>Tap one of the buttons below:</i>`;
 
       try {
-        await fetch(`https://api.telegram.org/bot${provider.botToken}/sendMessage`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            chat_id: provider.chatId,
-            text: message,
-            parse_mode: "HTML",
-            reply_markup: {
-              inline_keyboard: [[
-                { text: "✅ Approve", callback_data: `arcenpay:approve:${record.requestId}` },
-                { text: "❌ Deny", callback_data: `arcenpay:deny:${record.requestId}` },
-              ]],
-            },
-          }),
-        });
+        await fetch(
+          `https://api.telegram.org/bot${provider.botToken}/sendMessage`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              chat_id: provider.chatId,
+              text: message,
+              parse_mode: "HTML",
+              reply_markup: {
+                inline_keyboard: [
+                  [
+                    {
+                      text: "✅ Approve",
+                      callback_data: `arcenpay:approve:${record.requestId}`,
+                    },
+                    {
+                      text: "❌ Deny",
+                      callback_data: `arcenpay:deny:${record.requestId}`,
+                    },
+                  ],
+                ],
+              },
+            }),
+          },
+        );
       } catch (err) {
         console.error("[BalanceMonitor] Telegram send failed:", err);
       }
@@ -2433,7 +2470,9 @@ if (process.env.ENABLE_BILLING_KEEPER === "true" && process.env.PRIVATE_KEY) {
         void (async () => {
           const tokenId = result.tokenId.toString();
           const routeState = await subscriptionRouteStore.read(tokenId);
-          const subscriberEmail = await lookupSubscriberEmail(result.subscriber);
+          const subscriberEmail = await lookupSubscriberEmail(
+            result.subscriber,
+          );
           await persistBillingEvent(
             "subscription.renewal_failed",
             buildEventIdempotencyKey("subscription.renewal_failed", [
@@ -2815,8 +2854,16 @@ app.get("/api/premium/data", (req, res) => {
     data: {
       insights: payment?.verified
         ? [
-            { metric: "settled_amount", value: payment.settledAmount, change: null },
-            { metric: "usage_entries", value: aggregation?.totalEntries ?? 0, change: null },
+            {
+              metric: "settled_amount",
+              value: payment.settledAmount,
+              change: null,
+            },
+            {
+              metric: "usage_entries",
+              value: aggregation?.totalEntries ?? 0,
+              change: null,
+            },
           ]
         : [],
     },
@@ -4356,18 +4403,21 @@ process.on("SIGINT", () => {
 
 // HARDEN: Catch unhandled rejections and exceptions to prevent silent process crashes.
 // Report to Sentry if configured, then exit so the process manager restarts.
-process.on("unhandledRejection", (reason: unknown, promise: Promise<unknown>) => {
-  console.error("[Facilitator] UNHANDLED REJECTION — exiting:", reason);
-  if (process.env.SENTRY_DSN) {
-    Sentry.captureException(
-      reason instanceof Error ? reason : new Error(String(reason)),
-    );
-    // Allow Sentry to flush before exit (up to 2s)
-    void Sentry.close(2000).finally(() => process.exit(1));
-  } else {
-    process.exit(1);
-  }
-});
+process.on(
+  "unhandledRejection",
+  (reason: unknown, promise: Promise<unknown>) => {
+    console.error("[Facilitator] UNHANDLED REJECTION — exiting:", reason);
+    if (process.env.SENTRY_DSN) {
+      Sentry.captureException(
+        reason instanceof Error ? reason : new Error(String(reason)),
+      );
+      // Allow Sentry to flush before exit (up to 2s)
+      void Sentry.close(2000).finally(() => process.exit(1));
+    } else {
+      process.exit(1);
+    }
+  },
+);
 
 process.on("uncaughtException", (error: Error) => {
   console.error("[Facilitator] UNCAUGHT EXCEPTION — exiting:", error);

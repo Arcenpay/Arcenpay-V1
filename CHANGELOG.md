@@ -13,7 +13,7 @@ All notable changes to ArcenPay are documented here.
 - 3 public SDK packages: `sdk-node`, `sdk-react`, `sdk-agent`, plus the private internal core
 - Email magic-link authentication with wallet linking
 - EIP-712 x402 payment validation with anti-replay
-- Subscription minting via ZeroDev smart accounts + AutopayModule
+- Subscription minting via sponsored smart accounts + AutopayModule
 - Agent session vault with ZK usage proof settlement
 - Embeddable billing UI via `ArcenEmbed`
 - The Graph subgraph for on-chain analytics
@@ -22,7 +22,7 @@ All notable changes to ArcenPay are documented here.
 - Feature flag engine with DB-first rules and on-chain fallback
 - Invoicing, billing events, webhook delivery, dunning
 - Platform tiers (FREE / PLUS / PRO) with limits
-- Gas sponsorship via ZeroDev paymaster
+- Gas sponsorship via hosted paymaster
 - Tableland flag mirroring (optional)
 - Lit Protocol subscription-gated decryption (optional)
 - Cross-chain relay (Axelar/CCIP — in progress)

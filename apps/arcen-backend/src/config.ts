@@ -320,17 +320,30 @@ export function getAllRpcUrls(chainId: number): string[] {
   return fallback ? [fallback] : [];
 }
 
-// ── ZeroDev ────────────────────────────────────────────────────────────────────
+// ── Smart Account Infra ───────────────────────────────────────────────────────
 
 /**
- * ZeroDev project ID for ERC-7579 smart account infrastructure.
- * This is an ArcenPay-managed key. The SDK receives bundler/paymaster
- * URLs via /api/v1/public/zerodev-config — integrators never touch this.
+ * Pimlico API key for ERC-4337 smart account infrastructure.
+ * When present, Pimlico becomes the preferred hosted provider.
  */
-export const ZERODEV_PROJECT_ID: string = (() => {
-  const val = process.env.ZERODEV_PROJECT_ID ??
-    process.env.NEXT_PUBLIC_ZERODEV_PROJECT_ID;
-  return requireInProd("ZERODEV_PROJECT_ID", val) || "";
+export const PIMLICO_API_KEY: string = (() => {
+  const val = getEnvValue([
+    "PIMLICO_API_KEY",
+    "NEXT_PUBLIC_PIMLICO_API_KEY",
+  ]);
+  return val ?? "";
+})();
+
+/**
+ * Optional Pimlico RPC override. Supports generic or chain-specific variants
+ * via direct env access inside the route layer.
+ */
+export const PIMLICO_RPC_URL: string = (() => {
+  const val = getEnvValue([
+    "PIMLICO_RPC",
+    "NEXT_PUBLIC_PIMLICO_RPC",
+  ]);
+  return val ?? "";
 })();
 
 // ── WalletConnect ─────────────────────────────────────────────────────────────

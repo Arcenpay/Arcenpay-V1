@@ -37,18 +37,20 @@ export interface ArcenPayContextValue {
   isTestnet: boolean;
   /** Resolved component ID for ArcenEmbed. */
   componentId: string;
-  /** ZeroDev smart-account infrastructure config (fetched from ArcenPay backend). */
-  zeroDev: ZeroDevInfra;
+  /** Smart-account infrastructure config (fetched from ArcenPay backend). */
+  smartAccount: SmartAccountInfra;
 }
 
-export interface ZeroDevInfra {
+export interface SmartAccountInfra {
+  /** Hosted provider backing the smart-account RPC endpoints. */
+  provider?: "pimlico";
   /** Bundler RPC URL for ERC-4337 user ops. */
   bundlerUrl: string;
   /** Paymaster RPC URL for gas sponsorship. */
   paymasterUrl: string;
   /** True while the config is still loading from the backend. */
   isReady: boolean;
-  /** True if the ZeroDev project is in self-funded mode (account pays own gas). */
+  /** True if the hosted provider is in self-funded mode (account pays own gas). */
   selfFunded?: boolean;
 }
 
@@ -367,8 +369,8 @@ function ArcenPayRuntime({
     }));
   }, [identify]);
 
-  // ── ZeroDev infra config ───────────────────────────────────────────────
-  const [zeroDev, setZeroDev] = useState<ZeroDevInfra>({
+  // ── Smart-account infra config ────────────────────────────────────────
+  const [smartAccount, setSmartAccount] = useState<SmartAccountInfra>({
     bundlerUrl: "",
     paymasterUrl: "",
     isReady: false,
@@ -376,7 +378,7 @@ function ArcenPayRuntime({
 
   useEffect(() => {
     if (!baseUrl || !chainId) {
-      setZeroDev({
+      setSmartAccount({
         bundlerUrl: "",
         paymasterUrl: "",
         isReady: false,
@@ -385,42 +387,68 @@ function ArcenPayRuntime({
     }
 
     let cancelled = false;
-    setZeroDev({
+    setSmartAccount({
       bundlerUrl: "",
       paymasterUrl: "",
       isReady: false,
     });
 
+    const candidateRoutes = ["/api/v1/public/smart-account-config"];
     const candidateQueries = [
       `chainId=${chainId}&selfFunded=true`,
       `chainId=${chainId}`,
     ];
 
     Promise.all(
-      candidateQueries.map(async (query) => {
-        const res = await fetch(`${baseUrl}/api/v1/public/zerodev-config?${query}`);
-        if (!res.ok) return null;
-        const body = (await res.json()) as {
-          data?: { bundlerUrl?: string; paymasterUrl?: string; selfFunded?: boolean };
-        };
-        if (body.data?.bundlerUrl && body.data?.paymasterUrl) {
-          return body.data;
-        }
-        return null;
-      }),
+      candidateRoutes.flatMap((route) =>
+        candidateQueries.map(async (query) => {
+          const res = await fetch(`${baseUrl}${route}?${query}`);
+          if (!res.ok) {
+            const detail = await res
+              .json()
+              .catch(() => ({} as { error?: string }));
+            console.warn("[ArcenPayProvider] smart-account config request failed", {
+              chainId,
+              route,
+              query,
+              status: res.status,
+              error: detail?.error ?? `HTTP ${res.status}`,
+            });
+            return null;
+          }
+          const body = (await res.json()) as {
+            data?: {
+              provider?: "pimlico";
+              bundlerUrl?: string;
+              paymasterUrl?: string;
+              selfFunded?: boolean;
+            };
+          };
+          if (body.data?.bundlerUrl && body.data?.paymasterUrl) {
+            return body.data;
+          }
+          return null;
+        }),
+      ),
     )
       .then((results) => {
         if (cancelled) return;
         const resolved = results.find((value) => Boolean(value));
         if (!resolved?.bundlerUrl || !resolved?.paymasterUrl) return;
-        setZeroDev({
+        setSmartAccount({
+          provider: resolved.provider,
           bundlerUrl: resolved.bundlerUrl,
           paymasterUrl: resolved.paymasterUrl,
           selfFunded: resolved.selfFunded ?? false,
           isReady: true,
         });
       })
-      .catch(() => {});
+      .catch((error) => {
+        console.warn("[ArcenPayProvider] smart-account config fetch failed", {
+          chainId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      });
 
     return () => {
       cancelled = true;
@@ -475,9 +503,9 @@ function ArcenPayRuntime({
       network,
       isTestnet: manifest.isTestnet,
       componentId,
-      zeroDev,
+      smartAccount,
     };
-  }, [baseUrl, chainId, componentId, session, userConfig, zeroDev]);
+  }, [baseUrl, chainId, componentId, session, userConfig, smartAccount]);
 
   return (
     <ArcenPayContext.Provider value={contextValue}>

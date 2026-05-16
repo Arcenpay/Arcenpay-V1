@@ -3,11 +3,12 @@ export {
   getCounterfactualSmartAccountAddress,
   isPrefundError,
   isRecoverableSmartAccountFundingError,
+  isSmartAccountInfrastructureError,
   revokeAutopayModule,
   sendSmartAccountTransaction,
   updateAutopayConfig,
   cancelSubscription,
-} from "./lib/zerodev";
+} from "./smart-account-core";
 
 export type {
   DeploySmartAccountConfig,
@@ -16,4 +17,4 @@ export type {
   SmartAccountTransactionConfig,
   UpdateAutopayConfigInput,
   CancelSubscriptionInput,
-} from "./lib/zerodev";
+} from "./smart-account-core";

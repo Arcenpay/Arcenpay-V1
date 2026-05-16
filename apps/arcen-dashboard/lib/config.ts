@@ -25,6 +25,7 @@ const SUBGRAPH_REQUIRED = isEnabled(
 const isProd =
   process.env.NODE_ENV === "production" &&
   process.env.NEXT_PHASE !== "phase-production-build";
+const isDev = process.env.NODE_ENV === "development";
 
 const PUBLIC_CHAIN_SUBGRAPH_URLS: Record<number, string | undefined> = {
   [SEPOLIA_CHAIN_ID]:
@@ -90,11 +91,13 @@ export const GRAPH_URL: string = (() => {
         "[config] NEXT_PUBLIC_GRAPH_URL must be set in production.",
       );
     }
-    console.warn(
-      SUBGRAPH_REQUIRED
-        ? "[config] NEXT_PUBLIC_GRAPH_URL is not set. Subgraph queries will fail."
-        : "[config] NEXT_PUBLIC_GRAPH_URL is not set. Subgraph-backed analytics will be unavailable.",
-    );
+    if (SUBGRAPH_REQUIRED || isDev) {
+      console.warn(
+        SUBGRAPH_REQUIRED
+          ? "[config] NEXT_PUBLIC_GRAPH_URL is not set. Subgraph queries will fail."
+          : "[config] NEXT_PUBLIC_GRAPH_URL is not set. Subgraph-backed analytics will be unavailable.",
+      );
+    }
     return "";
   }
   if (isProd && SUBGRAPH_REQUIRED && val.includes("/placeholder/")) {

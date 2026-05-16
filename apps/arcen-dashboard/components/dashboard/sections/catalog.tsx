@@ -101,7 +101,10 @@ import {
 } from "@/lib/default-chain";
 import { toast } from "sonner";
 import { PlanFactoryABI } from "@arcenpay/internal-core";
-import { sendSmartAccountTransaction } from "@arcenpay/react/zerodev";
+import {
+  isSmartAccountInfrastructureError,
+  sendSmartAccountTransaction,
+} from "@arcenpay/react/smart-account";
 import { useDashboardWallet } from "@/hooks/use-dashboard-wallet";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -206,6 +209,7 @@ interface RegisterOnChainResponse {
     target: string;
     value?: string;
     data: string;
+    executionMode?: "wallet" | "smart-account";
     functionSignature?: string;
   };
 }
@@ -295,39 +299,65 @@ async function copyOwnerActionPayload(
   }
 }
 
-async function fetchZeroDevConfig(chainId: number): Promise<{
+async function fetchSmartAccountConfig(chainId: number): Promise<{
+  provider?: "pimlico";
   bundlerUrl: string;
   paymasterUrl: string;
 } | null> {
+  const candidateRoutes = ["/api/v1/public/smart-account-config"];
   const candidateQueries = [
     `chainId=${chainId}&selfFunded=true`,
     `chainId=${chainId}`,
   ];
 
   try {
-    for (const query of candidateQueries) {
-      const res = await fetch(`/api/v1/public/zerodev-config?${query}`);
-      if (!res.ok) continue;
+    for (const route of candidateRoutes) {
+      for (const query of candidateQueries) {
+        const res = await fetch(`${route}?${query}`);
+        if (!res.ok) {
+          const detail = await res
+            .json()
+            .catch(() => ({} as { error?: string }));
+          console.warn("[catalog] Smart-account config request failed", {
+            chainId,
+            route,
+            query,
+            status: res.status,
+            error: detail?.error ?? `HTTP ${res.status}`,
+          });
+          continue;
+        }
 
-      const body = (await res.json().catch(() => ({}))) as {
-        data?: {
-          bundlerUrl?: string;
-          paymasterUrl?: string;
+        const body = (await res.json().catch(() => ({}))) as {
+          data?: {
+            provider?: "pimlico";
+            bundlerUrl?: string;
+            paymasterUrl?: string;
+          };
         };
-      };
 
-      if (body.data?.bundlerUrl && body.data?.paymasterUrl) {
-        return {
-          bundlerUrl: body.data.bundlerUrl,
-          paymasterUrl: body.data.paymasterUrl,
-        };
+        if (body.data?.bundlerUrl && body.data?.paymasterUrl) {
+          return {
+            provider: body.data.provider,
+            bundlerUrl: body.data.bundlerUrl,
+            paymasterUrl: body.data.paymasterUrl,
+          };
+        }
       }
     }
-  } catch {
-    // Ignore fetch errors and fall back to direct wallet execution.
+  } catch (error) {
+    console.warn("[catalog] Smart-account config request threw", {
+      chainId,
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 
   return null;
+}
+
+function formatSmartAccountProviderLabel(provider?: "pimlico") {
+  if (provider === "pimlico") return "Pimlico";
+  return "Smart account";
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -3186,25 +3216,18 @@ function PlansTable({
           throw new Error("Connected wallet client unavailable");
         }
 
-        const zeroDevConfig = await fetchZeroDevConfig(domain.chainId);
         let txHash: `0x${string}`;
         let usedGasless = false;
+        const walletOnlyExecution =
+          data.preparedTransaction.executionMode === "wallet";
 
-        if (zeroDevConfig) {
-          const result = await sendSmartAccountTransaction({
-            chainId: domain.chainId,
-            walletClient,
-            to: data.preparedTransaction.target as `0x${string}`,
-            data: data.preparedTransaction.data as `0x${string}`,
-            value: BigInt(data.preparedTransaction.value ?? "0"),
-            bundlerUrl: zeroDevConfig.bundlerUrl,
-            paymasterUrl: zeroDevConfig.paymasterUrl,
-          });
-          txHash = result.txHash;
-          usedGasless = true;
-        } else {
-          toast.message(
-            "Gas sponsorship is not configured for this chain yet. Sending from your connected wallet instead.",
+        if (walletOnlyExecution) {
+          console.info(
+            "[catalog] Using direct wallet execution for provider-only on-chain registration.",
+            {
+              chainId: domain.chainId,
+              target: data.preparedTransaction.target,
+            },
           );
           txHash = await walletClient.sendTransaction({
             account: walletClient.account,
@@ -3212,6 +3235,47 @@ function PlansTable({
             data: data.preparedTransaction.data as `0x${string}`,
             value: BigInt(data.preparedTransaction.value ?? "0"),
           });
+        } else {
+          const smartAccountConfig = await fetchSmartAccountConfig(domain.chainId);
+          if (smartAccountConfig) {
+            const providerLabel = formatSmartAccountProviderLabel(
+              smartAccountConfig.provider,
+            );
+            try {
+              const result = await sendSmartAccountTransaction({
+                chainId: domain.chainId,
+                walletClient,
+                to: data.preparedTransaction.target as `0x${string}`,
+                data: data.preparedTransaction.data as `0x${string}`,
+                value: BigInt(data.preparedTransaction.value ?? "0"),
+                bundlerUrl: smartAccountConfig.bundlerUrl,
+                paymasterUrl: smartAccountConfig.paymasterUrl,
+              });
+              txHash = result.txHash;
+              usedGasless = true;
+            } catch (error) {
+              const message =
+                error instanceof Error
+                  ? error.message
+                  : "Gas sponsorship failed";
+              console.warn(
+                "[catalog] Sponsored smart-account registration failed.",
+                {
+                  chainId: domain.chainId,
+                  provider: smartAccountConfig.provider ?? "unknown",
+                  message,
+                  infrastructureError: isSmartAccountInfrastructureError(error),
+                },
+              );
+              throw new Error(
+                `${providerLabel} sponsorship failed for this registration. ${message}`,
+              );
+            }
+          } else {
+            throw new Error(
+              "Gas sponsorship is not configured for this chain. Pimlico must be configured before this registration can be sent.",
+            );
+          }
         }
 
         const receipt = await publicClient.waitForTransactionReceipt({
