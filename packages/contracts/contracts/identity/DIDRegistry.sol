@@ -15,7 +15,7 @@ contract DIDRegistry is Ownable {
     // ============================================================
 
     struct DIDDocument {
-        string did;              // DID string (e.g., did:meap:0x1234...)
+        string did;              // DID string (e.g., did:arcenpay:0x1234...)
         address controller;       // Controlling wallet address
         uint64 createdAt;
         uint64 updatedAt;
@@ -52,6 +52,9 @@ contract DIDRegistry is Ownable {
     /// @notice Agent/wallet address => reputation score
     mapping(address => ReputationScore) private _reputation;
 
+    /// @notice Tracks whether reputation timestamps have been initialized
+    mapping(address => bool) private _reputationInitialized;
+
     /// @notice Authorized contracts that can update reputation scores
     mapping(address => bool) public authorizedUpdaters;
 
@@ -73,6 +76,7 @@ contract DIDRegistry is Ownable {
 
     /// @notice Authorize a contract to update reputation scores
     function authorizeUpdater(address updater) external onlyOwner {
+        require(updater != address(0), "DIDRegistry: zero updater");
         authorizedUpdaters[updater] = true;
     }
 
@@ -110,6 +114,7 @@ contract DIDRegistry is Ownable {
         // Initialize reputation
         _reputation[msg.sender].firstActivity = uint64(block.timestamp);
         _reputation[msg.sender].lastActivity = uint64(block.timestamp);
+        _reputationInitialized[msg.sender] = true;
 
         emit DIDRegistered(msg.sender, did);
     }
@@ -145,44 +150,52 @@ contract DIDRegistry is Ownable {
     /// @notice Record a subscription event for reputation
     function recordSubscription(address agent, uint256 volume) external onlyUpdater {
         ReputationScore storage rep = _reputation[agent];
+        _touchReputation(agent, rep);
         rep.totalSubscriptions++;
         rep.totalVolume += volume;
-        rep.lastActivity = uint64(block.timestamp);
-        if (rep.firstActivity == 0) rep.firstActivity = uint64(block.timestamp);
         emit ReputationUpdated(agent, "subscription", rep.totalSubscriptions);
     }
 
     /// @notice Record a settlement event
     function recordSettlement(address agent, uint256 amount) external onlyUpdater {
         ReputationScore storage rep = _reputation[agent];
+        _touchReputation(agent, rep);
         rep.totalSettlements++;
         rep.totalVolume += amount;
-        rep.lastActivity = uint64(block.timestamp);
         emit ReputationUpdated(agent, "settlement", rep.totalSettlements);
     }
 
     /// @notice Record a proof submission
     function recordProofSubmission(address agent) external onlyUpdater {
         ReputationScore storage rep = _reputation[agent];
+        _touchReputation(agent, rep);
         rep.totalProofsSubmitted++;
-        rep.lastActivity = uint64(block.timestamp);
         emit ReputationUpdated(agent, "proof", rep.totalProofsSubmitted);
     }
 
     /// @notice Record a failed payment
     function recordFailedPayment(address agent) external onlyUpdater {
         ReputationScore storage rep = _reputation[agent];
+        _touchReputation(agent, rep);
         rep.failedPayments++;
-        rep.lastActivity = uint64(block.timestamp);
         emit ReputationUpdated(agent, "failedPayment", rep.failedPayments);
     }
 
     /// @notice Record a slash/penalty event
     function recordSlash(address agent) external onlyUpdater {
         ReputationScore storage rep = _reputation[agent];
+        _touchReputation(agent, rep);
         rep.slashEvents++;
-        rep.lastActivity = uint64(block.timestamp);
         emit ReputationUpdated(agent, "slash", rep.slashEvents);
+    }
+
+    function _touchReputation(address agent, ReputationScore storage rep) internal {
+        if (!_reputationInitialized[agent]) {
+            rep.firstActivity = uint64(block.timestamp);
+            _reputationInitialized[agent] = true;
+        }
+
+        rep.lastActivity = uint64(block.timestamp);
     }
 
     // ============================================================

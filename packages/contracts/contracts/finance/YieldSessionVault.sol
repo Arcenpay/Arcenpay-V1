@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /// @title YieldSessionVault
 /// @notice Optional experimental extension. Not part of the default deployed core runtime.
@@ -15,11 +16,11 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 ///   and yield accrues proportionally to all depositors.
 ///
 ///   Architecture:
-///   - Agents deposit USDC → receive vault shares (meapUSDC)
+///   - Agents deposit USDC → receive vault shares (arcenUSDC)
 ///   - Idle USDC is deployed to yield strategy
 ///   - Settlement draws from vault reserves (no share burn)
 ///   - Agents withdraw shares → receive USDC + proportional yield
-contract YieldSessionVault is ERC4626, Ownable {
+contract YieldSessionVault is ERC4626, Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     // ============================================================
@@ -27,6 +28,7 @@ contract YieldSessionVault is ERC4626, Ownable {
     // ============================================================
 
     struct SessionAllocation {
+        address agent;          // Session owner
         uint256 shares;          // Shares allocated to this session
         uint256 depositedAssets; // Original USDC deposited
         bool active;
@@ -41,6 +43,8 @@ contract YieldSessionVault is ERC4626, Ownable {
     event SessionSettled(bytes32 indexed sessionId, uint256 amount, address provider);
     event SessionClosed(bytes32 indexed sessionId, uint256 sharesRedeemed, uint256 assetsReturned);
     event StrategyUpdated(address indexed oldStrategy, address indexed newStrategy);
+    event StrategyAssetsDeployed(uint256 amount, uint256 totalDeployed);
+    event StrategyAssetsWithdrawn(uint256 amount, uint256 realizedYield, uint256 totalDeployed);
     event YieldHarvested(uint256 amount);
 
     // ============================================================
@@ -72,7 +76,7 @@ contract YieldSessionVault is ERC4626, Ownable {
     /// @param asset_ The underlying stablecoin (e.g., USDC)
     constructor(
         IERC20 asset_
-    ) ERC4626(asset_) ERC20("MEAP Yield Session", "meapUSDC") Ownable(msg.sender) {}
+    ) ERC4626(asset_) ERC20("ArcenPay Yield Session", "arcenUSDC") Ownable(msg.sender) {}
 
     // ============================================================
     //                      ADMIN FUNCTIONS
@@ -90,9 +94,18 @@ contract YieldSessionVault is ERC4626, Ownable {
 
     /// @notice Set the yield strategy contract
     function setYieldStrategy(address strategy) external onlyOwner {
+        require(strategy != address(0), "YieldVault: zero strategy");
         address old = yieldStrategy;
         yieldStrategy = strategy;
         emit StrategyUpdated(old, strategy);
+    }
+
+    /// @notice Clears the configured yield strategy after all assets are withdrawn
+    function clearYieldStrategy() external onlyOwner {
+        require(deployedToStrategy == 0, "YieldVault: strategy still funded");
+        address old = yieldStrategy;
+        yieldStrategy = address(0);
+        emit StrategyUpdated(old, address(0));
     }
 
     modifier onlySettler() {
@@ -107,7 +120,7 @@ contract YieldSessionVault is ERC4626, Ownable {
     /// @notice Fund a new session — deposits USDC, mints vault shares
     /// @param amount The USDC amount to deposit
     /// @return sessionId The unique session identifier
-    function fundSession(uint256 amount) external returns (bytes32 sessionId) {
+    function fundSession(uint256 amount) external nonReentrant returns (bytes32 sessionId) {
         require(amount > 0, "YieldVault: zero amount");
 
         // Deposit through ERC4626 → mints shares to this contract
@@ -121,7 +134,10 @@ contract YieldSessionVault is ERC4626, Ownable {
             _sessionNonce++
         ));
 
+        require(_sessions[sessionId].createdAt == 0, "YieldVault: session exists");
+
         _sessions[sessionId] = SessionAllocation({
+            agent: msg.sender,
             shares: shares,
             depositedAssets: amount,
             active: true,
@@ -141,19 +157,20 @@ contract YieldSessionVault is ERC4626, Ownable {
         bytes32 sessionId,
         uint256 amount,
         address provider
-    ) external onlySettler {
+    ) external onlySettler nonReentrant {
         SessionAllocation storage session = _sessions[sessionId];
         require(session.active, "YieldVault: session not active");
+        require(amount > 0, "YieldVault: zero amount");
         require(provider != address(0), "YieldVault: zero provider");
 
-        // Convert amount to shares
-        uint256 sharesToBurn = convertToShares(amount);
+        // Burn enough shares to withdraw the requested amount, rounding up when needed.
+        uint256 sharesToBurn = previewWithdraw(amount);
         require(session.shares >= sharesToBurn, "YieldVault: insufficient session balance");
 
         session.shares -= sharesToBurn;
 
-        // Redeem shares to provider
-        redeem(sharesToBurn, provider, address(this));
+        // Withdraw the exact requested assets to the provider.
+        withdraw(amount, provider, address(this));
 
         emit SessionSettled(sessionId, amount, provider);
     }
@@ -161,12 +178,13 @@ contract YieldSessionVault is ERC4626, Ownable {
     /// @notice Close a session — returns remaining USDC + yield to agent
     /// @param sessionId The session to close
     /// @param agent The agent who owns the session
-    function closeSession(bytes32 sessionId, address agent) external {
+    function closeSession(bytes32 sessionId, address agent) external nonReentrant {
         SessionAllocation storage session = _sessions[sessionId];
         require(session.active, "YieldVault: session not active");
+        require(session.agent == agent, "YieldVault: agent mismatch");
         // Only agent or settler can close
         require(
-            msg.sender == agent || authorizedSettlers[msg.sender],
+            msg.sender == session.agent || authorizedSettlers[msg.sender],
             "YieldVault: unauthorized"
         );
 
@@ -193,8 +211,10 @@ contract YieldSessionVault is ERC4626, Ownable {
         require(amount > 0, "YieldVault: zero amount");
 
         IERC20 underlying = IERC20(asset());
+        require(amount <= underlying.balanceOf(address(this)), "YieldVault: insufficient idle assets");
         underlying.safeTransfer(yieldStrategy, amount);
         deployedToStrategy += amount;
+        emit StrategyAssetsDeployed(amount, deployedToStrategy);
     }
 
     /// @notice Withdraw assets from yield strategy
@@ -206,14 +226,22 @@ contract YieldSessionVault is ERC4626, Ownable {
         IERC20 underlying = IERC20(asset());
         underlying.safeTransferFrom(yieldStrategy, address(this), amount);
 
+        uint256 realizedYield = 0;
         if (amount > deployedToStrategy) {
             // Yield earned — more came back than deployed
-            uint256 yield_ = amount - deployedToStrategy;
+            realizedYield = amount - deployedToStrategy;
             deployedToStrategy = 0;
-            emit YieldHarvested(yield_);
+            emit YieldHarvested(realizedYield);
         } else {
             deployedToStrategy -= amount;
         }
+
+        emit StrategyAssetsWithdrawn(amount, realizedYield, deployedToStrategy);
+    }
+
+    /// @notice ERC4626 total assets, including assets temporarily deployed to the strategy.
+    function totalAssets() public view override returns (uint256) {
+        return IERC20(asset()).balanceOf(address(this)) + deployedToStrategy;
     }
 
     // ============================================================
@@ -239,6 +267,6 @@ contract YieldSessionVault is ERC4626, Ownable {
 
     /// @notice Total assets under management (vault + strategy)
     function totalManagedAssets() external view returns (uint256) {
-        return totalAssets() + deployedToStrategy;
+        return totalAssets();
     }
 }

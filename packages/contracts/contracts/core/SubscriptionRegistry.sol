@@ -1,14 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/utils/Pausable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "../interfaces/ISubscriptionRegistry.sol";
 import "../interfaces/IERC5643.sol";
 import "../interfaces/IPlanFactory.sol";
+import "../utils/UpgradeableReentrancyGuard.sol";
 
 interface ICrossChainTransport {
     function dispatch(
@@ -22,13 +24,15 @@ interface ICrossChainTransport {
 /// @notice ERC-5643 based subscription NFT lifecycle management
 /// @dev Extends ERC-721 with subscription-specific logic: expiry, renewal, cancellation
 contract SubscriptionRegistry is
-    ERC721,
-    ERC721Enumerable,
+    Initializable,
+    ERC721Upgradeable,
+    ERC721EnumerableUpgradeable,
     IERC5643,
     ISubscriptionRegistry,
-    Ownable,
-    ReentrancyGuard,
-    Pausable
+    OwnableUpgradeable,
+    UpgradeableReentrancyGuard,
+    PausableUpgradeable,
+    UUPSUpgradeable
 {
     uint8 public constant ROUTE_AXELAR = 1;
     uint8 public constant ROUTE_CCIP = 2;
@@ -65,20 +69,33 @@ contract SubscriptionRegistry is
     address public ccipTransport;
 
     /// @notice Migration import window toggle
-    bool public migrationEnabled = true;
+    bool public migrationEnabled;
 
     // ============================================================
     //                        CONSTRUCTOR
     // ============================================================
 
-    constructor(
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(
+        address initialOwner,
         string memory name_,
         string memory symbol_,
         address _planFactory
-    ) ERC721(name_, symbol_) Ownable(msg.sender) {
+    ) external initializer {
+        __ERC721_init(name_, symbol_);
+        __ERC721Enumerable_init();
+        __Ownable_init(initialOwner);
+        __UpgradeableReentrancyGuard_init();
+        __Pausable_init();
+
         require(_planFactory != address(0), "SubscriptionRegistry: zero PlanFactory");
         planFactory = IPlanFactory(_planFactory);
         _nextTokenId = 1; // Start at 1
+        migrationEnabled = true;
     }
 
     // ============================================================
@@ -104,6 +121,7 @@ contract SubscriptionRegistry is
 
     /// @notice Authorizes a billing contract
     function authorizeBiller(address biller) external onlyOwner {
+        require(biller != address(0), "SubscriptionRegistry: zero biller");
         authorizedBillers[biller] = true;
     }
 
@@ -114,6 +132,7 @@ contract SubscriptionRegistry is
 
     /// @notice Authorizes a GMP bridge address
     function authorizeBridge(address bridge) external onlyOwner {
+        require(bridge != address(0), "SubscriptionRegistry: zero bridge");
         authorizedBridges[bridge] = true;
     }
 
@@ -270,6 +289,12 @@ contract SubscriptionRegistry is
     }
 
     /// @inheritdoc ISubscriptionRegistry
+    function getPlanId(uint256 tokenId) external view returns (uint256 planId) {
+        require(_ownerOf(tokenId) != address(0), "SubscriptionRegistry: nonexistent token");
+        return _tokenPlans[tokenId];
+    }
+
+    /// @inheritdoc ISubscriptionRegistry
     function updateCrossChain(uint256 tokenId, bytes calldata gmMessage) external onlyBridge whenNotPaused {
         // Decode GMP message: (uint64 newExpiration, uint256 planId)
         (uint64 newExpiration, uint256 planId) = abi.decode(gmMessage, (uint64, uint256));
@@ -343,7 +368,7 @@ contract SubscriptionRegistry is
     // ============================================================
 
     /// @inheritdoc IERC5643
-    function renewSubscription(uint256 tokenId, uint64 duration) external payable {
+    function renewSubscription(uint256, uint64) external payable {
         // Public renewal (for direct user calls) — requires biller authorization in production
         // In MVP, delegate to authorized biller flow
         revert("SubscriptionRegistry: use authorized biller");
@@ -395,6 +420,7 @@ contract SubscriptionRegistry is
     function _renewInternal(uint256 tokenId, uint64 extension) internal {
         require(_ownerOf(tokenId) != address(0), "SubscriptionRegistry: nonexistent token");
         require(extension > 0, "SubscriptionRegistry: zero extension");
+        require(planFactory.getPlan(_tokenPlans[tokenId]).active, "SubscriptionRegistry: plan inactive");
 
         uint64 currentExpiry = _expirations[tokenId];
         uint64 newExpiry;
@@ -434,7 +460,7 @@ contract SubscriptionRegistry is
         address to,
         uint256 tokenId,
         address auth
-    ) internal override(ERC721, ERC721Enumerable) returns (address) {
+    ) internal override(ERC721Upgradeable, ERC721EnumerableUpgradeable) returns (address) {
         address from = super._update(to, tokenId, auth);
 
         if (from != address(0) && _walletTokens[from] == tokenId) {
@@ -451,13 +477,17 @@ contract SubscriptionRegistry is
     function _increaseBalance(
         address account,
         uint128 value
-    ) internal override(ERC721, ERC721Enumerable) {
+    ) internal override(ERC721Upgradeable, ERC721EnumerableUpgradeable) {
         super._increaseBalance(account, value);
     }
 
     function supportsInterface(
         bytes4 interfaceId
-    ) public view override(ERC721, ERC721Enumerable) returns (bool) {
+    ) public view override(ERC721Upgradeable, ERC721EnumerableUpgradeable) returns (bool) {
         return super.supportsInterface(interfaceId);
+    }
+
+    function _authorizeUpgrade(address newImplementation) internal view override onlyOwner {
+        (newImplementation);
     }
 }

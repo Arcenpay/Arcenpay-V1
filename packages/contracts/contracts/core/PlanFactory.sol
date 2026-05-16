@@ -1,18 +1,28 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
-import "@openzeppelin/contracts/utils/Pausable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/cryptography/EIP712Upgradeable.sol";
 import "../interfaces/IPlanFactory.sol";
+import "../utils/UpgradeableReentrancyGuard.sol";
 
 /// @title PlanFactory
 /// @notice SaaS provider plan configuration and deployment
 /// @dev Manages provider registration and plan tier CRUD operations
 /// @dev Supports EIP-712 meta-transactions for gasless plan creation
-contract PlanFactory is IPlanFactory, Ownable, ReentrancyGuard, EIP712, Pausable {
+contract PlanFactory is
+    Initializable,
+    IPlanFactory,
+    OwnableUpgradeable,
+    UpgradeableReentrancyGuard,
+    EIP712Upgradeable,
+    PausableUpgradeable,
+    UUPSUpgradeable
+{
     using ECDSA for bytes32;
     // ============================================================
     //                      EIP-712 CONSTANTS
@@ -49,9 +59,20 @@ contract PlanFactory is IPlanFactory, Ownable, ReentrancyGuard, EIP712, Pausable
     //                        CONSTRUCTOR
     // ============================================================
 
-    constructor(address[] memory _approvedTokens) Ownable(msg.sender) EIP712("ArcenPay PlanFactory", "1") {
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(address initialOwner, address[] memory _approvedTokens) external initializer {
+        __Ownable_init(initialOwner);
+        __UpgradeableReentrancyGuard_init();
+        __EIP712_init("ArcenPay PlanFactory", "1");
+        __Pausable_init();
+
         _nextPlanId = 1; // Start plan IDs at 1
         for (uint256 i = 0; i < _approvedTokens.length; i++) {
+            require(_approvedTokens[i] != address(0), "PlanFactory: zero token");
             approvedTokens[_approvedTokens[i]] = true;
         }
     }
@@ -66,12 +87,14 @@ contract PlanFactory is IPlanFactory, Ownable, ReentrancyGuard, EIP712, Pausable
     /// @notice Adds a token to the approved list
     /// @param token The token address to approve
     function approveToken(address token) external onlyOwner {
+        require(token != address(0), "PlanFactory: zero token");
         approvedTokens[token] = true;
     }
 
     /// @notice Removes a token from the approved list
     /// @param token The token address to remove
     function revokeToken(address token) external onlyOwner {
+        require(token != address(0), "PlanFactory: zero token");
         approvedTokens[token] = false;
     }
 
@@ -234,5 +257,9 @@ contract PlanFactory is IPlanFactory, Ownable, ReentrancyGuard, EIP712, Pausable
     /// @inheritdoc IPlanFactory
     function isProvider(address provider) external view returns (bool) {
         return _providers[provider];
+    }
+
+    function _authorizeUpgrade(address newImplementation) internal view override onlyOwner {
+        (newImplementation);
     }
 }

@@ -2,7 +2,7 @@
 pragma solidity ^0.8.24;
 
 /// @title ISubscriptionRegistry
-/// @notice Interface for the MEAP Subscription Registry
+/// @notice Interface for the ArcenPay Subscription Registry
 /// @dev Extends ERC-5643 with plan management and cross-chain support
 interface ISubscriptionRegistry {
     // ============================================================
@@ -109,6 +109,11 @@ interface ISubscriptionRegistry {
     /// @return planId The plan ID
     /// @return planTier The plan tier name
     function getPlanFeatures(uint256 tokenId) external view returns (uint256 planId, string memory planTier);
+
+    /// @notice Returns the active plan id for a subscription token
+    /// @param tokenId The token ID to query
+    /// @return planId The plan ID
+    function getPlanId(uint256 tokenId) external view returns (uint256 planId);
 
     /// @notice Updates state from cross-chain GMP message
     /// @param tokenId The token ID to update

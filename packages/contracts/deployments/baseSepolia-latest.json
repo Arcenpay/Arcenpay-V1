@@ -2,18 +2,30 @@
   "network": "baseSepolia",
   "chainId": 84532,
   "deployer": "0x38f62CCfD6F771eF9E48e3bb86a3E0413aE5319B",
+  "deploymentKind": "uups",
   "contracts": {
-    "PlanFactory": "0x66775Af13C63781AAd28203CC5d3E9eE5d5eB83d",
-    "FeeCollector": "0x5F32fBfF19385A78c3F721007758E9924FAD4133",
-    "SubscriptionRegistry": "0xF9610c064FFD64255A1d509d17b2Af8733084e50",
-    "SessionVault": "0x96BcE2d49e3e4EddBBF3aa07354E66615BC2623c",
-    "ZKUsageVerifier": "0x03290b6988F87925A4939d974895bC30981aA90D",
-    "ERC7579AutopayModule": "0x69Ac04bFdC045A99A2D31bb141A74da354a94c19",
-    "MirrorRegistry": "0xe7E0dFfa82596ee6Ba1755bc25c29376a07236dE"
+    "PlanFactory": "0x59b15e1d4882A4CaAD475097549dF94fE336a421",
+    "FeeCollector": "0x6450DD859035405D892793F4a6D0BE780f9bBfEe",
+    "SubscriptionRegistry": "0xC2faa4DD73B2F449b6db1A661cC8C7C271187007",
+    "SessionVault": "0x9dF25216eaB5766414414C07E28Fba4f89b4b24B",
+    "ZKUsageVerifier": "0x613D16B414a6428aE07A712039DE764245Eb14Ac",
+    "ERC7579AutopayModule": "0xE8FFF520331E2ce6d75B5b57385e4ab15Cd3ae43",
+    "MirrorRegistry": "0xC24cBC9C664aCA41dEf6D5a3E941c1e11C163fD1"
+  },
+  "implementations": {
+    "PlanFactory": "0x137b43305Ce33180325d41fc4Ea177a2180367b3",
+    "FeeCollector": "0x97159C2f714CE05594Dd229507F8f185998DC35C",
+    "SubscriptionRegistry": "0x5de0397B31F8a11293c9F024343DC1649f003500",
+    "SessionVault": "0x826D6787192741851613baeCBA39f81c4941f32f",
+    "ZKUsageVerifier": "0x081D063A8D2DBA0535a3e4503a9B609A422081c8",
+    "ERC7579AutopayModule": "0x958E0d11fcECC663f1a9EC657d4834B84B725A21",
+    "MirrorRegistry": "0x8fa7e89a670ea5B64B7e62C2f4DF3A63c80d2b7e"
   },
   "config": {
     "USDC": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
-    "treasury": "0x38f62CCfD6F771eF9E48e3bb86a3E0413aE5319B"
+    "treasury": "0x38f62CCfD6F771eF9E48e3bb86a3E0413aE5319B",
+    "owner": "0x38f62CCfD6F771eF9E48e3bb86a3E0413aE5319B",
+    "admin": "0x38f62CCfD6F771eF9E48e3bb86a3E0413aE5319B"
   },
-  "deployedAt": "2026-04-23T07:08:47.926Z"
+  "deployedAt": "2026-05-16T05:48:46.892Z"
 }

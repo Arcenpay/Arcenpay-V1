@@ -1,6 +1,9 @@
 {
-  "solc_version": "0.8.24",
-  "solc_remaps": ["@openzeppelin/=lib/openzeppelin-contracts/"],
+  "solc_remaps": [
+    "@openzeppelin/contracts/=../../node_modules/@openzeppelin/contracts/",
+    "@openzeppelin/contracts-upgradeable/=../../node_modules/@openzeppelin/contracts-upgradeable/",
+    "forge-std/=lib/forge-std/src/"
+  ],
   "detectors_to_run": "all",
   "exclude_informational": false,
   "exclude_low": false,
@@ -8,6 +11,6 @@
   "exclude_high": false,
   "exclude_optimization": true,
   "fail_on": "high",
-  "filter_paths": "test/,script/,lib/",
+  "filter_paths": "test/,script/,lib/,node_modules/",
   "compile_force_framework": "foundry"
 }

@@ -73,6 +73,7 @@ contract MultisigVerifier is Ownable {
             "MultisigVerifier: unauthorized"
         );
         require(registeredMultisigs[multisig], "MultisigVerifier: not registered");
+        require(delegate != address(0), "MultisigVerifier: zero delegate");
         authorizedDelegates[multisig][delegate] = true;
         emit DelegateAuthorized(multisig, delegate);
     }

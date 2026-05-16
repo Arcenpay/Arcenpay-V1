@@ -46,22 +46,13 @@ function isAddress(value: string | undefined | null): value is `0x${string}` {
 }
 
 function resolveUsdcOverride(chainId: number): `0x${string}` | null {
-  const globalOverride =
-    process.env.NEXT_PUBLIC_USDC_ADDRESS || process.env.NEXT_PUBLIC_MOCK_USDC_ADDRESS;
+  const globalOverride = process.env.NEXT_PUBLIC_USDC_ADDRESS;
 
   const chainOverrides: Record<number, string | undefined> = {
-    11155111:
-      process.env.NEXT_PUBLIC_USDC_ADDRESS_11155111 ||
-      process.env.NEXT_PUBLIC_MOCK_USDC_ADDRESS_11155111,
-    84532:
-      process.env.NEXT_PUBLIC_USDC_ADDRESS_84532 ||
-      process.env.NEXT_PUBLIC_MOCK_USDC_ADDRESS_84532,
-    8453:
-      process.env.NEXT_PUBLIC_USDC_ADDRESS_8453 ||
-      process.env.NEXT_PUBLIC_MOCK_USDC_ADDRESS_8453,
-    5042002:
-      process.env.NEXT_PUBLIC_USDC_ADDRESS_5042002 ||
-      process.env.NEXT_PUBLIC_MOCK_USDC_ADDRESS_5042002,
+    11155111: process.env.NEXT_PUBLIC_USDC_ADDRESS_11155111,
+    84532: process.env.NEXT_PUBLIC_USDC_ADDRESS_84532,
+    8453: process.env.NEXT_PUBLIC_USDC_ADDRESS_8453,
+    5042002: process.env.NEXT_PUBLIC_USDC_ADDRESS_5042002,
   };
 
   const candidate = chainOverrides[chainId] || globalOverride;

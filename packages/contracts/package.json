@@ -18,6 +18,10 @@
     "deploy:base-sepolia": "hardhat run scripts/deploy.ts --network baseSepolia",
     "deploy:base-mainnet": "hardhat run scripts/deploy.ts --network baseMainnet",
     "deploy:arc-testnet": "hardhat run scripts/deploy.ts --network arcTestnet",
+    "upgrade:sepolia": "hardhat run scripts/upgrade.ts --network sepolia",
+    "upgrade:base-sepolia": "hardhat run scripts/upgrade.ts --network baseSepolia",
+    "upgrade:base-mainnet": "hardhat run scripts/upgrade.ts --network baseMainnet",
+    "upgrade:arc-testnet": "hardhat run scripts/upgrade.ts --network arcTestnet",
     "ops:snapshot-live-state:sepolia": "hardhat run scripts/snapshot-live-state.ts --network sepolia",
     "ops:snapshot-live-state:base-sepolia": "hardhat run scripts/snapshot-live-state.ts --network baseSepolia",
     "ops:snapshot-live-state:base-mainnet": "hardhat run scripts/snapshot-live-state.ts --network baseMainnet",
@@ -60,5 +64,8 @@
     "ts-node": "^10.9.0",
     "typechain": "^8.3.2",
     "typescript": "^5.7.0"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts-upgradeable": "^5.6.1"
   }
 }

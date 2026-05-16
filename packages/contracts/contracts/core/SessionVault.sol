@@ -3,15 +3,24 @@ pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/utils/Pausable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "../interfaces/ISessionVault.sol";
+import "../utils/UpgradeableReentrancyGuard.sol";
 
 /// @title SessionVault
 /// @notice Pre-funded stablecoin balance vault for ZKVUB billing sessions
 /// @dev Agents deposit stablecoins into sessions; verifier settles from session balance
-contract SessionVault is ISessionVault, Ownable, ReentrancyGuard, Pausable {
+contract SessionVault is
+    Initializable,
+    ISessionVault,
+    OwnableUpgradeable,
+    UpgradeableReentrancyGuard,
+    PausableUpgradeable,
+    UUPSUpgradeable
+{
     using SafeERC20 for IERC20;
 
     // ============================================================
@@ -54,7 +63,16 @@ contract SessionVault is ISessionVault, Ownable, ReentrancyGuard, Pausable {
     //                        CONSTRUCTOR
     // ============================================================
 
-    constructor() Ownable(msg.sender) {}
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(address initialOwner) external initializer {
+        __Ownable_init(initialOwner);
+        __UpgradeableReentrancyGuard_init();
+        __Pausable_init();
+    }
 
     // ============================================================
     //                       MODIFIERS
@@ -74,6 +92,7 @@ contract SessionVault is ISessionVault, Ownable, ReentrancyGuard, Pausable {
 
     /// @notice Authorizes a settlement contract
     function authorizeSettler(address settler) external onlyOwner {
+        require(settler != address(0), "SessionVault: zero settler");
         authorizedSettlers[settler] = true;
     }
 
@@ -225,5 +244,9 @@ contract SessionVault is ISessionVault, Ownable, ReentrancyGuard, Pausable {
     /// @param agent The agent address
     function getAgentSessions(address agent) external view returns (bytes32[] memory) {
         return _agentSessions[agent];
+    }
+
+    function _authorizeUpgrade(address newImplementation) internal view override onlyOwner {
+        (newImplementation);
     }
 }

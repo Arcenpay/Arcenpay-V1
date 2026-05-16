@@ -1,30 +1,39 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/utils/Pausable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "../interfaces/IZKUsageVerifier.sol";
 import "../interfaces/ISessionVault.sol";
 import "../interfaces/IFeeCollector.sol";
 import "../interfaces/IPlanFactory.sol";
 import "../interfaces/IGroth16Verifier.sol";
+import "../utils/UpgradeableReentrancyGuard.sol";
 
 /// @title ZKUsageVerifier
 /// @notice On-chain zk-SNARK proof verification and ZKVUB settlement
-contract ZKUsageVerifier is IZKUsageVerifier, Ownable, ReentrancyGuard, Pausable {
+contract ZKUsageVerifier is
+    Initializable,
+    IZKUsageVerifier,
+    OwnableUpgradeable,
+    UpgradeableReentrancyGuard,
+    PausableUpgradeable,
+    UUPSUpgradeable
+{
     // ============================================================
     //                         STORAGE
     // ============================================================
 
     /// @notice Reference to SessionVault
-    ISessionVault public immutable sessionVault;
+    ISessionVault public sessionVault;
 
     /// @notice Reference to FeeCollector
-    IFeeCollector public immutable feeCollector;
+    IFeeCollector public feeCollector;
 
     /// @notice Reference to PlanFactory
-    IPlanFactory public immutable planFactory;
+    IPlanFactory public planFactory;
 
     /// @notice Used nullifiers (prevents double-spend)
     mapping(bytes32 => bool) private _usedNullifiers;
@@ -45,11 +54,21 @@ contract ZKUsageVerifier is IZKUsageVerifier, Ownable, ReentrancyGuard, Pausable
     //                        CONSTRUCTOR
     // ============================================================
 
-    constructor(
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(
+        address initialOwner,
         address _sessionVault,
         address _feeCollector,
         address _planFactory
-    ) Ownable(msg.sender) {
+    ) external initializer {
+        __Ownable_init(initialOwner);
+        __UpgradeableReentrancyGuard_init();
+        __Pausable_init();
+
         require(_sessionVault != address(0), "ZKVerifier: zero SessionVault");
         require(_feeCollector != address(0), "ZKVerifier: zero FeeCollector");
         require(_planFactory != address(0), "ZKVerifier: zero PlanFactory");
@@ -195,5 +214,9 @@ contract ZKUsageVerifier is IZKUsageVerifier, Ownable, ReentrancyGuard, Pausable
             proof.c,
             publicSignals
         );
+    }
+
+    function _authorizeUpgrade(address newImplementation) internal view override onlyOwner {
+        (newImplementation);
     }
 }

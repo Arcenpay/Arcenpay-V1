@@ -1,16 +1,24 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "../interfaces/IFeeCollector.sol";
+import "../utils/UpgradeableReentrancyGuard.sol";
 
 /// @title FeeCollector
 /// @notice Protocol fee collection and distribution
 /// @dev Collects 0.5% on subscriptions and 0.3% on ZKVUB settlements
-contract FeeCollector is IFeeCollector, Ownable, ReentrancyGuard {
+contract FeeCollector is
+    Initializable,
+    IFeeCollector,
+    OwnableUpgradeable,
+    UpgradeableReentrancyGuard,
+    UUPSUpgradeable
+{
     using SafeERC20 for IERC20;
 
     // ============================================================
@@ -61,7 +69,15 @@ contract FeeCollector is IFeeCollector, Ownable, ReentrancyGuard {
     //                        CONSTRUCTOR
     // ============================================================
 
-    constructor(address _treasury) Ownable(msg.sender) {
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(address initialOwner, address _treasury) external initializer {
+        __Ownable_init(initialOwner);
+        __UpgradeableReentrancyGuard_init();
+
         require(_treasury != address(0), "FeeCollector: zero treasury");
         treasury = _treasury;
 
@@ -99,6 +115,7 @@ contract FeeCollector is IFeeCollector, Ownable, ReentrancyGuard {
 
     /// @notice Authorizes a contract to collect fees
     function authorizeCollector(address collector) external onlyOwner {
+        require(collector != address(0), "FeeCollector: zero collector");
         authorizedCollectors[collector] = true;
     }
 
@@ -259,5 +276,9 @@ contract FeeCollector is IFeeCollector, Ownable, ReentrancyGuard {
         IERC20(token).safeTransfer(treasury, balance);
 
         emit FeesWithdrawn(treasury, balance);
+    }
+
+    function _authorizeUpgrade(address newImplementation) internal view override onlyOwner {
+        (newImplementation);
     }
 }

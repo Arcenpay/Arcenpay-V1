@@ -1,19 +1,29 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/utils/Pausable.sol";
 import "../interfaces/IERC7579AutopayModule.sol";
 import "../interfaces/IPlanFactory.sol";
 import "../interfaces/ISubscriptionRegistry.sol";
 import "../interfaces/IFeeCollector.sol";
+import "../utils/UpgradeableReentrancyGuard.sol";
 
 /// @title ERC7579AutopayModule
 /// @notice Automated recurring billing module for ERC-7579 smart accounts
 /// @dev Implements the Executor module type (typeId = 2)
-contract ERC7579AutopayModule is IERC7579AutopayModule, ReentrancyGuard, Pausable {
+contract ERC7579AutopayModule is
+    Initializable,
+    IERC7579AutopayModule,
+    OwnableUpgradeable,
+    UpgradeableReentrancyGuard,
+    PausableUpgradeable,
+    UUPSUpgradeable
+{
     using SafeERC20 for IERC20;
 
     // ============================================================
@@ -31,22 +41,25 @@ contract ERC7579AutopayModule is IERC7579AutopayModule, ReentrancyGuard, Pausabl
     // ============================================================
 
     /// @notice Admin address for global pause control
-    address public immutable admin;
+    address public admin;
 
     /// @notice Reference to PlanFactory
-    IPlanFactory public immutable planFactory;
+    IPlanFactory public planFactory;
 
     /// @notice Reference to SubscriptionRegistry
-    ISubscriptionRegistry public immutable subscriptionRegistry;
+    ISubscriptionRegistry public subscriptionRegistry;
 
     /// @notice Reference to FeeCollector
-    IFeeCollector public immutable feeCollector;
+    IFeeCollector public feeCollector;
 
     /// @notice Account address => autopay configuration
     mapping(address => AutopayConfig) private _configs;
 
     /// @notice Account address => last successful pull timestamp
     mapping(address => uint64) private _lastPullTimes;
+
+    /// @notice Account address => whether the first successful pull has occurred
+    mapping(address => bool) private _hasPulled;
 
     /// @notice Account address => initialization status
     mapping(address => bool) private _initialized;
@@ -64,7 +77,7 @@ contract ERC7579AutopayModule is IERC7579AutopayModule, ReentrancyGuard, Pausabl
     struct PendingDispatch {
         uint256 tokenId;
         uint256 destinationChainId;
-        address merchant;
+        address refundAddress;
         uint64 timestamp;
     }
 
@@ -80,18 +93,28 @@ contract ERC7579AutopayModule is IERC7579AutopayModule, ReentrancyGuard, Pausabl
     /// @notice Emitted when migration imports are permanently disabled
     event MigrationFinalized();
 
-    bool public migrationEnabled = true;
+    bool public migrationEnabled;
 
     // ============================================================
     //                        CONSTRUCTOR
     // ============================================================
 
-    constructor(
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(
+        address initialOwner,
         address _planFactory,
         address _subscriptionRegistry,
         address _feeCollector,
         address _admin
-    ) {
+    ) external initializer {
+        __Ownable_init(initialOwner);
+        __UpgradeableReentrancyGuard_init();
+        __Pausable_init();
+
         require(_planFactory != address(0), "AutopayModule: zero PlanFactory");
         require(_subscriptionRegistry != address(0), "AutopayModule: zero Registry");
         require(_feeCollector != address(0), "AutopayModule: zero FeeCollector");
@@ -101,6 +124,7 @@ contract ERC7579AutopayModule is IERC7579AutopayModule, ReentrancyGuard, Pausabl
         subscriptionRegistry = ISubscriptionRegistry(_subscriptionRegistry);
         feeCollector = IFeeCollector(_feeCollector);
         admin = _admin;
+        migrationEnabled = true;
     }
 
     function pause() external { require(msg.sender == admin, "AutopayModule: not admin"); _pause(); }
@@ -109,6 +133,12 @@ contract ERC7579AutopayModule is IERC7579AutopayModule, ReentrancyGuard, Pausabl
     modifier onlyAdmin() {
         require(msg.sender == admin, "AutopayModule: not admin");
         _;
+    }
+
+    function setAdmin(address newAdmin) external onlyOwner {
+        require(newAdmin != address(0), "AutopayModule: zero admin");
+        emit AdminUpdated(admin, newAdmin);
+        admin = newAdmin;
     }
 
     // ============================================================
@@ -128,6 +158,7 @@ contract ERC7579AutopayModule is IERC7579AutopayModule, ReentrancyGuard, Pausabl
         // Store config
         _configs[msg.sender] = config;
         _initialized[msg.sender] = true;
+        _hasPulled[msg.sender] = false;
 
         emit AutopayConfigured(
             msg.sender,
@@ -174,6 +205,7 @@ contract ERC7579AutopayModule is IERC7579AutopayModule, ReentrancyGuard, Pausabl
 
         delete _configs[msg.sender];
         delete _lastPullTimes[msg.sender];
+        delete _hasPulled[msg.sender];
         delete _totalPulled[msg.sender];
         delete _accountPaused[msg.sender];
         delete _pendingDispatches[msg.sender];
@@ -201,12 +233,14 @@ contract ERC7579AutopayModule is IERC7579AutopayModule, ReentrancyGuard, Pausabl
         require(_initialized[account], "AutopayModule: not initialized");
 
         AutopayConfig storage config = _configs[account];
+        IPlanFactory.Plan memory plan = _getCurrentPlan(config);
 
         // Verify caller is the authorized merchant
         require(msg.sender == config.merchant, "AutopayModule: not merchant");
 
         // Verify amount is within limits
         require(amount > 0 && amount <= config.maxAmount, "AutopayModule: amount out of range");
+        require(amount <= plan.price, "AutopayModule: amount exceeds active plan price");
 
         // Per-account pause check
         require(!_accountPaused[account], "AutopayModule: account paused");
@@ -221,7 +255,7 @@ contract ERC7579AutopayModule is IERC7579AutopayModule, ReentrancyGuard, Pausabl
 
         // Verify interval has elapsed (velocity limit)
         uint64 lastPull = _lastPullTimes[account];
-        if (lastPull != 0) {
+        if (_hasPulled[account]) {
             require(
                 block.timestamp >= lastPull + config.interval,
                 "AutopayModule: interval not elapsed"
@@ -233,6 +267,7 @@ contract ERC7579AutopayModule is IERC7579AutopayModule, ReentrancyGuard, Pausabl
 
         // Update last pull time BEFORE external calls (checks-effects-interactions)
         _lastPullTimes[account] = uint64(block.timestamp);
+        _hasPulled[account] = true;
         _totalPulled[account] += amount;
 
         // Calculate protocol fee using provider-specific tier rate
@@ -277,16 +312,23 @@ contract ERC7579AutopayModule is IERC7579AutopayModule, ReentrancyGuard, Pausabl
                 try subscriptionRegistry.dispatchCrossChainUpdate{value: 0}(
                     tokenId,
                     destinationChainId,
-                    config.merchant
-                ) {
+                    account
+                ) returns (bytes32 messageId, uint8 routeUsed) {
                     // Success — clear any pending dispatch
                     delete _pendingDispatches[account];
+                    emit CrossChainDispatchSucceeded(
+                        account,
+                        tokenId,
+                        destinationChainId,
+                        messageId,
+                        routeUsed
+                    );
                 } catch {
                     // GMP dispatch failure should not revert the payment, but track for retry
                     _pendingDispatches[account] = PendingDispatch({
                         tokenId: tokenId,
                         destinationChainId: destinationChainId,
-                        merchant: config.merchant,
+                        refundAddress: account,
                         timestamp: uint64(block.timestamp)
                     });
                     emit CrossChainDispatchFailed(account, destinationChainId);
@@ -320,11 +362,16 @@ contract ERC7579AutopayModule is IERC7579AutopayModule, ReentrancyGuard, Pausabl
     /// @inheritdoc IERC7579AutopayModule
     function canExecute(address account) external view returns (bool) {
         if (!_initialized[account]) return false;
+        if (paused() || _accountPaused[account]) return false;
 
         AutopayConfig storage config = _configs[account];
+        IPlanFactory.Plan memory plan = _getCurrentPlan(config);
+        if (!plan.active || plan.provider != config.merchant || plan.acceptedToken != config.token) {
+            return false;
+        }
         uint64 lastPull = _lastPullTimes[account];
 
-        if (lastPull == 0) {
+        if (!_hasPulled[account]) {
             return block.timestamp >= config.startTime;
         }
 
@@ -376,12 +423,23 @@ contract ERC7579AutopayModule is IERC7579AutopayModule, ReentrancyGuard, Pausabl
         require(migrationEnabled, "AutopayModule: migration closed");
         require(account != address(0), "AutopayModule: zero account");
         require(!_initialized[account], "AutopayModule: already initialized");
+        require(lastPullTime_ <= block.timestamp, "AutopayModule: future last pull");
 
         AutopayConfig memory importedConfig = config;
         _validateConfig(importedConfig, true);
+        if (importedConfig.maxTotalAmount > 0) {
+            require(
+                totalPulled_ <= importedConfig.maxTotalAmount,
+                "AutopayModule: imported total exceeds max"
+            );
+        }
+        if (totalPulled_ > 0) {
+            require(lastPullTime_ != 0, "AutopayModule: missing pull timestamp");
+        }
 
         _configs[account] = importedConfig;
         _lastPullTimes[account] = lastPullTime_;
+        _hasPulled[account] = lastPullTime_ != 0;
         _totalPulled[account] = totalPulled_;
         _mirrorDestinationChainIds[account] = mirrorDestinationChainId_;
         _accountPaused[account] = accountPaused_;
@@ -405,23 +463,32 @@ contract ERC7579AutopayModule is IERC7579AutopayModule, ReentrancyGuard, Pausabl
     /// @param account The account whose dispatch failed
     function retryDispatch(address account) external nonReentrant {
         require(_initialized[account], "AutopayModule: not initialized");
+        AutopayConfig storage config = _configs[account];
+        require(
+            msg.sender == account ||
+            msg.sender == config.merchant ||
+            msg.sender == admin ||
+            msg.sender == owner(),
+            "AutopayModule: unauthorized retry"
+        );
         PendingDispatch storage pending = _pendingDispatches[account];
         require(pending.timestamp != 0, "AutopayModule: no pending dispatch");
 
         uint256 tokenId = pending.tokenId;
         uint256 destChainId = pending.destinationChainId;
-        address merchant = pending.merchant;
+        address refundAddress = pending.refundAddress;
 
         // Clear before external call (CEI pattern)
         delete _pendingDispatches[account];
 
         // Attempt dispatch — reverts on failure so caller knows
-        subscriptionRegistry.dispatchCrossChainUpdate{value: 0}(
+        (bytes32 messageId, uint8 routeUsed) = subscriptionRegistry.dispatchCrossChainUpdate{value: 0}(
             tokenId,
             destChainId,
-            merchant
+            refundAddress
         );
 
+        emit CrossChainDispatchSucceeded(account, tokenId, destChainId, messageId, routeUsed);
         emit CrossChainDispatchRetried(account, tokenId, destChainId);
     }
 
@@ -429,11 +496,11 @@ contract ERC7579AutopayModule is IERC7579AutopayModule, ReentrancyGuard, Pausabl
     function getPendingDispatch(address account) external view returns (
         uint256 tokenId,
         uint256 destinationChainId,
-        address merchant,
+        address refundAddress,
         uint64 timestamp
     ) {
         PendingDispatch storage p = _pendingDispatches[account];
-        return (p.tokenId, p.destinationChainId, p.merchant, p.timestamp);
+        return (p.tokenId, p.destinationChainId, p.refundAddress, p.timestamp);
     }
 
     // ============================================================
@@ -450,9 +517,7 @@ contract ERC7579AutopayModule is IERC7579AutopayModule, ReentrancyGuard, Pausabl
         }
 
         // Verify plan exists and is active
-        IPlanFactory.Plan memory plan = planFactory.getPlan(config.planId);
-        require(plan.active, "AutopayModule: plan inactive");
-        require(plan.provider == config.merchant, "AutopayModule: merchant mismatch");
+        IPlanFactory.Plan memory plan = _getCurrentPlan(config);
         require(config.maxAmount <= plan.price, "AutopayModule: amount exceeds plan price");
 
         // If maxTotalAmount is set, it must allow at least one pull
@@ -464,7 +529,7 @@ contract ERC7579AutopayModule is IERC7579AutopayModule, ReentrancyGuard, Pausabl
     function _getOrMintToken(address account, uint256 planId) internal returns (uint256 tokenId, bool mintedNow) {
         uint256 walletToken = subscriptionRegistry.getWalletSubscription(account);
         if (walletToken != 0) {
-            (uint256 tokenPlanId,) = subscriptionRegistry.getPlanFeatures(walletToken);
+            uint256 tokenPlanId = subscriptionRegistry.getPlanId(walletToken);
             if (tokenPlanId == planId) {
                 return (walletToken, false);
             }
@@ -475,5 +540,16 @@ contract ERC7579AutopayModule is IERC7579AutopayModule, ReentrancyGuard, Pausabl
 
         tokenId = subscriptionRegistry.mint(account, planId, uint64(_configs[account].interval));
         return (tokenId, true);
+    }
+
+    function _getCurrentPlan(AutopayConfig memory config) internal view returns (IPlanFactory.Plan memory plan) {
+        plan = planFactory.getPlan(config.planId);
+        require(plan.active, "AutopayModule: plan inactive");
+        require(plan.provider == config.merchant, "AutopayModule: merchant mismatch");
+        require(plan.acceptedToken == config.token, "AutopayModule: token mismatch");
+    }
+
+    function _authorizeUpgrade(address newImplementation) internal view override onlyOwner {
+        (newImplementation);
     }
 }

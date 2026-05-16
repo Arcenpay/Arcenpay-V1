@@ -2,6 +2,7 @@
 pragma solidity ^0.8.24;
 
 import "forge-std/Test.sol";
+import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import "../contracts/core/FeeCollector.sol";
 import "../contracts/interfaces/IFeeCollector.sol";
 
@@ -15,7 +16,12 @@ contract FeeCollectorTest is Test {
     address public provider2 = makeAddr("provider2");
 
     function setUp() public {
-        feeCollector = new FeeCollector(treasury);
+        FeeCollector implementation = new FeeCollector();
+        ERC1967Proxy proxy = new ERC1967Proxy(
+            address(implementation),
+            abi.encodeCall(FeeCollector.initialize, (address(this), treasury))
+        );
+        feeCollector = FeeCollector(address(proxy));
         // Authorize this test contract as a fee collector
         feeCollector.authorizeCollector(address(this));
     }

@@ -2,6 +2,7 @@
 pragma solidity ^0.8.24;
 
 import "forge-std/Test.sol";
+import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import "../contracts/core/PlanFactory.sol";
 import "../contracts/core/FeeCollector.sol";
 import "../contracts/core/SubscriptionRegistry.sol";
@@ -39,9 +40,9 @@ contract MockGroth16Verifier {
     }
 }
 
-/// @title MEAPProtocolTest
-/// @notice End-to-end Foundry tests for MEAP core contracts
-contract MEAPProtocolTest is Test {
+/// @title ArcenPayProtocolTest
+/// @notice End-to-end Foundry tests for ArcenPay core contracts
+contract ArcenPayProtocolTest is Test {
     // ============================================================
     //                       TEST STATE
     // ============================================================
@@ -91,37 +92,75 @@ contract MEAPProtocolTest is Test {
         // Deploy PlanFactory with USDC approved
         address[] memory approvedTokens = new address[](1);
         approvedTokens[0] = address(usdc);
-        planFactory = new PlanFactory(approvedTokens);
+        PlanFactory planFactoryImpl = new PlanFactory();
+        ERC1967Proxy planFactoryProxy = new ERC1967Proxy(
+            address(planFactoryImpl),
+            abi.encodeCall(PlanFactory.initialize, (owner, approvedTokens))
+        );
+        planFactory = PlanFactory(address(planFactoryProxy));
 
         // Deploy FeeCollector
-        feeCollector = new FeeCollector(treasury);
+        FeeCollector feeCollectorImpl = new FeeCollector();
+        ERC1967Proxy feeCollectorProxy = new ERC1967Proxy(
+            address(feeCollectorImpl),
+            abi.encodeCall(FeeCollector.initialize, (owner, treasury))
+        );
+        feeCollector = FeeCollector(address(feeCollectorProxy));
 
         // Deploy SubscriptionRegistry
-        registry = new SubscriptionRegistry(
-            "MEAP Subscription",
-            "MEAP-SUB",
-            address(planFactory)
+        SubscriptionRegistry registryImpl = new SubscriptionRegistry();
+        ERC1967Proxy registryProxy = new ERC1967Proxy(
+            address(registryImpl),
+            abi.encodeCall(
+                SubscriptionRegistry.initialize,
+                (owner, "ArcenPay Subscription", "ARCENPAY-SUB", address(planFactory))
+            )
         );
+        registry = SubscriptionRegistry(address(registryProxy));
 
         // Deploy SessionVault
-        sessionVault = new SessionVault();
-        autopayModule = new ERC7579AutopayModule(
-            address(planFactory),
-            address(registry),
-            address(feeCollector),
-            address(this) // admin = test contract
+        SessionVault sessionVaultImpl = new SessionVault();
+        ERC1967Proxy sessionVaultProxy = new ERC1967Proxy(
+            address(sessionVaultImpl),
+            abi.encodeCall(SessionVault.initialize, (owner))
         );
+        sessionVault = SessionVault(address(sessionVaultProxy));
+
+        ERC7579AutopayModule autopayImpl = new ERC7579AutopayModule();
+        ERC1967Proxy autopayProxy = new ERC1967Proxy(
+            address(autopayImpl),
+            abi.encodeCall(
+                ERC7579AutopayModule.initialize,
+                (
+                    owner,
+                    address(planFactory),
+                    address(registry),
+                    address(feeCollector),
+                    address(this)
+                )
+            )
+        );
+        autopayModule = ERC7579AutopayModule(address(autopayProxy));
 
         // Deploy MirrorRegistry
-        mirrorRegistry = new MirrorRegistry();
+        MirrorRegistry mirrorImpl = new MirrorRegistry();
+        ERC1967Proxy mirrorProxy = new ERC1967Proxy(
+            address(mirrorImpl),
+            abi.encodeCall(MirrorRegistry.initialize, (owner))
+        );
+        mirrorRegistry = MirrorRegistry(address(mirrorProxy));
 
         // Deploy mock Groth16 verifier and ZKUsageVerifier
         mockVerifier = new MockGroth16Verifier();
-        zkVerifier = new ZKUsageVerifier(
-            address(sessionVault),
-            address(feeCollector),
-            address(planFactory)
+        ZKUsageVerifier zkVerifierImpl = new ZKUsageVerifier();
+        ERC1967Proxy zkVerifierProxy = new ERC1967Proxy(
+            address(zkVerifierImpl),
+            abi.encodeCall(
+                ZKUsageVerifier.initialize,
+                (owner, address(sessionVault), address(feeCollector), address(planFactory))
+            )
         );
+        zkVerifier = ZKUsageVerifier(address(zkVerifierProxy));
         zkVerifier.setGroth16Verifier(address(mockVerifier));
 
         // Fund test accounts
@@ -519,6 +558,19 @@ contract MEAPProtocolTest is Test {
         assertEq(newExpiry, originalExpiry + DURATION);
     }
 
+    function test_renewSubscription_revert_inactivePlan() public {
+        vm.prank(provider);
+        uint256 planId = planFactory.createPlan("Pro", "pro", PLAN_PRICE, MONTHLY, address(usdc), "");
+
+        uint256 tokenId = registry.mint(subscriber, planId, DURATION);
+
+        vm.prank(provider);
+        planFactory.deactivatePlan(planId);
+
+        vm.expectRevert("SubscriptionRegistry: plan inactive");
+        registry.renew(tokenId, DURATION);
+    }
+
     function test_cancelSubscription() public {
         vm.prank(provider);
         uint256 planId = planFactory.createPlan("Pro", "pro", PLAN_PRICE, MONTHLY, address(usdc), "");
@@ -789,6 +841,43 @@ contract MEAPProtocolTest is Test {
             expiryAfterFirstBilling + MONTHLY,
             "autopay renew should happen only once per cycle"
         );
+    }
+
+    function test_autopayExecute_revert_inactivePlan() public {
+        vm.prank(provider);
+        uint256 planId = planFactory.createPlan(
+            "Pro Plan",
+            "pro",
+            PLAN_PRICE,
+            MONTHLY,
+            address(usdc),
+            "ipfs://pro-plan"
+        );
+
+        vm.prank(subscriber);
+        usdc.approve(address(autopayModule), type(uint256).max);
+
+        uint64 startTime = uint64(block.timestamp + 5);
+        IERC7579AutopayModule.AutopayConfig memory config = IERC7579AutopayModule.AutopayConfig({
+            merchant: provider,
+            maxAmount: PLAN_PRICE,
+            token: address(usdc),
+            interval: MONTHLY,
+            startTime: startTime,
+            planId: planId,
+            maxTotalAmount: 0
+        });
+
+        vm.prank(subscriber);
+        autopayModule.onInstall(abi.encode(config));
+
+        vm.prank(provider);
+        planFactory.deactivatePlan(planId);
+
+        vm.warp(startTime + 1);
+        vm.prank(provider);
+        vm.expectRevert("AutopayModule: plan inactive");
+        autopayModule.execute(subscriber, PLAN_PRICE);
     }
 
     function test_subscriptionRegistry_changePlan_revert_subscriberCannotSelfUpgrade() public {
@@ -1281,6 +1370,25 @@ contract MEAPProtocolTest is Test {
         autopayModule.execute(subscriber, PLAN_PRICE);
     }
 
+    function test_autopay_revert_tokenMismatch() public {
+        vm.prank(provider);
+        uint256 planId = planFactory.createPlan("Pro", "pro", PLAN_PRICE, MONTHLY, address(usdc), "");
+
+        IERC7579AutopayModule.AutopayConfig memory config = IERC7579AutopayModule.AutopayConfig({
+            merchant: provider,
+            maxAmount: PLAN_PRICE,
+            token: treasury,
+            interval: MONTHLY,
+            startTime: uint64(block.timestamp + 5),
+            planId: planId,
+            maxTotalAmount: 0
+        });
+
+        vm.prank(subscriber);
+        vm.expectRevert("AutopayModule: token mismatch");
+        autopayModule.onInstall(abi.encode(config));
+    }
+
     function test_autopay_globalPause() public {
         vm.prank(provider);
         uint256 planId = planFactory.createPlan("Pro", "pro", PLAN_PRICE, MONTHLY, address(usdc), "");
@@ -1342,6 +1450,36 @@ contract MEAPProtocolTest is Test {
         autopayModule.onInstall(abi.encode(config));
 
         vm.expectRevert("AutopayModule: no pending dispatch");
+        autopayModule.retryDispatch(subscriber);
+    }
+
+    function test_autopay_retryDispatch_revert_unauthorizedCaller() public {
+        vm.prank(provider);
+        uint256 planId = planFactory.createPlan("Pro", "pro", PLAN_PRICE, MONTHLY, address(usdc), "");
+
+        IERC7579AutopayModule.AutopayConfig memory config = IERC7579AutopayModule.AutopayConfig({
+            merchant: provider,
+            maxAmount: PLAN_PRICE,
+            token: address(usdc),
+            interval: MONTHLY,
+            startTime: uint64(block.timestamp + 5),
+            planId: planId,
+            maxTotalAmount: 0
+        });
+
+        vm.prank(subscriber);
+        usdc.approve(address(autopayModule), type(uint256).max);
+        vm.prank(subscriber);
+        autopayModule.onInstall(abi.encode(config));
+        vm.prank(subscriber);
+        autopayModule.setMirrorDestination(8453);
+
+        vm.warp(block.timestamp + 6);
+        vm.prank(provider);
+        autopayModule.execute(subscriber, PLAN_PRICE);
+
+        vm.prank(address(0x9999));
+        vm.expectRevert("AutopayModule: unauthorized retry");
         autopayModule.retryDispatch(subscriber);
     }
 

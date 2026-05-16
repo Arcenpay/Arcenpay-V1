@@ -9,6 +9,12 @@ type ChainConfig = {
   explorerBase: string;
 };
 
+type ProxyDeployment = {
+  implementation: string;
+  proxy: string;
+  contract: any;
+};
+
 const CHAIN_CONFIGS: Record<number, ChainConfig> = {
   11155111: {
     slug: "sepolia",
@@ -27,10 +33,43 @@ const CHAIN_CONFIGS: Record<number, ChainConfig> = {
   },
   5042002: {
     slug: "arcTestnet",
-    usdc: "0xF9610c064FFD64255A1d509d17b2Af8733084e50",
+    usdc: "0x3600000000000000000000000000000000000000",
     explorerBase: "https://testnet.arcscan.app/address",
   },
 };
+
+async function deployUUPSProxy(
+  contractName: string,
+  initializeArgs: unknown[],
+): Promise<ProxyDeployment> {
+  const ImplementationFactory = await ethers.getContractFactory(contractName);
+  const implementation = await ImplementationFactory.deploy();
+  await implementation.waitForDeployment();
+  const implementationAddress = await implementation.getAddress();
+
+  const ProxyFactory = await ethers.getContractFactory(
+    "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy",
+  );
+  const initializeData = ImplementationFactory.interface.encodeFunctionData(
+    "initialize",
+    initializeArgs,
+  );
+  const proxy = await ProxyFactory.deploy(implementationAddress, initializeData);
+  await proxy.waitForDeployment();
+  const proxyAddress = await proxy.getAddress();
+
+  const contract = ImplementationFactory.attach(proxyAddress) as any;
+
+  console.log(
+    `[deploy] ${contractName}: proxy=${proxyAddress} implementation=${implementationAddress}`,
+  );
+
+  return {
+    implementation: implementationAddress,
+    proxy: proxyAddress,
+    contract,
+  };
+}
 
 async function main() {
   const [deployer] = await ethers.getSigners();
@@ -51,94 +90,73 @@ async function main() {
   const balance = await ethers.provider.getBalance(deployer.address);
   console.log(`[deploy] Balance=${ethers.formatEther(balance)} ETH`);
   if (balance === 0n) {
-    throw new Error("Deployer has 0 ETH — cannot deploy.");
+    throw new Error("Deployer has 0 ETH -- cannot deploy.");
   }
 
-  // 1) PlanFactory
-  const PlanFactory = await ethers.getContractFactory("PlanFactory");
-  const planFactory = await PlanFactory.deploy([usdcAddress]);
-  await planFactory.waitForDeployment();
-  const planFactoryAddr = await planFactory.getAddress();
-  console.log(`[deploy] PlanFactory=${planFactoryAddr}`);
-
-  // 2) FeeCollector
-  const FeeCollector = await ethers.getContractFactory("FeeCollector");
-  const feeCollector = await FeeCollector.deploy(deployer.address);
-  await feeCollector.waitForDeployment();
-  const feeCollectorAddr = await feeCollector.getAddress();
-  console.log(`[deploy] FeeCollector=${feeCollectorAddr}`);
-
-  // 3) SubscriptionRegistry
-  const SubscriptionRegistry = await ethers.getContractFactory("SubscriptionRegistry");
-  const registry = await SubscriptionRegistry.deploy(
+  const planFactory = await deployUUPSProxy("PlanFactory", [
+    deployer.address,
+    [usdcAddress],
+  ]);
+  const feeCollector = await deployUUPSProxy("FeeCollector", [
+    deployer.address,
+    deployer.address,
+  ]);
+  const subscriptionRegistry = await deployUUPSProxy("SubscriptionRegistry", [
+    deployer.address,
     "ArcenPay Subscription",
     "ARCENPAY-SUB",
-    planFactoryAddr,
-  );
-  await registry.waitForDeployment();
-  const registryAddr = await registry.getAddress();
-  console.log(`[deploy] SubscriptionRegistry=${registryAddr}`);
-
-  // 4) SessionVault
-  const SessionVault = await ethers.getContractFactory("SessionVault");
-  const sessionVault = await SessionVault.deploy();
-  await sessionVault.waitForDeployment();
-  const sessionVaultAddr = await sessionVault.getAddress();
-  console.log(`[deploy] SessionVault=${sessionVaultAddr}`);
-
-  // 5) ZKUsageVerifier
-  const ZKUsageVerifier = await ethers.getContractFactory("ZKUsageVerifier");
-  const zkVerifier = await ZKUsageVerifier.deploy(
-    sessionVaultAddr,
-    feeCollectorAddr,
-    planFactoryAddr,
-  );
-  await zkVerifier.waitForDeployment();
-  const zkVerifierAddr = await zkVerifier.getAddress();
-  console.log(`[deploy] ZKUsageVerifier=${zkVerifierAddr}`);
-
-  // 6) ERC7579AutopayModule
-  const AutopayModule = await ethers.getContractFactory("ERC7579AutopayModule");
-  const autopayModule = await AutopayModule.deploy(
-    planFactoryAddr,
-    registryAddr,
-    feeCollectorAddr,
+    planFactory.proxy,
+  ]);
+  const sessionVault = await deployUUPSProxy("SessionVault", [deployer.address]);
+  const zkVerifier = await deployUUPSProxy("ZKUsageVerifier", [
     deployer.address,
-  );
-  await autopayModule.waitForDeployment();
-  const autopayModuleAddr = await autopayModule.getAddress();
-  console.log(`[deploy] ERC7579AutopayModule=${autopayModuleAddr}`);
+    sessionVault.proxy,
+    feeCollector.proxy,
+    planFactory.proxy,
+  ]);
+  const autopayModule = await deployUUPSProxy("ERC7579AutopayModule", [
+    deployer.address,
+    planFactory.proxy,
+    subscriptionRegistry.proxy,
+    feeCollector.proxy,
+    deployer.address,
+  ]);
+  const mirrorRegistry = await deployUUPSProxy("MirrorRegistry", [deployer.address]);
 
-  // 7) MirrorRegistry
-  const MirrorRegistry = await ethers.getContractFactory("MirrorRegistry");
-  const mirrorRegistry = await MirrorRegistry.deploy();
-  await mirrorRegistry.waitForDeployment();
-  const mirrorRegistryAddr = await mirrorRegistry.getAddress();
-  console.log(`[deploy] MirrorRegistry=${mirrorRegistryAddr}`);
-
-  // Post-deploy role wiring
-  await (await registry.authorizeBiller(autopayModuleAddr)).wait();
-  await (await feeCollector.authorizeCollector(autopayModuleAddr)).wait();
-  await (await feeCollector.authorizeCollector(zkVerifierAddr)).wait();
-  await (await sessionVault.authorizeSettler(zkVerifierAddr)).wait();
+  await (await subscriptionRegistry.contract.authorizeBiller(autopayModule.proxy)).wait();
+  await (await feeCollector.contract.authorizeCollector(autopayModule.proxy)).wait();
+  await (await feeCollector.contract.authorizeCollector(zkVerifier.proxy)).wait();
+  await (await sessionVault.contract.authorizeSettler(zkVerifier.proxy)).wait();
   console.log("[deploy] Role wiring complete");
 
   const summary = {
     network: network.name,
     chainId,
     deployer: deployer.address,
+    deploymentKind: "uups",
     contracts: {
-      PlanFactory: planFactoryAddr,
-      FeeCollector: feeCollectorAddr,
-      SubscriptionRegistry: registryAddr,
-      SessionVault: sessionVaultAddr,
-      ZKUsageVerifier: zkVerifierAddr,
-      ERC7579AutopayModule: autopayModuleAddr,
-      MirrorRegistry: mirrorRegistryAddr,
+      PlanFactory: planFactory.proxy,
+      FeeCollector: feeCollector.proxy,
+      SubscriptionRegistry: subscriptionRegistry.proxy,
+      SessionVault: sessionVault.proxy,
+      ZKUsageVerifier: zkVerifier.proxy,
+      ERC7579AutopayModule: autopayModule.proxy,
+      MirrorRegistry: mirrorRegistry.proxy,
+    },
+    implementations: {
+      PlanFactory: planFactory.implementation,
+      FeeCollector: feeCollector.implementation,
+      SubscriptionRegistry: subscriptionRegistry.implementation,
+      SessionVault: sessionVault.implementation,
+      ZKUsageVerifier: zkVerifier.implementation,
+      ERC7579AutopayModule: autopayModule.implementation,
+      MirrorRegistry: mirrorRegistry.implementation,
     },
     config: {
       USDC: usdcAddress,
       treasury: deployer.address,
+      owner: deployer.address,
+      admin: deployer.address,
     },
     deployedAt: new Date().toISOString(),
   };

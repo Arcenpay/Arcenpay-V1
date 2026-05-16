@@ -2,6 +2,7 @@
 pragma solidity ^0.8.24;
 
 import "forge-std/Test.sol";
+import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import "../contracts/core/MirrorRegistry.sol";
 
 /**
@@ -25,7 +26,12 @@ contract MirrorRegistryFuzzTest is Test {
         bridge1 = address(0xB1);
         bridge2 = address(0xB2);
 
-        mirror = new MirrorRegistry();
+        MirrorRegistry implementation = new MirrorRegistry();
+        ERC1967Proxy proxy = new ERC1967Proxy(
+            address(implementation),
+            abi.encodeCall(MirrorRegistry.initialize, (admin))
+        );
+        mirror = MirrorRegistry(address(proxy));
         mirror.authorizeBridge(bridge1, SOURCE_CHAIN);
         mirror.authorizeBridge(bridge2, ALT_CHAIN);
         mirror.setAxelarGateway(address(0xA1));

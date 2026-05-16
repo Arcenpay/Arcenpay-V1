@@ -31,8 +31,8 @@ const CHAINS: ChainConfig[] = [
     isTestnet: true,
     deploymentFile: "sepolia-latest.json",
     rpcEnv: "SEPOLIA_RPC_URL",
-    subgraphEnv: "MEAP_SUBGRAPH_URL_11155111",
-    facilitatorEnv: "MEAP_FACILITATOR_URL_11155111",
+    subgraphEnv: "ARCENPAY_SUBGRAPH_URL_11155111",
+    facilitatorEnv: "ARCENPAY_FACILITATOR_URL_11155111",
   },
   {
     chainId: 84532,
@@ -40,8 +40,8 @@ const CHAINS: ChainConfig[] = [
     isTestnet: true,
     deploymentFile: "baseSepolia-latest.json",
     rpcEnv: "BASE_SEPOLIA_RPC_URL",
-    subgraphEnv: "MEAP_SUBGRAPH_URL_84532",
-    facilitatorEnv: "MEAP_FACILITATOR_URL_84532",
+    subgraphEnv: "ARCENPAY_SUBGRAPH_URL_84532",
+    facilitatorEnv: "ARCENPAY_FACILITATOR_URL_84532",
   },
   {
     chainId: 8453,
@@ -49,8 +49,8 @@ const CHAINS: ChainConfig[] = [
     isTestnet: false,
     deploymentFile: "baseMainnet-latest.json",
     rpcEnv: "BASE_MAINNET_RPC_URL",
-    subgraphEnv: "MEAP_SUBGRAPH_URL_8453",
-    facilitatorEnv: "MEAP_FACILITATOR_URL_8453",
+    subgraphEnv: "ARCENPAY_SUBGRAPH_URL_8453",
+    facilitatorEnv: "ARCENPAY_FACILITATOR_URL_8453",
   },
   {
     chainId: 5042002,
@@ -58,8 +58,8 @@ const CHAINS: ChainConfig[] = [
     isTestnet: true,
     deploymentFile: "arcTestnet-latest.json",
     rpcEnv: "ARC_TESTNET_RPC_URL",
-    subgraphEnv: "MEAP_SUBGRAPH_URL_5042002",
-    facilitatorEnv: "MEAP_FACILITATOR_URL_5042002",
+    subgraphEnv: "ARCENPAY_SUBGRAPH_URL_5042002",
+    facilitatorEnv: "ARCENPAY_FACILITATOR_URL_5042002",
   },
 ];
 
@@ -115,4 +115,3 @@ function main() {
 }
 
 main();
-

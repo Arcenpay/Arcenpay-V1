@@ -1,15 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/Pausable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "../interfaces/ISubscriptionRegistry.sol";
 
 /// @title MirrorRegistry
 /// @notice Cross-chain entitlement state mirror
 /// @dev Receives GMP messages and mirrors subscription state from primary chain
 /// @dev Supports Axelar GMP (primary) and Chainlink CCIP (fallback) transport routes
-contract MirrorRegistry is Ownable, Pausable {
+contract MirrorRegistry is Initializable, OwnableUpgradeable, PausableUpgradeable, UUPSUpgradeable {
     uint8 public constant ROUTE_AXELAR = 1;
     uint8 public constant ROUTE_CCIP = 2;
 
@@ -73,7 +75,15 @@ contract MirrorRegistry is Ownable, Pausable {
     //                        CONSTRUCTOR
     // ============================================================
 
-    constructor() Ownable(msg.sender) {}
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(address initialOwner) external initializer {
+        __Ownable_init(initialOwner);
+        __Pausable_init();
+    }
 
     // ============================================================
     //                      ADMIN FUNCTIONS
@@ -84,20 +94,36 @@ contract MirrorRegistry is Ownable, Pausable {
 
     /// @notice Authorizes a bridge for a specific source chain
     function authorizeBridge(address bridge, uint256 sourceChainId) external onlyOwner {
+        require(bridge != address(0), "MirrorRegistry: zero bridge");
+        require(sourceChainId > 0, "MirrorRegistry: invalid source chain");
         authorizedBridges[sourceChainId][bridge] = true;
         emit BridgeAuthorized(bridge, sourceChainId);
     }
 
     /// @notice Configures the Axelar transport gateway
     function setAxelarGateway(address gateway) external onlyOwner {
+        require(gateway != address(0), "MirrorRegistry: zero gateway");
         axelarGateway = gateway;
         emit MirrorRouteConfigured(ROUTE_AXELAR, gateway);
     }
 
     /// @notice Configures the CCIP transport router
     function setCCIPRouter(address router) external onlyOwner {
+        require(router != address(0), "MirrorRegistry: zero router");
         ccipRouter = router;
         emit MirrorRouteConfigured(ROUTE_CCIP, router);
+    }
+
+    /// @notice Clears the Axelar transport gateway after routing is disabled operationally
+    function clearAxelarGateway() external onlyOwner {
+        axelarGateway = address(0);
+        emit MirrorRouteConfigured(ROUTE_AXELAR, address(0));
+    }
+
+    /// @notice Clears the CCIP transport router after routing is disabled operationally
+    function clearCCIPRouter() external onlyOwner {
+        ccipRouter = address(0);
+        emit MirrorRouteConfigured(ROUTE_CCIP, address(0));
     }
 
     /// @notice Registers trusted source subscription registry per source chain
@@ -273,5 +299,9 @@ contract MirrorRegistry is Ownable, Pausable {
         _sourceToSubscriber[sourceKey] = subscriber;
 
         emit SubscriptionMirrored(subscriber, sourceTokenId, sourceChainId, expiration);
+    }
+
+    function _authorizeUpgrade(address newImplementation) internal view override onlyOwner {
+        (newImplementation);
     }
 }

@@ -24,7 +24,7 @@ interface IERC7579Module {
 }
 
 /// @title IERC7579AutopayModule
-/// @notice Interface for the MEAP Autopay Executor Module
+/// @notice Interface for the ArcenPay Autopay Executor Module
 interface IERC7579AutopayModule is IERC7579Module {
     // ============================================================
     //                          STRUCTS
@@ -101,6 +101,18 @@ interface IERC7579AutopayModule is IERC7579Module {
 
     /// @notice Emitted when a failed cross-chain dispatch is successfully retried
     event CrossChainDispatchRetried(address indexed account, uint256 tokenId, uint256 destinationChainId);
+
+    /// @notice Emitted when the module admin address changes
+    event AdminUpdated(address indexed previousAdmin, address indexed newAdmin);
+
+    /// @notice Emitted when a cross-chain dispatch succeeds from the module layer
+    event CrossChainDispatchSucceeded(
+        address indexed account,
+        uint256 indexed tokenId,
+        uint256 indexed destinationChainId,
+        bytes32 messageId,
+        uint8 routeUsed
+    );
 
     // ============================================================
     //                     CORE FUNCTIONS

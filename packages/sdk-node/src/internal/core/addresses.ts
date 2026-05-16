@@ -25,15 +25,15 @@ const ADDRESSES: Record<number, ContractAddresses> = {
     zkUsageVerifier: '0x1f75d66692416cE880d51Baf6CdcBeE98E5837c0',
     mirrorRegistry: '0xC187CD32d569ec0E84B9b378f8E63f3a74afac74',
   },
-  // Base Sepolia (Testnet) — Deployed 2026-04-23
+  // Base Sepolia (Testnet) — Deployed 2026-05-16
   84532: {
-    subscriptionRegistry: '0xF9610c064FFD64255A1d509d17b2Af8733084e50',
-    autopayModule: '0x69Ac04bFdC045A99A2D31bb141A74da354a94c19',
-    planFactory: '0x66775Af13C63781AAd28203CC5d3E9eE5d5eB83d',
-    feeCollector: '0x5F32fBfF19385A78c3F721007758E9924FAD4133',
-    sessionVault: '0x96BcE2d49e3e4EddBBF3aa07354E66615BC2623c',
-    zkUsageVerifier: '0x03290b6988F87925A4939d974895bC30981aA90D',
-    mirrorRegistry: '0xe7E0dFfa82596ee6Ba1755bc25c29376a07236dE',
+    subscriptionRegistry: '0xC2faa4DD73B2F449b6db1A661cC8C7C271187007',
+    autopayModule: '0xE8FFF520331E2ce6d75B5b57385e4ab15Cd3ae43',
+    planFactory: '0x59b15e1d4882A4CaAD475097549dF94fE336a421',
+    feeCollector: '0x6450DD859035405D892793F4a6D0BE780f9bBfEe',
+    sessionVault: '0x9dF25216eaB5766414414C07E28Fba4f89b4b24B',
+    zkUsageVerifier: '0x613D16B414a6428aE07A712039DE764245Eb14Ac',
+    mirrorRegistry: '0xC24cBC9C664aCA41dEf6D5a3E941c1e11C163fD1',
   },
   // Base Mainnet — set ARCENPAY_CONTRACT_8453_* env vars after audit + deployment
   8453: {
@@ -45,15 +45,15 @@ const ADDRESSES: Record<number, ContractAddresses> = {
     zkUsageVerifier: '0x0000000000000000000000000000000000000000',
     mirrorRegistry: '0x0000000000000000000000000000000000000000',
   },
-  // Arc Testnet — set ARCENPAY_CONTRACT_5042002_* env vars after deployment
+  // Arc Testnet (Testnet) — Deployed 2026-05-16
   5042002: {
-    subscriptionRegistry: '0xe7E0dFfa82596ee6Ba1755bc25c29376a07236dE',
-    autopayModule: '0xC8B9C0986d018509AE4dB507FbE4fBd23DCECCe9',
-    planFactory: '0x03290b6988F87925A4939d974895bC30981aA90D',
-    feeCollector: '0x69Ac04bFdC045A99A2D31bb141A74da354a94c19',
-    sessionVault: '0xd6c90997B4d947548F3D97623ab305461265359D',
-    zkUsageVerifier: '0xFEB51A5Eeac4392c2d05C79bc019DDa823911a8a',
-    mirrorRegistry: '0x8Cef0cbE0c00BC7a6Be8d47d7d2ce933f895c8f8',
+    subscriptionRegistry: '0x0C7925f2113aA6ee91dCc1706f5A8BB04DF57E14',
+    autopayModule: '0x66D4345041F7C32f267AB82b75b521cf5Ca17a3C',
+    planFactory: '0x664D6Ac885aa801ba629De70b2CA07D4fa1cEFD5',
+    feeCollector: '0x433b61A30e75F1b164cf802d2404467051959D5b',
+    sessionVault: '0x958cfa6449bf58cb4cb6694a5A057230b12b48B1',
+    zkUsageVerifier: '0x5f20268871785F2C99889a51fEDF0c2EB80ad54A',
+    mirrorRegistry: '0x4b204ac7F28722D0180Ed983c9e20ac8a4b4be15',
   },
 };
 
