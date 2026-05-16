@@ -13,14 +13,6 @@ import { apolloClient } from "@/lib/graphql";
 
 const queryClient = new QueryClient();
 
-// Dynamic metadata URL based on environment
-const getMetadataUrl = () => {
-  if (typeof window !== "undefined") {
-    return window.location.origin;
-  }
-  return DASHBOARD_APP_URL;
-};
-
 // Initialize AppKit once at module scope — themeMode updated dynamically below
 createAppKit({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -32,7 +24,7 @@ createAppKit({
   metadata: {
     name: "ArcenPay Dashboard",
     description: "ArcenPay Provider Dashboard",
-    url: getMetadataUrl(),
+    url: DASHBOARD_APP_URL,
     icons: ["/icon.svg"],
   },
   features: {

@@ -391,21 +391,34 @@ function ArcenPayRuntime({
       isReady: false,
     });
 
-    fetch(`${baseUrl}/api/v1/public/zerodev-config?chainId=${chainId}`)
-      .then(async (res) => {
-        if (!res.ok) return;
+    const candidateQueries = [
+      `chainId=${chainId}&selfFunded=true`,
+      `chainId=${chainId}`,
+    ];
+
+    Promise.all(
+      candidateQueries.map(async (query) => {
+        const res = await fetch(`${baseUrl}/api/v1/public/zerodev-config?${query}`);
+        if (!res.ok) return null;
         const body = (await res.json()) as {
           data?: { bundlerUrl?: string; paymasterUrl?: string; selfFunded?: boolean };
         };
-        if (cancelled) return;
         if (body.data?.bundlerUrl && body.data?.paymasterUrl) {
-          setZeroDev({
-            bundlerUrl: body.data.bundlerUrl,
-            paymasterUrl: body.data.paymasterUrl,
-            selfFunded: body.data.selfFunded ?? false,
-            isReady: true,
-          });
+          return body.data;
         }
+        return null;
+      }),
+    )
+      .then((results) => {
+        if (cancelled) return;
+        const resolved = results.find((value) => Boolean(value));
+        if (!resolved?.bundlerUrl || !resolved?.paymasterUrl) return;
+        setZeroDev({
+          bundlerUrl: resolved.bundlerUrl,
+          paymasterUrl: resolved.paymasterUrl,
+          selfFunded: resolved.selfFunded ?? false,
+          isReady: true,
+        });
       })
       .catch(() => {});
 

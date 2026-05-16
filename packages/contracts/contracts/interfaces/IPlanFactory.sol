@@ -48,10 +48,12 @@ interface IPlanFactory {
     // ============================================================
 
     /// @notice Registers a new SaaS provider
+    /// @dev Owner-only admin path retained for pre-registration and recovery flows.
     /// @param provider The provider's address
     function registerProvider(address provider) external;
 
     /// @notice Creates a new subscription plan
+    /// @dev Auto-registers msg.sender as a provider on first successful plan creation.
     /// @param name The plan name
     /// @param tier The plan tier identifier
     /// @param price Price per interval in stablecoin base units
@@ -69,7 +71,8 @@ interface IPlanFactory {
     ) external returns (uint256 planId);
 
     /// @notice Creates a plan on behalf of a provider via EIP-712 signature
-    /// @dev Allows a relayer to pay gas while the provider retains ownership
+    /// @dev Allows a relayer to pay gas while the provider retains ownership, and auto-registers
+    ///      the provider on first successful plan creation.
     /// @param provider The address that will own the plan (must sign)
     /// @param name The plan name
     /// @param tier The plan tier identifier

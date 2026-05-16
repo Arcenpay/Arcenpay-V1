@@ -100,33 +100,6 @@ const UPDATE_PLAN_FOR_ABI = [
   },
 ] as const;
 
-const PROVIDER_REGISTRY_ABI = [
-  {
-    inputs: [{ internalType: "address", name: "provider", type: "address" }],
-    name: "isProvider",
-    outputs: [{ internalType: "bool", name: "", type: "bool" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [{ internalType: "address", name: "provider", type: "address" }],
-    name: "registerProvider",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-] as const;
-
-const OWNABLE_OWNER_ABI = [
-  {
-    inputs: [],
-    name: "owner",
-    outputs: [{ internalType: "address", name: "", type: "address" }],
-    stateMutability: "view",
-    type: "function",
-  },
-] as const;
-
 function sameAddress(a: string, b: string): boolean {
   return a.toLowerCase() === b.toLowerCase();
 }
@@ -478,61 +451,6 @@ export async function registerPlanOnChain(c: Context) {
     where: { id: planId },
     data: { chainSyncStatus: "PENDING", chainSyncError: null },
   });
-
-  const isProviderRegistered = await publicClient
-    .readContract({
-      address: planFactoryAddress,
-      abi: PROVIDER_REGISTRY_ABI,
-      functionName: "isProvider",
-      args: [providerAddress as `0x${string}`],
-    })
-    .catch(() => false as boolean);
-
-  if (!isProviderRegistered) {
-    const planFactoryOwner = await publicClient
-      .readContract({
-        address: planFactoryAddress,
-        abi: OWNABLE_OWNER_ABI,
-        functionName: "owner",
-      })
-      .catch(() => null as `0x${string}` | null);
-
-    const ownerHint = planFactoryOwner
-      ? ` PlanFactory owner is ${planFactoryOwner}.`
-      : "";
-    const registerProviderCalldata = encodeFunctionData({
-      abi: PROVIDER_REGISTRY_ABI,
-      functionName: "registerProvider",
-      args: [providerAddress as `0x${string}`],
-    });
-    await db.catalogPlan.update({
-      where: { id: planId },
-      data: {
-        chainSyncStatus: "FAILED",
-        chainSyncError: `Configured provider wallet is not registered.${ownerHint} Owner action required: execute registerProvider(${providerAddress}) from owner/multisig.`,
-      },
-    });
-    return c.json({
-      error: `Configured provider wallet is not a registered provider.${ownerHint} Contact the platform admin or execute owner registration via Safe/multisig.`,
-      userAddress: providerAddress,
-      planFactoryOwner,
-      ownerActionRequired: {
-        description:
-          "Execute registerProvider(providerAddress) on PlanFactory from owner wallet/multisig.",
-        target: planFactoryAddress,
-        value: "0",
-        data: registerProviderCalldata,
-        functionSignature: "registerProvider(address)",
-        args: [providerAddress],
-        safeTransaction: {
-          to: planFactoryAddress,
-          value: "0",
-          data: registerProviderCalldata,
-          operation: 0,
-        },
-      },
-    }, 409 as any);
-  }
 
   const createPlanForCalldata = encodeFunctionData({
     abi: CREATE_PLAN_FOR_ABI,

@@ -299,22 +299,29 @@ async function fetchZeroDevConfig(chainId: number): Promise<{
   bundlerUrl: string;
   paymasterUrl: string;
 } | null> {
+  const candidateQueries = [
+    `chainId=${chainId}&selfFunded=true`,
+    `chainId=${chainId}`,
+  ];
+
   try {
-    const res = await fetch(`/api/v1/public/zerodev-config?chainId=${chainId}`);
-    if (!res.ok) return null;
+    for (const query of candidateQueries) {
+      const res = await fetch(`/api/v1/public/zerodev-config?${query}`);
+      if (!res.ok) continue;
 
-    const body = (await res.json().catch(() => ({}))) as {
-      data?: {
-        bundlerUrl?: string;
-        paymasterUrl?: string;
+      const body = (await res.json().catch(() => ({}))) as {
+        data?: {
+          bundlerUrl?: string;
+          paymasterUrl?: string;
+        };
       };
-    };
 
-    if (body.data?.bundlerUrl && body.data?.paymasterUrl) {
-      return {
-        bundlerUrl: body.data.bundlerUrl,
-        paymasterUrl: body.data.paymasterUrl,
-      };
+      if (body.data?.bundlerUrl && body.data?.paymasterUrl) {
+        return {
+          bundlerUrl: body.data.bundlerUrl,
+          paymasterUrl: body.data.paymasterUrl,
+        };
+      }
     }
   } catch {
     // Ignore fetch errors and fall back to direct wallet execution.

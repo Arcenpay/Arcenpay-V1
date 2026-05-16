@@ -9,8 +9,6 @@ import { ZERODEV_PROJECT_ID } from "../../../config.js";
 import { DEFAULT_CHAIN_ID } from "../../../lib/platform/default-chain.js";
 import { corsHeaders } from "../../../middleware/cors.js";
 
-const ARC_TESTNET_CHAIN_ID = 5042002;
-
 function parseChainIdSet(raw: string | undefined): Set<number> {
   if (!raw) return new Set();
   return new Set(
@@ -22,13 +20,25 @@ function parseChainIdSet(raw: string | undefined): Set<number> {
 }
 
 function getExplicitZeroDevOverride(chainId: number) {
+  const unifiedUrl =
+    process.env[`ZERODEV_RPC_${chainId}`] ??
+    process.env[`NEXT_PUBLIC_ZERODEV_RPC_${chainId}`] ??
+    process.env.ZERODEV_RPC ??
+    process.env.NEXT_PUBLIC_ZERODEV_RPC ??
+    "";
   const bundlerUrl =
-    process.env[`ZERODEV_BUNDLER_RPC_${chainId}`] ??
-    process.env.ZERODEV_BUNDLER_RPC ??
+    unifiedUrl ||
+    process.env[`ZERODEV_BUNDLER_RPC_${chainId}`] ||
+    process.env[`NEXT_PUBLIC_ZERODEV_BUNDLER_RPC_${chainId}`] ||
+    process.env.ZERODEV_BUNDLER_RPC ||
+    process.env.NEXT_PUBLIC_ZERODEV_BUNDLER_RPC ||
     "";
   const paymasterUrl =
-    process.env[`ZERODEV_PAYMASTER_RPC_${chainId}`] ??
-    process.env.ZERODEV_PAYMASTER_RPC ??
+    unifiedUrl ||
+    process.env[`ZERODEV_PAYMASTER_RPC_${chainId}`] ||
+    process.env[`NEXT_PUBLIC_ZERODEV_PAYMASTER_RPC_${chainId}`] ||
+    process.env.ZERODEV_PAYMASTER_RPC ||
+    process.env.NEXT_PUBLIC_ZERODEV_PAYMASTER_RPC ||
     "";
 
   return {
@@ -66,6 +76,9 @@ export async function GET(c: Context) {
     );
   }
 
+  const { bundlerUrl: overrideBundlerUrl, paymasterUrl: overridePaymasterUrl } =
+    getExplicitZeroDevOverride(chainId);
+
   const isSelfFunded =
     selfFundedRaw === "true" ||
     parseChainIdSet(
@@ -73,24 +86,9 @@ export async function GET(c: Context) {
         process.env.ARCENPAY_ZERODEV_SELF_FUNDED_CHAINS,
     ).has(chainId) ||
     process.env.ZERODEV_MODE === "self-funded" ||
+    overrideBundlerUrl.includes("selfFunded=true") ||
+    overridePaymasterUrl.includes("selfFunded=true") ||
     false;
-
-  const { bundlerUrl: overrideBundlerUrl, paymasterUrl: overridePaymasterUrl } =
-    getExplicitZeroDevOverride(chainId);
-
-  if (
-    chainId === ARC_TESTNET_CHAIN_ID &&
-    (!overrideBundlerUrl || !overridePaymasterUrl)
-  ) {
-    return c.json(
-      {
-        error:
-          "ZeroDev is not configured for Arc Testnet. Arc subscriptions can continue with direct-wallet autopay without a smart-account relay.",
-      },
-      404,
-      corsHeaders(origin),
-    );
-  }
 
   const baseUrl = `https://rpc.zerodev.app/api/v3/${ZERODEV_PROJECT_ID}/chain/${chainId}`;
   const suffix = isSelfFunded ? "?selfFunded=true" : "";

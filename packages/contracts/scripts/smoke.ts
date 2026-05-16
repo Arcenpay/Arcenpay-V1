@@ -132,16 +132,7 @@ async function main() {
   const checks = summary.checks as string[];
   const warnings = summary.warnings as string[];
 
-  // 1) Provider registration + plan create
-  const isProvider = await planFactory.isProvider(signer.address);
-  if (!isProvider) {
-    const tx = await planFactory.registerProvider(signer.address);
-    await tx.wait();
-    checks.push("Registered signer as provider");
-  } else {
-    checks.push("Signer already registered as provider");
-  }
-
+  // 1) Self-serve provider onboarding + plan create
   const planName = `smoke-${Date.now()}`;
   const createPlanTx = await planFactory.createPlan(
     planName,
@@ -152,6 +143,11 @@ async function main() {
     "ipfs://arcenpay/smoke",
   );
   await createPlanTx.wait();
+  const isProvider = await planFactory.isProvider(signer.address);
+  if (!isProvider) {
+    throw new Error("Signer should be auto-registered as provider after createPlan.");
+  }
+  checks.push("Signer is registered as provider");
   const providerPlans = (await planFactory.getProviderPlans(signer.address)) as bigint[];
   const planId = providerPlans[providerPlans.length - 1];
   checks.push(`Created plan ${planId.toString()}`);

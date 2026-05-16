@@ -122,11 +122,12 @@ contract PlanFactory is
         address acceptedToken,
         string calldata metadataURI
     ) external whenNotPaused returns (uint256 planId) {
-        require(_providers[msg.sender], "PlanFactory: not a provider");
         require(price > 0, "PlanFactory: price must be > 0");
         require(billingInterval >= 2_592_000, "PlanFactory: interval must be >= 30 days");
         require(approvedTokens[acceptedToken], "PlanFactory: token not approved");
         require(bytes(name).length > 0, "PlanFactory: empty name");
+
+        _registerProviderIfNeeded(msg.sender);
 
         planId = _nextPlanId++;
 
@@ -160,7 +161,6 @@ contract PlanFactory is
         bytes calldata signature
     ) external whenNotPaused returns (uint256 planId) {
         require(block.timestamp <= deadline, "PlanFactory: signature expired");
-        require(_providers[provider], "PlanFactory: not a provider");
         require(price > 0, "PlanFactory: price must be > 0");
         require(billingInterval >= 2_592_000, "PlanFactory: interval must be >= 30 days");
         require(approvedTokens[acceptedToken], "PlanFactory: token not approved");
@@ -188,6 +188,8 @@ contract PlanFactory is
         bytes32 digest = _hashTypedDataV4(structHash);
         address recoveredSigner = ECDSA.recover(digest, signature);
         require(recoveredSigner == provider, "PlanFactory: invalid signature");
+
+        _registerProviderIfNeeded(provider);
 
         // Create plan with provider as owner (not msg.sender)
         planId = _nextPlanId++;
@@ -302,6 +304,16 @@ contract PlanFactory is
     /// @inheritdoc IPlanFactory
     function isProvider(address provider) external view returns (bool) {
         return _providers[provider];
+    }
+
+    function _registerProviderIfNeeded(address provider) internal {
+        require(provider != address(0), "PlanFactory: zero address");
+        if (_providers[provider]) {
+            return;
+        }
+
+        _providers[provider] = true;
+        emit ProviderRegistered(provider);
     }
 
     function _authorizeUpgrade(address newImplementation) internal view override onlyOwner {

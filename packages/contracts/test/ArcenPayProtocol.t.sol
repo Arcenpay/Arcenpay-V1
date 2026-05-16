@@ -213,10 +213,21 @@ contract ArcenPayProtocolTest is Test {
         assertTrue(plan.active);
     }
 
-    function test_createPlan_revert_notProvider() public {
+    function test_createPlan_allowsUnregisteredProvider() public {
         vm.prank(subscriber);
-        vm.expectRevert("PlanFactory: not a provider");
-        planFactory.createPlan("Plan", "basic", PLAN_PRICE, MONTHLY, address(usdc), "");
+        uint256 planId = planFactory.createPlan(
+            "Plan",
+            "basic",
+            PLAN_PRICE,
+            MONTHLY,
+            address(usdc),
+            ""
+        );
+
+        assertTrue(planFactory.isProvider(subscriber));
+
+        IPlanFactory.Plan memory plan = planFactory.getPlan(planId);
+        assertEq(plan.provider, subscriber);
     }
 
     function test_createPlan_revert_shortInterval() public {
@@ -229,6 +240,27 @@ contract ArcenPayProtocolTest is Test {
         vm.prank(provider);
         vm.expectRevert("PlanFactory: token not approved");
         planFactory.createPlan("Plan", "basic", PLAN_PRICE, MONTHLY, address(0x999), "");
+    }
+
+    function test_createPlan_autoRegistersSender() public {
+        address newProvider = address(0xBEEF);
+
+        assertFalse(planFactory.isProvider(newProvider));
+
+        vm.prank(newProvider);
+        uint256 planId = planFactory.createPlan(
+            "Starter",
+            "starter",
+            PLAN_PRICE,
+            MONTHLY,
+            address(usdc),
+            ""
+        );
+
+        assertTrue(planFactory.isProvider(newProvider));
+
+        IPlanFactory.Plan memory plan = planFactory.getPlan(planId);
+        assertEq(plan.provider, newProvider);
     }
 
     function test_deactivatePlan() public {
@@ -261,7 +293,6 @@ contract ArcenPayProtocolTest is Test {
         // Setup: Create a new provider with a known private key
         uint256 providerPk = 0xA11CE;
         address providerAddr = vm.addr(providerPk);
-        planFactory.registerProvider(providerAddr);
 
         // Get the nonce before creating plan
         uint256 nonce = planFactory.nonces(providerAddr);
@@ -312,6 +343,7 @@ contract ArcenPayProtocolTest is Test {
         assertEq(plan.provider, providerAddr, "Provider should be the signer, not msg.sender");
         assertEq(plan.name, "Pro Plan");
         assertEq(plan.price, PLAN_PRICE);
+        assertTrue(planFactory.isProvider(providerAddr), "Provider should be auto-registered");
 
         // Verify nonce was incremented
         assertEq(planFactory.nonces(providerAddr), 1, "Nonce should be incremented");
@@ -325,7 +357,6 @@ contract ArcenPayProtocolTest is Test {
     function test_createPlanFor_revert_expiredSignature() public {
         uint256 providerPk = 0xA11CE;
         address providerAddr = vm.addr(providerPk);
-        planFactory.registerProvider(providerAddr);
 
         uint256 deadline = block.timestamp - 1; // Already expired
         uint256 nonce = planFactory.nonces(providerAddr);
@@ -369,7 +400,6 @@ contract ArcenPayProtocolTest is Test {
     function test_createPlanFor_revert_replayAttack() public {
         uint256 providerPk = 0xA11CE;
         address providerAddr = vm.addr(providerPk);
-        planFactory.registerProvider(providerAddr);
 
         uint256 deadline = block.timestamp + 1 hours;
         uint256 nonce = planFactory.nonces(providerAddr);
@@ -427,7 +457,6 @@ contract ArcenPayProtocolTest is Test {
     function test_createPlanFor_revert_invalidSignature() public {
         uint256 providerPk = 0xA11CE;
         address providerAddr = vm.addr(providerPk);
-        planFactory.registerProvider(providerAddr);
 
         // Sign with a different private key
         uint256 attackerPk = 0xBAD;
@@ -472,10 +501,9 @@ contract ArcenPayProtocolTest is Test {
         );
     }
 
-    function test_createPlanFor_revert_notProvider() public {
+    function test_createPlanFor_autoRegistersProvider() public {
         uint256 userPk = 0xA11CE;
         address userAddr = vm.addr(userPk);
-        // Note: NOT registering as provider
 
         uint256 deadline = block.timestamp + 1 hours;
         uint256 nonce = planFactory.nonces(userAddr);
@@ -502,8 +530,7 @@ contract ArcenPayProtocolTest is Test {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(userPk, digest);
         bytes memory signature = abi.encodePacked(r, s, v);
 
-        vm.expectRevert("PlanFactory: not a provider");
-        planFactory.createPlanFor(
+        uint256 planId = planFactory.createPlanFor(
             userAddr,
             "Pro Plan",
             "pro",
@@ -514,6 +541,11 @@ contract ArcenPayProtocolTest is Test {
             deadline,
             signature
         );
+
+        assertTrue(planFactory.isProvider(userAddr));
+
+        IPlanFactory.Plan memory plan = planFactory.getPlan(planId);
+        assertEq(plan.provider, userAddr);
     }
 
     // ============================================================

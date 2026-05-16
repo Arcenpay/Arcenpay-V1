@@ -19,7 +19,7 @@ export default async function RootLayout({
 
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className="font-sans antialiased">
+      <body className="font-sans antialiased" suppressHydrationWarning>
         <DashboardStructuredData />
         <ThemeProvider
           attribute="class"
