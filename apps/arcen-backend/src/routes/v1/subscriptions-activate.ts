@@ -1,8 +1,7 @@
 /**
  * POST /api/v1/subscriptions/activate
  *
- * Execute the first authorized on-chain subscription activation through the
- * provider's configured merchant signer.
+ * Prepare or confirm the first authorized on-chain subscription activation.
  *
  * Auth:
  *   - Bearer api_xxx (recommended for provider backends)
@@ -18,10 +17,10 @@
  */
 
 import type { Context } from "hono";
-import { privateKeyToAccount } from "viem/accounts";
 import {
   createPublicClient,
-  createWalletClient,
+  encodeFunctionData,
+  decodeFunctionData,
   formatUnits,
   http,
   isAddress,
@@ -76,18 +75,10 @@ const bodySchema = z.object({
   planId: z.union([z.string().trim().min(1), z.number().int().positive()]),
   paymentAccount: addressSchema,
   subscriberEmail: z.string().email().optional(),
+  activationTxHash: z.string().regex(/^0x[0-9a-fA-F]{64}$/).optional(),
+  txHash: z.string().regex(/^0x[0-9a-fA-F]{64}$/).optional(),
   company: companySchema,
 });
-
-const registryBillerStatusAbi = [
-  {
-    inputs: [{ internalType: "address", name: "", type: "address" }],
-    name: "authorizedBillers",
-    outputs: [{ internalType: "bool", name: "", type: "bool" }],
-    stateMutability: "view",
-    type: "function",
-  },
-] as const;
 
 const registryOwnerOfAbi = [
   {
@@ -166,16 +157,6 @@ async function clearScheduledCancellationTransition(
     return true;
   }
   return false;
-}
-
-function normalizePrivateKey(raw: string | undefined): `0x${string}` | null {
-  if (!raw) return null;
-  const trimmed = raw.trim();
-  if (!trimmed) return null;
-  const withPrefix = trimmed.startsWith("0x") ? trimmed : `0x${trimmed}`;
-  return /^0x[a-fA-F0-9]{64}$/.test(withPrefix)
-    ? (withPrefix as `0x${string}`)
-    : null;
 }
 
 function formatTokenAmount(
@@ -557,25 +538,6 @@ export async function POST(c: Context) {
   const rpcUrl = getRpcUrl(chainId);
   const contracts = getContractAddresses(chainId);
 
-  const billerPrivateKey = normalizePrivateKey(
-    process.env.ONCHAIN_PROVIDER_PRIVATE_KEY ||
-      process.env.SUBSCRIPTION_BILLER_PRIVATE_KEY ||
-      process.env.BILLER_PRIVATE_KEY ||
-      process.env.PRIVATE_KEY ||
-      process.env.DEPLOYER_PRIVATE_KEY,
-  );
-
-  if (!billerPrivateKey) {
-    return c.json(
-      {
-        error:
-          "Subscription activation signer is not configured. Set SUBSCRIPTION_BILLER_PRIVATE_KEY on the dashboard backend.",
-      },
-      503,
-      corsHeaders(origin),
-    );
-  }
-
   const autopayAddress = contracts.autopayModule as `0x${string}`;
   const subscriptionRegistryAddress =
     contracts.subscriptionRegistry as `0x${string}`;
@@ -599,13 +561,7 @@ export async function POST(c: Context) {
     );
   }
 
-  const signerAccount = privateKeyToAccount(billerPrivateKey);
   const publicClient = createPublicClient({
-    chain,
-    transport: http(rpcUrl),
-  });
-  const walletClient = createWalletClient({
-    account: signerAccount,
     chain,
     transport: http(rpcUrl),
   });
@@ -631,43 +587,12 @@ export async function POST(c: Context) {
     );
   }
 
-  if (merchantAddress !== signerAccount.address.toLowerCase()) {
-    return c.json(
-      {
-        error:
-          `Merchant signer mismatch. Plan ${onChainPlanId.toString()} is owned by ${merchantAddress}, ` +
-          `but the configured backend signer is ${signerAccount.address.toLowerCase()}. ` +
-          "Initial activation can only be executed by the plan's merchant wallet.",
-      },
-      409,
-      corsHeaders(origin),
-    );
-  }
-
-  const autopayAuthorized = (await publicClient.readContract({
-    address: subscriptionRegistryAddress,
-    abi: registryBillerStatusAbi,
-    functionName: "authorizedBillers",
-    args: [autopayAddress],
-  })) as boolean;
-
-  if (!autopayAuthorized) {
-    return c.json(
-      {
-        error:
-          "AutopayModule is not authorized as a biller on SubscriptionRegistry. Run the registry authorization step before activating subscriptions.",
-      },
-      409,
-      corsHeaders(origin),
-    );
-  }
-
   const autopaySnapshot = await waitForAutopayActivationSnapshot({
     publicClient,
     autopayAddress,
     paymentAccount,
     expectedPlanId: onChainPlanId,
-    expectedMerchant: signerAccount.address.toLowerCase(),
+    expectedMerchant: merchantAddress,
   });
   const isInitialized = autopaySnapshot.isInitialized;
 
@@ -696,12 +621,12 @@ export async function POST(c: Context) {
   }
 
   const configMerchant = String(autopayConfig?.merchant ?? "").toLowerCase();
-  if (configMerchant !== signerAccount.address.toLowerCase()) {
+  if (configMerchant !== merchantAddress) {
     return c.json(
       {
         error:
           `Autopay merchant mismatch. Payment account expects ${configMerchant}, ` +
-          `but the backend signer is ${signerAccount.address.toLowerCase()}.`,
+          `but the on-chain plan provider is ${merchantAddress}.`,
       },
       409,
       corsHeaders(origin),
@@ -942,20 +867,101 @@ export async function POST(c: Context) {
     select: { activePlanId: true },
   });
 
-  try {
-    const txHash = await walletClient.writeContract({
-      account: signerAccount,
-      address: autopayAddress,
+  const submittedActivationTxHash =
+    (parsed.data.activationTxHash ?? parsed.data.txHash)?.toLowerCase() as
+      | `0x${string}`
+      | undefined;
+
+  if (!submittedActivationTxHash) {
+    const activationCalldata = encodeFunctionData({
       abi: ERC7579AutopayModuleABI,
       functionName: "execute",
       args: [paymentAccount, chargeAmount],
-      chain,
     });
 
-    const receipt = await publicClient.waitForTransactionReceipt({
-      hash: txHash,
-      confirmations: requiredConfirmations(),
+    return c.json(
+      {
+        data: {
+          activationRequired: true,
+          paymentAccount,
+          chargeAmountAtomic: chargeAmount.toString(),
+          chargeAmountDisplay: formatTokenAmount(
+            chargeAmount,
+            tokenDecimals,
+            tokenSymbol,
+          ),
+          preparedTransaction: {
+            target: autopayAddress,
+            value: "0",
+            data: activationCalldata,
+            functionSignature: "execute(address,uint256)",
+          },
+          verification: {
+            chainId,
+            acceptedToken: acceptedTokenAddress,
+            merchantAddress,
+            onChainPlanId: onChainPlanId.toString(),
+          },
+        },
+      },
+      202,
+      corsHeaders(origin),
+    );
+  }
+
+  try {
+    const [transaction, receipt] = await Promise.all([
+      publicClient.getTransaction({ hash: submittedActivationTxHash }),
+      publicClient.getTransactionReceipt({
+        hash: submittedActivationTxHash,
+      }),
+    ]);
+
+    if (
+      !transaction.to ||
+      transaction.to.toLowerCase() !== autopayAddress.toLowerCase()
+    ) {
+      return c.json(
+        { error: "Activation transaction was sent to the wrong contract." },
+        409,
+        corsHeaders(origin),
+      );
+    }
+
+    const decoded = decodeFunctionData({
+      abi: ERC7579AutopayModuleABI,
+      data: transaction.input,
     });
+
+    if (decoded.functionName !== "execute") {
+      return c.json(
+        { error: "Activation transaction must call AutopayModule.execute." },
+        409,
+        corsHeaders(origin),
+      );
+    }
+
+    const [decodedAccount, decodedAmount] = decoded.args as [
+      `0x${string}`,
+      bigint,
+    ];
+
+    if (decodedAccount.toLowerCase() !== paymentAccount.toLowerCase()) {
+      return c.json(
+        { error: "Activation transaction targeted the wrong payment account." },
+        409,
+        corsHeaders(origin),
+      );
+    }
+
+    if (decodedAmount !== chargeAmount) {
+      return c.json(
+        { error: "Activation transaction used the wrong billing amount." },
+        409,
+        corsHeaders(origin),
+      );
+    }
+
     if (receipt.status !== "success") {
       return c.json(
         { error: "Initial subscription activation transaction failed." },
@@ -963,20 +969,14 @@ export async function POST(c: Context) {
         corsHeaders(origin),
       );
     }
+
     await assertReceiptFinalized({
       publicClient,
       receipt,
       label: "Initial subscription activation transaction",
     });
 
-    const receiptBlock =
-      receipt.blockNumber != null
-        ? await publicClient.getBlock({ blockNumber: receipt.blockNumber })
-        : null;
-    const occurredAt =
-      receiptBlock?.timestamp != null
-        ? new Date(Number(receiptBlock.timestamp) * 1000)
-        : new Date();
+    const txHash = submittedActivationTxHash;
 
     const billingLogs = parseEventLogs({
       abi: ERC7579AutopayModuleABI,
@@ -995,6 +995,26 @@ export async function POST(c: Context) {
         args.merchant.toLowerCase() === merchantAddress
       );
     });
+
+    if (!latestBillingLog) {
+      return c.json(
+        {
+          error:
+            "Activation transaction did not emit BillingExecuted for the current payment account and merchant.",
+        },
+        409,
+        corsHeaders(origin),
+      );
+    }
+
+    const receiptBlock =
+      receipt.blockNumber != null
+        ? await publicClient.getBlock({ blockNumber: receipt.blockNumber })
+        : null;
+    const occurredAt =
+      receiptBlock?.timestamp != null
+        ? new Date(Number(receiptBlock.timestamp) * 1000)
+        : new Date();
 
     let tokenId = ((latestBillingLog?.args as { tokenId?: bigint } | undefined)
       ?.tokenId ?? 0n) as bigint;

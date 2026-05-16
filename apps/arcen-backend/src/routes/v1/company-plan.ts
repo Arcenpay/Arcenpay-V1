@@ -7,10 +7,9 @@
  */
 import type { Context } from "hono";
 import { db } from "../../db.js";
-import { privateKeyToAccount } from "viem/accounts";
 import {
   createPublicClient,
-  createWalletClient,
+  encodeFunctionData,
   http,
   isAddress,
 } from "viem";
@@ -182,24 +181,6 @@ function readTargetNumericLimitsFromPlanMetadata(
 
 import { corsHeaders } from "../../middleware/cors.js";
 
-function normalizePrivateKey(raw: string | undefined): `0x${string}` | null {
-  if (!raw) return null;
-  const trimmed = raw.trim();
-  if (!trimmed) return null;
-  const withPrefix = trimmed.startsWith("0x") ? trimmed : `0x${trimmed}`;
-  return /^0x[a-fA-F0-9]{64}$/.test(withPrefix)
-    ? (withPrefix as `0x${string}`)
-    : null;
-}
-
-function requiredConfirmations(): number {
-  const raw = process.env.ONCHAIN_MIN_CONFIRMATIONS?.trim();
-  if (!raw) return 2;
-
-  const parsed = Number.parseInt(raw, 10);
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : 2;
-}
-
 function createChainClients(chainId?: number) {
   const resolvedChainId = chainId ?? DEFAULT_CHAIN_ID;
   const chain = getChain(resolvedChainId);
@@ -210,114 +191,6 @@ function createChainClients(chainId?: number) {
       transport: http(getRpcUrl(resolvedChainId)),
     }),
     contracts: getContractAddresses(resolvedChainId),
-  };
-}
-
-function resolveAuthorizedRegistryPlanChangeCapability() {
-  const billerPrivateKey = normalizePrivateKey(
-    process.env.SUBSCRIPTION_BILLER_PRIVATE_KEY ||
-      process.env.BILLER_PRIVATE_KEY ||
-      process.env.PRIVATE_KEY ||
-      process.env.ONCHAIN_PROVIDER_PRIVATE_KEY ||
-      process.env.DEPLOYER_PRIVATE_KEY,
-  );
-
-  if (!billerPrivateKey) {
-    return {
-      ok: false as const,
-      status: 503,
-      error:
-        "Subscription biller signer is not configured on the backend. Set SUBSCRIPTION_BILLER_PRIVATE_KEY for immediate upgrades.",
-    };
-  }
-
-  return {
-    ok: true as const,
-    billerPrivateKey,
-  };
-}
-
-async function executeAuthorizedRegistryPlanChange(input: {
-  tokenId: string;
-  expectedOnChainPlanId: string;
-  chainId?: number;
-}) {
-  const capability = resolveAuthorizedRegistryPlanChangeCapability();
-  if (!capability.ok) {
-    return capability;
-  }
-  const { billerPrivateKey } = capability;
-
-  const { chain, publicClient, contracts } = createChainClients(input.chainId);
-  const subscriptionRegistryAddress =
-    contracts.subscriptionRegistry as `0x${string}`;
-
-  if (
-    !subscriptionRegistryAddress ||
-    !isAddress(subscriptionRegistryAddress)
-  ) {
-    return {
-      ok: false as const,
-      status: 503,
-      error: "Subscription registry is not configured for this chain.",
-    };
-  }
-
-  const signerAccount = privateKeyToAccount(billerPrivateKey);
-  const authorized = (await publicClient.readContract({
-    address: subscriptionRegistryAddress,
-    abi: [
-      {
-        inputs: [{ internalType: "address", name: "", type: "address" }],
-        name: "authorizedBillers",
-        outputs: [{ internalType: "bool", name: "", type: "bool" }],
-        stateMutability: "view",
-        type: "function",
-      },
-    ] as const,
-    functionName: "authorizedBillers",
-    args: [signerAccount.address],
-  })) as boolean;
-
-  if (!authorized) {
-    return {
-      ok: false as const,
-      status: 409,
-      error:
-        "The configured backend signer is not authorized as a SubscriptionRegistry biller, so immediate upgrades cannot finalize access yet.",
-    };
-  }
-
-  const walletClient = createWalletClient({
-    account: signerAccount,
-    chain,
-    transport: http(getRpcUrl(chain.id)),
-  });
-
-  const txHash = await walletClient.writeContract({
-    account: signerAccount,
-    chain,
-    address: subscriptionRegistryAddress,
-    abi: SubscriptionRegistryABI,
-    functionName: "changePlan",
-    args: [BigInt(input.tokenId), BigInt(input.expectedOnChainPlanId)],
-  });
-
-  const receipt = await publicClient.waitForTransactionReceipt({
-    hash: txHash,
-    confirmations: requiredConfirmations(),
-  });
-  if (receipt.status !== "success") {
-    return {
-      ok: false as const,
-      status: 502,
-      error: "Authorized SubscriptionRegistry plan change transaction failed.",
-    };
-  }
-
-  return {
-    ok: true as const,
-    txHash,
   };
 }
 
@@ -1058,56 +931,6 @@ export async function handleCompanyPlanRequest(
         );
       }
 
-      const capability = resolveAuthorizedRegistryPlanChangeCapability();
-      if (!capability.ok) {
-        return c.json(
-          { error: capability.error },
-          capability.status as any,
-          corsHeaders(origin),
-        );
-      }
-
-      const subChainId = company.subscriptionState?.chainId;
-      const { publicClient, contracts } = createChainClients(subChainId);
-      const subscriptionRegistryAddress =
-        contracts.subscriptionRegistry as `0x${string}`;
-      if (
-        !subscriptionRegistryAddress ||
-        !isAddress(subscriptionRegistryAddress)
-      ) {
-        return c.json(
-          { error: "Subscription registry is not configured for this chain." },
-          503,
-          corsHeaders(origin),
-        );
-      }
-      const signerAccount = privateKeyToAccount(capability.billerPrivateKey);
-      const authorized = (await publicClient.readContract({
-        address: subscriptionRegistryAddress,
-        abi: [
-          {
-            inputs: [{ internalType: "address", name: "", type: "address" }],
-            name: "authorizedBillers",
-            outputs: [{ internalType: "bool", name: "", type: "bool" }],
-            stateMutability: "view",
-            type: "function",
-          },
-        ] as const,
-        functionName: "authorizedBillers",
-        args: [signerAccount.address],
-      })) as boolean;
-
-      if (!authorized) {
-        return c.json(
-          {
-            error:
-              "The configured backend signer is not authorized as a SubscriptionRegistry biller, so immediate upgrades cannot finalize access yet.",
-          },
-          409,
-          corsHeaders(origin),
-        );
-      }
-
       const proration = createProrationSummary({
         currentPlanName: currentPlan?.name ?? "Current plan",
         targetPlanName: plan.name,
@@ -1481,19 +1304,66 @@ export async function handleCompanyPlanRequest(
 
       let accessChangeTxHashLocal = normalizedRequestedAccessChangeTxHash;
       if (!accessChangeTxHashLocal) {
-        const accessChangeExecution = await executeAuthorizedRegistryPlanChange({
-          tokenId: verification.tokenId,
-          expectedOnChainPlanId: plan.onChainPlanId!,
-          chainId: subChainId,
-        });
-        if (!accessChangeExecution.ok) {
+        const { contracts } = createChainClients(subChainId);
+        const subscriptionRegistryAddress =
+          contracts.subscriptionRegistry as `0x${string}`;
+        if (
+          !subscriptionRegistryAddress ||
+          !isAddress(subscriptionRegistryAddress)
+        ) {
           return c.json(
-            { error: accessChangeExecution.error },
-            accessChangeExecution.status as any,
+            { error: "Subscription registry is not configured for this chain." },
+            503,
             corsHeaders(origin),
           );
         }
-        accessChangeTxHashLocal = accessChangeExecution.txHash;
+
+        const accessChangeCalldata = encodeFunctionData({
+          abi: SubscriptionRegistryABI,
+          functionName: "changePlan",
+          args: [BigInt(verification.tokenId), BigInt(plan.onChainPlanId!)],
+        });
+
+        return c.json(
+          {
+            data: {
+              ...buildLifecycleResponse({
+                changeType: "upgrade",
+                stage: "pending_verification",
+                scheduled: false,
+                mode: "immediate_prorated_upgrade",
+                pendingVerification: true,
+                data: {
+                  planId,
+                  planName: plan.name,
+                  previousPlanId: previousPlanId ?? null,
+                  autopayConfigTxHash: normalizedAutopayConfigTxHash,
+                  paymentTxHash: normalizedPaymentTxHash,
+                  proration: proration.response,
+                  accessChangeRequired: true,
+                  accessChangeScope: "subscription_registry_plan_change",
+                  accessChangeNote:
+                    "Submit the prepared SubscriptionRegistry.changePlan transaction from an authorized biller account, then call this endpoint again with accessChangeTxHash.",
+                  preparedTransaction: {
+                    chainId: subChainId ?? DEFAULT_CHAIN_ID,
+                    target: subscriptionRegistryAddress,
+                    value: "0",
+                    data: accessChangeCalldata,
+                    functionSignature: "changePlan(uint256,uint256)",
+                  },
+                  verification: {
+                    paymentAccount: companyPaymentAccount,
+                    tokenId: verification.tokenId,
+                    currentOnChainPlanId: verification.previousOnChainPlanId,
+                    targetOnChainPlanId: plan.onChainPlanId,
+                  },
+                },
+              }),
+            },
+          },
+          202,
+          corsHeaders(origin),
+        );
       }
 
       const accessChange = await verifySubscriptionRegistryPlanChange({

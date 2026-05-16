@@ -116,6 +116,23 @@ interface IPlanFactory {
         string calldata metadataURI
     ) external;
 
+    /// @notice Updates a plan on behalf of a provider via EIP-712 signature
+    /// @dev Allows a relayer or sponsored smart account to pay gas while the provider retains ownership
+    /// @param provider The current owner of the plan (must sign)
+    /// @param planId The plan ID to update
+    /// @param price New price (0 = no change)
+    /// @param metadataURI New metadata URI (empty = no change)
+    /// @param deadline Signature expiration timestamp
+    /// @param signature EIP-712 signature from the provider
+    function updatePlanFor(
+        address provider,
+        uint256 planId,
+        uint256 price,
+        string calldata metadataURI,
+        uint256 deadline,
+        bytes calldata signature
+    ) external;
+
     /// @notice Deactivates a plan (no new subscriptions)
     /// @param planId The plan ID to deactivate
     function deactivatePlan(uint256 planId) external;

@@ -81,8 +81,9 @@ import {
   useChainId,
   usePublicClient,
   useSignTypedData,
-  useWriteContract,
+  useWalletClient,
 } from "wagmi";
+import { parseEventLogs } from "viem";
 import {
   getUsdcAddress,
   getTokenOptions,
@@ -100,6 +101,7 @@ import {
 } from "@/lib/default-chain";
 import { toast } from "sonner";
 import { PlanFactoryABI } from "@arcenpay/internal-core";
+import { sendSmartAccountTransaction } from "@arcenpay/react/zerodev";
 import { useDashboardWallet } from "@/hooks/use-dashboard-wallet";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -197,8 +199,15 @@ interface RegisterOnChainResponse {
   planFactoryOwner?: string | null;
   ownerActionRequired?: OwnerActionRequiredPayload;
   providerAddress?: string;
+  planOwner?: string;
   signingRequired?: boolean;
   noOp?: boolean;
+  preparedTransaction?: {
+    target: string;
+    value?: string;
+    data: string;
+    functionSignature?: string;
+  };
 }
 
 // ─── Token Options ────────────────────────────────────────────────────────────
@@ -284,6 +293,34 @@ async function copyOwnerActionPayload(
   } catch {
     // Ignore clipboard errors (unsupported contexts, denied permission, etc.)
   }
+}
+
+async function fetchZeroDevConfig(chainId: number): Promise<{
+  bundlerUrl: string;
+  paymasterUrl: string;
+} | null> {
+  try {
+    const res = await fetch(`/api/v1/public/zerodev-config?chainId=${chainId}`);
+    if (!res.ok) return null;
+
+    const body = (await res.json().catch(() => ({}))) as {
+      data?: {
+        bundlerUrl?: string;
+        paymasterUrl?: string;
+      };
+    };
+
+    if (body.data?.bundlerUrl && body.data?.paymasterUrl) {
+      return {
+        bundlerUrl: body.data.bundlerUrl,
+        paymasterUrl: body.data.paymasterUrl,
+      };
+    }
+  } catch {
+    // Ignore fetch errors and fall back to direct wallet execution.
+  }
+
+  return null;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -2910,7 +2947,7 @@ function PlansTable({
   const chainId = useChainId();
   const publicClient = usePublicClient({ chainId: chainId || DEFAULT_CHAIN_ID });
   const { signTypedDataAsync } = useSignTypedData();
-  const { writeContractAsync } = useWriteContract();
+  const { data: walletClient } = useWalletClient();
 
   const [plans, setPlans] = useState<CatalogPlan[]>([]);
   const [loading, setLoading] = useState(true);
@@ -3039,54 +3076,6 @@ function PlansTable({
       );
       const billingIntervalSeconds = plan.billingInterval * 86400;
 
-      if (plan.onChainPlanId && signingRequired) {
-        if (!publicClient) {
-          throw new Error(
-            `Public client unavailable for ${getChainLabel(domain.chainId)}`,
-          );
-        }
-
-        const txHash = await writeContractAsync({
-          address: planFactoryAddress as `0x${string}`,
-          abi: PlanFactoryABI,
-          functionName: "updatePlan",
-          args: [BigInt(plan.onChainPlanId), priceInUsdc, ""],
-        });
-
-        const receipt = await publicClient.waitForTransactionReceipt({
-          hash: txHash,
-          timeout: 45_000,
-        });
-
-        if (receipt.status === "reverted") {
-          throw new Error("Transaction reverted on-chain");
-        }
-
-        const confirmRes = await fetch(
-          `/api/catalog/plans/${plan.id}/chain-confirm`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              txHash,
-              onChainPlanId: plan.onChainPlanId,
-              success: true,
-            }),
-          },
-        );
-
-        if (!confirmRes.ok) {
-          const confirmErr = await confirmRes.json().catch(() => ({}));
-          throw new Error(
-            confirmErr.error || "Failed to confirm on-chain price sync",
-          );
-        }
-
-        toast.success(`Synced on-chain · ${txHash.slice(0, 10)}…`);
-        load();
-        return;
-      }
-
       // 3. Sign EIP-712 typed data when the provider is the connected wallet
       const signature = signingRequired
         ? await signTypedDataAsync({
@@ -3096,31 +3085,51 @@ function PlansTable({
               chainId: BigInt(domain.chainId),
               verifyingContract: planFactoryAddress as `0x${string}`,
             },
-            types: {
-              CreatePlan: [
-                { name: "provider", type: "address" },
-                { name: "name", type: "string" },
-                { name: "tier", type: "string" },
-                { name: "price", type: "uint256" },
-                { name: "billingInterval", type: "uint32" },
-                { name: "acceptedToken", type: "address" },
-                { name: "metadataURI", type: "string" },
-                { name: "nonce", type: "uint256" },
-                { name: "deadline", type: "uint256" },
-              ],
-            },
-            primaryType: "CreatePlan",
-            message: {
-              provider: (providerAddress ?? address) as `0x${string}`,
-              name: plan.name,
-              tier: plan.tier,
-              price: priceInUsdc,
-              billingInterval: billingIntervalSeconds,
-              acceptedToken: plan.acceptedToken as `0x${string}`,
-              metadataURI: "",
-              nonce: BigInt(nonce),
-              deadline: BigInt(deadline),
-            },
+            types: plan.onChainPlanId
+              ? {
+                  UpdatePlan: [
+                    { name: "provider", type: "address" },
+                    { name: "planId", type: "uint256" },
+                    { name: "price", type: "uint256" },
+                    { name: "metadataURI", type: "string" },
+                    { name: "nonce", type: "uint256" },
+                    { name: "deadline", type: "uint256" },
+                  ],
+                }
+              : {
+                  CreatePlan: [
+                    { name: "provider", type: "address" },
+                    { name: "name", type: "string" },
+                    { name: "tier", type: "string" },
+                    { name: "price", type: "uint256" },
+                    { name: "billingInterval", type: "uint32" },
+                    { name: "acceptedToken", type: "address" },
+                    { name: "metadataURI", type: "string" },
+                    { name: "nonce", type: "uint256" },
+                    { name: "deadline", type: "uint256" },
+                  ],
+                },
+            primaryType: plan.onChainPlanId ? "UpdatePlan" : "CreatePlan",
+            message: plan.onChainPlanId
+              ? {
+                  provider: (providerAddress ?? address) as `0x${string}`,
+                  planId: BigInt(plan.onChainPlanId),
+                  price: priceInUsdc,
+                  metadataURI: "",
+                  nonce: BigInt(nonce),
+                  deadline: BigInt(deadline),
+                }
+              : {
+                  provider: (providerAddress ?? address) as `0x${string}`,
+                  name: plan.name,
+                  tier: plan.tier,
+                  price: priceInUsdc,
+                  billingInterval: billingIntervalSeconds,
+                  acceptedToken: plan.acceptedToken as `0x${string}`,
+                  metadataURI: "",
+                  nonce: BigInt(nonce),
+                  deadline: BigInt(deadline),
+                },
           })
         : undefined;
 
@@ -3159,6 +3168,121 @@ function PlansTable({
         }
         throw new Error(data.error || "Registration failed");
       }
+
+      if (data.preparedTransaction) {
+        if (!publicClient) {
+          throw new Error(
+            `Public client unavailable for ${getChainLabel(domain.chainId)}`,
+          );
+        }
+        if (!walletClient || !walletClient.account) {
+          throw new Error("Connected wallet client unavailable");
+        }
+
+        const zeroDevConfig = await fetchZeroDevConfig(domain.chainId);
+        let txHash: `0x${string}`;
+        let usedGasless = false;
+
+        if (zeroDevConfig) {
+          const result = await sendSmartAccountTransaction({
+            chainId: domain.chainId,
+            walletClient,
+            to: data.preparedTransaction.target as `0x${string}`,
+            data: data.preparedTransaction.data as `0x${string}`,
+            value: BigInt(data.preparedTransaction.value ?? "0"),
+            bundlerUrl: zeroDevConfig.bundlerUrl,
+            paymasterUrl: zeroDevConfig.paymasterUrl,
+          });
+          txHash = result.txHash;
+          usedGasless = true;
+        } else {
+          toast.message(
+            "Gas sponsorship is not configured for this chain yet. Sending from your connected wallet instead.",
+          );
+          txHash = await walletClient.sendTransaction({
+            account: walletClient.account,
+            to: data.preparedTransaction.target as `0x${string}`,
+            data: data.preparedTransaction.data as `0x${string}`,
+            value: BigInt(data.preparedTransaction.value ?? "0"),
+          });
+        }
+
+        const receipt = await publicClient.waitForTransactionReceipt({
+          hash: txHash,
+          timeout: 45_000,
+        });
+
+        if (receipt.status === "reverted") {
+          throw new Error("Transaction reverted on-chain");
+        }
+
+        const createdLogs = parseEventLogs({
+          abi: PlanFactoryABI,
+          logs: receipt.logs,
+          eventName: "PlanCreated",
+          strict: false,
+        });
+
+        const expectedOwner = (
+          data.planOwner ??
+          data.providerAddress ??
+          address
+        )?.toLowerCase();
+
+        const latestCreatedLog = [...createdLogs].reverse().find((log) => {
+          const provider = (log as { args?: { provider?: string } }).args
+            ?.provider;
+          return (
+            typeof provider === "string" &&
+            expectedOwner &&
+            provider.toLowerCase() === expectedOwner
+          );
+        });
+
+        let onChainPlanId = (
+          latestCreatedLog as { args?: { planId?: bigint } } | undefined
+        )?.args?.planId?.toString();
+
+        if (!onChainPlanId && expectedOwner) {
+          const providerPlans = (await publicClient.readContract({
+            address: planFactoryAddress as `0x${string}`,
+            abi: PlanFactoryABI,
+            functionName: "getProviderPlans",
+            args: [expectedOwner as `0x${string}`],
+          })) as bigint[];
+          const latestProviderPlan = providerPlans.at(-1);
+          if (typeof latestProviderPlan === "bigint") {
+            onChainPlanId = latestProviderPlan.toString();
+          }
+        }
+
+        const confirmRes = await fetch(
+          `/api/catalog/plans/${plan.id}/chain-confirm`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              txHash,
+              onChainPlanId,
+              success: true,
+            }),
+          },
+        );
+
+        if (!confirmRes.ok) {
+          const confirmErr = await confirmRes.json().catch(() => ({}));
+          throw new Error(
+            confirmErr.error || "Failed to confirm on-chain registration",
+          );
+        }
+
+        toast.success(
+          `${usedGasless ? "Registered gaslessly" : "Registered"} on-chain · ${txHash.slice(0, 10)}…`,
+        );
+        load();
+        return;
+      }
+
       toast.success(
         data.noOp
           ? "Plan is already in sync on-chain"
@@ -3175,7 +3299,7 @@ function PlansTable({
         msg.includes("denied") ||
         msg.includes("User rejected")
       ) {
-        toast.error("Signature cancelled");
+        toast.error("Signature or transaction cancelled");
       } else {
         toast.error(msg);
       }

@@ -32,6 +32,9 @@ contract PlanFactory is
     bytes32 public constant CREATE_PLAN_TYPEHASH = keccak256(
         "CreatePlan(address provider,string name,string tier,uint256 price,uint32 billingInterval,address acceptedToken,string metadataURI,uint256 nonce,uint256 deadline)"
     );
+    bytes32 public constant UPDATE_PLAN_TYPEHASH = keccak256(
+        "UpdatePlan(address provider,uint256 planId,uint256 price,string metadataURI,uint256 nonce,uint256 deadline)"
+    );
 
     // ============================================================
     //                         STORAGE
@@ -227,6 +230,48 @@ contract PlanFactory is
         Plan storage plan = _plans[planId];
         require(plan.id != 0, "PlanFactory: plan not found");
         require(plan.provider == msg.sender, "PlanFactory: not plan owner");
+
+        if (price > 0) {
+            plan.price = price;
+        }
+        if (bytes(metadataURI).length > 0) {
+            plan.metadataURI = metadataURI;
+        }
+
+        emit PlanUpdated(planId);
+    }
+
+    /// @inheritdoc IPlanFactory
+    function updatePlanFor(
+        address provider,
+        uint256 planId,
+        uint256 price,
+        string calldata metadataURI,
+        uint256 deadline,
+        bytes calldata signature
+    ) external whenNotPaused {
+        require(block.timestamp <= deadline, "PlanFactory: signature expired");
+
+        Plan storage plan = _plans[planId];
+        require(plan.id != 0, "PlanFactory: plan not found");
+        require(plan.provider == provider, "PlanFactory: not plan owner");
+
+        uint256 currentNonce = nonces[provider];
+        nonces[provider] = currentNonce + 1;
+
+        bytes32 structHash = keccak256(abi.encode(
+            UPDATE_PLAN_TYPEHASH,
+            provider,
+            planId,
+            price,
+            keccak256(bytes(metadataURI)),
+            currentNonce,
+            deadline
+        ));
+
+        bytes32 digest = _hashTypedDataV4(structHash);
+        address recoveredSigner = ECDSA.recover(digest, signature);
+        require(recoveredSigner == provider, "PlanFactory: invalid signature");
 
         if (price > 0) {
             plan.price = price;

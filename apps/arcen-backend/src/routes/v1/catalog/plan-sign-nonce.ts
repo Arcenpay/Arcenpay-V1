@@ -1,6 +1,5 @@
 import type { Context } from "hono";
 import { createPublicClient, http } from "viem";
-import { privateKeyToAccount } from "viem/accounts";
 import { db } from "../../../db.js";
 import { requirePermission, isErrorResponse } from "../../../lib/auth/api-auth.js";
 import { getChain, getContractAddresses } from "@arcenpay/internal-core";
@@ -18,36 +17,18 @@ const NONCES_ABI = [
   },
 ] as const;
 
-function normalizePrivateKey(raw: string | undefined): `0x${string}` | null {
-  if (!raw) return null;
-  const trimmed = raw.trim();
-  if (!trimmed) return null;
-  const withPrefix = trimmed.startsWith("0x") ? trimmed : `0x${trimmed}`;
-  return /^0x[a-fA-F0-9]{64}$/.test(withPrefix)
-    ? (withPrefix as `0x${string}`)
-    : null;
-}
-
 export async function getPlanSignNonce(c: Context) {
   const auth = await requirePermission(c, "catalog:read");
   if (isErrorResponse(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any as any);
   const planId = c.req.param("id");
 
-  const managedProviderKey = normalizePrivateKey(
-    process.env.ONCHAIN_PROVIDER_PRIVATE_KEY ||
-      process.env.SUBSCRIPTION_BILLER_PRIVATE_KEY,
-  );
-  const managedProviderAddress = managedProviderKey
-    ? privateKeyToAccount(managedProviderKey).address
-    : null;
-
   const userAddress = auth.team.walletAddress;
-  const providerAddress = managedProviderAddress ?? userAddress ?? null;
+  const providerAddress = userAddress ?? null;
 
   if (!providerAddress || !isAddress(providerAddress)) {
     return c.json({
         error:
-          "No provider address is configured. Link a wallet or configure ONCHAIN_PROVIDER_PRIVATE_KEY / SUBSCRIPTION_BILLER_PRIVATE_KEY.",
+          "No provider wallet is linked to this team. Link your wallet first to register plans on-chain.",
       }, 400 as any);
   }
 
@@ -129,7 +110,7 @@ export async function getPlanSignNonce(c: Context) {
       planFactoryAddress,
       userAddress,
       providerAddress,
-      signingRequired: !managedProviderAddress,
+      signingRequired: true,
       domain: {
         name: "ArcenPay PlanFactory",
         version: "1",

@@ -235,9 +235,6 @@ contract ERC7579AutopayModule is
         AutopayConfig storage config = _configs[account];
         IPlanFactory.Plan memory plan = _getCurrentPlan(config);
 
-        // Verify caller is the authorized merchant
-        require(msg.sender == config.merchant, "AutopayModule: not merchant");
-
         // Verify amount is within limits
         require(amount > 0 && amount <= config.maxAmount, "AutopayModule: amount out of range");
         require(amount <= plan.price, "AutopayModule: amount exceeds active plan price");
