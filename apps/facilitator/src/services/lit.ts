@@ -5,7 +5,7 @@
 import { LIT_NETWORK } from "@lit-protocol/constants";
 import { decryptToString, encryptString } from "@lit-protocol/encryption";
 import { LitNodeClient } from "@lit-protocol/lit-node-client";
-import type { PlanTier } from "../sdk";
+import type { PlanTier } from "@arcenpay/internal-core";
 
 export interface LitAccessCondition {
   contractAddress: string;

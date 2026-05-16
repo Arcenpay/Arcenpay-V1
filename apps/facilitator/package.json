@@ -4,8 +4,8 @@
   "private": true,
   "description": "ArcenPay Facilitator Node — x402 payment validation and on-chain submission",
   "scripts": {
-    "prebuild": "npm run build --workspace=@arcenpay/internal-core",
-    "pretypecheck": "npm run build --workspace=@arcenpay/internal-core",
+    "prebuild": "npm run build --workspace=@arcenpay/internal-core && npm run build --workspace=@arcenpay/node",
+    "pretypecheck": "npm run build --workspace=@arcenpay/internal-core && npm run build --workspace=@arcenpay/node",
     "build": "tsc",
     "dev": "tsx watch src/server.ts",
     "start": "node dist/server.js",
@@ -17,12 +17,18 @@
   "dependencies": {
     "@arcenpay/internal-core": "*",
     "@arcenpay/node": "*",
+    "@lit-protocol/constants": "^7.4.0",
+    "@lit-protocol/encryption": "^7.4.0",
+    "@lit-protocol/lit-node-client": "^7.4.0",
     "@sentry/node": "^8.0.0",
+    "@tableland/sdk": "^7.2.1",
     "cors": "^2.8.5",
     "dotenv": "^16.4.0",
+    "ethers": "^6.13.5",
     "express": "^5.0.0",
     "ioredis": "^5.3.0",
     "prom-client": "^15.1.3",
+    "redis": "^4.7.1",
     "viem": "^2.21.0"
   },
   "devDependencies": {

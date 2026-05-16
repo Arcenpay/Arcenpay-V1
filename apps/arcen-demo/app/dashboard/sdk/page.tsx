@@ -129,22 +129,8 @@ const NODE_SERVICE_MATRIX = [
   { name: "buildEventIdempotencyKey", tag: "live", useCase: "Build stable ids for billing and protocol events." },
   { name: "createProtocolEvent", tag: "live", useCase: "Create canonical protocol event payloads for downstream systems." },
   { name: "mapProtocolEventToBillingType", tag: "live", useCase: "Bridge protocol events into billing-event categories." },
-  { name: "WebhookService", tag: "infra", useCase: "Deliver signed outbound webhooks with retry logic." },
-  { name: "UsageService", tag: "infra", useCase: "Track usage logs and generate ZK billing proofs." },
-  { name: "SettlementService", tag: "infra", useCase: "Read and watch settlement state from chain." },
-  { name: "SettlementWriterService", tag: "infra", useCase: "Submit settlement transactions as a backend service." },
-  { name: "EventListenerService", tag: "infra", useCase: "Subscribe to on-chain subscription lifecycle events." },
-  { name: "EmailService", tag: "infra", useCase: "Send transactional billing mail from backend workflows." },
-  { name: "TablelandService", tag: "infra", useCase: "Read and write off-chain mirrored feature flags." },
-  { name: "LitProtocolService", tag: "infra", useCase: "Build Lit access-control conditions and encrypted experiences." },
-  { name: "AggregatorService", tag: "infra", useCase: "Aggregate usage into Merkle and proof-friendly structures." },
-  { name: "RedisUsageStore", tag: "infra", useCase: "Persist usage logs and settlement cursors in Redis." },
-  { name: "ProofOrchestrator", tag: "infra", useCase: "Coordinate proof generation and settlement submission jobs." },
-  { name: "AxelarTransport", tag: "infra", useCase: "Dispatch cross-chain subscription messages over Axelar." },
-  { name: "CCIPTransport", tag: "infra", useCase: "Dispatch cross-chain messages over Chainlink CCIP." },
-  { name: "BillingKeeper", tag: "infra", useCase: "Run recurring renewal and autopay maintenance loops." },
   { name: "InMemoryNonceStore / RedisNonceStore", tag: "infra", useCase: "Prevent replay in x402 flows." },
-  { name: "ArcenApiError / UsageProofError", tag: "error model", useCase: "Typed SDK error surfaces for consumers." },
+  { name: "ArcenApiError", tag: "error model", useCase: "Typed SDK error surface for public Node integrations." },
 ];
 
 const TEMPLATE_BLOCKS: TemplateBlock[] = [

@@ -43,24 +43,9 @@ import {
 } from "prom-client";
 import {
   x402Middleware,
-  AggregatorService,
-  SettlementService,
-  SettlementWriterService,
-  RedisUsageStore,
-  EventListenerService,
-  WebhookService,
-  type WebhookDeliveryLog,
-  type WebhookPayload,
-  EmailService,
-  TablelandService,
-  LitProtocolService,
-  ProofOrchestrator,
-  BillingKeeper,
   buildEventIdempotencyKey,
   createProtocolEvent,
   mapProtocolEventToBillingType,
-  AxelarTransport,
-  CCIPTransport,
   type ProtocolEventName,
 } from "@arcenpay/node";
 import {
@@ -100,6 +85,23 @@ import {
   storePendingApproval,
   getPendingApproval,
 } from "./telegram-webhook.js";
+import { AggregatorService } from "./services/aggregator.js";
+import { SettlementService } from "./services/settlement.js";
+import { SettlementWriterService } from "./services/settlement-writer.js";
+import { RedisUsageStore } from "./services/redis-usage.js";
+import { EventListenerService } from "./services/events.js";
+import {
+  WebhookService,
+  type WebhookDeliveryLog,
+  type WebhookPayload,
+} from "./services/webhooks.js";
+import { EmailService } from "./services/email.js";
+import { TablelandService } from "./services/tableland.js";
+import { LitProtocolService } from "./services/lit.js";
+import { ProofOrchestrator } from "./services/proof-orchestrator.js";
+import { BillingKeeper } from "./services/keeper.js";
+import { AxelarTransport } from "./services/transport-axelar.js";
+import { CCIPTransport } from "./services/transport-ccip.js";
 
 const app = express();
 const PORT = process.env.PORT || 3402;

@@ -6,7 +6,10 @@
 
 import { createPublicClient, http } from "viem";
 import { sepolia, baseSepolia, base } from "viem/chains";
-import { DEFAULT_CHAIN_ID, getContractAddresses } from "../sdk";
+import {
+  DEFAULT_CHAIN_ID,
+  getContractAddresses,
+} from "@arcenpay/internal-core";
 
 export type SubscriptionEventType =
   | "minted"

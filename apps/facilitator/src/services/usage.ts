@@ -10,12 +10,16 @@ import { pathToFileURL } from "url";
 import { createPublicClient, createWalletClient, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { sepolia, baseSepolia, base } from "viem/chains";
-import type { PublicInputs, UsageProof, BillingSettlement } from "../sdk";
+import type {
+  PublicInputs,
+  UsageProof,
+  BillingSettlement,
+} from "@arcenpay/internal-core";
 import {
   DEFAULT_CHAIN_ID,
   ZKUsageVerifierABI,
   getContractAddresses,
-} from "../sdk";
+} from "@arcenpay/internal-core";
 
 interface UsageLogEntry {
   sessionId: string;

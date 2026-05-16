@@ -4,7 +4,7 @@
 // ============================================================
 
 import { Database } from "@tableland/sdk";
-import type { PlanTier, TablelandEntitlement } from "../sdk";
+import type { PlanTier, TablelandEntitlement } from "@arcenpay/internal-core";
 // Tableland SDK requires a full ethers Signer — ethers is an explicit dependency.
 // Viem is used everywhere else; this is the one place ethers is intentional.
 import { JsonRpcProvider, Wallet } from "ethers";

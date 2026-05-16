@@ -46,12 +46,6 @@
       "import": "./dist/webhooks.mjs",
       "require": "./dist/webhooks.js",
       "default": "./dist/webhooks.mjs"
-    },
-    "./tableland": {
-      "types": "./dist/tableland.d.ts",
-      "import": "./dist/tableland.mjs",
-      "require": "./dist/tableland.js",
-      "default": "./dist/tableland.mjs"
     }
   },
   "files": [
@@ -66,20 +60,14 @@
     "predev": "npm run sync:core",
     "pretest": "npm run sync:core",
     "pretypecheck": "npm run sync:core",
-    "build": "tsup src/index.ts src/client-entry.ts src/core.ts src/event-contracts.ts src/webhooks.ts src/tableland.ts --clean --format cjs,esm --dts --dts-resolve",
-    "dev": "tsup src/index.ts src/client-entry.ts src/core.ts src/event-contracts.ts src/webhooks.ts src/tableland.ts --clean --format cjs,esm --dts --watch",
+    "build": "tsup src/index.ts src/client-entry.ts src/core.ts src/event-contracts.ts src/webhooks.ts --clean --format cjs,esm --dts --dts-resolve",
+    "dev": "tsup src/index.ts src/client-entry.ts src/core.ts src/event-contracts.ts src/webhooks.ts --clean --format cjs,esm --dts --watch",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@lit-protocol/constants": "^7.4.0",
-    "@lit-protocol/encryption": "^7.4.0",
-    "@lit-protocol/lit-node-client": "^7.4.0",
-    "@tableland/sdk": "^7.2.1",
-    "ethers": "^6.13.5",
-    "redis": "^4.7.1",
     "viem": "^2.21.0"
   },
   "devDependencies": {

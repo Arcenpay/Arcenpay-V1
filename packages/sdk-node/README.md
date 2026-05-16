@@ -1,6 +1,6 @@
 # @arcenpay/node
 
-ArcenPay Node.js SDK for server-side billing actions, access-token minting, company APIs, entitlement checks, subscription activation, webhook verification, and optional advanced runtime services.
+ArcenPay Node.js SDK for public server-side integrations: authenticated API calls, entitlement checks, subscription activation, webhook verification, protocol event helpers, and x402 middleware.
 
 ## Install
 
@@ -84,20 +84,9 @@ Standard app integrations usually use:
 - `ArcenClient`
 - `ArcenApiError`
 - `verifyWebhookSignature`
-
-The package also exposes advanced optional services:
-
+- `buildEventIdempotencyKey`
+- `createProtocolEvent`
 - `x402Middleware`
-- `WebhookService`
-- `UsageService`
-- `SettlementService`
-- `SettlementWriterService`
-- `EventListenerService`
-- `BillingKeeper`
-- `TablelandService`
-- `ProofOrchestrator`
-- `AxelarTransport`
-- `CCIPTransport`
 - `InMemoryNonceStore`
 - `RedisNonceStore`
 
@@ -113,5 +102,7 @@ constant manually when promoting to production.
 
 ## Boundary
 
-Use `@arcenpay/node` for server-owned logic. For customer-facing UI, use
-`@arcenpay/react`.
+Use `@arcenpay/node` for developer-facing server integrations. ArcenPay-operated
+runtime services such as proof submission, settlement, keepers, and webhook
+delivery live in the internal apps, not in this public SDK. For customer-facing
+UI, use `@arcenpay/react`.

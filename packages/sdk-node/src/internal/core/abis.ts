@@ -240,6 +240,23 @@ export const PlanFactoryABI = [
   },
   {
     type: "function",
+    name: "createPlanFor",
+    inputs: [
+      { name: "provider", type: "address" },
+      { name: "name", type: "string" },
+      { name: "tier", type: "string" },
+      { name: "price", type: "uint256" },
+      { name: "billingInterval", type: "uint32" },
+      { name: "acceptedToken", type: "address" },
+      { name: "metadataURI", type: "string" },
+      { name: "deadline", type: "uint256" },
+      { name: "signature", type: "bytes" },
+    ],
+    outputs: [{ name: "planId", type: "uint256" }],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
     name: "getPlan",
     inputs: [{ name: "planId", type: "uint256" }],
     outputs: [
@@ -276,6 +293,20 @@ export const PlanFactoryABI = [
     stateMutability: "view",
   },
   {
+    type: "function",
+    name: "nonces",
+    inputs: [{ name: "provider", type: "address" }],
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "DOMAIN_SEPARATOR",
+    inputs: [],
+    outputs: [{ name: "", type: "bytes32" }],
+    stateMutability: "view",
+  },
+  {
     type: "event",
     name: "PlanCreated",
     inputs: [
@@ -305,8 +336,27 @@ export const PlanFactoryABI = [
     stateMutability: "nonpayable",
   },
   {
+    type: "function",
+    name: "updatePlanFor",
+    inputs: [
+      { name: "provider", type: "address" },
+      { name: "planId", type: "uint256" },
+      { name: "price", type: "uint256" },
+      { name: "metadataURI", type: "string" },
+      { name: "deadline", type: "uint256" },
+      { name: "signature", type: "bytes" },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
     type: "event",
     name: "PlanDeactivated",
+    inputs: [{ name: "planId", type: "uint256", indexed: true }],
+  },
+  {
+    type: "event",
+    name: "PlanUpdated",
     inputs: [{ name: "planId", type: "uint256", indexed: true }],
   },
 ] as const;

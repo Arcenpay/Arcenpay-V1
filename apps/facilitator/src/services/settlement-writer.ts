@@ -17,7 +17,7 @@ import {
   SessionVaultABI,
   FeeCollectorABI,
   getContractAddresses,
-} from "../sdk";
+} from "@arcenpay/internal-core";
 
 const CHAIN_MAP: Record<number, any> = {
   11155111: sepolia,

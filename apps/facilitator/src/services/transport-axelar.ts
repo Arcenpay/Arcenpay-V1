@@ -13,7 +13,7 @@ import {
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { sepolia, baseSepolia, base } from "viem/chains";
-import { DEFAULT_CHAIN_ID } from "../sdk";
+import { DEFAULT_CHAIN_ID } from "@arcenpay/internal-core";
 
 const CHAIN_MAP: Record<number, any> = {
   11155111: sepolia,

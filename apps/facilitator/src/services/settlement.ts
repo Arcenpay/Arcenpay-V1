@@ -5,13 +5,13 @@
 
 import { createPublicClient, http } from "viem";
 import { sepolia, baseSepolia, base } from "viem/chains";
-import type { BillingSettlement } from "../sdk";
+import type { BillingSettlement } from "@arcenpay/internal-core";
 import {
   DEFAULT_CHAIN_ID,
   SessionVaultABI,
   ZKUsageVerifierABI,
   getContractAddresses,
-} from "../sdk";
+} from "@arcenpay/internal-core";
 
 type SettlementCallback = (settlement: BillingSettlement) => void;
 
