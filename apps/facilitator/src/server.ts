@@ -145,8 +145,15 @@ const PROOF_SIGNER_PRIVATE_KEY =
   process.env.PROOF_SIGNER_PRIVATE_KEY || process.env.PRIVATE_KEY;
 const REDIS_PREFIX = process.env.REDIS_PREFIX || "arcenpay";
 const FACILITATOR_SECRET = (process.env.FACILITATOR_SECRET || "").trim();
+const BACKEND_URL = (
+  process.env.BACKEND_URL ||
+  process.env.NEXT_PUBLIC_BACKEND_URL ||
+  ""
+).replace(/\/$/, "");
 const DASHBOARD_URL = (process.env.DASHBOARD_URL || "").replace(/\/$/, "");
+const INTERNAL_API_BASE_URL = BACKEND_URL || DASHBOARD_URL;
 const DASHBOARD_PLAN_RESOLVER_PATH = "/api/internal/catalog/resolve-plan";
+const LIT_ENABLED = process.env.ENABLE_LIT_PROTOCOL === "true";
 const BILLING_MAINTENANCE_ENABLED =
   process.env.ENABLE_BILLING_MAINTENANCE_AUTOMATION === "true";
 const BILLING_MAINTENANCE_EXECUTE_DUNNING =
@@ -531,7 +538,7 @@ const aj = arcjet({
 
 const corsOrigins = (
   process.env.CORS_ORIGINS ||
-  "http://localhost:3000,http://localhost:3002,http://127.0.0.1:3000,http://127.0.0.1:3002"
+  "http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000,http://127.0.0.1:3001"
 )
   .split(",")
   .map((origin) => origin.trim())
@@ -1130,9 +1137,9 @@ async function postToDashboard(
 async function resolvePlanScopeFromDashboard(
   onChainPlanId: string,
 ): Promise<{ teamId: string; planId: string | null; environmentId: string | null } | null> {
-  if (!DASHBOARD_URL) return null;
+  if (!INTERNAL_API_BASE_URL) return null;
 
-  const url = new URL(`${DASHBOARD_URL}${DASHBOARD_PLAN_RESOLVER_PATH}`);
+  const url = new URL(`${INTERNAL_API_BASE_URL}${DASHBOARD_PLAN_RESOLVER_PATH}`);
   url.searchParams.set("onChainPlanId", onChainPlanId);
 
   const headers: Record<string, string> = {};
@@ -1273,7 +1280,7 @@ async function enqueueSubscriptionSync(input: {
  *
  * Priority:
  *   1. In-memory cache (populated when subscriber registers via POST /api/subscriber/email)
- *   2. Dashboard DB via GET /api/subscriber/lookup?wallet=… (if DASHBOARD_URL is set)
+ *   2. Platform API via GET /api/subscriber/lookup?wallet=… (if internal API base URL is set)
  *
  * Results from the remote lookup are cached in memory to avoid repeated API calls
  * within the same process lifetime.
@@ -1287,10 +1294,10 @@ async function lookupSubscriberEmail(
   const cached = subscriberEmailsByWallet.get(key);
   if (cached) return cached.email;
 
-  // 2 — fall back to dashboard lookup
-  if (!DASHBOARD_URL) return null;
+  // 2 — fall back to platform lookup
+  if (!INTERNAL_API_BASE_URL) return null;
   try {
-    const url = `${DASHBOARD_URL}/api/subscriber/lookup?wallet=${encodeURIComponent(key)}`;
+    const url = `${INTERNAL_API_BASE_URL}/api/subscriber/lookup?wallet=${encodeURIComponent(key)}`;
     const headers: Record<string, string> = {};
     if (FACILITATOR_SECRET)
       headers["Authorization"] = `Bearer ${FACILITATOR_SECRET}`;
@@ -1348,9 +1355,9 @@ let billingMaintenanceLastSuccessAt: string | null = null;
 let billingMaintenanceLastError: string | null = null;
 
 async function triggerDashboardBillingMaintenance(): Promise<void> {
-  if (!DASHBOARD_URL) {
+  if (!INTERNAL_API_BASE_URL) {
     throw new Error(
-      "DASHBOARD_URL is required to trigger dashboard billing maintenance.",
+      "BACKEND_URL or DASHBOARD_URL is required to trigger billing maintenance.",
     );
   }
 
@@ -1362,7 +1369,7 @@ async function triggerDashboardBillingMaintenance(): Promise<void> {
   }
 
   const response = await fetch(
-    `${DASHBOARD_URL}/api/internal/billing/maintenance/all`,
+    `${INTERNAL_API_BASE_URL}/api/internal/billing/maintenance/all`,
     {
       method: "POST",
       headers,
@@ -1457,7 +1464,7 @@ const litRuntimeState: {
   ready: false,
   lastError: null,
 };
-if (process.env.LIT_NETWORK) {
+if (LIT_ENABLED && process.env.LIT_NETWORK) {
   const litNetwork = (
     process.env.LIT_NETWORK === "habanero" ||
     process.env.LIT_NETWORK === "datil" ||
@@ -1492,6 +1499,10 @@ if (process.env.LIT_NETWORK) {
       console.error("[Facilitator] Lit init failed:", err);
       litService = null;
     });
+} else if (process.env.LIT_NETWORK && !LIT_ENABLED) {
+  console.log(
+    "[Facilitator] Lit configured but disabled. Set ENABLE_LIT_PROTOCOL=true to connect.",
+  );
 }
 
 function getDefaultFlagsForTier(planTier: PlanTier): Record<string, boolean> {
@@ -2378,7 +2389,7 @@ console.log("[Facilitator] ProofOrchestrator auto-submit active");
 
 // Agent balance monitor — polls agent balances and triggers dispatch notifications
 const balanceMonitor = new BalanceMonitor({
-  dashboardUrl: DASHBOARD_URL,
+  apiBaseUrl: INTERNAL_API_BASE_URL,
   facilitatorSecret: FACILITATOR_SECRET || undefined,
   publicClient: chainClient,
   sessionVaultAddress: CONTRACTS.sessionVault,
@@ -4177,18 +4188,18 @@ app.post(
       return;
     }
 
-    // Check gas budget with dashboard
-    if (!DASHBOARD_URL) {
+    // Check gas budget with platform API
+    if (!INTERNAL_API_BASE_URL) {
       res.status(200).json({
         sponsored: false,
-        reason: "Gas budget service not configured (DASHBOARD_URL missing)",
+        reason: "Gas budget service not configured (BACKEND_URL/DASHBOARD_URL missing)",
       });
       return;
     }
 
     try {
       const budgetRes = await fetch(
-        `${DASHBOARD_URL}/api/platform/gas-budget?teamId=${encodeURIComponent(body.teamId)}`,
+        `${INTERNAL_API_BASE_URL}/api/platform/gas-budget?teamId=${encodeURIComponent(body.teamId)}`,
         {
           headers: FACILITATOR_SECRET
             ? { Authorization: `Bearer ${FACILITATOR_SECRET}` }

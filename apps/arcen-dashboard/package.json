@@ -7,11 +7,11 @@
     "pretypecheck": "npm run build --workspace=@arcenpay/internal-core",
     "build": "NODE_OPTIONS=--max-old-space-size=8192 next build --webpack",
     "postbuild": "next-sitemap --config next-sitemap.config.mjs",
-    "dev": "next dev",
+    "dev": "next dev --port 3000",
     "lint": "next typegen && tsc --noEmit --incremental false",
     "test": "vitest run",
     "typecheck": "next typegen && tsc --noEmit --incremental false",
-    "start": "next start",
+    "start": "next start --port 3000",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:report": "playwright show-report"

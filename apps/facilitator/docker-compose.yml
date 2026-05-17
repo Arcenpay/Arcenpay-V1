@@ -16,7 +16,7 @@ services:
       - X402_REQUIRE_SETTLER_AUTH=true
       - REDIS_URL=redis://redis:6379
       - SESSION_VAULT_ADDRESS=${SESSION_VAULT_ADDRESS:-0x2dccEaad8551a620E4Fc736bb4d0fbb8D1A17D7C}
-      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000,http://localhost:3002}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000,http://localhost:3001}
     depends_on:
       redis:
         condition: service_healthy

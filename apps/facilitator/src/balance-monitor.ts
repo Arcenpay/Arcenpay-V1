@@ -41,7 +41,7 @@ interface DispatchRecord {
 }
 
 interface BalanceMonitorOptions {
-  dashboardUrl: string;
+  apiBaseUrl: string;
   facilitatorSecret?: string;
   publicClient: PublicClient;
   sessionVaultAddress: string;
@@ -95,7 +95,7 @@ export class BalanceMonitor {
       if (this.opts.facilitatorSecret) {
         headers.Authorization = `Bearer ${this.opts.facilitatorSecret}`;
       }
-      const res = await fetch(`${this.opts.dashboardUrl}/api/internal/agent/configs`, { headers });
+      const res = await fetch(`${this.opts.apiBaseUrl}/api/internal/agent/configs`, { headers });
       if (!res.ok) {
         console.warn(`[BalanceMonitor] Failed to fetch configs: ${res.status}`);
         return [];
@@ -193,7 +193,7 @@ export class BalanceMonitor {
         headers.Authorization = `Bearer ${this.opts.facilitatorSecret}`;
       }
       const res = await fetch(
-        `${this.opts.dashboardUrl}/api/platform/sessions?sessionLimit=10&teamId=${encodeURIComponent(teamId)}`,
+        `${this.opts.apiBaseUrl}/api/platform/sessions?sessionLimit=10&teamId=${encodeURIComponent(teamId)}`,
         { headers },
       );
       if (!res.ok) return [];

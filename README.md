@@ -6,7 +6,7 @@ ArcenPay is a monorepo for dashboard-managed billing, embedded customer billing 
 
 - `apps/arcen-dashboard`: provider control plane for plans, add-ons, credits, companies, components, invoices, payments, flags, and webhooks.
 - `apps/arcen-demo`: demo app showing the public React and Node SDK surface.
-- `apps/docs`: the developer documentation site.
+- `apps/arcenpay-docs`: the developer documentation site content.
 - `apps/facilitator`: runtime bridge for renewals, webhook fan-out, event processing, and advanced protocol flows.
 - `packages/sdk-react`: browser SDK with `ArcenPayProvider`, `ArcenEmbed`, hooks, and payment-link helpers.
 - `packages/sdk-node`: server SDK with `ArcenClient`, webhook verification, activation, and advanced runtime services.
@@ -34,11 +34,21 @@ npm run build
 Run the main apps:
 
 ```bash
+npm run dev:backend     # http://localhost:3300
 npm run dev:dashboard   # http://localhost:3000
 npm run dev:demo        # http://localhost:3001
-npm run dev:docs        # http://localhost:3003
-npm run dev:facilitator
+npm run dev:facilitator # http://localhost:3402
 ```
+
+Local port map:
+
+- Dashboard: `3000`
+- Demo app: `3001`
+- Backend API: `3300`
+- Facilitator: `3402`
+- Docs URL fallback: `3003`
+- PostgreSQL via Docker: `5433`
+- Redis via Docker: `6380`
 
 ## Core commands
 
@@ -63,7 +73,7 @@ The standard product integration path today is:
 
 ## Docs
 
-- Public docs source: `apps/docs`
+- Public docs source: `apps/arcenpay-docs`
 - Demo integration source: `apps/arcen-demo`
 - SDK READMEs:
   - `packages/sdk-react/README.md`
