@@ -29,7 +29,7 @@ export async function resolvePlan(c: Context) {
       status: "PUBLISHED",
       active: true,
     },
-    select: { id: true, teamId: true, onChainPlanId: true },
+    select: { id: true, teamId: true, onChainPlanId: true, environmentId: true },
     take: 2,
   });
 
@@ -46,5 +46,6 @@ export async function resolvePlan(c: Context) {
     teamId: matches[0].teamId,
     planId: matches[0].id,
     onChainPlanId: matches[0].onChainPlanId,
+    environmentId: matches[0].environmentId ?? null,
   });
 }

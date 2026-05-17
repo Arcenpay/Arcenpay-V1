@@ -1112,6 +1112,11 @@ export async function POST(c: Context) {
       walletAddress: paymentAccount,
       catalogPlanId: catalogPlan.id,
       catalogPlanName: catalogPlan.name,
+      customerName:
+        typeof activationCompanyInput.name === "string" &&
+        activationCompanyInput.name.trim()
+          ? activationCompanyInput.name.trim()
+          : null,
       onChainPlanId: onChainPlanId.toString(),
       onChainTokenId: tokenId.toString(),
       expiration: expiresAt.toString(),

@@ -810,10 +810,12 @@ model Invoice {
   paidAt     DateTime?
   externalRef String?
   planId      String?
+  companyId   String?
   metadata    Json?
 
   team         Team                  @relation(fields: [teamId], references: [id], onDelete: Cascade)
   environment  WorkspaceEnvironment? @relation(fields: [environmentId], references: [id], onDelete: SetNull)
+  company      ArcenCompany?          @relation(fields: [companyId], references: [id], onDelete: SetNull)
   lineItems    InvoiceLine[]
   deliveries   InvoiceDelivery[]
   creditNotes  CreditNote[]
@@ -825,6 +827,7 @@ model Invoice {
   @@index([teamId, status, issuedAt])
   @@index([teamId, environmentMode])
   @@index([teamId, environmentId])
+  @@index([companyId])
 }
 
 model InvoiceLine {
@@ -1309,6 +1312,7 @@ model ArcenCompany {
   subscriptionState SubscriptionState?
   billingBalance BillingBalance?
   payments  Payment[]
+  invoices  Invoice[]
   refunds   Refund[]
   billingAdjustments BillingAdjustment[]
   billingRecoveryTasks BillingRecoveryTask[]

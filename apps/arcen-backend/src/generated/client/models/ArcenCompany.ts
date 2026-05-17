@@ -255,6 +255,7 @@ export type ArcenCompanyWhereInput = {
   subscriptionState?: Prisma.XOR<Prisma.SubscriptionStateNullableScalarRelationFilter, Prisma.SubscriptionStateWhereInput> | null
   billingBalance?: Prisma.XOR<Prisma.BillingBalanceNullableScalarRelationFilter, Prisma.BillingBalanceWhereInput> | null
   payments?: Prisma.PaymentListRelationFilter
+  invoices?: Prisma.InvoiceListRelationFilter
   refunds?: Prisma.RefundListRelationFilter
   billingAdjustments?: Prisma.BillingAdjustmentListRelationFilter
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskListRelationFilter
@@ -288,6 +289,7 @@ export type ArcenCompanyOrderByWithRelationInput = {
   subscriptionState?: Prisma.SubscriptionStateOrderByWithRelationInput
   billingBalance?: Prisma.BillingBalanceOrderByWithRelationInput
   payments?: Prisma.PaymentOrderByRelationAggregateInput
+  invoices?: Prisma.InvoiceOrderByRelationAggregateInput
   refunds?: Prisma.RefundOrderByRelationAggregateInput
   billingAdjustments?: Prisma.BillingAdjustmentOrderByRelationAggregateInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskOrderByRelationAggregateInput
@@ -326,6 +328,7 @@ export type ArcenCompanyWhereUniqueInput = Prisma.AtLeast<{
   subscriptionState?: Prisma.XOR<Prisma.SubscriptionStateNullableScalarRelationFilter, Prisma.SubscriptionStateWhereInput> | null
   billingBalance?: Prisma.XOR<Prisma.BillingBalanceNullableScalarRelationFilter, Prisma.BillingBalanceWhereInput> | null
   payments?: Prisma.PaymentListRelationFilter
+  invoices?: Prisma.InvoiceListRelationFilter
   refunds?: Prisma.RefundListRelationFilter
   billingAdjustments?: Prisma.BillingAdjustmentListRelationFilter
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskListRelationFilter
@@ -397,6 +400,7 @@ export type ArcenCompanyCreateInput = {
   subscriptionState?: Prisma.SubscriptionStateCreateNestedOneWithoutCompanyInput
   billingBalance?: Prisma.BillingBalanceCreateNestedOneWithoutCompanyInput
   payments?: Prisma.PaymentCreateNestedManyWithoutCompanyInput
+  invoices?: Prisma.InvoiceCreateNestedManyWithoutCompanyInput
   refunds?: Prisma.RefundCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutCompanyInput
@@ -428,6 +432,7 @@ export type ArcenCompanyUncheckedCreateInput = {
   subscriptionState?: Prisma.SubscriptionStateUncheckedCreateNestedOneWithoutCompanyInput
   billingBalance?: Prisma.BillingBalanceUncheckedCreateNestedOneWithoutCompanyInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutCompanyInput
+  invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutCompanyInput
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutCompanyInput
@@ -459,6 +464,7 @@ export type ArcenCompanyUpdateInput = {
   subscriptionState?: Prisma.SubscriptionStateUpdateOneWithoutCompanyNestedInput
   billingBalance?: Prisma.BillingBalanceUpdateOneWithoutCompanyNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutCompanyNestedInput
+  invoices?: Prisma.InvoiceUpdateManyWithoutCompanyNestedInput
   refunds?: Prisma.RefundUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutCompanyNestedInput
@@ -490,6 +496,7 @@ export type ArcenCompanyUncheckedUpdateInput = {
   subscriptionState?: Prisma.SubscriptionStateUncheckedUpdateOneWithoutCompanyNestedInput
   billingBalance?: Prisma.BillingBalanceUncheckedUpdateOneWithoutCompanyNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutCompanyNestedInput
+  invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutCompanyNestedInput
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutCompanyNestedInput
@@ -558,14 +565,14 @@ export type ArcenCompanyOrderByRelationAggregateInput = {
   _count?: Prisma.SortOrder
 }
 
-export type ArcenCompanyScalarRelationFilter = {
-  is?: Prisma.ArcenCompanyWhereInput
-  isNot?: Prisma.ArcenCompanyWhereInput
-}
-
 export type ArcenCompanyNullableScalarRelationFilter = {
   is?: Prisma.ArcenCompanyWhereInput | null
   isNot?: Prisma.ArcenCompanyWhereInput | null
+}
+
+export type ArcenCompanyScalarRelationFilter = {
+  is?: Prisma.ArcenCompanyWhereInput
+  isNot?: Prisma.ArcenCompanyWhereInput
 }
 
 export type ArcenCompanyTeamIdEnvironmentIdWalletAddressCompoundUniqueInput = {
@@ -709,6 +716,22 @@ export type ArcenCompanyUncheckedUpdateManyWithoutEnvironmentNestedInput = {
   update?: Prisma.ArcenCompanyUpdateWithWhereUniqueWithoutEnvironmentInput | Prisma.ArcenCompanyUpdateWithWhereUniqueWithoutEnvironmentInput[]
   updateMany?: Prisma.ArcenCompanyUpdateManyWithWhereWithoutEnvironmentInput | Prisma.ArcenCompanyUpdateManyWithWhereWithoutEnvironmentInput[]
   deleteMany?: Prisma.ArcenCompanyScalarWhereInput | Prisma.ArcenCompanyScalarWhereInput[]
+}
+
+export type ArcenCompanyCreateNestedOneWithoutInvoicesInput = {
+  create?: Prisma.XOR<Prisma.ArcenCompanyCreateWithoutInvoicesInput, Prisma.ArcenCompanyUncheckedCreateWithoutInvoicesInput>
+  connectOrCreate?: Prisma.ArcenCompanyCreateOrConnectWithoutInvoicesInput
+  connect?: Prisma.ArcenCompanyWhereUniqueInput
+}
+
+export type ArcenCompanyUpdateOneWithoutInvoicesNestedInput = {
+  create?: Prisma.XOR<Prisma.ArcenCompanyCreateWithoutInvoicesInput, Prisma.ArcenCompanyUncheckedCreateWithoutInvoicesInput>
+  connectOrCreate?: Prisma.ArcenCompanyCreateOrConnectWithoutInvoicesInput
+  upsert?: Prisma.ArcenCompanyUpsertWithoutInvoicesInput
+  disconnect?: Prisma.ArcenCompanyWhereInput | boolean
+  delete?: Prisma.ArcenCompanyWhereInput | boolean
+  connect?: Prisma.ArcenCompanyWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.ArcenCompanyUpdateToOneWithWhereWithoutInvoicesInput, Prisma.ArcenCompanyUpdateWithoutInvoicesInput>, Prisma.ArcenCompanyUncheckedUpdateWithoutInvoicesInput>
 }
 
 export type ArcenCompanyCreateNestedOneWithoutSubscriptionStateInput = {
@@ -942,6 +965,7 @@ export type ArcenCompanyCreateWithoutTeamInput = {
   subscriptionState?: Prisma.SubscriptionStateCreateNestedOneWithoutCompanyInput
   billingBalance?: Prisma.BillingBalanceCreateNestedOneWithoutCompanyInput
   payments?: Prisma.PaymentCreateNestedManyWithoutCompanyInput
+  invoices?: Prisma.InvoiceCreateNestedManyWithoutCompanyInput
   refunds?: Prisma.RefundCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutCompanyInput
@@ -972,6 +996,7 @@ export type ArcenCompanyUncheckedCreateWithoutTeamInput = {
   subscriptionState?: Prisma.SubscriptionStateUncheckedCreateNestedOneWithoutCompanyInput
   billingBalance?: Prisma.BillingBalanceUncheckedCreateNestedOneWithoutCompanyInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutCompanyInput
+  invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutCompanyInput
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutCompanyInput
@@ -1048,6 +1073,7 @@ export type ArcenCompanyCreateWithoutEnvironmentInput = {
   subscriptionState?: Prisma.SubscriptionStateCreateNestedOneWithoutCompanyInput
   billingBalance?: Prisma.BillingBalanceCreateNestedOneWithoutCompanyInput
   payments?: Prisma.PaymentCreateNestedManyWithoutCompanyInput
+  invoices?: Prisma.InvoiceCreateNestedManyWithoutCompanyInput
   refunds?: Prisma.RefundCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutCompanyInput
@@ -1078,6 +1104,7 @@ export type ArcenCompanyUncheckedCreateWithoutEnvironmentInput = {
   subscriptionState?: Prisma.SubscriptionStateUncheckedCreateNestedOneWithoutCompanyInput
   billingBalance?: Prisma.BillingBalanceUncheckedCreateNestedOneWithoutCompanyInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutCompanyInput
+  invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutCompanyInput
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutCompanyInput
@@ -1113,6 +1140,146 @@ export type ArcenCompanyUpdateManyWithWhereWithoutEnvironmentInput = {
   data: Prisma.XOR<Prisma.ArcenCompanyUpdateManyMutationInput, Prisma.ArcenCompanyUncheckedUpdateManyWithoutEnvironmentInput>
 }
 
+export type ArcenCompanyCreateWithoutInvoicesInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  lastSeenAt?: Date | string
+  name: string
+  walletAddress?: string | null
+  email?: string | null
+  externalId?: string | null
+  logoUrl?: string | null
+  traits?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  activePlanId?: string | null
+  activeAddOnIds?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  team: Prisma.TeamCreateNestedOneWithoutArcenCompaniesInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutArcenCompaniesInput
+  users?: Prisma.ArcenUserCreateNestedManyWithoutCompanyInput
+  overrides?: Prisma.CompanyOverrideCreateNestedManyWithoutCompanyInput
+  events?: Prisma.ArcenEventCreateNestedManyWithoutCompanyInput
+  zkProofs?: Prisma.ZkTlsProofCreateNestedManyWithoutCompanyInput
+  subscriptionState?: Prisma.SubscriptionStateCreateNestedOneWithoutCompanyInput
+  billingBalance?: Prisma.BillingBalanceCreateNestedOneWithoutCompanyInput
+  payments?: Prisma.PaymentCreateNestedManyWithoutCompanyInput
+  refunds?: Prisma.RefundCreateNestedManyWithoutCompanyInput
+  billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutCompanyInput
+  billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutCompanyInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutCompanyInput
+  addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutCompanyInput
+  paymentLinks?: Prisma.PaymentLinkCreateNestedManyWithoutCompanyInput
+  checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutCompanyInput
+}
+
+export type ArcenCompanyUncheckedCreateWithoutInvoicesInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  lastSeenAt?: Date | string
+  teamId: string
+  environmentId?: string | null
+  name: string
+  walletAddress?: string | null
+  email?: string | null
+  externalId?: string | null
+  logoUrl?: string | null
+  traits?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  activePlanId?: string | null
+  activeAddOnIds?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  users?: Prisma.ArcenUserUncheckedCreateNestedManyWithoutCompanyInput
+  overrides?: Prisma.CompanyOverrideUncheckedCreateNestedManyWithoutCompanyInput
+  events?: Prisma.ArcenEventUncheckedCreateNestedManyWithoutCompanyInput
+  zkProofs?: Prisma.ZkTlsProofUncheckedCreateNestedManyWithoutCompanyInput
+  subscriptionState?: Prisma.SubscriptionStateUncheckedCreateNestedOneWithoutCompanyInput
+  billingBalance?: Prisma.BillingBalanceUncheckedCreateNestedOneWithoutCompanyInput
+  payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutCompanyInput
+  refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutCompanyInput
+  billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutCompanyInput
+  billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutCompanyInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutCompanyInput
+  addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutCompanyInput
+  paymentLinks?: Prisma.PaymentLinkUncheckedCreateNestedManyWithoutCompanyInput
+  checkoutSessions?: Prisma.CheckoutSessionUncheckedCreateNestedManyWithoutCompanyInput
+}
+
+export type ArcenCompanyCreateOrConnectWithoutInvoicesInput = {
+  where: Prisma.ArcenCompanyWhereUniqueInput
+  create: Prisma.XOR<Prisma.ArcenCompanyCreateWithoutInvoicesInput, Prisma.ArcenCompanyUncheckedCreateWithoutInvoicesInput>
+}
+
+export type ArcenCompanyUpsertWithoutInvoicesInput = {
+  update: Prisma.XOR<Prisma.ArcenCompanyUpdateWithoutInvoicesInput, Prisma.ArcenCompanyUncheckedUpdateWithoutInvoicesInput>
+  create: Prisma.XOR<Prisma.ArcenCompanyCreateWithoutInvoicesInput, Prisma.ArcenCompanyUncheckedCreateWithoutInvoicesInput>
+  where?: Prisma.ArcenCompanyWhereInput
+}
+
+export type ArcenCompanyUpdateToOneWithWhereWithoutInvoicesInput = {
+  where?: Prisma.ArcenCompanyWhereInput
+  data: Prisma.XOR<Prisma.ArcenCompanyUpdateWithoutInvoicesInput, Prisma.ArcenCompanyUncheckedUpdateWithoutInvoicesInput>
+}
+
+export type ArcenCompanyUpdateWithoutInvoicesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastSeenAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  walletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  externalId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  logoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  traits?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  activePlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  activeAddOnIds?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  team?: Prisma.TeamUpdateOneRequiredWithoutArcenCompaniesNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutArcenCompaniesNestedInput
+  users?: Prisma.ArcenUserUpdateManyWithoutCompanyNestedInput
+  overrides?: Prisma.CompanyOverrideUpdateManyWithoutCompanyNestedInput
+  events?: Prisma.ArcenEventUpdateManyWithoutCompanyNestedInput
+  zkProofs?: Prisma.ZkTlsProofUpdateManyWithoutCompanyNestedInput
+  subscriptionState?: Prisma.SubscriptionStateUpdateOneWithoutCompanyNestedInput
+  billingBalance?: Prisma.BillingBalanceUpdateOneWithoutCompanyNestedInput
+  payments?: Prisma.PaymentUpdateManyWithoutCompanyNestedInput
+  refunds?: Prisma.RefundUpdateManyWithoutCompanyNestedInput
+  billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutCompanyNestedInput
+  billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutCompanyNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutCompanyNestedInput
+  addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutCompanyNestedInput
+  paymentLinks?: Prisma.PaymentLinkUpdateManyWithoutCompanyNestedInput
+  checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutCompanyNestedInput
+}
+
+export type ArcenCompanyUncheckedUpdateWithoutInvoicesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastSeenAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  walletAddress?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  externalId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  logoUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  traits?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  activePlanId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  activeAddOnIds?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  users?: Prisma.ArcenUserUncheckedUpdateManyWithoutCompanyNestedInput
+  overrides?: Prisma.CompanyOverrideUncheckedUpdateManyWithoutCompanyNestedInput
+  events?: Prisma.ArcenEventUncheckedUpdateManyWithoutCompanyNestedInput
+  zkProofs?: Prisma.ZkTlsProofUncheckedUpdateManyWithoutCompanyNestedInput
+  subscriptionState?: Prisma.SubscriptionStateUncheckedUpdateOneWithoutCompanyNestedInput
+  billingBalance?: Prisma.BillingBalanceUncheckedUpdateOneWithoutCompanyNestedInput
+  payments?: Prisma.PaymentUncheckedUpdateManyWithoutCompanyNestedInput
+  refunds?: Prisma.RefundUncheckedUpdateManyWithoutCompanyNestedInput
+  billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutCompanyNestedInput
+  billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutCompanyNestedInput
+  subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutCompanyNestedInput
+  addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutCompanyNestedInput
+  paymentLinks?: Prisma.PaymentLinkUncheckedUpdateManyWithoutCompanyNestedInput
+  checkoutSessions?: Prisma.CheckoutSessionUncheckedUpdateManyWithoutCompanyNestedInput
+}
+
 export type ArcenCompanyCreateWithoutSubscriptionStateInput = {
   id?: string
   createdAt?: Date | string
@@ -1134,6 +1301,7 @@ export type ArcenCompanyCreateWithoutSubscriptionStateInput = {
   zkProofs?: Prisma.ZkTlsProofCreateNestedManyWithoutCompanyInput
   billingBalance?: Prisma.BillingBalanceCreateNestedOneWithoutCompanyInput
   payments?: Prisma.PaymentCreateNestedManyWithoutCompanyInput
+  invoices?: Prisma.InvoiceCreateNestedManyWithoutCompanyInput
   refunds?: Prisma.RefundCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutCompanyInput
@@ -1164,6 +1332,7 @@ export type ArcenCompanyUncheckedCreateWithoutSubscriptionStateInput = {
   zkProofs?: Prisma.ZkTlsProofUncheckedCreateNestedManyWithoutCompanyInput
   billingBalance?: Prisma.BillingBalanceUncheckedCreateNestedOneWithoutCompanyInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutCompanyInput
+  invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutCompanyInput
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutCompanyInput
@@ -1210,6 +1379,7 @@ export type ArcenCompanyUpdateWithoutSubscriptionStateInput = {
   zkProofs?: Prisma.ZkTlsProofUpdateManyWithoutCompanyNestedInput
   billingBalance?: Prisma.BillingBalanceUpdateOneWithoutCompanyNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutCompanyNestedInput
+  invoices?: Prisma.InvoiceUpdateManyWithoutCompanyNestedInput
   refunds?: Prisma.RefundUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutCompanyNestedInput
@@ -1240,6 +1410,7 @@ export type ArcenCompanyUncheckedUpdateWithoutSubscriptionStateInput = {
   zkProofs?: Prisma.ZkTlsProofUncheckedUpdateManyWithoutCompanyNestedInput
   billingBalance?: Prisma.BillingBalanceUncheckedUpdateOneWithoutCompanyNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutCompanyNestedInput
+  invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutCompanyNestedInput
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutCompanyNestedInput
@@ -1271,6 +1442,7 @@ export type ArcenCompanyCreateWithoutSubscriptionChangeRequestsInput = {
   subscriptionState?: Prisma.SubscriptionStateCreateNestedOneWithoutCompanyInput
   billingBalance?: Prisma.BillingBalanceCreateNestedOneWithoutCompanyInput
   payments?: Prisma.PaymentCreateNestedManyWithoutCompanyInput
+  invoices?: Prisma.InvoiceCreateNestedManyWithoutCompanyInput
   refunds?: Prisma.RefundCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutCompanyInput
@@ -1301,6 +1473,7 @@ export type ArcenCompanyUncheckedCreateWithoutSubscriptionChangeRequestsInput = 
   subscriptionState?: Prisma.SubscriptionStateUncheckedCreateNestedOneWithoutCompanyInput
   billingBalance?: Prisma.BillingBalanceUncheckedCreateNestedOneWithoutCompanyInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutCompanyInput
+  invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutCompanyInput
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutCompanyInput
@@ -1347,6 +1520,7 @@ export type ArcenCompanyUpdateWithoutSubscriptionChangeRequestsInput = {
   subscriptionState?: Prisma.SubscriptionStateUpdateOneWithoutCompanyNestedInput
   billingBalance?: Prisma.BillingBalanceUpdateOneWithoutCompanyNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutCompanyNestedInput
+  invoices?: Prisma.InvoiceUpdateManyWithoutCompanyNestedInput
   refunds?: Prisma.RefundUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutCompanyNestedInput
@@ -1377,6 +1551,7 @@ export type ArcenCompanyUncheckedUpdateWithoutSubscriptionChangeRequestsInput = 
   subscriptionState?: Prisma.SubscriptionStateUncheckedUpdateOneWithoutCompanyNestedInput
   billingBalance?: Prisma.BillingBalanceUncheckedUpdateOneWithoutCompanyNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutCompanyNestedInput
+  invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutCompanyNestedInput
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutCompanyNestedInput
@@ -1406,6 +1581,7 @@ export type ArcenCompanyCreateWithoutPaymentsInput = {
   zkProofs?: Prisma.ZkTlsProofCreateNestedManyWithoutCompanyInput
   subscriptionState?: Prisma.SubscriptionStateCreateNestedOneWithoutCompanyInput
   billingBalance?: Prisma.BillingBalanceCreateNestedOneWithoutCompanyInput
+  invoices?: Prisma.InvoiceCreateNestedManyWithoutCompanyInput
   refunds?: Prisma.RefundCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutCompanyInput
@@ -1436,6 +1612,7 @@ export type ArcenCompanyUncheckedCreateWithoutPaymentsInput = {
   zkProofs?: Prisma.ZkTlsProofUncheckedCreateNestedManyWithoutCompanyInput
   subscriptionState?: Prisma.SubscriptionStateUncheckedCreateNestedOneWithoutCompanyInput
   billingBalance?: Prisma.BillingBalanceUncheckedCreateNestedOneWithoutCompanyInput
+  invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutCompanyInput
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutCompanyInput
@@ -1482,6 +1659,7 @@ export type ArcenCompanyUpdateWithoutPaymentsInput = {
   zkProofs?: Prisma.ZkTlsProofUpdateManyWithoutCompanyNestedInput
   subscriptionState?: Prisma.SubscriptionStateUpdateOneWithoutCompanyNestedInput
   billingBalance?: Prisma.BillingBalanceUpdateOneWithoutCompanyNestedInput
+  invoices?: Prisma.InvoiceUpdateManyWithoutCompanyNestedInput
   refunds?: Prisma.RefundUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutCompanyNestedInput
@@ -1512,6 +1690,7 @@ export type ArcenCompanyUncheckedUpdateWithoutPaymentsInput = {
   zkProofs?: Prisma.ZkTlsProofUncheckedUpdateManyWithoutCompanyNestedInput
   subscriptionState?: Prisma.SubscriptionStateUncheckedUpdateOneWithoutCompanyNestedInput
   billingBalance?: Prisma.BillingBalanceUncheckedUpdateOneWithoutCompanyNestedInput
+  invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutCompanyNestedInput
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutCompanyNestedInput
@@ -1543,6 +1722,7 @@ export type ArcenCompanyCreateWithoutBillingAdjustmentsInput = {
   subscriptionState?: Prisma.SubscriptionStateCreateNestedOneWithoutCompanyInput
   billingBalance?: Prisma.BillingBalanceCreateNestedOneWithoutCompanyInput
   payments?: Prisma.PaymentCreateNestedManyWithoutCompanyInput
+  invoices?: Prisma.InvoiceCreateNestedManyWithoutCompanyInput
   refunds?: Prisma.RefundCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutCompanyInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutCompanyInput
@@ -1573,6 +1753,7 @@ export type ArcenCompanyUncheckedCreateWithoutBillingAdjustmentsInput = {
   subscriptionState?: Prisma.SubscriptionStateUncheckedCreateNestedOneWithoutCompanyInput
   billingBalance?: Prisma.BillingBalanceUncheckedCreateNestedOneWithoutCompanyInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutCompanyInput
+  invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutCompanyInput
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutCompanyInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutCompanyInput
@@ -1619,6 +1800,7 @@ export type ArcenCompanyUpdateWithoutBillingAdjustmentsInput = {
   subscriptionState?: Prisma.SubscriptionStateUpdateOneWithoutCompanyNestedInput
   billingBalance?: Prisma.BillingBalanceUpdateOneWithoutCompanyNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutCompanyNestedInput
+  invoices?: Prisma.InvoiceUpdateManyWithoutCompanyNestedInput
   refunds?: Prisma.RefundUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutCompanyNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutCompanyNestedInput
@@ -1649,6 +1831,7 @@ export type ArcenCompanyUncheckedUpdateWithoutBillingAdjustmentsInput = {
   subscriptionState?: Prisma.SubscriptionStateUncheckedUpdateOneWithoutCompanyNestedInput
   billingBalance?: Prisma.BillingBalanceUncheckedUpdateOneWithoutCompanyNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutCompanyNestedInput
+  invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutCompanyNestedInput
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutCompanyNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutCompanyNestedInput
@@ -1678,6 +1861,7 @@ export type ArcenCompanyCreateWithoutBillingBalanceInput = {
   zkProofs?: Prisma.ZkTlsProofCreateNestedManyWithoutCompanyInput
   subscriptionState?: Prisma.SubscriptionStateCreateNestedOneWithoutCompanyInput
   payments?: Prisma.PaymentCreateNestedManyWithoutCompanyInput
+  invoices?: Prisma.InvoiceCreateNestedManyWithoutCompanyInput
   refunds?: Prisma.RefundCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutCompanyInput
@@ -1708,6 +1892,7 @@ export type ArcenCompanyUncheckedCreateWithoutBillingBalanceInput = {
   zkProofs?: Prisma.ZkTlsProofUncheckedCreateNestedManyWithoutCompanyInput
   subscriptionState?: Prisma.SubscriptionStateUncheckedCreateNestedOneWithoutCompanyInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutCompanyInput
+  invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutCompanyInput
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutCompanyInput
@@ -1754,6 +1939,7 @@ export type ArcenCompanyUpdateWithoutBillingBalanceInput = {
   zkProofs?: Prisma.ZkTlsProofUpdateManyWithoutCompanyNestedInput
   subscriptionState?: Prisma.SubscriptionStateUpdateOneWithoutCompanyNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutCompanyNestedInput
+  invoices?: Prisma.InvoiceUpdateManyWithoutCompanyNestedInput
   refunds?: Prisma.RefundUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutCompanyNestedInput
@@ -1784,6 +1970,7 @@ export type ArcenCompanyUncheckedUpdateWithoutBillingBalanceInput = {
   zkProofs?: Prisma.ZkTlsProofUncheckedUpdateManyWithoutCompanyNestedInput
   subscriptionState?: Prisma.SubscriptionStateUncheckedUpdateOneWithoutCompanyNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutCompanyNestedInput
+  invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutCompanyNestedInput
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutCompanyNestedInput
@@ -1815,6 +2002,7 @@ export type ArcenCompanyCreateWithoutRefundsInput = {
   subscriptionState?: Prisma.SubscriptionStateCreateNestedOneWithoutCompanyInput
   billingBalance?: Prisma.BillingBalanceCreateNestedOneWithoutCompanyInput
   payments?: Prisma.PaymentCreateNestedManyWithoutCompanyInput
+  invoices?: Prisma.InvoiceCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutCompanyInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutCompanyInput
@@ -1845,6 +2033,7 @@ export type ArcenCompanyUncheckedCreateWithoutRefundsInput = {
   subscriptionState?: Prisma.SubscriptionStateUncheckedCreateNestedOneWithoutCompanyInput
   billingBalance?: Prisma.BillingBalanceUncheckedCreateNestedOneWithoutCompanyInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutCompanyInput
+  invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutCompanyInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutCompanyInput
@@ -1891,6 +2080,7 @@ export type ArcenCompanyUpdateWithoutRefundsInput = {
   subscriptionState?: Prisma.SubscriptionStateUpdateOneWithoutCompanyNestedInput
   billingBalance?: Prisma.BillingBalanceUpdateOneWithoutCompanyNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutCompanyNestedInput
+  invoices?: Prisma.InvoiceUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutCompanyNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutCompanyNestedInput
@@ -1921,6 +2111,7 @@ export type ArcenCompanyUncheckedUpdateWithoutRefundsInput = {
   subscriptionState?: Prisma.SubscriptionStateUncheckedUpdateOneWithoutCompanyNestedInput
   billingBalance?: Prisma.BillingBalanceUncheckedUpdateOneWithoutCompanyNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutCompanyNestedInput
+  invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutCompanyNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutCompanyNestedInput
@@ -1951,6 +2142,7 @@ export type ArcenCompanyCreateWithoutBillingRecoveryTasksInput = {
   subscriptionState?: Prisma.SubscriptionStateCreateNestedOneWithoutCompanyInput
   billingBalance?: Prisma.BillingBalanceCreateNestedOneWithoutCompanyInput
   payments?: Prisma.PaymentCreateNestedManyWithoutCompanyInput
+  invoices?: Prisma.InvoiceCreateNestedManyWithoutCompanyInput
   refunds?: Prisma.RefundCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutCompanyInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestCreateNestedManyWithoutCompanyInput
@@ -1981,6 +2173,7 @@ export type ArcenCompanyUncheckedCreateWithoutBillingRecoveryTasksInput = {
   subscriptionState?: Prisma.SubscriptionStateUncheckedCreateNestedOneWithoutCompanyInput
   billingBalance?: Prisma.BillingBalanceUncheckedCreateNestedOneWithoutCompanyInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutCompanyInput
+  invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutCompanyInput
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutCompanyInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedCreateNestedManyWithoutCompanyInput
@@ -2027,6 +2220,7 @@ export type ArcenCompanyUpdateWithoutBillingRecoveryTasksInput = {
   subscriptionState?: Prisma.SubscriptionStateUpdateOneWithoutCompanyNestedInput
   billingBalance?: Prisma.BillingBalanceUpdateOneWithoutCompanyNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutCompanyNestedInput
+  invoices?: Prisma.InvoiceUpdateManyWithoutCompanyNestedInput
   refunds?: Prisma.RefundUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutCompanyNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUpdateManyWithoutCompanyNestedInput
@@ -2057,6 +2251,7 @@ export type ArcenCompanyUncheckedUpdateWithoutBillingRecoveryTasksInput = {
   subscriptionState?: Prisma.SubscriptionStateUncheckedUpdateOneWithoutCompanyNestedInput
   billingBalance?: Prisma.BillingBalanceUncheckedUpdateOneWithoutCompanyNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutCompanyNestedInput
+  invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutCompanyNestedInput
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutCompanyNestedInput
   subscriptionChangeRequests?: Prisma.SubscriptionChangeRequestUncheckedUpdateManyWithoutCompanyNestedInput
@@ -2086,6 +2281,7 @@ export type ArcenCompanyCreateWithoutUsersInput = {
   subscriptionState?: Prisma.SubscriptionStateCreateNestedOneWithoutCompanyInput
   billingBalance?: Prisma.BillingBalanceCreateNestedOneWithoutCompanyInput
   payments?: Prisma.PaymentCreateNestedManyWithoutCompanyInput
+  invoices?: Prisma.InvoiceCreateNestedManyWithoutCompanyInput
   refunds?: Prisma.RefundCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutCompanyInput
@@ -2116,6 +2312,7 @@ export type ArcenCompanyUncheckedCreateWithoutUsersInput = {
   subscriptionState?: Prisma.SubscriptionStateUncheckedCreateNestedOneWithoutCompanyInput
   billingBalance?: Prisma.BillingBalanceUncheckedCreateNestedOneWithoutCompanyInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutCompanyInput
+  invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutCompanyInput
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutCompanyInput
@@ -2162,6 +2359,7 @@ export type ArcenCompanyUpdateWithoutUsersInput = {
   subscriptionState?: Prisma.SubscriptionStateUpdateOneWithoutCompanyNestedInput
   billingBalance?: Prisma.BillingBalanceUpdateOneWithoutCompanyNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutCompanyNestedInput
+  invoices?: Prisma.InvoiceUpdateManyWithoutCompanyNestedInput
   refunds?: Prisma.RefundUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutCompanyNestedInput
@@ -2192,6 +2390,7 @@ export type ArcenCompanyUncheckedUpdateWithoutUsersInput = {
   subscriptionState?: Prisma.SubscriptionStateUncheckedUpdateOneWithoutCompanyNestedInput
   billingBalance?: Prisma.BillingBalanceUncheckedUpdateOneWithoutCompanyNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutCompanyNestedInput
+  invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutCompanyNestedInput
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutCompanyNestedInput
@@ -2222,6 +2421,7 @@ export type ArcenCompanyCreateWithoutEventsInput = {
   subscriptionState?: Prisma.SubscriptionStateCreateNestedOneWithoutCompanyInput
   billingBalance?: Prisma.BillingBalanceCreateNestedOneWithoutCompanyInput
   payments?: Prisma.PaymentCreateNestedManyWithoutCompanyInput
+  invoices?: Prisma.InvoiceCreateNestedManyWithoutCompanyInput
   refunds?: Prisma.RefundCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutCompanyInput
@@ -2252,6 +2452,7 @@ export type ArcenCompanyUncheckedCreateWithoutEventsInput = {
   subscriptionState?: Prisma.SubscriptionStateUncheckedCreateNestedOneWithoutCompanyInput
   billingBalance?: Prisma.BillingBalanceUncheckedCreateNestedOneWithoutCompanyInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutCompanyInput
+  invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutCompanyInput
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutCompanyInput
@@ -2298,6 +2499,7 @@ export type ArcenCompanyUpdateWithoutEventsInput = {
   subscriptionState?: Prisma.SubscriptionStateUpdateOneWithoutCompanyNestedInput
   billingBalance?: Prisma.BillingBalanceUpdateOneWithoutCompanyNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutCompanyNestedInput
+  invoices?: Prisma.InvoiceUpdateManyWithoutCompanyNestedInput
   refunds?: Prisma.RefundUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutCompanyNestedInput
@@ -2328,6 +2530,7 @@ export type ArcenCompanyUncheckedUpdateWithoutEventsInput = {
   subscriptionState?: Prisma.SubscriptionStateUncheckedUpdateOneWithoutCompanyNestedInput
   billingBalance?: Prisma.BillingBalanceUncheckedUpdateOneWithoutCompanyNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutCompanyNestedInput
+  invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutCompanyNestedInput
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutCompanyNestedInput
@@ -2359,6 +2562,7 @@ export type ArcenCompanyCreateWithoutAddOnGrantsInput = {
   subscriptionState?: Prisma.SubscriptionStateCreateNestedOneWithoutCompanyInput
   billingBalance?: Prisma.BillingBalanceCreateNestedOneWithoutCompanyInput
   payments?: Prisma.PaymentCreateNestedManyWithoutCompanyInput
+  invoices?: Prisma.InvoiceCreateNestedManyWithoutCompanyInput
   refunds?: Prisma.RefundCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutCompanyInput
@@ -2389,6 +2593,7 @@ export type ArcenCompanyUncheckedCreateWithoutAddOnGrantsInput = {
   subscriptionState?: Prisma.SubscriptionStateUncheckedCreateNestedOneWithoutCompanyInput
   billingBalance?: Prisma.BillingBalanceUncheckedCreateNestedOneWithoutCompanyInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutCompanyInput
+  invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutCompanyInput
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutCompanyInput
@@ -2435,6 +2640,7 @@ export type ArcenCompanyUpdateWithoutAddOnGrantsInput = {
   subscriptionState?: Prisma.SubscriptionStateUpdateOneWithoutCompanyNestedInput
   billingBalance?: Prisma.BillingBalanceUpdateOneWithoutCompanyNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutCompanyNestedInput
+  invoices?: Prisma.InvoiceUpdateManyWithoutCompanyNestedInput
   refunds?: Prisma.RefundUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutCompanyNestedInput
@@ -2465,6 +2671,7 @@ export type ArcenCompanyUncheckedUpdateWithoutAddOnGrantsInput = {
   subscriptionState?: Prisma.SubscriptionStateUncheckedUpdateOneWithoutCompanyNestedInput
   billingBalance?: Prisma.BillingBalanceUncheckedUpdateOneWithoutCompanyNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutCompanyNestedInput
+  invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutCompanyNestedInput
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutCompanyNestedInput
@@ -2495,6 +2702,7 @@ export type ArcenCompanyCreateWithoutPaymentLinksInput = {
   subscriptionState?: Prisma.SubscriptionStateCreateNestedOneWithoutCompanyInput
   billingBalance?: Prisma.BillingBalanceCreateNestedOneWithoutCompanyInput
   payments?: Prisma.PaymentCreateNestedManyWithoutCompanyInput
+  invoices?: Prisma.InvoiceCreateNestedManyWithoutCompanyInput
   refunds?: Prisma.RefundCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutCompanyInput
@@ -2525,6 +2733,7 @@ export type ArcenCompanyUncheckedCreateWithoutPaymentLinksInput = {
   subscriptionState?: Prisma.SubscriptionStateUncheckedCreateNestedOneWithoutCompanyInput
   billingBalance?: Prisma.BillingBalanceUncheckedCreateNestedOneWithoutCompanyInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutCompanyInput
+  invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutCompanyInput
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutCompanyInput
@@ -2571,6 +2780,7 @@ export type ArcenCompanyUpdateWithoutPaymentLinksInput = {
   subscriptionState?: Prisma.SubscriptionStateUpdateOneWithoutCompanyNestedInput
   billingBalance?: Prisma.BillingBalanceUpdateOneWithoutCompanyNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutCompanyNestedInput
+  invoices?: Prisma.InvoiceUpdateManyWithoutCompanyNestedInput
   refunds?: Prisma.RefundUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutCompanyNestedInput
@@ -2601,6 +2811,7 @@ export type ArcenCompanyUncheckedUpdateWithoutPaymentLinksInput = {
   subscriptionState?: Prisma.SubscriptionStateUncheckedUpdateOneWithoutCompanyNestedInput
   billingBalance?: Prisma.BillingBalanceUncheckedUpdateOneWithoutCompanyNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutCompanyNestedInput
+  invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutCompanyNestedInput
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutCompanyNestedInput
@@ -2631,6 +2842,7 @@ export type ArcenCompanyCreateWithoutCheckoutSessionsInput = {
   subscriptionState?: Prisma.SubscriptionStateCreateNestedOneWithoutCompanyInput
   billingBalance?: Prisma.BillingBalanceCreateNestedOneWithoutCompanyInput
   payments?: Prisma.PaymentCreateNestedManyWithoutCompanyInput
+  invoices?: Prisma.InvoiceCreateNestedManyWithoutCompanyInput
   refunds?: Prisma.RefundCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutCompanyInput
@@ -2661,6 +2873,7 @@ export type ArcenCompanyUncheckedCreateWithoutCheckoutSessionsInput = {
   subscriptionState?: Prisma.SubscriptionStateUncheckedCreateNestedOneWithoutCompanyInput
   billingBalance?: Prisma.BillingBalanceUncheckedCreateNestedOneWithoutCompanyInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutCompanyInput
+  invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutCompanyInput
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutCompanyInput
@@ -2707,6 +2920,7 @@ export type ArcenCompanyUpdateWithoutCheckoutSessionsInput = {
   subscriptionState?: Prisma.SubscriptionStateUpdateOneWithoutCompanyNestedInput
   billingBalance?: Prisma.BillingBalanceUpdateOneWithoutCompanyNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutCompanyNestedInput
+  invoices?: Prisma.InvoiceUpdateManyWithoutCompanyNestedInput
   refunds?: Prisma.RefundUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutCompanyNestedInput
@@ -2737,6 +2951,7 @@ export type ArcenCompanyUncheckedUpdateWithoutCheckoutSessionsInput = {
   subscriptionState?: Prisma.SubscriptionStateUncheckedUpdateOneWithoutCompanyNestedInput
   billingBalance?: Prisma.BillingBalanceUncheckedUpdateOneWithoutCompanyNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutCompanyNestedInput
+  invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutCompanyNestedInput
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutCompanyNestedInput
@@ -2766,6 +2981,7 @@ export type ArcenCompanyCreateWithoutOverridesInput = {
   subscriptionState?: Prisma.SubscriptionStateCreateNestedOneWithoutCompanyInput
   billingBalance?: Prisma.BillingBalanceCreateNestedOneWithoutCompanyInput
   payments?: Prisma.PaymentCreateNestedManyWithoutCompanyInput
+  invoices?: Prisma.InvoiceCreateNestedManyWithoutCompanyInput
   refunds?: Prisma.RefundCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutCompanyInput
@@ -2796,6 +3012,7 @@ export type ArcenCompanyUncheckedCreateWithoutOverridesInput = {
   subscriptionState?: Prisma.SubscriptionStateUncheckedCreateNestedOneWithoutCompanyInput
   billingBalance?: Prisma.BillingBalanceUncheckedCreateNestedOneWithoutCompanyInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutCompanyInput
+  invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutCompanyInput
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutCompanyInput
@@ -2842,6 +3059,7 @@ export type ArcenCompanyUpdateWithoutOverridesInput = {
   subscriptionState?: Prisma.SubscriptionStateUpdateOneWithoutCompanyNestedInput
   billingBalance?: Prisma.BillingBalanceUpdateOneWithoutCompanyNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutCompanyNestedInput
+  invoices?: Prisma.InvoiceUpdateManyWithoutCompanyNestedInput
   refunds?: Prisma.RefundUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutCompanyNestedInput
@@ -2872,6 +3090,7 @@ export type ArcenCompanyUncheckedUpdateWithoutOverridesInput = {
   subscriptionState?: Prisma.SubscriptionStateUncheckedUpdateOneWithoutCompanyNestedInput
   billingBalance?: Prisma.BillingBalanceUncheckedUpdateOneWithoutCompanyNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutCompanyNestedInput
+  invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutCompanyNestedInput
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutCompanyNestedInput
@@ -2902,6 +3121,7 @@ export type ArcenCompanyCreateWithoutZkProofsInput = {
   subscriptionState?: Prisma.SubscriptionStateCreateNestedOneWithoutCompanyInput
   billingBalance?: Prisma.BillingBalanceCreateNestedOneWithoutCompanyInput
   payments?: Prisma.PaymentCreateNestedManyWithoutCompanyInput
+  invoices?: Prisma.InvoiceCreateNestedManyWithoutCompanyInput
   refunds?: Prisma.RefundCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskCreateNestedManyWithoutCompanyInput
@@ -2932,6 +3152,7 @@ export type ArcenCompanyUncheckedCreateWithoutZkProofsInput = {
   subscriptionState?: Prisma.SubscriptionStateUncheckedCreateNestedOneWithoutCompanyInput
   billingBalance?: Prisma.BillingBalanceUncheckedCreateNestedOneWithoutCompanyInput
   payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutCompanyInput
+  invoices?: Prisma.InvoiceUncheckedCreateNestedManyWithoutCompanyInput
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutCompanyInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutCompanyInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedCreateNestedManyWithoutCompanyInput
@@ -2978,6 +3199,7 @@ export type ArcenCompanyUpdateWithoutZkProofsInput = {
   subscriptionState?: Prisma.SubscriptionStateUpdateOneWithoutCompanyNestedInput
   billingBalance?: Prisma.BillingBalanceUpdateOneWithoutCompanyNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutCompanyNestedInput
+  invoices?: Prisma.InvoiceUpdateManyWithoutCompanyNestedInput
   refunds?: Prisma.RefundUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutCompanyNestedInput
@@ -3008,6 +3230,7 @@ export type ArcenCompanyUncheckedUpdateWithoutZkProofsInput = {
   subscriptionState?: Prisma.SubscriptionStateUncheckedUpdateOneWithoutCompanyNestedInput
   billingBalance?: Prisma.BillingBalanceUncheckedUpdateOneWithoutCompanyNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutCompanyNestedInput
+  invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutCompanyNestedInput
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutCompanyNestedInput
@@ -3054,6 +3277,7 @@ export type ArcenCompanyUpdateWithoutTeamInput = {
   subscriptionState?: Prisma.SubscriptionStateUpdateOneWithoutCompanyNestedInput
   billingBalance?: Prisma.BillingBalanceUpdateOneWithoutCompanyNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutCompanyNestedInput
+  invoices?: Prisma.InvoiceUpdateManyWithoutCompanyNestedInput
   refunds?: Prisma.RefundUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutCompanyNestedInput
@@ -3084,6 +3308,7 @@ export type ArcenCompanyUncheckedUpdateWithoutTeamInput = {
   subscriptionState?: Prisma.SubscriptionStateUncheckedUpdateOneWithoutCompanyNestedInput
   billingBalance?: Prisma.BillingBalanceUncheckedUpdateOneWithoutCompanyNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutCompanyNestedInput
+  invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutCompanyNestedInput
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutCompanyNestedInput
@@ -3146,6 +3371,7 @@ export type ArcenCompanyUpdateWithoutEnvironmentInput = {
   subscriptionState?: Prisma.SubscriptionStateUpdateOneWithoutCompanyNestedInput
   billingBalance?: Prisma.BillingBalanceUpdateOneWithoutCompanyNestedInput
   payments?: Prisma.PaymentUpdateManyWithoutCompanyNestedInput
+  invoices?: Prisma.InvoiceUpdateManyWithoutCompanyNestedInput
   refunds?: Prisma.RefundUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUpdateManyWithoutCompanyNestedInput
@@ -3176,6 +3402,7 @@ export type ArcenCompanyUncheckedUpdateWithoutEnvironmentInput = {
   subscriptionState?: Prisma.SubscriptionStateUncheckedUpdateOneWithoutCompanyNestedInput
   billingBalance?: Prisma.BillingBalanceUncheckedUpdateOneWithoutCompanyNestedInput
   payments?: Prisma.PaymentUncheckedUpdateManyWithoutCompanyNestedInput
+  invoices?: Prisma.InvoiceUncheckedUpdateManyWithoutCompanyNestedInput
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutCompanyNestedInput
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutCompanyNestedInput
   billingRecoveryTasks?: Prisma.BillingRecoveryTaskUncheckedUpdateManyWithoutCompanyNestedInput
@@ -3212,6 +3439,7 @@ export type ArcenCompanyCountOutputType = {
   events: number
   zkProofs: number
   payments: number
+  invoices: number
   refunds: number
   billingAdjustments: number
   billingRecoveryTasks: number
@@ -3227,6 +3455,7 @@ export type ArcenCompanyCountOutputTypeSelect<ExtArgs extends runtime.Types.Exte
   events?: boolean | ArcenCompanyCountOutputTypeCountEventsArgs
   zkProofs?: boolean | ArcenCompanyCountOutputTypeCountZkProofsArgs
   payments?: boolean | ArcenCompanyCountOutputTypeCountPaymentsArgs
+  invoices?: boolean | ArcenCompanyCountOutputTypeCountInvoicesArgs
   refunds?: boolean | ArcenCompanyCountOutputTypeCountRefundsArgs
   billingAdjustments?: boolean | ArcenCompanyCountOutputTypeCountBillingAdjustmentsArgs
   billingRecoveryTasks?: boolean | ArcenCompanyCountOutputTypeCountBillingRecoveryTasksArgs
@@ -3279,6 +3508,13 @@ export type ArcenCompanyCountOutputTypeCountZkProofsArgs<ExtArgs extends runtime
  */
 export type ArcenCompanyCountOutputTypeCountPaymentsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.PaymentWhereInput
+}
+
+/**
+ * ArcenCompanyCountOutputType without action
+ */
+export type ArcenCompanyCountOutputTypeCountInvoicesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.InvoiceWhereInput
 }
 
 /**
@@ -3355,6 +3591,7 @@ export type ArcenCompanySelect<ExtArgs extends runtime.Types.Extensions.Internal
   subscriptionState?: boolean | Prisma.ArcenCompany$subscriptionStateArgs<ExtArgs>
   billingBalance?: boolean | Prisma.ArcenCompany$billingBalanceArgs<ExtArgs>
   payments?: boolean | Prisma.ArcenCompany$paymentsArgs<ExtArgs>
+  invoices?: boolean | Prisma.ArcenCompany$invoicesArgs<ExtArgs>
   refunds?: boolean | Prisma.ArcenCompany$refundsArgs<ExtArgs>
   billingAdjustments?: boolean | Prisma.ArcenCompany$billingAdjustmentsArgs<ExtArgs>
   billingRecoveryTasks?: boolean | Prisma.ArcenCompany$billingRecoveryTasksArgs<ExtArgs>
@@ -3431,6 +3668,7 @@ export type ArcenCompanyInclude<ExtArgs extends runtime.Types.Extensions.Interna
   subscriptionState?: boolean | Prisma.ArcenCompany$subscriptionStateArgs<ExtArgs>
   billingBalance?: boolean | Prisma.ArcenCompany$billingBalanceArgs<ExtArgs>
   payments?: boolean | Prisma.ArcenCompany$paymentsArgs<ExtArgs>
+  invoices?: boolean | Prisma.ArcenCompany$invoicesArgs<ExtArgs>
   refunds?: boolean | Prisma.ArcenCompany$refundsArgs<ExtArgs>
   billingAdjustments?: boolean | Prisma.ArcenCompany$billingAdjustmentsArgs<ExtArgs>
   billingRecoveryTasks?: boolean | Prisma.ArcenCompany$billingRecoveryTasksArgs<ExtArgs>
@@ -3461,6 +3699,7 @@ export type $ArcenCompanyPayload<ExtArgs extends runtime.Types.Extensions.Intern
     subscriptionState: Prisma.$SubscriptionStatePayload<ExtArgs> | null
     billingBalance: Prisma.$BillingBalancePayload<ExtArgs> | null
     payments: Prisma.$PaymentPayload<ExtArgs>[]
+    invoices: Prisma.$InvoicePayload<ExtArgs>[]
     refunds: Prisma.$RefundPayload<ExtArgs>[]
     billingAdjustments: Prisma.$BillingAdjustmentPayload<ExtArgs>[]
     billingRecoveryTasks: Prisma.$BillingRecoveryTaskPayload<ExtArgs>[]
@@ -3887,6 +4126,7 @@ export interface Prisma__ArcenCompanyClient<T, Null = never, ExtArgs extends run
   subscriptionState<T extends Prisma.ArcenCompany$subscriptionStateArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ArcenCompany$subscriptionStateArgs<ExtArgs>>): Prisma.Prisma__SubscriptionStateClient<runtime.Types.Result.GetResult<Prisma.$SubscriptionStatePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   billingBalance<T extends Prisma.ArcenCompany$billingBalanceArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ArcenCompany$billingBalanceArgs<ExtArgs>>): Prisma.Prisma__BillingBalanceClient<runtime.Types.Result.GetResult<Prisma.$BillingBalancePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   payments<T extends Prisma.ArcenCompany$paymentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ArcenCompany$paymentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PaymentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  invoices<T extends Prisma.ArcenCompany$invoicesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ArcenCompany$invoicesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$InvoicePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   refunds<T extends Prisma.ArcenCompany$refundsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ArcenCompany$refundsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$RefundPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   billingAdjustments<T extends Prisma.ArcenCompany$billingAdjustmentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ArcenCompany$billingAdjustmentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$BillingAdjustmentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   billingRecoveryTasks<T extends Prisma.ArcenCompany$billingRecoveryTasksArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ArcenCompany$billingRecoveryTasksArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$BillingRecoveryTaskPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -4507,6 +4747,30 @@ export type ArcenCompany$paymentsArgs<ExtArgs extends runtime.Types.Extensions.I
   take?: number
   skip?: number
   distinct?: Prisma.PaymentScalarFieldEnum | Prisma.PaymentScalarFieldEnum[]
+}
+
+/**
+ * ArcenCompany.invoices
+ */
+export type ArcenCompany$invoicesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Invoice
+   */
+  select?: Prisma.InvoiceSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Invoice
+   */
+  omit?: Prisma.InvoiceOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.InvoiceInclude<ExtArgs> | null
+  where?: Prisma.InvoiceWhereInput
+  orderBy?: Prisma.InvoiceOrderByWithRelationInput | Prisma.InvoiceOrderByWithRelationInput[]
+  cursor?: Prisma.InvoiceWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.InvoiceScalarFieldEnum | Prisma.InvoiceScalarFieldEnum[]
 }
 
 /**

@@ -83,12 +83,10 @@ export async function GET(c: Context) {
       ],
     }),
   };
-  const activeEnvironmentPlanIds = (
+  // Broader plan lookup: all plans in the team (cross-environment safety net)
+  const allTeamPlanIds = (
     await db.catalogPlan.findMany({
-      where: {
-        teamId: auth.team.teamId,
-        environmentId: activeEnvironment.id,
-      },
+      where: { teamId: auth.team.teamId },
       select: { id: true },
     })
   ).map((plan) => plan.id);
@@ -100,13 +98,9 @@ export async function GET(c: Context) {
         {
           OR: [
             { environmentId: activeEnvironment.id },
-            ...(activeEnvironmentPlanIds.length > 0
-              ? [
-                  {
-                    environmentId: null,
-                    planId: { in: activeEnvironmentPlanIds },
-                  },
-                ]
+            { environmentId: null },
+            ...(allTeamPlanIds.length > 0
+              ? [{ planId: { in: allTeamPlanIds } }]
               : []),
           ],
         },

@@ -527,6 +527,7 @@ export const InvoiceScalarFieldEnum = {
   paidAt: 'paidAt',
   externalRef: 'externalRef',
   planId: 'planId',
+  companyId: 'companyId',
   metadata: 'metadata'
 } as const
 

@@ -14,6 +14,7 @@ import {
   PlanFactoryABI,
   SubscriptionRegistryABI,
 } from "@arcenpay/internal-core";
+import type { ComponentInvoiceSummary } from "@arcenpay/internal-core";
 import { db } from "../../db.js";
 import { resolveEntitlementResults } from "../../lib/entitlements/entitlements.js";
 import { getRpcUrl } from "../../config.js";
@@ -127,6 +128,17 @@ function listComponentPlanMetadataEntitlements(
       icon: typeof candidate.icon === "string" ? candidate.icon : null,
     };
   });
+}
+
+function readInvoiceCustomerName(metadata: unknown): string | null {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+    return null;
+  }
+
+  const customerName = (metadata as Record<string, unknown>).customerName;
+  return typeof customerName === "string" && customerName.trim()
+    ? customerName.trim()
+    : null;
 }
 
 function resolveComponentEntitlementFeatureType(
@@ -447,32 +459,26 @@ export async function GET(c: Context) {
           icon: typeof entitlement.icon === "string" ? entitlement.icon : null,
         }));
 
-      const invoiceFilters = [
-        company.walletAddress
-          ? { customerWallet: company.walletAddress.toLowerCase() }
-          : null,
-        company.subscriptionState?.walletAddress
-          ? {
-              customerWallet:
-                company.subscriptionState.walletAddress.toLowerCase(),
-            }
-          : null,
-        company.email ? { customerEmail: company.email } : null,
-        subscriberEmailRecord?.email
-          ? { customerEmail: subscriberEmailRecord.email }
-          : null,
-        user?.email ? { customerEmail: user.email } : null,
-      ].filter(Boolean);
+      // Invoice lookup: scoped strictly to this company by companyId.
+      // Falls back to wallet/email for legacy invoices without companyId.
+      const now = new Date();
 
-      if (invoiceFilters.length > 0) {
-        const invoices = await db.invoice.findMany({
-          where: {
-            teamId,
-            OR: invoiceFilters as never,
-          },
-          orderBy: { issuedAt: "desc" },
-          take: 10,
-          select: {
+      const invoices = await db.invoice.findMany({
+        where: {
+          teamId,
+          OR: [
+            { companyId: company.id },
+            ...(company.walletAddress
+              ? [{ companyId: null, customerWallet: company.walletAddress.toLowerCase() }]
+              : []),
+            ...(company.email
+              ? [{ companyId: null, customerEmail: company.email }]
+              : []),
+          ],
+        },
+        orderBy: { issuedAt: "desc" },
+        take: 10,
+        select: {
             id: true,
             number: true,
             total: true,
@@ -483,38 +489,38 @@ export async function GET(c: Context) {
             paidAt: true,
             customerEmail: true,
             customerWallet: true,
+            metadata: true,
           },
         });
+      recentInvoices = await Promise.all(
+        invoices.map(async (invoice) => {
+          let downloadUrl: string | null = null;
+          try {
+            const preparedInvoice = await ensureInvoicePdfForTeam(
+              teamId,
+              invoice.id,
+            );
+            downloadUrl = preparedInvoice.downloadUrl;
+          } catch {
+            downloadUrl = null;
+          }
 
-        recentInvoices = await Promise.all(
-          invoices.map(async (invoice) => {
-            let downloadUrl: string | null = null;
-            try {
-              const preparedInvoice = await ensureInvoicePdfForTeam(
-                teamId,
-                invoice.id,
-              );
-              downloadUrl = preparedInvoice.downloadUrl;
-            } catch {
-              downloadUrl = null;
-            }
-
-            return {
-              id: invoice.id,
-              number: invoice.number,
-              total: String(invoice.total),
-              currency: invoice.currency,
-              status: invoice.status,
-              issuedAt: invoice.issuedAt?.toISOString() ?? null,
-              dueAt: invoice.dueAt?.toISOString() ?? null,
-              paidAt: invoice.paidAt?.toISOString() ?? null,
-              customerEmail: invoice.customerEmail,
-              customerWallet: invoice.customerWallet,
-              downloadUrl,
-            };
-          }),
-        );
-      }
+          return {
+            id: invoice.id,
+            number: invoice.number,
+            total: String(invoice.total),
+            currency: invoice.currency,
+            status: invoice.status,
+            issuedAt: invoice.issuedAt?.toISOString() ?? null,
+            dueAt: invoice.dueAt?.toISOString() ?? null,
+            paidAt: invoice.paidAt?.toISOString() ?? null,
+            customerName: readInvoiceCustomerName(invoice.metadata),
+            customerEmail: invoice.customerEmail,
+            customerWallet: invoice.customerWallet,
+            downloadUrl,
+          };
+        }),
+      );
 
       // Derive payment chain from the active plan, then subscription state, then env default.
       const configuredChainId =

@@ -43,11 +43,6 @@ import {
   SubscriptionRegistryABI,
 } from "../sdk";
 import {
-  deploySmartAccount,
-  getCounterfactualSmartAccountAddress,
-  isPrefundError,
-  isSmartAccountInfrastructureError,
-  isRecoverableSmartAccountFundingError,
   sendSmartAccountTransaction,
 } from "../lib/smart-account";
 import type { SubscriptionCancellationIntent } from "../lib/subscription-lifecycle";
@@ -123,11 +118,6 @@ function normalizeNamedFeatureIconName(name: string): string {
   };
 
   return aliasMap[normalized] ?? normalized;
-}
-
-function getSmartAccountProviderLabel(provider?: "pimlico") {
-  if (provider === "pimlico") return "Pimlico";
-  return "smart-account";
 }
 
 function renderNamedFeatureIcon(name: string, size: number) {
@@ -624,7 +614,17 @@ function reducer(state: PortalState, action: PortalAction): PortalState {
     case "SELECT_PLAN":
       return { ...state, selectedPlanId: action.planId };
     case "SET_BILLING_PERIOD":
-      return { ...state, billingPeriod: action.period };
+      return {
+        ...state,
+        billingPeriod: action.period,
+        selectedPlanId: state.data
+          ? resolvePlanSelectionForBillingPeriod({
+              plans: state.data.plans,
+              selectedPlanId: state.selectedPlanId,
+              billingPeriod: action.period,
+            })
+          : state.selectedPlanId,
+      };
     case "PROCESSING_START":
       return { ...state, processing: true };
     case "PROCESSING_DONE":
@@ -1936,7 +1936,78 @@ function getPlanDisplayPrice(
   if (!plan) return 0;
   const monthly = parseFloat(String(plan.price));
   const annual = plan.annualPrice ? parseFloat(String(plan.annualPrice)) : 0;
+  if (
+    billingPeriod === "annual" &&
+    annual <= 0 &&
+    plan.billingInterval >= 31_536_000
+  ) {
+    return monthly;
+  }
   return billingPeriod === "annual" && annual > 0 ? annual : monthly;
+}
+
+function matchesPlanBillingPeriod(
+  plan: ComponentPlanSummary | null | undefined,
+  billingPeriod: "monthly" | "annual",
+): boolean {
+  if (!plan) return false;
+  return billingPeriod === "annual"
+    ? plan.billingInterval >= 31_536_000
+    : plan.billingInterval < 31_536_000;
+}
+
+function findSiblingPlanForBillingPeriod(input: {
+  plans: ComponentPlanSummary[];
+  plan: ComponentPlanSummary | null | undefined;
+  billingPeriod: "monthly" | "annual";
+}): ComponentPlanSummary | null {
+  const { plans, plan, billingPeriod } = input;
+  if (!plan) return null;
+  if (matchesPlanBillingPeriod(plan, billingPeriod)) {
+    return plan;
+  }
+
+  const normalizedName = plan.name.trim().toLowerCase();
+  const normalizedTier = plan.tier.trim().toLowerCase();
+
+  return (
+    plans.find(
+      (candidate) =>
+        candidate.id !== plan.id &&
+        candidate.name.trim().toLowerCase() === normalizedName &&
+        candidate.tier.trim().toLowerCase() === normalizedTier &&
+        matchesPlanBillingPeriod(candidate, billingPeriod),
+    ) ?? null
+  );
+}
+
+function resolvePlanSelectionForBillingPeriod(input: {
+  plans: ComponentPlanSummary[];
+  selectedPlanId: string | null;
+  billingPeriod: "monthly" | "annual";
+}): string | null {
+  if (!input.selectedPlanId) return null;
+  const selectedPlan =
+    input.plans.find((plan) => plan.id === input.selectedPlanId) ?? null;
+  const sibling = findSiblingPlanForBillingPeriod({
+    plans: input.plans,
+    plan: selectedPlan,
+    billingPeriod: input.billingPeriod,
+  });
+  return sibling?.id ?? input.selectedPlanId;
+}
+
+function isUnsupportedOnChainAnnualSelection(
+  plan: ComponentPlanSummary | null | undefined,
+  billingPeriod: "monthly" | "annual",
+): boolean {
+  if (!plan?.onChainPlanId || billingPeriod !== "annual") {
+    return false;
+  }
+
+  return typeof plan.billingInterval === "number"
+    ? plan.billingInterval < 31_536_000
+    : true;
 }
 
 type WindowEthereum = {
@@ -3210,6 +3281,17 @@ export function renderElement(
                     >
                       {invoice.number ?? "Invoice"}
                     </div>
+                    {invoice.customerName ? (
+                      <div
+                        style={{
+                          fontSize: tokens.size - 3,
+                          color: tokens.textColor,
+                          marginTop: 2,
+                        }}
+                      >
+                        {invoice.customerName}
+                      </div>
+                    ) : null}
                     <div
                       style={{
                         fontSize: tokens.size - 3,
@@ -3355,6 +3437,17 @@ export function renderElement(
                       >
                         {invoice.number ?? "Invoice"}
                       </div>
+                      {invoice.customerName ? (
+                        <div
+                          style={{
+                            fontSize: tokens.size - 3,
+                            color: tokens.textColor,
+                            marginTop: 2,
+                          }}
+                        >
+                          {invoice.customerName}
+                        </div>
+                      ) : null}
                       <div
                         style={{
                           fontSize: tokens.size - 3,
@@ -4564,6 +4657,11 @@ function CheckoutContent({
   onBack: () => void;
   containerWidth: number;
 }) {
+  const effectiveSelectedPlanId = resolvePlanSelectionForBillingPeriod({
+    plans: data.plans,
+    selectedPlanId,
+    billingPeriod,
+  });
   const [coupon, setCoupon] = useState("");
   const [couponApplied, setCouponApplied] = useState<{
     code: string;
@@ -4592,11 +4690,11 @@ function CheckoutContent({
     activePlan: currentPlan,
   });
   const selectedPlan = data.plans.find(
-    (p: ComponentPlanSummary) => p.id === selectedPlanId,
+    (p: ComponentPlanSummary) => p.id === effectiveSelectedPlanId,
   );
   const isCurrentPlanSelected = isCurrentBillingSelection({
     activePlanId: currentPlanId,
-    selectedPlanId,
+    selectedPlanId: effectiveSelectedPlanId,
     activeBillingPeriod: currentBillingPeriod,
     selectedBillingPeriod: billingPeriod,
   });
@@ -4654,7 +4752,7 @@ function CheckoutContent({
     : 0;
   const activeCouponQuote =
     couponQuote &&
-    couponQuote.planId === selectedPlanId &&
+    couponQuote.planId === effectiveSelectedPlanId &&
     couponQuote.billingPeriod === billingPeriod
       ? couponQuote
       : null;
@@ -4668,9 +4766,13 @@ function CheckoutContent({
       : discountedPrice;
   const selectedPlanAlreadyScheduled = matchesTransitionTarget({
     transition: activeTransition,
-    planId: selectedPlanId,
+    planId: effectiveSelectedPlanId,
     billingPeriod,
   });
+  const unsupportedOnChainAnnualSelection = isUnsupportedOnChainAnnualSelection(
+    selectedPlan,
+    billingPeriod,
+  );
   const dueTodayAmount = selectedPlanAlreadyScheduled ? 0 : immediateAmountDue;
   const scheduledSelectionNote =
     selectedPlanAlreadyScheduled && selectedPlan
@@ -4712,19 +4814,19 @@ function CheckoutContent({
     onCouponQuoteChange(null);
     setCouponApplied(null);
     setCouponError("");
-  }, [billingPeriod, onCouponQuoteChange, selectedPlanId]);
+  }, [billingPeriod, effectiveSelectedPlanId, onCouponQuoteChange]);
 
   const nextBill =
     formatDateLabel(data.nextBillingAt) ??
     (selectedPlan && discountedPrice > 0 ? "After activation" : null);
 
   async function applyCoupon() {
-    if (!coupon.trim() || !selectedPlanId) return;
+    if (!coupon.trim() || !effectiveSelectedPlanId) return;
     setCouponLoading(true);
     setCouponError("");
     try {
       const res = await fetch(
-        `${apiBaseUrl}/api/v1/coupons/validate?code=${encodeURIComponent(coupon.trim())}&planId=${encodeURIComponent(selectedPlanId)}&billingPeriod=${encodeURIComponent(billingPeriod)}`,
+        `${apiBaseUrl}/api/v1/coupons/validate?code=${encodeURIComponent(coupon.trim())}&planId=${encodeURIComponent(effectiveSelectedPlanId)}&billingPeriod=${encodeURIComponent(billingPeriod)}`,
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -4737,7 +4839,7 @@ function CheckoutContent({
           code: String(d.code ?? coupon.trim().toUpperCase()),
           description: typeof d.description === "string" ? d.description : null,
           discount: Number(d.discount ?? 0),
-          planId: String(d.planId ?? selectedPlanId),
+          planId: String(d.planId ?? effectiveSelectedPlanId),
           billingPeriod: d.billingPeriod === "annual" ? "annual" : "monthly",
           baseAmountMicros: Number(d.baseAmountMicros ?? 0),
           discountedAmountMicros: Number(d.discountedAmountMicros ?? 0),
@@ -4950,7 +5052,7 @@ function CheckoutContent({
         >
           {data.plans.map((plan: ComponentPlanSummary) => {
             const isActive = plan.id === currentPlanId;
-            const isSelected = plan.id === selectedPlanId;
+            const isSelected = plan.id === effectiveSelectedPlanId;
             const price = getDisplayPrice(plan);
             const monthlyPrice = parseFloat(String(plan.price));
             const annualVal = plan.annualPrice
@@ -5604,14 +5706,16 @@ function CheckoutContent({
                   opacity:
                     (requiresBillingIdentity && missingCustomerName) ||
                     hasInvalidCustomerEmail ||
-                    (requiresHostedActivation && !hasCustomerEmail)
+                    (requiresHostedActivation && !hasCustomerEmail) ||
+                    unsupportedOnChainAnnualSelection
                       ? 0.6
                       : 1,
                 }}
                 disabled={
                   (requiresBillingIdentity && missingCustomerName) ||
                   hasInvalidCustomerEmail ||
-                  (requiresHostedActivation && !hasCustomerEmail)
+                  (requiresHostedActivation && !hasCustomerEmail) ||
+                  unsupportedOnChainAnnualSelection
                 }
               >
                 {isScheduledCancellationResume
@@ -5655,6 +5759,21 @@ function CheckoutContent({
                 }}
               >
                 {scheduledSelectionNote}
+              </div>
+            ) : null}
+
+            {unsupportedOnChainAnnualSelection ? (
+              <div
+                style={{
+                  fontSize: 11,
+                  color: "#c2410c",
+                  marginTop: 10,
+                  lineHeight: 1.5,
+                }}
+              >
+                Annual billing is not available for this on-chain self-serve
+                flow yet. Publish a dedicated annual on-chain plan variant
+                first, then subscribe to that plan directly.
               </div>
             ) : null}
 
@@ -5760,8 +5879,13 @@ function PaymentContent({
     selfFunded?: boolean;
   } | null;
 }) {
+  const effectiveSelectedPlanId = resolvePlanSelectionForBillingPeriod({
+    plans: data.plans,
+    selectedPlanId,
+    billingPeriod,
+  });
   const selectedPlan = data.plans.find(
-    (p: ComponentPlanSummary) => p.id === selectedPlanId,
+    (p: ComponentPlanSummary) => p.id === effectiveSelectedPlanId,
   );
   const activePlan = data.activePlan;
   const scheduledCancellation = getScheduledCancellationTransition(data);
@@ -5772,8 +5896,6 @@ function PaymentContent({
   const [localProvider, setLocalProvider] = useState<WindowEthereum | null>(
     null,
   );
-  const [provisionedSmartAccountAddress, setProvisionedSmartAccountAddress] =
-    useState<string | null>(null);
   const [connecting, setConnecting] = useState(false);
   const [txStatus, setTxStatus] = useState<
     "idle" | "approving" | "confirmed" | "error"
@@ -5793,7 +5915,7 @@ function PaymentContent({
   const activePlanPrice = getPlanDisplayPrice(activePlan, activeBillingPeriod);
   const activeCouponQuote =
     couponQuote &&
-    couponQuote.planId === selectedPlanId &&
+    couponQuote.planId === effectiveSelectedPlanId &&
     couponQuote.billingPeriod === billingPeriod
       ? couponQuote
       : null;
@@ -5812,17 +5934,13 @@ function PaymentContent({
     typeof paymentMethod?.walletAddress === "string"
       ? paymentMethod.walletAddress
       : null;
-  const smartAccountAddress =
-    provisionedSmartAccountAddress ?? serverSmartAccountAddress;
+  const smartAccountAddress = serverSmartAccountAddress;
   const zeroDevProjectId = undefined;
-  const smartAccountProviderLabel = getSmartAccountProviderLabel(
-    zeroDevConfig?.provider,
-  );
   const selectedOnChainPlanId = selectedPlan?.onChainPlanId ?? null;
   const activeOnChainPlanId = activePlan?.onChainPlanId ?? null;
   const isCurrentPlanSelected = isCurrentBillingSelection({
     activePlanId: activePlan?.id ?? null,
-    selectedPlanId,
+    selectedPlanId: effectiveSelectedPlanId,
     activeBillingPeriod,
     selectedBillingPeriod: billingPeriod,
   });
@@ -5853,6 +5971,10 @@ function PaymentContent({
     !isOnChainPlanChange &&
     !requiresHostedActivation &&
     selectedPlan?.id !== activePlan?.id;
+  const unsupportedOnChainAnnualSelection = isUnsupportedOnChainAnnualSelection(
+    selectedPlan,
+    billingPeriod,
+  );
   const isImmediateOnChainUpgrade =
     isOnChainPlanChange && basePrice > activePlanPrice;
   const immediateAmountDue = isImmediateOnChainUpgrade
@@ -5864,6 +5986,12 @@ function PaymentContent({
   const isNarrowPayment = containerWidth < 700;
   const finalAddress = address || localAddress;
   const finalConnected = isConnected || !!localAddress;
+  const requiresSmartAccountPlanChangeExecution = Boolean(
+    isOnChainPlanChange &&
+    smartAccountAddress &&
+    finalAddress &&
+    smartAccountAddress.toLowerCase() !== finalAddress.toLowerCase(),
+  );
   const resolvedWalletClient =
     wagmiWalletClient ??
     (chainId
@@ -5873,12 +6001,6 @@ function PaymentContent({
           provider: localProvider,
         })
       : null);
-
-  useEffect(() => {
-    if (serverSmartAccountAddress) {
-      setProvisionedSmartAccountAddress(serverSmartAccountAddress);
-    }
-  }, [serverSmartAccountAddress]);
 
   async function connectWindowEthereum(walletKind?: WalletKind) {
     setTxError("");
@@ -5959,95 +6081,88 @@ function PaymentContent({
       );
     }
 
-    // For first-time activations, use the funded connected wallet directly as
-    // the recurring payment account. Only preserve a separate payment account
-    // when the backend has already bound one to this subscription.
-    if (!serverSmartAccountAddress) {
-      return finalAddress as `0x${string}`;
-    }
-
-    if (smartAccountAddress && isAddress(smartAccountAddress)) {
-      return smartAccountAddress as `0x${string}`;
-    }
-
-    const canFallbackToWalletAccount = Boolean(finalAddress);
-
-    if (!zeroDevProjectId && !zeroDevConfig?.isReady) {
-      if (canFallbackToWalletAccount) {
-        return finalAddress as `0x${string}`;
-      }
-      throw new Error(
-        "Automatic payment account setup is not configured for this subscription yet.",
-      );
-    }
-
     await ensureWalletOnTargetChain(resolvedWalletClient, chainId);
+    return finalAddress as `0x${string}`;
+  }
 
-    const forceSelfFunded = zeroDevConfig?.selfFunded;
-    const chainLabel = formatChainLabel(chainId) ?? `Chain ${chainId}`;
-    const nativeSymbol = getChain(chainId).nativeCurrency.symbol;
-    const ensureSelfFundedQuery = (url: string): string => {
-      if (url.includes("selfFunded=true")) return url;
-      return url.includes("?")
-        ? `${url}&selfFunded=true`
-        : `${url}?selfFunded=true`;
+  async function requestHostedActivation(body: {
+    planId: string;
+    paymentAccount: `0x${string}`;
+    subscriberEmail?: string;
+    company: {
+      id?: string;
+      wallet: string;
+      name?: string;
+      email?: string;
+    };
+    activationTxHash?: `0x${string}`;
+  }) {
+    const res = await fetch(`${apiBaseUrl}/api/v1/subscriptions/activate`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify(body),
+    });
+
+    const json = (await res.json().catch(() => ({}))) as {
+      error?: string;
+      data?: {
+        txHash?: string;
+        activationRequired?: boolean;
+        preparedTransaction?: {
+          target?: string;
+          value?: string;
+          data?: string;
+          functionSignature?: string;
+        };
+      };
     };
 
-    for (let attempt = 0; attempt < 2; attempt += 1) {
-      try {
-        const paymasterUrl = zeroDevConfig?.paymasterUrl
-          ? forceSelfFunded || attempt > 0
-            ? ensureSelfFundedQuery(zeroDevConfig.paymasterUrl)
-            : zeroDevConfig.paymasterUrl
-          : undefined;
+    return { res, json };
+  }
 
+  async function confirmHostedActivation(params: {
+    body: {
+      planId: string;
+      paymentAccount: `0x${string}`;
+      subscriberEmail?: string;
+      company: {
+        id?: string;
+        wallet: string;
+        name?: string;
+        email?: string;
+      };
+    };
+    activationTxHash: `0x${string}`;
+  }) {
+    const maxAttempts = 6;
 
-        const result = await deploySmartAccount({
-          projectId: zeroDevProjectId,
-          bundlerUrl: zeroDevConfig?.bundlerUrl,
-          paymasterUrl,
-          chainId,
-          walletClient: resolvedWalletClient,
-        });
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+      const { res, json } = await requestHostedActivation({
+        ...params.body,
+        activationTxHash: params.activationTxHash,
+      });
 
-        setProvisionedSmartAccountAddress(result.smartAccountAddress);
-        return result.smartAccountAddress;
-      } catch (error) {
-        if (
-          canFallbackToWalletAccount &&
-          isSmartAccountInfrastructureError(error)
-        ) {
-          return finalAddress as `0x${string}`;
-        }
-
-        if (attempt === 0 && !forceSelfFunded && isPrefundError(error)) {
-          continue;
-        }
-
-        if (forceSelfFunded && isRecoverableSmartAccountFundingError(error)) {
-          const detail =
-            error instanceof Error ? error.message : String(error ?? "");
-          throw new Error(
-            `${smartAccountProviderLabel} self-funded sponsorship was not approved for ${chainLabel}. Verify the sponsorship paymaster for chain ${chainId} has enough native gas balance and that your ${smartAccountProviderLabel} policy allows this UserOperation. (${detail})`,
-          );
-        }
-
-        if (!forceSelfFunded && isRecoverableSmartAccountFundingError(error)) {
-          const detail =
-            error instanceof Error ? error.message : String(error ?? "");
-          throw new Error(
-            `Gas sponsorship was not approved for ${chainLabel}. Verify the ${smartAccountProviderLabel} paymaster and bundler are enabled for chain ${chainId}, then retry. (${detail})`,
-          );
-        }
-
-        throw error;
+      if (res.ok) {
+        return {
+          txHash: (json.data?.txHash ??
+            params.activationTxHash) as `0x${string}`,
+          pending: res.status === 202,
+        };
       }
+
+      if (res.status === 425 && attempt < maxAttempts - 1) {
+        await sleep(2_000);
+        continue;
+      }
+
+      throw new Error(json.error ?? `HTTP ${res.status}`);
     }
 
     throw new Error(
-      forceSelfFunded
-        ? `Could not set up the subscription smart account with ${smartAccountProviderLabel} self-funded sponsorship on ${chainLabel}. Verify the sponsorship paymaster deposit and policy, then try again.`
-        : `Could not set up your subscription wallet. Ensure the connected wallet has a small amount of ${nativeSymbol} on ${chainLabel} and try again.`,
+      "Subscription activation is still waiting for chain confirmations. Please try again in a moment.",
     );
   }
 
@@ -6159,7 +6274,6 @@ function PaymentContent({
           await submitPaymentAccountTransaction({
             to: autopayAddress,
             data: installData,
-            smartAccountAddressOverride: billingPaymentAccount,
           });
           installError = null;
           break;
@@ -6225,7 +6339,6 @@ function PaymentContent({
         await submitPaymentAccountTransaction({
           to: autopayAddress,
           data: updateData,
-          smartAccountAddressOverride: billingPaymentAccount,
         });
       }
 
@@ -6251,7 +6364,6 @@ function PaymentContent({
         await submitPaymentAccountTransaction({
           to: autopayAddress,
           data: unpauseData,
-          smartAccountAddressOverride: billingPaymentAccount,
         });
       }
     }
@@ -6278,7 +6390,6 @@ function PaymentContent({
     await submitPaymentAccountTransaction({
       to: tokenAddress,
       data: approveData,
-      smartAccountAddressOverride: billingPaymentAccount,
     });
 
     const allowanceCheckClient = createPublicClient({
@@ -6315,7 +6426,7 @@ function PaymentContent({
   async function fetchImmediateUpgradePreview(
     signal?: AbortSignal,
   ): Promise<PlanChangeProrationSummary> {
-    if (!selectedPlanId) {
+    if (!effectiveSelectedPlanId) {
       throw new Error("Select a destination plan before continuing.");
     }
 
@@ -6327,7 +6438,7 @@ function PaymentContent({
         Authorization: `Bearer ${accessToken}`,
       },
       body: JSON.stringify({
-        planId: selectedPlanId,
+        planId: effectiveSelectedPlanId,
         billingPeriod,
         ...(normalizedCustomerName ? { customerName: normalizedCustomerName } : {}),
         ...(hasCustomerEmail ? { customerEmail: normalizedCustomerEmail } : {}),
@@ -6353,7 +6464,7 @@ function PaymentContent({
     let cancelled = false;
     const controller = new AbortController();
 
-    if (!isImmediateOnChainUpgrade || !selectedPlanId) {
+    if (!isImmediateOnChainUpgrade || !effectiveSelectedPlanId) {
       setPlanChangePreview(null);
       setPlanChangePreviewError("");
       setPlanChangePreviewLoading(false);
@@ -6395,13 +6506,21 @@ function PaymentContent({
     hasCustomerEmail,
     isImmediateOnChainUpgrade,
     normalizedCustomerEmail,
-    selectedPlanId,
+    effectiveSelectedPlanId,
   ]);
 
   async function handlePay() {
     setTxError("");
     if (price === 0) {
       onConfirm({});
+      return;
+    }
+
+    if (unsupportedOnChainAnnualSelection) {
+      setTxStatus("error");
+      setTxError(
+        "Annual billing is not supported for this on-chain self-serve flow yet. Publish a dedicated annual on-chain plan variant first, then subscribe to that plan directly.",
+      );
       return;
     }
 
@@ -6458,6 +6577,9 @@ function PaymentContent({
             ? { subscriberEmail: normalizedCustomerEmail }
             : {}),
           company: {
+            ...(typeof company?.id === "string" && company.id.trim()
+              ? { id: String(company.id).trim() }
+              : {}),
             wallet:
               typeof company?.walletAddress === "string" &&
               company.walletAddress.trim()
@@ -6476,27 +6598,45 @@ function PaymentContent({
           },
         };
 
-        const res = await fetch(`${apiBaseUrl}/api/v1/subscriptions/activate`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${accessToken}`,
-          },
-          body: JSON.stringify(body),
-        });
-
-        const json = (await res.json().catch(() => ({}))) as {
-          error?: string;
-          data?: { txHash?: string };
-        };
+        const { res, json } = await requestHostedActivation(body);
         if (!res.ok) {
           throw new Error(json.error ?? `HTTP ${res.status}`);
         }
 
-        setTxStatus("confirmed");
-        await onActivationComplete({
+        let activationResult: {
+          txHash?: string;
+          pending?: boolean;
+        } = {
           txHash: json.data?.txHash,
           pending: res.status === 202,
+        };
+
+        if (json.data?.activationRequired) {
+          const preparedTarget = json.data.preparedTransaction?.target;
+          const preparedData = json.data.preparedTransaction?.data;
+
+          if (!preparedTarget || !isAddress(preparedTarget) || !preparedData) {
+            throw new Error(
+              "Hosted activation returned an invalid sponsored transaction payload.",
+            );
+          }
+
+          const activationTx = await submitPaymentAccountTransaction({
+            to: preparedTarget as `0x${string}`,
+            data: preparedData as `0x${string}`,
+            smartAccountAddressOverride: readyPaymentAccount,
+          });
+
+          activationResult = await confirmHostedActivation({
+            body,
+            activationTxHash: activationTx.txHash,
+          });
+        }
+
+        setTxStatus("confirmed");
+        await onActivationComplete({
+          txHash: activationResult.txHash,
+          pending: activationResult.pending,
           successMsg: requiresResumeActivation
             ? "Subscription will continue. Future renewals are active again."
             : undefined,
@@ -6534,7 +6674,9 @@ function PaymentContent({
 
     if (
       !resolvedWalletClient ||
-      (!zeroDevProjectId && !zeroDevConfig?.isReady)
+      (requiresSmartAccountPlanChangeExecution &&
+        !zeroDevProjectId &&
+        !zeroDevConfig?.isReady)
     ) {
       throw new Error("Connect your wallet before making plan changes.");
       return;
@@ -6656,7 +6798,10 @@ function PaymentContent({
     (!finalConnected || !finalAddress);
   const needsWalletClient =
     isOnChainPlanChange &&
-    (!resolvedWalletClient || (!zeroDevProjectId && !zeroDevConfig?.isReady));
+    (!resolvedWalletClient ||
+      (requiresSmartAccountPlanChangeExecution &&
+        !zeroDevProjectId &&
+        !zeroDevConfig?.isReady));
   const hasWindowEth =
     typeof window !== "undefined" &&
     !!(window as unknown as { ethereum?: unknown }).ethereum;
@@ -6937,6 +7082,24 @@ function PaymentContent({
                     </div>
                   )}
 
+                  {unsupportedOnChainAnnualSelection && (
+                    <div
+                      style={{
+                        padding: "10px 12px",
+                        background: "#fff7ed",
+                        border: "1px solid #fdba74",
+                        borderRadius: 8,
+                        fontSize: tokens.size - 2,
+                        color: "#c2410c",
+                        marginBottom: 12,
+                      }}
+                    >
+                      Annual billing is not available for this on-chain
+                      subscription flow yet. A dedicated annual on-chain plan
+                      needs to be published first.
+                    </div>
+                  )}
+
                   {planChangePreview && isImmediateOnChainUpgrade && (
                     <div
                       style={{
@@ -7016,6 +7179,7 @@ function PaymentContent({
                     disabled={
                       processing ||
                       txStatus === "approving" ||
+                      unsupportedOnChainAnnualSelection ||
                       (isImmediateOnChainUpgrade &&
                         (planChangePreviewLoading ||
                           Boolean(planChangePreviewError)))
@@ -8601,6 +8765,13 @@ export function ArcenEmbed({
     mode === "modal" ? modalContentWidth || 360 : containerWidth;
 
   const isInline = mode === "inline";
+  const effectiveSelectedPlanId = state.data
+    ? resolvePlanSelectionForBillingPeriod({
+        plans: state.data.plans,
+        selectedPlanId: state.selectedPlanId,
+        billingPeriod: state.billingPeriod,
+      })
+    : state.selectedPlanId;
 
   // Notify parent whenever view changes
   useEffect(() => {
@@ -8671,12 +8842,12 @@ export function ArcenEmbed({
   useEffect(() => {
     setCouponQuote((current) => {
       if (!current) return null;
-      if (!state.selectedPlanId) return null;
-      if (current.planId !== state.selectedPlanId) return null;
+      if (!effectiveSelectedPlanId) return null;
+      if (current.planId !== effectiveSelectedPlanId) return null;
       if (current.billingPeriod !== state.billingPeriod) return null;
       return current;
     });
-  }, [state.billingPeriod, state.selectedPlanId]);
+  }, [effectiveSelectedPlanId, state.billingPeriod]);
 
   useEffect(() => {
     const company =
@@ -8841,11 +9012,24 @@ export function ArcenEmbed({
       pending?: boolean;
       successMsg?: string;
     }) => {
+      const effectivePlanId = state.data
+        ? resolvePlanSelectionForBillingPeriod({
+            plans: state.data.plans,
+            selectedPlanId: state.selectedPlanId,
+            billingPeriod: state.billingPeriod,
+          })
+        : state.selectedPlanId;
       const selectedPlan = state.data?.plans.find(
-        (plan: ComponentPlanSummary) => plan.id === state.selectedPlanId,
+        (plan: ComponentPlanSummary) => plan.id === effectivePlanId,
       );
 
       await fetchData();
+      if (result.pending) {
+        for (let attempt = 0; attempt < 3; attempt += 1) {
+          await sleep(1_500);
+          await fetchData();
+        }
+      }
       setCouponQuote(null);
 
       if (selectedPlan?.id) {
@@ -8862,7 +9046,7 @@ export function ArcenEmbed({
         txHash: result.txHash,
       });
     },
-    [fetchData, onPlanChange, state.data, state.selectedPlanId],
+    [fetchData, onPlanChange, state.billingPeriod, state.data, state.selectedPlanId],
   );
 
   const handleUnsubscribe = useCallback(
@@ -9239,10 +9423,11 @@ export function ArcenEmbed({
               onCustomerEmailChange={setCustomerEmail}
               onCouponQuoteChange={setCouponQuote}
               onSubscribeClose={() => {
-                const targetId = selectedPlanId ?? data.activePlan?.id ?? "";
+                const targetId =
+                  effectiveSelectedPlanId ?? data.activePlan?.id ?? "";
                 const hasBillingSelectionChange = !isCurrentBillingSelection({
                   activePlanId: data.activePlan?.id ?? null,
-                  selectedPlanId,
+                  selectedPlanId: effectiveSelectedPlanId,
                   activeBillingPeriod: resolveActiveBillingPeriod({
                     billingPeriod: data.billingPeriod,
                     activePlan: data.activePlan,
@@ -9276,7 +9461,9 @@ export function ArcenEmbed({
               onCustomerNameChange={setCustomerName}
               onCustomerEmailChange={setCustomerEmail}
               onConfirm={(txHash) => {
-                if (selectedPlanId) handleSwitchPlan(selectedPlanId, txHash);
+                if (effectiveSelectedPlanId) {
+                  handleSwitchPlan(effectiveSelectedPlanId, txHash);
+                }
               }}
               onActivationComplete={handleActivateSubscription}
               onBack={() => dispatch({ type: "OPEN_CHECKOUT" })}
@@ -9296,7 +9483,7 @@ export function ArcenEmbed({
           {view === "success" && (
             <SuccessContent
               data={data}
-              selectedPlanId={selectedPlanId}
+              selectedPlanId={effectiveSelectedPlanId}
               successMsg={successMsg}
               txHash={successTxHash}
               chainId={data.paymentMethod?.chainId ?? null}
@@ -9350,10 +9537,10 @@ export function ArcenEmbed({
                   onCouponQuoteChange={setCouponQuote}
                   onSubscribeClose={() => {
                     const targetId =
-                      selectedPlanId ?? data.activePlan?.id ?? "";
+                      effectiveSelectedPlanId ?? data.activePlan?.id ?? "";
                     const hasBillingSelectionChange = !isCurrentBillingSelection({
                       activePlanId: data.activePlan?.id ?? null,
-                      selectedPlanId,
+                      selectedPlanId: effectiveSelectedPlanId,
                       activeBillingPeriod: resolveActiveBillingPeriod({
                         billingPeriod: data.billingPeriod,
                         activePlan: data.activePlan,
@@ -9387,8 +9574,9 @@ export function ArcenEmbed({
                   onCustomerNameChange={setCustomerName}
                   onCustomerEmailChange={setCustomerEmail}
                   onConfirm={(txHash) => {
-                    if (selectedPlanId)
-                      handleSwitchPlan(selectedPlanId, txHash);
+                    if (effectiveSelectedPlanId) {
+                      handleSwitchPlan(effectiveSelectedPlanId, txHash);
+                    }
                   }}
                   onActivationComplete={handleActivateSubscription}
                   onBack={() => dispatch({ type: "OPEN_CHECKOUT" })}
@@ -9408,7 +9596,7 @@ export function ArcenEmbed({
               {view === "success" && (
                 <SuccessContent
                   data={data}
-                  selectedPlanId={selectedPlanId}
+                  selectedPlanId={effectiveSelectedPlanId}
                   successMsg={successMsg}
                   txHash={successTxHash}
                   chainId={data.paymentMethod?.chainId ?? null}

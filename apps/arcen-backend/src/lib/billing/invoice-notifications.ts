@@ -1,6 +1,7 @@
 import { db } from "../../db.js";
 import { sendPaymentReceiptEmail } from "./email.js";
 import {
+  createInvoiceDownloadUrl,
   ensureInvoicePdfForTeam,
   ensureReceiptPdfForTeam,
   readObject,
@@ -61,6 +62,14 @@ export async function sendPaidInvoiceReceipt(input: {
     Number(context.invoice.amountPaid) > 0
       ? String(context.invoice.amountPaid)
       : String(context.invoice.total);
+  const invoiceDownloadUrl = createInvoiceDownloadUrl(
+    context.invoice.id,
+    invoiceObjectKey,
+  );
+  const receiptDownloadUrl = createInvoiceDownloadUrl(
+    context.invoice.id,
+    receiptObjectKey,
+  );
 
   try {
     const result = await sendPaymentReceiptEmail({
@@ -73,7 +82,19 @@ export async function sendPaidInvoiceReceipt(input: {
       providerName,
       paymentMethod,
       supportEmail: support.email,
+      supportPhone: support.phone,
       supportUrl: support.url,
+      invoiceDownloadUrl,
+      receiptDownloadUrl,
+      subtotal: String(context.invoice.subtotal),
+      taxTotal: String(context.invoice.taxTotal),
+      amountPaid,
+      lineItems: context.invoice.lineItems.map((line) => ({
+        description: line.description,
+        quantity: line.quantity,
+        unitAmount: String(line.unitAmount),
+        total: String(line.lineTotal),
+      })),
       invoicePdf: {
         filename: invoiceFilename,
         contentBase64: invoiceBytes.toString("base64"),

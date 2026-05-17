@@ -33,6 +33,7 @@ import {
   upsertSubscriptionLedgerState,
 } from "../../lib/billing/billing-ledger.js";
 import { recordBillingAdjustment } from "../../lib/billing/billing-adjustments.js";
+import { sendPaidInvoiceReceipt } from "../../lib/billing/invoice-notifications.js";
 import { computeProrationQuote } from "../../lib/billing/billing-proration.js";
 import {
   createSubscriptionChangeRequest,
@@ -332,6 +333,7 @@ async function createProrationInvoice(input: {
       amountOutstanding: amountDue,
       issuedAt: input.issuedAt,
       planId: input.planId,
+      companyId: input.companyId,
       metadata: toPrismaJson({
         ...(input.metadata ?? {}),
         ...(input.customerName ? { customerName: input.customerName } : {}),
@@ -799,6 +801,22 @@ export async function handleCompanyPlanRequest(
   }
 
   if (usesAuthoritativeOnChainPlanChange) {
+    const targetPlanNativeBillingPeriod = deriveBillingPeriodFromPlan(plan);
+    if (
+      normalizedBillingPeriod === "annual" &&
+      targetPlanNativeBillingPeriod !== "annual" &&
+      !plan.annualPrice
+    ) {
+      return c.json(
+        {
+          error:
+            "Annual billing is not available because this plan does not have an annual price configured. Publish a dedicated annual on-chain plan variant first, then subscribe to that plan directly.",
+        },
+        409,
+        corsHeaders(origin),
+      );
+    }
+
     if (!currentPlan?.onChainPlanId) {
       return c.json(
         {
@@ -1621,6 +1639,19 @@ export async function handleCompanyPlanRequest(
       }
 
       const { transitionId, invoiceId, paymentId } = upgradeResult;
+
+      if (invoiceId && normalizedPaymentTxHash) {
+        await sendPaidInvoiceReceipt({
+          teamId,
+          invoiceId,
+          txHash: normalizedPaymentTxHash,
+        }).catch((err) => {
+          console.warn(
+            "[company-plan] Failed to send proration invoice receipt:",
+            err,
+          );
+        });
+      }
 
       deliverWebhook(teamId, "company.plan.changed", {
         companyId,

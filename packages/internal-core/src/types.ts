@@ -378,6 +378,7 @@ export interface ComponentInvoiceSummary {
   issuedAt: string | null;
   dueAt?: string | null;
   paidAt?: string | null;
+  customerName?: string | null;
   customerEmail?: string | null;
   customerWallet?: string | null;
   downloadUrl?: string | null;

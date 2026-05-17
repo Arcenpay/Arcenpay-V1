@@ -122,6 +122,7 @@ export interface CreateChargeInvoiceInput {
   customerEmail?: string | null;
   customerWallet?: string | null;
   customerName?: string | null;
+  companyId?: string | null;
   planId?: string | null;
   issuedAt?: Date;
   metadata?: Record<string, unknown>;
@@ -161,6 +162,7 @@ export async function createIssuedChargeInvoice(
       amountOutstanding: toSix(input.amount),
       issuedAt: input.issuedAt ?? new Date(),
       planId: input.planId ?? undefined,
+      companyId: input.companyId ?? undefined,
       metadata: toPrismaJson({
         ...(input.metadata ?? {}),
         ...(input.customerName ? { customerName: input.customerName } : {}),
@@ -313,6 +315,12 @@ async function processStoredBillingEvent(
       skipped = true;
       reason = "zero_amount";
     } else {
+      const resolvedPlanId =
+        typeof payload.catalogPlanId === "string" && payload.catalogPlanId.trim()
+          ? payload.catalogPlanId.trim()
+          : typeof payload.planId === "string" && payload.planId.trim()
+            ? payload.planId.trim()
+            : null;
       const invoice = await createIssuedChargeInvoice({
         teamId: event.teamId,
         environmentId: payloadEnvironmentId,
@@ -326,7 +334,11 @@ async function processStoredBillingEvent(
             : typeof payload.subscriber === "string"
               ? payload.subscriber
               : null,
-        planId: typeof payload.planId === "string" ? payload.planId : null,
+        planId: resolvedPlanId,
+        companyId:
+          typeof payload.companyId === "string" && payload.companyId.trim()
+            ? payload.companyId.trim()
+            : null,
         issuedAt: options.occurredAt ?? occurredAtFromPayload,
         metadata: {
           billingEventId: event.id,
@@ -348,7 +360,11 @@ async function processStoredBillingEvent(
   const companyId =
     typeof payload.companyId === "string" ? payload.companyId : null;
   const catalogPlanId =
-    typeof payload.planId === "string" ? payload.planId : null;
+    typeof payload.catalogPlanId === "string" && payload.catalogPlanId.trim()
+      ? payload.catalogPlanId.trim()
+      : typeof payload.planId === "string" && payload.planId.trim()
+        ? payload.planId.trim()
+        : null;
   const onChainPlanId =
     typeof payload.onChainPlanId === "string" ? payload.onChainPlanId : null;
   const onChainTokenId =

@@ -1129,7 +1129,7 @@ async function postToDashboard(
 
 async function resolvePlanScopeFromDashboard(
   onChainPlanId: string,
-): Promise<{ teamId: string; planId: string | null } | null> {
+): Promise<{ teamId: string; planId: string | null; environmentId: string | null } | null> {
   if (!DASHBOARD_URL) return null;
 
   const url = new URL(`${DASHBOARD_URL}${DASHBOARD_PLAN_RESOLVER_PATH}`);
@@ -1151,6 +1151,7 @@ async function resolvePlanScopeFromDashboard(
   const data = (await response.json()) as {
     teamId?: string;
     planId?: string | null;
+    environmentId?: string | null;
   };
 
   if (!data.teamId) {
@@ -1162,6 +1163,7 @@ async function resolvePlanScopeFromDashboard(
   return {
     teamId: data.teamId,
     planId: data.planId ?? null,
+    environmentId: data.environmentId ?? null,
   };
 }
 
@@ -2008,6 +2010,8 @@ eventListener.on("billing_executed", async (event) => {
     : null;
   const existingRouteState = await subscriptionRouteStore.read(tokenId);
   const teamId = existingRouteState?.teamId || planScope?.teamId || null;
+  const catalogPlanId = planScope?.planId ?? null;
+  const environmentId = planScope?.environmentId ?? null;
 
   if (subscriberWallet) {
     await subscriptionRouteStore.write(tokenId, {
@@ -2040,7 +2044,10 @@ eventListener.on("billing_executed", async (event) => {
     ]),
     {
       tokenId,
-      planId: onChainPlanId,
+      planId: catalogPlanId ?? onChainPlanId,
+      catalogPlanId,
+      onChainPlanId,
+      environmentId,
       subscriber: subscriberWallet,
       customerWallet: subscriberWallet,
       amount,

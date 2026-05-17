@@ -43,12 +43,10 @@ export async function getRevenueSeries(c: Context) {
   }
 
   const months = parsed.data.months ?? 12;
-  const activeEnvironmentPlanIds = (
+  // Broader plan lookup: all plans in the team (cross-environment safety net)
+  const allTeamPlanIds = (
     await db.catalogPlan.findMany({
-      where: {
-        teamId: auth.team.teamId,
-        environmentId: activeEnvironment.id,
-      },
+      where: { teamId: auth.team.teamId },
       select: { id: true },
     })
   ).map((plan) => plan.id);
@@ -66,13 +64,9 @@ export async function getRevenueSeries(c: Context) {
       issuedAt: { gte: oldestMonth },
       OR: [
         { environmentId: activeEnvironment.id },
-        ...(activeEnvironmentPlanIds.length > 0
-          ? [
-              {
-                environmentId: null,
-                planId: { in: activeEnvironmentPlanIds },
-              },
-            ]
+        { environmentId: null },
+        ...(allTeamPlanIds.length > 0
+          ? [{ planId: { in: allTeamPlanIds } }]
           : []),
       ],
     },

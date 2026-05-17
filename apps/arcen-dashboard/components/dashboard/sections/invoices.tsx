@@ -50,6 +50,10 @@ type InvoiceItem = {
   status: InvoiceStatus;
   currency: string;
   total: string;
+  metadata?: {
+    customerName?: string | null;
+    [key: string]: unknown;
+  } | null;
   customerEmail: string | null;
   customerWallet: string | null;
   issuedAt: string | null;
@@ -275,8 +279,15 @@ function InvoiceTable({
                 <TableCell>
                   <InvoiceSourceBadge invoice={invoice} source={source} />
                 </TableCell>
-                <TableCell className="max-w-[220px] truncate">
-                  {invoice.customerEmail || invoice.customerWallet || "N/A"}
+                <TableCell className="max-w-[220px]">
+                  <div className="space-y-1">
+                    <p className="truncate font-medium text-foreground">
+                      {invoice.metadata?.customerName || "Unknown customer"}
+                    </p>
+                    <p className="truncate text-sm text-muted-foreground">
+                      {invoice.customerEmail || invoice.customerWallet || "N/A"}
+                    </p>
+                  </div>
                 </TableCell>
                 <TableCell>
                   {Number(invoice.total).toFixed(2)} {invoice.currency}

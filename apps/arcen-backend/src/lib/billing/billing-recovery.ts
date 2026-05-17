@@ -5,11 +5,11 @@ import {
   updateSubscriptionChangeRequestStage,
 } from "./subscription-change-requests.js";
 import {
-  recordSuccessfulPayment,
   upsertSubscriptionLedgerState,
 } from "./billing-ledger.js";
 import { deliverWebhook } from "../webhooks/deliver-webhook.js";
 import { sendPaidInvoiceReceipt } from "./invoice-notifications.js";
+import { allocateInvoiceNumber, toSix } from "./invoices.js";
 
 const BILLING_RECOVERY_RETRY_DELAYS_MS = [
   5 * 60 * 1000,
@@ -66,6 +66,7 @@ interface SubscriptionActivationRecoveryPayload {
   walletAddress: string;
   catalogPlanId: string;
   catalogPlanName: string;
+  customerName?: string | null;
   onChainPlanId: string;
   onChainTokenId: string;
   expiration?: string | null;
@@ -110,6 +111,8 @@ function parseSubscriptionActivationPayload(
     walletAddress: String(record.walletAddress ?? ""),
     catalogPlanId: String(record.catalogPlanId ?? ""),
     catalogPlanName: String(record.catalogPlanName ?? "Subscription"),
+    customerName:
+      typeof record.customerName === "string" ? record.customerName.trim() : null,
     onChainPlanId: String(record.onChainPlanId ?? ""),
     onChainTokenId: String(record.onChainTokenId ?? ""),
     expiration:
@@ -203,6 +206,7 @@ export async function enqueueSubscriptionActivationRecovery(input: {
   walletAddress: string;
   catalogPlanId: string;
   catalogPlanName: string;
+  customerName?: string | null;
   onChainPlanId: string;
   onChainTokenId: string;
   expiration?: string | null;
@@ -236,6 +240,7 @@ export async function enqueueSubscriptionActivationRecovery(input: {
         walletAddress: normalizeWallet(input.walletAddress),
         catalogPlanId: input.catalogPlanId,
         catalogPlanName: input.catalogPlanName,
+        customerName: input.customerName?.trim() || null,
         onChainPlanId: input.onChainPlanId,
         onChainTokenId: input.onChainTokenId,
         expiration: input.expiration ?? null,
@@ -519,47 +524,148 @@ export async function finalizeSubscriptionActivation(
 
   const company = await db.arcenCompany.findUnique({
     where: { id: input.payload.companyId },
-    select: { traits: true },
+    select: {
+      name: true,
+      email: true,
+      walletAddress: true,
+      traits: true,
+    },
   });
   const currentTraits = asRecord(company?.traits);
   const currentTransition = asRecord(currentTraits.subscriptionTransition);
+  const nextTraits = { ...currentTraits };
   if (currentTransition.mode === "cancel_at_period_end") {
-    const nextTraits = { ...currentTraits };
     delete nextTraits.subscriptionTransition;
-
-    await db.arcenCompany.update({
-      where: { id: input.payload.companyId },
-      data: {
-        traits: toPrismaJson(nextTraits),
-      },
-    });
   }
 
-  await recordSuccessfulPayment({
-    idempotencyKey: `payment:subscription.activate:${input.payload.txHash}`,
-    teamId: input.teamId,
-    environmentId: input.payload.environmentId ?? null,
-    companyId: input.payload.companyId,
-    walletAddress: input.payload.walletAddress,
-    subscriptionStateId: subscriptionState?.id,
-    kind: "SUBSCRIPTION_ACTIVATION",
-    amount: input.payload.amount,
-    currency: input.payload.currency ?? "USDC",
-    payerWallet: input.payload.walletAddress,
-    recipientWallet: input.payload.merchantAddress,
-    acceptedToken: input.payload.acceptedToken,
-    txHash: input.payload.txHash,
-    occurredAt,
-    settledAt: occurredAt,
-    metadata: {
-      source,
-      ...(input.taskId ? { recoveryTaskId: input.taskId } : {}),
-      tokenId: input.payload.onChainTokenId,
-      onChainPlanId: input.payload.onChainPlanId,
-      expiration: input.payload.expiration,
+  const companyUpdate = {
+    activePlanId: input.payload.catalogPlanId,
+    traits: toPrismaJson(nextTraits),
+    ...(input.payload.walletAddress &&
+    company?.walletAddress?.toLowerCase() !==
+      input.payload.walletAddress.toLowerCase()
+      ? { walletAddress: input.payload.walletAddress.toLowerCase() }
+      : {}),
+    ...(input.payload.subscriberEmail &&
+    company?.email?.trim().toLowerCase() !==
+      input.payload.subscriberEmail.trim().toLowerCase()
+      ? { email: input.payload.subscriberEmail.trim().toLowerCase() }
+      : {}),
+    ...(input.payload.customerName &&
+    company?.name?.trim() !== input.payload.customerName.trim()
+      ? { name: input.payload.customerName.trim() }
+      : {}),
+  };
+
+  await db.arcenCompany.update({
+    where: { id: input.payload.companyId },
+    data: companyUpdate,
+  });
+
+  // Create invoice + record payment directly first, so the data is
+  // guaranteed to be in the database regardless of billing event outcome.
+  const team = await db.team.findUnique({
+    where: { id: input.teamId },
+    select: { slug: true, invoicePrefix: true, environmentMode: true },
+  });
+  const prefix = team?.invoicePrefix ?? (team ? `INV-${team.slug.toUpperCase()}` : "INV-ARCENPAY");
+  const invoiceNumber = team
+    ? await allocateInvoiceNumber(input.teamId, prefix, occurredAt)
+    : `INV-${Date.now()}`;
+  const invoiceAmount = toSix(input.payload.amount);
+
+  const invoice = await db.invoice.create({
+    data: {
+      teamId: input.teamId,
+      environmentId: input.payload.environmentId ?? null,
+      environmentMode: team?.environmentMode ?? "PRODUCTION",
+      status: "PAID",
+      number: invoiceNumber,
+      currency: input.payload.currency ?? "USDC",
+      customerEmail: input.payload.subscriberEmail ?? null,
+      customerWallet: normalizeWallet(input.payload.walletAddress),
+      subtotal: invoiceAmount,
+      taxTotal: "0.000000",
+      total: invoiceAmount,
+      amountPaid: invoiceAmount,
+      amountCredited: "0.000000",
+      amountOutstanding: "0.000000",
+      issuedAt: occurredAt,
+      paidAt: occurredAt,
+      planId: input.payload.catalogPlanId,
+      companyId: input.payload.companyId,
+      metadata: toPrismaJson({
+        source,
+        mode: "subscription_activation",
+        description: `Subscription activation — ${input.payload.catalogPlanName}`,
+        customerName: input.payload.customerName ?? null,
+        tokenId: input.payload.onChainTokenId,
+        onChainPlanId: input.payload.onChainPlanId,
+        txHash: input.payload.txHash,
+        ...(input.taskId ? { recoveryTaskId: input.taskId } : {}),
+      }),
+      lineItems: {
+        create: {
+          description: `Subscription activation — ${input.payload.catalogPlanName}`,
+          quantity: 1,
+          unitAmount: invoiceAmount,
+          taxRate: "0.0000",
+          lineSubtotal: invoiceAmount,
+          lineTax: "0.000000",
+          lineTotal: invoiceAmount,
+        },
+      },
     },
   });
 
+  let paymentId: string | null = null;
+  const existingPayment = await db.payment.findFirst({
+    where: { txHash: input.payload.txHash },
+    select: { id: true },
+  });
+  if (existingPayment) {
+    await db.payment.update({
+      where: { id: existingPayment.id },
+      data: {
+        invoiceId: invoice.id,
+        companyId: input.payload.companyId,
+        subscriptionStateId: subscriptionState?.id,
+      },
+    });
+    paymentId = existingPayment.id;
+  } else {
+    const payment = await db.payment.create({
+      data: {
+        idempotencyKey: `payment:subscription.activate:${input.payload.txHash}`,
+        teamId: input.teamId,
+        environmentId: input.payload.environmentId ?? null,
+        companyId: input.payload.companyId,
+        invoiceId: invoice.id,
+        subscriptionStateId: subscriptionState?.id,
+        kind: "SUBSCRIPTION_ACTIVATION",
+        status: "SUCCEEDED",
+        amount: invoiceAmount,
+        currency: input.payload.currency ?? "USDC",
+        payerWallet: normalizeWallet(input.payload.walletAddress),
+        recipientWallet: normalizeWallet(input.payload.merchantAddress),
+        acceptedToken: normalizeWallet(input.payload.acceptedToken),
+        txHash: input.payload.txHash,
+        occurredAt,
+        settledAt: occurredAt,
+        metadata: toPrismaJson({
+          source,
+          tokenId: input.payload.onChainTokenId,
+          onChainPlanId: input.payload.onChainPlanId,
+          expiration: input.payload.expiration,
+          ...(input.taskId ? { recoveryTaskId: input.taskId } : {}),
+        }),
+      },
+    });
+    paymentId = payment.id;
+  }
+
+  // Ingest the billing event as a secondary operation (webhooks + subscription sync).
+  // The invoice and payment are already persisted above, so this is non-blocking.
   const billingEvent = await ingestBillingEvent({
     teamId: input.teamId,
     eventType: "SUBSCRIPTION_MINTED",
@@ -567,10 +673,11 @@ export async function finalizeSubscriptionActivation(
     idempotencyKey: `subscription.minted:${input.payload.txHash}`,
     source,
     occurredAt,
-    triggerInvoice: true,
+    triggerInvoice: false, // Invoice already created above
     payload: {
       tokenId: input.payload.onChainTokenId,
       planId: input.payload.catalogPlanId,
+      catalogPlanId: input.payload.catalogPlanId,
       onChainPlanId: input.payload.onChainPlanId,
       companyId: input.payload.companyId,
       environmentId: input.payload.environmentId ?? null,
@@ -580,6 +687,9 @@ export async function finalizeSubscriptionActivation(
       expiration: input.payload.expiration,
       txHash: input.payload.txHash,
       description: `Subscription activation — ${input.payload.catalogPlanName}`,
+      ...(input.payload.customerName
+        ? { customerName: input.payload.customerName }
+        : {}),
       ...(input.payload.subscriberEmail
         ? { email: input.payload.subscriberEmail }
         : {}),
@@ -594,25 +704,23 @@ export async function finalizeSubscriptionActivation(
       previousPlanId: input.payload.previousPlanId ?? null,
       txHash: input.payload.txHash,
       source,
-      invoiceId: billingEvent.invoiceId,
+      invoiceId: invoice.id,
     }).catch((err) => {
       console.warn("[billing-recovery] Failed to deliver webhook:", err);
     });
   }
 
-  if (billingEvent.invoiceId) {
-    await sendPaidInvoiceReceipt({
-      teamId: input.teamId,
-      invoiceId: billingEvent.invoiceId,
-      txHash: input.payload.txHash,
-    }).catch((err) => {
-      console.warn("[billing-recovery] Failed to send invoice receipt:", err);
-    });
-  }
+  await sendPaidInvoiceReceipt({
+    teamId: input.teamId,
+    invoiceId: invoice.id,
+    txHash: input.payload.txHash,
+  }).catch((err) => {
+    console.warn("[billing-recovery] Failed to send invoice receipt:", err);
+  });
 
   return {
     subscriptionState,
-    invoiceId: billingEvent.invoiceId,
+    invoiceId: invoice.id,
     eventDeduped: billingEvent.deduped,
   };
 }

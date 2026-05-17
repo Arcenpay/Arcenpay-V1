@@ -201,6 +201,7 @@ export function getSupportDetails(
       input.profile?.billingEmail?.trim() ||
       input.profile?.contactEmail?.trim() ||
       null,
+    phone: input.profile?.supportPhone?.trim() || null,
     url:
       input.profile?.supportUrl?.trim() ||
       input.profile?.website?.trim() ||

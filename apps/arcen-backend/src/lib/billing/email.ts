@@ -203,7 +203,19 @@ type ReceiptEmailInput = {
   providerName: string;
   paymentMethod: string;
   supportEmail?: string | null;
+  supportPhone?: string | null;
   supportUrl?: string | null;
+  invoiceDownloadUrl?: string | null;
+  receiptDownloadUrl?: string | null;
+  subtotal: string;
+  taxTotal: string;
+  amountPaid: string;
+  lineItems: Array<{
+    description: string;
+    quantity: number;
+    unitAmount: string;
+    total: string;
+  }>;
   invoicePdf: {
     filename: string;
     contentBase64: string;
@@ -222,6 +234,54 @@ type CreditNoteEmailInput = {
   currency: string;
   reason: string;
 };
+
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function formatEmailDate(value?: string | null): string {
+  if (!value) {
+    return new Intl.DateTimeFormat("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    }).format(new Date());
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return new Intl.DateTimeFormat("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    }).format(new Date());
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  }).format(date);
+}
+
+function formatMoneyAmount(value: string): string {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return value;
+  const sign = numeric < 0 ? "-" : "";
+  return `${sign}${Math.abs(numeric).toFixed(2)}`;
+}
+
+function formatMoneyWithCurrency(value: string, currency: string): string {
+  const code = currency.trim().toUpperCase();
+  const amount = formatMoneyAmount(value);
+  if (code === "USD") return `${value.startsWith("-") ? "-" : ""}$${formatMoneyAmount(value).replace(/^-/, "")}`;
+  return `${amount} ${escapeHtml(code)}`;
+}
 
 /** Sends a credit note notification email to a subscriber/customer */
 export async function sendCreditNoteEmail(input: CreditNoteEmailInput): Promise<void> {
@@ -320,18 +380,79 @@ export async function sendInvoiceEmail(input: InvoiceEmailInput): Promise<void> 
 export async function sendPaymentReceiptEmail(
   input: ReceiptEmailInput,
 ): Promise<{ id?: string }> {
-  const paidAt = input.paidAt
-    ? new Date(input.paidAt).toLocaleDateString()
-    : new Date().toLocaleDateString();
+  const paidAt = formatEmailDate(input.paidAt);
+  const totalLabel = formatMoneyWithCurrency(input.total, input.currency);
+  const subtotalLabel = formatMoneyWithCurrency(input.subtotal, input.currency);
+  const taxLabel = formatMoneyWithCurrency(input.taxTotal, input.currency);
+  const amountPaidLabel = formatMoneyWithCurrency(input.amountPaid, input.currency);
+  const encodedSupportEmail = input.supportEmail
+    ? encodeURIComponent(input.supportEmail)
+    : null;
+  const escapedProviderName = escapeHtml(input.providerName);
+  const escapedReceiptNumber = escapeHtml(input.receiptNumber);
+  const escapedInvoiceNumber = escapeHtml(input.invoiceNumber);
+  const escapedPaymentMethod = escapeHtml(input.paymentMethod);
+  const receiptLineItems = input.lineItems.length > 0
+    ? input.lineItems
+    : [
+        {
+          description: `Invoice ${input.invoiceNumber}`,
+          quantity: 1,
+          unitAmount: input.total,
+          total: input.total,
+        },
+      ];
+  const lineItemsHtml = receiptLineItems
+    .map((line) => {
+      const description = escapeHtml(line.description);
+      const quantity = escapeHtml(String(line.quantity));
+      const total = formatMoneyWithCurrency(line.total, input.currency);
+      const unitAmount = formatMoneyWithCurrency(line.unitAmount, input.currency);
+
+      return `
+        <tr>
+          <td style="padding:0 0 18px;vertical-align:top;">
+            <div style="font-size:15px;line-height:22px;font-weight:600;color:#1f2937;">${description}</div>
+            <div style="margin-top:4px;font-size:13px;line-height:20px;color:#6b7280;">Qty ${quantity} &middot; ${unitAmount}</div>
+          </td>
+          <td align="right" style="padding:0 0 18px;vertical-align:top;font-size:15px;line-height:22px;font-weight:600;color:#111827;white-space:nowrap;">
+            ${total}
+          </td>
+        </tr>`;
+    })
+    .join("");
+  const taxRow =
+    Number(input.taxTotal) > 0
+      ? `
+        <tr>
+          <td style="padding:16px 0 0;font-size:14px;line-height:22px;color:#6b7280;">Tax</td>
+          <td align="right" style="padding:16px 0 0;font-size:14px;line-height:22px;color:#111827;">${taxLabel}</td>
+        </tr>`
+      : "";
   const supportLine = input.supportUrl
-    ? `Questions? Visit <a href="${input.supportUrl}" style="color:#8b5cf6;text-decoration:none;">our support site</a>`
+    ? `Questions? Contact us at <a href="${input.supportUrl}" style="color:#635bff;text-decoration:none;font-weight:600;">support</a>${input.supportEmail ? ` or <a href="mailto:${encodedSupportEmail}" style="color:#635bff;text-decoration:none;font-weight:600;">${escapeHtml(input.supportEmail)}</a>` : ""}${input.supportPhone ? ` or call us at ${escapeHtml(input.supportPhone)}` : ""}.`
     : input.supportEmail
-      ? `Questions? Contact us at <a href="mailto:${input.supportEmail}" style="color:#8b5cf6;text-decoration:none;">${input.supportEmail}</a>`
-      : "Need help? Reply to this email and our team will take it from there.";
+      ? `Questions? Contact us at <a href="mailto:${encodedSupportEmail}" style="color:#635bff;text-decoration:none;font-weight:600;">${escapeHtml(input.supportEmail)}</a>${input.supportPhone ? ` or call us at ${escapeHtml(input.supportPhone)}` : ""}.`
+      : input.supportPhone
+        ? `Questions? Call us at ${escapeHtml(input.supportPhone)}.`
+        : "Need help? Reply to this email and our team will take it from there.";
+  const downloadActionsHtml = `
+            <tr>
+              <td style="padding:16px 0 0;font-size:14px;line-height:22px;color:#6b7280;">
+                ${input.invoiceDownloadUrl
+                  ? `<a href="${input.invoiceDownloadUrl}" style="color:#6b7280;text-decoration:none;font-weight:600;">Download invoice</a>`
+                  : `<span style="color:#9ca3af;">Invoice attached</span>`}
+              </td>
+              <td style="padding:16px 0 0 20px;font-size:14px;line-height:22px;color:#6b7280;">
+                ${input.receiptDownloadUrl
+                  ? `<a href="${input.receiptDownloadUrl}" style="color:#6b7280;text-decoration:none;font-weight:600;">Download receipt</a>`
+                  : `<span style="color:#9ca3af;">Receipt attached</span>`}
+              </td>
+            </tr>`;
 
   const result = await sendWithResend({
     to: input.to,
-    subject: `Receipt from ${input.providerName} for ${input.total} ${input.currency}`,
+    subject: `Your receipt from ${input.providerName} #${input.receiptNumber}`,
     html: `
 <!DOCTYPE html>
 <html lang="en">
@@ -340,47 +461,105 @@ export async function sendPaymentReceiptEmail(
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Receipt for ${input.invoiceNumber}</title>
 </head>
-<body style="margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="padding:32px 16px;">
+<body style="margin:0;padding:0;background:#000000;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#000000;padding:48px 16px 40px;">
     <tr><td align="center">
-      <table width="560" cellpadding="0" cellspacing="0"
-             style="background:#171717;border-radius:24px;padding:32px;color:#f5f5f5;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;">
+        <tr>
+          <td align="center" style="padding:0 0 22px;">
+            <table cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td style="width:24px;height:24px;border-radius:12px;background:#111827;color:#ffffff;font-size:13px;font-weight:700;text-align:center;line-height:24px;">A</td>
+                <td style="padding-left:10px;font-size:14px;line-height:24px;font-weight:600;color:#ffffff;">${escapedProviderName}</td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding-bottom:20px;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;border:1px solid #e5e7eb;border-radius:18px;">
+              <tr>
+                <td style="padding:30px 30px 24px;">
+                  <table width="100%" cellpadding="0" cellspacing="0">
+                    <tr>
+                      <td style="vertical-align:top;">
+                        <div style="font-size:13px;line-height:20px;font-weight:600;color:#6b7280;">Receipt from ${escapedProviderName}</div>
+                        <div style="margin-top:8px;font-size:42px;line-height:44px;font-weight:700;letter-spacing:-0.03em;color:#111827;">${totalLabel}</div>
+                        <div style="margin-top:10px;font-size:14px;line-height:22px;color:#6b7280;">Paid ${paidAt}</div>
+                      </td>
+                      <td align="right" style="vertical-align:top;padding-left:16px;">
+                        <table cellpadding="0" cellspacing="0" style="width:74px;height:74px;border:1px solid #e5e7eb;border-radius:10px;background:#fafafa;">
+                          <tr><td style="padding:10px 11px;vertical-align:top;">
+                            <div style="width:14px;height:6px;border-radius:3px;background:#d1d5db;"></div>
+                            <div style="width:7px;height:7px;border-radius:50%;background:#e5e7eb;margin-top:6px;"></div>
+                            <div style="width:40px;height:4px;border-radius:2px;background:#eceff3;margin-top:8px;"></div>
+                            <div style="width:34px;height:4px;border-radius:2px;background:#eceff3;margin-top:6px;"></div>
+                            <div style="width:42px;height:4px;border-radius:2px;background:#eceff3;margin-top:6px;"></div>
+                            <div style="width:30px;height:4px;border-radius:2px;background:#eceff3;margin-top:6px;"></div>
+                          </td></tr>
+                        </table>
+                      </td>
+                    </tr>
+                  </table>
+                  <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:20px;border-top:1px solid #eceff1;">
+                    ${downloadActionsHtml}
+                  </table>
+                  <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:20px;">
+                    <tr>
+                      <td style="padding:0 0 8px;font-size:14px;line-height:22px;color:#6b7280;">Receipt number</td>
+                      <td align="right" style="padding:0 0 8px;font-size:14px;line-height:22px;color:#111827;">${escapedReceiptNumber}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding:0 0 8px;font-size:14px;line-height:22px;color:#6b7280;">Invoice number</td>
+                      <td align="right" style="padding:0 0 8px;font-size:14px;line-height:22px;color:#111827;">${escapedInvoiceNumber}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding:0;font-size:14px;line-height:22px;color:#6b7280;">Payment method</td>
+                      <td align="right" style="padding:0;font-size:14px;line-height:22px;color:#111827;">${escapedPaymentMethod}</td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
         <tr><td>
-          <p style="margin:0 0 18px;font-size:14px;color:#a3a3a3;">Receipt from ${input.providerName}</p>
-          <h1 style="margin:0;font-size:40px;line-height:1.05;font-weight:700;color:#ffffff;">
-            ${input.total} ${input.currency}
-          </h1>
-          <p style="margin:12px 0 0;font-size:18px;color:#d4d4d8;">
-            Paid ${paidAt}
-          </p>
-
-          <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:26px;border-top:1px solid #2f2f2f;padding-top:18px;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;border:1px solid #e5e7eb;border-radius:18px;">
             <tr>
-              <td style="font-size:14px;color:#a3a3a3;padding:8px 0;">Receipt number</td>
-              <td align="right" style="font-size:15px;color:#ffffff;padding:8px 0;">${input.receiptNumber}</td>
-            </tr>
-            <tr>
-              <td style="font-size:14px;color:#a3a3a3;padding:8px 0;">Invoice number</td>
-              <td align="right" style="font-size:15px;color:#ffffff;padding:8px 0;">${input.invoiceNumber}</td>
-            </tr>
-            <tr>
-              <td style="font-size:14px;color:#a3a3a3;padding:8px 0;">Payment method</td>
-              <td align="right" style="font-size:15px;color:#ffffff;padding:8px 0;">${input.paymentMethod}</td>
-            </tr>
-          </table>
-
-          <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:28px;background:#202020;border-radius:18px;padding:18px 20px;">
-            <tr>
-              <td style="font-size:15px;line-height:1.6;color:#e4e4e7;">
-                Your invoice PDF and receipt PDF are attached to this email.
+              <td style="padding:30px;">
+                <div style="font-size:16px;line-height:24px;font-weight:700;color:#111827;">Receipt #${escapedReceiptNumber}</div>
+                <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:24px;">
+                  ${lineItemsHtml}
+                </table>
+                <table width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #eceff1;">
+                  <tr>
+                    <td style="padding:18px 0 0;font-size:14px;line-height:22px;font-weight:600;color:#111827;">Subtotal</td>
+                    <td align="right" style="padding:18px 0 0;font-size:14px;line-height:22px;font-weight:600;color:#111827;">${subtotalLabel}</td>
+                  </tr>
+                  ${taxRow}
+                  <tr>
+                    <td style="padding:16px 0 0;font-size:14px;line-height:22px;font-weight:700;color:#111827;">Total</td>
+                    <td align="right" style="padding:16px 0 0;font-size:14px;line-height:22px;font-weight:700;color:#111827;">${totalLabel}</td>
+                  </tr>
+                </table>
+                <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:18px;border-top:1px solid #eceff1;">
+                  <tr>
+                    <td style="padding:18px 0 0;font-size:15px;line-height:24px;font-weight:700;color:#111827;">Amount paid</td>
+                    <td align="right" style="padding:18px 0 0;font-size:15px;line-height:24px;font-weight:700;color:#111827;">${amountPaidLabel}</td>
+                  </tr>
+                </table>
+                <div style="margin-top:22px;padding-top:18px;border-top:1px solid #eceff1;font-size:14px;line-height:22px;color:#6b7280;">
+                  ${supportLine}
+                </div>
               </td>
             </tr>
           </table>
-
-          <p style="margin:24px 0 0;font-size:14px;line-height:1.6;color:#a1a1aa;">
-            ${supportLine}
-          </p>
         </td></tr>
+        <tr>
+          <td align="center" style="padding-top:24px;font-size:12px;line-height:18px;color:#8b8b93;">
+            Powered by <span style="font-weight:700;color:#ffffff;">ArcenPay</span> Billing
+          </td>
+        </tr>
       </table>
     </td></tr>
   </table>

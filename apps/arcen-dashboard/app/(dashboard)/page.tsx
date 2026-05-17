@@ -81,7 +81,12 @@ function isValidSection(section: string): section is Section {
 export default function Dashboard() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [activeSection, setActiveSection] = useState<Section>("overview");
+  const [activeSection, setActiveSection] = useState<Section>(() => {
+    const sectionFromUrl = searchParams.get("section");
+    return sectionFromUrl && isValidSection(sectionFromUrl)
+      ? sectionFromUrl
+      : "overview";
+  });
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
