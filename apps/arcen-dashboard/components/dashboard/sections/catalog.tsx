@@ -5279,7 +5279,7 @@ function ConfigurationTab() {
               <div>
                 <p className="text-sm font-medium text-foreground">Add plans</p>
                 <p className="text-xs text-muted-foreground">
-                  Published plans on {getChainLabel(configuredChainId)}
+                  Eligible published plans on {getChainLabel(configuredChainId)}
                 </p>
               </div>
               <Badge variant="outline">{availableLivePlans.length}</Badge>
@@ -5287,7 +5287,7 @@ function ConfigurationTab() {
             {!hasPublishedPlans ? (
               <p className="text-xs text-muted-foreground">Publish a plan first.</p>
             ) : availableLivePlans.length === 0 ? (
-              <p className="text-xs text-muted-foreground">All published plans are live.</p>
+              <p className="text-xs text-muted-foreground">All eligible published plans are live.</p>
             ) : (
               <div className="flex flex-wrap gap-2">
                 {availableLivePlans.map((plan) => (

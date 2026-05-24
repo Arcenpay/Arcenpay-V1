@@ -43,6 +43,9 @@ import {
   SubscriptionRegistryABI,
 } from "../sdk";
 import {
+  getCounterfactualSmartAccountAddress,
+  hasSmartAccountInfrastructure,
+  isUnsupportedEip7702AuthorizationError,
   sendSmartAccountTransaction,
 } from "../lib/smart-account";
 import type { SubscriptionCancellationIntent } from "../lib/subscription-lifecycle";
@@ -52,7 +55,9 @@ import {
   buildPlanChangeSuccessMessage,
 } from "../lib/subscription-lifecycle";
 import {
+  hasAnnualBillingOption,
   isCurrentBillingSelection,
+  matchesPlanBillingPeriod,
   resolveActiveBillingPeriod,
 } from "../lib/billing-period";
 import {
@@ -472,6 +477,7 @@ type PlanChangeConfirmation = {
   autopayConfigTxHash?: string;
   accessChangeTxHash?: string;
   paymentTxHash?: string;
+  prorationEffectiveAt?: string;
 };
 
 type CancellationConfirmation = {
@@ -488,9 +494,14 @@ type PlanChangeProrationSummary = {
   effectiveAt: string;
   totalPeriodSeconds: number;
   remainingSeconds: number;
-  remainingRatio: string;
+  remainingRatio: number;
   newPlanRemainingCharge: string;
   unusedOldPlanCredit: string;
+  amountDueBeforeCredits?: string;
+  availableBillingCredit?: string;
+  billingCreditApplied?: string;
+  remainingBillingCredit?: string;
+  creditCreated?: string;
   amountDue: string;
   amountPaid: string;
   amountRemaining: string;
@@ -533,21 +544,6 @@ type PortalAction =
   | { type: "PROCESSING_START" }
   | { type: "PROCESSING_DONE"; flashMsg?: string }
   | { type: "PROCESSING_ERR"; error: string };
-
-function isEnvEnabled(value: string | undefined, defaultValue = true): boolean {
-  const normalized = (value ?? "").trim().toLowerCase();
-  if (!normalized) return defaultValue;
-  if (["1", "true", "yes", "on"].includes(normalized)) return true;
-  if (["0", "false", "no", "off"].includes(normalized)) return false;
-  return defaultValue;
-}
-
-const PORTAL_SELF_SERVE_PLAN_CHANGES_ENABLED = isEnvEnabled(
-  process.env.NEXT_PUBLIC_ARCENPAY_ENABLE_PORTAL_PLAN_CHANGES,
-);
-const PORTAL_SELF_SERVE_CANCELLATION_ENABLED = isEnvEnabled(
-  process.env.NEXT_PUBLIC_ARCENPAY_ENABLE_PORTAL_CANCELLATION,
-);
 
 const initialState: PortalState = {
   data: null,
@@ -1946,16 +1942,6 @@ function getPlanDisplayPrice(
   return billingPeriod === "annual" && annual > 0 ? annual : monthly;
 }
 
-function matchesPlanBillingPeriod(
-  plan: ComponentPlanSummary | null | undefined,
-  billingPeriod: "monthly" | "annual",
-): boolean {
-  if (!plan) return false;
-  return billingPeriod === "annual"
-    ? plan.billingInterval >= 31_536_000
-    : plan.billingInterval < 31_536_000;
-}
-
 function findSiblingPlanForBillingPeriod(input: {
   plans: ComponentPlanSummary[];
   plan: ComponentPlanSummary | null | undefined;
@@ -2004,6 +1990,10 @@ function isUnsupportedOnChainAnnualSelection(
   if (!plan?.onChainPlanId || billingPeriod !== "annual") {
     return false;
   }
+
+  // Allow annual billing if the plan has an annualPrice configured
+  // OR if its native billingInterval is already annual.
+  if (hasAnnualBillingOption(plan)) return false;
 
   return typeof plan.billingInterval === "number"
     ? plan.billingInterval < 31_536_000
@@ -2135,6 +2125,27 @@ function getWalletConnectionErrorMessage(error: unknown): string {
   }
 
   return message;
+}
+
+function isUserRejectedWalletAction(error: unknown): boolean {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    Number((error as { code?: number | string }).code) === 4001
+  ) {
+    return true;
+  }
+
+  const message = error instanceof Error ? error.message.toLowerCase() : "";
+  if (!message) return false;
+
+  return (
+    message.includes("user rejected") ||
+    message.includes("user denied") ||
+    message.includes("transaction cancelled") ||
+    message.includes("wallet connection was cancelled")
+  );
 }
 
 async function requestWindowEthereumAccounts(
@@ -3698,11 +3709,13 @@ function PortalContent({
   };
 
   // Categorise elements by role
+  const plan = data.activePlan;
+  const isPaid = plan ? parseFloat(String(plan.price)) > 0 : false;
+  const price = plan ? parseFloat(String(plan.price)) : 0;
+
   const hasPlanManager = elements.some((e) => e.type === "planManager");
   const hasIncluded = elements.some((e) => e.type === "includedFeatures");
   const hasMetered = elements.some((e) => e.type === "meteredFeatures");
-  const hasUnsubscribe =
-    allowCancellation && elements.some((e) => e.type === "unsubscribe");
   const billingTypes = [
     "nextBillDue",
     "paymentMethod",
@@ -3711,13 +3724,16 @@ function PortalContent({
     "billing-history",
   ];
   const billingEls = elements.filter((e) => billingTypes.includes(e.type));
-  const customEls = elements.filter((e) =>
-    ["text", "button", "plansTable"].includes(e.type),
-  );
+  const hasLeftCard = hasPlanManager || hasIncluded || hasMetered;
+  const shouldRenderCardUnsubscribe = allowCancellation && isPaid && hasLeftCard;
+  const shouldRenderStandaloneUnsubscribe =
+    allowCancellation && isPaid && !hasLeftCard;
+  const customEls = elements.filter((e) => {
+    if (["text", "button", "plansTable"].includes(e.type)) return true;
+    if (e.type !== "unsubscribe") return false;
+    return shouldRenderStandaloneUnsubscribe;
+  });
 
-  const plan = data.activePlan;
-  const isPaid = plan ? parseFloat(String(plan.price)) > 0 : false;
-  const price = plan ? parseFloat(String(plan.price)) : 0;
   const scheduledCancellation = getScheduledCancellationTransition(data);
   const lifecycleBadge = getLifecycleBadge(data);
   const lifecycleNote = getLifecycleNote(data);
@@ -3737,7 +3753,6 @@ function PortalContent({
   //   - columns=1 → everything stacked
   //   - columns=2 → left (plan/features/usage) + right (billing), matches integrated layout
   //   - columns=3+ → plan card | features/usage | billing (each group separate)
-  const hasLeftCard = hasPlanManager || hasIncluded || hasMetered;
   const hasRightCol = billingEls.length > 0;
 
   const isNarrowPortal = containerWidth > 0 && containerWidth < 640;
@@ -4050,7 +4065,7 @@ function PortalContent({
                 allowCancellation,
               ),
             )}
-            {hasUnsubscribe && isPaid && !scheduledCancellation && (
+            {shouldRenderCardUnsubscribe && !scheduledCancellation && (
               <>
                 {divider}
                 <div style={{ padding: "14px 24px" }}>
@@ -4258,7 +4273,7 @@ function PortalContent({
                     </div>
                   </>
                 )}
-                {hasUnsubscribe && isPaid && !scheduledCancellation && (
+                {shouldRenderCardUnsubscribe && !scheduledCancellation && (
                   <>
                     {divider}
                     <div style={{ padding: "14px 24px" }}>
@@ -4539,7 +4554,7 @@ function PortalContent({
                 )}
 
                 {/* Unsubscribe link at bottom of left card */}
-                {hasUnsubscribe && isPaid && !scheduledCancellation && (
+                {shouldRenderCardUnsubscribe && !scheduledCancellation && (
                   <>
                     {divider}
                     <div style={{ padding: "14px 24px" }}>
@@ -4976,7 +4991,15 @@ function CheckoutContent({
             padding: 3,
           }}
         >
-          {(["monthly", "annual"] as const).map((period) => (
+          {(() => {
+            const hasAnnualVariant = data.plans.some((p) =>
+              hasAnnualBillingOption(p),
+            );
+            const periods = (["monthly", "annual"] as const).filter(
+              (p) => p === "monthly" || hasAnnualVariant,
+            );
+            return <>{
+              periods.map((period) => (
             <button
               key={period}
               onClick={() => onBillingPeriodChange(period)}
@@ -5024,7 +5047,8 @@ function CheckoutContent({
                 </span>
               )}
             </button>
-          ))}
+          ))}</>;
+          })()}
         </div>
       </div>
 
@@ -5849,7 +5873,7 @@ function PaymentContent({
   onActivationComplete,
   onBack,
   containerWidth,
-  zeroDevConfig,
+  smartAccountConfig,
 }: {
   data: ComponentRenderData;
   selectedPlanId: string | null;
@@ -5871,7 +5895,7 @@ function PaymentContent({
   }) => Promise<void> | void;
   onBack: () => void;
   containerWidth: number;
-  zeroDevConfig?: {
+  smartAccountConfig?: {
     provider?: "pimlico";
     bundlerUrl: string;
     paymasterUrl: string;
@@ -5935,7 +5959,14 @@ function PaymentContent({
       ? paymentMethod.walletAddress
       : null;
   const smartAccountAddress = serverSmartAccountAddress;
-  const zeroDevProjectId = undefined;
+  const hasSmartAccountInfra = Boolean(
+    chainId &&
+      hasSmartAccountInfrastructure({
+        chainId,
+        bundlerUrl: smartAccountConfig?.bundlerUrl,
+        paymasterUrl: smartAccountConfig?.paymasterUrl,
+      }),
+  );
   const selectedOnChainPlanId = selectedPlan?.onChainPlanId ?? null;
   const activeOnChainPlanId = activePlan?.onChainPlanId ?? null;
   const isCurrentPlanSelected = isCurrentBillingSelection({
@@ -5986,12 +6017,6 @@ function PaymentContent({
   const isNarrowPayment = containerWidth < 700;
   const finalAddress = address || localAddress;
   const finalConnected = isConnected || !!localAddress;
-  const requiresSmartAccountPlanChangeExecution = Boolean(
-    isOnChainPlanChange &&
-    smartAccountAddress &&
-    finalAddress &&
-    smartAccountAddress.toLowerCase() !== finalAddress.toLowerCase(),
-  );
   const resolvedWalletClient =
     wagmiWalletClient ??
     (chainId
@@ -6001,6 +6026,15 @@ function PaymentContent({
           provider: localProvider,
         })
       : null);
+  const resolvedWalletAddress =
+    resolvedWalletClient?.account?.address ?? finalAddress ?? null;
+  const requiresSmartAccountPlanChangeExecution = Boolean(
+    isOnChainPlanChange &&
+    smartAccountAddress &&
+    resolvedWalletAddress &&
+    smartAccountAddress.toLowerCase() !==
+      resolvedWalletAddress.toLowerCase(),
+  );
 
   async function connectWindowEthereum(walletKind?: WalletKind) {
     setTxError("");
@@ -6031,17 +6065,12 @@ function PaymentContent({
     const effectiveSmartAccountAddress =
       params.smartAccountAddressOverride ?? smartAccountAddress;
 
-    const requiresSmartAccountExecution = Boolean(
-      effectiveSmartAccountAddress &&
-      finalAddress &&
-      effectiveSmartAccountAddress.toLowerCase() !== finalAddress.toLowerCase(),
+    const prefersSponsoredExecution = Boolean(
+      effectiveSmartAccountAddress && hasSmartAccountInfra,
     );
 
-    if (requiresSmartAccountExecution) {
-      if (
-        (!zeroDevProjectId && !zeroDevConfig?.isReady) ||
-        !effectiveSmartAccountAddress
-      ) {
+    if (prefersSponsoredExecution) {
+      if (!effectiveSmartAccountAddress) {
         throw new Error(
           "Autopay setup requires additional configuration on this account.",
         );
@@ -6049,40 +6078,83 @@ function PaymentContent({
 
       await ensureWalletOnTargetChain(resolvedWalletClient, chainId);
 
-      return sendSmartAccountTransaction({
-        projectId: zeroDevProjectId,
-        bundlerUrl: zeroDevConfig?.bundlerUrl,
-        paymasterUrl: zeroDevConfig?.paymasterUrl,
-        chainId,
-        walletClient: resolvedWalletClient,
-        smartAccountAddress: effectiveSmartAccountAddress as `0x${string}`,
-        to: params.to,
-        data: params.data,
-      });
+      try {
+        return await sendSmartAccountTransaction({
+          bundlerUrl: smartAccountConfig?.bundlerUrl,
+          paymasterUrl: smartAccountConfig?.paymasterUrl,
+          chainId,
+          walletClient: resolvedWalletClient,
+          smartAccountAddress: effectiveSmartAccountAddress as `0x${string}`,
+          to: params.to,
+          data: params.data,
+        });
+      } catch (error) {
+        const canFallbackToDirectWalletExecution = Boolean(
+          effectiveSmartAccountAddress &&
+            resolvedWalletAddress &&
+            effectiveSmartAccountAddress.toLowerCase() ===
+              resolvedWalletAddress.toLowerCase() &&
+            isUnsupportedEip7702AuthorizationError(error),
+        );
+
+        if (!canFallbackToDirectWalletExecution) {
+          throw error;
+        }
+
+        return submitWalletTransaction({
+          chainId,
+          walletClient: resolvedWalletClient,
+          account: resolvedWalletAddress as `0x${string}`,
+          to: params.to,
+          data: params.data,
+        });
+      }
     }
 
-    if (!finalAddress) {
+    if (!resolvedWalletAddress) {
       throw new Error("Connect the customer wallet before continuing.");
     }
 
     return submitWalletTransaction({
       chainId,
       walletClient: resolvedWalletClient,
-      account: finalAddress as `0x${string}`,
+      account: resolvedWalletAddress as `0x${string}`,
       to: params.to,
       data: params.data,
     });
   }
 
   async function ensureBillingSmartAccount(): Promise<`0x${string}`> {
-    if (!chainId || !resolvedWalletClient || !finalAddress) {
+    if (!chainId || !resolvedWalletClient) {
       throw new Error(
         "A connected wallet on the target payment chain is required before activation.",
       );
     }
 
     await ensureWalletOnTargetChain(resolvedWalletClient, chainId);
-    return finalAddress as `0x${string}`;
+
+    if (
+      hasSmartAccountInfra &&
+      resolvedWalletAddress &&
+      isAddress(resolvedWalletAddress)
+    ) {
+      return resolvedWalletAddress as `0x${string}`;
+    }
+
+    if (smartAccountAddress && isAddress(smartAccountAddress)) {
+      return smartAccountAddress as `0x${string}`;
+    }
+
+    if (!hasSmartAccountInfra) {
+      throw new Error(
+        "Gas sponsorship is not configured for this chain yet. Configure Pimlico bundler and paymaster support before activating subscriptions.",
+      );
+    }
+
+    return getCounterfactualSmartAccountAddress(
+      resolvedWalletClient,
+      chainId,
+    );
   }
 
   async function requestHostedActivation(body: {
@@ -6279,13 +6351,7 @@ function PaymentContent({
           break;
         } catch (error) {
           installError = error;
-          const message =
-            error instanceof Error ? error.message.toLowerCase() : "";
-          if (
-            message.includes("rejected") ||
-            message.includes("denied") ||
-            message.includes("cancelled")
-          ) {
+          if (isUserRejectedWalletAction(error)) {
             throw error;
           }
 
@@ -6649,7 +6715,7 @@ function PaymentContent({
             : requiresResumeActivation
               ? "Subscription reactivation failed"
               : "Activation failed";
-        if (msg.includes("rejected") || msg.includes("denied")) {
+        if (isUserRejectedWalletAction(err)) {
           setTxError("Transaction cancelled");
         } else {
           setTxError(msg.slice(0, 160));
@@ -6674,9 +6740,7 @@ function PaymentContent({
 
     if (
       !resolvedWalletClient ||
-      (requiresSmartAccountPlanChangeExecution &&
-        !zeroDevProjectId &&
-        !zeroDevConfig?.isReady)
+      (requiresSmartAccountPlanChangeExecution && !hasSmartAccountInfra)
     ) {
       throw new Error("Connect your wallet before making plan changes.");
       return;
@@ -6781,11 +6845,12 @@ function PaymentContent({
         txHash: paymentTransferTxHash ?? autopayTxHash,
         autopayConfigTxHash: autopayTxHash,
         paymentTxHash: paymentTransferTxHash,
+        prorationEffectiveAt: preview?.effectiveAt,
       });
     } catch (err: unknown) {
       setTxStatus("error");
       const msg = err instanceof Error ? err.message : "Transaction failed";
-      if (msg.includes("rejected") || msg.includes("denied")) {
+      if (isUserRejectedWalletAction(err)) {
         setTxError("Transaction cancelled");
       } else {
         setTxError(msg.slice(0, 120));
@@ -6794,14 +6859,19 @@ function PaymentContent({
   }
 
   const needsWallet =
-    (isOnChainPlanChange || requiresHostedActivation) &&
+    (isOnChainPlanChange ||
+      requiresHostedActivation ||
+      requiresResumeActivation) &&
     (!finalConnected || !finalAddress);
   const needsWalletClient =
-    isOnChainPlanChange &&
+    (isOnChainPlanChange ||
+      requiresHostedActivation ||
+      requiresResumeActivation) &&
     (!resolvedWalletClient ||
-      (requiresSmartAccountPlanChangeExecution &&
-        !zeroDevProjectId &&
-        !zeroDevConfig?.isReady));
+      ((requiresSmartAccountPlanChangeExecution ||
+        requiresHostedActivation ||
+        requiresResumeActivation) &&
+        !hasSmartAccountInfra));
   const hasWindowEth =
     typeof window !== "undefined" &&
     !!(window as unknown as { ethereum?: unknown }).ethereum;
@@ -7131,7 +7201,7 @@ function PaymentContent({
                           color: tokens.textColor,
                         }}
                       >
-                        <span>Remaining charge</span>
+                        <span>Remaining charge on new plan</span>
                         <span>
                           {formatUsdFromDecimalString(
                             planChangePreview.newPlanRemainingCharge,
@@ -7147,13 +7217,54 @@ function PaymentContent({
                           color: tokens.textColor,
                         }}
                       >
-                        <span>Unused credit</span>
+                        <span>Unused value on current plan</span>
                         <span>
                           {formatUsdFromDecimalString(
                             planChangePreview.unusedOldPlanCredit,
                           )}
                         </span>
                       </div>
+                      {Number(planChangePreview.availableBillingCredit ?? 0) >
+                      0 ? (
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            fontSize: tokens.size - 1,
+                            marginBottom: 6,
+                            color: tokens.textColor,
+                          }}
+                        >
+                          <span>Existing wallet credit</span>
+                          <span>
+                            {formatUsdFromDecimalString(
+                              planChangePreview.availableBillingCredit ??
+                                "0.000000",
+                            )}
+                          </span>
+                        </div>
+                      ) : null}
+                      {Number(planChangePreview.billingCreditApplied ?? 0) >
+                      0 ? (
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            fontSize: tokens.size - 1,
+                            marginBottom: 6,
+                            color: tokens.textColor,
+                          }}
+                        >
+                          <span>Wallet credit applied</span>
+                          <span>
+                            -
+                            {formatUsdFromDecimalString(
+                              planChangePreview.billingCreditApplied ??
+                                "0.000000",
+                            )}
+                          </span>
+                        </div>
+                      ) : null}
                       <div
                         style={{
                           display: "flex",
@@ -7813,7 +7924,7 @@ function UnsubscribeContent({
   onConfirm,
   onBack,
   containerWidth,
-  zeroDevConfig,
+  smartAccountConfig,
 }: {
   data: ComponentRenderData;
   processing: boolean;
@@ -7821,7 +7932,7 @@ function UnsubscribeContent({
   onConfirm: (confirmation: CancellationConfirmation) => void;
   onBack: () => void;
   containerWidth: number;
-  zeroDevConfig?: {
+  smartAccountConfig?: {
     provider?: "pimlico";
     bundlerUrl: string;
     paymasterUrl: string;
@@ -7854,7 +7965,14 @@ function UnsubscribeContent({
     typeof paymentMethod?.walletAddress === "string"
       ? paymentMethod.walletAddress
       : null;
-  const zeroDevProjectId = undefined;
+  const hasSmartAccountInfra = Boolean(
+    chainId &&
+      hasSmartAccountInfrastructure({
+        chainId,
+        bundlerUrl: smartAccountConfig?.bundlerUrl,
+        paymasterUrl: smartAccountConfig?.paymasterUrl,
+      }),
+  );
   const finalAddress = address || localAddress;
   const finalConnected = isConnected || !!localAddress;
   const resolvedWalletClient =
@@ -7866,23 +7984,17 @@ function UnsubscribeContent({
           provider: localProvider,
         })
       : null);
+  const resolvedWalletAddress =
+    resolvedWalletClient?.account?.address ?? finalAddress ?? null;
   const requiresOnChainCancellation = Boolean(
     activePlan?.onChainPlanId && smartAccountAddress && price > 0,
   );
-  const requiresSmartAccountCancellationExecution = Boolean(
-    requiresOnChainCancellation &&
-    smartAccountAddress &&
-    finalAddress &&
-    smartAccountAddress.toLowerCase() !== finalAddress.toLowerCase(),
+  const prefersSponsoredCancellationExecution = Boolean(
+    requiresOnChainCancellation && smartAccountAddress && hasSmartAccountInfra,
   );
   const needsWallet =
     requiresOnChainCancellation && (!finalConnected || !finalAddress);
-  const needsWalletClient =
-    requiresOnChainCancellation &&
-    (!resolvedWalletClient ||
-      (requiresSmartAccountCancellationExecution &&
-        !zeroDevProjectId &&
-        !zeroDevConfig?.isReady));
+  const needsWalletClient = requiresOnChainCancellation && !resolvedWalletClient;
 
   async function connectWindowEthereum(walletKind?: WalletKind) {
     setTxError("");
@@ -7915,18 +8027,9 @@ function UnsubscribeContent({
       return;
     }
 
-    if (
-      !resolvedWalletClient ||
-      (requiresSmartAccountCancellationExecution &&
-        !zeroDevProjectId &&
-        !zeroDevConfig?.isReady)
-    ) {
+    if (!resolvedWalletClient) {
       setTxStatus("error");
-      setTxError(
-        requiresSmartAccountCancellationExecution
-          ? "A wallet client is required for on-chain cancellation."
-          : "A wallet client is required for on-chain cancellation.",
-      );
+      setTxError("A wallet client is required for on-chain cancellation.");
       return;
     }
 
@@ -7973,33 +8076,49 @@ function UnsubscribeContent({
       });
 
       let txHash: `0x${string}` | undefined;
-      if (requiresSmartAccountCancellationExecution) {
-        if (!zeroDevProjectId && !zeroDevConfig?.isReady) {
-          throw new Error(
-            "Subscription cancellation requires a connected wallet.",
+      if (prefersSponsoredCancellationExecution) {
+        try {
+          const result = await sendSmartAccountTransaction({
+            bundlerUrl: smartAccountConfig?.bundlerUrl,
+            paymasterUrl: smartAccountConfig?.paymasterUrl,
+            chainId,
+            walletClient: resolvedWalletClient,
+            smartAccountAddress: smartAccountAddress as `0x${string}`,
+            to: autopayAddress,
+            data: pauseData,
+          });
+          txHash = result.txHash;
+        } catch (error) {
+          const canFallbackToDirectWalletExecution = Boolean(
+            resolvedWalletAddress &&
+              smartAccountAddress &&
+              resolvedWalletAddress.toLowerCase() ===
+                smartAccountAddress.toLowerCase() &&
+              isUnsupportedEip7702AuthorizationError(error),
           );
-        }
 
-        const result = await sendSmartAccountTransaction({
-          projectId: zeroDevProjectId,
-          bundlerUrl: zeroDevConfig?.bundlerUrl,
-          paymasterUrl: zeroDevConfig?.paymasterUrl,
-          chainId,
-          walletClient: resolvedWalletClient,
-          smartAccountAddress: smartAccountAddress as `0x${string}`,
-          to: autopayAddress,
-          data: pauseData,
-        });
-        txHash = result.txHash;
+          if (!canFallbackToDirectWalletExecution) {
+            throw error;
+          }
+
+          const result = await submitWalletTransaction({
+            chainId,
+            walletClient: resolvedWalletClient,
+            account: resolvedWalletAddress as `0x${string}`,
+            to: autopayAddress,
+            data: pauseData,
+          });
+          txHash = result.txHash;
+        }
       } else {
-        if (!finalAddress) {
+        if (!resolvedWalletAddress) {
           throw new Error("Connect the customer wallet before continuing.");
         }
 
         const result = await submitWalletTransaction({
           chainId,
           walletClient: resolvedWalletClient,
-          account: finalAddress as `0x${string}`,
+          account: resolvedWalletAddress as `0x${string}`,
           to: autopayAddress,
           data: pauseData,
         });
@@ -8294,8 +8413,8 @@ function UnsubscribeContent({
               color: "#b91c1c",
               lineHeight: 1.5,
             }}
-          >
-            {requiresSmartAccountCancellationExecution
+        >
+            {prefersSponsoredCancellationExecution
               ? "This embed needs a wallet client and smart-account provider config to submit the smart-account autopay shutdown transaction."
               : "This embed needs a wallet client to submit the autopay shutdown transaction."}
           </div>
@@ -8681,9 +8800,7 @@ export function ArcenEmbed({
   // customer actually attempts the change, so the CTA should not disappear
   // because of a frontend env toggle.
   const allowPortalPlanChanges = true;
-  const allowPortalCancellation = mockData
-    ? true
-    : PORTAL_SELF_SERVE_CANCELLATION_ENABLED;
+  const allowPortalCancellation = true;
 
   // Try to read token and componentId from Provider context
   let providerToken: string | null = null;
@@ -8934,6 +9051,9 @@ export function ArcenEmbed({
             ...(confirmation?.paymentTxHash
               ? { paymentTxHash: confirmation.paymentTxHash }
               : {}),
+            ...(confirmation?.prorationEffectiveAt
+              ? { prorationEffectiveAt: confirmation.prorationEffectiveAt }
+              : {}),
           },
           planApiController.signal,
         );
@@ -9170,24 +9290,146 @@ export function ArcenEmbed({
 
   // Guard: loading — show skeleton first
   if (loading) {
+    const skeletonCard = (
+      <div
+        style={{
+          background: "#ffffff",
+          border: "1px solid #eef2f7",
+          borderRadius: 20,
+          padding: 24,
+          boxShadow: "0 16px 40px rgba(15, 23, 42, 0.05)",
+        }}
+      >
+        <div
+          style={{
+            width: 180,
+            height: 14,
+            background: "#f3f4f6",
+            borderRadius: 999,
+            marginBottom: 18,
+            animation: "pulse 1.5s infinite",
+          }}
+        />
+        <div
+          style={{
+            width: "100%",
+            height: 120,
+            background: "#f3f4f6",
+            borderRadius: 16,
+            animation: "pulse 1.5s infinite",
+          }}
+        />
+      </div>
+    );
+
     return (
       <div
         className={className}
-        style={{ fontFamily: "system-ui, sans-serif", padding: 24, ...style }}
+        style={{
+          fontFamily: "system-ui, sans-serif",
+          padding: 24,
+          minHeight: 1180,
+          background: "#ffffff",
+          ...style,
+        }}
       >
-        <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
-          {[1, 2].map((i) => (
+        <div
+          style={{
+            width: "100%",
+            maxWidth: 1480,
+            margin: "0 auto",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: 28,
+            }}
+          >
             <div
-              key={i}
               style={{
-                flex: 1,
-                height: 120,
+                width: 240,
+                height: 18,
                 background: "#f3f4f6",
-                borderRadius: 10,
+                borderRadius: 999,
                 animation: "pulse 1.5s infinite",
               }}
             />
-          ))}
+            <div
+              style={{
+                width: 90,
+                height: 18,
+                background: "#f3f4f6",
+                borderRadius: 999,
+                animation: "pulse 1.5s infinite",
+              }}
+            />
+          </div>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+              gap: 20,
+              marginBottom: 24,
+            }}
+          >
+            {[1, 2, 3].map((i) => (
+              <div
+                key={i}
+                style={{
+                  background: "#ffffff",
+                  border: "1px solid #eef2f7",
+                  borderRadius: 24,
+                  padding: 24,
+                  boxShadow: "0 16px 40px rgba(15, 23, 42, 0.05)",
+                }}
+              >
+                <div
+                  style={{
+                    width: 140,
+                    height: 16,
+                    background: "#f3f4f6",
+                    borderRadius: 999,
+                    marginBottom: 12,
+                    animation: "pulse 1.5s infinite",
+                  }}
+                />
+                <div
+                  style={{
+                    width: 90,
+                    height: 12,
+                    background: "#f3f4f6",
+                    borderRadius: 999,
+                    marginBottom: 28,
+                    animation: "pulse 1.5s infinite",
+                  }}
+                />
+                <div
+                  style={{
+                    width: "100%",
+                    height: 46,
+                    background: "#f3f4f6",
+                    borderRadius: 14,
+                    animation: "pulse 1.5s infinite",
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+
+          <div
+            style={{
+              display: "grid",
+              gap: 20,
+            }}
+          >
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i}>{skeletonCard}</div>
+            ))}
+          </div>
         </div>
         <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} } @keyframes arcenSpin { to { transform: rotate(360deg) } }`}</style>
       </div>
@@ -9435,7 +9677,15 @@ export function ArcenEmbed({
                   selectedBillingPeriod: billingPeriod,
                 });
                 if (targetId && hasBillingSelectionChange) {
-                  handleSwitchPlan(targetId);
+                  const targetPlan = data.plans.find((p) => p.id === targetId);
+                  const targetPrice = parseFloat(String(targetPlan?.price ?? "0"));
+                  const currentPrice = parseFloat(String(data.activePlan?.price ?? "0"));
+                  // Free plan → must use cancellation flow, not plan-change
+                  if (targetPrice <= 0 && currentPrice > 0 && allowPortalCancellation) {
+                    dispatch({ type: "OPEN_UNSUBSCRIBE" });
+                  } else {
+                    handleSwitchPlan(targetId);
+                  }
                 } else {
                   dispatch({ type: "GOTO_PORTAL" });
                 }
@@ -9457,7 +9707,7 @@ export function ArcenEmbed({
               customerName={customerName}
               customerEmail={customerEmail}
               containerWidth={effectiveContainerWidth}
-              zeroDevConfig={providerSmartAccount}
+              smartAccountConfig={providerSmartAccount}
               onCustomerNameChange={setCustomerName}
               onCustomerEmailChange={setCustomerEmail}
               onConfirm={(txHash) => {
@@ -9475,7 +9725,7 @@ export function ArcenEmbed({
               processing={processing}
               tokens={tokens}
               containerWidth={effectiveContainerWidth}
-              zeroDevConfig={providerSmartAccount}
+              smartAccountConfig={providerSmartAccount}
               onConfirm={(confirmation) => handleUnsubscribe(confirmation)}
               onBack={() => dispatch({ type: "GOTO_PORTAL" })}
             />
@@ -9570,7 +9820,7 @@ export function ArcenEmbed({
                   customerName={customerName}
                   customerEmail={customerEmail}
                   containerWidth={effectiveContainerWidth}
-                  zeroDevConfig={providerSmartAccount}
+                  smartAccountConfig={providerSmartAccount}
                   onCustomerNameChange={setCustomerName}
                   onCustomerEmailChange={setCustomerEmail}
                   onConfirm={(txHash) => {
@@ -9588,7 +9838,7 @@ export function ArcenEmbed({
                   processing={processing}
                   tokens={tokens}
                   containerWidth={effectiveContainerWidth}
-                  zeroDevConfig={providerSmartAccount}
+                  smartAccountConfig={providerSmartAccount}
                   onConfirm={(confirmation) => handleUnsubscribe(confirmation)}
                   onBack={() => dispatch({ type: "GOTO_PORTAL" })}
                 />

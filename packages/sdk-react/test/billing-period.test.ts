@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   deriveBillingPeriodFromPlan,
+  hasAnnualBillingOption,
   isCurrentBillingSelection,
+  matchesPlanBillingPeriod,
   normalizeBillingPeriod,
   resolveActiveBillingPeriod,
 } from "../src/lib/billing-period";
@@ -35,5 +37,31 @@ describe("billing period helpers", () => {
         selectedBillingPeriod: "annual",
       }),
     ).toBe(false);
+  });
+
+  it("treats string annualPrice as a valid annual option", () => {
+    const monthlyPlanWithAnnualPrice = {
+      billingInterval: 2_592_000,
+      annualPrice: "99.000000",
+    } as const;
+
+    expect(hasAnnualBillingOption(monthlyPlanWithAnnualPrice)).toBe(true);
+    expect(
+      matchesPlanBillingPeriod(monthlyPlanWithAnnualPrice, "annual"),
+    ).toBe(true);
+    expect(
+      matchesPlanBillingPeriod(monthlyPlanWithAnnualPrice, "monthly"),
+    ).toBe(true);
+  });
+
+  it("does not treat monthly plans without annual pricing as annual-capable", () => {
+    const monthlyOnlyPlan = {
+      billingInterval: 2_592_000,
+      annualPrice: null,
+    } as const;
+
+    expect(hasAnnualBillingOption(monthlyOnlyPlan)).toBe(false);
+    expect(matchesPlanBillingPeriod(monthlyOnlyPlan, "annual")).toBe(false);
+    expect(matchesPlanBillingPeriod(monthlyOnlyPlan, "monthly")).toBe(true);
   });
 });

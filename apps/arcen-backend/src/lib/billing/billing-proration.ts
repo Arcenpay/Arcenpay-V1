@@ -22,6 +22,19 @@ export interface ProrationQuote {
   deltaMicros: bigint;
 }
 
+export interface ProrationSettlement {
+  quote: ProrationQuote;
+  unusedOldPlanCreditMicros: bigint;
+  newPlanRemainingChargeMicros: bigint;
+  amountDueBeforeCreditsMicros: bigint;
+  availableBillingCreditMicros: bigint;
+  billingCreditAppliedMicros: bigint;
+  amountDueMicros: bigint;
+  creditCreatedMicros: bigint;
+  remainingBillingCreditMicros: bigint;
+  totalCreditBalanceMicros: bigint;
+}
+
 function clampNonNegative(value: number): number {
   return Number.isFinite(value) && value > 0 ? value : 0;
 }
@@ -69,5 +82,49 @@ export function computeProrationQuote(
     currentRemainingMicros,
     targetRemainingMicros,
     deltaMicros,
+  };
+}
+
+export function computeProrationSettlement(input: {
+  currentAmountMicros: bigint;
+  targetAmountMicros: bigint;
+  currentPeriodStart: Date;
+  currentPeriodEnd: Date;
+  effectiveAt?: Date;
+  availableBillingCreditMicros?: bigint;
+}): ProrationSettlement {
+  const quote = computeProrationQuote(input);
+  const unusedOldPlanCreditMicros = quote.currentRemainingMicros;
+  const newPlanRemainingChargeMicros = quote.targetRemainingMicros;
+  const amountDueBeforeCreditsMicros = quote.deltaMicros > 0n ? quote.deltaMicros : 0n;
+  const creditCreatedMicros = quote.deltaMicros < 0n ? -quote.deltaMicros : 0n;
+  const availableBillingCreditMicros =
+    input.availableBillingCreditMicros && input.availableBillingCreditMicros > 0n
+      ? input.availableBillingCreditMicros
+      : 0n;
+  const billingCreditAppliedMicros =
+    amountDueBeforeCreditsMicros > 0n
+      ? amountDueBeforeCreditsMicros < availableBillingCreditMicros
+        ? amountDueBeforeCreditsMicros
+        : availableBillingCreditMicros
+      : 0n;
+  const amountDueMicros =
+    amountDueBeforeCreditsMicros - billingCreditAppliedMicros;
+  const remainingBillingCreditMicros =
+    availableBillingCreditMicros - billingCreditAppliedMicros;
+  const totalCreditBalanceMicros =
+    remainingBillingCreditMicros + creditCreatedMicros;
+
+  return {
+    quote,
+    unusedOldPlanCreditMicros,
+    newPlanRemainingChargeMicros,
+    amountDueBeforeCreditsMicros,
+    availableBillingCreditMicros,
+    billingCreditAppliedMicros,
+    amountDueMicros,
+    creditCreatedMicros,
+    remainingBillingCreditMicros,
+    totalCreditBalanceMicros,
   };
 }

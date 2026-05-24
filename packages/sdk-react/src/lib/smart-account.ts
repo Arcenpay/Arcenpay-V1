@@ -1,6 +1,7 @@
 export {
   deploySmartAccount,
   getCounterfactualSmartAccountAddress,
+  hasSmartAccountInfrastructure,
   isPrefundError,
   isRecoverableSmartAccountFundingError,
   isSmartAccountInfrastructureError,

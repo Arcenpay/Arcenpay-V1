@@ -7,16 +7,22 @@
 import {
   prepareUserOperation,
 } from "viem/account-abstraction";
-import { toKernelSmartAccount } from "permissionless/accounts";
+import {
+  toKernelSmartAccount,
+  to7702KernelSmartAccount,
+} from "permissionless/accounts";
 import { createSmartAccountClient } from "permissionless/clients";
 import { createPimlicoClient } from "permissionless/clients/pimlico";
 import {
   createPublicClient,
   http,
+  parseSignature,
   type WalletClient,
   type PublicClient,
+  type Account,
   encodeFunctionData,
 } from "viem";
+import { hashAuthorization } from "viem/utils";
 import { sepolia, baseSepolia, base } from "viem/chains";
 import {
   getContractAddresses,
@@ -72,6 +78,21 @@ function resolveSmartAccountUrls(params: {
     };
   }
 
+  const specificBundlerRpc =
+    process.env[`NEXT_PUBLIC_BUNDLER_RPC_URL_${params.chainId}`] ||
+    process.env[`NEXT_PUBLIC_PIMLICO_BUNDLER_RPC_URL_${params.chainId}`];
+  const genericBundlerRpc =
+    process.env.NEXT_PUBLIC_BUNDLER_RPC_URL ||
+    process.env.NEXT_PUBLIC_PIMLICO_BUNDLER_RPC_URL;
+  const specificPaymasterRpc =
+    process.env[`NEXT_PUBLIC_PAYMASTER_RPC_URL_${params.chainId}`] ||
+    process.env[`NEXT_PUBLIC_PIMLICO_PAYMASTER_RPC_URL_${params.chainId}`];
+  const genericPaymasterRpc =
+    process.env.NEXT_PUBLIC_PAYMASTER_RPC_URL ||
+    process.env.NEXT_PUBLIC_PIMLICO_PAYMASTER_RPC_URL;
+  const specificPimlicoRpcUrl =
+    process.env[`NEXT_PUBLIC_PIMLICO_RPC_URL_${params.chainId}`];
+  const genericPimlicoRpcUrl = process.env.NEXT_PUBLIC_PIMLICO_RPC_URL;
   const specificPimlicoRpc =
     process.env[`NEXT_PUBLIC_PIMLICO_RPC_${params.chainId}`];
   const genericPimlicoRpc = process.env.NEXT_PUBLIC_PIMLICO_RPC;
@@ -87,6 +108,12 @@ function resolveSmartAccountUrls(params: {
   const hasConfiguredUrls = !!(
     params.bundlerUrl ||
     params.paymasterUrl ||
+    specificBundlerRpc ||
+    genericBundlerRpc ||
+    specificPaymasterRpc ||
+    genericPaymasterRpc ||
+    specificPimlicoRpcUrl ||
+    genericPimlicoRpcUrl ||
     specificPimlicoRpc ||
     genericPimlicoRpc ||
     specificPimlicoApiKey ||
@@ -96,16 +123,33 @@ function resolveSmartAccountUrls(params: {
   return {
     bundlerUrl:
       params.bundlerUrl ||
+      specificBundlerRpc ||
+      genericBundlerRpc ||
+      specificPimlicoRpcUrl ||
+      genericPimlicoRpcUrl ||
       specificPimlicoRpc ||
       genericPimlicoRpc ||
       defaultPimlicoV2,
     paymasterUrl:
       params.paymasterUrl ||
+      specificPaymasterRpc ||
+      genericPaymasterRpc ||
+      specificPimlicoRpcUrl ||
+      genericPimlicoRpcUrl ||
       specificPimlicoRpc ||
       genericPimlicoRpc ||
       defaultPimlicoV2,
     hasConfiguredUrls,
   };
+}
+
+export function hasSmartAccountInfrastructure(input: {
+  projectId?: string;
+  chainId: number;
+  bundlerUrl?: string;
+  paymasterUrl?: string;
+}): boolean {
+  return resolveSmartAccountUrls(input).hasConfiguredUrls;
 }
 
 function resolveSmartAccountHeaders(_params: {
@@ -180,6 +224,15 @@ function normalizeSmartAccountError(
     );
   }
 
+  if (
+    message.includes("Invalid EIP-7702 authorization") ||
+    message.toLowerCase().includes("recovered signer address does not match")
+  ) {
+    return new Error(
+      `${providerName} rejected the sponsored ${chainLabel} request because the wallet signer address does not match the payment account sender for EIP-7702 gas sponsorship. Reconnect the same wallet that owns the subscription payment account and retry. Bundler URL: ${params.bundlerUrl ?? "n/a"}. Paymaster URL: ${params.paymasterUrl ?? "n/a"}. Original error: ${message}`,
+    );
+  }
+
   if (isSmartAccountInitCodeError(error)) {
     return new Error(
       `${providerName} could not simulate the smart-account deployment on ${chainLabel} (chain ${params.chainId}). The initCode reverted during gas estimation, which usually means the Kernel factory or EntryPoint is missing, underfunded, or incompatible for this chain. Bundler URL: ${params.bundlerUrl ?? "n/a"}. Paymaster URL: ${params.paymasterUrl ?? "n/a"}. Original error: ${message}`,
@@ -189,10 +242,12 @@ function normalizeSmartAccountError(
   if (
     message.includes("401") ||
     message.toLowerCase().includes("unauthorized") ||
-    message.toLowerCase().includes("forbidden")
+    message.toLowerCase().includes("forbidden") ||
+    message.toLowerCase().includes("invalid api key") ||
+    message.toLowerCase().includes("invalid key")
   ) {
     return new Error(
-      `Pimlico rejected the request credentials for ${chainLabel}. Set NEXT_PUBLIC_PIMLICO_API_KEY${params.chainId ? ` or NEXT_PUBLIC_PIMLICO_API_KEY_${params.chainId}` : ""} in the dashboard environment and retry.`,
+      `Pimlico rejected the gas-sponsorship credentials for ${chainLabel}. Customer funds still come from the user's wallet; Pimlico is only sponsoring gas. Configure PIMLICO_API_KEY${params.chainId ? ` or PIMLICO_API_KEY_${params.chainId}` : ""} on the backend, or provide a full Pimlico RPC URL via PIMLICO_RPC_${params.chainId} / PIMLICO_RPC_URL_${params.chainId}, or NEXT_PUBLIC_PIMLICO_API_KEY${params.chainId ? ` / NEXT_PUBLIC_PIMLICO_API_KEY_${params.chainId}` : ""} in the dashboard environment, then retry.`,
     );
   }
 
@@ -231,6 +286,27 @@ async function requestHostedPaymasterData(params: {
   return sponsorship;
 }
 
+async function assertHostedSmartAccountProviderReady(params: {
+  pimlicoClient: ReturnType<typeof createPimlicoClient>;
+  projectId?: string;
+  chainId: number;
+  bundlerUrl: string;
+  paymasterUrl: string;
+  hasConfiguredUrls?: boolean;
+}) {
+  try {
+    await (params.pimlicoClient as any).getUserOperationGasPrice();
+  } catch (error) {
+    throw normalizeSmartAccountError(error, {
+      projectId: params.projectId,
+      chainId: params.chainId,
+      bundlerUrl: params.bundlerUrl,
+      paymasterUrl: params.paymasterUrl,
+      hasConfiguredUrls: params.hasConfiguredUrls,
+    });
+  }
+}
+
 export function isRecoverableSmartAccountFundingError(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error ?? "");
   const lower = message.toLowerCase();
@@ -263,6 +339,21 @@ export function isSmartAccountInfrastructureError(error: unknown): boolean {
   );
 }
 
+export function isUnsupportedEip7702AuthorizationError(
+  error: unknown,
+): boolean {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  const lower = message.toLowerCase();
+
+  return (
+    lower.includes("could not sign the eip-7702 gas-sponsorship authorization") ||
+    lower.includes("wallet_signauthorization") ||
+    lower.includes("does not support json-rpc accounts") ||
+    lower.includes("wallet returned an unsupported") ||
+    lower.includes("user rejected")
+  );
+}
+
 function isAlreadyDeployedSmartAccountError(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error ?? "");
   const lower = message.toLowerCase();
@@ -278,6 +369,7 @@ async function createKernelAccountForWallet(params: {
   walletClient: WalletClient;
   chainId: number;
   publicClient?: PublicClient;
+  smartAccountAddress?: `0x${string}`;
 }) {
   const chain = CHAIN_MAP[params.chainId] || baseSepolia;
   const kernelConfig = resolveSmartAccountKernelConfig(params.chainId);
@@ -291,6 +383,29 @@ async function createKernelAccountForWallet(params: {
       chain,
       transport: http(),
     }) as PublicClient);
+
+  const connectedWalletAddress = params.walletClient.account?.address;
+  const use7702SponsoredExecution = Boolean(
+    kernelConfig.entryPointVersion === "0.7" &&
+      connectedWalletAddress &&
+      params.smartAccountAddress &&
+      connectedWalletAddress.toLowerCase() ===
+        params.smartAccountAddress.toLowerCase(),
+  );
+
+  if (use7702SponsoredExecution) {
+    const kernelAccount = await to7702KernelSmartAccount({
+      client: publicClient,
+      owner: params.walletClient as any,
+      entryPoint: entryPoint as any,
+    });
+
+    return {
+      publicClient,
+      kernelAccount,
+      sponsoredMode: "eip7702" as const,
+    };
+  }
 
   const kernelAccount = await toKernelSmartAccount({
     client: publicClient,
@@ -314,7 +429,11 @@ async function createKernelAccountForWallet(params: {
       : {}),
   });
 
-  return { publicClient, kernelAccount };
+  return {
+    publicClient,
+    kernelAccount,
+    sponsoredMode: "counterfactual" as const,
+  };
 }
 
 export async function getCounterfactualSmartAccountAddress(
@@ -402,6 +521,7 @@ async function createKernelExecutionContext(config: {
   projectId?: string;
   chainId: number;
   walletClient: WalletClient;
+  smartAccountAddress?: `0x${string}`;
   bundlerUrl?: string;
   paymasterUrl?: string;
   forceDeployed?: boolean;
@@ -429,13 +549,14 @@ async function createKernelExecutionContext(config: {
     transport: http(),
   }) as PublicClient;
 
-  const { kernelAccount } = await createKernelAccountForWallet({
+  const { kernelAccount, sponsoredMode } = await createKernelAccountForWallet({
     walletClient: config.walletClient,
     chainId: config.chainId,
     publicClient,
+    smartAccountAddress: config.smartAccountAddress,
   });
 
-  if (config.forceDeployed) {
+  if (config.forceDeployed && sponsoredMode !== "eip7702") {
     (kernelAccount as any).isDeployed = async () => true;
     (kernelAccount as any).getFactoryArgs = async () => ({
       factory: undefined,
@@ -452,6 +573,15 @@ async function createKernelExecutionContext(config: {
         : undefined,
     ),
     entryPoint: entryPoint as any,
+  });
+
+  await assertHostedSmartAccountProviderReady({
+    pimlicoClient,
+    projectId: config.projectId,
+    chainId: config.chainId,
+    bundlerUrl,
+    paymasterUrl,
+    hasConfiguredUrls,
   });
 
   const kernelClient = createSmartAccountClient({
@@ -520,13 +650,160 @@ async function createKernelExecutionContext(config: {
     bundlerUrl,
     paymasterUrl,
     hasConfiguredUrls,
+    sponsoredMode,
   };
+}
+
+async function buildEip7702Authorization(params: {
+  walletClient: WalletClient;
+  publicClient: PublicClient;
+  chainId: number;
+  sender: `0x${string}`;
+  implementation: `0x${string}`;
+}): Promise<{
+  address: `0x${string}`;
+  chainId: number;
+  nonce: number;
+  r: `0x${string}`;
+  s: `0x${string}`;
+  yParity: number;
+}> {
+  const authorizationNonce = await params.publicClient.getTransactionCount({
+    address: params.sender,
+    blockTag: "pending",
+  });
+  const authorizationRequest = {
+    address: params.implementation,
+    chainId: params.chainId,
+    nonce: authorizationNonce,
+  };
+  const account = params.walletClient.account as
+    | (Account & {
+        signAuthorization?: (input: {
+          address: `0x${string}`;
+          chainId: number;
+          nonce: number;
+        }) => Promise<{
+          address: `0x${string}`;
+          chainId: number;
+          nonce: number;
+          r: `0x${string}`;
+          s: `0x${string}`;
+          yParity: number;
+        }>;
+      })
+    | undefined;
+
+  if (account?.type === "local" && typeof account.signAuthorization === "function") {
+    return account.signAuthorization(authorizationRequest);
+  }
+
+  function isSignedAuthorizationObject(value: unknown): value is {
+    address: `0x${string}`;
+    chainId: number;
+    nonce: number;
+    r: `0x${string}`;
+    s: `0x${string}`;
+    yParity: number;
+  } {
+    if (!value || typeof value !== "object") return false;
+    const candidate = value as Record<string, unknown>;
+    return (
+      typeof candidate.address === "string" &&
+      typeof candidate.chainId === "number" &&
+      typeof candidate.nonce === "number" &&
+      typeof candidate.r === "string" &&
+      typeof candidate.s === "string" &&
+      typeof candidate.yParity === "number"
+    );
+  }
+
+  async function tryWalletRpcAuthorization(method: string, paramsList: unknown[]) {
+    const result = await (params.walletClient as any).request({
+      method,
+      params: paramsList,
+    });
+
+    if (typeof result === "string") {
+      const parsed = parseSignature(result as `0x${string}`);
+      return {
+        ...authorizationRequest,
+        r: parsed.r,
+        s: parsed.s,
+        yParity: parsed.yParity,
+      };
+    }
+
+    if (isSignedAuthorizationObject(result)) {
+      return result;
+    }
+
+    throw new Error(
+      `Wallet returned an unsupported ${method} authorization response shape.`,
+    );
+  }
+
+  const signingFailures: string[] = [];
+
+  const signingAttempts: Array<() => Promise<{
+    address: `0x${string}`;
+    chainId: number;
+    nonce: number;
+    r: `0x${string}`;
+    s: `0x${string}`;
+    yParity: number;
+  }>> = [
+    () =>
+      tryWalletRpcAuthorization("wallet_signAuthorization", [
+        authorizationRequest,
+      ]),
+    () =>
+      tryWalletRpcAuthorization("wallet_signAuthorization", [
+        {
+          account: params.sender,
+          ...authorizationRequest,
+        },
+      ]),
+    async () => {
+      const signed = (await (params.walletClient as any).request({
+        method: "eth_sign",
+        params: [params.sender, hashAuthorization(authorizationRequest)],
+      })) as `0x${string}`;
+      const parsed = parseSignature(signed);
+
+      return {
+        ...authorizationRequest,
+        r: parsed.r,
+        s: parsed.s,
+        yParity: parsed.yParity,
+      };
+    },
+  ];
+
+  for (const attempt of signingAttempts) {
+    try {
+      return await attempt();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error ?? "");
+      signingFailures.push(message);
+    }
+  }
+
+  try {
+    throw new Error(signingFailures.filter(Boolean).join(" | "));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error ?? "");
+    throw new Error(
+      `This wallet could not sign the EIP-7702 gas-sponsorship authorization for ${getSmartAccountChainLabel(params.chainId)}. Customer funds still come from the user's wallet, but EOA-owned sponsored execution needs a wallet-exposed authorization signer before the Pimlico user operation can be sent. This wallet either does not expose that signer to the dapp, or it rejected the request. Original error: ${message}`,
+    );
+  }
 }
 
 async function deployKernelAccountIfNeeded(config: {
   projectId?: string;
   chainId: number;
   walletClient: WalletClient;
+  smartAccountAddress?: `0x${string}`;
   bundlerUrl?: string;
   paymasterUrl?: string;
 }): Promise<SmartAccountResult> {
@@ -629,6 +906,7 @@ export async function revokeAutopayModule(
     projectId: config.projectId,
     chainId: config.chainId,
     walletClient: config.walletClient,
+    smartAccountAddress: config.smartAccountAddress,
     bundlerUrl,
     paymasterUrl,
   });
@@ -686,10 +964,12 @@ export async function sendSmartAccountTransaction(
       bundlerUrl,
       paymasterUrl,
       hasConfiguredUrls,
+      sponsoredMode,
     } = await createKernelExecutionContext({
       projectId: config.projectId,
       chainId: config.chainId,
       walletClient: config.walletClient,
+      smartAccountAddress: config.smartAccountAddress,
       bundlerUrl: config.bundlerUrl,
       paymasterUrl: config.paymasterUrl,
       forceDeployed,
@@ -706,10 +986,22 @@ export async function sendSmartAccountTransaction(
     }
 
     try {
+      const requiresEip7702Authorization =
+        sponsoredMode === "eip7702" && !(await (kernelAccount as any).isDeployed());
+      const authorization = requiresEip7702Authorization
+        ? await buildEip7702Authorization({
+            walletClient: config.walletClient,
+            publicClient,
+            chainId: config.chainId,
+            sender: kernelAccount.address,
+            implementation: (kernelAccount as any).implementation as `0x${string}`,
+          })
+        : undefined;
       const txHash = await (kernelClient as any).sendTransaction({
         to: config.to,
         data: config.data,
         value: config.value ?? 0n,
+        authorization,
       });
 
       await publicClient.waitForTransactionReceipt({ hash: txHash });
@@ -732,11 +1024,19 @@ export async function sendSmartAccountTransaction(
   try {
     return await execute(false);
   } catch (error) {
-    if (isSmartAccountInitCodeError(error)) {
+    const uses7702SponsoredExecution = Boolean(
+      config.smartAccountAddress &&
+        config.walletClient.account?.address &&
+        config.walletClient.account.address.toLowerCase() ===
+          config.smartAccountAddress.toLowerCase(),
+    );
+
+    if (isSmartAccountInitCodeError(error) && !uses7702SponsoredExecution) {
       await deployKernelAccountIfNeeded({
         projectId: config.projectId,
         chainId: config.chainId,
         walletClient: config.walletClient,
+        smartAccountAddress: config.smartAccountAddress,
         bundlerUrl: config.bundlerUrl,
         paymasterUrl: config.paymasterUrl,
       });

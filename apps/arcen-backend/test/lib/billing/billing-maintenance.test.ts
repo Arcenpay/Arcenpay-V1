@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
-vi.mock("../../db.js", () => ({
+vi.mock("../../../src/db.js", () => ({
   db: {
     subscriptionState: {
       findMany: vi.fn(),
@@ -66,11 +66,11 @@ vi.mock("../../db.js", () => ({
   },
 }));
 
-vi.mock("../webhooks/deliver-webhook.js", () => ({
+vi.mock("../../../src/lib/webhooks/deliver-webhook.js", () => ({
   deliverWebhook: vi.fn(() => Promise.resolve()),
 }));
 
-vi.mock("./billing-reconciliation.js", () => ({
+vi.mock("../../../src/lib/billing/billing-reconciliation.js", () => ({
   getBillingReconciliationSummary: vi.fn(() =>
     Promise.resolve({
       active: 0,
@@ -81,7 +81,7 @@ vi.mock("./billing-reconciliation.js", () => ({
   ),
 }));
 
-vi.mock("./billing-dunning.js", () => ({
+vi.mock("../../../src/lib/billing/billing-dunning.js", () => ({
   runBillingDunningSweep: vi.fn(() =>
     Promise.resolve({
       scanned: 0,
@@ -92,7 +92,7 @@ vi.mock("./billing-dunning.js", () => ({
   ),
 }));
 
-vi.mock("./billing-recovery.js", () => ({
+vi.mock("../../../src/lib/billing/billing-recovery.js", () => ({
   processPendingBillingRecoveryTasks: vi.fn(() =>
     Promise.resolve({
       scanned: 0,
@@ -104,7 +104,7 @@ vi.mock("./billing-recovery.js", () => ({
   ),
 }));
 
-vi.mock("./billing-adjustments.js", () => ({
+vi.mock("../../../src/lib/billing/billing-adjustments.js", () => ({
   recordBillingAdjustment: vi.fn(() =>
     Promise.resolve({
       id: "adjustment-test-id",
@@ -113,11 +113,20 @@ vi.mock("./billing-adjustments.js", () => ({
   ),
 }));
 
-vi.mock("./subscription-change-requests.js", () => ({
+vi.mock("../../../src/lib/billing/billing-balances.js", () => ({
+  postBillingCredit: vi.fn(() =>
+    Promise.resolve({
+      id: "balance-test-id",
+      availableCredit: "10.000000",
+    }),
+  ),
+}));
+
+vi.mock("../../../src/lib/billing/subscription-change-requests.js", () => ({
   getLatestSubscriptionChangeRequest: vi.fn(),
 }));
 
-vi.mock("../catalog/catalog-billing.js", () => ({
+vi.mock("../../../src/lib/catalog/catalog-billing.js", () => ({
   resolvePublishedFreePlan: vi.fn(() =>
     Promise.resolve({
       id: "free-plan-id",
@@ -132,11 +141,12 @@ vi.mock("../catalog/catalog-billing.js", () => ({
   ),
 }));
 
-import { db } from "../../db.js";
-import { applyScheduledSubscriptionTransitions } from "./billing-maintenance.js";
-import { deliverWebhook } from "../webhooks/deliver-webhook.js";
-import { recordBillingAdjustment } from "./billing-adjustments.js";
-import { getLatestSubscriptionChangeRequest } from "./subscription-change-requests.js";
+import { db } from "../../../src/db.js";
+import { applyScheduledSubscriptionTransitions } from "../../../src/lib/billing/billing-maintenance.js";
+import { deliverWebhook } from "../../../src/lib/webhooks/deliver-webhook.js";
+import { recordBillingAdjustment } from "../../../src/lib/billing/billing-adjustments.js";
+import { postBillingCredit } from "../../../src/lib/billing/billing-balances.js";
+import { getLatestSubscriptionChangeRequest } from "../../../src/lib/billing/subscription-change-requests.js";
 
 const mockDb = db as any;
 
@@ -416,6 +426,13 @@ describe("applyScheduledSubscriptionTransitions", () => {
         companyId: "company-1",
         fromCatalogPlanId: "plan-pro",
         toCatalogPlanId: "plan-starter",
+      }),
+    );
+
+    expect(vi.mocked(postBillingCredit)).toHaveBeenCalledWith(
+      expect.objectContaining({
+        teamId: "team-1",
+        companyId: "company-1",
       }),
     );
   });

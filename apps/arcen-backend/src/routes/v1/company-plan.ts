@@ -33,8 +33,9 @@ import {
   upsertSubscriptionLedgerState,
 } from "../../lib/billing/billing-ledger.js";
 import { recordBillingAdjustment } from "../../lib/billing/billing-adjustments.js";
+import { consumeBillingCredit } from "../../lib/billing/billing-balances.js";
 import { sendPaidInvoiceReceipt } from "../../lib/billing/invoice-notifications.js";
-import { computeProrationQuote } from "../../lib/billing/billing-proration.js";
+import { computeProrationSettlement } from "../../lib/billing/billing-proration.js";
 import {
   createSubscriptionChangeRequest,
   findSimilarOpenSubscriptionChangeRequest,
@@ -58,7 +59,7 @@ import { DEFAULT_CHAIN_ID } from "../../lib/platform/default-chain.js";
 
 type PlanRouteDb = Pick<
   typeof db,
-  "team" | "invoice" | "arcenCompany" | "subscriptionState" | "payment" | "paymentAttempt" | "billingAdjustment"
+  "team" | "invoice" | "arcenCompany" | "subscriptionState" | "payment" | "paymentAttempt" | "billingAdjustment" | "billingBalance"
 >;
 
 type SubscriptionTransition = {
@@ -209,6 +210,29 @@ function microsToAmountString(value: bigint | number): string {
   return `${sign}${whole.toString()}.${fraction}`;
 }
 
+function amountStringToMicros(value: string): bigint {
+  const trimmed = value.trim();
+  if (!trimmed) return 0n;
+
+  const sign = trimmed.startsWith("-") ? -1n : 1n;
+  const normalized = trimmed.replace(/^[+-]/, "");
+  const [wholePartRaw, fractionPartRaw = ""] = normalized.split(".", 2);
+  const wholePart = /^\d+$/.test(wholePartRaw) ? wholePartRaw : "0";
+  const fractionPart = /^\d+$/.test(fractionPartRaw)
+    ? fractionPartRaw.slice(0, 6).padEnd(6, "0")
+    : "000000";
+
+  return (
+    sign *
+    (BigInt(wholePart || "0") * 1_000_000n + BigInt(fractionPart || "0"))
+  );
+}
+
+function decimalAmountToMicros(value: unknown): bigint {
+  if (value === null || value === undefined) return 0n;
+  return amountStringToMicros(String(value));
+}
+
 function buildLifecycleResponse(input: {
   success?: boolean;
   transitionId?: string | null;
@@ -249,22 +273,23 @@ function createProrationSummary(params: {
   currentPeriodStart: Date;
   currentPeriodEnd: Date;
   effectiveAt: Date;
+  availableBillingCreditMicros?: bigint;
 }) {
-  const quote = computeProrationQuote({
+  const settlement = computeProrationSettlement({
     currentAmountMicros: params.currentPlanAmountMicros,
     targetAmountMicros: params.targetPlanAmountMicros,
     currentPeriodStart: params.currentPeriodStart,
     currentPeriodEnd: params.currentPeriodEnd,
     effectiveAt: params.effectiveAt,
+    availableBillingCreditMicros: params.availableBillingCreditMicros,
   });
-  const amountDueMicros = quote.deltaMicros > 0n ? quote.deltaMicros : 0n;
-  const creditMicros = quote.deltaMicros < 0n ? -quote.deltaMicros : 0n;
-  const unusedCreditMicros = -quote.currentRemainingMicros;
 
   return {
-    quote,
-    amountDueMicros,
-    creditMicros,
+    quote: settlement.quote,
+    amountDueMicros: settlement.amountDueMicros,
+    amountDueBeforeCreditsMicros: settlement.amountDueBeforeCreditsMicros,
+    creditMicros: settlement.creditCreatedMicros,
+    billingCreditAppliedMicros: settlement.billingCreditAppliedMicros,
     response: {
       currency: "USDC",
       currentPlanName: params.currentPlanName,
@@ -272,19 +297,34 @@ function createProrationSummary(params: {
       currentPeriodStart: params.currentPeriodStart.toISOString(),
       currentPeriodEnd: params.currentPeriodEnd.toISOString(),
       effectiveAt: params.effectiveAt.toISOString(),
-      totalPeriodSeconds: quote.totalPeriodSeconds,
-      remainingSeconds: quote.remainingSeconds,
-      remainingRatio: quote.remainingRatio,
+      totalPeriodSeconds: settlement.quote.totalPeriodSeconds,
+      remainingSeconds: settlement.quote.remainingSeconds,
+      remainingRatio: settlement.quote.remainingRatio,
       newPlanRemainingCharge: microsToAmountString(
-        quote.targetRemainingMicros,
+        settlement.newPlanRemainingChargeMicros,
       ),
-      unusedOldPlanCredit: microsToAmountString(unusedCreditMicros),
-      amountDue: microsToAmountString(amountDueMicros),
-      amountPaid: microsToAmountString(amountDueMicros),
-      amountRemaining: creditMicros > 0n
-        ? microsToAmountString(creditMicros)
-        : "0.000000",
-      hasCreditBalance: creditMicros > 0n,
+      unusedOldPlanCredit: microsToAmountString(
+        settlement.unusedOldPlanCreditMicros,
+      ),
+      amountDueBeforeCredits: microsToAmountString(
+        settlement.amountDueBeforeCreditsMicros,
+      ),
+      availableBillingCredit: microsToAmountString(
+        settlement.availableBillingCreditMicros,
+      ),
+      billingCreditApplied: microsToAmountString(
+        settlement.billingCreditAppliedMicros,
+      ),
+      remainingBillingCredit: microsToAmountString(
+        settlement.remainingBillingCreditMicros,
+      ),
+      creditCreated: microsToAmountString(settlement.creditCreatedMicros),
+      amountDue: microsToAmountString(settlement.amountDueMicros),
+      amountPaid: microsToAmountString(settlement.billingCreditAppliedMicros),
+      amountRemaining: microsToAmountString(
+        settlement.totalCreditBalanceMicros,
+      ),
+      hasCreditBalance: settlement.totalCreditBalanceMicros > 0n,
     },
   };
 }
@@ -300,6 +340,8 @@ async function createProrationInvoice(input: {
   targetPlanName: string;
   targetRemainingMicros: bigint;
   currentRemainingMicros: bigint;
+  amountDueBeforeCreditsMicros: bigint;
+  billingCreditAppliedMicros: bigint;
   amountDueMicros: bigint;
   issuedAt: Date;
   metadata?: Record<string, unknown>;
@@ -314,13 +356,15 @@ async function createProrationInvoice(input: {
   const number = await allocateInvoiceNumber(input.teamId, prefix, input.issuedAt);
   const targetCharge = microsToAmountString(input.targetRemainingMicros);
   const unusedCredit = microsToAmountString(-input.currentRemainingMicros);
+  const appliedBillingCredit = microsToAmountString(-input.billingCreditAppliedMicros);
   const amountDue = microsToAmountString(input.amountDueMicros);
+  const invoiceStatus = input.amountDueMicros > 0n ? "ISSUED" : "PAID";
 
   return client.invoice.create({
     data: {
       teamId: input.teamId,
       environmentMode: team.environmentMode,
-      status: "ISSUED",
+      status: invoiceStatus,
       number,
       currency: "USDC",
       customerEmail: input.customerEmail ?? null,
@@ -330,8 +374,9 @@ async function createProrationInvoice(input: {
       total: amountDue,
       amountPaid: "0.000000",
       amountCredited: "0.000000",
-      amountOutstanding: amountDue,
+      amountOutstanding: input.amountDueMicros > 0n ? amountDue : "0.000000",
       issuedAt: input.issuedAt,
+      paidAt: input.amountDueMicros > 0n ? null : input.issuedAt,
       planId: input.planId,
       companyId: input.companyId,
       metadata: toPrismaJson({
@@ -358,6 +403,19 @@ async function createProrationInvoice(input: {
             lineTax: "0.000000",
             lineTotal: unusedCredit,
           },
+          ...(input.billingCreditAppliedMicros > 0n
+            ? [
+                {
+                  description: "Applied wallet credit balance",
+                  quantity: 1,
+                  unitAmount: appliedBillingCredit,
+                  taxRate: "0.0000",
+                  lineSubtotal: appliedBillingCredit,
+                  lineTax: "0.000000",
+                  lineTotal: appliedBillingCredit,
+                },
+              ]
+            : []),
         ],
       },
     },
@@ -410,12 +468,86 @@ type CompanyPlanRequestBody = {
   autopayConfigTxHash?: string;
   accessChangeTxHash?: string;
   paymentTxHash?: string;
+  prorationEffectiveAt?: string;
   previewOnly?: boolean;
   scheduleAtPeriodEnd?: boolean;
   couponCode?: string;
   customerName?: string;
   customerEmail?: string;
 };
+
+const PRORATION_QUOTE_MAX_AGE_MS = 5 * 60 * 1000;
+const PRORATION_QUOTE_MAX_FUTURE_DRIFT_MS = 30 * 1000;
+
+function resolveRequestedProrationEffectiveAt(input: {
+  requestedEffectiveAt?: string;
+  periodStart?: Date | null;
+  periodEnd?: Date | null;
+}):
+  | { ok: true; effectiveAt: Date }
+  | { ok: false; status: number; error: string } {
+  if (!input.requestedEffectiveAt) {
+    return { ok: true, effectiveAt: new Date() };
+  }
+
+  const effectiveAt = new Date(input.requestedEffectiveAt);
+  if (Number.isNaN(effectiveAt.getTime())) {
+    return {
+      ok: false,
+      status: 400,
+      error: "Invalid prorationEffectiveAt timestamp.",
+    };
+  }
+
+  const now = Date.now();
+  const effectiveAtMs = effectiveAt.getTime();
+
+  if (effectiveAtMs > now + PRORATION_QUOTE_MAX_FUTURE_DRIFT_MS) {
+    return {
+      ok: false,
+      status: 409,
+      error:
+        "The upgrade quote appears to be from the future. Refresh the quote and try again.",
+    };
+  }
+
+  if (now - effectiveAtMs > PRORATION_QUOTE_MAX_AGE_MS) {
+    return {
+      ok: false,
+      status: 409,
+      error:
+        "The upgrade quote is too old to use safely. Refresh the quote and try again.",
+    };
+  }
+
+  if (
+    input.periodStart &&
+    !Number.isNaN(input.periodStart.getTime()) &&
+    effectiveAt < input.periodStart
+  ) {
+    return {
+      ok: false,
+      status: 409,
+      error:
+        "The upgrade quote is older than the current billing period. Refresh the quote and try again.",
+    };
+  }
+
+  if (
+    input.periodEnd &&
+    !Number.isNaN(input.periodEnd.getTime()) &&
+    effectiveAt > input.periodEnd
+  ) {
+    return {
+      ok: false,
+      status: 409,
+      error:
+        "The upgrade quote is outside the current billing period. Refresh the quote and try again.",
+    };
+  }
+
+  return { ok: true, effectiveAt };
+}
 
 export async function handleCompanyPlanRequest(
   c: Context,
@@ -488,6 +620,7 @@ export async function handleCompanyPlanRequest(
     autopayConfigTxHash,
     accessChangeTxHash,
     paymentTxHash,
+    prorationEffectiveAt,
     previewOnly,
     scheduleAtPeriodEnd,
     couponCode,
@@ -533,6 +666,12 @@ export async function handleCompanyPlanRequest(
       traits: true,
       walletAddress: true,
       email: true,
+      billingBalance: {
+        select: {
+          availableCredit: true,
+          currency: true,
+        },
+      },
       subscriptionState: {
         select: {
           id: true,
@@ -928,9 +1067,26 @@ export async function handleCompanyPlanRequest(
     }
 
     const isUpgrade = targetPlanAmountMicros > currentPlanAmountMicros;
-    const currentPeriodStart = company.subscriptionState?.currentPeriodStart;
+    let currentPeriodStart = company.subscriptionState?.currentPeriodStart;
     const currentPeriodEnd = company.subscriptionState?.currentPeriodEnd;
-    const effectiveAt = new Date();
+    const availableBillingCreditMicros = decimalAmountToMicros(
+      company.billingBalance?.availableCredit,
+    );
+
+    // Derive period start from end when start is null (legacy subscriptions)
+    if (
+      !currentPeriodStart &&
+      currentPeriodEnd &&
+      !Number.isNaN(currentPeriodEnd.getTime())
+    ) {
+      const billingIntervalSeconds =
+        currentPlan?.billingInterval ?? plan.billingInterval ?? 2_592_000;
+      currentPeriodStart = new Date(
+        currentPeriodEnd.getTime() - billingIntervalSeconds * 1000,
+      );
+    }
+
+    let effectiveAt = new Date();
 
     if (isUpgrade && previewOnly === true) {
       if (
@@ -957,6 +1113,7 @@ export async function handleCompanyPlanRequest(
         currentPeriodStart,
         currentPeriodEnd,
         effectiveAt,
+        availableBillingCreditMicros,
       });
 
       return c.json(
@@ -1043,6 +1200,7 @@ export async function handleCompanyPlanRequest(
                 currentPeriodStart: company.subscriptionState.currentPeriodStart,
                 currentPeriodEnd: company.subscriptionState.currentPeriodEnd,
                 effectiveAt: new Date(),
+                availableBillingCreditMicros,
               }).response
             : null;
         const existingRequest = await findSimilarOpenSubscriptionChangeRequest({
@@ -1243,6 +1401,20 @@ export async function handleCompanyPlanRequest(
         );
       }
 
+      const effectiveAtResolution = resolveRequestedProrationEffectiveAt({
+        requestedEffectiveAt: prorationEffectiveAt,
+        periodStart,
+        periodEnd,
+      });
+      if (!effectiveAtResolution.ok) {
+        return c.json(
+          { error: effectiveAtResolution.error },
+          effectiveAtResolution.status as any,
+          corsHeaders(origin),
+        );
+      }
+      effectiveAt = effectiveAtResolution.effectiveAt;
+
       const proration = createProrationSummary({
         currentPlanName: currentPlan?.name ?? "Current plan",
         targetPlanName: plan.name,
@@ -1251,6 +1423,7 @@ export async function handleCompanyPlanRequest(
         currentPeriodStart: periodStart,
         currentPeriodEnd: periodEnd,
         effectiveAt,
+        availableBillingCreditMicros,
       });
 
       const normalizedPaymentTxHash = normalizeTxHash(paymentTxHash);
@@ -1507,7 +1680,41 @@ export async function handleCompanyPlanRequest(
 
             let invoiceId: string | null = null;
             let paymentId: string | null = null;
-            if (proration.amountDueMicros > 0n && normalizedPaymentTxHash) {
+            if (proration.billingCreditAppliedMicros > 0n) {
+              const appliedCredit = await consumeBillingCredit(
+                {
+                  teamId,
+                  companyId,
+                  requestedAmount: microsToAmount(
+                    proration.billingCreditAppliedMicros,
+                  ),
+                  metadata: {
+                    source: "self_service",
+                    mode: "immediate_prorated_upgrade",
+                    billingPeriod: normalizedBillingPeriod,
+                    previousBillingPeriod: currentBillingPeriod,
+                    previousPlanId: previousPlanId ?? null,
+                    autopayConfigTxHash: normalizedAutopayConfigTxHash,
+                    accessChangeTxHash: accessChangeTxHashLocal,
+                    paymentTxHash: normalizedPaymentTxHash,
+                    proration: proration.response,
+                  },
+                },
+                tx,
+              );
+              const appliedCreditMicros = amountStringToMicros(
+                appliedCredit.appliedAmount.toFixed(6),
+              );
+
+              if (appliedCreditMicros !== proration.billingCreditAppliedMicros) {
+                throw new Error("PLAN_CHANGE_BILLING_CREDIT_STALE");
+              }
+            }
+
+            if (
+              proration.amountDueBeforeCreditsMicros > 0n &&
+              (normalizedPaymentTxHash || proration.billingCreditAppliedMicros > 0n)
+            ) {
               const invoice = await createProrationInvoice({
                 teamId,
                 companyId,
@@ -1519,6 +1726,10 @@ export async function handleCompanyPlanRequest(
                 targetPlanName: plan.name,
                 targetRemainingMicros: proration.quote.targetRemainingMicros,
                 currentRemainingMicros: proration.quote.currentRemainingMicros,
+                amountDueBeforeCreditsMicros:
+                  proration.amountDueBeforeCreditsMicros,
+                billingCreditAppliedMicros:
+                  proration.billingCreditAppliedMicros,
                 amountDueMicros: proration.amountDueMicros,
                 issuedAt: effectiveAt,
                 metadata: {
@@ -1534,7 +1745,9 @@ export async function handleCompanyPlanRequest(
                 },
               }, tx);
               invoiceId = invoice.id;
+            }
 
+            if (proration.amountDueMicros > 0n && normalizedPaymentTxHash) {
               const payment = await recordSuccessfulPayment({
                 idempotencyKey: `payment:plan_change.upgrade:${normalizedPaymentTxHash}`,
                 teamId,
@@ -1563,7 +1776,9 @@ export async function handleCompanyPlanRequest(
                 },
               }, tx);
               paymentId = payment.id;
+            }
 
+            if (proration.amountDueBeforeCreditsMicros > 0n) {
               await recordBillingAdjustment({
                 teamId,
                 companyId,
@@ -1571,7 +1786,7 @@ export async function handleCompanyPlanRequest(
                 paymentId,
                 kind: "UPGRADE_PRORATION_CHARGE",
                 status: "POSTED",
-                amount: microsToAmount(proration.amountDueMicros),
+                amount: microsToAmount(proration.amountDueBeforeCreditsMicros),
                 fromCatalogPlanId: previousPlanId ?? null,
                 toCatalogPlanId: plan.id,
                 periodStartedAt: periodStart,
@@ -1585,6 +1800,12 @@ export async function handleCompanyPlanRequest(
                   autopayConfigTxHash: normalizedAutopayConfigTxHash,
                   accessChangeTxHash: accessChangeTxHashLocal,
                   paymentTxHash: normalizedPaymentTxHash,
+                  amountDueBeforeCredits: microsToAmountString(
+                    proration.amountDueBeforeCreditsMicros,
+                  ),
+                  billingCreditApplied: microsToAmountString(
+                    proration.billingCreditAppliedMicros,
+                  ),
                   proration: proration.response,
                 },
               }, tx);
@@ -1630,6 +1851,16 @@ export async function handleCompanyPlanRequest(
             {
               error:
                 "This plan change is already being processed or one of its transaction hashes was already consumed. Refresh the subscription state and retry if needed.",
+            },
+            409,
+            corsHeaders(origin),
+          );
+        }
+        if (message === "PLAN_CHANGE_BILLING_CREDIT_STALE") {
+          return c.json(
+            {
+              error:
+                "Your available wallet credit changed while this upgrade was processing. Refresh the pricing summary and try again.",
             },
             409,
             corsHeaders(origin),

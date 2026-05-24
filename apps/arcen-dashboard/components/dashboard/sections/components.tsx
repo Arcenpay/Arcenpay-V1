@@ -440,6 +440,21 @@ export function ComponentsSection({ onSectionChange }: ComponentsSectionProps = 
     setEditorOpen(true);
   };
 
+  const copyComponentId = async (componentId: string) => {
+    if (
+      typeof navigator === "undefined" ||
+      !navigator.clipboard?.writeText
+    ) {
+      return false;
+    }
+    try {
+      await navigator.clipboard.writeText(componentId);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   // Called from the modal — build the ComponentConfig and open the editor
   const handleModalCreate = (
     name: string,
@@ -494,11 +509,21 @@ export function ComponentsSection({ onSectionChange }: ComponentsSectionProps = 
           });
           if (res.ok) {
             const data = await res.json();
+            const createdId =
+              typeof data?.data?.id === "string" ? data.data.id : component.id;
             setCustomComponents((prev) => [
               ...prev,
-              { ...component, id: data.data.id },
+              { ...component, id: createdId },
             ]);
-            toast.success("Component created");
+            const copied = await copyComponentId(createdId);
+            toast.success(
+              copied
+                ? "Component created and ID copied"
+                : "Component created",
+            );
+            if (!copied) {
+              toast.message(`Component ID: ${createdId}`);
+            }
             setEditorOpen(false);
             setSelectedComponent(null);
           } else {

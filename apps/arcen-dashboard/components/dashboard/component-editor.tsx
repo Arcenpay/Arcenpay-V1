@@ -1527,7 +1527,10 @@ export function ComponentEditor({
     if (!configRes.ok) return [];
     const payload = (await configRes.json()) as {
       catalog?: { plans?: Array<Record<string, unknown>> };
-      config?: { livePlanIds?: string[] | null };
+      config?: {
+        livePlanIds?: string[] | null;
+        restrictLivePlans?: boolean | null;
+      };
     };
 
     const rawPlans = Array.isArray(payload.catalog?.plans)
@@ -1536,8 +1539,11 @@ export function ComponentEditor({
     const configuredIds = Array.isArray(payload.config?.livePlanIds)
       ? payload.config.livePlanIds
       : [];
+    const restrictLivePlans = Boolean(payload.config?.restrictLivePlans);
     const filteredPlans =
-      configuredIds.length > 0
+      !restrictLivePlans
+        ? rawPlans
+        : configuredIds.length > 0
         ? rawPlans.filter((plan) => configuredIds.includes(String(plan.id ?? "")))
         : [];
 
@@ -1745,6 +1751,39 @@ export function ComponentEditor({
           metadata: p.metadata ?? null,
         }))
       : [];
+    const sdkElementTypes = new Set(
+      elements.map((el) => toSdkElementType(el.type)),
+    );
+    const needsPaidBillingPreview = [
+      "planManager",
+      "unsubscribe",
+      "nextBillDue",
+      "paymentMethod",
+      "invoices",
+      "billingHistory",
+    ].some((type) => sdkElementTypes.has(type));
+    const syntheticPaidPlan: ComponentRenderData["activePlan"] = {
+      id: "preview-paid-plan",
+      name: "Starter",
+      tier: "starter",
+      price: "9",
+      billingInterval: 2_592_000,
+      description: "Preview paid plan",
+      acceptedToken: "USDC",
+      metadata: {
+        entitlements: [
+          {
+            featureKey: "api_access",
+            featureName: "API access",
+            type: "BOOLEAN",
+            enabled: true,
+            value: true,
+          },
+        ],
+      },
+    };
+    const firstPaidPlan =
+      sdkPlans.find((plan) => Number(plan.price ?? "0") > 0) ?? null;
 
     const usageMap = new Map(
       (liveData?.usage ?? []).map((item) => [
@@ -1756,21 +1795,32 @@ export function ComponentEditor({
       (liveData?.flags ?? []).map((flag) => [flag.featureKey, flag]),
     );
     const preferredPreviewPlan =
+      (needsPaidBillingPreview
+        ? sdkPlans.find((plan) => {
+            const entitlements = Array.isArray(plan.metadata?.entitlements)
+              ? plan.metadata.entitlements
+              : [];
+            return entitlements.length > 0 && Number(plan.price ?? "0") > 0;
+          }) ??
+          firstPaidPlan
+        : null) ??
       sdkPlans.find((plan) => {
         const entitlements = Array.isArray(plan.metadata?.entitlements)
           ? plan.metadata.entitlements
           : [];
         return entitlements.length > 0;
       }) ??
-      sdkPlans.find((plan) => Number(plan.price ?? "0") > 0) ??
+      firstPaidPlan ??
       sdkPlans[0] ??
-      null;
-    const activePlanId =
+      (needsPaidBillingPreview ? syntheticPaidPlan : null);
+    const requestedActivePlanId =
       typeof liveData?.activePlan?.id === "string"
         ? String(liveData.activePlan.id)
-        : (preferredPreviewPlan?.id ?? null);
+        : null;
     const activePlan =
-      sdkPlans.find((plan) => plan.id === activePlanId) ??
+      (requestedActivePlanId
+        ? sdkPlans.find((plan) => plan.id === requestedActivePlanId) ?? null
+        : null) ??
       preferredPreviewPlan;
     const rawPlanEntitlements = Array.isArray(
       activePlan?.metadata?.entitlements,
@@ -1901,6 +1951,36 @@ export function ComponentEditor({
       activePlan,
       plans: sdkPlans,
       entitlements: previewEntitlements,
+      billingPeriod:
+        activePlan?.billingInterval === 31_536_000 ? "annual" : "monthly",
+      nextBillingAt:
+        activePlan && parseFloat(String(activePlan.price ?? "0")) > 0
+          ? "2026-06-16T00:00:00.000Z"
+          : null,
+      paymentMethod:
+        activePlan && parseFloat(String(activePlan.price ?? "0")) > 0
+          ? {
+              walletAddress: "0x1234567890abcdef1234567890abcdef12345678",
+              token: activePlan.acceptedToken ?? "USDC",
+              chainId: 5042002,
+            }
+          : null,
+      recentInvoices:
+        activePlan && parseFloat(String(activePlan.price ?? "0")) > 0
+          ? [
+              {
+                id: "preview-invoice-1",
+                number: "INV-PREVIEW-0001",
+                status: "PAID",
+                total: activePlan.price,
+                currency: "USDC",
+                issuedAt: "2026-05-17T00:00:00.000Z",
+                paidAt: "2026-05-17T00:00:00.000Z",
+                customerName: "Preview Company",
+                downloadUrl: "#",
+              },
+            ]
+          : [],
       usage:
         (liveData?.usage?.map((item) => {
           const featureKey = String(item.featureKey ?? "");

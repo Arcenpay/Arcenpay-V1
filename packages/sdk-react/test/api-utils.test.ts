@@ -1,13 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
   createPaymentLinkCheckoutUrl,
+  resolveAppBaseUrl,
   entitlementsToFeatures,
 } from "../src/lib/api";
 
 describe("sdk-react api helpers", () => {
-  it("builds payment-link URLs from the internally resolved app URL", () => {
+  it("builds payment-link URLs from the current resolved app URL", () => {
     expect(createPaymentLinkCheckoutUrl("starter plan")).toBe(
-      "https://yak-included-currently.ngrok-free.app/pay/starter%20plan",
+      `${resolveAppBaseUrl()}/pay/starter%20plan`,
     );
   });
 

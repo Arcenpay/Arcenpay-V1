@@ -2,6 +2,7 @@ import type { Context } from "hono";
 import { z } from "zod";
 import { db } from "../../../db.js";
 import { requirePermission, isErrorResponse } from "../../../lib/auth/api-auth.js";
+import { listMetadataEntitlements } from "../../../lib/catalog/catalog-entitlements.js";
 import { writeAuditEvent } from "../../../lib/platform/audit.js";
 import { resolvePlanNetwork } from "../../../lib/catalog/plan-network.js";
 import { toPrismaNullableJson } from "../../../utils/prisma-json.js";
@@ -434,6 +435,39 @@ export async function updatePlan(c: Context) {
     beforeData: existing,
     afterData: updated,
   });
+
+  // Auto-add newly published plans to the catalog config's livePlanIds
+  // so they appear in the embedded portal immediately.
+  const hasEnabledEntitlements = listMetadataEntitlements(updated.metadata).some(
+    (entitlement) => entitlement.enabled !== false,
+  );
+  const isPaidPlan = parseFloat(String(updated.price ?? "0")) > 0;
+
+  if (
+    parsed.data.status === "PUBLISHED" &&
+    updated.status === "PUBLISHED" &&
+    (!isPaidPlan || hasEnabledEntitlements)
+  ) {
+    const config = await db.catalogConfig.findFirst({
+      where: {
+        teamId: auth.team.teamId,
+        environmentId: updated.environmentId ?? undefined,
+      },
+      orderBy: { updatedAt: "desc" },
+      select: { id: true, livePlanIds: true },
+    });
+    if (config) {
+      const currentIds: string[] = Array.isArray(config.livePlanIds)
+        ? (config.livePlanIds as string[])
+        : [];
+      if (!currentIds.includes(updated.id)) {
+        await db.catalogConfig.update({
+          where: { id: config.id },
+          data: { livePlanIds: [...currentIds, updated.id] },
+        });
+      }
+    }
+  }
 
   return c.json({ plan: updated });
 }

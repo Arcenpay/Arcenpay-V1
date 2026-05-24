@@ -1,20 +1,26 @@
+import type { Prisma } from "../../generated/client/client.js";
 import { db } from "../../db.js";
 import { toPrismaJson } from "../../utils/prisma-json.js";
 import { toSix } from "./invoices.js";
 
+type BillingBalanceDb = Pick<typeof db, "arcenCompany" | "billingBalance" | "invoice">;
 type InvoiceBalanceDb = Pick<typeof db, "invoice">;
+type DbClient = BillingBalanceDb | Prisma.TransactionClient;
 
 function normalizeWallet(value?: string | null): string | null {
   return value?.trim() ? value.trim().toLowerCase() : null;
 }
 
-async function resolveCompany(input: {
-  teamId: string;
-  companyId?: string | null;
-  walletAddress?: string | null;
-}) {
+async function resolveCompany(
+  input: {
+    teamId: string;
+    companyId?: string | null;
+    walletAddress?: string | null;
+  },
+  client: DbClient = db,
+) {
   if (input.companyId) {
-    return db.arcenCompany.findFirst({
+    return client.arcenCompany.findFirst({
       where: { id: input.companyId, teamId: input.teamId },
       select: { id: true, walletAddress: true },
     });
@@ -23,7 +29,7 @@ async function resolveCompany(input: {
   const walletAddress = normalizeWallet(input.walletAddress);
   if (!walletAddress) return null;
 
-  return db.arcenCompany.findFirst({
+  return client.arcenCompany.findFirst({
     where: { teamId: input.teamId, walletAddress },
     select: { id: true, walletAddress: true },
   });
@@ -34,11 +40,11 @@ export async function ensureBillingBalance(input: {
   companyId?: string | null;
   walletAddress?: string | null;
   currency?: string;
-}) {
-  const company = await resolveCompany(input);
+}, client: DbClient = db) {
+  const company = await resolveCompany(input, client);
   if (!company) return null;
 
-  return db.billingBalance.upsert({
+  return client.billingBalance.upsert({
     where: { companyId: company.id },
     update: {
       currency: input.currency ?? "USDC",
@@ -61,18 +67,18 @@ export async function postBillingCredit(input: {
   amount: number;
   currency?: string;
   metadata?: Record<string, unknown>;
-}) {
+}, client: DbClient = db) {
   if (!Number.isFinite(input.amount) || input.amount <= 0) {
     throw new Error("postBillingCredit requires a positive amount");
   }
 
-  const company = await resolveCompany(input);
+  const company = await resolveCompany(input, client);
   if (!company) return null;
 
-  const balance = await ensureBillingBalance(input);
+  const balance = await ensureBillingBalance(input, client);
   if (!balance) return null;
 
-  await db.billingBalance.updateMany({
+  await client.billingBalance.updateMany({
     where: { id: balance.id, availableCredit: balance.availableCredit },
     data: {
       availableCredit: toSix(Number(balance.availableCredit) + input.amount),
@@ -92,7 +98,7 @@ export async function postBillingCredit(input: {
     },
   });
 
-  return db.billingBalance.findUnique({ where: { id: balance.id } });
+  return client.billingBalance.findUnique({ where: { id: balance.id } });
 }
 
 export async function consumeBillingCredit(input: {
@@ -101,12 +107,12 @@ export async function consumeBillingCredit(input: {
   walletAddress?: string | null;
   requestedAmount: number;
   metadata?: Record<string, unknown>;
-}) {
+}, client: DbClient = db) {
   if (!Number.isFinite(input.requestedAmount) || input.requestedAmount <= 0) {
     return { appliedAmount: 0, balance: null };
   }
 
-  const balance = await ensureBillingBalance(input);
+  const balance = await ensureBillingBalance(input, client);
   if (!balance) return { appliedAmount: 0, balance: null };
 
   const available = Number(balance.availableCredit);
@@ -115,7 +121,7 @@ export async function consumeBillingCredit(input: {
     return { appliedAmount: 0, balance };
   }
 
-  const updated = await db.billingBalance.updateMany({
+  const updated = await client.billingBalance.updateMany({
     where: { id: balance.id, availableCredit: balance.availableCredit },
     data: {
       availableCredit: toSix(Math.max(0, available - appliedAmount)),
@@ -136,13 +142,15 @@ export async function consumeBillingCredit(input: {
     },
   });
 
-  const refreshed = await db.billingBalance.findUnique({ where: { id: balance.id } });
+  const refreshed = await client.billingBalance.findUnique({
+    where: { id: balance.id },
+  });
   return { appliedAmount: updated.count > 0 ? appliedAmount : 0, balance: refreshed ?? balance };
 }
 
 export async function recomputeInvoiceBalance(
   invoiceId: string,
-  client: InvoiceBalanceDb = db,
+  client: Pick<typeof db, "invoice"> = db,
 ) {
   const invoice = await client.invoice.findUnique({
     where: { id: invoiceId },

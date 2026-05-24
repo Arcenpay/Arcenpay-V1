@@ -2,6 +2,7 @@ import type { Context } from "hono";
 import { z } from "zod";
 import { db } from "../../../db.js";
 import { requirePermission, isErrorResponse } from "../../../lib/auth/api-auth.js";
+import { listMetadataEntitlements } from "../../../lib/catalog/catalog-entitlements.js";
 import { writeAuditEvent } from "../../../lib/platform/audit.js";
 import { requireResolvedActiveEnvironment } from "../../../lib/environments/workspace-environments.js";
 
@@ -41,6 +42,18 @@ function getCreditBundleCount(metadata: unknown): number {
   return Array.isArray(bundles) ? bundles.length : 0;
 }
 
+function countEnabledPlanEntitlements(metadata: unknown): number {
+  return listMetadataEntitlements(metadata).filter(
+    (entitlement) => entitlement.enabled !== false,
+  ).length;
+}
+
+function canPlanGoLive(plan: { price: unknown; metadata?: unknown }): boolean {
+  const isPaid = parseFloat(String(plan.price ?? "0")) > 0;
+  if (!isPaid) return true;
+  return countEnabledPlanEntitlements(plan.metadata) > 0;
+}
+
 function normalizeConfiguredPlanId(
   value: string | null | undefined,
   plans: Array<{ id: string; name: string; tier: string }>,
@@ -72,16 +85,6 @@ function dedupeIds(ids: string[] | null): string[] | null {
   return Array.from(new Set(ids));
 }
 
-function getDerivedDefaultPlanIds(input: {
-  initialPlan: string;
-  fallbackPlan: string | null;
-}): string[] {
-  const ids = new Set<string>();
-  if (input.initialPlan && input.initialPlan !== "none") ids.add(input.initialPlan);
-  if (input.fallbackPlan && input.fallbackPlan !== "none") ids.add(input.fallbackPlan);
-  return Array.from(ids);
-}
-
 async function loadEnvironmentScopedCatalog(teamId: string, environmentId: string) {
   const [plans, addOns, creditTypes, companies, activeAddOnGrants] = await Promise.all([
     db.catalogPlan.findMany({
@@ -101,6 +104,7 @@ async function loadEnvironmentScopedCatalog(teamId: string, environmentId: strin
         billingInterval: true,
         acceptedToken: true,
         chainId: true,
+        metadata: true,
         updatedAt: true,
       },
     }),
@@ -191,10 +195,12 @@ async function loadEnvironmentScopedCatalog(teamId: string, environmentId: strin
     addOns,
     creditTypes,
     catalog: {
-      plans: plans.map((plan) => ({
-        ...plan,
-        companyCount: planCompanyCounts.get(plan.id) ?? 0,
-      })),
+      plans: plans
+        .filter((plan) => canPlanGoLive(plan))
+        .map((plan) => ({
+          ...plan,
+          companyCount: planCompanyCounts.get(plan.id) ?? 0,
+        })),
       addOns: addOns.map((addOn) => ({
         ...addOn,
         grantCount: addOnGrantCounts.get(addOn.id) ?? 0,
@@ -242,16 +248,11 @@ export async function getCatalogConfig(c: Context) {
   return c.json({
     config: {
       ...config,
-      livePlanIds: config.restrictLivePlans
-        ? config.livePlanIds
-        : getDerivedDefaultPlanIds({
-            initialPlan: config.initialPlan,
-            fallbackPlan: config.fallbackPlan,
-          }),
-      liveAddOnIds: config.restrictLiveAddOns ? config.liveAddOnIds : [],
+      livePlanIds: config.restrictLivePlans ? config.livePlanIds : null,
+      liveAddOnIds: config.restrictLiveAddOns ? config.liveAddOnIds : null,
       liveCreditTypeIds: config.restrictLiveCreditTypes
         ? config.liveCreditTypeIds
-        : [],
+        : null,
     },
     catalog: catalogData.catalog,
   });

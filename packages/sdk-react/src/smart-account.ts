@@ -2,6 +2,7 @@ export {
   deploySmartAccount,
   getCounterfactualSmartAccountAddress,
   isSmartAccountInfrastructureError,
+  isUnsupportedEip7702AuthorizationError,
   isPrefundError,
   isRecoverableSmartAccountFundingError,
   revokeAutopayModule,

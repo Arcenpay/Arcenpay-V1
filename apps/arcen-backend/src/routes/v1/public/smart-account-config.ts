@@ -23,17 +23,52 @@ function getPimlicoApiKey(chainId: number) {
   );
 }
 
-function getExplicitPimlicoOverride(chainId: number) {
-  const explicitUrl =
+function getSharedPimlicoRpcOverride(chainId: number) {
+  return (
     readTrimmedEnv(`PAYMASTER_RPC_URL_${chainId}`) ||
+    readTrimmedEnv(`BUNDLER_RPC_URL_${chainId}`) ||
+    readTrimmedEnv(`PIMLICO_RPC_URL_${chainId}`) ||
     readTrimmedEnv(`PIMLICO_RPC_${chainId}`) ||
+    readTrimmedEnv(`NEXT_PUBLIC_PIMLICO_RPC_URL_${chainId}`) ||
     readTrimmedEnv(`NEXT_PUBLIC_PIMLICO_RPC_${chainId}`) ||
+    readTrimmedEnv("BUNDLER_RPC_URL") ||
+    readTrimmedEnv("PIMLICO_RPC_URL") ||
     readTrimmedEnv("PAYMASTER_RPC_URL") ||
     PIMLICO_RPC_URL ||
-    "";
+    ""
+  ).trim();
+}
 
-  if (explicitUrl.trim()) {
-    return explicitUrl.trim();
+function getBundlerUrl(chainId: number) {
+  const explicitUrl =
+    readTrimmedEnv(`BUNDLER_RPC_URL_${chainId}`) ||
+    readTrimmedEnv(`PIMLICO_BUNDLER_RPC_URL_${chainId}`) ||
+    readTrimmedEnv("BUNDLER_RPC_URL") ||
+    readTrimmedEnv("PIMLICO_BUNDLER_RPC_URL") ||
+    getSharedPimlicoRpcOverride(chainId);
+
+  if (explicitUrl) {
+    return explicitUrl;
+  }
+
+  const apiKey = getPimlicoApiKey(chainId);
+  if (!apiKey) {
+    return "";
+  }
+
+  return `https://api.pimlico.io/v2/${chainId}/rpc?apikey=${apiKey}`;
+}
+
+function getPaymasterUrl(chainId: number) {
+  const explicitUrl =
+    readTrimmedEnv(`PAYMASTER_RPC_URL_${chainId}`) ||
+    readTrimmedEnv(`PIMLICO_PAYMASTER_RPC_URL_${chainId}`) ||
+    readTrimmedEnv("PAYMASTER_RPC_URL") ||
+    readTrimmedEnv("PIMLICO_PAYMASTER_RPC_URL") ||
+    getSharedPimlicoRpcOverride(chainId);
+
+  if (explicitUrl) {
+    return explicitUrl;
   }
 
   const apiKey = getPimlicoApiKey(chainId);
@@ -60,8 +95,9 @@ export async function GET(c: Context) {
     return c.json({ error: "Invalid chainId" }, 400, corsHeaders(origin));
   }
 
-  const pimlicoUrl = getExplicitPimlicoOverride(chainId);
-  if (!pimlicoUrl) {
+  const bundlerUrl = getBundlerUrl(chainId);
+  const paymasterUrl = getPaymasterUrl(chainId);
+  if (!bundlerUrl || !paymasterUrl) {
     return c.json(
       {
         error:
@@ -75,8 +111,8 @@ export async function GET(c: Context) {
   const data = {
     provider: "pimlico" as const,
     chainId,
-    bundlerUrl: pimlicoUrl,
-    paymasterUrl: pimlicoUrl,
+    bundlerUrl,
+    paymasterUrl,
     selfFunded: requestedSelfFunded,
   };
 

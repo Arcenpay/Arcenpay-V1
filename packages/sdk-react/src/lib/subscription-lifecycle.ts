@@ -33,6 +33,12 @@ export function buildPlanChangeSuccessMessage(
   input: PlanChangeSuccessMessageInput,
 ): string {
   const mode = input.mode ?? "";
+  const prorationAmountDue =
+    input.prorationAmountDue !== null && input.prorationAmountDue !== undefined
+      ? Number(input.prorationAmountDue)
+      : 0;
+  const hasProrationCharge =
+    Number.isFinite(prorationAmountDue) && prorationAmountDue > 0;
   const targetBillingPeriodDisplay = billingPeriodLabel(input.targetBillingPeriod);
   const previousBillingPeriodDisplay = billingPeriodLabel(input.previousBillingPeriod);
 
@@ -61,7 +67,7 @@ export function buildPlanChangeSuccessMessage(
 
   if (input.pendingVerification) {
     if (mode === "immediate_prorated_upgrade") {
-      return `Upgrade submitted.${input.prorationAmountDue ? ` $${Number(input.prorationAmountDue).toFixed(2)} will be charged after on-chain verification.` : " We’re waiting for on-chain confirmations before applying the new plan."}`;
+      return `Upgrade submitted.${hasProrationCharge ? ` $${prorationAmountDue.toFixed(2)} will be charged after on-chain verification.` : " We’re waiting for on-chain confirmations before applying the new plan."}`;
     }
 
     if (
@@ -102,7 +108,7 @@ export function buildPlanChangeSuccessMessage(
       input.targetBillingPeriod !== input.previousBillingPeriod
         ? ` Billing changed to ${targetBillingPeriodDisplay}.`
         : "";
-    return `Plan upgraded.${input.prorationAmountDue ? ` $${Number(input.prorationAmountDue).toFixed(2)} was charged for the remaining term.` : ""}${billingChangeNote}`;
+    return `Plan upgraded.${hasProrationCharge ? ` $${prorationAmountDue.toFixed(2)} was charged for the remaining term.` : ""}${billingChangeNote}`;
   }
 
   if (mode === "immediate_on_chain" && (input.walletCreditCreated ?? 0) > 0) {

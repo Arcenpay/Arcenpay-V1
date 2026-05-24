@@ -395,8 +395,8 @@ function ArcenPayRuntime({
 
     const candidateRoutes = ["/api/v1/public/smart-account-config"];
     const candidateQueries = [
-      `chainId=${chainId}&selfFunded=true`,
       `chainId=${chainId}`,
+      `chainId=${chainId}&selfFunded=true`,
     ];
 
     Promise.all(

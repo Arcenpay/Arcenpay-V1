@@ -80,11 +80,7 @@ function deriveVisiblePlanIds(config: {
   if (config.restrictLivePlans) {
     return Array.isArray(config.livePlanIds) ? config.livePlanIds : [];
   }
-
-  const ids = new Set<string>();
-  if (config.initialPlan && config.initialPlan !== "none") ids.add(config.initialPlan);
-  if (config.fallbackPlan && config.fallbackPlan !== "none") ids.add(config.fallbackPlan);
-  return Array.from(ids);
+  return null;
 }
 
 type ComponentPlanMetadataEntitlement = {
@@ -279,6 +275,7 @@ export async function GET(c: Context) {
               status: true,
               catalogPlanId: true,
               walletAddress: true,
+              onChainTokenId: true,
               currentPeriodEnd: true,
               metadata: true,
               chainId: true,
@@ -528,38 +525,97 @@ export async function GET(c: Context) {
         (company.subscriptionState?.chainId ?? DEFAULT_CHAIN_ID);
       billingPaymentAccount = company.subscriptionState?.walletAddress ?? null;
 
-      paymentMethod = {
-        walletAddress: billingPaymentAccount,
-        token:
-          typeof activePlan?.acceptedToken === "string"
-            ? activePlan.acceptedToken
-            : "USDC",
-        chainId: configuredChainId,
-      };
-
       if (company.subscriptionState?.currentPeriodEnd) {
         nextBillingAt =
           company.subscriptionState.currentPeriodEnd.toISOString();
       }
 
-      if (billingPaymentAccount) {
+      if (
+        billingPaymentAccount ||
+        company.subscriptionState?.onChainTokenId
+      ) {
         try {
           const client = createPublicClient({
             transport: http(getRpcUrl(configuredChainId)),
           });
           const contracts = getContractAddresses(configuredChainId);
-          const tokenId = (await client.readContract({
-            address: contracts.subscriptionRegistry as `0x${string}`,
-            abi: SubscriptionRegistryABI,
-            functionName: "getWalletSubscription",
-            args: [billingPaymentAccount.toLowerCase() as `0x${string}`],
-          })) as bigint;
-          const hasActiveSubscription = (await client.readContract({
-            address: contracts.subscriptionRegistry as `0x${string}`,
-            abi: SubscriptionRegistryABI,
-            functionName: "hasActiveSubscription",
-            args: [billingPaymentAccount.toLowerCase() as `0x${string}`],
-          })) as boolean;
+          let tokenId = 0n;
+          let hasActiveSubscription = false;
+
+          if (billingPaymentAccount) {
+            tokenId = (await client.readContract({
+              address: contracts.subscriptionRegistry as `0x${string}`,
+              abi: SubscriptionRegistryABI,
+              functionName: "getWalletSubscription",
+              args: [billingPaymentAccount.toLowerCase() as `0x${string}`],
+            })) as bigint;
+            hasActiveSubscription = (await client.readContract({
+              address: contracts.subscriptionRegistry as `0x${string}`,
+              abi: SubscriptionRegistryABI,
+              functionName: "hasActiveSubscription",
+              args: [billingPaymentAccount.toLowerCase() as `0x${string}`],
+            })) as boolean;
+          }
+
+          if (
+            (!hasActiveSubscription || tokenId <= 0n) &&
+            company.subscriptionState?.onChainTokenId
+          ) {
+            tokenId = BigInt(company.subscriptionState.onChainTokenId);
+          }
+
+          if (tokenId > 0n) {
+            const owner = (await client.readContract({
+              address: contracts.subscriptionRegistry as `0x${string}`,
+              abi: [
+                {
+                  type: "function",
+                  name: "ownerOf",
+                  inputs: [{ name: "tokenId", type: "uint256" }],
+                  outputs: [{ name: "", type: "address" }],
+                  stateMutability: "view",
+                },
+              ] as const,
+              functionName: "ownerOf",
+              args: [tokenId],
+            })) as `0x${string}`;
+            const normalizedOwner = owner.toLowerCase();
+            if (
+              normalizedOwner &&
+              normalizedOwner !== billingPaymentAccount?.toLowerCase()
+            ) {
+              billingPaymentAccount = normalizedOwner;
+              await upsertSubscriptionLedgerState({
+                teamId,
+                companyId: company.id,
+                walletAddress: normalizedOwner,
+                chainId: configuredChainId,
+                status:
+                  company.subscriptionState?.status === "PAST_DUE"
+                    ? "PAST_DUE"
+                    : "ACTIVE",
+                catalogPlanId:
+                  company.subscriptionState?.catalogPlanId ??
+                  (typeof activePlan?.id === "string" ? activePlan.id : null),
+                onChainPlanId:
+                  typeof activePlan?.onChainPlanId === "string"
+                    ? activePlan.onChainPlanId
+                    : null,
+                onChainTokenId: tokenId.toString(),
+                currentPeriodEnd: company.subscriptionState?.currentPeriodEnd ??
+                  undefined,
+                lastEvent: "subscription.render_owner_reconciled",
+                lastEventAt: new Date(),
+                metadata: {
+                  source: "component_render",
+                  previousWalletAddress:
+                    company.subscriptionState?.walletAddress ?? null,
+                },
+              });
+            }
+
+            hasActiveSubscription = normalizedOwner === billingPaymentAccount;
+          }
 
           if (hasActiveSubscription && tokenId > 0n) {
             const [expiration, planFeatures] = await Promise.all([
@@ -593,6 +649,15 @@ export async function GET(c: Context) {
           }
         }
       }
+
+      paymentMethod = {
+        walletAddress: billingPaymentAccount,
+        token:
+          typeof activePlan?.acceptedToken === "string"
+            ? activePlan.acceptedToken
+            : "USDC",
+        chainId: configuredChainId,
+      };
     }
   }
 
@@ -810,7 +875,16 @@ export async function GET(c: Context) {
     activeBillingPeriod ??
     deriveBillingPeriodFromInterval(activePlan?.billingInterval);
 
-  const plansForResponse = hydratedPlans.map((plan) => ({
+  const plansForResponse = hydratedPlans
+    .filter((plan) => {
+      const metadata = asRecord(plan.metadata);
+      const rawEntitlements = metadata.entitlements;
+      const hasEntitlements = Array.isArray(rawEntitlements) && rawEntitlements.length > 0;
+      const isPaid = parseFloat(String(plan.price ?? "0")) > 0;
+      // Free plans always show. Paid plans must have entitlements configured.
+      return !isPaid || hasEntitlements;
+    })
+    .map((plan) => ({
     id: plan.id,
     name: plan.name,
     tier: plan.tier,

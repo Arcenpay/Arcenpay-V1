@@ -5,6 +5,7 @@ import { db } from "../../db.js";
 import { resolvePublishedFreePlan } from "../catalog/catalog-billing.js";
 import { toPrismaJson } from "../../utils/prisma-json.js";
 import { recordBillingAdjustment } from "./billing-adjustments.js";
+import { postBillingCredit } from "./billing-balances.js";
 import { deliverWebhook } from "../webhooks/deliver-webhook.js";
 import { computeProrationQuote } from "./billing-proration.js";
 import { getLatestSubscriptionChangeRequest } from "./subscription-change-requests.js";
@@ -289,7 +290,7 @@ export async function applyScheduledSubscriptionTransitions(input: {
 
       if (quote.deltaMicros < 0n) {
         const creditAmount = microsToAmount(Number(-quote.deltaMicros));
-        await recordBillingAdjustment({
+        const adjustment = await recordBillingAdjustment({
           teamId: input.teamId,
           companyId: state.companyId,
           subscriptionStateId: subscriptionStateForAdjustment?.id ?? null,
@@ -303,6 +304,21 @@ export async function applyScheduledSubscriptionTransitions(input: {
           postedAt: now,
           metadata: {
             source: "billing-maintenance",
+            transitionMode: mode,
+            currentBillingPeriod,
+            targetBillingPeriod,
+            remainingRatio: quote.remainingRatio,
+          },
+        });
+
+        await postBillingCredit({
+          teamId: input.teamId,
+          companyId: state.companyId,
+          amount: creditAmount,
+          currency: "USDC",
+          metadata: {
+            source: "billing-maintenance",
+            billingAdjustmentId: adjustment.id,
             transitionMode: mode,
             currentBillingPeriod,
             targetBillingPeriod,
