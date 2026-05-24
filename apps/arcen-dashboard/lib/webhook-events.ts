@@ -60,6 +60,26 @@ export const CANONICAL_WEBHOOK_EVENTS: CanonicalWebhookEventDefinition[] = [
     label: "Invoice Paid",
     description: "When an issued invoice is marked as paid.",
   },
+  {
+    id: "payment_link.created",
+    label: "Payment Link Created",
+    description: "When a hosted payment link is created from the dashboard or API.",
+  },
+  {
+    id: "payment_link.updated",
+    label: "Payment Link Updated",
+    description: "When a hosted payment link is updated, activated, deactivated, or archived.",
+  },
+  {
+    id: "checkout.session.created",
+    label: "Checkout Session Created",
+    description: "When a customer opens a hosted checkout link and a payment session is created.",
+  },
+  {
+    id: "checkout.session.paid",
+    label: "Checkout Session Paid",
+    description: "When a hosted checkout session is paid and verified on-chain.",
+  },
 ];
 
 export const CANONICAL_WEBHOOK_EVENT_IDS = CANONICAL_WEBHOOK_EVENTS.map(

@@ -247,4 +247,139 @@ describe("ArcenClient", () => {
       );
     });
   });
+
+  describe("payment link APIs", () => {
+    it("creates a payment link with API-key auth", async () => {
+      mockFetch.mockResolvedValueOnce(
+        mockResponse({
+          paymentLink: {
+            id: "plink_1",
+            name: "Priority setup fee",
+            slug: "priority-setup-fee-ab12cd34",
+            kind: "CUSTOM",
+            status: "ACTIVE",
+            amount: "49.000000",
+            currency: "USDC",
+            acceptedToken: "0x0000000000000000000000000000000000000002",
+            recipientWallet: "0x1234567890123456789012345678901234567890",
+            chainId: 84532,
+            checkoutUrl: "http://localhost/pay/priority-setup-fee-ab12cd34",
+            metadata: {
+              checkoutPage: {
+                title: "Priority setup",
+                accentColor: "#10b981",
+              },
+            },
+          },
+        }),
+      );
+
+      const result = await client.createPaymentLink({
+        kind: "CUSTOM",
+        name: "Priority setup fee",
+        amount: 49,
+        metadata: {
+          checkoutPage: {
+            title: "Priority setup",
+            accentColor: "#10b981",
+          },
+        },
+        acceptedToken: "0x0000000000000000000000000000000000000002",
+        recipientWallet: "0x1234567890123456789012345678901234567890",
+      });
+
+      expect(result.paymentLink.id).toBe("plink_1");
+
+      const [url, request] = mockFetch.mock.calls[0] as [string, RequestInit];
+      expect(url).toContain("/api/v1/payment-links");
+      expect(request.method).toBe("POST");
+      expect((request.headers as Record<string, string>).Authorization).toBe(
+        `Bearer ${API_KEY}`,
+      );
+      expect(request.body).toBe(
+        JSON.stringify({
+          kind: "CUSTOM",
+          name: "Priority setup fee",
+          amount: 49,
+          metadata: {
+            checkoutPage: {
+              title: "Priority setup",
+              accentColor: "#10b981",
+            },
+          },
+          acceptedToken: "0x0000000000000000000000000000000000000002",
+          recipientWallet: "0x1234567890123456789012345678901234567890",
+        }),
+      );
+    });
+
+    it("lists payment links with API-key auth", async () => {
+      mockFetch.mockResolvedValueOnce(
+        mockResponse({
+          paymentLinks: [
+            {
+              id: "plink_1",
+              name: "Setup fee",
+              slug: "setup-fee-ab12cd34",
+              kind: "CUSTOM",
+              status: "ACTIVE",
+              amount: "49.000000",
+              currency: "USDC",
+              acceptedToken: "0x0000000000000000000000000000000000000002",
+              recipientWallet: "0x1234567890123456789012345678901234567890",
+              chainId: 84532,
+              checkoutUrl: "http://localhost/pay/setup-fee-ab12cd34",
+            },
+          ],
+        }),
+      );
+
+      const result = await client.listPaymentLinks();
+
+      expect(result.paymentLinks).toHaveLength(1);
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining("/api/v1/payment-links"),
+        expect.objectContaining({ method: "GET" }),
+      );
+    });
+
+    it("creates a checkout session from a payment link", async () => {
+      mockFetch.mockResolvedValueOnce(
+        mockResponse({
+          checkoutSession: {
+            id: "sess_1",
+            purpose: "CUSTOM",
+            status: "PENDING",
+            amount: "49.000000",
+            currency: "USDC",
+            paymentLink: {
+              id: "plink_1",
+              name: "Setup fee",
+              slug: "setup-fee-ab12cd34",
+              kind: "CUSTOM",
+            },
+          },
+        }),
+      );
+
+      const result = await client.createCheckoutSession({
+        paymentLinkId: "plink_1",
+        customerEmail: "buyer@example.com",
+        customerName: "Ada Lovelace",
+      });
+
+      expect(result.checkoutSession.id).toBe("sess_1");
+
+      const [url, request] = mockFetch.mock.calls[0] as [string, RequestInit];
+      expect(url).toContain("/api/v1/checkout-sessions");
+      expect(request.method).toBe("POST");
+      expect(request.body).toBe(
+        JSON.stringify({
+          paymentLinkId: "plink_1",
+          customerEmail: "buyer@example.com",
+          customerName: "Ada Lovelace",
+        }),
+      );
+    });
+  });
 });

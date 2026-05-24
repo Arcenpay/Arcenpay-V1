@@ -9,6 +9,7 @@ import { recordSuccessfulPayment } from "../billing/billing-ledger.js";
 import { createIssuedChargeInvoice } from "../billing/billing-events.js";
 import { grantCompanyAddOn } from "../companies/addon-grants.js";
 import { sendPaidInvoiceReceipt } from "../billing/invoice-notifications.js";
+import { deliverWebhook } from "../webhooks/deliver-webhook.js";
 
 function normalizeWallet(value?: string | null): string | null {
   const trimmed = value?.trim().toLowerCase();
@@ -105,7 +106,7 @@ export async function createCheckoutSession(input: {
   expiresAt?: Date | null;
   metadata?: Record<string, unknown>;
 }) {
-  return db.checkoutSession.create({
+  const session = await db.checkoutSession.create({
     data: {
       teamId: input.teamId,
       environmentId: input.environmentId ?? null,
@@ -136,6 +137,31 @@ export async function createCheckoutSession(input: {
       company: true,
     },
   });
+
+  deliverWebhook(input.teamId, "checkout.session.created", {
+    environmentId: session.environmentId ?? input.environmentId ?? null,
+    checkoutSessionId: session.id,
+    paymentLinkId: session.paymentLinkId ?? null,
+    paymentLinkSlug: session.paymentLink?.slug ?? null,
+    purpose: session.purpose,
+    status: session.status,
+    amount: session.amount,
+    currency: session.currency,
+    acceptedToken: session.acceptedToken,
+    chainId: session.chainId,
+    recipientWallet: session.recipientWallet,
+    customerEmail: session.customerEmail ?? null,
+    customerWallet: session.customerWallet ?? null,
+    customerName: session.customerName ?? null,
+    companyId: session.companyId ?? null,
+    catalogAddOnId: session.catalogAddOnId ?? null,
+    invoiceId: session.invoiceId ?? null,
+    successUrl: session.successUrl ?? null,
+    cancelUrl: session.cancelUrl ?? null,
+    expiresAt: session.expiresAt?.toISOString() ?? null,
+  }).catch(() => {});
+
+  return session;
 }
 
 export async function getCheckoutSessionById(id: string, teamId?: string) {
@@ -335,6 +361,28 @@ export async function confirmCheckoutSessionPayment(input: {
       txHash: verification.txHash,
     }).catch(() => {});
   }
+
+  deliverWebhook(session.teamId, "checkout.session.paid", {
+    environmentId: updated.environmentId ?? null,
+    checkoutSessionId: updated.id,
+    paymentLinkId: updated.paymentLinkId ?? null,
+    paymentLinkSlug: updated.paymentLink?.slug ?? null,
+    purpose: updated.purpose,
+    status: updated.status,
+    amount: updated.amount,
+    currency: updated.currency,
+    acceptedToken: updated.acceptedToken,
+    chainId: updated.chainId,
+    recipientWallet: updated.recipientWallet,
+    customerEmail: updated.customerEmail ?? null,
+    customerWallet: updated.customerWallet ?? null,
+    customerName: updated.customerName ?? null,
+    companyId: updated.companyId ?? null,
+    paymentId: payment.id,
+    invoiceId,
+    txHash: verification.txHash,
+    paidAt: updated.paidAt?.toISOString() ?? null,
+  }).catch(() => {});
 
   return { ok: true as const, session: updated, payment };
 }

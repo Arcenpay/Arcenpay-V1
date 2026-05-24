@@ -44,6 +44,10 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { getUsdcAddress } from "@/lib/contracts";
 import { getChainLabel, resolveEnvironmentChainId } from "@/lib/default-chain";
+import {
+  mergePaymentLinkCheckoutAppearance,
+  readPaymentLinkCheckoutAppearance,
+} from "@/lib/payment-link-checkout";
 import { toast } from "sonner";
 import { useEnvironment } from "@/contexts/environment-context";
 
@@ -69,9 +73,16 @@ type PaymentLinkRow = {
   expiresAt?: string | null;
   createdAt: string;
   description?: string | null;
+  metadata?: Record<string, unknown> | null;
   successUrl?: string | null;
   cancelUrl?: string | null;
-  company?: { id: string; name: string; email: string | null; walletAddress: string | null } | null;
+  company?: {
+    id: string;
+    name: string;
+    email: string | null;
+    walletAddress: string | null;
+    logoUrl?: string | null;
+  } | null;
   catalogAddOn?: { id: string; name: string; code: string; billingType: string; saleMode: string } | null;
   invoice?: { id: string; number: string; status: string; total: string; currency: string } | null;
   checkoutSessions?: Array<{
@@ -164,8 +175,14 @@ export function PaymentsSection() {
     successUrl: "",
     cancelUrl: "",
     description: "",
-    isOneTime: true,
     companyId: "",
+    checkoutTitle: "",
+    checkoutDescription: "",
+    brandName: "",
+    recipientName: "",
+    buttonLabel: "",
+    accentColor: "",
+    logoUrl: "",
   });
 
   const [editDialog, setEditDialog] = useState<PaymentLinkRow | null>(null);
@@ -176,6 +193,13 @@ export function PaymentsSection() {
     cancelUrl: "",
     description: "",
     expiresAt: "",
+    checkoutTitle: "",
+    checkoutDescription: "",
+    brandName: "",
+    recipientName: "",
+    buttonLabel: "",
+    accentColor: "",
+    logoUrl: "",
   });
 
   const load = useCallback(async () => {
@@ -239,6 +263,15 @@ export function PaymentsSection() {
           kind: "CUSTOM",
           name: form.name,
           description: form.description || undefined,
+          metadata: mergePaymentLinkCheckoutAppearance(undefined, {
+            title: form.checkoutTitle,
+            description: form.checkoutDescription,
+            brandName: form.brandName,
+            recipientName: form.recipientName,
+            buttonLabel: form.buttonLabel,
+            accentColor: form.accentColor,
+            logoUrl: form.logoUrl,
+          }),
           amount: Number(form.amount),
           acceptedToken: runtimeUsdc,
           recipientWallet: form.recipientWallet,
@@ -261,8 +294,14 @@ export function PaymentsSection() {
         successUrl: "",
         cancelUrl: "",
         description: "",
-        isOneTime: true,
         companyId: "",
+        checkoutTitle: "",
+        checkoutDescription: "",
+        brandName: "",
+        recipientName: "",
+        buttonLabel: "",
+        accentColor: "",
+        logoUrl: "",
       });
       await load();
     } catch (error) {
@@ -322,6 +361,15 @@ export function PaymentsSection() {
         body: JSON.stringify({
           name: editForm.name,
           description: editForm.description || null,
+          metadata: mergePaymentLinkCheckoutAppearance(editDialog.metadata, {
+            title: editForm.checkoutTitle,
+            description: editForm.checkoutDescription,
+            brandName: editForm.brandName,
+            recipientName: editForm.recipientName,
+            buttonLabel: editForm.buttonLabel,
+            accentColor: editForm.accentColor,
+            logoUrl: editForm.logoUrl,
+          }) ?? null,
           recipientWallet: editForm.recipientWallet,
           successUrl: editForm.successUrl || null,
           cancelUrl: editForm.cancelUrl || null,
@@ -341,6 +389,7 @@ export function PaymentsSection() {
   }
 
   function openEdit(link: PaymentLinkRow) {
+    const appearance = readPaymentLinkCheckoutAppearance(link.metadata);
     setEditDialog(link);
     setEditForm({
       name: link.name,
@@ -349,6 +398,13 @@ export function PaymentsSection() {
       cancelUrl: link.cancelUrl ?? "",
       description: link.description ?? "",
       expiresAt: link.expiresAt ? new Date(link.expiresAt).toISOString().slice(0, 16) : "",
+      checkoutTitle: appearance.title,
+      checkoutDescription: appearance.description,
+      brandName: appearance.brandName,
+      recipientName: appearance.recipientName,
+      buttonLabel: appearance.buttonLabel,
+      accentColor: appearance.accentColor,
+      logoUrl: appearance.logoUrl,
     });
   }
 
@@ -530,6 +586,79 @@ export function PaymentsSection() {
                 />
               </div>
             </div>
+            <div className="rounded-xl border border-border/60 bg-secondary/10 p-4">
+              <div className="mb-3">
+                <p className="text-sm font-medium text-foreground">Hosted checkout appearance</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  These fields control the public checkout page and can also be set from the SDK via payment-link metadata.
+                </p>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label>Checkout title</Label>
+                  <Input
+                    value={form.checkoutTitle}
+                    onChange={(e) => setForm((c) => ({ ...c, checkoutTitle: e.target.value }))}
+                    placeholder="Priority setup fee"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Brand name</Label>
+                  <Input
+                    value={form.brandName}
+                    onChange={(e) => setForm((c) => ({ ...c, brandName: e.target.value }))}
+                    placeholder="ArcenPay"
+                  />
+                </div>
+              </div>
+              <div className="mt-4 space-y-1.5">
+                <Label>Checkout description</Label>
+                <Textarea
+                  value={form.checkoutDescription}
+                  onChange={(e) =>
+                    setForm((c) => ({ ...c, checkoutDescription: e.target.value }))
+                  }
+                  className="h-20"
+                  placeholder="What the customer is paying for and what happens after payment."
+                />
+              </div>
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label>Recipient display name</Label>
+                  <Input
+                    value={form.recipientName}
+                    onChange={(e) => setForm((c) => ({ ...c, recipientName: e.target.value }))}
+                    placeholder="Acme Labs"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Pay button label</Label>
+                  <Input
+                    value={form.buttonLabel}
+                    onChange={(e) => setForm((c) => ({ ...c, buttonLabel: e.target.value }))}
+                    placeholder="Complete payment"
+                  />
+                </div>
+              </div>
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label>Accent color</Label>
+                  <Input
+                    value={form.accentColor}
+                    onChange={(e) => setForm((c) => ({ ...c, accentColor: e.target.value }))}
+                    placeholder="#16a34a"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Logo URL</Label>
+                  <Input
+                    value={form.logoUrl}
+                    onChange={(e) => setForm((c) => ({ ...c, logoUrl: e.target.value }))}
+                    placeholder="https://yourcdn.com/logo.png"
+                  />
+                </div>
+              </div>
+            </div>
             <Button onClick={() => void createCustomPaymentLink()} disabled={creating} className="w-full">
               {creating ? (
                 <>
@@ -577,6 +706,15 @@ export function PaymentsSection() {
                   (s) => s.status === "PAID",
                 );
                 const isActive = link.status === "ACTIVE";
+                const appearance = readPaymentLinkCheckoutAppearance(link.metadata);
+                const hasCustomization = Boolean(
+                  appearance.title ||
+                    appearance.description ||
+                    appearance.brandName ||
+                    appearance.buttonLabel ||
+                    appearance.accentColor ||
+                    appearance.logoUrl,
+                );
                 return (
                   <div
                     key={link.id}
@@ -596,6 +734,11 @@ export function PaymentsSection() {
                           <Badge variant={statusVariant(link.status)} className="text-[10px] px-1.5">
                             {link.status.toLowerCase()}
                           </Badge>
+                          {hasCustomization ? (
+                            <Badge variant="outline" className="text-[10px] px-1.5">
+                              Custom checkout
+                            </Badge>
+                          ) : null}
                         </div>
                         <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
                           <span>
@@ -788,7 +931,7 @@ export function PaymentsSection() {
           <DialogHeader>
             <DialogTitle>Edit payment link</DialogTitle>
             <DialogDescription>
-              Update the link name, recipient wallet, or redirect URLs.
+              Update the payment link details, redirects, and hosted checkout appearance.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -838,6 +981,73 @@ export function PaymentsSection() {
                 value={editForm.expiresAt}
                 onChange={(e) => setEditForm((c) => ({ ...c, expiresAt: e.target.value }))}
               />
+            </div>
+            <div className="rounded-xl border border-border/60 bg-secondary/10 p-4">
+              <div className="mb-3">
+                <p className="text-sm font-medium text-foreground">Hosted checkout appearance</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Update the public page title, branding, colors, and pay button text.
+                </p>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label>Checkout title</Label>
+                  <Input
+                    value={editForm.checkoutTitle}
+                    onChange={(e) => setEditForm((c) => ({ ...c, checkoutTitle: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Brand name</Label>
+                  <Input
+                    value={editForm.brandName}
+                    onChange={(e) => setEditForm((c) => ({ ...c, brandName: e.target.value }))}
+                  />
+                </div>
+              </div>
+              <div className="mt-4 space-y-1.5">
+                <Label>Checkout description</Label>
+                <Textarea
+                  value={editForm.checkoutDescription}
+                  onChange={(e) =>
+                    setEditForm((c) => ({ ...c, checkoutDescription: e.target.value }))
+                  }
+                  className="h-20"
+                />
+              </div>
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label>Recipient display name</Label>
+                  <Input
+                    value={editForm.recipientName}
+                    onChange={(e) => setEditForm((c) => ({ ...c, recipientName: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Pay button label</Label>
+                  <Input
+                    value={editForm.buttonLabel}
+                    onChange={(e) => setEditForm((c) => ({ ...c, buttonLabel: e.target.value }))}
+                  />
+                </div>
+              </div>
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label>Accent color</Label>
+                  <Input
+                    value={editForm.accentColor}
+                    onChange={(e) => setEditForm((c) => ({ ...c, accentColor: e.target.value }))}
+                    placeholder="#16a34a"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Logo URL</Label>
+                  <Input
+                    value={editForm.logoUrl}
+                    onChange={(e) => setEditForm((c) => ({ ...c, logoUrl: e.target.value }))}
+                  />
+                </div>
+              </div>
             </div>
           </div>
           <DialogFooter>

@@ -6,6 +6,7 @@ import {
   updatePaymentLink,
 } from "../../lib/payments/payment-links.js";
 import { APP_URL } from "../../config.js";
+import { deliverWebhook } from "../../lib/webhooks/deliver-webhook.js";
 
 const updateSchema = z.object({
   status: z.enum(["ACTIVE", "INACTIVE", "ARCHIVED"]).optional(),
@@ -15,6 +16,7 @@ const updateSchema = z.object({
   successUrl: z.string().url().nullable().optional(),
   cancelUrl: z.string().url().nullable().optional(),
   expiresAt: z.string().datetime().nullable().optional(),
+  metadata: z.record(z.unknown()).nullable().optional(),
 });
 
 function withCheckoutUrl<T extends { slug: string }>(paymentLink: T) {
@@ -62,11 +64,36 @@ export async function PATCH(c: Context) {
         : parsed.data.expiresAt
           ? new Date(parsed.data.expiresAt)
           : undefined,
+    metadata:
+      parsed.data.metadata === undefined ? undefined : parsed.data.metadata,
   });
 
   const updated = await getPaymentLinkById(auth.teamId, id);
   if (!updated) {
     return c.json({ error: "Payment link not found" }, 404 as any);
   }
+
+  deliverWebhook(auth.teamId, "payment_link.updated", {
+    environmentId: updated.environmentId ?? null,
+    paymentLinkId: updated.id,
+    slug: updated.slug,
+    checkoutUrl: `${APP_URL}/pay/${updated.slug}`,
+    kind: updated.kind,
+    status: updated.status,
+    name: updated.name,
+    description: updated.description ?? null,
+    amount: updated.amount,
+    currency: updated.currency,
+    acceptedToken: updated.acceptedToken,
+    recipientWallet: updated.recipientWallet,
+    companyId: updated.companyId ?? null,
+    catalogAddOnId: updated.catalogAddOnId ?? null,
+    invoiceId: updated.invoiceId ?? null,
+    successUrl: updated.successUrl ?? null,
+    cancelUrl: updated.cancelUrl ?? null,
+    expiresAt: updated.expiresAt?.toISOString() ?? null,
+    metadata: updated.metadata ?? null,
+  }).catch(() => {});
+
   return c.json({ paymentLink: withCheckoutUrl(updated) });
 }

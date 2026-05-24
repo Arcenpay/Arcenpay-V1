@@ -11,6 +11,11 @@ export type {
   IdentifyInput,
   ActivateSubscriptionInput,
   ActivateSubscriptionResult,
+  PaymentLinkSummary,
+  CreatePaymentLinkInput,
+  UpdatePaymentLinkInput,
+  CheckoutSessionSummary,
+  CreateCheckoutSessionInput,
 } from "./client";
 export type {
   ArcenCompanyKeys,

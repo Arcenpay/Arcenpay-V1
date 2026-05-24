@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { db } from "../../db.js";
-import { toPrismaJson } from "../../utils/prisma-json.js";
+import { toPrismaJson, toPrismaNullableJson } from "../../utils/prisma-json.js";
 import { DEFAULT_CHAIN_ID } from "../platform/default-chain.js";
 
 function slugify(value: string): string {
@@ -65,7 +65,13 @@ export async function createPaymentLink(input: {
       catalogAddOn: true,
       invoice: true,
       company: {
-        select: { id: true, name: true, email: true, walletAddress: true },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          walletAddress: true,
+          logoUrl: true,
+        },
       },
     },
   });
@@ -82,7 +88,13 @@ export async function listPaymentLinks(teamId: string, environmentId?: string | 
         select: { id: true, number: true, status: true, total: true, currency: true },
       },
       company: {
-        select: { id: true, name: true, email: true, walletAddress: true },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          walletAddress: true,
+          logoUrl: true,
+        },
       },
       checkoutSessions: {
         select: { id: true, status: true, paidAt: true, txHash: true },
@@ -126,7 +138,7 @@ export async function updatePaymentLink(input: {
   successUrl?: string | null;
   cancelUrl?: string | null;
   expiresAt?: Date | null;
-  metadata?: Record<string, unknown>;
+  metadata?: Record<string, unknown> | null;
 }) {
   return db.paymentLink.updateMany({
     where: { teamId: input.teamId, id: input.id },
@@ -145,7 +157,11 @@ export async function updatePaymentLink(input: {
       ...(input.successUrl !== undefined ? { successUrl: input.successUrl } : {}),
       ...(input.cancelUrl !== undefined ? { cancelUrl: input.cancelUrl } : {}),
       ...(input.expiresAt !== undefined ? { expiresAt: input.expiresAt } : {}),
-      ...(input.metadata ? { metadata: toPrismaJson(input.metadata) } : {}),
+      ...(input.metadata !== undefined
+        ? {
+            metadata: toPrismaNullableJson(input.metadata),
+          }
+        : {}),
     },
   });
 }

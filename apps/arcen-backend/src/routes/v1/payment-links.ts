@@ -8,6 +8,7 @@ import { writeAuditEvent } from "../../lib/platform/audit.js";
 import { RUNTIME_CHAIN_ID } from "../../lib/platform/runtime-chain.js";
 import { getUsdcAddress } from "../../lib/platform/contracts.js";
 import { requireResolvedActiveEnvironment } from "../../lib/environments/workspace-environments.js";
+import { deliverWebhook } from "../../lib/webhooks/deliver-webhook.js";
 
 const createSchema = z
   .object({
@@ -23,6 +24,7 @@ const createSchema = z
     successUrl: z.string().url().optional(),
     cancelUrl: z.string().url().optional(),
     expiresAt: z.string().datetime().optional(),
+    metadata: z.record(z.unknown()).optional(),
   })
   .superRefine((value, ctx) => {
     if (value.kind === "ADDON" && !value.catalogAddOnId) {
@@ -211,6 +213,7 @@ export async function POST(c: Context) {
       ? new Date(parsed.data.expiresAt)
       : null,
     metadata: {
+      ...(parsed.data.metadata ?? {}),
       source: "dashboard",
       kind: parsed.data.kind,
     },
@@ -226,6 +229,29 @@ export async function POST(c: Context) {
       afterData: paymentLink,
     }).catch(() => {});
   }
+
+  deliverWebhook(auth.teamId, "payment_link.created", {
+    environmentId: paymentLink.environmentId ?? resolvedEnvironmentId ?? null,
+    paymentLinkId: paymentLink.id,
+    slug: paymentLink.slug,
+    checkoutUrl: `${APP_URL}/pay/${paymentLink.slug}`,
+    kind: paymentLink.kind,
+    status: paymentLink.status,
+    name: paymentLink.name,
+    description: paymentLink.description ?? null,
+    amount: paymentLink.amount,
+    currency: paymentLink.currency,
+    acceptedToken: paymentLink.acceptedToken,
+    recipientWallet: paymentLink.recipientWallet,
+    companyId: paymentLink.companyId ?? null,
+    catalogAddOnId: paymentLink.catalogAddOnId ?? null,
+    invoiceId: paymentLink.invoiceId ?? null,
+    successUrl: paymentLink.successUrl ?? null,
+    cancelUrl: paymentLink.cancelUrl ?? null,
+    expiresAt: paymentLink.expiresAt?.toISOString() ?? null,
+    metadata: paymentLink.metadata ?? null,
+    source: parsed.data.kind === "CUSTOM" ? "custom" : "catalog",
+  }).catch(() => {});
 
   return c.json({ paymentLink: withCheckoutUrl(paymentLink) }, 201 as any);
 }

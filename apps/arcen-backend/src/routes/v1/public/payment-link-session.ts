@@ -28,6 +28,7 @@ export async function createPaymentLinkSession(c: Context) {
 
   const checkoutSession = await createCheckoutSession({
     teamId: paymentLink.teamId,
+    environmentId: paymentLink.environmentId ?? null,
     purpose: paymentLink.kind,
     paymentLinkId: paymentLink.id,
     companyId: parsed.data.companyId ?? paymentLink.companyId ?? undefined,

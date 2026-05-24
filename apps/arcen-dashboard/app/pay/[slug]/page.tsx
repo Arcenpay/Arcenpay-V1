@@ -13,8 +13,11 @@ import { isAddress, parseUnits } from "viem";
 import { useAppKit } from "@reown/appkit/react";
 import {
   CheckCircle2,
-  Copy,
+  ChevronDown,
+  ChevronLeft,
   Loader2,
+  MapPinHouse,
+  Globe,
   Wallet,
   AlertTriangle,
   XCircle,
@@ -22,9 +25,10 @@ import {
   Shield,
   Clock,
   RefreshCw,
-  User,
 } from "lucide-react";
+import { Web3Icon } from "@/components/web3-icon";
 import { DEFAULT_CHAIN_ID, getChainLabel } from "@/lib/default-chain";
+import { readPaymentLinkCheckoutAppearance } from "@/lib/payment-link-checkout";
 
 const ERC20_TRANSFER_ABI = [
   {
@@ -60,8 +64,17 @@ type PublicCheckoutSession = {
   paymentLink?: {
     id: string;
     name: string;
+    description?: string | null;
     slug: string;
     kind: string;
+    metadata?: Record<string, unknown> | null;
+    company?: {
+      id: string;
+      name: string;
+      email?: string | null;
+      walletAddress?: string | null;
+      logoUrl?: string | null;
+    } | null;
   } | null;
   catalogAddOn?: {
     id: string;
@@ -91,31 +104,13 @@ function normalizeWalletAddress(value?: string | null) {
   return value?.trim().toLowerCase() ?? null;
 }
 
-function CopyField({ value }: { value: string }) {
-  const [copied, setCopied] = useState(false);
-  return (
-    <button
-      type="button"
-      onClick={() => {
-        navigator.clipboard.writeText(value);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 1200);
-      }}
-      className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800"
-    >
-      {copied ? (
-        <>
-          <CheckCircle2 className="h-3.5 w-3.5" />
-          Copied
-        </>
-      ) : (
-        <>
-          <Copy className="h-3.5 w-3.5" />
-          Copy
-        </>
-      )}
-    </button>
-  );
+function getAccentTextColor(accent: string) {
+  if (!/^#[0-9a-fA-F]{6}$/.test(accent)) return "#ffffff";
+  const red = Number.parseInt(accent.slice(1, 3), 16);
+  const green = Number.parseInt(accent.slice(3, 5), 16);
+  const blue = Number.parseInt(accent.slice(5, 7), 16);
+  const luminance = (red * 299 + green * 587 + blue * 114) / 1000;
+  return luminance > 170 ? "#111111" : "#ffffff";
 }
 
 function useExpiryCountdown(expiresAt?: string | null) {
@@ -151,9 +146,59 @@ function useExpiryCountdown(expiresAt?: string | null) {
 
 function Skeleton() {
   return (
-    <div className="mt-20 flex flex-col items-center gap-4 text-neutral-500">
-      <Loader2 className="h-8 w-8 animate-spin" />
-      <p className="text-sm">Preparing your checkout…</p>
+    <div className="pt-6 sm:pt-10">
+      <div className="mx-auto max-w-[110rem] overflow-hidden rounded-[1rem] border border-[#e5e7eb] bg-white shadow-[0_20px_60px_-40px_rgba(15,23,42,0.28)] lg:grid lg:grid-cols-[1.02fr_0.98fr]">
+        <section className="bg-[#f5f5f7] px-6 py-8 sm:px-10 lg:px-12 lg:py-10">
+          <div className="h-4 w-16 animate-pulse rounded bg-[#d8dbe2]" />
+          <div className="mt-7 flex items-center gap-3">
+            <div className="h-10 w-10 animate-pulse rounded-full bg-[#d8dbe2]" />
+            <div className="space-y-2">
+              <div className="h-4 w-32 animate-pulse rounded bg-[#d8dbe2]" />
+              <div className="h-3 w-20 animate-pulse rounded bg-[#e1e4ea]" />
+            </div>
+          </div>
+          <div className="mt-8 h-4 w-24 animate-pulse rounded bg-[#d8dbe2]" />
+          <div className="mt-3 h-12 w-40 animate-pulse rounded bg-[#d8dbe2]" />
+          <div className="mt-5 space-y-3">
+            <div className="h-3 w-full animate-pulse rounded bg-[#e1e4ea]" />
+            <div className="h-3 w-4/5 animate-pulse rounded bg-[#e1e4ea]" />
+          </div>
+          <div className="mt-10 rounded-2xl bg-white p-6 ring-1 ring-[#eceff4]">
+            <div className="h-5 w-32 animate-pulse rounded bg-[#d8dbe2]" />
+            <div className="mt-6 h-16 animate-pulse rounded-2xl bg-[#eef1f5]" />
+            <div className="mt-6 space-y-3">
+              <div className="h-3 w-full animate-pulse rounded bg-[#e1e4ea]" />
+              <div className="h-3 w-full animate-pulse rounded bg-[#e1e4ea]" />
+              <div className="h-3 w-3/4 animate-pulse rounded bg-[#e1e4ea]" />
+            </div>
+          </div>
+        </section>
+        <section className="px-6 py-8 sm:px-10 lg:px-12 lg:py-10">
+          <div className="h-12 w-full animate-pulse rounded-lg bg-[#111111]" />
+          <div className="my-7 flex items-center gap-4">
+            <div className="h-px flex-1 bg-[#e7e9ef]" />
+            <div className="h-3 w-8 animate-pulse rounded bg-[#e1e4ea]" />
+            <div className="h-px flex-1 bg-[#e7e9ef]" />
+          </div>
+          <div className="space-y-6">
+            <div className="space-y-3">
+              <div className="h-4 w-24 animate-pulse rounded bg-[#d8dbe2]" />
+              <div className="h-12 w-full animate-pulse rounded-xl bg-[#f5f6f8]" />
+            </div>
+            <div className="space-y-3">
+              <div className="h-4 w-28 animate-pulse rounded bg-[#d8dbe2]" />
+              <div className="h-16 w-full animate-pulse rounded-xl bg-[#f5f6f8]" />
+            </div>
+            <div className="space-y-3">
+              <div className="h-4 w-32 animate-pulse rounded bg-[#d8dbe2]" />
+              <div className="h-12 w-full animate-pulse rounded-xl bg-[#f5f6f8]" />
+              <div className="h-12 w-full animate-pulse rounded-xl bg-[#f5f6f8]" />
+              <div className="h-12 w-full animate-pulse rounded-xl bg-[#f5f6f8]" />
+            </div>
+            <div className="h-14 w-full animate-pulse rounded-lg bg-[#111111]" />
+          </div>
+        </section>
+      </div>
     </div>
   );
 }
@@ -162,12 +207,9 @@ export default function HostedPaymentPage() {
   return (
     <Suspense
       fallback={
-        <main className="min-h-screen bg-gradient-to-b from-neutral-50 to-neutral-100 px-4 py-8">
-          <div className="mx-auto max-w-lg">
-            <div className="mt-20 flex flex-col items-center gap-4 text-neutral-500">
-              <Loader2 className="h-8 w-8 animate-spin" />
-              <p className="text-sm">Loading checkout…</p>
-            </div>
+        <main className="min-h-screen overflow-hidden bg-[#f6f4f1] px-4 py-8 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-6xl">
+            <Skeleton />
           </div>
         </main>
       }
@@ -197,6 +239,8 @@ function CheckoutContent() {
   const [customerEmail, setCustomerEmail] = useState("");
   const [customerWallet, setCustomerWallet] = useState("");
   const [customerName, setCustomerName] = useState("");
+  const [billingCountry, setBillingCountry] = useState("");
+  const [addressLine1, setAddressLine1] = useState("");
   const [sentTxHash, setSentTxHash] = useState<string | null>(null);
   const [verifying, setVerifying] = useState(false);
   const [verificationFailed, setVerificationFailed] = useState(false);
@@ -216,6 +260,52 @@ function CheckoutContent() {
     session?.invoice?.number ??
     session?.paymentLink?.name ??
     "One-time payment";
+  const productDescription =
+    session?.catalogAddOn?.description ??
+    session?.paymentLink?.description ??
+    (session?.invoice
+      ? "Complete this invoice securely with an on-chain USDC payment."
+      : "Securely complete this hosted checkout with your wallet.");
+  const paymentLinkKindLabel =
+    session?.paymentLink?.kind === "INVOICE"
+      ? "Invoice checkout"
+      : session?.paymentLink?.kind === "ADDON"
+        ? "Add-on checkout"
+        : "Hosted checkout";
+  const billingCadenceLabel =
+    session?.purpose === "INVOICE"
+      ? "One-time invoice payment"
+      : session?.purpose === "ADDON"
+        ? "Add-on purchase"
+        : "One-time hosted payment";
+  const checkoutAppearance = readPaymentLinkCheckoutAppearance(
+    session?.paymentLink?.metadata,
+  );
+  const merchantName =
+    checkoutAppearance.brandName ||
+    session?.paymentLink?.company?.name ||
+    session?.paymentLink?.name ||
+    "ArcenPay";
+  const merchantLogoUrl =
+    checkoutAppearance.logoUrl || session?.paymentLink?.company?.logoUrl || "";
+  const recipientDisplayName =
+    checkoutAppearance.recipientName ||
+    session?.paymentLink?.company?.name ||
+    merchantName;
+  const displayTitle = checkoutAppearance.title || productName;
+  const displayDescription =
+    checkoutAppearance.description || productDescription;
+  const payButtonLabel =
+    checkoutAppearance.buttonLabel ||
+    (session?.purpose === "INVOICE"
+      ? "Pay invoice"
+      : session?.purpose === "ADDON"
+        ? "Complete purchase"
+        : "Complete payment");
+  const accentColor = checkoutAppearance.accentColor || "#111111";
+  const accentSoftColor =
+    accentColor.length === 7 ? `${accentColor}1a` : accentColor;
+  const accentTextColor = getAccentTextColor(accentColor);
   const isCorrectNetwork = !session || connectedChainId === session.chainId;
   const isSelfPayment =
     Boolean(session && address) &&
@@ -458,7 +548,6 @@ function CheckoutContent() {
     }
   }
 
-  const showConnect = !isConnected && session?.status === "PENDING";
   const showPay = isConnected && session?.status === "PENDING" && !sentTxHash && !verificationFailed;
   const showProcessing = sentTxHash && (isConfirming || isSending || verifying) && session?.status === "PENDING";
   const showError =
@@ -467,52 +556,141 @@ function CheckoutContent() {
     (error && session?.status === "PENDING" && !sentTxHash && !verifying);
   const showReceiptError =
     receipt && receipt.status === "reverted" && session?.status === "PENDING";
+  const paymentButtonLabel = isSending
+    ? "Confirm in wallet"
+    : isConfirming
+      ? "Waiting for confirmation"
+      : verifying
+        ? "Processing payment"
+        : payButtonLabel;
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-neutral-50 to-neutral-100 px-4 py-8">
-      <div className="mx-auto max-w-lg">
+    <main className="min-h-screen overflow-hidden bg-[#f6f4f1] px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-6xl">
         {loading && <Skeleton />}
 
         {/* Error state */}
         {!loading && error && !session && (
-          <div className="mt-10 rounded-2xl border border-red-200 bg-white p-8 text-center shadow-sm">
-            <XCircle className="mx-auto h-12 w-12 text-red-400" />
-            <h1 className="mt-4 text-xl font-semibold text-neutral-900">Checkout unavailable</h1>
-            <p className="mt-2 text-sm text-neutral-600">{error}</p>
-            <button
-              type="button"
-              onClick={handleRetry}
-              className="mt-6 inline-flex items-center gap-2 rounded-xl bg-neutral-900 px-6 py-2.5 text-sm font-medium text-white hover:bg-neutral-800 transition-colors"
-            >
-              <RefreshCw className="h-4 w-4" />
-              Try again
-            </button>
+          <div className="pt-6 sm:pt-10">
+            <div className="mx-auto max-w-3xl overflow-hidden rounded-[1rem] border border-[#e5e7eb] bg-white shadow-[0_20px_60px_-40px_rgba(15,23,42,0.28)]">
+              <div className="border-b border-[#eceff4] bg-[#f5f5f7] px-6 py-6 sm:px-8">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8b8f98]">
+                  Hosted checkout
+                </p>
+                <h1 className="mt-3 text-2xl font-semibold text-[#151922]">
+                  Checkout unavailable
+                </h1>
+                <p className="mt-2 max-w-xl text-sm leading-6 text-[#6f7480]">
+                  We couldn&apos;t create or restore this checkout session right now.
+                </p>
+              </div>
+              <div className="px-6 py-8 text-center sm:px-8">
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border border-red-200 bg-red-50">
+                  <XCircle className="h-7 w-7 text-red-500" />
+                </div>
+                <p className="mx-auto mt-5 max-w-lg text-sm leading-6 text-[#5f6470]">
+                  {error}
+                </p>
+                <button
+                  type="button"
+                  onClick={handleRetry}
+                  className="mt-6 inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#111111] px-6 text-sm font-medium text-white transition hover:opacity-95"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Try again
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
         {/* Already PAID */}
         {!loading && session?.status === "PAID" && (
-          <div className="mt-10 space-y-6">
-            <div className="rounded-2xl border border-emerald-200 bg-white p-8 text-center shadow-sm">
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50">
-                <CheckCircle2 className="h-9 w-9 text-emerald-500" />
-              </div>
-              <h1 className="mt-4 text-2xl font-semibold text-neutral-900">Payment confirmed</h1>
-              <p className="mt-2 text-sm text-neutral-600">
-                Your {amountFormatted} {session.currency} payment has been verified on-chain.
-              </p>
-              {session.txHash && (
-                <p className="mt-3 break-all font-mono text-xs text-neutral-500">{session.txHash}</p>
-              )}
-              {session.successUrl && (
-                <a
-                  href={session.successUrl}
-                  className="mt-5 inline-flex items-center gap-2 rounded-xl bg-neutral-900 px-6 py-2.5 text-sm font-medium text-white hover:bg-neutral-800 transition-colors"
-                >
-                  Continue
-                  <ArrowRight className="h-4 w-4" />
-                </a>
-              )}
+          <div className="pt-6 sm:pt-10">
+            <div className="mx-auto max-w-[72rem] overflow-hidden rounded-[1rem] border border-[#e5e7eb] bg-white shadow-[0_20px_60px_-40px_rgba(15,23,42,0.28)] lg:grid lg:grid-cols-[0.95fr_1.05fr]">
+              <section className="bg-[#f5f5f7] px-6 py-8 sm:px-10 lg:px-12 lg:py-10">
+                <div className="flex items-center gap-3">
+                  {merchantLogoUrl ? (
+                    <img
+                      src={merchantLogoUrl}
+                      alt={merchantName}
+                      className="h-10 w-10 rounded-full object-cover ring-1 ring-black/5"
+                    />
+                  ) : (
+                    <div
+                      className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold"
+                      style={{
+                        backgroundColor: accentColor,
+                        color: accentTextColor,
+                      }}
+                    >
+                      {merchantName.slice(0, 1).toUpperCase()}
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-base font-semibold text-[#1f232b]">
+                      {merchantName}
+                    </p>
+                    <p className="text-xs uppercase tracking-[0.18em] text-[#8b8f98]">
+                      Payment complete
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-8">
+                  <p className="text-sm text-[#7a7f89]">Amount paid</p>
+                  <p className="mt-2 text-[3rem] font-semibold tracking-[-0.04em] text-[#12161d] sm:text-[3.5rem]">
+                    ${amountFormatted}
+                  </p>
+                </div>
+                <div className="mt-8 rounded-2xl bg-white p-6 ring-1 ring-[#eceff4]">
+                  <p className="text-sm font-semibold text-[#1f232b]">
+                    Order Summary
+                  </p>
+                  <div className="mt-4 flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-base font-medium text-[#1f232b]">
+                        {displayTitle}
+                      </p>
+                      <p className="mt-1 text-sm text-[#6f7480]">
+                        {billingCadenceLabel}
+                      </p>
+                    </div>
+                    <p className="text-base font-medium text-[#1f232b]">
+                      ${amountFormatted}
+                    </p>
+                  </div>
+                </div>
+              </section>
+              <section className="px-6 py-8 sm:px-10 lg:px-12 lg:py-10">
+                <div className="mx-auto max-w-xl text-center lg:pt-8">
+                  <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#111111] text-white">
+                    <CheckCircle2 className="h-8 w-8" />
+                  </div>
+                  <h1 className="mt-6 text-3xl font-semibold tracking-[-0.03em] text-[#151922]">
+                    Payment confirmed
+                  </h1>
+                  <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-[#6f7480]">
+                    Your payment to {recipientDisplayName} has been verified on-chain and this checkout is complete.
+                  </p>
+                  {session.successUrl ? (
+                    <a
+                      href={session.successUrl}
+                      className="mt-8 inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-[#111111] px-6 text-sm font-medium text-white transition hover:opacity-95"
+                    >
+                      Continue
+                      <ArrowRight className="h-4 w-4" />
+                    </a>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => window.location.assign("/")}
+                      className="mt-8 inline-flex h-12 items-center justify-center rounded-lg border border-[#d9dde5] px-6 text-sm font-medium text-[#151922] transition hover:bg-[#f7f8fa]"
+                    >
+                      Done
+                    </button>
+                  )}
+                </div>
+              </section>
             </div>
           </div>
         )}
@@ -521,225 +699,377 @@ function CheckoutContent() {
         {!loading &&
           session &&
           (session.status === "EXPIRED" || session.status === "CANCELLED" || session.status === "FAILED") && (
-            <div className="mt-10 rounded-2xl border border-amber-200 bg-white p-8 text-center shadow-sm">
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-amber-50">
-                <Clock className="h-9 w-9 text-amber-500" />
+            <div className="pt-6 sm:pt-10">
+              <div className="mx-auto max-w-3xl overflow-hidden rounded-[1rem] border border-[#e5e7eb] bg-white shadow-[0_20px_60px_-40px_rgba(15,23,42,0.28)]">
+                <div className="border-b border-[#eceff4] bg-[#f5f5f7] px-6 py-6 sm:px-8">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8b8f98]">
+                    Hosted checkout
+                  </p>
+                  <h1 className="mt-3 text-2xl font-semibold text-[#151922]">
+                    {session.status === "EXPIRED"
+                      ? "Session expired"
+                      : session.status === "CANCELLED"
+                        ? "Session cancelled"
+                        : "Payment failed"}
+                  </h1>
+                  <p className="mt-2 max-w-xl text-sm leading-6 text-[#6f7480]">
+                    {session.status === "EXPIRED"
+                      ? "This checkout session has ended before payment was completed."
+                      : session.status === "CANCELLED"
+                        ? "This checkout session is no longer active."
+                        : "We couldn&apos;t verify this payment successfully."}
+                  </p>
+                </div>
+                <div className="px-6 py-8 text-center sm:px-8">
+                  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border border-[#e3e6ed] bg-[#f7f8fa]">
+                    <Clock className="h-7 w-7 text-[#3d4048]" />
+                  </div>
+                  <p className="mx-auto mt-5 max-w-lg text-sm leading-6 text-[#5f6470]">
+                    {session.status === "FAILED"
+                      ? session.verificationError ?? "The payment could not be verified."
+                      : session.status === "CANCELLED"
+                        ? "Create a fresh session if you still want to complete this payment."
+                        : "Create a fresh session to continue this checkout."}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleRetry}
+                    className="mt-6 inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#111111] px-6 text-sm font-medium text-white transition hover:opacity-95"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    Create new session
+                  </button>
+                </div>
               </div>
-              <h1 className="mt-4 text-xl font-semibold text-neutral-900">
-                {session.status === "EXPIRED" ? "Session expired" : session.status === "CANCELLED" ? "Session cancelled" : "Payment failed"}
-              </h1>
-              <p className="mt-2 text-sm text-neutral-600">
-                {session.status === "EXPIRED"
-                  ? "This checkout session has expired."
-                  : session.status === "CANCELLED"
-                    ? "This checkout session has been cancelled."
-                    : session.verificationError ?? "The payment could not be verified."}
-              </p>
-              <button
-                type="button"
-                onClick={handleRetry}
-                className="mt-5 inline-flex items-center gap-2 rounded-xl bg-neutral-900 px-6 py-2.5 text-sm font-medium text-white hover:bg-neutral-800 transition-colors"
-              >
-                <RefreshCw className="h-4 w-4" />
-                Create new session
-              </button>
             </div>
           )}
 
         {/* PENDING — active checkout */}
         {!loading && session?.status === "PENDING" && (
-          <div className="space-y-5">
-            {/* Header */}
-            <div className="text-center">
-              <p className="text-xs font-medium uppercase tracking-[0.18em] text-neutral-500">
-                ArcenPay Hosted Checkout
-              </p>
-              <h1 className="mt-2 text-2xl font-semibold tracking-tight text-neutral-900">
-                {productName}
-              </h1>
-            </div>
+          <div className="pt-6 sm:pt-10">
+            <div className="mx-auto max-w-[110rem] overflow-hidden rounded-[1rem] border border-[#e5e7eb] bg-white shadow-[0_20px_60px_-40px_rgba(15,23,42,0.28)] lg:grid lg:grid-cols-[1.02fr_0.98fr]">
+              <section className="bg-[#f5f5f7] px-6 py-8 sm:px-10 lg:px-12 lg:py-10">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (session.cancelUrl) {
+                      window.location.assign(session.cancelUrl);
+                      return;
+                    }
+                    window.history.back();
+                  }}
+                  className="inline-flex items-center gap-2 text-sm text-[#8b8f98] transition hover:text-[#3d4048]"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Back
+                </button>
 
-            {/* Payment card */}
-            <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="text-xs font-medium uppercase tracking-[0.14em] text-neutral-500">Amount due</p>
-                  <p className="mt-1 text-4xl font-semibold tracking-tight text-neutral-900">
+                <div className="mt-7 flex items-center gap-3">
+                  {merchantLogoUrl ? (
+                    <img
+                      src={merchantLogoUrl}
+                      alt={merchantName}
+                      className="h-10 w-10 rounded-full object-cover ring-1 ring-black/5"
+                    />
+                  ) : (
+                    <div
+                      className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold"
+                      style={{
+                        backgroundColor: accentColor,
+                        color: accentTextColor,
+                      }}
+                    >
+                      {merchantName.slice(0, 1).toUpperCase()}
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-base font-semibold text-[#1f232b]">
+                      {merchantName}
+                    </p>
+                    <p className="text-xs uppercase tracking-[0.18em] text-[#8b8f98]">
+                      {paymentLinkKindLabel}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-8">
+                  <p className="text-sm text-[#7a7f89]">Pay {merchantName}</p>
+                  <p className="mt-2 text-[3rem] font-semibold tracking-[-0.04em] text-[#12161d] sm:text-[3.5rem]">
                     ${amountFormatted}
                   </p>
-                  <p className="mt-1 text-sm text-neutral-600">{session.currency}</p>
                 </div>
-                <div className="flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700">
-                  <Shield className="h-3.5 w-3.5" />
-                  {checkoutChainLabel}
-                </div>
-              </div>
-              {countdown && (
-                <div className="mt-3 flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
-                  <Clock className="h-3.5 w-3.5" />
-                  Expires in <span className="font-mono font-medium">{countdown}</span>
-                </div>
-              )}
-            </div>
 
-            {/* Customer info */}
-            <div className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
-              <p className="mb-4 text-sm font-medium text-neutral-900">Billing information</p>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <label className="space-y-1.5">
-                  <span className="flex items-center gap-1.5 text-xs text-neutral-600">
-                    <User className="h-3.5 w-3.5" /> Full name
-                  </span>
-                  <input
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    className="h-11 w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3 text-sm outline-none transition focus:border-neutral-400 focus:bg-white"
-                    placeholder="Aditya Moharana"
-                  />
-                  <p
-                    className={
-                      missingCustomerName
-                        ? "text-xs text-red-600"
-                        : "text-xs text-neutral-500"
-                    }
-                  >
-                    {missingCustomerName
-                      ? "Enter the billing name that should appear on the invoice and receipt."
-                      : "This name will appear on the invoice and receipt."}
+                <div className="mt-10">
+                  <p className="text-xl font-semibold text-[#1f232b]">
+                    Order Summary
                   </p>
-                </label>
-                <label className="space-y-1.5">
-                  <span className="flex items-center gap-1.5 text-xs text-neutral-600">
-                    <User className="h-3.5 w-3.5" /> Billing email
-                  </span>
-                  <input
-                    value={customerEmail}
-                    onChange={(e) => setCustomerEmail(e.target.value)}
-                    className="h-11 w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3 text-sm outline-none transition focus:border-neutral-400 focus:bg-white"
-                    placeholder="you@company.com"
-                  />
-                  <p
-                    className={
-                      missingCustomerEmail || invalidCustomerEmail
-                        ? "text-xs text-red-600"
-                        : "text-xs text-neutral-500"
-                    }
-                  >
-                    {missingCustomerEmail || invalidCustomerEmail
-                      ? "Enter a valid billing email so we can send the invoice and receipt."
-                      : "We’ll email the invoice and payment receipt to this address."}
-                  </p>
-                </label>
-              </div>
-            </div>
 
-            {/* Payment flow */}
-            <div className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
-              <p className="mb-4 text-sm font-medium text-neutral-900">Payment</p>
-
-              {/* Connect wallet step */}
-              {showConnect && (
-                <div className="space-y-4">
-                  <div className="rounded-xl border border-neutral-100 bg-neutral-50 p-4">
-                    <div className="flex items-start gap-3">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-500/10 text-sm font-semibold text-blue-600">
-                        1
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-neutral-900">Connect your wallet</p>
-                        <p className="mt-1 text-xs text-neutral-600">
-                          Connect any wallet to pay {session.amount} {session.currency} on {checkoutChainLabel}. MetaMask, WalletConnect, Coinbase Wallet, and more are supported.
+                  <div className="mt-5 flex items-start gap-4">
+                    <div
+                      className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl text-lg font-semibold"
+                      style={{
+                        backgroundColor: accentColor,
+                        color: accentTextColor,
+                      }}
+                    >
+                      {displayTitle
+                        .split(" ")
+                        .slice(0, 2)
+                        .map((part) => part.charAt(0))
+                        .join("")
+                        .slice(0, 2)
+                        .toUpperCase()}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <p className="text-lg font-medium text-[#1f232b]">
+                            {displayTitle}
+                          </p>
+                          <p className="mt-1 text-sm text-[#5f6470]">
+                            {billingCadenceLabel}
+                          </p>
+                          <p className="mt-2 max-w-md text-sm leading-6 text-[#7a7f89]">
+                            {displayDescription}
+                          </p>
+                        </div>
+                        <p className="whitespace-nowrap text-base font-medium text-[#1f232b]">
+                          ${amountFormatted}
                         </p>
                       </div>
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => open()}
-                    className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-neutral-900 px-4 text-sm font-medium text-white transition-colors hover:bg-neutral-800"
-                  >
-                    <Wallet className="h-4 w-4" />
-                    Connect wallet
-                  </button>
-                </div>
-              )}
 
-              {/* Pay step */}
-              {showPay && (
-                <div className="space-y-4">
-                  <div className="rounded-xl border border-neutral-100 bg-neutral-50 p-4">
-                    <div className="flex items-start gap-3">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-sm font-semibold text-emerald-600">
-                        <CheckCircle2 className="h-4 w-4" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-neutral-900">Wallet connected</p>
-                        <p className="mt-1 break-all font-mono text-xs text-neutral-600">{address}</p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => open()}
-                        className="shrink-0 text-xs text-blue-600 hover:text-blue-800"
-                      >
-                        Change
-                      </button>
+                  <div className="mt-8 space-y-3 border-t border-[#d8dbe2] pt-5 text-sm">
+                    <div className="flex items-center justify-between text-[#2b313a]">
+                      <span>Subtotal</span>
+                      <span>${amountFormatted}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-[#7a7f89]">
+                      <span>Tax</span>
+                      <span>$0.00</span>
+                    </div>
+                    <div className="flex items-center justify-between text-[#7a7f89]">
+                      <span>Shipping</span>
+                      <span>Free</span>
+                    </div>
+                    <div className="flex items-center justify-between border-t border-[#d8dbe2] pt-4 text-base font-semibold text-[#161a22]">
+                      <span>Total</span>
+                      <span>${amountFormatted}</span>
                     </div>
                   </div>
+                </div>
 
-                  <div className="rounded-xl border border-neutral-100 bg-neutral-50 p-4">
-                    <div className="flex items-start gap-3">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-500/10 text-sm font-semibold text-blue-600">
-                        2
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-neutral-900">Send payment</p>
-                        <div className="mt-3 space-y-2 text-xs text-neutral-600">
-                          <div className="flex items-center justify-between">
-                            <span>Send to</span>
-                            <span className="font-mono">{session.recipientWallet.slice(0, 8)}…{session.recipientWallet.slice(-6)}</span>
+                <div className="mt-8 flex flex-wrap items-center gap-3 text-xs text-[#6f7480]">
+                  <div className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-2 ring-1 ring-[#e3e5eb]">
+                    <Web3Icon token={session.currency} size="sm" />
+                    <span>{session.currency}</span>
+                  </div>
+                  <div className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-2 ring-1 ring-[#e3e5eb]">
+                    <Web3Icon chainLabel={checkoutChainLabel} size="sm" />
+                    <span>{checkoutChainLabel}</span>
+                  </div>
+                  {countdown ? (
+                    <div className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-2 ring-1 ring-[#e3e5eb]">
+                      <Clock className="h-3.5 w-3.5" />
+                      <span>{countdown} left</span>
+                    </div>
+                  ) : null}
+                </div>
+              </section>
+
+              <section className="px-6 py-8 sm:px-10 lg:px-12 lg:py-10">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!isConnected) {
+                      open();
+                      return;
+                    }
+                    if (showPay) {
+                      void handlePay();
+                    }
+                  }}
+                  disabled={showProcessing || isSending}
+                  className="inline-flex h-12 w-full items-center justify-center gap-3 rounded-lg px-5 text-base font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-60"
+                  style={{
+                    backgroundColor: accentColor,
+                    color: accentTextColor,
+                  }}
+                >
+                  <Wallet className="h-4 w-4" />
+                  {showProcessing
+                    ? "Processing payment"
+                    : isConnected
+                      ? "Pay with wallet"
+                      : "Connect wallet to pay"}
+                </button>
+
+                <div className="my-7 flex items-center gap-4 text-sm text-[#b2b6bf]">
+                  <div className="h-px flex-1 bg-[#e7e9ef]" />
+                  <span>Or</span>
+                  <div className="h-px flex-1 bg-[#e7e9ef]" />
+                </div>
+
+                <div className="space-y-6">
+                  <div>
+                    <p className="text-[15px] font-semibold text-[#1e222b]">
+                      Contact info
+                    </p>
+                    <label className="mt-3 block space-y-2">
+                      <span className="text-sm text-[#373b44]">Email</span>
+                      <input
+                        value={customerEmail}
+                        onChange={(e) => setCustomerEmail(e.target.value)}
+                        className="h-12 w-full rounded-xl border border-[#dfe3ea] bg-white px-4 text-sm text-[#1d2129] outline-none transition focus:border-[#111827]"
+                        placeholder="you@example.com"
+                      />
+                    </label>
+                    <p
+                      className={
+                        missingCustomerEmail || invalidCustomerEmail
+                          ? "mt-2 text-xs text-red-600"
+                          : "mt-2 text-xs text-[#81848f]"
+                      }
+                    >
+                      {missingCustomerEmail || invalidCustomerEmail
+                        ? "Enter a valid billing email so we can send the invoice and receipt."
+                        : "Receipts and invoices will go to this address."}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-[15px] font-semibold text-[#1e222b]">
+                      Payment method
+                    </p>
+                    <div className="mt-3 rounded-xl border border-[#dfe3ea] bg-white px-4 py-3">
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="flex h-10 w-10 items-center justify-center rounded-full"
+                            style={{ backgroundColor: accentSoftColor }}
+                          >
+                            <Web3Icon token={session.currency} size="md" />
                           </div>
-                          <div className="flex items-center justify-between">
-                            <span>Amount</span>
-                            <span className="font-medium text-neutral-900">
-                              {Number(session.amount).toFixed(2)} {session.currency}
-                            </span>
+                          <div>
+                            <p className="text-sm font-medium text-[#1f232b]">
+                              Wallet transfer
+                            </p>
+                            <p className="text-xs text-[#7a7f89]">
+                              Send {session.currency} to {recipientDisplayName}
+                            </p>
                           </div>
-                          <div className="flex items-center justify-between">
-                            <span>Network</span>
-                            <span>{checkoutChainLabel}</span>
-                          </div>
-                          <div className="flex items-center justify-between gap-3">
-                            <span>Token contract</span>
-                            <span className="font-mono">
-                              {session.acceptedToken.slice(0, 8)}…{session.acceptedToken.slice(-6)}
-                            </span>
-                          </div>
+                        </div>
+                        <div className="text-right text-xs text-[#6f7480]">
+                          <p>{session.currency}</p>
+                          <p>{checkoutChainLabel}</p>
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  {!isCorrectNetwork && (
-                    <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                  <div>
+                    <p className="text-[15px] font-semibold text-[#1e222b]">
+                      Billing information
+                    </p>
+                    <div className="mt-3 space-y-3">
+                      <label className="block space-y-2">
+                        <span className="text-sm text-[#373b44]">Full name</span>
+                        <input
+                          value={customerName}
+                          onChange={(e) => setCustomerName(e.target.value)}
+                          className="h-12 w-full rounded-xl border border-[#dfe3ea] bg-white px-4 text-sm text-[#1d2129] outline-none transition focus:border-[#111827]"
+                          placeholder="Ada Lovelace"
+                        />
+                      </label>
+                      <label className="block space-y-2">
+                        <span className="text-sm text-[#373b44]">
+                          Country or region
+                        </span>
+                        <div className="relative">
+                          <select
+                            value={billingCountry}
+                            onChange={(e) => setBillingCountry(e.target.value)}
+                            className="h-12 w-full appearance-none rounded-xl border border-[#dfe3ea] bg-white px-4 text-sm text-[#1d2129] outline-none transition focus:border-[#111827]"
+                          >
+                            <option value="">Select your country</option>
+                            <option>India</option>
+                            <option>United States</option>
+                            <option>United Kingdom</option>
+                            <option>United Arab Emirates</option>
+                            <option>Singapore</option>
+                          </select>
+                          <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9497a1]" />
+                        </div>
+                      </label>
+                      <label className="block space-y-2">
+                        <span className="text-sm text-[#373b44]">
+                          Address line 1
+                        </span>
+                        <input
+                          value={addressLine1}
+                          onChange={(e) => setAddressLine1(e.target.value)}
+                          className="h-12 w-full rounded-xl border border-[#dfe3ea] bg-white px-4 text-sm text-[#1d2129] outline-none transition focus:border-[#111827]"
+                          placeholder="Street address"
+                        />
+                      </label>
+                    </div>
+                    <p
+                      className={
+                        missingCustomerName
+                          ? "mt-2 text-xs text-red-600"
+                          : "mt-2 text-xs text-[#81848f]"
+                      }
+                    >
+                      {missingCustomerName
+                        ? "Enter the billing name that should appear on the invoice and receipt."
+                        : "We use this for hosted receipts and customer support context."}
+                    </p>
+                  </div>
+
+                  {isConnected ? (
+                    <div className="rounded-xl border border-[#dfe3ea] bg-[#fafbfc] px-4 py-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-[#1f232b]">
+                            Connected wallet
+                          </p>
+                          <p className="mt-1 break-all font-mono text-xs text-[#70737d]">
+                            {address}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => open()}
+                          className="shrink-0 text-xs font-medium text-[#111827] hover:text-black"
+                        >
+                          Change
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {!isCorrectNetwork ? (
+                    <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
                       <div className="flex items-start gap-3">
-                        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
+                        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
                         <div className="space-y-3">
-                          <div>
-                            <p className="text-sm font-medium text-amber-900">Wrong network</p>
-                            <p className="mt-1 text-xs text-amber-800">
-                              This checkout is for {checkoutChainLabel}. Switch networks before paying.
-                            </p>
-                          </div>
+                          <p>
+                            This checkout is for {checkoutChainLabel}. Switch
+                            networks before paying.
+                          </p>
                           <button
                             type="button"
-                            onClick={() => void switchChainAsync({ chainId: session.chainId })}
+                            onClick={() =>
+                              void switchChainAsync({ chainId: session.chainId })
+                            }
                             disabled={isSwitchingNetwork}
-                            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-amber-100 px-4 text-sm font-medium text-amber-900 transition-colors hover:bg-amber-200 disabled:cursor-not-allowed disabled:opacity-60"
+                            className="inline-flex h-10 items-center justify-center rounded-xl bg-white px-4 text-sm font-medium text-amber-900 shadow-sm transition hover:bg-amber-100 disabled:opacity-60"
                           >
                             {isSwitchingNetwork ? (
                               <>
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                                Switching network…
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Switching…
                               </>
                             ) : (
                               <>Switch to {checkoutChainLabel}</>
@@ -748,177 +1078,133 @@ function CheckoutContent() {
                         </div>
                       </div>
                     </div>
-                  )}
+                  ) : null}
 
-                  {isSelfPayment && (
-                    <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                  {isSelfPayment ? (
+                    <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
                       <div className="flex items-start gap-3">
-                        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
-                        <div>
-                          <p className="text-sm font-medium text-amber-900">Recipient matches payer</p>
-                          <p className="mt-1 text-xs text-amber-800">
-                            This link is currently set to send funds back to the same wallet that is paying. No net USDC will move. Use a different payer wallet or update the payment link recipient.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="rounded-xl border border-blue-100 bg-blue-50 p-4">
-                    <div className="flex items-start gap-3">
-                      <Shield className="mt-0.5 h-4 w-4 shrink-0 text-blue-700" />
-                      <div>
-                        <p className="text-sm font-medium text-blue-900">Why your wallet shows 0 ETH</p>
-                        <p className="mt-1 text-xs text-blue-800">
-                          This checkout sends USDC through the token contract, so many wallets show 0 ETH at the top. The actual payment amount is the USDC transfer in the transaction data, and the real recipient is the wallet shown above.
+                        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                        <p>
+                          The payer wallet matches the recipient wallet. Use a
+                          different payer wallet or update the payment link
+                          recipient.
                         </p>
                       </div>
                     </div>
-                  </div>
+                  ) : null}
 
                   <button
                     type="button"
-                    onClick={handlePay}
-                    disabled={!canSubmitPayment}
-                    className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-neutral-900 px-4 text-sm font-medium text-white transition-colors hover:bg-neutral-800 disabled:cursor-not-allowed disabled:bg-neutral-300"
+                    onClick={() => void handlePay()}
+                    disabled={!showPay || !canSubmitPayment}
+                    className="inline-flex h-14 w-full items-center justify-center gap-3 rounded-lg bg-[#111111] px-5 text-base font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    {isSending ? (
+                    {showProcessing || isSending ? (
                       <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Confirm in wallet…
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                        {paymentButtonLabel}
                       </>
                     ) : (
-                      <>
-                        <Wallet className="h-4 w-4" />
-                        Pay ${amountFormatted}
-                      </>
+                      <>{paymentButtonLabel}</>
                     )}
                   </button>
-                </div>
-              )}
 
-              {/* Processing step */}
-              {showProcessing && (
-                <div className="space-y-4">
-                  <div className="rounded-xl border border-neutral-100 bg-neutral-50 p-4">
-                    <div className="flex items-start gap-3">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-sm font-semibold text-emerald-600">
-                        <CheckCircle2 className="h-4 w-4" />
+                  {showReceiptError && !isConfirming && !verifying ? (
+                    <div className="space-y-3">
+                      <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+                        <XCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                        <span>
+                          Transaction reverted on-chain. Please try again.
+                        </span>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-neutral-900">Wallet connected</p>
-                        <p className="mt-1 break-all font-mono text-xs text-neutral-600">{address}</p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSentTxHash(null);
+                          setVerificationFailed(false);
+                        }}
+                        className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-neutral-200 bg-white text-sm font-medium text-neutral-900 transition-colors hover:bg-neutral-50"
+                      >
+                        <RefreshCw className="h-4 w-4" />
+                        Try again
+                      </button>
+                    </div>
+                  ) : null}
+
+                  {verificationFailed && !verifying && sentTxHash ? (
+                    <div className="space-y-3">
+                      <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                        <span>
+                          {error ??
+                            "Verification failed. The transaction may still be confirming. You can retry."}
+                        </span>
                       </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setVerificationFailed(false);
+                          void verifyOnBackend(sentTxHash);
+                        }}
+                        className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-amber-100 text-sm font-medium text-amber-900 transition-colors hover:bg-amber-200"
+                      >
+                        <RefreshCw className="h-4 w-4" />
+                        Retry verification
+                      </button>
+                    </div>
+                  ) : null}
+
+                  {showError &&
+                  !isSending &&
+                  !isConfirming &&
+                  !verifying &&
+                  !verificationFailed ? (
+                    <div className="space-y-3">
+                      <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+                        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                        <span>
+                          {sendError
+                            ? ((sendError as { shortMessage?: string })
+                                .shortMessage ??
+                              (sendError as Error).message)
+                            : error || "Transaction failed"}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setError(null);
+                          setSentTxHash(null);
+                        }}
+                        className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-neutral-200 bg-white text-sm font-medium text-neutral-900 transition-colors hover:bg-neutral-50"
+                      >
+                        <RefreshCw className="h-4 w-4" />
+                        Try again
+                      </button>
+                    </div>
+                  ) : null}
+
+                  <div className="pt-4 text-center text-xs text-[#8b8f98]">
+                    <p>Powered by ArcenPay</p>
+                    <div className="mt-2 flex items-center justify-center gap-4">
+                      <span className="inline-flex items-center gap-1.5">
+                        <Shield className="h-3.5 w-3.5" />
+                        Secure checkout
+                      </span>
+                      <span className="inline-flex items-center gap-1.5">
+                        <Globe className="h-3.5 w-3.5" />
+                        {checkoutChainLabel}
+                      </span>
+                      {billingCountry ? (
+                        <span className="inline-flex items-center gap-1.5">
+                          <MapPinHouse className="h-3.5 w-3.5" />
+                          {billingCountry}
+                        </span>
+                      ) : null}
                     </div>
                   </div>
-
-                  <div className="flex flex-col items-center gap-4 py-8">
-                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-blue-50">
-                      <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-                    </div>
-                    <div className="text-center">
-                      <p className="text-lg font-medium text-neutral-900">
-                        {isSending
-                          ? "Confirm in wallet"
-                          : isConfirming
-                            ? "Waiting for confirmation"
-                            : verifying
-                              ? "Verifying payment"
-                              : "Processing"}
-                      </p>
-                      <p className="mt-1 text-sm text-neutral-600">
-                        {isSending
-                          ? "Approve the transaction in your wallet app."
-                          : isConfirming
-                            ? "Waiting for the blockchain to confirm your transfer."
-                            : verifying
-                              ? "ArcenPay is verifying your on-chain payment."
-                              : ""}
-                      </p>
-                    </div>
-                    {sentTxHash && (
-                      <p className="break-all font-mono text-xs text-neutral-500">{sentTxHash}</p>
-                    )}
-                  </div>
                 </div>
-              )}
-
-              {/* Transaction reverted */}
-              {showReceiptError && !isConfirming && !verifying && (
-                <div className="space-y-3">
-                  <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">
-                    <XCircle className="mt-0.5 h-4 w-4 shrink-0" />
-                    <span>Transaction reverted on-chain. Please try again.</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSentTxHash(null);
-                      setVerificationFailed(false);
-                    }}
-                    className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-neutral-200 bg-white text-sm font-medium text-neutral-900 hover:bg-neutral-50 transition-colors"
-                  >
-                    <RefreshCw className="h-4 w-4" />
-                    Try again
-                  </button>
-                </div>
-              )}
-
-              {/* Verification failed — retry */}
-              {verificationFailed && !verifying && sentTxHash && (
-                <div className="space-y-3">
-                  <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-                    <span>
-                      {error ?? "Verification failed. The transaction may still be confirming. You can retry."}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setVerificationFailed(false);
-                      void verifyOnBackend(sentTxHash);
-                    }}
-                    className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-amber-100 text-sm font-medium text-amber-900 hover:bg-amber-200 transition-colors"
-                  >
-                    <RefreshCw className="h-4 w-4" />
-                    Retry verification
-                  </button>
-                </div>
-              )}
-
-              {/* Payment error */}
-              {showError && !isSending && !isConfirming && !verifying && !verificationFailed && (
-                <div className="space-y-3">
-                  <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">
-                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-                    <span>
-                      {sendError
-                        ? ((sendError as { shortMessage?: string }).shortMessage ?? (sendError as Error).message)
-                        : error || "Transaction failed"}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setError(null);
-                      setSentTxHash(null);
-                    }}
-                    className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-neutral-200 bg-white text-sm font-medium text-neutral-900 hover:bg-neutral-50 transition-colors"
-                  >
-                    <RefreshCw className="h-4 w-4" />
-                    Try again
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Footer */}
-            <div className="rounded-2xl border border-neutral-200 bg-white/80 p-4 text-center text-xs text-neutral-500">
-              <div className="flex items-center justify-center gap-2">
-                <Shield className="h-3.5 w-3.5" />
-                Powered by ArcenPay — secure on-chain USDC payments on {checkoutChainLabel}
-              </div>
+              </section>
             </div>
           </div>
         )}

@@ -41,8 +41,19 @@ export async function getCheckout(c: Context) {
         ? {
             id: checkoutSession.paymentLink.id,
             name: checkoutSession.paymentLink.name,
+            description: checkoutSession.paymentLink.description,
             slug: checkoutSession.paymentLink.slug,
             kind: checkoutSession.paymentLink.kind,
+            metadata: checkoutSession.paymentLink.metadata ?? null,
+            company: checkoutSession.paymentLink.company
+              ? {
+                  id: checkoutSession.paymentLink.company.id,
+                  name: checkoutSession.paymentLink.company.name,
+                  email: checkoutSession.paymentLink.company.email,
+                  walletAddress: checkoutSession.paymentLink.company.walletAddress,
+                  logoUrl: checkoutSession.paymentLink.company.logoUrl,
+                }
+              : null,
           }
         : null,
       catalogAddOn: checkoutSession.catalogAddOn
@@ -106,8 +117,19 @@ export async function updateCheckout(c: Context) {
         ? {
             id: checkoutSession.paymentLink.id,
             name: checkoutSession.paymentLink.name,
+            description: checkoutSession.paymentLink.description,
             slug: checkoutSession.paymentLink.slug,
             kind: checkoutSession.paymentLink.kind,
+            metadata: checkoutSession.paymentLink.metadata ?? null,
+            company: checkoutSession.paymentLink.company
+              ? {
+                  id: checkoutSession.paymentLink.company.id,
+                  name: checkoutSession.paymentLink.company.name,
+                  email: checkoutSession.paymentLink.company.email,
+                  walletAddress: checkoutSession.paymentLink.company.walletAddress,
+                  logoUrl: checkoutSession.paymentLink.company.logoUrl,
+                }
+              : null,
           }
         : null,
       catalogAddOn: checkoutSession.catalogAddOn

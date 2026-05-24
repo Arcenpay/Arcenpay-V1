@@ -67,6 +67,127 @@ export interface ConsumeEntitlementInput {
   idempotencyKey?: string;
 }
 
+export interface PaymentLinkSummary {
+  id: string;
+  name: string;
+  slug: string;
+  kind: "ADDON" | "INVOICE" | "CUSTOM";
+  status: "ACTIVE" | "INACTIVE" | "ARCHIVED";
+  amount: string;
+  currency: string;
+  acceptedToken: string;
+  recipientWallet: string;
+  chainId: number;
+  checkoutUrl: string;
+  description?: string | null;
+  metadata?: Record<string, unknown> | null;
+  successUrl?: string | null;
+  cancelUrl?: string | null;
+  expiresAt?: string | null;
+  createdAt?: string;
+  company?: {
+    id: string;
+    name: string;
+    email: string | null;
+    walletAddress: string | null;
+    logoUrl?: string | null;
+  } | null;
+  catalogAddOn?: {
+    id: string;
+    name: string;
+    code?: string | null;
+    billingType?: string | null;
+    saleMode?: string | null;
+  } | null;
+  invoice?: {
+    id: string;
+    number?: string | null;
+    status?: string | null;
+    total?: string | null;
+    currency?: string | null;
+  } | null;
+}
+
+export interface CreatePaymentLinkInput {
+  kind: "ADDON" | "INVOICE" | "CUSTOM";
+  name: string;
+  description?: string;
+  metadata?: Record<string, unknown>;
+  companyId?: string;
+  catalogAddOnId?: string;
+  invoiceId?: string;
+  amount?: number;
+  acceptedToken?: string;
+  recipientWallet: string;
+  successUrl?: string;
+  cancelUrl?: string;
+  expiresAt?: string;
+}
+
+export interface UpdatePaymentLinkInput {
+  status?: "ACTIVE" | "INACTIVE" | "ARCHIVED";
+  name?: string;
+  description?: string | null;
+  metadata?: Record<string, unknown> | null;
+  recipientWallet?: string;
+  successUrl?: string | null;
+  cancelUrl?: string | null;
+  expiresAt?: string | null;
+}
+
+export interface CheckoutSessionSummary {
+  id: string;
+  purpose: "ADDON" | "INVOICE" | "CUSTOM";
+  status: "PENDING" | "PAID" | "EXPIRED" | "CANCELLED" | "FAILED";
+  customerEmail?: string | null;
+  customerWallet?: string | null;
+  customerName?: string | null;
+  amount: string;
+  currency: string;
+  acceptedToken?: string;
+  recipientWallet?: string;
+  txHash?: string | null;
+  verificationError?: string | null;
+  createdAt?: string;
+  paidAt?: string | null;
+  paymentLink?: {
+    id: string;
+    name: string;
+    slug: string;
+    kind: string;
+  } | null;
+  company?: {
+    id: string;
+    name: string;
+    email: string | null;
+    walletAddress: string | null;
+  } | null;
+  payment?: {
+    id: string;
+    status: string;
+    txHash: string;
+    amount: string;
+    currency: string;
+  } | null;
+}
+
+export interface CreateCheckoutSessionInput {
+  paymentLinkId?: string;
+  purpose?: "ADDON" | "INVOICE" | "CUSTOM";
+  companyId?: string;
+  catalogAddOnId?: string;
+  invoiceId?: string;
+  customerEmail?: string;
+  customerWallet?: string;
+  customerName?: string;
+  amount?: number;
+  acceptedToken?: string;
+  recipientWallet?: string;
+  successUrl?: string;
+  cancelUrl?: string;
+  expiresAt?: string;
+}
+
 // Shape of the raw API response from /api/v1/access-tokens
 interface AccessTokenApiResponse {
   token: string;
@@ -348,6 +469,60 @@ export class ArcenClient {
     return this.request("PATCH", `/api/v1/companies/${id}`, {
       useApiKey: true,
       body: data,
+    });
+  }
+
+  async listPaymentLinks(): Promise<{ paymentLinks: PaymentLinkSummary[] }> {
+    return this.request("GET", "/api/v1/payment-links", { useApiKey: true });
+  }
+
+  async getPaymentLink(id: string): Promise<{ paymentLink: PaymentLinkSummary }> {
+    return this.request("GET", `/api/v1/payment-links/${id}`, {
+      useApiKey: true,
+    });
+  }
+
+  async createPaymentLink(
+    input: CreatePaymentLinkInput,
+  ): Promise<{ paymentLink: PaymentLinkSummary }> {
+    return this.request("POST", "/api/v1/payment-links", {
+      useApiKey: true,
+      body: input,
+    });
+  }
+
+  async updatePaymentLink(
+    id: string,
+    input: UpdatePaymentLinkInput,
+  ): Promise<{ paymentLink: PaymentLinkSummary }> {
+    return this.request("PATCH", `/api/v1/payment-links/${id}`, {
+      useApiKey: true,
+      body: input,
+    });
+  }
+
+  async listCheckoutSessions(): Promise<{
+    checkoutSessions: CheckoutSessionSummary[];
+  }> {
+    return this.request("GET", "/api/v1/checkout-sessions", {
+      useApiKey: true,
+    });
+  }
+
+  async getCheckoutSession(
+    id: string,
+  ): Promise<{ checkoutSession: CheckoutSessionSummary }> {
+    return this.request("GET", `/api/v1/checkout-sessions/${id}`, {
+      useApiKey: true,
+    });
+  }
+
+  async createCheckoutSession(
+    input: CreateCheckoutSessionInput,
+  ): Promise<{ checkoutSession: CheckoutSessionSummary }> {
+    return this.request("POST", "/api/v1/checkout-sessions", {
+      useApiKey: true,
+      body: input,
     });
   }
 
