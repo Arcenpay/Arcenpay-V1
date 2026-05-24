@@ -208,12 +208,10 @@ export default function SdkShowcasePage() {
         company: {
           id: `company-${address.slice(2, 10)}`,
           wallet: address,
-          name: "ArcenPay Demo Studio",
         },
         user: {
           id: `user-${address.slice(2, 10)}`,
           wallet: address,
-          name: "SDK Explorer",
         },
       })
       .then(() => {

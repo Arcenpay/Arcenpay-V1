@@ -10,6 +10,7 @@ import {
 import { deliverWebhook } from "../webhooks/deliver-webhook.js";
 import { sendPaidInvoiceReceipt } from "./invoice-notifications.js";
 import { allocateInvoiceNumber, toSix } from "./invoices.js";
+import { syncCustomerUserIdentity } from "./customer-identity.js";
 
 const BILLING_RECOVERY_RETRY_DELAYS_MS = [
   5 * 60 * 1000,
@@ -62,10 +63,12 @@ export function computeBillingRecoveryNextAttemptAt(
 
 interface SubscriptionActivationRecoveryPayload {
   companyId: string;
+  customerUserId?: string | null;
   environmentId?: string | null;
   walletAddress: string;
   catalogPlanId: string;
   catalogPlanName: string;
+  billingPeriod?: "monthly" | "annual" | null;
   customerName?: string | null;
   onChainPlanId: string;
   onChainTokenId: string;
@@ -108,9 +111,13 @@ function parseSubscriptionActivationPayload(
 
   return {
     companyId: String(record.companyId ?? ""),
+    customerUserId:
+      typeof record.customerUserId === "string" ? record.customerUserId : null,
     walletAddress: String(record.walletAddress ?? ""),
     catalogPlanId: String(record.catalogPlanId ?? ""),
     catalogPlanName: String(record.catalogPlanName ?? "Subscription"),
+    billingPeriod:
+      record.billingPeriod === "annual" ? "annual" : "monthly",
     customerName:
       typeof record.customerName === "string" ? record.customerName.trim() : null,
     onChainPlanId: String(record.onChainPlanId ?? ""),
@@ -202,10 +209,12 @@ async function clearPendingLifecycleTraits(input: {
 export async function enqueueSubscriptionActivationRecovery(input: {
   teamId: string;
   companyId: string;
+  customerUserId?: string | null;
   environmentId?: string | null;
   walletAddress: string;
   catalogPlanId: string;
   catalogPlanName: string;
+  billingPeriod?: "monthly" | "annual" | null;
   customerName?: string | null;
   onChainPlanId: string;
   onChainTokenId: string;
@@ -236,10 +245,12 @@ export async function enqueueSubscriptionActivationRecovery(input: {
       walletAddress: normalizeWallet(input.walletAddress),
       payload: toPrismaJson({
         companyId: input.companyId,
+        customerUserId: input.customerUserId ?? null,
         environmentId: input.environmentId ?? null,
         walletAddress: normalizeWallet(input.walletAddress),
         catalogPlanId: input.catalogPlanId,
         catalogPlanName: input.catalogPlanName,
+        billingPeriod: input.billingPeriod === "annual" ? "annual" : "monthly",
         customerName: input.customerName?.trim() || null,
         onChainPlanId: input.onChainPlanId,
         onChainTokenId: input.onChainTokenId,
@@ -518,6 +529,7 @@ export async function finalizeSubscriptionActivation(
     lastSourceTxHash: input.payload.txHash,
     metadata: {
       source,
+      billingPeriod: input.payload.billingPeriod ?? "monthly",
       ...(input.taskId ? { recoveryTaskId: input.taskId } : {}),
     },
   });
@@ -537,6 +549,7 @@ export async function finalizeSubscriptionActivation(
   if (currentTransition.mode === "cancel_at_period_end") {
     delete nextTraits.subscriptionTransition;
   }
+  nextTraits.billingPeriod = input.payload.billingPeriod ?? "monthly";
 
   const companyUpdate = {
     activePlanId: input.payload.catalogPlanId,
@@ -560,6 +573,14 @@ export async function finalizeSubscriptionActivation(
   await db.arcenCompany.update({
     where: { id: input.payload.companyId },
     data: companyUpdate,
+  });
+
+  await syncCustomerUserIdentity({
+    companyId: input.payload.companyId,
+    userId: input.payload.customerUserId ?? null,
+    customerName: input.payload.customerName ?? null,
+    customerEmail: input.payload.subscriberEmail ?? null,
+    walletAddress: input.payload.walletAddress,
   });
 
   // Create invoice + record payment directly first, so the data is

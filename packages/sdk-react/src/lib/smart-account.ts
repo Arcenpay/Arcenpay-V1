@@ -5,6 +5,7 @@ export {
   isPrefundError,
   isRecoverableSmartAccountFundingError,
   isSmartAccountInfrastructureError,
+  isUnsupportedEip7702AuthorizationError,
   revokeAutopayModule,
   sendSmartAccountTransaction,
   updateAutopayConfig,

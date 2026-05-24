@@ -733,6 +733,56 @@ export async function updateSubscriptionChangeRequestStage(input: {
   });
 }
 
+export async function revertOpenSubscriptionChangeRequests(input: {
+  teamId: string;
+  companyId: string;
+  excludeRequestIds?: string[];
+  appliedAt?: Date;
+  metadata?: Record<string, unknown>;
+  client?: DbClient;
+}) {
+  const client = input.client ?? db;
+  const requestIdsToExclude = (input.excludeRequestIds ?? []).filter(Boolean);
+  const openRequests = await client.subscriptionChangeRequest.findMany({
+    where: {
+      teamId: input.teamId,
+      companyId: input.companyId,
+      stage: {
+        in: ["REQUESTED", "PENDING_VERIFICATION", "PENDING_RECOVERY"] as const,
+      },
+      ...(requestIdsToExclude.length > 0
+        ? {
+            id: {
+              notIn: requestIdsToExclude,
+            },
+          }
+        : {}),
+    },
+    select: { id: true },
+  });
+
+  if (openRequests.length === 0) {
+    return 0;
+  }
+
+  const appliedAt = input.appliedAt ?? new Date();
+  for (const request of openRequests) {
+    await updateSubscriptionChangeRequestStage(
+      {
+        requestId: request.id,
+        stage: "reverted",
+        appliedAt,
+        pendingVerification: false,
+        failureReason: null,
+        metadata: input.metadata,
+      },
+      client,
+    );
+  }
+
+  return openRequests.length;
+}
+
 export async function findSimilarOpenSubscriptionChangeRequest(input: {
   teamId: string;
   companyId: string;

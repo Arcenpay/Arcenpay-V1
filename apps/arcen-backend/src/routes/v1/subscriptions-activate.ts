@@ -80,6 +80,8 @@ const bodySchema = z.object({
   company: companySchema,
 });
 
+const ANNUAL_BILLING_INTERVAL_SECONDS = 31_536_000;
+
 const registryOwnerOfAbi = [
   {
     inputs: [{ internalType: "uint256", name: "tokenId", type: "uint256" }],
@@ -181,6 +183,7 @@ type AutopayActivationSnapshot = {
   config: {
     merchant?: string;
     maxAmount?: bigint;
+    interval?: number | bigint;
     startTime?: bigint;
     planId?: bigint;
   } | null;
@@ -210,6 +213,7 @@ async function readAutopayActivationSnapshot(params: {
   })) as {
     merchant?: string;
     maxAmount?: bigint;
+    interval?: number | bigint;
     startTime?: bigint;
     planId?: bigint;
   };
@@ -641,6 +645,12 @@ export async function POST(c: Context) {
       corsHeaders(origin),
     );
   }
+
+  const autopayIntervalSeconds = Number(autopayConfig?.interval ?? 0n);
+  const resolvedBillingPeriod: "monthly" | "annual" =
+    autopayIntervalSeconds >= ANNUAL_BILLING_INTERVAL_SECONDS
+      ? "annual"
+      : "monthly";
 
   const acceptedTokenAddress = isAddress(
     String(onChainPlan?.acceptedToken ?? catalogPlan.acceptedToken ?? ""),
@@ -1108,10 +1118,13 @@ export async function POST(c: Context) {
 
     const finalizationPayload = {
       companyId: company.id,
+      customerUserId:
+        embedTokenContext?.userId ?? sessionDefaults?.userId ?? null,
       environmentId: catalogPlan.environmentId ?? null,
       walletAddress: paymentAccount,
       catalogPlanId: catalogPlan.id,
       catalogPlanName: catalogPlan.name,
+      billingPeriod: resolvedBillingPeriod,
       customerName:
         typeof activationCompanyInput.name === "string" &&
         activationCompanyInput.name.trim()

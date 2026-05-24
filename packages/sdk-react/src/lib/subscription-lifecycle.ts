@@ -10,6 +10,7 @@ type PlanChangeSuccessMessageInput = {
   walletCreditCreated?: number;
   pendingVerification?: boolean;
   alreadyScheduled?: boolean;
+  replacedScheduledDowngrade?: boolean;
 };
 
 type CancellationRequestBodyInput = {
@@ -24,11 +25,6 @@ type CancellationFeedbackInput = {
   pendingVerification?: boolean;
 };
 
-function billingPeriodLabel(period: string | null | undefined): string {
-  if (period === "annual" || period === "yearly") return "Annual";
-  return "Monthly";
-}
-
 export function buildPlanChangeSuccessMessage(
   input: PlanChangeSuccessMessageInput,
 ): string {
@@ -39,8 +35,10 @@ export function buildPlanChangeSuccessMessage(
       : 0;
   const hasProrationCharge =
     Number.isFinite(prorationAmountDue) && prorationAmountDue > 0;
-  const targetBillingPeriodDisplay = billingPeriodLabel(input.targetBillingPeriod);
-  const previousBillingPeriodDisplay = billingPeriodLabel(input.previousBillingPeriod);
+  const billingPeriodChanged =
+    input.targetBillingPeriod &&
+    input.previousBillingPeriod &&
+    input.targetBillingPeriod !== input.previousBillingPeriod;
 
   if (input.alreadyScheduled) {
     if (
@@ -48,12 +46,8 @@ export function buildPlanChangeSuccessMessage(
       mode === "period_end" ||
       mode === "period_end_downgrade"
     ) {
-      if (
-        input.targetBillingPeriod &&
-        input.previousBillingPeriod &&
-        input.targetBillingPeriod !== input.previousBillingPeriod
-      ) {
-        return `This plan change is already scheduled. ${targetBillingPeriodDisplay} billing will take effect${input.effectiveAtLabel ? ` on ${input.effectiveAtLabel}` : " at the next renewal"}.`;
+      if (billingPeriodChanged) {
+        return `This plan change is already scheduled. The updated renewal settings will take effect${input.effectiveAtLabel ? ` on ${input.effectiveAtLabel}` : " at the next renewal"}.`;
       }
       return `This plan change is already scheduled${input.effectiveAtLabel ? ` for ${input.effectiveAtLabel}` : ""}.`;
     }
@@ -75,12 +69,8 @@ export function buildPlanChangeSuccessMessage(
       mode === "period_end" ||
       mode === "period_end_downgrade"
     ) {
-      if (
-        input.targetBillingPeriod &&
-        input.previousBillingPeriod &&
-        input.targetBillingPeriod !== input.previousBillingPeriod
-      ) {
-        return `Plan change submitted. We’re waiting for on-chain confirmations, then ${targetBillingPeriodDisplay} billing will take effect${input.effectiveAtLabel ? ` on ${input.effectiveAtLabel}` : " at the next renewal"}.`;
+      if (billingPeriodChanged) {
+        return `Plan change submitted. We’re waiting for on-chain confirmations, then the updated renewal settings will take effect${input.effectiveAtLabel ? ` on ${input.effectiveAtLabel}` : " at the next renewal"}.`;
       }
       return `Plan change submitted. We’re waiting for on-chain confirmations${input.effectiveAtLabel ? `, and the change will take effect on ${input.effectiveAtLabel}` : " before the scheduled change is applied"}.`;
     }
@@ -91,24 +81,25 @@ export function buildPlanChangeSuccessMessage(
     mode === "period_end" ||
     mode === "period_end_downgrade"
   ) {
-    if (
-      input.targetBillingPeriod &&
-      input.previousBillingPeriod &&
-      input.targetBillingPeriod !== input.previousBillingPeriod
-    ) {
-      return `Plan change scheduled.${input.selectedPlanName ? ` ${input.selectedPlanName}` : ""} ${targetBillingPeriodDisplay} billing will take effect${input.effectiveAtLabel ? ` on ${input.effectiveAtLabel}` : " on the next renewal"}.`;
+    if (billingPeriodChanged) {
+      return `Plan change scheduled.${input.selectedPlanName ? ` ${input.selectedPlanName}` : " The updated subscription"} will take effect${input.effectiveAtLabel ? ` on ${input.effectiveAtLabel}` : " on the next renewal"}.`;
     }
     return `Plan change scheduled.${input.selectedPlanName ? ` ${input.selectedPlanName} will take effect` : " The new plan will take effect"}${input.effectiveAtLabel ? ` on ${input.effectiveAtLabel}` : " on the next renewal"}.`;
   }
 
   if (mode === "immediate_prorated_upgrade") {
-    const billingChangeNote =
-      input.targetBillingPeriod &&
-      input.previousBillingPeriod &&
-      input.targetBillingPeriod !== input.previousBillingPeriod
-        ? ` Billing changed to ${targetBillingPeriodDisplay}.`
-        : "";
-    return `Plan upgraded.${hasProrationCharge ? ` $${prorationAmountDue.toFixed(2)} was charged for the remaining term.` : ""}${billingChangeNote}`;
+    const chargeNote = hasProrationCharge
+      ? ` $${prorationAmountDue.toFixed(2)} was charged for the remaining term.`
+      : "";
+    const downgradeNote = input.replacedScheduledDowngrade
+      ? " The scheduled downgrade was removed."
+      : "";
+    const billingChangeNote = billingPeriodChanged
+      ? input.replacedScheduledDowngrade
+        ? " Future renewals now use the updated billing schedule."
+        : " Future renewals now use the updated billing schedule."
+      : "";
+    return `Plan upgraded.${chargeNote}${downgradeNote}${billingChangeNote}`;
   }
 
   if (mode === "immediate_on_chain" && (input.walletCreditCreated ?? 0) > 0) {

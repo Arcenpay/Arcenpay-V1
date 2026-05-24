@@ -1,13 +1,16 @@
 import type { Context } from "hono";
 import { z } from "zod";
 import { db } from "../../../db.js";
+import { createPublicClient, http } from "viem";
 import { requirePermission, isErrorResponse } from "../../../lib/auth/api-auth.js";
-import { listMetadataEntitlements } from "../../../lib/catalog/catalog-entitlements.js";
+import { listAllMetadataEntitlements } from "../../../lib/catalog/catalog-entitlements.js";
 import { writeAuditEvent } from "../../../lib/platform/audit.js";
 import { resolvePlanNetwork } from "../../../lib/catalog/plan-network.js";
 import { toPrismaNullableJson } from "../../../utils/prisma-json.js";
 import { assertCanCreatePlan } from "../../../lib/catalog/tier-guard.js";
 import { requireResolvedActiveEnvironment } from "../../../lib/environments/workspace-environments.js";
+import { getRpcUrl } from "../../../config.js";
+import { getChain, PlanFactoryABI, getContractAddresses } from "@arcenpay/internal-core";
 
 const listSchema = z.object({
   environmentMode: z.enum(["DEVELOPMENT", "PRODUCTION"]).optional(),
@@ -44,6 +47,15 @@ const updateSchema = z.object({
 
 function normalizeComparableAddress(value: string): string {
   return value.trim().toLowerCase();
+}
+
+function resolveMaxOnChainChargeMicrosFromValues(input: {
+  price: number;
+  annualPrice?: number | null;
+}): bigint {
+  const monthlyMicros = Math.round(input.price * 1_000_000);
+  const annualMicros = Math.round(Number(input.annualPrice ?? 0) * 1_000_000);
+  return BigInt(Math.max(monthlyMicros, annualMicros, 0));
 }
 
 function getLockedOnChainFieldChanges(
@@ -116,7 +128,46 @@ export async function listPlans(c: Context) {
 
   const repairedPlans = await Promise.all(
     plans.map(async (plan) => {
-      if (plan.onChainPlanId) return plan;
+      if (plan.onChainPlanId) {
+        if (parseFloat(plan.price.toString()) === 0) return plan;
+
+        try {
+          const publicClient = createPublicClient({
+            chain: getChain(activeEnvironment.chainId),
+            transport: http(getRpcUrl(activeEnvironment.chainId)),
+          });
+          const contracts = getContractAddresses(activeEnvironment.chainId);
+          const livePlan = (await publicClient.readContract({
+            address: contracts.planFactory as `0x${string}`,
+            abi: PlanFactoryABI,
+            functionName: "getPlan",
+            args: [BigInt(plan.onChainPlanId)],
+          })) as { price?: bigint };
+          const expectedPriceCap = resolveMaxOnChainChargeMicrosFromValues({
+            price: parseFloat(plan.price.toString()),
+            annualPrice: plan.annualPrice
+              ? parseFloat(plan.annualPrice.toString())
+              : 0,
+          });
+          const livePriceCap = BigInt(livePlan.price ?? 0n);
+
+          if (livePriceCap === expectedPriceCap) {
+            return plan;
+          }
+
+          return db.catalogPlan.update({
+            where: { id: plan.id },
+            data: {
+              chainSyncStatus: "PENDING",
+              chainSyncError:
+                `On-chain price cap is ${livePriceCap.toString()} but this plan now requires ${expectedPriceCap.toString()}. Run on-chain sync to update the plan price cap.`,
+              chainSyncedAt: null,
+            },
+          });
+        } catch {
+          return plan;
+        }
+      }
 
       const resolved = resolvePlanNetwork({
         environmentMode: activeEnvironment.mode,
@@ -300,6 +351,13 @@ export async function updatePlan(c: Context) {
   const nextVersion = existing.version + 1;
   const existingPrice = parseFloat(existing.price.toString());
   const nextPrice = parsed.data.price ?? existingPrice;
+  const existingAnnualPrice = existing.annualPrice
+    ? parseFloat(existing.annualPrice.toString())
+    : 0;
+  const nextAnnualPrice =
+    parsed.data.annualPrice === undefined
+      ? existingAnnualPrice
+      : (parsed.data.annualPrice ?? 0);
   const nextEnvironmentMode = activeEnvironment.mode;
   const nextAcceptedTokenInput =
     parsed.data.acceptedToken ?? existing.acceptedToken;
@@ -342,10 +400,18 @@ export async function updatePlan(c: Context) {
       }, 409 as any);
   }
 
-  const priceChanged =
-    parsed.data.price !== undefined && parsed.data.price !== existingPrice;
+  const priceCapChanged =
+    resolveMaxOnChainChargeMicrosFromValues({
+      price: existingPrice,
+      annualPrice: existingAnnualPrice,
+    }) !==
+    resolveMaxOnChainChargeMicrosFromValues({
+      price: nextPrice,
+      annualPrice: nextAnnualPrice,
+    });
   const onChainRelevantUpdate =
     parsed.data.price !== undefined ||
+    parsed.data.annualPrice !== undefined ||
     parsed.data.name !== undefined ||
     parsed.data.tier !== undefined ||
     parsed.data.billingInterval !== undefined ||
@@ -353,7 +419,7 @@ export async function updatePlan(c: Context) {
     parsed.data.chainId !== undefined;
 
   const chainSyncUpdate = existing.onChainPlanId
-    ? priceChanged
+    ? priceCapChanged
       ? {
           chainSyncStatus: "PENDING" as const,
           chainSyncError: null,
@@ -438,7 +504,7 @@ export async function updatePlan(c: Context) {
 
   // Auto-add newly published plans to the catalog config's livePlanIds
   // so they appear in the embedded portal immediately.
-  const hasEnabledEntitlements = listMetadataEntitlements(updated.metadata).some(
+  const hasEnabledEntitlements = listAllMetadataEntitlements(updated.metadata).some(
     (entitlement) => entitlement.enabled !== false,
   );
   const isPaidPlan = parseFloat(String(updated.price ?? "0")) > 0;

@@ -16,6 +16,38 @@ function getCreditGrants(metadata: unknown): z.infer<typeof creditGrantSchema>[]
   return meta.creditGrants as z.infer<typeof creditGrantSchema>[];
 }
 
+async function enrichCreditGrants(
+  teamId: string,
+  grants: z.infer<typeof creditGrantSchema>[],
+) {
+  if (grants.length === 0) return [];
+  const creditTypes = await db.catalogCreditType.findMany({
+    where: {
+      teamId,
+      id: { in: grants.map((grant) => grant.creditTypeId) },
+    },
+    select: {
+      id: true,
+      name: true,
+      code: true,
+      unitName: true,
+    },
+  });
+  const creditTypeById = new Map(
+    creditTypes.map((creditType) => [creditType.id, creditType]),
+  );
+
+  return grants.map((grant) => {
+    const creditType = creditTypeById.get(grant.creditTypeId);
+    return {
+      ...grant,
+      name: creditType?.name ?? grant.creditTypeId,
+      code: creditType?.code ?? null,
+      unitName: creditType?.unitName ?? "credits",
+    };
+  });
+}
+
 export async function getPlanCreditGrants(c: Context) {
   const auth = await requirePermission(c, "catalog:read");
   if (isErrorResponse(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any as any);
@@ -29,7 +61,10 @@ export async function getPlanCreditGrants(c: Context) {
     return c.json({ error: "Plan not found" }, 404 as any);
   }
 
-  const creditGrants = getCreditGrants(plan.metadata);
+  const creditGrants = await enrichCreditGrants(
+    auth.team.teamId,
+    getCreditGrants(plan.metadata),
+  );
   return c.json({ creditGrants });
 }
 
@@ -79,7 +114,13 @@ export async function addPlanCreditGrant(c: Context) {
     afterData: parsed.data,
   });
 
-  return c.json({ creditGrants: newGrants, plan: updated }, 201 as any);
+  return c.json(
+    {
+      creditGrants: await enrichCreditGrants(auth.team.teamId, newGrants),
+      plan: updated,
+    },
+    201 as any,
+  );
 }
 
 export async function deletePlanCreditGrant(c: Context) {
@@ -128,5 +169,7 @@ export async function deletePlanCreditGrant(c: Context) {
     afterData: { creditTypeId },
   });
 
-  return c.json({ creditGrants: filtered });
+  return c.json({
+    creditGrants: await enrichCreditGrants(auth.team.teamId, filtered),
+  });
 }

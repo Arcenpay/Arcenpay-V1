@@ -43,10 +43,7 @@ export default function DashboardPage() {
     identified,
     loading: sessionLoading,
     error: sessionError,
-  } = useDemoArcenSession(address, {
-    companyName: "ArcenPay Demo Studio",
-    userName: "Dashboard Operator",
-  });
+  } = useDemoArcenSession(address);
   const { planTier, isSubscribed } = useEntitlement(
     identified ? (address ?? undefined) : undefined,
   );

@@ -2,7 +2,7 @@ import type { Context } from "hono";
 import { createPublicClient, http } from "viem";
 import { db } from "../../../db.js";
 import { requirePermission, isErrorResponse } from "../../../lib/auth/api-auth.js";
-import { getChain, getContractAddresses } from "@arcenpay/internal-core";
+import { getChain, getContractAddresses, PlanFactoryABI } from "@arcenpay/internal-core";
 import { getRpcUrl } from "../../../config.js";
 import { resolvePlanNetwork } from "../../../lib/catalog/plan-network.js";
 import { isAddress } from "viem";
@@ -43,6 +43,9 @@ export async function getPlanSignNonce(c: Context) {
           chainId: true,
         },
       },
+      name: true,
+      tier: true,
+      billingInterval: true,
       acceptedToken: true,
       chainId: true,
       onChainPlanId: true,
@@ -104,6 +107,46 @@ export async function getPlanSignNonce(c: Context) {
       args: [providerAddress as `0x${string}`],
     });
 
+    let signatureMode: "create" | "update" = plan.onChainPlanId
+      ? "update"
+      : "create";
+
+    if (plan.onChainPlanId) {
+      const onChainPlan = (await publicClient.readContract({
+        address: planFactoryAddress,
+        abi: PlanFactoryABI,
+        functionName: "getPlan",
+        args: [BigInt(plan.onChainPlanId)],
+      })) as {
+        provider: `0x${string}`;
+        name: string;
+        tier: string;
+        billingInterval: number;
+        acceptedToken: `0x${string}`;
+      };
+
+      const immutableMismatch =
+        onChainPlan.name !== plan.name ||
+        onChainPlan.tier !== plan.tier ||
+        Number(onChainPlan.billingInterval) !== plan.billingInterval * 86400 ||
+        onChainPlan.acceptedToken.toLowerCase() !==
+          plan.acceptedToken.toLowerCase();
+
+      if (immutableMismatch) {
+        const activeSubscriberCount = await db.subscriptionState.count({
+          where: {
+            teamId: auth.team.teamId,
+            catalogPlanId: plan.id,
+            status: { in: ["ACTIVE", "PAST_DUE"] },
+          },
+        });
+
+        if (activeSubscriberCount === 0) {
+          signatureMode = "create";
+        }
+      }
+    }
+
     return c.json({
       nonce: nonce.toString(),
       chainId,
@@ -111,6 +154,7 @@ export async function getPlanSignNonce(c: Context) {
       userAddress,
       providerAddress,
       signingRequired: true,
+      signatureMode,
       domain: {
         name: "ArcenPay PlanFactory",
         version: "1",

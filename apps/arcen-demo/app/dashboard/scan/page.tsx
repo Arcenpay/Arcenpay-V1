@@ -27,10 +27,7 @@ interface CompanyData {
 
 export default function ScanPage() {
   const { address } = useWallet();
-  const { identified, loading: sessionLoading } = useDemoArcenSession(address, {
-    companyName: "ArcenPay Demo Studio",
-    userName: "Scan Operator",
-  });
+  const { identified, loading: sessionLoading } = useDemoArcenSession(address);
   const { consume, loading: consumeLoading } = useConsumeEntitlement();
   const { track } = useTrack();
   const flagMap = useFlags(identified ? ["scan"] : []);

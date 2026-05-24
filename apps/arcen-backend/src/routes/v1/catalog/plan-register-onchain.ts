@@ -104,6 +104,17 @@ function sameAddress(a: string, b: string): boolean {
   return a.toLowerCase() === b.toLowerCase();
 }
 
+function resolveMaxOnChainChargeMicros(plan: {
+  price: { toString(): string };
+  annualPrice?: { toString(): string } | string | null;
+}): bigint {
+  const monthlyMicros = Math.round(parseFloat(plan.price.toString()) * 1_000_000);
+  const annualMicros = Math.round(
+    parseFloat(String(plan.annualPrice ?? "0")) * 1_000_000,
+  );
+  return BigInt(Math.max(monthlyMicros, annualMicros, 0));
+}
+
 export async function registerPlanOnChain(c: Context) {
   const auth = await requirePermission(c, "catalog:write");
   if (isErrorResponse(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any as any);
@@ -237,10 +248,10 @@ export async function registerPlanOnChain(c: Context) {
 
   const publicClient = createPublicClient({ chain, transport: http(rpcUrl) });
 
-  const priceInUsdc = BigInt(
-    Math.round(parseFloat(plan.price.toString()) * 1_000_000),
-  );
+  const priceInUsdc = resolveMaxOnChainChargeMicros(plan);
   const billingIntervalSeconds = plan.billingInterval * 86400;
+  let shouldReplaceOnChainPlan = false;
+  let replacedOnChainPlanId: string | null = null;
   const usdcAddress = plan.onChainPlanId
     ? (plan.acceptedToken as `0x${string}`)
     : resolvedNetwork.acceptedToken;
@@ -284,15 +295,26 @@ export async function registerPlanOnChain(c: Context) {
     }
 
     if (immutableMismatches.length > 0) {
-      const message = `On-chain plan ${plan.onChainPlanId} can only sync price updates. These fields differ from the on-chain plan: ${immutableMismatches.join(", ")}. Create a new plan to change them.`;
-      await db.catalogPlan.update({
-        where: { id: planId },
-        data: { chainSyncStatus: "FAILED", chainSyncError: message },
+      const activeSubscriberCount = await db.subscriptionState.count({
+        where: {
+          teamId: auth.team.teamId,
+          catalogPlanId: plan.id,
+          status: { in: ["ACTIVE", "PAST_DUE"] },
+        },
       });
-      return c.json({ error: message }, 409 as any);
-    }
 
-    if (onChainPlan.price === priceInUsdc) {
+      if (activeSubscriberCount > 0) {
+        const message = `On-chain plan ${plan.onChainPlanId} can only sync price updates. These fields differ from the on-chain plan: ${immutableMismatches.join(", ")}. This plan already has ${activeSubscriberCount} active subscriber(s), so create a new plan instead of replacing the on-chain plan.`;
+        await db.catalogPlan.update({
+          where: { id: planId },
+          data: { chainSyncStatus: "FAILED", chainSyncError: message },
+        });
+        return c.json({ error: message }, 409 as any);
+      }
+
+      shouldReplaceOnChainPlan = true;
+      replacedOnChainPlanId = plan.onChainPlanId;
+    } else if (onChainPlan.price === priceInUsdc) {
       const syncedPlan = await db.catalogPlan.update({
         where: { id: planId },
         data: {
@@ -327,88 +349,90 @@ export async function registerPlanOnChain(c: Context) {
       });
     }
 
-    const updateNonce = await publicClient.readContract({
-      address: planFactoryAddress,
-      abi: CREATE_PLAN_FOR_ABI,
-      functionName: "nonces",
-      args: [providerAddress as `0x${string}`],
-    });
+    if (!shouldReplaceOnChainPlan) {
+      const updateNonce = await publicClient.readContract({
+        address: planFactoryAddress,
+        abi: CREATE_PLAN_FOR_ABI,
+        functionName: "nonces",
+        args: [providerAddress as `0x${string}`],
+      });
 
-    const isValidUpdateSig = await verifyTypedData({
-      address: providerAddress as `0x${string}`,
-      domain: {
-        ...PLAN_FACTORY_DOMAIN,
-        chainId: BigInt(chainId),
-        verifyingContract: planFactoryAddress,
-      },
-      types: UPDATE_PLAN_TYPES,
-      primaryType: "UpdatePlan",
-      message: {
-        provider: providerAddress as `0x${string}`,
-        planId: onChainPlanId,
-        price: priceInUsdc,
-        metadataURI: "",
-        nonce: updateNonce,
-        deadline: BigInt(deadline as number),
-      },
-      signature: signature as `0x${string}`,
-    });
+      const isValidUpdateSig = await verifyTypedData({
+        address: providerAddress as `0x${string}`,
+        domain: {
+          ...PLAN_FACTORY_DOMAIN,
+          chainId: BigInt(chainId),
+          verifyingContract: planFactoryAddress,
+        },
+        types: UPDATE_PLAN_TYPES,
+        primaryType: "UpdatePlan",
+        message: {
+          provider: providerAddress as `0x${string}`,
+          planId: onChainPlanId,
+          price: priceInUsdc,
+          metadataURI: "",
+          nonce: updateNonce,
+          deadline: BigInt(deadline as number),
+        },
+        signature: signature as `0x${string}`,
+      });
 
-    if (!isValidUpdateSig) {
-      return c.json({ error: "Invalid signature" }, 401 as any);
+      if (!isValidUpdateSig) {
+        return c.json({ error: "Invalid signature" }, 401 as any);
+      }
+
+      const updatePlanForCalldata = encodeFunctionData({
+        abi: UPDATE_PLAN_FOR_ABI,
+        functionName: "updatePlanFor",
+        args: [
+          providerAddress as `0x${string}`,
+          onChainPlanId,
+          priceInUsdc,
+          "",
+          BigInt(deadline as number),
+          signature as `0x${string}`,
+        ],
+      });
+
+      const preparedPlan = await db.catalogPlan.update({
+        where: { id: planId },
+        data: { chainSyncStatus: "PENDING", chainSyncError: null },
+      });
+
+      await writeAuditEvent({
+        headers: c.req.raw.headers,
+        teamId: auth.team.teamId,
+        userId: auth.team.userId,
+        walletAddress: auth.team.walletAddress,
+        action: "catalog.plan.chain_sync_prepared",
+        resourceType: "CatalogPlan",
+        resourceId: planId,
+        metadata: {
+          onChainPlanId: plan.onChainPlanId,
+          planOwner: providerAddress,
+          registrationMode: "user_controlled_update",
+          transport: "prepared_call",
+          target: planFactoryAddress,
+        },
+      });
+
+      return c.json({
+        ok: true,
+        onChainPlanId: plan.onChainPlanId,
+        plan: preparedPlan,
+        planOwner: providerAddress,
+        providerAddress,
+        signingRequired: true,
+        preparedTransaction: {
+          target: planFactoryAddress,
+          value: "0",
+          data: updatePlanForCalldata,
+          executionMode: "smart-account",
+          functionSignature:
+            "updatePlanFor(address,uint256,uint256,string,uint256,bytes)",
+        },
+      });
     }
-
-    const updatePlanForCalldata = encodeFunctionData({
-      abi: UPDATE_PLAN_FOR_ABI,
-      functionName: "updatePlanFor",
-      args: [
-        providerAddress as `0x${string}`,
-        onChainPlanId,
-        priceInUsdc,
-        "",
-        BigInt(deadline as number),
-        signature as `0x${string}`,
-      ],
-    });
-
-    const preparedPlan = await db.catalogPlan.update({
-      where: { id: planId },
-      data: { chainSyncStatus: "PENDING", chainSyncError: null },
-    });
-
-    await writeAuditEvent({
-      headers: c.req.raw.headers,
-      teamId: auth.team.teamId,
-      userId: auth.team.userId,
-      walletAddress: auth.team.walletAddress,
-      action: "catalog.plan.chain_sync_prepared",
-      resourceType: "CatalogPlan",
-      resourceId: planId,
-    metadata: {
-      onChainPlanId: plan.onChainPlanId,
-      planOwner: providerAddress,
-      registrationMode: "user_controlled_update",
-      transport: "prepared_call",
-      target: planFactoryAddress,
-    },
-  });
-
-    return c.json({
-      ok: true,
-      onChainPlanId: plan.onChainPlanId,
-      plan: preparedPlan,
-      planOwner: providerAddress,
-      providerAddress,
-      signingRequired: true,
-    preparedTransaction: {
-      target: planFactoryAddress,
-      value: "0",
-      data: updatePlanForCalldata,
-      executionMode: "smart-account",
-      functionSignature:
-        "updatePlanFor(address,uint256,uint256,string,uint256,bytes)",
-    },
-  });
   }
 
   let nonce: bigint | null = null;
@@ -490,7 +514,10 @@ export async function registerPlanOnChain(c: Context) {
     resourceId: planId,
     metadata: {
       planOwner: providerAddress,
-      registrationMode: "user_controlled",
+      registrationMode: replacedOnChainPlanId
+        ? "user_controlled_replacement"
+        : "user_controlled",
+      ...(replacedOnChainPlanId ? { replacedOnChainPlanId } : {}),
       transport: "prepared_call",
       target: planFactoryAddress,
     },

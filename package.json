@@ -9,7 +9,7 @@
     "subgraph"
   ],
   "scripts": {
-    "build": "turbo run build",
+    "build": "turbo run build --filter=!arcen-demo && npm run build --workspace=arcen-demo",
     "build:sdk": "turbo run build --filter=@arcenpay/react --filter=@arcenpay/node",
     "build:launch": "turbo run build --filter=@arcenpay/dashboard... --filter=@arcenpay/facilitator...",
     "dev": "turbo run dev --ui=tui",

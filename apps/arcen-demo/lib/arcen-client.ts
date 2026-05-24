@@ -33,12 +33,9 @@ export function getDemoCompanyKeys() {
 }
 
 export function getDemoCompanyIdentity() {
-  const companyKeys = getDemoCompanyKeys();
-
-  return {
-    ...companyKeys,
-    name: process.env.DEMO_COMPANY_NAME ?? companyKeys.id ?? "Demo Company",
-  };
+  // Do not inject a default demo company name here. The real customer name
+  // captured in the billing portal should remain the source of truth.
+  return getDemoCompanyKeys();
 }
 
 export function getDemoUserIdentity() {
@@ -48,7 +45,6 @@ export function getDemoUserIdentity() {
   return {
     id: userId,
     wallet: process.env.DEMO_USER_WALLET ?? companyKeys.wallet,
-    name: process.env.DEMO_USER_NAME ?? "Demo User",
     email: process.env.DEMO_USER_EMAIL ?? undefined,
   };
 }

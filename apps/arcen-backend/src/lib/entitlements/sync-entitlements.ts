@@ -93,7 +93,7 @@ export async function syncEntitlementsToFlagRules(
           values: [],
           metricKey: entitlement.featureKey,
           metricValue: Number(entitlement.value),
-          metricPeriod: "monthly",
+          metricPeriod: "plan_period",
         },
       });
     }

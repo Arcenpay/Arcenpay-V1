@@ -1794,21 +1794,45 @@ export function ComponentEditor({
     const flagMap = new Map(
       (liveData?.flags ?? []).map((flag) => [flag.featureKey, flag]),
     );
+    const readPlanEntitlements = (plan: { metadata?: unknown } | null) => {
+      const metadata =
+        plan?.metadata && typeof plan.metadata === "object"
+          ? (plan.metadata as Record<string, unknown>)
+          : null;
+      if (Array.isArray(metadata?.entitlements)) {
+        return metadata.entitlements;
+      }
+      const legacyAnnual = (metadata as
+        | { annualEntitlements?: unknown[] }
+        | null
+        | undefined)?.annualEntitlements;
+      return Array.isArray(legacyAnnual) ? legacyAnnual : [];
+    };
+    const readPlanCreditGrants = (plan: { metadata?: unknown } | null) => {
+      const metadata =
+        plan?.metadata && typeof plan.metadata === "object"
+          ? (plan.metadata as Record<string, unknown>)
+          : null;
+      return Array.isArray(metadata?.creditGrants)
+        ? metadata.creditGrants
+        : [];
+    };
     const preferredPreviewPlan =
       (needsPaidBillingPreview
         ? sdkPlans.find((plan) => {
-            const entitlements = Array.isArray(plan.metadata?.entitlements)
-              ? plan.metadata.entitlements
-              : [];
-            return entitlements.length > 0 && Number(plan.price ?? "0") > 0;
+            const entitlements = readPlanEntitlements(plan);
+            const creditGrants = readPlanCreditGrants(plan);
+            return (
+              (entitlements.length > 0 || creditGrants.length > 0) &&
+              Number(plan.price ?? "0") > 0
+            );
           }) ??
           firstPaidPlan
         : null) ??
       sdkPlans.find((plan) => {
-        const entitlements = Array.isArray(plan.metadata?.entitlements)
-          ? plan.metadata.entitlements
-          : [];
-        return entitlements.length > 0;
+        const entitlements = readPlanEntitlements(plan);
+        const creditGrants = readPlanCreditGrants(plan);
+        return entitlements.length > 0 || creditGrants.length > 0;
       }) ??
       firstPaidPlan ??
       sdkPlans[0] ??
@@ -1822,13 +1846,12 @@ export function ComponentEditor({
         ? sdkPlans.find((plan) => plan.id === requestedActivePlanId) ?? null
         : null) ??
       preferredPreviewPlan;
-    const rawPlanEntitlements = Array.isArray(
-      activePlan?.metadata?.entitlements,
-    )
-      ? (activePlan.metadata.entitlements as unknown as Array<
-          Record<string, unknown>
-        >)
-      : [];
+    const rawPlanEntitlements = readPlanEntitlements(activePlan) as Array<
+      Record<string, unknown>
+    >;
+    const rawPlanCreditGrants = readPlanCreditGrants(activePlan) as Array<
+      Record<string, unknown>
+    >;
     const planEntitlements: ComponentRenderData["entitlements"] =
       rawPlanEntitlements
         .filter(
@@ -1894,6 +1917,41 @@ export function ComponentEditor({
               null,
           };
         });
+    const planCreditGrantEntitlements: ComponentRenderData["entitlements"] =
+      rawPlanCreditGrants
+        .filter(
+          (entry) =>
+            entry &&
+            typeof entry === "object" &&
+            typeof entry.creditTypeId === "string",
+        )
+        .map((entry) => {
+          const rawAmount =
+            typeof entry.amount === "number"
+              ? entry.amount
+              : Number.parseFloat(String(entry.amount ?? 0));
+          const amount = Number.isFinite(rawAmount) ? rawAmount : 0;
+          const unitName =
+            typeof entry.unitName === "string" && entry.unitName
+              ? entry.unitName
+              : "credits";
+          const creditName =
+            (typeof entry.name === "string" && entry.name) ||
+            (typeof entry.code === "string" && entry.code) ||
+            String(entry.creditTypeId);
+
+          return {
+            featureKey: `credit:${typeof entry.code === "string" && entry.code ? entry.code : String(entry.creditTypeId)}`,
+            name: creditName,
+            value: amount,
+            featureType: "credit" as const,
+            usage: 0,
+            exceeded: false,
+            unitSingular: unitName,
+            unitPlural: unitName,
+            icon: null,
+          };
+        });
     const fallbackEntitlements: ComponentRenderData["entitlements"] =
       liveData?.flags?.map((f) => ({
         featureKey: f.featureKey,
@@ -1911,7 +1969,9 @@ export function ComponentEditor({
         unitPlural: f.unitPlural ?? f.unitSingular ?? undefined,
       })) ?? [];
     const previewEntitlements =
-      planEntitlements.length > 0 ? planEntitlements : fallbackEntitlements;
+      planEntitlements.length > 0 || planCreditGrantEntitlements.length > 0
+        ? [...planEntitlements, ...planCreditGrantEntitlements]
+        : fallbackEntitlements;
 
     return {
       component: {

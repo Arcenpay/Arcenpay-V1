@@ -2,7 +2,7 @@ import type { Context } from "hono";
 import { z } from "zod";
 import { db } from "../../../db.js";
 import { requirePermission, isErrorResponse } from "../../../lib/auth/api-auth.js";
-import { listMetadataEntitlements } from "../../../lib/catalog/catalog-entitlements.js";
+import { listAllMetadataEntitlements } from "../../../lib/catalog/catalog-entitlements.js";
 import { writeAuditEvent } from "../../../lib/platform/audit.js";
 import { requireResolvedActiveEnvironment } from "../../../lib/environments/workspace-environments.js";
 
@@ -43,15 +43,23 @@ function getCreditBundleCount(metadata: unknown): number {
 }
 
 function countEnabledPlanEntitlements(metadata: unknown): number {
-  return listMetadataEntitlements(metadata).filter(
+  return listAllMetadataEntitlements(metadata).filter(
     (entitlement) => entitlement.enabled !== false,
   ).length;
+}
+
+function countPlanCreditGrants(metadata: unknown): number {
+  const creditGrants = asRecord(metadata).creditGrants;
+  return Array.isArray(creditGrants) ? creditGrants.length : 0;
 }
 
 function canPlanGoLive(plan: { price: unknown; metadata?: unknown }): boolean {
   const isPaid = parseFloat(String(plan.price ?? "0")) > 0;
   if (!isPaid) return true;
-  return countEnabledPlanEntitlements(plan.metadata) > 0;
+  return (
+    countEnabledPlanEntitlements(plan.metadata) > 0 ||
+    countPlanCreditGrants(plan.metadata) > 0
+  );
 }
 
 function normalizeConfiguredPlanId(

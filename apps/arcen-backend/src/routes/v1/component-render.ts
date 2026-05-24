@@ -19,7 +19,10 @@ import { db } from "../../db.js";
 import { resolveEntitlementResults } from "../../lib/entitlements/entitlements.js";
 import { getRpcUrl } from "../../config.js";
 import { DEFAULT_CHAIN_ID } from "../../lib/platform/default-chain.js";
-import { listMetadataEntitlements } from "../../lib/catalog/catalog-entitlements.js";
+import {
+  listAllMetadataEntitlements,
+  listMetadataEntitlements,
+} from "../../lib/catalog/catalog-entitlements.js";
 import { normalizeComponentDesign } from "../../lib/catalog/component-design.js";
 import {
   extractEmbedAccessToken,
@@ -29,6 +32,9 @@ import { ensureInvoicePdfForTeam } from "../../lib/billing/invoice-documents.js"
 import { upsertSubscriptionLedgerState } from "../../lib/billing/billing-ledger.js";
 import { getLatestSubscriptionChangeRequest } from "../../lib/billing/subscription-change-requests.js";
 import { corsHeaders } from "../../middleware/cors.js";
+import { toPrismaJson } from "../../utils/prisma-json.js";
+
+const PERIOD_END_REPAIR_TOLERANCE_MS = 5 * 60 * 1000;
 
 // ─── Normalization helpers ────────────────────────────────────────────────────
 
@@ -70,6 +76,75 @@ function deriveBillingPeriodFromInterval(
     : "monthly";
 }
 
+function parseIsoDate(value: unknown): Date | null {
+  if (typeof value !== "string" || !value.trim()) return null;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function resolveDeferredBillingPeriodRepair(input: {
+  transition: Record<string, unknown> | null;
+  activeBillingPeriod: "monthly" | "annual" | null;
+  liveCurrentPeriodEnd: string | null;
+}):
+  | {
+      previousBillingPeriod: "monthly" | "annual";
+      targetBillingPeriod: "monthly" | "annual";
+      effectiveAt: string;
+    }
+  | null {
+  const transition = input.transition;
+  if (!transition) return null;
+  if (transition.changeType !== "upgrade" || transition.stage !== "applied") {
+    return null;
+  }
+  if (transition.mode !== "immediate_prorated_upgrade") return null;
+
+  const previousPlanId =
+    typeof transition.previousPlanId === "string"
+      ? transition.previousPlanId
+      : null;
+  const targetPlanId =
+    typeof transition.targetPlanId === "string" ? transition.targetPlanId : null;
+  if (!previousPlanId || !targetPlanId || previousPlanId !== targetPlanId) {
+    return null;
+  }
+
+  const previousBillingPeriod = normalizeBillingPeriod(
+    transition.previousBillingPeriod,
+  );
+  const targetBillingPeriod = normalizeBillingPeriod(
+    transition.targetBillingPeriod,
+  );
+  if (
+    !previousBillingPeriod ||
+    !targetBillingPeriod ||
+    previousBillingPeriod === targetBillingPeriod ||
+    input.activeBillingPeriod !== targetBillingPeriod
+  ) {
+    return null;
+  }
+
+  const livePeriodEnd = parseIsoDate(input.liveCurrentPeriodEnd);
+  const prorationPeriodEnd = parseIsoDate(
+    asRecord(asRecord(transition.metadata).proration).currentPeriodEnd,
+  );
+  if (!livePeriodEnd || !prorationPeriodEnd) return null;
+
+  if (
+    livePeriodEnd.getTime() >
+    prorationPeriodEnd.getTime() + PERIOD_END_REPAIR_TOLERANCE_MS
+  ) {
+    return null;
+  }
+
+  return {
+    previousBillingPeriod,
+    targetBillingPeriod,
+    effectiveAt: livePeriodEnd.toISOString(),
+  };
+}
+
 function deriveVisiblePlanIds(config: {
   restrictLivePlans?: boolean;
   livePlanIds?: string[];
@@ -94,10 +169,19 @@ type ComponentPlanMetadataEntitlement = {
   icon?: string | null;
 };
 
+type ComponentPlanMetadataCreditGrant = {
+  creditTypeId: string;
+  amount: number;
+  name?: string | null;
+  code?: string | null;
+  unitName?: string | null;
+};
+
 function listComponentPlanMetadataEntitlements(
   metadata: unknown,
+  billingPeriod: "monthly" | "annual" = "monthly",
 ): ComponentPlanMetadataEntitlement[] {
-  return listMetadataEntitlements(metadata).map((entry) => {
+  return listMetadataEntitlements(metadata, billingPeriod).map((entry) => {
     const candidate = entry as unknown as Record<string, unknown>;
 
     return {
@@ -124,6 +208,89 @@ function listComponentPlanMetadataEntitlements(
       icon: typeof candidate.icon === "string" ? candidate.icon : null,
     };
   });
+}
+
+function listComponentPlanMetadataCreditGrants(
+  metadata: unknown,
+): ComponentPlanMetadataCreditGrant[] {
+  const raw = asRecord(metadata).creditGrants;
+  if (!Array.isArray(raw)) return [];
+
+  return raw
+    .filter(
+      (
+        entry,
+      ): entry is {
+        creditTypeId: string;
+        amount: number | string;
+        name?: string | null;
+        code?: string | null;
+        unitName?: string | null;
+      } =>
+        Boolean(
+          entry &&
+            typeof entry === "object" &&
+            typeof (entry as { creditTypeId?: unknown }).creditTypeId ===
+              "string",
+        ),
+    )
+    .map((entry) => {
+      const numericAmount =
+        typeof entry.amount === "number"
+          ? entry.amount
+          : Number.parseFloat(String(entry.amount));
+      return {
+        creditTypeId: entry.creditTypeId,
+        amount: Number.isFinite(numericAmount) ? numericAmount : 0,
+        name: typeof entry.name === "string" ? entry.name : null,
+        code: typeof entry.code === "string" ? entry.code : null,
+        unitName: typeof entry.unitName === "string" ? entry.unitName : null,
+      };
+    })
+    .filter((entry) => entry.amount > 0);
+}
+
+function hydratePlanMetadataWithCreditGrants(
+  metadata: unknown,
+  creditsById: Map<
+    string,
+    { id: string; name: string; code: string; unitName: string }
+  >,
+): Record<string, unknown> | null {
+  const record = asRecord(metadata);
+  const creditGrants = listComponentPlanMetadataCreditGrants(metadata);
+  if (Object.keys(record).length === 0 && creditGrants.length === 0) {
+    return null;
+  }
+
+  return {
+    ...record,
+    creditGrants: creditGrants.map((grant) => {
+      const creditType = creditsById.get(grant.creditTypeId);
+      return {
+        ...grant,
+        name: creditType?.name ?? grant.name ?? grant.creditTypeId,
+        code: creditType?.code ?? grant.code ?? null,
+        unitName: creditType?.unitName ?? grant.unitName ?? "credits",
+      };
+    }),
+  };
+}
+
+function toCreditGrantEntitlements(
+  creditGrants: ComponentPlanMetadataCreditGrant[],
+): Array<Record<string, unknown>> {
+  return creditGrants.map((grant) => ({
+    featureKey: `credit:${grant.code ?? grant.creditTypeId}`,
+    name: grant.name ?? grant.creditTypeId,
+    value: grant.amount,
+    featureType: "credit",
+    usage: 0,
+    exceeded: false,
+    unitSingular: grant.unitName ?? "credit",
+    unitPlural: grant.unitName ?? "credits",
+    icon: null,
+  }));
 }
 
 function readInvoiceCustomerName(metadata: unknown): string | null {
@@ -247,6 +414,7 @@ export async function GET(c: Context) {
   let paymentMethod: Record<string, unknown> | null = null;
   let recentInvoices: Record<string, unknown>[] = [];
   let subscriptionTransition: Record<string, unknown> | null = null;
+  let latestChangeRequest: Record<string, unknown> | null = null;
   let billingPaymentAccount: string | null = null;
   let liveOnChainPlanId: string | null = null;
   let liveOnChainTokenId: string | null = null;
@@ -321,7 +489,7 @@ export async function GET(c: Context) {
         email: company.email ?? subscriberEmailRecord?.email ?? null,
       };
 
-      const latestChangeRequest = await getLatestSubscriptionChangeRequest({
+      latestChangeRequest = await getLatestSubscriptionChangeRequest({
         teamId,
         companyId: company.id,
       });
@@ -354,6 +522,30 @@ export async function GET(c: Context) {
             metadata: true,
           },
         })) as Record<string, unknown> | null;
+        const activePlanCreditGrants = listComponentPlanMetadataCreditGrants(
+          activePlan?.metadata ?? null,
+        );
+        if (activePlan && activePlanCreditGrants.length > 0) {
+          const creditTypes = await db.catalogCreditType.findMany({
+            where: {
+              teamId,
+              id: { in: activePlanCreditGrants.map((grant) => grant.creditTypeId) },
+            },
+            select: {
+              id: true,
+              name: true,
+              code: true,
+              unitName: true,
+            },
+          });
+          activePlan = {
+            ...activePlan,
+            metadata: hydratePlanMetadataWithCreditGrants(
+              activePlan.metadata,
+              new Map(creditTypes.map((creditType) => [creditType.id, creditType])),
+            ),
+          };
+        }
       }
 
       activeBillingPeriod =
@@ -362,6 +554,135 @@ export async function GET(c: Context) {
         ) ??
         normalizeBillingPeriod(companyTraits.billingPeriod) ??
         deriveBillingPeriodFromInterval(activePlan?.billingInterval);
+
+      const deferredBillingPeriodRepair = resolveDeferredBillingPeriodRepair({
+        transition: latestChangeRequest,
+        activeBillingPeriod,
+        liveCurrentPeriodEnd,
+      });
+      if (deferredBillingPeriodRepair) {
+        const now = new Date();
+        const repairedTransitionMetadata = {
+          ...asRecord(latestChangeRequest?.metadata),
+          mode: "next_renewal_on_chain",
+          targetPlanName:
+            typeof latestChangeRequest?.targetPlanName === "string"
+              ? latestChangeRequest.targetPlanName
+              : typeof activePlan?.name === "string"
+                ? activePlan.name
+                : null,
+          previousBillingPeriod:
+            deferredBillingPeriodRepair.previousBillingPeriod,
+          targetBillingPeriod: deferredBillingPeriodRepair.targetBillingPeriod,
+          repairedAt: now.toISOString(),
+          repairedFromMode:
+            typeof latestChangeRequest?.mode === "string"
+              ? latestChangeRequest.mode
+              : null,
+        };
+        const repairedTraits = {
+          ...companyTraits,
+          billingPeriod: deferredBillingPeriodRepair.previousBillingPeriod,
+        };
+        const repairedStateMetadata = {
+          ...asRecord(company.subscriptionState?.metadata),
+          source: "component.render",
+          mode: "next_renewal_on_chain",
+          billingPeriod: deferredBillingPeriodRepair.previousBillingPeriod,
+          previousBillingPeriod:
+            deferredBillingPeriodRepair.previousBillingPeriod,
+          pendingBillingPeriod: deferredBillingPeriodRepair.targetBillingPeriod,
+          pendingCatalogPlanId:
+            latestChangeRequest?.targetPlanId ??
+            (typeof activePlan?.id === "string" ? activePlan.id : null),
+          pendingOnChainPlanId:
+            liveOnChainPlanId ??
+            (typeof activePlan?.onChainPlanId === "string"
+              ? activePlan.onChainPlanId
+              : null),
+          repairedAt: now.toISOString(),
+        };
+        const repairedWalletAddress =
+          billingPaymentAccount ??
+          company.subscriptionState?.walletAddress ??
+          company.walletAddress ??
+          null;
+
+        if (latestChangeRequest?.id && repairedWalletAddress) {
+          await db.$transaction(async (tx) => {
+            await tx.subscriptionChangeRequest.update({
+              where: { id: String(latestChangeRequest?.id) },
+              data: {
+                changeType: "BILLING_PERIOD_CHANGE",
+                stage: "REQUESTED",
+                effectiveAt: new Date(deferredBillingPeriodRepair.effectiveAt),
+                appliedAt: null,
+                pendingVerification: false,
+                failureReason: null,
+                metadata: toPrismaJson(repairedTransitionMetadata),
+              },
+            });
+
+            await tx.arcenCompany.update({
+              where: { id: company.id },
+              data: {
+                traits: toPrismaJson(repairedTraits),
+              },
+            });
+
+            await upsertSubscriptionLedgerState(
+              {
+                teamId,
+                companyId: company.id,
+                walletAddress: repairedWalletAddress,
+                chainId: configuredChainId,
+                status:
+                  company.subscriptionState?.status === "PAST_DUE"
+                    ? "PAST_DUE"
+                    : "ACTIVE",
+                catalogPlanId:
+                  company.subscriptionState?.catalogPlanId ??
+                  (typeof activePlan?.id === "string" ? activePlan.id : null),
+                onChainPlanId:
+                  liveOnChainPlanId ??
+                  (typeof activePlan?.onChainPlanId === "string"
+                    ? activePlan.onChainPlanId
+                    : null),
+                onChainTokenId:
+                  liveOnChainTokenId ??
+                  company.subscriptionState?.onChainTokenId ??
+                  null,
+                currentPeriodEnd: new Date(
+                  deferredBillingPeriodRepair.effectiveAt,
+                ),
+                cancelAtPeriodEnd: false,
+                cancelledAt: null,
+                pastDueAt: null,
+                graceEndsAt: null,
+                lastEvent: "subscription.render_repaired_billing_period_change",
+                lastEventAt: now,
+                metadata: repairedStateMetadata,
+              },
+              tx,
+            );
+          });
+        }
+
+        activeBillingPeriod = deferredBillingPeriodRepair.previousBillingPeriod;
+        subscriptionTransition = {
+          ...asRecord(latestChangeRequest),
+          changeType: "billing_period_change",
+          stage: "requested",
+          mode: "next_renewal_on_chain",
+          effectiveAt: deferredBillingPeriodRepair.effectiveAt,
+          pendingVerification: false,
+          pendingRecovery: false,
+          previousBillingPeriod:
+            deferredBillingPeriodRepair.previousBillingPeriod,
+          targetBillingPeriod: deferredBillingPeriodRepair.targetBillingPeriod,
+          metadata: repairedTransitionMetadata,
+        };
+      }
 
       const companyKeys = {
         internalId: company.id,
@@ -398,7 +719,11 @@ export async function GET(c: Context) {
       );
       const activePlanEntitlements = listComponentPlanMetadataEntitlements(
         activePlan?.metadata ?? null,
+        activeBillingPeriod ?? "monthly",
       ).filter((entry) => entry.enabled !== false);
+      const activePlanCreditGrantEntitlements = toCreditGrantEntitlements(
+        listComponentPlanMetadataCreditGrants(activePlan?.metadata ?? null),
+      );
 
       entitlements = activePlanEntitlements.map((entry) => {
         const resolvedEntitlement = entitlementMap.get(entry.featureKey);
@@ -443,6 +768,7 @@ export async function GET(c: Context) {
           icon: entry.icon ?? flag?.icon ?? null,
         };
       });
+      entitlements = [...entitlements, ...activePlanCreditGrantEntitlements];
 
       usageData = entitlements
         .filter((entitlement) => entitlement.featureType === "event_based")
@@ -815,6 +1141,40 @@ export async function GET(c: Context) {
     }
   }
 
+  const planCreditTypeIds = Array.from(
+    new Set(
+      hydratedPlans.flatMap((plan) =>
+        listComponentPlanMetadataCreditGrants(plan.metadata).map(
+          (grant) => grant.creditTypeId,
+        ),
+      ),
+    ),
+  );
+  if (planCreditTypeIds.length > 0) {
+    const creditTypes = await db.catalogCreditType.findMany({
+      where: {
+        teamId,
+        id: { in: planCreditTypeIds },
+      },
+      select: {
+        id: true,
+        name: true,
+        code: true,
+        unitName: true,
+      },
+    });
+    const creditTypeById = new Map(
+      creditTypes.map((creditType) => [creditType.id, creditType]),
+    );
+    hydratedPlans = hydratedPlans.map((plan) => ({
+      ...plan,
+      metadata: hydratePlanMetadataWithCreditGrants(
+        plan.metadata,
+        creditTypeById,
+      ) as typeof plan.metadata,
+    }));
+  }
+
   const liveMatchedPlan = liveOnChainPlanId
     ? (hydratedPlans.find((plan) => plan.onChainPlanId === liveOnChainPlanId) ??
       null)
@@ -877,12 +1237,13 @@ export async function GET(c: Context) {
 
   const plansForResponse = hydratedPlans
     .filter((plan) => {
-      const metadata = asRecord(plan.metadata);
-      const rawEntitlements = metadata.entitlements;
-      const hasEntitlements = Array.isArray(rawEntitlements) && rawEntitlements.length > 0;
+      const hasEntitlements =
+        listAllMetadataEntitlements(plan.metadata).length > 0;
+      const hasCreditGrants =
+        listComponentPlanMetadataCreditGrants(plan.metadata).length > 0;
       const isPaid = parseFloat(String(plan.price ?? "0")) > 0;
-      // Free plans always show. Paid plans must have entitlements configured.
-      return !isPaid || hasEntitlements;
+      // Free plans always show. Paid plans must have customer-facing value configured.
+      return !isPaid || hasEntitlements || hasCreditGrants;
     })
     .map((plan) => ({
     id: plan.id,

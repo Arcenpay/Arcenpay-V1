@@ -5,7 +5,10 @@ export interface MetadataEntitlementLink {
   enabled?: boolean;
   type?: "BOOLEAN" | "NUMERIC" | "UNLIMITED";
   value?: boolean | number | null;
+  valueUnit?: string | null;
 }
+
+export type CatalogBillingPeriod = "monthly" | "annual";
 
 export interface LinkedPlanSummary {
   id: string;
@@ -19,12 +22,34 @@ export interface LinkedPlanEntitlementSummary extends LinkedPlanSummary {
   valueUnit?: string | null;
 }
 
-export function listMetadataEntitlements(metadata: unknown): MetadataEntitlementLink[] {
-  if (!metadata || typeof metadata !== "object") return [];
+function asRecord(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return value as Record<string, unknown>;
+}
 
-  const entitlements = (metadata as { entitlements?: unknown[] }).entitlements;
-  if (!Array.isArray(entitlements)) return [];
+export function normalizeCatalogBillingPeriod(
+  value: unknown,
+): CatalogBillingPeriod {
+  if (typeof value !== "string") return "monthly";
+  const normalized = value.trim().toLowerCase();
+  return normalized === "annual" || normalized === "yearly"
+    ? "annual"
+    : "monthly";
+}
 
+function readSharedMetadataEntitlements(metadata: unknown): unknown[] {
+  const record = asRecord(metadata);
+  const shared = record.entitlements;
+  if (Array.isArray(shared)) return shared;
+
+  // Backward compatibility for plans edited while annual entitlements existed.
+  const legacyAnnual = record.annualEntitlements;
+  return Array.isArray(legacyAnnual) ? legacyAnnual : [];
+}
+
+function filterMetadataEntitlements(
+  entitlements: unknown[],
+): MetadataEntitlementLink[] {
   return entitlements.filter((entry): entry is MetadataEntitlementLink => {
     if (!entry || typeof entry !== "object") return false;
 
@@ -34,6 +59,47 @@ export function listMetadataEntitlements(metadata: unknown): MetadataEntitlement
       (candidate.enabled === undefined || typeof candidate.enabled === "boolean")
     );
   });
+}
+
+export function listDirectMetadataEntitlements(
+  metadata: unknown,
+  _billingPeriod: CatalogBillingPeriod = "monthly",
+): MetadataEntitlementLink[] {
+  return filterMetadataEntitlements(readSharedMetadataEntitlements(metadata));
+}
+
+export function hasDirectMetadataEntitlements(
+  metadata: unknown,
+  _billingPeriod: CatalogBillingPeriod = "monthly",
+): boolean {
+  return readSharedMetadataEntitlements(metadata).length > 0;
+}
+
+export function listMetadataEntitlements(
+  metadata: unknown,
+  _billingPeriod: CatalogBillingPeriod = "monthly",
+): MetadataEntitlementLink[] {
+  return listDirectMetadataEntitlements(metadata);
+}
+
+export function listAllMetadataEntitlements(
+  metadata: unknown,
+): MetadataEntitlementLink[] {
+  return listMetadataEntitlements(metadata);
+}
+
+export function writeMetadataEntitlements(input: {
+  metadata: unknown;
+  billingPeriod?: CatalogBillingPeriod;
+  entitlements: MetadataEntitlementLink[];
+}): Record<string, unknown> {
+  const { annualEntitlements: _legacyAnnualEntitlements, ...rest } = asRecord(
+    input.metadata,
+  ) as Record<string, unknown> & { annualEntitlements?: unknown };
+  return {
+    ...rest,
+    entitlements: input.entitlements,
+  };
 }
 
 export async function loadPublishedPlanLinksByFeatureKey(teamId: string) {
@@ -52,13 +118,18 @@ export async function loadPublishedPlanLinksByFeatureKey(teamId: string) {
     orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
   });
 
-  const linkedPlansByFeatureKey = new Map<string, Map<string, LinkedPlanSummary>>();
+  const linkedPlansByFeatureKey = new Map<
+    string,
+    Map<string, LinkedPlanSummary>
+  >();
 
   for (const plan of plans) {
-    for (const entitlement of listMetadataEntitlements(plan.metadata)) {
+    for (const entitlement of listAllMetadataEntitlements(plan.metadata)) {
       if (entitlement.enabled === false) continue;
 
-      const plansForFeature = linkedPlansByFeatureKey.get(entitlement.featureKey) ?? new Map<string, LinkedPlanSummary>();
+      const plansForFeature =
+        linkedPlansByFeatureKey.get(entitlement.featureKey) ??
+        new Map<string, LinkedPlanSummary>();
       plansForFeature.set(plan.id, {
         id: plan.id,
         name: plan.name,
@@ -69,10 +140,14 @@ export async function loadPublishedPlanLinksByFeatureKey(teamId: string) {
   }
 
   return new Map(
-    Array.from(linkedPlansByFeatureKey.entries()).map(([featureKey, linkedPlans]) => [
-      featureKey,
-      Array.from(linkedPlans.values()).sort((left, right) => left.name.localeCompare(right.name)),
-    ]),
+    Array.from(linkedPlansByFeatureKey.entries()).map(
+      ([featureKey, linkedPlans]) => [
+        featureKey,
+        Array.from(linkedPlans.values()).sort((left, right) =>
+          left.name.localeCompare(right.name),
+        ),
+      ],
+    ),
   );
 }
 
@@ -92,10 +167,13 @@ export async function loadPublishedPlanEntitlementsByFeatureKey(teamId: string) 
     orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
   });
 
-  const entitlementsByFeatureKey = new Map<string, Map<string, LinkedPlanEntitlementSummary>>();
+  const entitlementsByFeatureKey = new Map<
+    string,
+    Map<string, LinkedPlanEntitlementSummary>
+  >();
 
   for (const plan of plans) {
-    for (const entitlement of listMetadataEntitlements(plan.metadata)) {
+    for (const entitlement of listAllMetadataEntitlements(plan.metadata)) {
       if (entitlement.enabled === false) continue;
 
       const featureEntitlements =
@@ -109,8 +187,8 @@ export async function loadPublishedPlanEntitlementsByFeatureKey(teamId: string) 
         type: entitlement.type ?? "BOOLEAN",
         value: entitlement.value ?? null,
         valueUnit:
-          typeof (entitlement as { valueUnit?: unknown }).valueUnit === "string"
-            ? (entitlement as { valueUnit?: string | null }).valueUnit ?? null
+          typeof entitlement.valueUnit === "string"
+            ? entitlement.valueUnit ?? null
             : null,
       });
       entitlementsByFeatureKey.set(entitlement.featureKey, featureEntitlements);
@@ -118,9 +196,13 @@ export async function loadPublishedPlanEntitlementsByFeatureKey(teamId: string) 
   }
 
   return new Map(
-    Array.from(entitlementsByFeatureKey.entries()).map(([featureKey, linkedEntitlements]) => [
-      featureKey,
-      Array.from(linkedEntitlements.values()).sort((left, right) => left.name.localeCompare(right.name)),
-    ]),
+    Array.from(entitlementsByFeatureKey.entries()).map(
+      ([featureKey, linkedEntitlements]) => [
+        featureKey,
+        Array.from(linkedEntitlements.values()).sort((left, right) =>
+          left.name.localeCompare(right.name),
+        ),
+      ],
+    ),
   );
 }

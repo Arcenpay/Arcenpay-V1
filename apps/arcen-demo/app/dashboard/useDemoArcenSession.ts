@@ -21,6 +21,8 @@ export function useDemoArcenSession(
   const [error, setError] = useState<string | null>(null);
 
   const normalizedAddress = address?.toLowerCase() ?? null;
+  const normalizedCompanyName = options?.companyName?.trim() || null;
+  const normalizedUserName = options?.userName?.trim() || null;
   const identified =
     !!normalizedAddress &&
     !!session.token &&
@@ -58,12 +60,12 @@ export function useDemoArcenSession(
       company: {
         id: `company-${normalizedAddress.slice(2, 10)}`,
         wallet: address ?? normalizedAddress,
-        name: options?.companyName ?? "ArcenPay Demo Studio",
+        ...(normalizedCompanyName ? { name: normalizedCompanyName } : {}),
       },
       user: {
         id: `user-${normalizedAddress.slice(2, 10)}`,
         wallet: address ?? normalizedAddress,
-        name: options?.userName ?? "Demo User",
+        ...(normalizedUserName ? { name: normalizedUserName } : {}),
       },
     })
       .then(() => {
@@ -91,8 +93,8 @@ export function useDemoArcenSession(
     identify,
     identified,
     normalizedAddress,
-    options?.companyName,
-    options?.userName,
+    normalizedCompanyName,
+    normalizedUserName,
   ]);
 
   return {

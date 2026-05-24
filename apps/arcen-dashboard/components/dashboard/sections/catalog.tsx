@@ -233,6 +233,14 @@ function tokenLabel(address: string): string {
     : address.slice(0, 10) + "…";
 }
 
+function resolveMaxOnChainChargeMicros(plan: Pick<CatalogPlan, "price" | "annualPrice">): bigint {
+  const monthlyMicros = Math.round(parseFloat(plan.price || "0") * 1_000_000);
+  const annualMicros = Math.round(
+    parseFloat(String(plan.annualPrice ?? "0")) * 1_000_000,
+  );
+  return BigInt(Math.max(monthlyMicros, annualMicros, 0));
+}
+
 function getInitialTokenForEnvironment(
   env: EnvMode,
   connectedChainId?: number,
@@ -3063,6 +3071,7 @@ function PlansTable({
         domain,
         signingRequired,
         providerAddress,
+        signatureMode,
       } = (await nonceRes.json()) as {
         nonce: string;
         planFactoryAddress: string;
@@ -3074,7 +3083,12 @@ function PlansTable({
         };
         signingRequired: boolean;
         providerAddress?: string;
+        signatureMode?: "create" | "update";
       };
+      const effectiveSignatureMode =
+        signatureMode === "create" ? "create" : plan.onChainPlanId ? "update" : "create";
+      const resolvedOnChainPlanId =
+        effectiveSignatureMode === "update" ? plan.onChainPlanId : null;
 
       if (chainId !== domain.chainId) {
         const expectedLabel = getChainLabel(domain.chainId);
@@ -3108,9 +3122,7 @@ function PlansTable({
 
       // 2. Prepare plan parameters for signing
       const deadline = Math.floor(Date.now() / 1000) + 3600; // 1 hour from now
-      const priceInUsdc = BigInt(
-        Math.round(parseFloat(plan.price) * 1_000_000),
-      );
+      const priceInUsdc = resolveMaxOnChainChargeMicros(plan);
       const billingIntervalSeconds = plan.billingInterval * 86400;
 
       // 3. Sign EIP-712 typed data when the provider is the connected wallet
@@ -3122,7 +3134,7 @@ function PlansTable({
               chainId: BigInt(domain.chainId),
               verifyingContract: planFactoryAddress as `0x${string}`,
             },
-            types: plan.onChainPlanId
+            types: effectiveSignatureMode === "update"
               ? {
                   UpdatePlan: [
                     { name: "provider", type: "address" },
@@ -3146,11 +3158,12 @@ function PlansTable({
                     { name: "deadline", type: "uint256" },
                   ],
                 },
-            primaryType: plan.onChainPlanId ? "UpdatePlan" : "CreatePlan",
-            message: plan.onChainPlanId
+            primaryType:
+              effectiveSignatureMode === "update" ? "UpdatePlan" : "CreatePlan",
+            message: effectiveSignatureMode === "update" && resolvedOnChainPlanId
               ? {
                   provider: (providerAddress ?? address) as `0x${string}`,
-                  planId: BigInt(plan.onChainPlanId),
+                  planId: BigInt(resolvedOnChainPlanId),
                   price: priceInUsdc,
                   metadataURI: "",
                   nonce: BigInt(nonce),
@@ -5689,6 +5702,20 @@ interface Entitlement {
   icon?: string | null;
 }
 
+function entitlementUsageLabel(): string {
+  return "per billing cycle";
+}
+
+function entitlementPlanPriceLabel(
+  plan: Pick<CatalogPlan, "price" | "annualPrice">,
+): string {
+  const monthly = `$${parseFloat(String(plan.price)).toFixed(2)}/mo`;
+  if (Number(plan.annualPrice ?? 0) > 0) {
+    return `${monthly} · $${parseFloat(String(plan.annualPrice)).toFixed(2)}/yr`;
+  }
+  return monthly;
+}
+
 function getEntitlementAvatarType(
   entitlement: Pick<Entitlement, "type" | "featureType">,
 ): "boolean" | "event" | "trait" {
@@ -5856,7 +5883,7 @@ function AddEntitlementDialog({
   const isFree = parseFloat(plan.price) === 0;
   const planPrice = isFree
     ? "Free"
-    : `$${parseFloat(plan.price).toFixed(2)}/month`;
+    : entitlementPlanPriceLabel(plan);
 
   return (
     <Sheet
@@ -6048,7 +6075,7 @@ function AddEntitlementDialog({
                 <div className="space-y-3 p-4 rounded-lg bg-secondary/30 border border-border">
                   <div className="space-y-1.5">
                     <Label className="text-xs font-medium">
-                      Monthly limit *
+                      Limit *
                     </Label>
                     <Input
                       type="number"
@@ -6078,7 +6105,8 @@ function AddEntitlementDialog({
                       <p className="text-xs text-muted-foreground">
                         Displays as:{" "}
                         <strong>
-                          {form.value} {form.valueUnit || "units"} per month
+                          {form.value} {form.valueUnit || "units"}{" "}
+                          {entitlementUsageLabel()}
                         </strong>
                       </p>
                     )}
@@ -6124,7 +6152,7 @@ function AddEntitlementDialog({
                     <p className="text-base font-bold text-foreground whitespace-nowrap">
                       {isFree
                         ? "Free"
-                        : `$${parseFloat(plan.price).toFixed(2)}/mo`}
+                        : planPrice}
                     </p>
                   </div>
                   <div className="space-y-1.5 pt-3 border-t border-border">
@@ -6145,7 +6173,7 @@ function AddEntitlementDialog({
                         </p>
                         <p className="text-xs text-muted-foreground ml-auto">
                           {ent.type === "NUMERIC"
-                            ? `${ent.value} ${ent.valueUnit ?? ""} /mo`
+                            ? `${ent.value} ${ent.valueUnit ?? ""} ${entitlementUsageLabel()}`
                             : ent.enabled
                               ? "On"
                               : "Off"}
@@ -6166,7 +6194,7 @@ function AddEntitlementDialog({
                       </p>
                       <p className="text-xs text-muted-foreground ml-auto">
                         {form.type === "NUMERIC" && form.value
-                          ? `${form.value} ${form.valueUnit || ""} /mo`
+                          ? `${form.value} ${form.valueUnit || ""} ${entitlementUsageLabel()}`
                           : form.type === "UNLIMITED"
                             ? "Unlimited"
                             : form.enabled
@@ -7440,7 +7468,7 @@ function PlanDetailView({
     try {
       const res = await fetch(`/api/catalog/plans/${plan.id}/entitlements`);
       if (res.ok) {
-        const data = await res.json();
+        const data = (await res.json()) as { entitlements?: Entitlement[] };
         setEntitlements(data.entitlements ?? []);
       }
     } finally {
@@ -7767,10 +7795,16 @@ function PlanDetailView({
           {/* ── Entitlements section ── */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-base font-semibold">
-                {entitlements.length} Entitlement
-                {entitlements.length !== 1 ? "s" : ""}
-              </h3>
+              <div className="space-y-2">
+                <h3 className="text-base font-semibold">
+                  {entitlements.length} Entitlement
+                  {entitlements.length !== 1 ? "s" : ""}
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  These entitlements apply to this plan, and event limits reset
+                  on each subscriber&apos;s own billing cycle.
+                </p>
+              </div>
               <div className="flex items-center gap-2">
                 <div className="relative">
                   <input
@@ -7851,8 +7885,8 @@ function PlanDetailView({
                                   <p className="text-sm font-medium text-foreground">
                                     {ent.value ?? "—"}{" "}
                                     {ent.valueUnit
-                                      ? `${ent.valueUnit} per month`
-                                      : "per month"}
+                                      ? `${ent.valueUnit} ${entitlementUsageLabel()}`
+                                      : entitlementUsageLabel()}
                                   </p>
                                   <p className="text-xs text-muted-foreground">
                                     Numerical limit
@@ -8027,11 +8061,15 @@ function PlanDetailView({
                       >
                         <td className="py-3 px-4 font-medium flex items-center gap-2">
                           <Coins className="w-3.5 h-3.5 text-amber-500" />
-                          {grant.creditTypeId}{" "}
-                          {/* Ideally show name here, but needs a join or fetch */}
+                          {grant.name ?? grant.creditTypeId}
+                          {grant.code ? (
+                            <span className="text-xs text-muted-foreground font-mono">
+                              {grant.code}
+                            </span>
+                          ) : null}
                         </td>
                         <td className="py-3 px-4 text-foreground">
-                          {grant.amount} units
+                          {grant.amount} {grant.unitName ?? "credits"}
                         </td>
                         <td className="py-3 px-4 text-right">
                           <Button

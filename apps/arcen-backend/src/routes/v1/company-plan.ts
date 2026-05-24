@@ -32,14 +32,20 @@ import {
   recordSuccessfulPayment,
   upsertSubscriptionLedgerState,
 } from "../../lib/billing/billing-ledger.js";
+import { syncCustomerUserIdentity } from "../../lib/billing/customer-identity.js";
 import { recordBillingAdjustment } from "../../lib/billing/billing-adjustments.js";
 import { consumeBillingCredit } from "../../lib/billing/billing-balances.js";
+import {
+  isEmailDeliveryConfigured,
+  sendSubscriptionPlanChangeEmail,
+} from "../../lib/billing/email.js";
 import { sendPaidInvoiceReceipt } from "../../lib/billing/invoice-notifications.js";
 import { computeProrationSettlement } from "../../lib/billing/billing-proration.js";
 import {
   createSubscriptionChangeRequest,
   findSimilarOpenSubscriptionChangeRequest,
   getLatestSubscriptionChangeRequest,
+  revertOpenSubscriptionChangeRequests,
   stripLegacySubscriptionLifecycleTraits,
 } from "../../lib/billing/subscription-change-requests.js";
 import {
@@ -102,6 +108,40 @@ function deriveBillingPeriodFromPlan(
     plan.billingInterval >= 31_536_000
     ? "annual"
     : "monthly";
+}
+
+const ANNUAL_BILLING_INTERVAL_SECONDS = 31_536_000;
+const PERIOD_END_RENEWAL_TOLERANCE_MS = 5 * 60 * 1000;
+
+function resolveExpectedAutopayIntervalSeconds(input: {
+  plan: { billingInterval?: number | null };
+  billingPeriod: "monthly" | "annual";
+}): number {
+  if (input.billingPeriod === "annual") {
+    return ANNUAL_BILLING_INTERVAL_SECONDS;
+  }
+  return Number(input.plan.billingInterval ?? 2_592_000);
+}
+
+function hasRenewalBoundaryMoved(input: {
+  previousPeriodEnd: Date | null | undefined;
+  nextPeriodEnd: Date | null | undefined;
+}): boolean {
+  const previousPeriodEnd = input.previousPeriodEnd;
+  const nextPeriodEnd = input.nextPeriodEnd;
+  if (
+    !previousPeriodEnd ||
+    !nextPeriodEnd ||
+    Number.isNaN(previousPeriodEnd.getTime()) ||
+    Number.isNaN(nextPeriodEnd.getTime())
+  ) {
+    return false;
+  }
+
+  return (
+    nextPeriodEnd.getTime() >
+    previousPeriodEnd.getTime() + PERIOD_END_RENEWAL_TOLERANCE_MS
+  );
 }
 
 function isOpenLifecycleStage(
@@ -589,7 +629,7 @@ export async function handleCompanyPlanRequest(
       corsHeaders(origin),
     );
 
-  const { teamId, companyId } = decoded;
+  const { teamId, companyId, userId } = decoded;
   if (!companyId)
     return c.json(
       { error: "No company associated with this token" },
@@ -746,6 +786,14 @@ export async function handleCompanyPlanRequest(
       });
     }
   }
+
+  await syncCustomerUserIdentity({
+    companyId: company.id,
+    userId: userId ?? null,
+    customerName: hasCustomerName ? normalizedCustomerName : null,
+    customerEmail: hasCustomerEmail ? normalizedCustomerEmail : null,
+    walletAddress: companyPaymentAccount,
+  });
 
   const resolvedCompanyName = companyUpdates.name ?? company.name ?? null;
   const resolvedCompanyEmail = companyUpdates.email ?? company.email ?? null;
@@ -949,7 +997,7 @@ export async function handleCompanyPlanRequest(
       return c.json(
         {
           error:
-            "Annual billing is not available because this plan does not have an annual price configured. Publish a dedicated annual on-chain plan variant first, then subscribe to that plan directly.",
+            "Annual billing is not available because this plan does not have an annual price configured.",
         },
         409,
         corsHeaders(origin),
@@ -1165,10 +1213,17 @@ export async function handleCompanyPlanRequest(
     }
 
     const subChainId = company.subscriptionState?.chainId;
+    const expectedTargetAmountAtomic = BigInt(targetPlanAmountMicros);
+    const expectedTargetIntervalSeconds = resolveExpectedAutopayIntervalSeconds({
+      plan,
+      billingPeriod: normalizedBillingPeriod,
+    });
     const verification = await verifyAutopayPlanChange({
       paymentAccount: companyPaymentAccount,
       txHash: normalizedAutopayConfigTxHash,
       expectedOnChainPlanId: plan.onChainPlanId!,
+      expectedChargeAmountAtomic: expectedTargetAmountAtomic,
+      expectedBillingIntervalSeconds: expectedTargetIntervalSeconds,
       chainId: subChainId,
     });
     if (!verification.ok) {
@@ -1493,8 +1548,16 @@ export async function handleCompanyPlanRequest(
         }
       }
 
+      const requiresRegistryAccessChange =
+        verification.previousOnChainPlanId !== String(plan.onChainPlanId);
       let accessChangeTxHashLocal = normalizedRequestedAccessChangeTxHash;
-      if (!accessChangeTxHashLocal) {
+      if (
+        !accessChangeTxHashLocal &&
+        (!requiresRegistryAccessChange || verification.registryPlanChanged)
+      ) {
+        accessChangeTxHashLocal = normalizedAutopayConfigTxHash;
+      }
+      if (!accessChangeTxHashLocal && requiresRegistryAccessChange) {
         const { contracts } = createChainClients(subChainId);
         const subscriptionRegistryAddress =
           contracts.subscriptionRegistry as `0x${string}`;
@@ -1556,13 +1619,25 @@ export async function handleCompanyPlanRequest(
           corsHeaders(origin),
         );
       }
+      const finalizedAccessChangeTxHash =
+        accessChangeTxHashLocal ?? normalizedAutopayConfigTxHash;
 
-      const accessChange = await verifySubscriptionRegistryPlanChange({
-        paymentAccount: companyPaymentAccount,
-        txHash: accessChangeTxHashLocal,
-        expectedOnChainPlanId: plan.onChainPlanId!,
-        chainId: subChainId,
-      });
+      const accessChange = requiresRegistryAccessChange
+        ? await verifySubscriptionRegistryPlanChange({
+            paymentAccount: companyPaymentAccount,
+            txHash: finalizedAccessChangeTxHash,
+            expectedOnChainPlanId: plan.onChainPlanId!,
+            chainId: subChainId,
+          })
+        : {
+            ok: true as const,
+            txHash: finalizedAccessChangeTxHash,
+            tokenId: verification.tokenId,
+            previousOnChainPlanId: verification.previousOnChainPlanId,
+            onChainPlanId: verification.onChainPlanId,
+            currentPeriodEnd: verification.currentPeriodEnd,
+            billerWallet: verification.merchantWallet,
+          };
       if (!accessChange.ok) {
         return c.json(
           { error: accessChange.error },
@@ -1571,10 +1646,41 @@ export async function handleCompanyPlanRequest(
         );
       }
 
+      const accessChangePeriodEnd = new Date(accessChange.currentPeriodEnd);
+      const shouldScheduleBillingPeriodActivation =
+        previousPlanId === plan.id &&
+        currentBillingPeriod !== normalizedBillingPeriod &&
+        !hasRenewalBoundaryMoved({
+          previousPeriodEnd: company.subscriptionState?.currentPeriodEnd,
+          nextPeriodEnd: accessChangePeriodEnd,
+        });
+      const lifecycleChangeType = shouldScheduleBillingPeriodActivation
+        ? "billing_period_change"
+        : "upgrade";
+      const lifecycleStage = shouldScheduleBillingPeriodActivation
+        ? "requested"
+        : "applied";
+      const lifecycleMode = shouldScheduleBillingPeriodActivation
+        ? "next_renewal_on_chain"
+        : "immediate_prorated_upgrade";
+      const lifecycleEffectiveAt = shouldScheduleBillingPeriodActivation
+        ? accessChangePeriodEnd
+        : effectiveAt;
+      const activeBillingPeriodAfterChange = shouldScheduleBillingPeriodActivation
+        ? currentBillingPeriod
+        : normalizedBillingPeriod;
+
       let upgradeResult: {
         transitionId: string;
         invoiceId: string | null;
         paymentId: string | null;
+        changeType: "upgrade" | "billing_period_change";
+        stage:
+          | "requested"
+          | "applied";
+        mode: "immediate_prorated_upgrade" | "next_renewal_on_chain";
+        effectiveAt: string;
+        scheduled: boolean;
       };
       try {
         upgradeResult = await db.$transaction(
@@ -1588,7 +1694,7 @@ export async function handleCompanyPlanRequest(
               readConsumedPaymentTxHashes(latestTraits);
             const alreadyConsumed =
               latestConsumedPaymentTxHashes.includes(normalizedAutopayConfigTxHash) ||
-              latestConsumedPaymentTxHashes.includes(accessChangeTxHashLocal) ||
+              latestConsumedPaymentTxHashes.includes(finalizedAccessChangeTxHash) ||
               (normalizedPaymentTxHash
                 ? latestConsumedPaymentTxHashes.includes(normalizedPaymentTxHash)
                 : false);
@@ -1599,13 +1705,15 @@ export async function handleCompanyPlanRequest(
 
             const nextTraits: Record<string, unknown> =
               stripLegacySubscriptionLifecycleTraits(latestTraits);
-            nextTraits.billingPeriod = normalizedBillingPeriod;
-            nextTraits.billingVerifiedTxHashes = [
-              ...latestConsumedPaymentTxHashes,
-              normalizedAutopayConfigTxHash,
-              accessChangeTxHashLocal,
-              ...(normalizedPaymentTxHash ? [normalizedPaymentTxHash] : []),
-            ].slice(-20);
+            nextTraits.billingPeriod = activeBillingPeriodAfterChange;
+            nextTraits.billingVerifiedTxHashes = Array.from(
+              new Set([
+                ...latestConsumedPaymentTxHashes,
+                normalizedAutopayConfigTxHash,
+                finalizedAccessChangeTxHash,
+                ...(normalizedPaymentTxHash ? [normalizedPaymentTxHash] : []),
+              ]),
+            ).slice(-20);
 
             await tx.arcenCompany.update({
               where: { id: companyId },
@@ -1624,27 +1732,53 @@ export async function handleCompanyPlanRequest(
               onChainPlanId: accessChange.onChainPlanId,
               onChainTokenId: accessChange.tokenId,
               currentPeriodStart: periodStart,
-              currentPeriodEnd: periodEnd,
-              cancelAtPeriodEnd: undefined,
-              cancelledAt: undefined,
+              currentPeriodEnd: accessChangePeriodEnd,
+              cancelAtPeriodEnd: false,
+              cancelledAt: null,
               pastDueAt: null,
               graceEndsAt: null,
-              lastEvent: "subscription.plan_upgraded",
+              lastEvent: shouldScheduleBillingPeriodActivation
+                ? "subscription.billing_period_change_scheduled"
+                : "subscription.plan_upgraded",
               lastEventAt: effectiveAt,
-              lastSourceTxHash: accessChangeTxHashLocal,
+              lastSourceTxHash: finalizedAccessChangeTxHash,
               metadata: {
                 source: "self_service",
-                mode: "immediate_prorated_upgrade",
-                billingPeriod: normalizedBillingPeriod,
+                mode: lifecycleMode,
+                billingPeriod: activeBillingPeriodAfterChange,
                 previousBillingPeriod: currentBillingPeriod,
+                pendingBillingPeriod: shouldScheduleBillingPeriodActivation
+                  ? normalizedBillingPeriod
+                  : undefined,
+                pendingCatalogPlanId: shouldScheduleBillingPeriodActivation
+                  ? plan.id
+                  : undefined,
+                pendingOnChainPlanId: shouldScheduleBillingPeriodActivation
+                  ? accessChange.onChainPlanId
+                  : undefined,
                 previousCatalogPlanId: previousPlanId ?? null,
                 previousOnChainPlanId: accessChange.previousOnChainPlanId,
                 proration: proration.response,
                 autopayConfigTxHash: normalizedAutopayConfigTxHash,
-                accessChangeTxHash: accessChangeTxHashLocal,
+                accessChangeTxHash: finalizedAccessChangeTxHash,
                 paymentTxHash: normalizedPaymentTxHash,
               },
             }, tx);
+
+            await revertOpenSubscriptionChangeRequests(
+              {
+                teamId,
+                companyId,
+                appliedAt: effectiveAt,
+                client: tx,
+                metadata: {
+                  supersededAt: effectiveAt.toISOString(),
+                  supersededByChangeType: lifecycleChangeType,
+                  supersededByPlanId: plan.id,
+                  supersededByBillingPeriod: normalizedBillingPeriod,
+                },
+              },
+            );
 
             const changeRequest = await createSubscriptionChangeRequest({
               teamId,
@@ -1655,25 +1789,27 @@ export async function handleCompanyPlanRequest(
                 null,
               companyId,
               subscriptionStateId: subscriptionState?.id ?? null,
-              changeType: "upgrade",
-              stage: "applied",
+              changeType: lifecycleChangeType,
+              stage: lifecycleStage,
               source: "self_service",
               previousPlanId: previousPlanId ?? null,
               targetPlanId: plan.id,
               previousBillingPeriod: currentBillingPeriod,
               targetBillingPeriod: normalizedBillingPeriod,
               requestedAt: effectiveAt,
-              effectiveAt,
-              appliedAt: effectiveAt,
+              effectiveAt: lifecycleEffectiveAt,
+              appliedAt: shouldScheduleBillingPeriodActivation ? null : effectiveAt,
               autopayConfigTxHash: normalizedAutopayConfigTxHash,
-              accessChangeTxHash: accessChangeTxHashLocal,
+              accessChangeTxHash: finalizedAccessChangeTxHash,
               paymentTxHash: normalizedPaymentTxHash,
               metadata: {
-                mode: "immediate_prorated_upgrade",
+                mode: lifecycleMode,
                 targetPlanName: plan.name,
                 previousPlanId: previousPlanId ?? null,
                 previousBillingPeriod: currentBillingPeriod,
                 targetBillingPeriod: normalizedBillingPeriod,
+                scheduledBillingPeriodActivation:
+                  shouldScheduleBillingPeriodActivation,
                 proration: proration.response,
               },
             }, tx);
@@ -1695,7 +1831,7 @@ export async function handleCompanyPlanRequest(
                     previousBillingPeriod: currentBillingPeriod,
                     previousPlanId: previousPlanId ?? null,
                     autopayConfigTxHash: normalizedAutopayConfigTxHash,
-                    accessChangeTxHash: accessChangeTxHashLocal,
+                    accessChangeTxHash: finalizedAccessChangeTxHash,
                     paymentTxHash: normalizedPaymentTxHash,
                     proration: proration.response,
                   },
@@ -1739,7 +1875,7 @@ export async function handleCompanyPlanRequest(
                   previousBillingPeriod: currentBillingPeriod,
                   previousPlanId: previousPlanId ?? null,
                   autopayConfigTxHash: normalizedAutopayConfigTxHash,
-                  accessChangeTxHash: accessChangeTxHashLocal,
+                  accessChangeTxHash: finalizedAccessChangeTxHash,
                   paymentTxHash: normalizedPaymentTxHash,
                   proration: proration.response,
                 },
@@ -1764,14 +1900,13 @@ export async function handleCompanyPlanRequest(
                 txHash: normalizedPaymentTxHash,
                 occurredAt: effectiveAt,
                 settledAt: effectiveAt,
-                preserveScheduledCancellation: true,
                 metadata: {
                   source: "self_service",
                   mode: "immediate_prorated_upgrade",
                   billingPeriod: normalizedBillingPeriod,
                   previousBillingPeriod: currentBillingPeriod,
                   autopayConfigTxHash: normalizedAutopayConfigTxHash,
-                  accessChangeTxHash: accessChangeTxHashLocal,
+                  accessChangeTxHash: finalizedAccessChangeTxHash,
                   proration: proration.response,
                 },
               }, tx);
@@ -1798,7 +1933,7 @@ export async function handleCompanyPlanRequest(
                   billingPeriod: normalizedBillingPeriod,
                   previousBillingPeriod: currentBillingPeriod,
                   autopayConfigTxHash: normalizedAutopayConfigTxHash,
-                  accessChangeTxHash: accessChangeTxHashLocal,
+                  accessChangeTxHash: finalizedAccessChangeTxHash,
                   paymentTxHash: normalizedPaymentTxHash,
                   amountDueBeforeCredits: microsToAmountString(
                     proration.amountDueBeforeCreditsMicros,
@@ -1830,13 +1965,22 @@ export async function handleCompanyPlanRequest(
                   billingPeriod: normalizedBillingPeriod,
                   previousBillingPeriod: currentBillingPeriod,
                   autopayConfigTxHash: normalizedAutopayConfigTxHash,
-                  accessChangeTxHash: accessChangeTxHashLocal,
+                  accessChangeTxHash: finalizedAccessChangeTxHash,
                   proration: proration.response,
                 },
               }, tx);
             }
 
-            return { transitionId: changeRequest.id, invoiceId, paymentId };
+            return {
+              transitionId: changeRequest.id,
+              invoiceId,
+              paymentId,
+              changeType: lifecycleChangeType,
+              stage: lifecycleStage,
+              mode: lifecycleMode,
+              effectiveAt: lifecycleEffectiveAt.toISOString(),
+              scheduled: shouldScheduleBillingPeriodActivation,
+            };
           },
           { isolationLevel: "Serializable" },
         );
@@ -1869,13 +2013,22 @@ export async function handleCompanyPlanRequest(
         throw error;
       }
 
-      const { transitionId, invoiceId, paymentId } = upgradeResult;
+      const {
+        transitionId,
+        invoiceId,
+        paymentId,
+        changeType,
+        stage,
+        mode,
+        effectiveAt: transitionEffectiveAt,
+        scheduled,
+      } = upgradeResult;
 
-      if (invoiceId && normalizedPaymentTxHash) {
+      if (invoiceId) {
         await sendPaidInvoiceReceipt({
           teamId,
           invoiceId,
-          txHash: normalizedPaymentTxHash,
+          txHash: normalizedPaymentTxHash ?? null,
         }).catch((err) => {
           console.warn(
             "[company-plan] Failed to send proration invoice receipt:",
@@ -1892,17 +2045,17 @@ export async function handleCompanyPlanRequest(
           plan.environmentId ??
           null,
         transitionId,
-        changeType: "upgrade",
-        stage: "applied",
+        changeType,
+        stage,
         planId,
         planName: plan.name,
         billingPeriod: normalizedBillingPeriod,
         previousPlanId: previousPlanId ?? null,
-        mode: "immediate_prorated_upgrade",
-        scheduled: false,
-        txHash: accessChangeTxHashLocal,
+        mode,
+        scheduled,
+        txHash: finalizedAccessChangeTxHash,
         autopayConfigTxHash: normalizedAutopayConfigTxHash,
-        accessChangeTxHash: accessChangeTxHashLocal,
+        accessChangeTxHash: finalizedAccessChangeTxHash,
         paymentTxHash: normalizedPaymentTxHash,
         invoiceId,
         paymentId,
@@ -1917,11 +2070,11 @@ export async function handleCompanyPlanRequest(
           data: {
             ...buildLifecycleResponse({
               transitionId,
-              changeType: "upgrade",
-              stage: "applied",
-              scheduled: false,
-              mode: "immediate_prorated_upgrade",
-              effectiveAt: accessChange.currentPeriodEnd,
+              changeType,
+              stage,
+              scheduled,
+              mode,
+              effectiveAt: transitionEffectiveAt,
               data: {
                 planId,
                 planName: plan.name,
@@ -1930,7 +2083,7 @@ export async function handleCompanyPlanRequest(
                 tokenId: accessChange.tokenId,
                 currentPeriodEnd: accessChange.currentPeriodEnd,
                 autopayConfigTxHash: normalizedAutopayConfigTxHash,
-                accessChangeTxHash: accessChangeTxHashLocal,
+                accessChangeTxHash: finalizedAccessChangeTxHash,
                 paymentTxHash: normalizedPaymentTxHash,
                 invoiceId,
                 paymentId,
@@ -2266,6 +2419,23 @@ export async function handleCompanyPlanRequest(
       scheduled: true,
       ...(normalizedCouponCode ? { couponCode: normalizedCouponCode } : {}),
     }).catch(() => {});
+
+    if (resolvedCompanyEmail && isEmailDeliveryConfigured()) {
+      await sendSubscriptionPlanChangeEmail({
+        to: resolvedCompanyEmail,
+        customerName: resolvedCompanyName,
+        changeKind: "downgrade_scheduled",
+        currentPlanName: currentPlan?.name ?? null,
+        targetPlanName: plan.name,
+        effectiveAt:
+          company.subscriptionState?.currentPeriodEnd?.toISOString() ?? null,
+      }).catch((err) => {
+        console.warn(
+          "[company-plan] Failed to send scheduled downgrade email:",
+          err,
+        );
+      });
+    }
 
     return c.json(
       {

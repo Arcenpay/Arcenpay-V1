@@ -14,7 +14,7 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const pathname = usePathname();
+  const pathname = usePathname() ?? "";
   const { isConnected } = useAccount();
 
   const isActive = (href: string) =>

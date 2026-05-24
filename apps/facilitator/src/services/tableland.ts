@@ -32,6 +32,7 @@ export class TablelandService {
   private initialized = false;
   private dbRead: Database | null = null;
   private dbWrite: Database | null = null;
+  private writesDisabledReason: string | null = null;
 
   constructor(config: TablelandConfig) {
     this.config = config;
@@ -90,7 +91,7 @@ export class TablelandService {
     metadata: Partial<TablelandEntitlement>,
   ): Promise<boolean> {
     this.ensureInitialized();
-    this.ensureWritable();
+    if (!this.isWritable()) return false;
     const normalized = walletAddress.toLowerCase();
 
     const now = Math.floor(Date.now() / 1000);
@@ -135,6 +136,7 @@ export class TablelandService {
 
       return true;
     } catch (err) {
+      this.disableWritesIfUnsupported(err);
       console.error("[Tableland] setFeatureFlags error:", err);
       return false;
     }
@@ -142,7 +144,7 @@ export class TablelandService {
 
   async revokeEntitlement(walletAddress: string): Promise<boolean> {
     this.ensureInitialized();
-    this.ensureWritable();
+    if (!this.isWritable()) return false;
 
     try {
       const statement = `DELETE FROM ${this.config.tableName} WHERE wallet_address = ?`;
@@ -151,6 +153,7 @@ export class TablelandService {
         .run();
       return true;
     } catch (err) {
+      this.disableWritesIfUnsupported(err);
       console.error("[Tableland] revokeEntitlement error:", err);
       return false;
     }
@@ -158,13 +161,14 @@ export class TablelandService {
 
   async revokeEntitlementByTokenId(tokenId: number): Promise<boolean> {
     this.ensureInitialized();
-    this.ensureWritable();
+    if (!this.isWritable()) return false;
 
     try {
       const statement = `DELETE FROM ${this.config.tableName} WHERE nft_token_id = ?`;
       await this.dbWrite!.prepare(statement).bind(tokenId).run();
       return true;
     } catch (err) {
+      this.disableWritesIfUnsupported(err);
       console.error("[Tableland] revokeEntitlementByTokenId error:", err);
       return false;
     }
@@ -185,7 +189,7 @@ export class TablelandService {
     >,
   ): Promise<boolean> {
     this.ensureInitialized();
-    this.ensureWritable();
+    if (!this.isWritable()) return false;
 
     const assignments: string[] = [];
     const values: Array<string | number> = [];
@@ -225,6 +229,7 @@ export class TablelandService {
         .run();
       return true;
     } catch (err) {
+      this.disableWritesIfUnsupported(err);
       console.error("[Tableland] updateEntitlementByTokenId error:", err);
       return false;
     }
@@ -342,6 +347,28 @@ export class TablelandService {
         "[Tableland] Write requested without signer. Set TABLELAND_PRIVATE_KEY + TABLELAND_RPC_URL.",
       );
     }
+  }
+
+  private isWritable(): boolean {
+    if (this.writesDisabledReason) {
+      return false;
+    }
+
+    this.ensureWritable();
+    return true;
+  }
+
+  private disableWritesIfUnsupported(error: unknown): void {
+    const message = error instanceof Error ? error.message : String(error);
+    if (!/unsupported chain/i.test(message) || this.writesDisabledReason) {
+      return;
+    }
+
+    this.writesDisabledReason = message;
+    this.dbWrite = null;
+    console.warn(
+      `[Tableland] Disabling writes for chain ${this.config.chainId}: ${message}`,
+    );
   }
 
   private ensureSafeTableName(): void {

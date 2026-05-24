@@ -152,7 +152,9 @@ const BACKEND_URL = (
 ).replace(/\/$/, "");
 const DASHBOARD_URL = (process.env.DASHBOARD_URL || "").replace(/\/$/, "");
 const INTERNAL_API_BASE_URL = BACKEND_URL || DASHBOARD_URL;
-const DASHBOARD_PLAN_RESOLVER_PATH = "/api/internal/catalog/resolve-plan";
+const BACKEND_API_PREFIX = "/api/v1";
+const DASHBOARD_PLAN_RESOLVER_PATH =
+  `${BACKEND_API_PREFIX}/internal/catalog/resolve-plan`;
 const LIT_ENABLED = process.env.ENABLE_LIT_PROTOCOL === "true";
 const BILLING_MAINTENANCE_ENABLED =
   process.env.ENABLE_BILLING_MAINTENANCE_AUTOMATION === "true";
@@ -223,6 +225,31 @@ function parseChainIdSet(raw: string): Set<number> {
     .map((v) => Number.parseInt(v.trim(), 10))
     .filter((v) => Number.isFinite(v) && v > 0);
   return new Set(values);
+}
+
+function normalizeBackendApiPath(pathname: string): string {
+  const normalized = pathname.startsWith("/") ? pathname : `/${pathname}`;
+
+  if (
+    normalized === BACKEND_API_PREFIX ||
+    normalized.startsWith(`${BACKEND_API_PREFIX}/`)
+  ) {
+    return normalized;
+  }
+
+  if (normalized === "/api") {
+    return BACKEND_API_PREFIX;
+  }
+
+  if (normalized.startsWith("/api/")) {
+    return `${BACKEND_API_PREFIX}/${normalized.slice("/api/".length)}`;
+  }
+
+  return `${BACKEND_API_PREFIX}${normalized}`;
+}
+
+function buildInternalApiUrl(baseUrl: string, pathname: string): string {
+  return `${baseUrl}${normalizeBackendApiPath(pathname)}`;
 }
 
 function buildPimlicoPaymasterUrl(chainId: number): string {
@@ -878,7 +905,10 @@ jobQueue.startWorker<BillingEventJobPayload | SubscriptionSyncJobPayload>(
       const requestPayload = await buildBillingEventRequest(
         job.payload as BillingEventJobPayload,
       );
-      const ok = await postToDashboard("/api/billing/events", requestPayload);
+      const ok = await postToDashboard(
+        "/api/v1/billing/events",
+        requestPayload,
+      );
       if (!ok) {
         throw new Error("Dashboard POST /api/billing/events returned non-2xx");
       }
@@ -890,8 +920,9 @@ jobQueue.startWorker<BillingEventJobPayload | SubscriptionSyncJobPayload>(
         job.payload as SubscriptionSyncJobPayload,
       );
       const ok = await postToDashboard(
-        "/api/internal/companies/sync-subscription",
+        "/api/v1/internal/companies/sync-subscription",
         requestPayload,
+        { method: "PATCH" },
       );
       if (!ok) {
         throw new Error(
@@ -1099,6 +1130,7 @@ const billingBridgeStats: {
 async function postToDashboard(
   pathname: string,
   payload: unknown,
+  options?: { method?: "POST" | "PATCH" },
 ): Promise<boolean> {
   if (!DASHBOARD_URL) return false;
   try {
@@ -1108,8 +1140,8 @@ async function postToDashboard(
     if (FACILITATOR_SECRET) {
       headers.Authorization = `Bearer ${FACILITATOR_SECRET}`;
     }
-    const response = await fetch(`${DASHBOARD_URL}${pathname}`, {
-      method: "POST",
+    const response = await fetch(buildInternalApiUrl(DASHBOARD_URL, pathname), {
+      method: options?.method ?? "POST",
       headers,
       body: JSON.stringify(payload),
     });
@@ -1139,7 +1171,9 @@ async function resolvePlanScopeFromDashboard(
 ): Promise<{ teamId: string; planId: string | null; environmentId: string | null } | null> {
   if (!INTERNAL_API_BASE_URL) return null;
 
-  const url = new URL(`${INTERNAL_API_BASE_URL}${DASHBOARD_PLAN_RESOLVER_PATH}`);
+  const url = new URL(
+    buildInternalApiUrl(INTERNAL_API_BASE_URL, DASHBOARD_PLAN_RESOLVER_PATH),
+  );
   url.searchParams.set("onChainPlanId", onChainPlanId);
 
   const headers: Record<string, string> = {};
@@ -1191,7 +1225,7 @@ async function persistWebhookDelivery(
     "webhooks",
     "webhook_delivery",
     {
-      pathname: "/api/webhooks/delivery",
+      pathname: "/api/v1/webhooks/delivery",
       payload: {
         teamId,
         deliveryId: entry.id,
@@ -1297,7 +1331,10 @@ async function lookupSubscriberEmail(
   // 2 — fall back to platform lookup
   if (!INTERNAL_API_BASE_URL) return null;
   try {
-    const url = `${INTERNAL_API_BASE_URL}/api/subscriber/lookup?wallet=${encodeURIComponent(key)}`;
+    const url = `${buildInternalApiUrl(
+      INTERNAL_API_BASE_URL,
+      "/api/v1/subscriber/lookup",
+    )}?wallet=${encodeURIComponent(key)}`;
     const headers: Record<string, string> = {};
     if (FACILITATOR_SECRET)
       headers["Authorization"] = `Bearer ${FACILITATOR_SECRET}`;
@@ -1369,7 +1406,10 @@ async function triggerDashboardBillingMaintenance(): Promise<void> {
   }
 
   const response = await fetch(
-    `${INTERNAL_API_BASE_URL}/api/internal/billing/maintenance/all`,
+    buildInternalApiUrl(
+      INTERNAL_API_BASE_URL,
+      "/api/v1/internal/billing/maintenance/all",
+    ),
     {
       method: "POST",
       headers,
@@ -4199,7 +4239,10 @@ app.post(
 
     try {
       const budgetRes = await fetch(
-        `${INTERNAL_API_BASE_URL}/api/platform/gas-budget?teamId=${encodeURIComponent(body.teamId)}`,
+        `${buildInternalApiUrl(
+          INTERNAL_API_BASE_URL,
+          "/api/v1/platform/gas-budget",
+        )}?teamId=${encodeURIComponent(body.teamId)}`,
         {
           headers: FACILITATOR_SECRET
             ? { Authorization: `Bearer ${FACILITATOR_SECRET}` }
@@ -4272,7 +4315,7 @@ app.post(
       });
 
       if (PAYMASTER_RECORD_ESTIMATED_SPEND) {
-        void postToDashboard("/api/platform/gas-spend", {
+        void postToDashboard("/api/v1/platform/gas-spend", {
           teamId: body.teamId,
           chainId: body.chainId,
           txHash: quoteId,

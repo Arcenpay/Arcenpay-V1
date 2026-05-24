@@ -6,6 +6,10 @@ import { resolvePublishedFreePlan } from "../catalog/catalog-billing.js";
 import { toPrismaJson } from "../../utils/prisma-json.js";
 import { recordBillingAdjustment } from "./billing-adjustments.js";
 import { postBillingCredit } from "./billing-balances.js";
+import {
+  isEmailDeliveryConfigured,
+  sendSubscriptionPlanChangeEmail,
+} from "./email.js";
 import { deliverWebhook } from "../webhooks/deliver-webhook.js";
 import { computeProrationQuote } from "./billing-proration.js";
 import { getLatestSubscriptionChangeRequest } from "./subscription-change-requests.js";
@@ -92,6 +96,8 @@ export async function applyScheduledSubscriptionTransitions(input: {
           id: true,
           environmentId: true,
           activePlanId: true,
+          name: true,
+          email: true,
           traits: true,
         },
       },
@@ -410,6 +416,25 @@ export async function applyScheduledSubscriptionTransitions(input: {
         source: "billing-maintenance",
       }).catch((err) => {
         console.warn("[billing-maintenance] Failed to deliver cancellation webhook:", err);
+      });
+    }
+
+    if (state.company.email && isEmailDeliveryConfigured()) {
+      await sendSubscriptionPlanChangeEmail({
+        to: state.company.email,
+        customerName: state.company.name,
+        changeKind:
+          mode === "cancel_at_period_end"
+            ? "cancellation_applied"
+            : "downgrade_applied",
+        currentPlanName: previousPlan?.name ?? null,
+        targetPlanName: targetPlan.name,
+        effectiveAt: now.toISOString(),
+      }).catch((err) => {
+        console.warn(
+          "[billing-maintenance] Failed to send subscription change email:",
+          err,
+        );
       });
     }
 

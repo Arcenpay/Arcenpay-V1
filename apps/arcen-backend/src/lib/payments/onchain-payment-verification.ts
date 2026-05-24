@@ -246,6 +246,8 @@ export interface VerifyAutopayPlanChangeInput {
   paymentAccount: string;
   txHash: `0x${string}`;
   expectedOnChainPlanId: string;
+  expectedChargeAmountAtomic?: bigint;
+  expectedBillingIntervalSeconds?: number;
   requireRegistryPlanChange?: boolean;
   chainId?: number;
 }
@@ -257,6 +259,7 @@ export type VerifyAutopayPlanChangeResult =
       tokenId: string;
       previousOnChainPlanId: string;
       onChainPlanId: string;
+      registryPlanChanged: boolean;
       acceptedToken: string;
       merchantWallet: string;
       currentPeriodEnd: string;
@@ -422,7 +425,9 @@ export async function verifyAutopayPlanChange(
       };
     }
 
-    if (configUpdatedEvent.maxAmount !== BigInt(targetPlan.price ?? 0n)) {
+    const expectedChargeAmount =
+      params.expectedChargeAmountAtomic ?? BigInt(targetPlan.price ?? 0n);
+    if (configUpdatedEvent.maxAmount !== expectedChargeAmount) {
       return {
         ok: false,
         status: 409,
@@ -430,7 +435,10 @@ export async function verifyAutopayPlanChange(
       };
     }
 
-    if (Number(configUpdatedEvent.interval) !== Number(targetPlan.billingInterval ?? 0)) {
+    const expectedBillingInterval =
+      params.expectedBillingIntervalSeconds ??
+      Number(targetPlan.billingInterval ?? 0);
+    if (Number(configUpdatedEvent.interval) !== Number(expectedBillingInterval)) {
       return {
         ok: false,
         status: 409,
@@ -497,7 +505,7 @@ export async function verifyAutopayPlanChange(
       };
     }
 
-    if (BigInt(updatedConfig?.maxAmount ?? 0n) !== BigInt(targetPlan.price ?? 0n)) {
+    if (BigInt(updatedConfig?.maxAmount ?? 0n) !== expectedChargeAmount) {
       return {
         ok: false,
         status: 409,
@@ -505,7 +513,7 @@ export async function verifyAutopayPlanChange(
       };
     }
 
-    if (Number(updatedConfig?.interval ?? 0) !== Number(targetPlan.billingInterval ?? 0)) {
+    if (Number(updatedConfig?.interval ?? 0) !== Number(expectedBillingInterval)) {
       return {
         ok: false,
         status: 409,
@@ -546,6 +554,7 @@ export async function verifyAutopayPlanChange(
       tokenId: tokenId.toString(),
       previousOnChainPlanId: configUpdatedEvent.previousPlanId.toString(),
       onChainPlanId: expectedOnChainPlanId.toString(),
+      registryPlanChanged: tokenFeatures[0] === expectedOnChainPlanId,
       acceptedToken: String(targetPlan.acceptedToken).toLowerCase(),
       merchantWallet: String(targetPlan.provider).toLowerCase(),
       currentPeriodEnd: new Date(Number(currentPeriodEnd) * 1000).toISOString(),

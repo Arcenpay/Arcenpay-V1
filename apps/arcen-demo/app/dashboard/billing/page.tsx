@@ -41,10 +41,7 @@ function SkeletonBox({ h, flex }: { h: number; flex?: number }) {
 
 function BillingContent() {
   const { address, connecting } = useWallet();
-  const { identified, loading, error } = useDemoArcenSession(address, {
-    companyName: "ArcenPay Demo Studio",
-    userName: "Billing Customer",
-  });
+  const { identified, loading, error } = useDemoArcenSession(address);
 
   if (loading) return <Skeleton />;
 

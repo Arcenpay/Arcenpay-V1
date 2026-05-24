@@ -235,6 +235,19 @@ type CreditNoteEmailInput = {
   reason: string;
 };
 
+type SubscriptionPlanChangeEmailInput = {
+  to: string;
+  customerName?: string | null;
+  changeKind:
+    | "downgrade_scheduled"
+    | "downgrade_applied"
+    | "cancellation_scheduled"
+    | "cancellation_applied";
+  currentPlanName?: string | null;
+  targetPlanName?: string | null;
+  effectiveAt?: string | null;
+};
+
 function escapeHtml(value: string): string {
   return value
     .replaceAll("&", "&amp;")
@@ -281,6 +294,89 @@ function formatMoneyWithCurrency(value: string, currency: string): string {
   const amount = formatMoneyAmount(value);
   if (code === "USD") return `${value.startsWith("-") ? "-" : ""}$${formatMoneyAmount(value).replace(/^-/, "")}`;
   return `${amount} ${escapeHtml(code)}`;
+}
+
+function buildSubscriptionPlanChangeCopy(
+  input: SubscriptionPlanChangeEmailInput,
+): { subject: string; heading: string; message: string } {
+  const customerPrefix = input.customerName?.trim()
+    ? `${escapeHtml(input.customerName.trim())}, `
+    : "";
+  const effectiveAt = formatEmailDate(input.effectiveAt);
+  const currentPlan = input.currentPlanName?.trim()
+    ? escapeHtml(input.currentPlanName.trim())
+    : "your current plan";
+  const targetPlan = input.targetPlanName?.trim()
+    ? escapeHtml(input.targetPlanName.trim())
+    : "your updated plan";
+
+  switch (input.changeKind) {
+    case "downgrade_scheduled":
+      return {
+        subject: "Your ArcenPay plan downgrade is scheduled",
+        heading: "Plan downgrade scheduled",
+        message: `${customerPrefix}your subscription will stay on <strong>${currentPlan}</strong> until <strong>${effectiveAt}</strong>. After that, it will move to <strong>${targetPlan}</strong> automatically.`,
+      };
+    case "downgrade_applied":
+      return {
+        subject: "Your ArcenPay plan has been updated",
+        heading: "Plan downgrade applied",
+        message: `${customerPrefix}your subscription changed from <strong>${currentPlan}</strong> to <strong>${targetPlan}</strong> on <strong>${effectiveAt}</strong>.`,
+      };
+    case "cancellation_scheduled":
+      return {
+        subject: "Your ArcenPay cancellation is scheduled",
+        heading: "Cancellation scheduled",
+        message: `${customerPrefix}your subscription stays active until <strong>${effectiveAt}</strong>. After that, recurring billing will stop.`,
+      };
+    default:
+      return {
+        subject: "Your ArcenPay subscription has been cancelled",
+        heading: "Subscription cancelled",
+        message: `${customerPrefix}your subscription ended on <strong>${effectiveAt}</strong>.`,
+      };
+  }
+}
+
+export async function sendSubscriptionPlanChangeEmail(
+  input: SubscriptionPlanChangeEmailInput,
+): Promise<void> {
+  const copy = buildSubscriptionPlanChangeCopy(input);
+
+  await sendWithResend({
+    to: input.to,
+    subject: copy.subject,
+    html: `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>${copy.heading}</title>
+</head>
+<body style="margin:0;padding:0;background:#f5f7fa;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 16px;">
+    <tr><td align="center">
+      <table width="520" cellpadding="0" cellspacing="0"
+             style="background:#ffffff;border:1px solid #d8dde6;border-radius:12px;padding:32px;">
+        <tr><td>
+          <p style="margin:0 0 24px;font-size:22px;font-weight:700;color:#0f172a;">ArcenPay</p>
+          <h1 style="margin:0 0 10px;font-size:20px;font-weight:600;color:#111827;">
+            ${copy.heading}
+          </h1>
+          <p style="margin:0 0 20px;font-size:14px;line-height:1.7;color:#4b5563;">
+            ${copy.message}
+          </p>
+          <p style="margin:18px 0 0;font-size:12px;color:#6b7280;">
+            If you have any questions, please contact your service provider or reply to your usual billing support channel.
+          </p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`,
+  });
 }
 
 /** Sends a credit note notification email to a subscriber/customer */

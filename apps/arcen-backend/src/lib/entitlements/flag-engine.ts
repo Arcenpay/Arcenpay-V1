@@ -17,6 +17,7 @@ import { createPublicClient, http } from "viem";
 import { getChain, getContractAddresses } from "@arcenpay/internal-core";
 import { getRpcUrl } from "../../config.js";
 import { DEFAULT_CHAIN_ID } from "../platform/default-chain.js";
+import { normalizeCatalogBillingPeriod } from "../catalog/catalog-entitlements.js";
 
 const viemClients = new Map<number, unknown>();
 
@@ -164,7 +165,13 @@ export interface FlagCheckResult {
 export async function resolveCompany(
   teamId: string,
   keys: CompanyKeys,
-): Promise<{ id: string; traits: Record<string, unknown>; activePlanId: string | null; activeAddOnIds: string[] } | null> {
+): Promise<{
+  id: string;
+  traits: Record<string, unknown>;
+  activePlanId: string | null;
+  activeAddOnIds: string[];
+  billingPeriod: "monthly" | "annual";
+} | null> {
   if (!keys.id && !keys.internalId && !keys.wallet && !keys.email) return null;
 
   const where: Record<string, unknown>[] = [];
@@ -201,6 +208,7 @@ export async function resolveCompany(
           catalogPlanId: true,
           currentPeriodEnd: true,
           graceEndsAt: true,
+          metadata: true,
         },
       },
     },
@@ -257,6 +265,11 @@ export async function resolveCompany(
     id: company.id,
     traits: (company.traits as Record<string, unknown>) ?? {},
     activePlanId,
+    billingPeriod: normalizeCatalogBillingPeriod(
+      (company.subscriptionState?.metadata as Record<string, unknown> | null)
+        ?.billingPeriod ??
+        (company.traits as Record<string, unknown> | null)?.billingPeriod,
+    ),
     activeAddOnIds:
       activeGrantAddOnIds.length > 0
         ? activeGrantAddOnIds

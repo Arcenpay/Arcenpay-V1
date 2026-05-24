@@ -10,6 +10,12 @@ import {
   syncEntitlementsToFlagRules,
   type PlanEntitlement,
 } from "../../../lib/entitlements/sync-entitlements.js";
+import {
+  listAllMetadataEntitlements,
+  listMetadataEntitlements,
+  writeMetadataEntitlements,
+} from "../../../lib/catalog/catalog-entitlements.js";
+import { toPrismaNullableJson } from "../../../utils/prisma-json.js";
 
 const entitlementSchema = z.object({
   featureName: z.string().min(1),
@@ -25,13 +31,8 @@ const entitlementSchema = z.object({
   icon: z.string().trim().nullable().optional(),
 });
 
-function getEntitlements(
-  metadata: unknown,
-): z.infer<typeof entitlementSchema>[] {
-  if (!metadata || typeof metadata !== "object") return [];
-  const meta = metadata as Record<string, unknown>;
-  if (!Array.isArray(meta.entitlements)) return [];
-  return meta.entitlements as z.infer<typeof entitlementSchema>[];
+function getEntitlements(metadata: unknown): z.infer<typeof entitlementSchema>[] {
+  return listMetadataEntitlements(metadata) as z.infer<typeof entitlementSchema>[];
 }
 
 async function enrichEntitlements(
@@ -116,7 +117,7 @@ export async function addPlanEntitlement(c: Context) {
     );
   }
 
-  const existing = getEntitlements(plan.metadata);
+  const existing = [...getEntitlements(plan.metadata)];
   if (existing.some((e) => e.featureKey === parsed.data.featureKey)) {
     return c.json(
       { error: "Feature key already exists on this plan" },
@@ -125,20 +126,20 @@ export async function addPlanEntitlement(c: Context) {
   }
 
   const newEntitlements = [...existing, parsed.data];
-  const updatedMeta = {
-    ...((plan.metadata as Record<string, unknown>) ?? {}),
+  const updatedMeta = writeMetadataEntitlements({
+    metadata: plan.metadata,
     entitlements: newEntitlements,
-  };
+  });
 
   const updated = await db.catalogPlan.update({
     where: { id: plan.id },
-    data: { metadata: updatedMeta },
+    data: { metadata: toPrismaNullableJson(updatedMeta) },
   });
 
   syncEntitlementsToFlagRules(
     auth.team.teamId,
     plan.id,
-    newEntitlements as PlanEntitlement[],
+    listAllMetadataEntitlements(updatedMeta) as PlanEntitlement[],
   ).catch((err) => console.error("[Entitlements] Flag rule sync failed:", err));
 
   await writeAuditEvent({
@@ -152,7 +153,10 @@ export async function addPlanEntitlement(c: Context) {
     afterData: parsed.data,
   });
 
-  return c.json({ entitlements: newEntitlements, plan: updated }, 201 as any);
+  return c.json(
+    { entitlements: newEntitlements, plan: updated },
+    201 as any,
+  );
 }
 
 export async function updatePlanEntitlement(c: Context) {
@@ -190,7 +194,7 @@ export async function updatePlanEntitlement(c: Context) {
     );
   }
 
-  const existing = getEntitlements(plan.metadata);
+  const existing = [...getEntitlements(plan.metadata)];
   const idx = existing.findIndex(
     (e) => e.featureKey === parsed.data.featureKey,
   );
@@ -199,20 +203,20 @@ export async function updatePlanEntitlement(c: Context) {
   }
 
   existing[idx] = { ...existing[idx], ...parsed.data };
-  const updatedMeta = {
-    ...((plan.metadata as Record<string, unknown>) ?? {}),
+  const updatedMeta = writeMetadataEntitlements({
+    metadata: plan.metadata,
     entitlements: existing,
-  };
+  });
 
   await db.catalogPlan.update({
     where: { id: plan.id },
-    data: { metadata: updatedMeta },
+    data: { metadata: toPrismaNullableJson(updatedMeta) },
   });
 
   syncEntitlementsToFlagRules(
     auth.team.teamId,
     plan.id,
-    existing as PlanEntitlement[],
+    listAllMetadataEntitlements(updatedMeta) as PlanEntitlement[],
   ).catch((err) => console.error("[Entitlements] Flag rule sync failed:", err));
 
   return c.json({ entitlements: existing });
@@ -237,27 +241,27 @@ export async function deletePlanEntitlement(c: Context) {
     return c.json({ error: "Plan not found" }, 404 as any);
   }
 
-  const existing = getEntitlements(plan.metadata);
+  const existing = [...getEntitlements(plan.metadata)];
   const filtered = existing.filter((e) => e.featureKey !== featureKey);
 
   if (filtered.length === existing.length) {
     return c.json({ error: "Entitlement not found" }, 404 as any);
   }
 
-  const updatedMeta = {
-    ...((plan.metadata as Record<string, unknown>) ?? {}),
+  const updatedMeta = writeMetadataEntitlements({
+    metadata: plan.metadata,
     entitlements: filtered,
-  };
+  });
 
   await db.catalogPlan.update({
     where: { id: plan.id },
-    data: { metadata: updatedMeta },
+    data: { metadata: toPrismaNullableJson(updatedMeta) },
   });
 
   syncEntitlementsToFlagRules(
     auth.team.teamId,
     plan.id,
-    filtered as PlanEntitlement[],
+    listAllMetadataEntitlements(updatedMeta) as PlanEntitlement[],
   ).catch((err) => console.error("[Entitlements] Flag rule sync failed:", err));
 
   await writeAuditEvent({

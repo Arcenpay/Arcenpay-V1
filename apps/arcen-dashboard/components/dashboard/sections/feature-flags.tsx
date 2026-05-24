@@ -135,6 +135,10 @@ function formatConditionValueSummary(condition: Pick<
   FlagCondition,
   "criteriaType" | "operator" | "values" | "metricKey" | "metricValue" | "metricPeriod" | "traitKey" | "zktlsProviderId"
 >) {
+  const metricPeriodLabel =
+    condition.metricPeriod === "plan_period"
+      ? "billing cycle"
+      : condition.metricPeriod;
   switch (condition.criteriaType) {
     case "base_plan":
     case "add_on":
@@ -142,7 +146,7 @@ function formatConditionValueSummary(condition: Pick<
         .filter((value) => typeof value === "string" && value.length > 0)
         .join(", ");
     case "usage":
-      return [condition.metricKey, condition.operator === "is_less_than" ? "<" : condition.operator, condition.metricValue, condition.metricPeriod]
+      return [condition.metricKey, condition.operator === "is_less_than" ? "<" : condition.operator, condition.metricValue, metricPeriodLabel]
         .filter((value) => value !== null && value !== undefined && value !== "")
         .join(" · ");
     case "company_trait":
@@ -227,6 +231,7 @@ function ConditionEditor({ condition, onChange, onDelete }: {
             <select value={condition.metricPeriod ?? "monthly"}
               onChange={(e) => onChange({ ...condition, metricPeriod: e.target.value })}
               className={`col-span-2 ${selectCls}`}>
+              <option value="plan_period">Billing cycle</option>
               <option value="monthly">Monthly</option>
               <option value="weekly">Weekly</option>
               <option value="daily">Daily</option>

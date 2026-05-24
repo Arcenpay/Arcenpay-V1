@@ -521,6 +521,7 @@ interface PortalState {
   data: ComponentRenderData | null;
   loading: boolean;
   error: string | null;
+  actionError: string | null;
   view: PortalView;
   selectedPlanId: string | null;
   billingPeriod: "monthly" | "annual";
@@ -549,6 +550,7 @@ const initialState: PortalState = {
   data: null,
   loading: true,
   error: null,
+  actionError: null,
   view: "portal",
   selectedPlanId: null,
   billingPeriod: "monthly",
@@ -561,11 +563,12 @@ const initialState: PortalState = {
 function reducer(state: PortalState, action: PortalAction): PortalState {
   switch (action.type) {
     case "FETCH_START":
-      return { ...state, loading: true, error: null };
+      return { ...state, loading: true, error: null, actionError: null };
     case "FETCH_OK":
       return {
         ...state,
         error: null,
+        actionError: null,
         loading: false,
         data: action.data,
         view: "portal",
@@ -577,10 +580,11 @@ function reducer(state: PortalState, action: PortalAction): PortalState {
         flashMsg: null,
       };
     case "FETCH_ERR":
-      return { ...state, loading: false, error: action.error };
+      return { ...state, loading: false, error: action.error, actionError: null };
     case "OPEN_CHECKOUT":
       return {
         ...state,
+        actionError: null,
         view: "checkout",
         selectedPlanId: state.data?.activePlan?.id ?? null,
         billingPeriod: resolveActiveBillingPeriod({
@@ -589,29 +593,32 @@ function reducer(state: PortalState, action: PortalAction): PortalState {
         }),
       };
     case "OPEN_UNSUBSCRIBE":
-      return { ...state, view: "unsubscribe" };
+      return { ...state, view: "unsubscribe", actionError: null };
     case "OPEN_PAYMENT":
-      return { ...state, view: "payment" };
+      return { ...state, view: "payment", actionError: null };
     case "GOTO_PORTAL":
       return {
         ...state,
         view: "portal",
         selectedPlanId: null,
         flashMsg: action.flashMsg ?? null,
+        actionError: null,
       };
     case "GOTO_SUCCESS":
       return {
         ...state,
         view: "success",
         processing: false,
+        actionError: null,
         successMsg: action.successMsg,
         successTxHash: action.txHash ?? null,
       };
     case "SELECT_PLAN":
-      return { ...state, selectedPlanId: action.planId };
+      return { ...state, selectedPlanId: action.planId, actionError: null };
     case "SET_BILLING_PERIOD":
       return {
         ...state,
+        actionError: null,
         billingPeriod: action.period,
         selectedPlanId: state.data
           ? resolvePlanSelectionForBillingPeriod({
@@ -622,16 +629,17 @@ function reducer(state: PortalState, action: PortalAction): PortalState {
           : state.selectedPlanId,
       };
     case "PROCESSING_START":
-      return { ...state, processing: true };
+      return { ...state, processing: true, actionError: null };
     case "PROCESSING_DONE":
       return {
         ...state,
         processing: false,
         view: "portal",
         flashMsg: action.flashMsg ?? null,
+        actionError: null,
       };
     case "PROCESSING_ERR":
-      return { ...state, processing: false, error: action.error };
+      return { ...state, processing: false, actionError: action.error };
     default:
       return state;
   }
@@ -947,6 +955,35 @@ function matchesTransitionTarget(input: {
   );
 }
 
+function isBillingPeriodOnlyTransition(input: {
+  transition: ComponentSubscriptionTransition | null | undefined;
+  activePlanId?: string | null;
+}): boolean {
+  const transition = input.transition;
+  if (!transition || !isOpenTransitionStage(transition)) return false;
+  const previousBillingPeriod = transition.previousBillingPeriod ?? null;
+  const targetBillingPeriod = transition.targetBillingPeriod ?? null;
+  if (
+    !previousBillingPeriod ||
+    !targetBillingPeriod ||
+    previousBillingPeriod === targetBillingPeriod
+  ) {
+    return false;
+  }
+
+  const activePlanId = input.activePlanId ?? null;
+  return (
+    transition.changeType === "billing_period_change" ||
+    (Boolean(activePlanId) && transition.targetPlanId === activePlanId)
+  );
+}
+
+function billingPeriodDisplayName(
+  billingPeriod: "monthly" | "annual" | null | undefined,
+): string {
+  return billingPeriod === "annual" ? "yearly" : "monthly";
+}
+
 function getLifecycleNote(
   data: ComponentRenderData,
 ): string | null {
@@ -954,9 +991,30 @@ function getLifecycleNote(
   if (!transition || !isOpenTransitionStage(transition)) return null;
 
   const effectiveAtLabel = formatDateLabel(transition.effectiveAt);
+  const isBillingScheduleChange = isBillingPeriodOnlyTransition({
+    transition,
+    activePlanId: data.activePlan?.id ?? null,
+  });
 
   if (transition.pendingRecovery || transition.stage === "pending_recovery") {
     return "The subscription change has been submitted, and ArcenPay is finishing the recovery steps now.";
+  }
+
+  if (isBillingScheduleChange) {
+    const targetBillingLabel = billingPeriodDisplayName(
+      transition.targetBillingPeriod,
+    );
+    if (
+      transition.pendingVerification ||
+      transition.stage === "pending_verification"
+    ) {
+      return effectiveAtLabel
+        ? `Billing schedule change submitted. We are still waiting for on-chain confirmation before renewals switch to ${targetBillingLabel} billing on ${effectiveAtLabel}.`
+        : `Billing schedule change submitted. We are still waiting for on-chain confirmation before renewals switch to ${targetBillingLabel} billing.`;
+    }
+    return effectiveAtLabel
+      ? `Your current billing cycle stays active until ${effectiveAtLabel}. Renewals switch to ${targetBillingLabel} billing on that date.`
+      : `Your current billing cycle stays active until the current period ends. Renewals switch to ${targetBillingLabel} billing after that.`;
   }
 
   if (transition.changeType === "downgrade") {
@@ -992,6 +1050,20 @@ function getLifecycleBadge(
       label: "Active",
       background: "#dcfce7",
       color: "#15803d",
+    };
+  }
+
+  if (
+    isBillingPeriodOnlyTransition({
+      transition,
+      activePlanId: data.activePlan?.id ?? null,
+    }) &&
+    transition.stage !== "pending_recovery"
+  ) {
+    return {
+      label: "Billing change scheduled",
+      background: "#dbeafe",
+      color: "#1d4ed8",
     };
   }
 
@@ -1942,6 +2014,15 @@ function getPlanDisplayPrice(
   return billingPeriod === "annual" && annual > 0 ? annual : monthly;
 }
 
+function getPlanDisplayIntervalLabel(
+  plan: ComponentPlanSummary | null | undefined,
+  billingPeriod: "monthly" | "annual",
+): string {
+  if (!plan) return "";
+  if (billingPeriod === "annual") return "/yr";
+  return intervalLabel(plan.billingInterval);
+}
+
 function findSiblingPlanForBillingPeriod(input: {
   plans: ComponentPlanSummary[];
   plan: ComponentPlanSummary | null | undefined;
@@ -1998,6 +2079,75 @@ function isUnsupportedOnChainAnnualSelection(
   return typeof plan.billingInterval === "number"
     ? plan.billingInterval < 31_536_000
     : true;
+}
+
+function resolveOnChainAutopayConfigForBillingPeriod(input: {
+  selectedPlan: ComponentPlanSummary | null | undefined;
+  targetPlan: {
+    price?: bigint;
+    billingInterval?: number;
+  };
+  billingPeriod: "monthly" | "annual";
+}): { chargeAmount: bigint; interval: number } {
+  const selectedAnnualPrice = input.selectedPlan?.annualPrice
+    ? parseFloat(String(input.selectedPlan.annualPrice))
+    : 0;
+  const selectedMonthlyPrice = input.selectedPlan
+    ? parseFloat(String(input.selectedPlan.price))
+    : 0;
+  const nativeIntervalSeconds = Number(input.targetPlan.billingInterval ?? 0);
+  const usesAnnualBillingConfig =
+    input.billingPeriod === "annual" &&
+    (selectedAnnualPrice > 0 || nativeIntervalSeconds >= 31_536_000);
+
+  const chargeAmount =
+    usesAnnualBillingConfig && selectedAnnualPrice > 0
+      ? parseDecimalToAtomicUnits(selectedAnnualPrice.toFixed(6))
+      : BigInt(
+          Math.round(
+            Math.max(
+              usesAnnualBillingConfig
+                ? selectedAnnualPrice || Number(input.targetPlan.price ?? 0n) / 1_000_000
+                : selectedMonthlyPrice || Number(input.targetPlan.price ?? 0n) / 1_000_000,
+              0,
+            ) * 1_000_000,
+          ),
+        );
+  const interval =
+    usesAnnualBillingConfig && nativeIntervalSeconds < 31_536_000
+      ? 31_536_000
+      : nativeIntervalSeconds;
+
+  return { chargeAmount, interval };
+}
+
+function formatAtomicUsdcAmount(value: bigint): string {
+  return `$${(Number(value) / 1_000_000).toFixed(2)}`;
+}
+
+function assertOnChainPlanSupportsConfiguredCharge(input: {
+  selectedPlan: ComponentPlanSummary | null | undefined;
+  targetPlan: {
+    price?: bigint;
+  };
+  billingPeriod: "monthly" | "annual";
+  chargeAmount: bigint;
+}) {
+  const onChainPriceCap = BigInt(input.targetPlan.price ?? 0n);
+  if (input.chargeAmount <= onChainPriceCap) {
+    return;
+  }
+
+  const selectedPlanName = input.selectedPlan?.name?.trim() || "This plan";
+  const planLabel =
+    input.billingPeriod === "annual" ? "yearly" : "monthly";
+
+  throw new Error(
+    `${selectedPlanName} is not synced on-chain for ${planLabel} billing yet. ` +
+      `The plan currently allows up to ${formatAtomicUsdcAmount(onChainPriceCap)} ` +
+      `on-chain, but this checkout needs ${formatAtomicUsdcAmount(input.chargeAmount)}. ` +
+      `Update the plan with the dashboard's on-chain sync action, then try again.`,
+  );
 }
 
 type WindowEthereum = {
@@ -2536,6 +2686,20 @@ export function renderElement(
   const prop = (key: string) =>
     el[key] ?? (el.config as Record<string, unknown> | undefined)?.[key];
 
+  const activePlan = data.activePlan;
+  const activeBillingPeriod = resolveActiveBillingPeriod({
+    billingPeriod: data.billingPeriod,
+    activePlan,
+  });
+  const activePlanDisplayPrice = getPlanDisplayPrice(
+    activePlan,
+    activeBillingPeriod,
+  );
+  const activePlanDisplayIntervalLabel = getPlanDisplayIntervalLabel(
+    activePlan,
+    activeBillingPeriod,
+  );
+
   const iconMap = new Map<string, string>();
   (data.entitlements as any[])?.forEach((ent: any) => {
     if (ent.icon && ent.featureKey) iconMap.set(ent.featureKey, ent.icon);
@@ -2551,8 +2715,8 @@ export function renderElement(
 
   switch (el.type) {
     case "planManager": {
-      const plan = data.activePlan;
-      const priceNum = plan ? parseFloat(String(plan.price)) : 0;
+      const plan = activePlan;
+      const priceNum = activePlanDisplayPrice;
       const lifecycleBadge = getLifecycleBadge(data);
       const lifecycleNote = getLifecycleNote(data);
       return (
@@ -2645,7 +2809,7 @@ export function renderElement(
                       color: tokens.mutedColor,
                     }}
                   >
-                    {intervalLabel(plan!.billingInterval)}
+                    {activePlanDisplayIntervalLabel}
                   </div>
                 )}
               </div>
@@ -2886,6 +3050,10 @@ export function renderElement(
     case "plansTable": {
       const pendingTransition = getSubscriptionTransition(data);
       const scheduledCancellation = getScheduledCancellationTransition(data);
+      const isBillingScheduleChange = isBillingPeriodOnlyTransition({
+        transition: pendingTransition,
+        activePlanId: data.activePlan?.id ?? null,
+      });
       return (
         <div key={index} style={{ marginBottom: 24 }}>
           <SectionHeading tokens={tokens}>Available Plans</SectionHeading>
@@ -2941,11 +3109,31 @@ export function renderElement(
                 lineHeight: 1.6,
               }}
             >
-              Plan change pending: your subscription will move to{" "}
-              <strong>{pendingTransition.targetPlanName}</strong>
-              {pendingTransition.effectiveAt
-                ? ` on ${formatDateLabel(pendingTransition.effectiveAt) ?? "the next renewal"}.`
-                : " on the next renewal."}
+              {isBillingScheduleChange ? (
+                <>
+                  Billing schedule pending: your current cycle stays active
+                  until{" "}
+                  <strong>
+                    {formatDateLabel(pendingTransition.effectiveAt) ??
+                      "the next renewal"}
+                  </strong>
+                  . Renewals switch to{" "}
+                  <strong>
+                    {billingPeriodDisplayName(
+                      pendingTransition.targetBillingPeriod,
+                    )}
+                  </strong>{" "}
+                  billing after that.
+                </>
+              ) : (
+                <>
+                  Plan change pending: your subscription will move to{" "}
+                  <strong>{pendingTransition.targetPlanName}</strong>
+                  {pendingTransition.effectiveAt
+                    ? ` on ${formatDateLabel(pendingTransition.effectiveAt) ?? "the next renewal"}.`
+                    : " on the next renewal."}
+                </>
+              )}
             </div>
           ) : null}
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
@@ -2953,6 +3141,18 @@ export function renderElement(
               const isActive = p.id === data.activePlan?.id;
               const isPendingTarget = p.id === pendingTransition?.targetPlanId;
               const isCompact = data.plans.length > 2;
+              const cardBillingPeriod =
+                isActive
+                  ? activeBillingPeriod
+                  : isPendingTarget &&
+                      pendingTransition?.targetBillingPeriod === "annual"
+                    ? "annual"
+                    : "monthly";
+              const cardPrice = getPlanDisplayPrice(p, cardBillingPeriod);
+              const cardIntervalLabel = getPlanDisplayIntervalLabel(
+                p,
+                cardBillingPeriod,
+              );
               return (
                 <div
                   key={p.id}
@@ -2986,10 +3186,10 @@ export function renderElement(
                       marginBottom: 12,
                     }}
                   >
-                    {parseFloat(String(p.price)) === 0
+                    {cardPrice === 0
                       ? "Free"
-                      : `$${parseFloat(String(p.price)).toFixed(2)}`}
-                    {parseFloat(String(p.price)) > 0 ? (
+                      : `$${cardPrice.toFixed(2)}`}
+                    {cardPrice > 0 ? (
                       <span
                         style={{
                           fontSize: tokens.size - 2,
@@ -2997,7 +3197,7 @@ export function renderElement(
                           color: tokens.mutedColor,
                         }}
                       >
-                        {intervalLabel(p.billingInterval)}
+                        {cardIntervalLabel}
                       </span>
                     ) : null}
                   </div>
@@ -3047,12 +3247,30 @@ export function renderElement(
     }
 
     case "nextBillDue": {
-      const plan = data.activePlan;
+      const plan = activePlan;
       const pendingTransition = getSubscriptionTransition(data);
+      const isBillingScheduleChange = isBillingPeriodOnlyTransition({
+        transition: pendingTransition,
+        activePlanId: data.activePlan?.id ?? null,
+      });
       const scheduledCancellation = getScheduledCancellationTransition(data);
-      const priceVal = plan ? parseFloat(String(plan.price)) : 0;
+      const priceVal = activePlanDisplayPrice;
       const nextBillingLabel = formatDateLabel(data.nextBillingAt);
-      const nextBillingRelative = formatRelativeDate(data.nextBillingAt);
+      const nextBillingRelative =
+        activeBillingPeriod === "annual"
+          ? null
+          : formatRelativeDate(data.nextBillingAt);
+      const nextBillingDescriptor =
+        activeBillingPeriod === "annual"
+          ? "Next yearly billing date"
+          : "Scheduled billing date";
+      const annualRenewalNote =
+        activeBillingPeriod === "annual" &&
+        !scheduledCancellation &&
+        !pendingTransition?.targetPlanName &&
+        nextBillingLabel
+          ? `Your subscription is set to yearly billing. The next yearly charge is scheduled for ${nextBillingLabel}.`
+          : null;
       return (
         <Card key={index} tokens={tokens} style={{ marginBottom: 12 }}>
           <div
@@ -3113,11 +3331,49 @@ export function renderElement(
                     lineHeight: 1.6,
                   }}
                 >
-                  Future renewals are configured for{" "}
-                  <strong>{pendingTransition.targetPlanName}</strong>.
-                  {pendingTransition.effectiveAt
-                    ? ` The change takes effect on ${formatDateLabel(pendingTransition.effectiveAt) ?? "the next renewal"}.`
-                    : " The change takes effect on the next renewal."}
+                  {isBillingScheduleChange ? (
+                    <>
+                      Your current{" "}
+                      <strong>
+                        {billingPeriodDisplayName(activeBillingPeriod)}
+                      </strong>{" "}
+                      cycle stays active until{" "}
+                      <strong>
+                        {formatDateLabel(pendingTransition.effectiveAt) ??
+                          "the next renewal"}
+                      </strong>
+                      . Renewals switch to{" "}
+                      <strong>
+                        {billingPeriodDisplayName(
+                          pendingTransition.targetBillingPeriod,
+                        )}
+                      </strong>{" "}
+                      billing after that.
+                    </>
+                  ) : (
+                    <>
+                      Future renewals are configured for{" "}
+                      <strong>{pendingTransition.targetPlanName}</strong>.
+                      {pendingTransition.effectiveAt
+                        ? ` The change takes effect on ${formatDateLabel(pendingTransition.effectiveAt) ?? "the next renewal"}.`
+                        : " The change takes effect on the next renewal."}
+                    </>
+                  )}
+                </div>
+              ) : annualRenewalNote ? (
+                <div
+                  style={{
+                    marginBottom: 12,
+                    padding: "10px 12px",
+                    borderRadius: tokens.radius / 1.5,
+                    background: "#eff6ff",
+                    border: "1px solid #bfdbfe",
+                    color: "#1d4ed8",
+                    fontSize: tokens.size - 2,
+                    lineHeight: 1.6,
+                  }}
+                >
+                  {annualRenewalNote}
                 </div>
               ) : null}
               <div
@@ -3136,6 +3392,16 @@ export function renderElement(
                   }}
                 >
                   ${priceVal.toFixed(2)}
+                  <span
+                    style={{
+                      fontSize: tokens.size - 1,
+                      fontWeight: 500,
+                      color: tokens.mutedColor,
+                      marginLeft: 4,
+                    }}
+                  >
+                    {activePlanDisplayIntervalLabel}
+                  </span>
                 </div>
                 <div
                   style={{
@@ -3144,7 +3410,9 @@ export function renderElement(
                     paddingBottom: 2,
                   }}
                 >
-                  {nextBillingRelative ?? nextBillingLabel}
+                  {activeBillingPeriod === "annual"
+                    ? "renews yearly"
+                    : nextBillingRelative ?? nextBillingLabel}
                 </div>
               </div>
               <div
@@ -3154,7 +3422,7 @@ export function renderElement(
                   marginBottom: 10,
                 }}
               >
-                Scheduled billing date · {nextBillingLabel}
+                {nextBillingDescriptor} · {nextBillingLabel}
               </div>
             </div>
           )}
@@ -3163,8 +3431,7 @@ export function renderElement(
     }
 
     case "paymentMethod": {
-      const plan = data.activePlan;
-      const isPaidPlan = plan && parseFloat(String(plan.price)) > 0;
+      const isPaidPlan = activePlanDisplayPrice > 0;
       const method = data.paymentMethod as
         | ComponentPaymentMethod
         | null
@@ -3250,8 +3517,7 @@ export function renderElement(
     }
 
     case "invoices": {
-      const plan = data.activePlan;
-      const isPaidPlan = plan && parseFloat(String(plan.price)) > 0;
+      const isPaidPlan = activePlanDisplayPrice > 0;
       const invoices = data.recentInvoices as
         | ComponentInvoiceSummary[]
         | undefined;
@@ -3376,8 +3642,7 @@ export function renderElement(
     }
 
     case "unsubscribe": {
-      const plan = data.activePlan;
-      const isPaidPlan = plan && parseFloat(String(plan.price)) > 0;
+      const isPaidPlan = activePlanDisplayPrice > 0;
       if (!isPaidPlan || !allowCancellation) return null;
       if (getScheduledCancellationTransition(data)) return null;
       // Rendered inside left card by PortalContent — standalone fallback:
@@ -3404,8 +3669,7 @@ export function renderElement(
 
     case "billingHistory":
     case "billing-history": {
-      const plan = data.activePlan;
-      const isPaidPlan = plan && parseFloat(String(plan.price)) > 0;
+      const isPaidPlan = activePlanDisplayPrice > 0;
       const invoices = data.recentInvoices as
         | ComponentInvoiceSummary[]
         | undefined;
@@ -3710,8 +3974,16 @@ function PortalContent({
 
   // Categorise elements by role
   const plan = data.activePlan;
-  const isPaid = plan ? parseFloat(String(plan.price)) > 0 : false;
-  const price = plan ? parseFloat(String(plan.price)) : 0;
+  const activeBillingPeriod = resolveActiveBillingPeriod({
+    billingPeriod: data.billingPeriod,
+    activePlan: plan,
+  });
+  const isPaid = getPlanDisplayPrice(plan, activeBillingPeriod) > 0;
+  const price = getPlanDisplayPrice(plan, activeBillingPeriod);
+  const activePlanIntervalLabel = getPlanDisplayIntervalLabel(
+    plan,
+    activeBillingPeriod,
+  );
 
   const hasPlanManager = elements.some((e) => e.type === "planManager");
   const hasIncluded = elements.some((e) => e.type === "includedFeatures");
@@ -3953,7 +4225,7 @@ function PortalContent({
                           color: responsiveTokens.mutedColor,
                         }}
                       >
-                        {intervalLabel(plan!.billingInterval)}
+                        {activePlanIntervalLabel}
                       </div>
                     )}
                   </div>
@@ -4172,7 +4444,7 @@ function PortalContent({
                               color: responsiveTokens.mutedColor,
                             }}
                           >
-                            {intervalLabel(plan!.billingInterval)}
+                            {activePlanIntervalLabel}
                           </div>
                         )}
                       </div>
@@ -4404,7 +4676,7 @@ function PortalContent({
                               color: tokens.mutedColor,
                             }}
                           >
-                            {intervalLabel(plan!.billingInterval)}
+                            {activePlanIntervalLabel}
                           </div>
                         )}
                       </div>
@@ -4789,6 +5061,13 @@ function CheckoutContent({
     billingPeriod,
   );
   const dueTodayAmount = selectedPlanAlreadyScheduled ? 0 : immediateAmountDue;
+  const scheduledDowngradeWillBeReplaced = Boolean(
+    activeTransition?.changeType === "downgrade" &&
+      isOpenTransitionStage(activeTransition) &&
+      !selectedPlanAlreadyScheduled &&
+      !isCurrentPlanSelected &&
+      discountedPrice >= activeDisplayPrice,
+  );
   const scheduledSelectionNote =
     selectedPlanAlreadyScheduled && selectedPlan
       ? activeTransition?.changeType === "downgrade"
@@ -5786,6 +6065,21 @@ function CheckoutContent({
               </div>
             ) : null}
 
+            {scheduledDowngradeWillBeReplaced ? (
+              <div
+                style={{
+                  fontSize: 11,
+                  color: "#1d4ed8",
+                  marginTop: 10,
+                  lineHeight: 1.5,
+                }}
+              >
+                Continuing with this change will replace the scheduled downgrade
+                and keep your current subscription active with the new renewal
+                settings.
+              </div>
+            ) : null}
+
             {unsupportedOnChainAnnualSelection ? (
               <div
                 style={{
@@ -5795,9 +6089,7 @@ function CheckoutContent({
                   lineHeight: 1.5,
                 }}
               >
-                Annual billing is not available for this on-chain self-serve
-                flow yet. Publish a dedicated annual on-chain plan variant
-                first, then subscribe to that plan directly.
+                This plan does not have yearly billing configured yet.
               </div>
             ) : null}
 
@@ -5864,6 +6156,7 @@ function PaymentContent({
   accessToken,
   couponQuote,
   processing,
+  actionError,
   tokens,
   customerName,
   customerEmail,
@@ -5882,6 +6175,7 @@ function PaymentContent({
   accessToken: string;
   couponQuote: AppliedCouponQuote | null;
   processing: boolean;
+  actionError?: string | null;
   tokens: Tokens;
   customerName: string;
   customerEmail: string;
@@ -5912,6 +6206,7 @@ function PaymentContent({
     (p: ComponentPlanSummary) => p.id === effectiveSelectedPlanId,
   );
   const activePlan = data.activePlan;
+  const activeTransition = getSubscriptionTransition(data);
   const scheduledCancellation = getScheduledCancellationTransition(data);
   const runtimeChainId = useRuntimeChainId();
   const { address, isConnected } = useSafeAccount();
@@ -6008,6 +6303,11 @@ function PaymentContent({
   );
   const isImmediateOnChainUpgrade =
     isOnChainPlanChange && basePrice > activePlanPrice;
+  const scheduledDowngradeWillBeReplaced = Boolean(
+    isImmediateOnChainUpgrade &&
+      activeTransition?.changeType === "downgrade" &&
+      isOpenTransitionStage(activeTransition),
+  );
   const immediateAmountDue = isImmediateOnChainUpgrade
     ? Number.parseFloat(planChangePreview?.amountDue ?? "0")
     : isOnChainPlanChange
@@ -6263,7 +6563,18 @@ function PaymentContent({
     const contracts = getContractAddresses(paymentChainId);
     const autopayAddress = contracts.autopayModule as `0x${string}`;
     const tokenAddress = targetPlan.acceptedToken as `0x${string}`;
-    const chargeAmount = BigInt(targetPlan.price ?? 0n);
+    const { chargeAmount, interval: configuredInterval } =
+      resolveOnChainAutopayConfigForBillingPeriod({
+        selectedPlan,
+        targetPlan,
+        billingPeriod,
+      });
+    assertOnChainPlanSupportsConfiguredCharge({
+      selectedPlan,
+      targetPlan,
+      billingPeriod,
+      chargeAmount,
+    });
     if (chargeAmount <= 0n) {
       throw new Error("The selected on-chain plan has no billable amount.");
     }
@@ -6274,7 +6585,7 @@ function PaymentContent({
         merchant: targetPlan.provider as `0x${string}`,
         maxAmount: chargeAmount,
         token: tokenAddress,
-        interval: Number(targetPlan.billingInterval),
+        interval: configuredInterval,
         // Use chain time instead of browser time so wallet-confirmation delays
         // and local clock skew do not immediately invalidate the install.
         startTime: chainNow + BigInt(AUTOPAY_START_TIME_BUFFER_SECONDS),
@@ -6585,7 +6896,7 @@ function PaymentContent({
     if (unsupportedOnChainAnnualSelection) {
       setTxStatus("error");
       setTxError(
-        "Annual billing is not supported for this on-chain self-serve flow yet. Publish a dedicated annual on-chain plan variant first, then subscribe to that plan directly.",
+        "This plan does not have yearly billing configured yet.",
       );
       return;
     }
@@ -6764,6 +7075,21 @@ function PaymentContent({
         );
       }
 
+      const {
+        chargeAmount: configuredChargeAmount,
+        interval: configuredInterval,
+      } = resolveOnChainAutopayConfigForBillingPeriod({
+        selectedPlan,
+        targetPlan,
+        billingPeriod,
+      });
+      assertOnChainPlanSupportsConfiguredCharge({
+        selectedPlan,
+        targetPlan,
+        billingPeriod,
+        chargeAmount: configuredChargeAmount,
+      });
+
       let preview = planChangePreview;
       if (isImmediateOnChainUpgrade) {
         preview = preview ?? (await fetchImmediateUpgradePreview());
@@ -6783,9 +7109,9 @@ function PaymentContent({
         args: [
           {
             merchant: targetPlan.provider as `0x${string}`,
-            maxAmount: BigInt(targetPlan.price ?? 0n),
+            maxAmount: configuredChargeAmount,
             token: targetPlan.acceptedToken as `0x${string}`,
-            interval: Number(targetPlan.billingInterval ?? 0),
+            interval: configuredInterval,
             startTime:
               typeof currentConfig.startTime === "bigint"
                 ? currentConfig.startTime
@@ -7164,9 +7490,25 @@ function PaymentContent({
                         marginBottom: 12,
                       }}
                     >
-                      Annual billing is not available for this on-chain
-                      subscription flow yet. A dedicated annual on-chain plan
-                      needs to be published first.
+                      This plan does not have yearly billing configured yet.
+                    </div>
+                  )}
+
+                  {scheduledDowngradeWillBeReplaced && (
+                    <div
+                      style={{
+                        padding: "10px 12px",
+                        background: "#eff6ff",
+                        border: "1px solid #bfdbfe",
+                        borderRadius: 8,
+                        fontSize: tokens.size - 2,
+                        color: "#1d4ed8",
+                        marginBottom: 12,
+                      }}
+                    >
+                      This payment replaces the scheduled downgrade. Your
+                      current subscription will stay active and future renewals
+                      will use the updated plan settings.
                     </div>
                   )}
 
@@ -7581,6 +7923,22 @@ function PaymentContent({
                     </div>
                   )}
 
+                  {actionError && (
+                    <div
+                      style={{
+                        padding: "10px 12px",
+                        background: "#fef2f2",
+                        border: "1px solid #fecaca",
+                        borderRadius: 8,
+                        fontSize: tokens.size - 2,
+                        color: "#dc2626",
+                        marginBottom: 12,
+                      }}
+                    >
+                      {actionError}
+                    </div>
+                  )}
+
                   <PrimaryButton
                     tokens={tokens}
                     fullWidth
@@ -7920,6 +8278,7 @@ function PaymentContent({
 function UnsubscribeContent({
   data,
   processing,
+  actionError,
   tokens,
   onConfirm,
   onBack,
@@ -7928,6 +8287,7 @@ function UnsubscribeContent({
 }: {
   data: ComponentRenderData;
   processing: boolean;
+  actionError?: string | null;
   tokens: Tokens;
   onConfirm: (confirmation: CancellationConfirmation) => void;
   onBack: () => void;
@@ -8301,6 +8661,21 @@ function UnsubscribeContent({
             }}
           >
             {txError}
+          </div>
+        )}
+        {actionError && (
+          <div
+            style={{
+              marginTop: 16,
+              padding: "10px 12px",
+              background: "#fef2f2",
+              border: "1px solid #fecaca",
+              borderRadius: 8,
+              fontSize: tokens.size - 2,
+              color: "#dc2626",
+            }}
+          >
+            {actionError}
           </div>
         )}
       </div>
@@ -8794,7 +9169,7 @@ export function ArcenEmbed({
   onViewChange,
   onPlanChange,
   mode = "modal",
-}: ArcenEmbedProps) {
+}: ArcenEmbedProps = {}) {
   // The portal should always surface plan changes by default.
   // Workspace-specific restrictions are enforced by backend APIs when a
   // customer actually attempts the change, so the CTA should not disappear
@@ -9057,6 +9432,28 @@ export function ArcenEmbed({
           },
           planApiController.signal,
         );
+        const accessChangeRequired = Boolean(
+          (
+            response as {
+              data?: {
+                accessChangeRequired?: boolean;
+                accessChangeNote?: string;
+              };
+            }
+          )?.data?.accessChangeRequired,
+        );
+        if (accessChangeRequired) {
+          const accessChangeNote =
+            (
+              response as {
+                data?: {
+                  accessChangeNote?: string;
+                };
+              }
+            )?.data?.accessChangeNote ??
+            "ArcenPay could not finish this subscription switch yet. Refresh the portal and try the plan change again.";
+          throw new Error(accessChangeNote);
+        }
         await fetchData();
         setCouponQuote(null);
         onPlanChange?.(planId);
@@ -9091,6 +9488,9 @@ export function ArcenEmbed({
           billingPeriod: state.data?.billingPeriod,
           activePlan: state.data?.activePlan ?? null,
         });
+        const previousTransition = state.data
+          ? getSubscriptionTransition(state.data)
+          : null;
         dispatch({
           type: "GOTO_SUCCESS",
           successMsg: buildPlanChangeSuccessMessage({
@@ -9103,6 +9503,9 @@ export function ArcenEmbed({
             walletCreditCreated,
             pendingVerification,
             alreadyScheduled,
+            replacedScheduledDowngrade:
+              previousTransition?.changeType === "downgrade" &&
+              isOpenTransitionStage(previousTransition),
           }),
           txHash: successTxHash,
         });
@@ -9110,7 +9513,7 @@ export function ArcenEmbed({
         if (e instanceof DOMException && e.name === "AbortError") return;
         const msg = e instanceof Error ? e.message : "Failed to switch plan";
         dispatch({
-          type: "FETCH_ERR",
+          type: msg === "__TOKEN_EXPIRED__" ? "FETCH_ERR" : "PROCESSING_ERR",
           error: msg === "__TOKEN_EXPIRED__" ? "__TOKEN_EXPIRED__" : msg,
         });
       }
@@ -9228,6 +9631,7 @@ export function ArcenEmbed({
     data,
     loading,
     error,
+    actionError,
     view,
     selectedPlanId,
     billingPeriod,
@@ -9703,6 +10107,7 @@ export function ArcenEmbed({
               accessToken={tokenRef.current}
               couponQuote={couponQuote}
               processing={processing}
+              actionError={actionError}
               tokens={tokens}
               customerName={customerName}
               customerEmail={customerEmail}
@@ -9723,6 +10128,7 @@ export function ArcenEmbed({
             <UnsubscribeContent
               data={data}
               processing={processing}
+              actionError={actionError}
               tokens={tokens}
               containerWidth={effectiveContainerWidth}
               smartAccountConfig={providerSmartAccount}
@@ -9816,6 +10222,7 @@ export function ArcenEmbed({
                   accessToken={tokenRef.current}
                   couponQuote={couponQuote}
                   processing={processing}
+                  actionError={actionError}
                   tokens={tokens}
                   customerName={customerName}
                   customerEmail={customerEmail}
@@ -9836,6 +10243,7 @@ export function ArcenEmbed({
                 <UnsubscribeContent
                   data={data}
                   processing={processing}
+                  actionError={actionError}
                   tokens={tokens}
                   containerWidth={effectiveContainerWidth}
                   smartAccountConfig={providerSmartAccount}

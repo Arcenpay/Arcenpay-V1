@@ -60,7 +60,10 @@ export interface ResolvedEntitlementResults {
 }
 
 function listEntitlements(metadata: unknown): EntitlementEntry[] {
-  return listMetadataEntitlements(metadata).filter((entry): entry is EntitlementEntry => {
+  const entries = Array.isArray(metadata)
+    ? metadata
+    : listMetadataEntitlements(metadata);
+  return entries.filter((entry): entry is EntitlementEntry => {
     const candidate = entry as Partial<EntitlementEntry>;
     return (
       typeof candidate.type === "string" &&
@@ -90,7 +93,9 @@ async function loadMergedMetadataEntitlements(
     });
 
     if (plan) {
-      for (const entitlement of listEntitlements(plan.metadata)) {
+      for (const entitlement of listEntitlements(
+        listMetadataEntitlements(plan.metadata, company.billingPeriod),
+      )) {
         merged.set(entitlement.featureKey, {
           ...entitlement,
           source: "plan",
@@ -371,7 +376,12 @@ export async function resolveEntitlementResults(
           (metadataEntitlement.type === "NUMERIC" ||
             metadataEntitlement.type === "UNLIMITED")
         ) {
-          const usage = await aggregateUsage(teamId, company.id, featureKey, "monthly");
+          const usage = await aggregateUsage(
+            teamId,
+            company.id,
+            featureKey,
+            "plan_period",
+          );
           return finalizeMeteredEntitlement(fallback, usage);
         }
 
@@ -426,7 +436,7 @@ export async function resolveEntitlementResults(
               teamId,
               company.id,
               flag.eventKey ?? featureKey,
-              "monthly",
+              "plan_period",
             )
           : 0;
 
