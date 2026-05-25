@@ -5740,6 +5740,7 @@ function CheckoutContent({
                 <>
                   <div style={{ display: "flex", gap: 6 }}>
                     <input
+                      className="arcenpay-text-input"
                       value={coupon}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                         setCoupon(e.target.value);
@@ -5761,6 +5762,9 @@ function CheckoutContent({
                         fontFamily: tokens.font,
                         opacity: couponsSupported ? 1 : 0.6,
                         background: couponsSupported ? "#fff" : "#f9fafb",
+                        color: tokens.textColor,
+                        caretColor: tokens.textColor,
+                        WebkitTextFillColor: tokens.textColor,
                         cursor: couponsSupported ? "text" : "not-allowed",
                       }}
                     />
@@ -5827,6 +5831,7 @@ function CheckoutContent({
                 Full name
               </div>
               <input
+                className="arcenpay-text-input"
                 value={customerName}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                   onCustomerNameChange(e.target.value)
@@ -5841,6 +5846,10 @@ function CheckoutContent({
                   fontSize: tokens.size - 1,
                   outline: "none",
                   fontFamily: tokens.font,
+                  background: "#fff",
+                  color: tokens.textColor,
+                  caretColor: tokens.textColor,
+                  WebkitTextFillColor: tokens.textColor,
                   boxSizing: "border-box",
                 }}
               />
@@ -5874,6 +5883,7 @@ function CheckoutContent({
                 Billing email
               </div>
               <input
+                className="arcenpay-text-input"
                 value={customerEmail}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                   onCustomerEmailChange(e.target.value)
@@ -5888,6 +5898,10 @@ function CheckoutContent({
                   fontSize: tokens.size - 1,
                   outline: "none",
                   fontFamily: tokens.font,
+                  background: "#fff",
+                  color: tokens.textColor,
+                  caretColor: tokens.textColor,
+                  WebkitTextFillColor: tokens.textColor,
                   boxSizing: "border-box",
                 }}
               />
@@ -7737,6 +7751,7 @@ function PaymentContent({
                   Full name
                 </div>
                 <input
+                  className="arcenpay-text-input"
                   value={customerName}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                     onCustomerNameChange(e.target.value)
@@ -7751,6 +7766,10 @@ function PaymentContent({
                     fontSize: tokens.size - 1,
                     outline: "none",
                     fontFamily: tokens.font,
+                    background: "#fff",
+                    color: tokens.textColor,
+                    caretColor: tokens.textColor,
+                    WebkitTextFillColor: tokens.textColor,
                     boxSizing: "border-box",
                   }}
                 />
@@ -7782,6 +7801,7 @@ function PaymentContent({
                   Billing email
                 </div>
                 <input
+                  className="arcenpay-text-input"
                   value={customerEmail}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                     onCustomerEmailChange(e.target.value)
@@ -7796,6 +7816,10 @@ function PaymentContent({
                     fontSize: tokens.size - 1,
                     outline: "none",
                     fontFamily: tokens.font,
+                    background: "#fff",
+                    color: tokens.textColor,
+                    caretColor: tokens.textColor,
+                    WebkitTextFillColor: tokens.textColor,
                     boxSizing: "border-box",
                   }}
                 />
@@ -10031,6 +10055,21 @@ export function ArcenEmbed({
 
   return (
     <div ref={containerRef} className={className} style={containerStyle}>
+      <style>{`
+        .arcenpay-text-input::placeholder {
+          color: ${tokens.mutedColor};
+          opacity: 0.55;
+        }
+
+        .arcenpay-text-input:-webkit-autofill,
+        .arcenpay-text-input:-webkit-autofill:hover,
+        .arcenpay-text-input:-webkit-autofill:focus,
+        .arcenpay-text-input:-webkit-autofill:active {
+          -webkit-text-fill-color: ${tokens.textColor};
+          box-shadow: 0 0 0 1000px #fff inset;
+          transition: background-color 9999s ease-out 0s;
+        }
+      `}</style>
       {isInline ? (
         <>
           {view === "portal" && (

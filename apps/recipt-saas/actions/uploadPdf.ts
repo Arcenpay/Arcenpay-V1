@@ -17,7 +17,7 @@ export async function uploadPdf(formData: FormData) {
 
   if (!user) {
     return {
-      sucess: false,
+      success: false,
       message: "User not authenticated. Please sign in.",
     };
   }
@@ -29,12 +29,12 @@ export async function uploadPdf(formData: FormData) {
     );
 
     if (!file) {
-      return { sucess: false, message: "No file provided" };
+      return { success: false, message: "No file provided" };
     }
 
     if (!walletAddress) {
       return {
-        sucess: false,
+        success: false,
         message: "Connect the billing wallet before uploading receipts.",
       };
     }
@@ -42,14 +42,14 @@ export async function uploadPdf(formData: FormData) {
     //validate file type
     if (file.type !== "application/pdf") {
       return {
-        sucess: false,
+        success: false,
         message: "Invalid file type. Only PDFs are allowed.",
       };
     }
 
     if (file.size > 10 * 1024 * 1024) {
       return {
-        sucess: false,
+        success: false,
         message: "File size must be less than 10MB.",
       };
     }
@@ -73,7 +73,7 @@ export async function uploadPdf(formData: FormData) {
 
     if (!entitlement.enabled || entitlement.exceeded) {
       return {
-        sucess: false,
+        success: false,
         message: entitlement.exceeded
           ? `Your current plan has used ${entitlement.usage} of ${entitlement.allocation ?? "unlimited"} scans. Upgrade in billing to continue.`
           : "Receipt scanning is not enabled for this workspace yet.",
@@ -100,7 +100,7 @@ export async function uploadPdf(formData: FormData) {
       const errorText = await uploadResponse.text();
       console.error("Upload failed:", errorText);
       return {
-        sucess: false,
+        success: false,
         message: `Failed to upload file to storage: ${uploadResponse.status}`,
       };
     }
@@ -143,7 +143,7 @@ export async function uploadPdf(formData: FormData) {
     });
 
     return {
-      sucess: true,
+      success: true,
       data: {
         receiptId,
         fileName: file.name,
@@ -153,7 +153,7 @@ export async function uploadPdf(formData: FormData) {
   } catch (error) {
     console.error("Error uploading file:", error);
     return {
-      sucess: false,
+      success: false,
       message: error instanceof Error ? error.message : "File upload failed",
     };
   }

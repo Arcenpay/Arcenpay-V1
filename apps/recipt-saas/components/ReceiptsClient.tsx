@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { useQuery, useMutation } from "convex/react";
@@ -35,18 +35,32 @@ export default function ReceiptsClient() {
   const router = useRouter();
   const { user } = useUser();
   const billing = useReceiptBilling();
+  const refetchEntitlements = billing.refetchEntitlements;
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<"date" | "amount" | "merchant">("date");
 
   const receipts = useQuery(
     api.receipts.getReceipts,
-    user?.id && billing.walletAddress
-      ? { userId: user.id, walletAddress: billing.walletAddress }
+    user?.id
+      ? { userId: user.id, walletAddress: billing.walletAddress ?? undefined }
       : "skip",
   );
 
   const deleteReceiptMutation = useMutation(api.receipts.deleteReceipt);
+
+  const completedCountRef = useRef(
+    receipts?.filter((r) => r.status === "completed").length ?? 0,
+  );
+
+  useEffect(() => {
+    const completedNow =
+      receipts?.filter((r) => r.status === "completed").length ?? 0;
+    if (completedNow > completedCountRef.current) {
+      refetchEntitlements();
+    }
+    completedCountRef.current = completedNow;
+  }, [receipts, refetchEntitlements]);
 
   // Filter and sort receipts
   const filteredReceipts = useMemo(() => {
@@ -124,7 +138,8 @@ export default function ReceiptsClient() {
       console.error("Error downloading receipt:", error);
       alert("Failed to download receipt. Please try again.");
     }
-  }; // Calculate stats
+  };
+
   const stats = useMemo(() => {
     if (!receipts)
       return { total: 0, completed: 0, processing: 0, totalAmount: 0 };

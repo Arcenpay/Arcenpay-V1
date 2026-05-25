@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { useQuery, useMutation } from "convex/react";
@@ -38,18 +38,29 @@ export default function ReceiptDetailClient({
   const router = useRouter();
   const { user } = useUser();
   const billing = useReceiptBilling();
+  const refetchEntitlements = billing.refetchEntitlements;
 
   const receipt = useQuery(
     api.receipts.getReceiptById,
-    receiptId && billing.walletAddress
+    receiptId
       ? {
           id: receiptId as Id<"receipts">,
-          walletAddress: billing.walletAddress,
+          walletAddress: billing.walletAddress ?? undefined,
         }
       : "skip",
   );
 
   const deleteReceiptMutation = useMutation(api.receipts.deleteReceipt);
+
+  const lastCompletedRef = useRef(false);
+
+  useEffect(() => {
+    const isCompleted = receipt?.status === "completed";
+    if (isCompleted && !lastCompletedRef.current) {
+      refetchEntitlements();
+    }
+    lastCompletedRef.current = isCompleted;
+  }, [receipt?.status, refetchEntitlements]);
 
   const handleDownload = async () => {
     if (!receipt) return;

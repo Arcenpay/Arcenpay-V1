@@ -6,6 +6,7 @@ import { ConvexProviderWithClerk } from "convex/react-clerk";
 import { ArcenPayProvider } from "@arcenpay/react";
 import { useAuth } from "@clerk/nextjs";
 import { ArcenIdentitySync } from "@/components/arcen/identity-sync";
+import { ReceiptBillingProvider } from "@/components/providers/receipt-billing-provider";
 
 const convex = new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
@@ -22,7 +23,7 @@ export default function ConvexClientProvider({
     >
       <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
         <ArcenIdentitySync />
-        {children}
+        <ReceiptBillingProvider>{children}</ReceiptBillingProvider>
       </ConvexProviderWithClerk>
     </ArcenPayProvider>
   );

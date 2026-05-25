@@ -3,9 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "npm-run-all --parallel dev:frontend dev:backend",
+    "dev": "npm-run-all --parallel dev:frontend dev:backend dev:inngest",
     "dev:frontend": "next dev",
     "dev:backend": "convex dev",
+    "dev:inngest": "npx inngest-cli@latest dev -u http://localhost:3002/api/inngest",
     "predev": "convex dev --until-success && convex dashboard",
     "build": "next build",
     "start": "next start",

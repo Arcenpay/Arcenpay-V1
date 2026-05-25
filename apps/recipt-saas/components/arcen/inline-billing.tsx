@@ -2,8 +2,8 @@
 
 import { ArcenEmbed } from "@arcenpay/react";
 import { SignInButton } from "@clerk/nextjs";
-import { CreditCard, Loader2, ShieldCheck, Wallet } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { useCallback } from "react";
+import { CreditCard, Loader2, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useReceiptBilling } from "@/hooks/use-receipt-billing";
@@ -15,6 +15,24 @@ export function InlineBilling({
   initialView?: "portal" | "checkout" | "payment" | "success" | "unsubscribe";
 }) {
   const billing = useReceiptBilling();
+
+  const refetchEntitlements = billing.refetchEntitlements;
+
+  const handleViewChange = useCallback(
+    (view: string) => {
+      if (view === "success" || view === "portal") {
+        refetchEntitlements();
+      }
+    },
+    [refetchEntitlements],
+  );
+
+  const handlePlanChange = useCallback(
+    () => {
+      refetchEntitlements();
+    },
+    [refetchEntitlements],
+  );
 
   if (!billing.isLoaded) {
     return (
@@ -112,48 +130,13 @@ export function InlineBilling({
   }
 
   return (
-    <div className="space-y-6">
-      <Card className="border-border/70 bg-card/90 shadow-sm">
-        <CardContent className="flex flex-col gap-4 p-6 md:flex-row md:items-center md:justify-between">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <Badge variant="secondary">
-                {billing.planTier ? billing.planTier : "No active plan"}
-              </Badge>
-              <Badge
-                variant={
-                  billing.scanEntitlement?.exceeded ? "destructive" : "outline"
-                }
-              >
-                {billing.usageLabel}
-              </Badge>
-              <Badge
-                variant={billing.canUseAiSummary ? "secondary" : "outline"}
-              >
-                {billing.canUseAiSummary
-                  ? "AI summary on"
-                  : "AI summary locked"}
-              </Badge>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              Wallet: {formatWalletAddress(billing.walletAddress)}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              This billing workspace is locked to the wallet linked in Clerk for
-              this account.
-            </p>
-          </div>
-          <div className="flex items-center gap-3 text-sm text-muted-foreground">
-            <ShieldCheck className="h-4 w-4 text-primary" />
-            Receipt scans and premium AI summaries are enforced through ArcenPay
-            entitlements.
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="rounded-3xl border border-border/70 bg-card/90 p-3 shadow-sm">
-        <ArcenEmbed initialView={initialView} mode="modal" />
-      </div>
+    <div className="rounded-3xl border border-border/70 bg-card/90 p-3 shadow-sm">
+      <ArcenEmbed
+        initialView={initialView}
+        mode="modal"
+        onViewChange={handleViewChange}
+        onPlanChange={handlePlanChange}
+      />
     </div>
   );
 }

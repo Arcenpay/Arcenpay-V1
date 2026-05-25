@@ -107,6 +107,56 @@ export interface ArcenIdentifyInput {
 
 import { resolveDashboardBaseUrl } from "../lib/api";
 
+const ARCENPAY_WAGMI_CHAINS = [sepolia, baseSepolia, base, arcTestnet] as const;
+const wagmiConfigCache = new Map<string, ReturnType<typeof createConfig>>();
+
+function getRpcTransport(id: number) {
+  const specific =
+    typeof process !== "undefined"
+      ? process.env[`NEXT_PUBLIC_RPC_URL_${id}`]
+      : undefined;
+  const global_ =
+    typeof process !== "undefined" ? process.env.NEXT_PUBLIC_RPC_URL : undefined;
+  const manifestRpc = (() => {
+    try {
+      return getChainEnvironment(id).services.rpcUrl;
+    } catch {
+      return "";
+    }
+  })();
+  const url = specific ?? global_ ?? manifestRpc;
+
+  return url ? http(url) : http();
+}
+
+function getOrCreateWagmiConfig(walletConnectProjectId?: string) {
+  const cacheKey = walletConnectProjectId ?? "";
+  const cachedConfig = wagmiConfigCache.get(cacheKey);
+
+  if (cachedConfig) {
+    return cachedConfig;
+  }
+
+  const projectId = walletConnectProjectId || "";
+  const config = createConfig({
+    chains: ARCENPAY_WAGMI_CHAINS,
+    connectors: projectId
+      ? [injected(), walletConnect({ projectId })]
+      : [injected()],
+    transports: {
+      [sepolia.id]: getRpcTransport(sepolia.id),
+      [baseSepolia.id]: getRpcTransport(baseSepolia.id),
+      [base.id]: getRpcTransport(base.id),
+      [arcTestnet.id]: getRpcTransport(arcTestnet.id),
+    },
+    ssr: true,
+  });
+
+  wagmiConfigCache.set(cacheKey, config);
+
+  return config;
+}
+
 function getChainId(): number {
   if (typeof process !== "undefined") {
     const env = process.env.NEXT_PUBLIC_CHAIN_ID;
@@ -169,6 +219,7 @@ interface ArcenPayRuntimeProps {
   baseUrl: string;
   componentId: string;
   configuredChainId: number;
+  lockChainId: boolean;
   publishableKey: string;
   userConfig?: Partial<ArcenPayConfig>;
 }
@@ -187,8 +238,10 @@ export function ArcenPayProvider(props: ArcenPayProviderProps) {
 
   // Resolve configuration — explicit props first, then env vars, then defaults
   const publishableKey = pkProp ?? getPublishableKey() ?? "";
-  const configuredChainId =
-    chainIdProp && isSupportedChainId(chainIdProp) ? chainIdProp : getChainId();
+  const lockChainId = Boolean(
+    chainIdProp && isSupportedChainId(chainIdProp),
+  );
+  const configuredChainId = lockChainId ? chainIdProp! : getChainId();
   const baseUrl = resolveDashboardBaseUrl();
   const wcProjectId = wcProp ?? getWalletConnectProjectId();
   const componentId =
@@ -198,43 +251,10 @@ export function ArcenPayProvider(props: ArcenPayProviderProps) {
       : "");
 
   // ── Wagmi config ──────────────────────────────────────────────────────
-  const wagmiConfig = useMemo(() => {
-    const projectId = wcProjectId || "";
-
-    const getRpcTransport = (id: number) => {
-      const specific =
-        typeof process !== "undefined"
-          ? process.env[`NEXT_PUBLIC_RPC_URL_${id}`]
-          : undefined;
-      const global_ =
-        typeof process !== "undefined"
-          ? process.env.NEXT_PUBLIC_RPC_URL
-          : undefined;
-      const manifestRpc = (() => {
-        try {
-          return getChainEnvironment(id).services.rpcUrl;
-        } catch {
-          return "";
-        }
-      })();
-      const url = specific ?? global_ ?? manifestRpc;
-      return url ? http(url) : http();
-    };
-
-    return createConfig({
-      chains: [sepolia, baseSepolia, base, arcTestnet],
-      connectors: projectId
-        ? [injected(), walletConnect({ projectId })]
-        : [injected()],
-      transports: {
-        [sepolia.id]: getRpcTransport(sepolia.id),
-        [baseSepolia.id]: getRpcTransport(baseSepolia.id),
-        [base.id]: getRpcTransport(base.id),
-        [arcTestnet.id]: getRpcTransport(arcTestnet.id),
-      },
-      ssr: true,
-    });
-  }, [wcProjectId]);
+  const wagmiConfig = useMemo(
+    () => getOrCreateWagmiConfig(wcProjectId),
+    [wcProjectId],
+  );
 
   const [queryClient] = useState(
     () =>
@@ -252,6 +272,7 @@ export function ArcenPayProvider(props: ArcenPayProviderProps) {
           baseUrl={baseUrl}
           componentId={componentId}
           configuredChainId={configuredChainId}
+          lockChainId={lockChainId}
           publishableKey={publishableKey}
           userConfig={userConfig}
         >
@@ -267,12 +288,16 @@ function ArcenPayRuntime({
   baseUrl,
   componentId,
   configuredChainId,
+  lockChainId,
   publishableKey,
   userConfig,
 }: ArcenPayRuntimeProps) {
   const { chainId: walletChainId, isConnected } = useAccount();
   const chainId =
-    isConnected && walletChainId && isSupportedChainId(walletChainId)
+    !lockChainId &&
+    isConnected &&
+    walletChainId &&
+    isSupportedChainId(walletChainId)
       ? walletChainId
       : configuredChainId;
 

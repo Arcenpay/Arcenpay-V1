@@ -64,7 +64,7 @@ export default function PDFDropzone({ onUploadSuccess }: PDFDropzoneProps) {
 
         const result = await uploadPdf(formData);
 
-        if (!result.sucess) {
+        if (!result.success) {
           setUploadStatus({
             type: "error",
             message: result.message || "Upload failed. Please try again.",

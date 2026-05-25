@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { SignInButton, useUser } from "@clerk/nextjs";
+import { useEffect, useRef } from "react";
 import { useQuery } from "convex/react";
 import {
   AlertTriangle,
@@ -30,10 +31,11 @@ import { formatWalletAddress } from "@/lib/receipt-billing";
 export default function DashboardClient() {
   const { user, isLoaded } = useUser();
   const billing = useReceiptBilling();
+  const refetchEntitlements = billing.refetchEntitlements;
   const receipts = useQuery(
     api.receipts.getReceipts,
-    user?.id && billing.walletAddress
-      ? { userId: user.id, walletAddress: billing.walletAddress }
+    user?.id
+      ? { userId: user.id, walletAddress: billing.walletAddress ?? undefined }
       : "skip",
   );
 
@@ -42,6 +44,15 @@ export default function DashboardClient() {
     receipts?.filter((receipt) => receipt.status === "completed").length ?? 0;
   const processingReceipts =
     receipts?.filter((receipt) => receipt.status === "processing").length ?? 0;
+
+  const completedCountRef = useRef(processedReceipts);
+
+  useEffect(() => {
+    if (processedReceipts > completedCountRef.current) {
+      refetchEntitlements();
+    }
+    completedCountRef.current = processedReceipts;
+  }, [processedReceipts, refetchEntitlements]);
   const totalAmount =
     receipts?.reduce(
       (sum, receipt) => sum + (receipt.transactionAmount ?? 0),

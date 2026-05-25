@@ -21,7 +21,7 @@ export function useArcenCompanyEntitlements(
   options: UseArcenCompanyEntitlementsOptions = {},
 ) {
   const { session, baseUrl } = useArcenPay();
-  const cacheTtlMs = options.cacheTtlMs ?? 30_000;
+  const cacheTtlMs = options.cacheTtlMs ?? 10_000;
   const abortRef = useRef<AbortController | null>(null);
 
   const [entitlements, setEntitlements] = useState<
