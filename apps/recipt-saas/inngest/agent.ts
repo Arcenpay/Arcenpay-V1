@@ -288,6 +288,36 @@ If a value is missing, use an empty string for text and 0 for numbers.`,
       }
     });
 
+    const trackedScan = await step.run("track-receipt-scan-completed", async () => {
+      try {
+        const billingClient = await getReceiptBillingClient(billingIdentity);
+        await billingClient.track({
+          name: "receipt_scan_completed",
+          idempotencyKey: `receipt-scan-completed:${receiptId}`,
+          traits: {
+            receiptId,
+            merchantName: dbPayload.merchantName,
+            transactionAmount: dbPayload.transactionAmount,
+            currency: dbPayload.currency,
+            itemCount: dbPayload.items.length,
+            aiSummaryEntitled: canGenerateAiSummary,
+            aiSummaryGenerated: Boolean(receiptSummary),
+            source: "receipt_saas",
+          },
+        });
+
+        return { ok: true } as const;
+      } catch (error) {
+        console.error("[receipt-saas] failed to track receipt scan completion", {
+          receiptId,
+          clerkUserId,
+          walletAddress,
+          error,
+        });
+        return { ok: false } as const;
+      }
+    });
+
     const summaryBilling = canGenerateAiSummary && Boolean(receiptSummary)
       ? await step.run("consume-ai-summary-entitlement", async () => {
           try {
@@ -310,9 +340,40 @@ If a value is missing, use an empty string for text and 0 for numbers.`,
         })
       : { ok: false } as const;
 
+    const trackedSummary =
+      canGenerateAiSummary && Boolean(receiptSummary)
+        ? await step.run("track-ai-summary-generated", async () => {
+            try {
+              const billingClient = await getReceiptBillingClient(billingIdentity);
+              await billingClient.track({
+                name: "receipt_ai_summary_generated",
+                idempotencyKey: `receipt-ai-summary-generated:${receiptId}`,
+                traits: {
+                  receiptId,
+                  merchantName: dbPayload.merchantName,
+                  summaryLength: receiptSummary?.length ?? 0,
+                  source: "receipt_saas",
+                },
+              });
+
+              return { ok: true } as const;
+            } catch (error) {
+              console.error("[receipt-saas] failed to track AI summary generation", {
+                receiptId,
+                clerkUserId,
+                walletAddress,
+                error,
+              });
+              return { ok: false } as const;
+            }
+          })
+        : { ok: false } as const;
+
     return {
       billingApplied: billing.ok,
       summaryBillingApplied: summaryBilling.ok,
+      scanTracked: trackedScan.ok,
+      summaryTracked: trackedSummary.ok,
       receiptId,
       status: save.ok ? "saved" : "failed",
     } as const;

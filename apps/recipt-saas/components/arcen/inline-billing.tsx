@@ -72,6 +72,34 @@ export function InlineBilling({
     );
   }
 
+  if (billing.walletMismatch) {
+    return (
+      <Card className="border-border/70 bg-card/90 shadow-sm">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Wallet className="h-5 w-5 text-primary" />
+            Wrong wallet connected
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4 text-sm text-muted-foreground">
+          <p>
+            This account is linked to{" "}
+            {formatWalletAddress(billing.clerkWalletAddress)} in Clerk.
+            Disconnect the current wallet and reconnect that same MetaMask
+            wallet to manage billing and receipt access.
+          </p>
+          <Button
+            variant="outline"
+            className="w-fit"
+            onClick={billing.disconnectWallet}
+          >
+            Disconnect current wallet
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
   if (!billing.isIdentified || billing.isEntitlementLoading) {
     return (
       <div className="flex min-h-80 items-center justify-center rounded-3xl border border-border/70 bg-card/80">
@@ -92,26 +120,39 @@ export function InlineBilling({
               <Badge variant="secondary">
                 {billing.planTier ? billing.planTier : "No active plan"}
               </Badge>
-              <Badge variant={billing.scanEntitlement?.exceeded ? "destructive" : "outline"}>
+              <Badge
+                variant={
+                  billing.scanEntitlement?.exceeded ? "destructive" : "outline"
+                }
+              >
                 {billing.usageLabel}
               </Badge>
-              <Badge variant={billing.canUseAiSummary ? "secondary" : "outline"}>
-                {billing.canUseAiSummary ? "AI summary on" : "AI summary locked"}
+              <Badge
+                variant={billing.canUseAiSummary ? "secondary" : "outline"}
+              >
+                {billing.canUseAiSummary
+                  ? "AI summary on"
+                  : "AI summary locked"}
               </Badge>
             </div>
             <p className="text-sm text-muted-foreground">
               Wallet: {formatWalletAddress(billing.walletAddress)}
             </p>
+            <p className="text-xs text-muted-foreground">
+              This billing workspace is locked to the wallet linked in Clerk for
+              this account.
+            </p>
           </div>
           <div className="flex items-center gap-3 text-sm text-muted-foreground">
             <ShieldCheck className="h-4 w-4 text-primary" />
-            Receipt scans and premium AI summaries are enforced through ArcenPay entitlements.
+            Receipt scans and premium AI summaries are enforced through ArcenPay
+            entitlements.
           </div>
         </CardContent>
       </Card>
 
       <div className="rounded-3xl border border-border/70 bg-card/90 p-3 shadow-sm">
-        <ArcenEmbed initialView={initialView} mode="inline" />
+        <ArcenEmbed initialView={initialView} mode="modal" />
       </div>
     </div>
   );

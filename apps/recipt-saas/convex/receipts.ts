@@ -47,11 +47,21 @@ export const storeReceipt = mutation({
 export const getReceipts = query({
   args: {
     userId: v.string(),
+    walletAddress: v.optional(v.string()),
   },
-  handler: async (ctx, { userId }) => {
+  handler: async (ctx, { userId, walletAddress }) => {
+    if (!walletAddress) {
+      return [];
+    }
+
     const receipts = await ctx.db
       .query("receipts")
-      .filter((q) => q.eq(q.field("userId"), userId))
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("userId"), userId),
+          q.eq(q.field("walletAddress"), walletAddress),
+        ),
+      )
       .order("desc")
       .collect();
     return receipts;
@@ -61,8 +71,9 @@ export const getReceipts = query({
 export const getReceiptById = query({
   args: {
     id: v.id("receipts"),
+    walletAddress: v.optional(v.string()),
   },
-  handler: async (ctx, { id }) => {
+  handler: async (ctx, { id, walletAddress }) => {
     const receipt = await ctx.db.get(id);
     if (!receipt) {
       throw new Error("Receipt not found");
@@ -74,6 +85,9 @@ export const getReceiptById = query({
     const userId = identify.subject;
     if (receipt.userId !== userId) {
       throw new Error("Access denied");
+    }
+    if (walletAddress && receipt.walletAddress && receipt.walletAddress !== walletAddress) {
+      throw new Error("Receipt belongs to a different wallet workspace");
     }
     return receipt;
   },
@@ -115,8 +129,9 @@ export const updateReceiptStatus = mutation({
 export const deleteReceipt = mutation({
   args: {
     id: v.id("receipts"),
+    walletAddress: v.optional(v.string()),
   },
-  handler: async (ctx, { id }) => {
+  handler: async (ctx, { id, walletAddress }) => {
     const receipt = await ctx.db.get(id);
     if (!receipt) {
       throw new Error("Receipt not found");
@@ -128,6 +143,9 @@ export const deleteReceipt = mutation({
     const userId = identify.subject;
     if (receipt.userId !== userId) {
       throw new Error("Access denied");
+    }
+    if (walletAddress && receipt.walletAddress && receipt.walletAddress !== walletAddress) {
+      throw new Error("Receipt belongs to a different wallet workspace");
     }
     await ctx.db.delete(id);
     return true;

@@ -29,17 +29,21 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useReceiptBilling } from "@/hooks/use-receipt-billing";
 
 export default function ReceiptsClient() {
   const router = useRouter();
   const { user } = useUser();
+  const billing = useReceiptBilling();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<"date" | "amount" | "merchant">("date");
 
   const receipts = useQuery(
     api.receipts.getReceipts,
-    user?.id ? { userId: user.id } : "skip",
+    user?.id && billing.walletAddress
+      ? { userId: user.id, walletAddress: billing.walletAddress }
+      : "skip",
   );
 
   const deleteReceiptMutation = useMutation(api.receipts.deleteReceipt);
@@ -87,7 +91,10 @@ export default function ReceiptsClient() {
     if (!confirm("Are you sure you want to delete this receipt?")) return;
 
     try {
-      await deleteReceiptMutation({ id: receiptId });
+      await deleteReceiptMutation({
+        id: receiptId,
+        walletAddress: billing.walletAddress ?? undefined,
+      });
     } catch (error) {
       console.error("Error deleting receipt:", error);
       alert("Failed to delete receipt. Please try again.");
@@ -158,7 +165,7 @@ export default function ReceiptsClient() {
             My Receipts
           </h1>
           <p className="text-black dark:text-white">
-            View and manage all your uploaded receipts
+            View and manage receipts for the active wallet workspace
           </p>
         </div>
 

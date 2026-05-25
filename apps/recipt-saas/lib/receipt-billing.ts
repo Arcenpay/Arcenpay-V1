@@ -10,33 +10,43 @@ type ReceiptBillingIdentityInput = {
   walletAddress?: string | null;
 };
 
+export function normalizeWalletAddress(walletAddress?: string | null) {
+  return walletAddress?.trim().toLowerCase() ?? null;
+}
+
 export function buildReceiptCompanyIdentity(
   input: ReceiptBillingIdentityInput,
 ) {
+  const normalizedWalletAddress = normalizeWalletAddress(input.walletAddress);
+
   return {
-    id: input.clerkUserId,
+    id: normalizedWalletAddress ?? `clerk:${input.clerkUserId}`,
     email: input.email ?? undefined,
     name: input.name ?? undefined,
-    wallet: input.walletAddress ?? undefined,
+    wallet: normalizedWalletAddress ?? undefined,
   };
 }
 
 export function buildReceiptUserIdentity(input: ReceiptBillingIdentityInput) {
+  const normalizedWalletAddress = normalizeWalletAddress(input.walletAddress);
+
   return {
     id: input.clerkUserId,
     clerkUserId: input.clerkUserId,
     email: input.email ?? undefined,
     name: input.name ?? undefined,
-    wallet: input.walletAddress ?? undefined,
+    wallet: normalizedWalletAddress ?? undefined,
   };
 }
 
 export function formatWalletAddress(walletAddress?: string | null) {
-  if (!walletAddress) {
+  const normalizedWalletAddress = normalizeWalletAddress(walletAddress);
+
+  if (!normalizedWalletAddress) {
     return "Not connected";
   }
 
-  return `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`;
+  return `${normalizedWalletAddress.slice(0, 6)}...${normalizedWalletAddress.slice(-4)}`;
 }
 
 export function formatScanAllowance(

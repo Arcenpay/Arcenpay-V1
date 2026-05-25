@@ -125,6 +125,8 @@ export default function PDFDropzone({ onUploadSuccess }: PDFDropzoneProps) {
 
   const helperMessage = !billing.isSignedIn
     ? "Sign in to start uploading receipts."
+    : billing.walletMismatch
+      ? `Reconnect the Clerk-linked wallet ${billing.clerkWalletAddress?.slice(0, 6)}...${billing.clerkWalletAddress?.slice(-4)} to upload in this workspace.`
     : billing.walletRequired
       ? "Connect the billing wallet before uploading."
       : billing.scanEntitlement?.exceeded
@@ -201,6 +203,8 @@ export default function PDFDropzone({ onUploadSuccess }: PDFDropzoneProps) {
                 <p className="text-lg font-semibold">
                   {billing.canScan
                     ? "Drop a receipt PDF here or click to browse"
+                    : billing.walletMismatch
+                      ? "Wrong wallet connected"
                     : billing.walletRequired
                       ? "Connect MetaMask to unlock uploading"
                       : billing.scanEntitlement?.exceeded

@@ -8,6 +8,7 @@ import { inngest } from "@/inngest/client";
 import Event from "@/inngest/constant";
 import { getReceiptBillingClient } from "@/lib/arcenpay-server";
 import {
+  normalizeWalletAddress,
   SCAN_FEATURE_KEY,
 } from "@/lib/receipt-billing";
 
@@ -23,7 +24,9 @@ export async function uploadPdf(formData: FormData) {
 
   try {
     const file = formData.get("file") as File;
-    const walletAddress = String(formData.get("walletAddress") ?? "").trim() || null;
+    const walletAddress = normalizeWalletAddress(
+      String(formData.get("walletAddress") ?? "").trim() || null,
+    );
 
     if (!file) {
       return { sucess: false, message: "No file provided" };
@@ -112,6 +115,18 @@ export async function uploadPdf(formData: FormData) {
       size: file.size,
       mimeType: file.type,
       walletAddress,
+    });
+
+    await billingClient.track({
+      name: "receipt_uploaded",
+      idempotencyKey: `receipt-uploaded:${receiptId}`,
+      traits: {
+        receiptId,
+        fileName: file.name,
+        mimeType: file.type,
+        fileSizeBytes: file.size,
+        source: "receipt_saas",
+      },
     });
 
     const fileUrl = await getFileDownloadUrl(storageId);

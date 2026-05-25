@@ -41,7 +41,12 @@ export default function ReceiptDetailClient({
 
   const receipt = useQuery(
     api.receipts.getReceiptById,
-    receiptId ? { id: receiptId as Id<"receipts"> } : "skip",
+    receiptId && billing.walletAddress
+      ? {
+          id: receiptId as Id<"receipts">,
+          walletAddress: billing.walletAddress,
+        }
+      : "skip",
   );
 
   const deleteReceiptMutation = useMutation(api.receipts.deleteReceipt);
@@ -76,7 +81,10 @@ export default function ReceiptDetailClient({
     if (!confirm("Are you sure you want to delete this receipt?")) return;
 
     try {
-      await deleteReceiptMutation({ id: receipt._id });
+      await deleteReceiptMutation({
+        id: receipt._id,
+        walletAddress: billing.walletAddress ?? undefined,
+      });
       router.push("/recipts");
     } catch (error) {
       console.error("Error deleting receipt:", error);

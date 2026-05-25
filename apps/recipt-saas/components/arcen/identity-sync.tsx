@@ -8,13 +8,19 @@ import {
   buildReceiptCompanyIdentity,
   buildReceiptUserIdentity,
   getClerkWalletAddress,
+  normalizeWalletAddress,
 } from "@/lib/receipt-billing";
 
 export function ArcenIdentitySync() {
   const { user, isLoaded } = useUser();
-  const { address } = useAccount();
+  const { address, isConnected } = useAccount();
   const { identify, session } = useArcenPay();
   const inFlightKeyRef = useRef<string | null>(null);
+  const sessionValue = session as {
+    token?: string | null;
+    company?: { id?: string | null; wallet?: string | null } | null;
+    user?: { id?: string | null; clerkUserId?: string | null } | null;
+  };
 
   const email = user?.primaryEmailAddress?.emailAddress ?? null;
   const name =
@@ -23,7 +29,9 @@ export function ArcenIdentitySync() {
     user?.firstName ??
     user?.primaryEmailAddress?.emailAddress ??
     null;
-  const walletAddress = getClerkWalletAddress(user) ?? address ?? null;
+  const linkedWalletAddress = normalizeWalletAddress(getClerkWalletAddress(user));
+  const liveWalletAddress = normalizeWalletAddress(isConnected ? address ?? null : null);
+  const walletAddress = linkedWalletAddress ?? liveWalletAddress;
 
   const identityKey = useMemo(() => {
     if (!user) {
@@ -39,11 +47,13 @@ export function ArcenIdentitySync() {
       return;
     }
 
-    const sessionWallet = session.company?.wallet?.toLowerCase() ?? null;
+    const sessionWallet = sessionValue.company?.wallet?.toLowerCase() ?? null;
     const currentWallet = walletAddress?.toLowerCase() ?? null;
     const alreadyIdentified =
-      Boolean(session.token) &&
-      (session.user?.clerkUserId ?? session.user?.id ?? session.company?.id) ===
+      Boolean(sessionValue.token) &&
+      (sessionValue.user?.clerkUserId ??
+        sessionValue.user?.id ??
+        sessionValue.company?.id) ===
         user.id &&
       sessionWallet === currentWallet;
 
@@ -75,7 +85,7 @@ export function ArcenIdentitySync() {
           inFlightKeyRef.current = null;
         }
       });
-  }, [email, identityKey, identify, isLoaded, name, session.company?.id, session.company?.wallet, session.token, session.user?.clerkUserId, session.user?.id, user, walletAddress]);
+  }, [email, identityKey, identify, isConnected, isLoaded, name, sessionValue.company?.id, sessionValue.company?.wallet, sessionValue.token, sessionValue.user?.clerkUserId, sessionValue.user?.id, user, walletAddress]);
 
   return null;
 }

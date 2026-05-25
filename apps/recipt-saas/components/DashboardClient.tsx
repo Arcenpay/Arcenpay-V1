@@ -32,7 +32,9 @@ export default function DashboardClient() {
   const billing = useReceiptBilling();
   const receipts = useQuery(
     api.receipts.getReceipts,
-    user?.id ? { userId: user.id } : "skip",
+    user?.id && billing.walletAddress
+      ? { userId: user.id, walletAddress: billing.walletAddress }
+      : "skip",
   );
 
   const totalReceipts = receipts?.length ?? 0;
@@ -88,6 +90,7 @@ export default function DashboardClient() {
     billing.aiSummaryEntitlement?.exceeded || !billing.aiSummaryEntitlement?.enabled
       ? "outline"
       : "secondary";
+  const linkedWalletLabel = formatWalletAddress(billing.clerkWalletAddress);
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(15,118,110,0.08),transparent_28%),radial-gradient(circle_at_top_right,rgba(234,88,12,0.08),transparent_24%)]">
@@ -146,7 +149,10 @@ export default function DashboardClient() {
                     {formatWalletAddress(billing.walletAddress)}
                   </div>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Connect the customer wallet that owns the receipt subscription.
+                    Use the same wallet you linked in Clerk for this account.
+                  </p>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Clerk-linked wallet: {linkedWalletLabel}
                   </p>
                 </div>
 
@@ -156,10 +162,16 @@ export default function DashboardClient() {
                     Active plan
                   </div>
                   <div className="text-lg font-semibold">
-                    {billing.planTier ? billing.planTier : "No active plan"}
+                    {billing.walletMismatch
+                      ? "Wallet mismatch"
+                      : billing.planTier
+                        ? billing.planTier
+                        : "No active plan"}
                   </div>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    {billing.isSubscribed
+                    {billing.walletMismatch
+                      ? "The connected wallet does not match the wallet linked in Clerk for this account."
+                      : billing.isSubscribed
                       ? "ArcenPay is actively enforcing scan access for this wallet."
                       : "Choose a plan to unlock receipt scanning and metered usage."}
                   </p>
@@ -249,6 +261,7 @@ export default function DashboardClient() {
         </section>
 
         {(billing.walletRequired ||
+          billing.walletMismatch ||
           billing.scanEntitlement?.exceeded ||
           !billing.scanEntitlement?.enabled) && (
           <Card className="mt-6 border-amber-400/40 bg-amber-50/70 shadow-sm dark:bg-amber-500/10">
@@ -257,15 +270,18 @@ export default function DashboardClient() {
                 <AlertTriangle className="mt-0.5 h-5 w-5 text-amber-600 dark:text-amber-300" />
                 <div className="space-y-1">
                   <p className="font-medium text-amber-950 dark:text-amber-100">
-                    {billing.walletRequired
+                    {billing.walletMismatch
+                      ? "Connected wallet does not match the Clerk-linked wallet for this account."
+                      : billing.walletRequired
                       ? "Connect the billing wallet before uploading receipts."
                       : billing.scanEntitlement?.exceeded
                         ? "This workspace has reached its scan limit."
                         : "Receipt scanning is not available on the current plan."}
                   </p>
                   <p className="text-sm text-amber-900/80 dark:text-amber-100/80">
-                    Move to the billing page to connect the correct wallet or
-                    upgrade the subscription before running more scans.
+                    {billing.walletMismatch
+                      ? `Disconnect the current wallet and reconnect ${linkedWalletLabel} to use this workspace.`
+                      : "Move to the billing page to connect the correct wallet or upgrade the subscription before running more scans."}
                   </p>
                 </div>
               </div>
