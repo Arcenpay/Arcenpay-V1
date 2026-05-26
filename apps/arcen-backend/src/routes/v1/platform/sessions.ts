@@ -96,11 +96,11 @@ async function readSessionsAndProofsFromSubgraph(
 ): Promise<{
   sessions: SessionRow[];
   proofs: ProofRow[];
-  status: "ok" | "unavailable";
+  status: "ok" | "unavailable" | "not_configured";
 }> {
   const graphUrl = getGraphUrl(chainId);
   if (!graphUrl) {
-    return { sessions: [], proofs: [], status: "unavailable" };
+    return { sessions: [], proofs: [], status: "not_configured" };
   }
 
   try {
@@ -239,7 +239,7 @@ export async function getSessions(c: Context) {
       chainId,
     },
     degraded:
-      subgraphData.status !== "ok" || activeProofs.status !== "ok",
+      subgraphData.status === "unavailable" || activeProofs.status !== "ok",
     dependencyHealth: {
       subgraph: subgraphData.status,
       facilitator: activeProofs.status,

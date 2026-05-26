@@ -578,6 +578,10 @@ app.use(
 );
 app.use(express.json({ limit: "50kb" })); // 50KB body limit (PRD §11.2)
 app.use(async (req, res, next) => {
+  if (FACILITATOR_SECRET && req.headers.authorization === `Bearer ${FACILITATOR_SECRET}`) {
+    return next();
+  }
+
   const decision = await aj.protect(req);
   if (decision.isDenied()) {
     if (decision.reason.isBot()) {
