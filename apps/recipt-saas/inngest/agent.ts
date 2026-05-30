@@ -7,7 +7,9 @@ import convex from "@/lib/convexClient";
 import { getReceiptBillingClient } from "@/lib/arcenpay-server";
 import {
   AI_SUMMARY_FEATURE_KEY,
+  AI_SUMMARY_FEATURE_KEYS,
   SCAN_FEATURE_KEY,
+  hasActiveEntitlement,
 } from "@/lib/receipt-billing";
 
 // Note: We previously used an Agent Network. That added routing loops causing
@@ -70,13 +72,23 @@ export const extractAndSavePDF = inngest.createFunction(
   { id: "extract-and-save-pdf" },
   { event: Event.EXTRACT_DATA_FROM_PDF_AND_SAVE_TO_DATABASE },
   async ({ event, step }) => {
-    const { url, receiptId, fileDisplayName, clerkUserId, walletAddress } =
+    const {
+      url,
+      receiptId,
+      fileDisplayName,
+      clerkUserId,
+      walletAddress,
+      aiSummaryEntitledAtUpload,
+      aiSummaryFeatureKey,
+    } =
       event.data as {
       url: string;
       receiptId: string;
       fileDisplayName?: string;
       clerkUserId: string;
       walletAddress?: string | null;
+      aiSummaryEntitledAtUpload?: boolean;
+      aiSummaryFeatureKey?: string;
     };
     const billingIdentity = {
       clerkUserId,
@@ -164,25 +176,65 @@ If a value is missing, use an empty string for text and 0 for numbers.`,
       extractFirstJson(jsonText),
     );
 
-    const aiSummaryEntitlement = await step.run(
+    const aiSummaryAccess = await step.run(
       "check-ai-summary-entitlement",
       async () => {
+        const fallbackAccess = {
+          enabled: Boolean(aiSummaryEntitledAtUpload),
+          featureKey: aiSummaryFeatureKey || AI_SUMMARY_FEATURE_KEY,
+          source: "upload_hint" as const,
+        };
+
         try {
           const billingClient = await getReceiptBillingClient(billingIdentity);
-          return await billingClient.checkEntitlement(AI_SUMMARY_FEATURE_KEY);
+          for (const featureKey of AI_SUMMARY_FEATURE_KEYS) {
+            let entitlement: Awaited<
+              ReturnType<typeof billingClient.checkEntitlement>
+            >;
+
+            try {
+              entitlement = await billingClient.checkEntitlement(featureKey);
+            } catch (error) {
+              console.error("[receipt-saas] failed to check AI summary feature key", {
+                receiptId,
+                clerkUserId,
+                walletAddress,
+                featureKey,
+                error,
+              });
+              continue;
+            }
+
+            if (hasActiveEntitlement(entitlement)) {
+              return {
+                enabled: true,
+                featureKey,
+                source: "billing" as const,
+              };
+            }
+          }
+
+          return fallbackAccess.enabled
+            ? fallbackAccess
+            : {
+                enabled: false,
+                featureKey: AI_SUMMARY_FEATURE_KEY,
+                source: "billing" as const,
+              };
         } catch (error) {
-          console.error("[receipt-saas] failed to check ArcenPay ai_summary access", {
+          console.error("[receipt-saas] failed to check ArcenPay ai_summery access", {
             receiptId,
             clerkUserId,
             walletAddress,
             error,
           });
-          return null;
+          return fallbackAccess;
         }
       },
     );
-    const canGenerateAiSummary =
-      Boolean(aiSummaryEntitlement?.enabled) && !aiSummaryEntitlement?.exceeded;
+    const canGenerateAiSummary = aiSummaryAccess.enabled;
+    const aiSummaryEntitlementFeatureKey =
+      aiSummaryAccess.featureKey || AI_SUMMARY_FEATURE_KEY;
 
     // Map to DB shape with minimal coercion
     const merchant = parsed.merchant ?? {};
@@ -301,6 +353,8 @@ If a value is missing, use an empty string for text and 0 for numbers.`,
             currency: dbPayload.currency,
             itemCount: dbPayload.items.length,
             aiSummaryEntitled: canGenerateAiSummary,
+            aiSummaryFeatureKey: aiSummaryEntitlementFeatureKey,
+            aiSummaryAccessSource: aiSummaryAccess.source,
             aiSummaryGenerated: Boolean(receiptSummary),
             source: "receipt_saas",
           },
@@ -323,13 +377,13 @@ If a value is missing, use an empty string for text and 0 for numbers.`,
           try {
             const billingClient = await getReceiptBillingClient(billingIdentity);
             await billingClient.consumeEntitlement({
-              featureKey: AI_SUMMARY_FEATURE_KEY,
+              featureKey: aiSummaryEntitlementFeatureKey,
               idempotencyKey: `receipt-ai-summary:${receiptId}`,
             });
 
             return { ok: true } as const;
           } catch (error) {
-            console.error("[receipt-saas] failed to consume ArcenPay ai_summary usage", {
+            console.error("[receipt-saas] failed to consume ArcenPay ai_summery usage", {
               receiptId,
               clerkUserId,
               walletAddress,
@@ -351,6 +405,7 @@ If a value is missing, use an empty string for text and 0 for numbers.`,
                 traits: {
                   receiptId,
                   merchantName: dbPayload.merchantName,
+                  aiSummaryFeatureKey: aiSummaryEntitlementFeatureKey,
                   summaryLength: receiptSummary?.length ?? 0,
                   source: "receipt_saas",
                 },

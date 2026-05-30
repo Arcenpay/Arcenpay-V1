@@ -324,15 +324,15 @@ export function SubscribersSection() {
   }, [fetchUsers]);
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
+    <div className="min-w-0 space-y-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
           <h1 className="text-2xl font-bold tracking-tight">Users</h1>
-          <p className="text-muted-foreground text-sm mt-0.5">
+          <p className="mt-0.5 max-w-2xl text-sm text-muted-foreground">
             Identified end users linked to companies through identify and track events.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           <Button variant="outline" size="sm" onClick={fetchUsers} disabled={loading}>
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
             <span className="ml-1.5 hidden sm:inline">Refresh</span>
@@ -379,15 +379,15 @@ export function SubscribersSection() {
           )}
         </div>
       ) : (
-        <div className="rounded-xl border border-border overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="overflow-hidden rounded-xl border border-border bg-card">
+          <table className="w-full table-fixed text-sm">
             <thead>
               <tr className="bg-muted/40 border-b border-border/60">
-                <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">User</th>
-                <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide hidden lg:table-cell">Email</th>
-                <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide hidden xl:table-cell">Wallet</th>
-                <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">Company</th>
-                <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide hidden sm:table-cell">Last Seen</th>
+                <th className="w-[52%] px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide sm:w-[34%]">User</th>
+                <th className="hidden w-[21%] px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide lg:table-cell">Email</th>
+                <th className="hidden w-[12%] px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide xl:table-cell">Wallet</th>
+                <th className="w-[48%] px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide lg:w-[30%] xl:w-[23%]">Company</th>
+                <th className="hidden w-[18%] px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide sm:table-cell lg:w-[15%] xl:w-[10%]">Last Seen</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/40">
@@ -398,21 +398,25 @@ export function SubscribersSection() {
                 return (
                   <tr key={user.id} className="hover:bg-muted/20 transition-colors">
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
+                      <div className="flex min-w-0 items-center gap-3">
                         <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                           <UserRound className="h-4 w-4 text-primary" />
                         </div>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-medium truncate">{displayName}</span>
-                            <Badge variant="outline" className="text-[11px]">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex min-w-0 items-center gap-2">
+                            <span className="truncate font-medium" title={displayName}>
+                              {displayName}
+                            </span>
+                            <Badge variant="outline" className="shrink-0 text-[11px]">
                               {identityMode}
                             </Badge>
                           </div>
-                          <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-2 flex-wrap">
+                          <div className="mt-0.5 flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
                             {user.clerkUserId && <span>Clerk</span>}
                             {user.externalId && (
-                              <code className="font-mono">{user.externalId}</code>
+                              <code className="truncate font-mono" title={user.externalId}>
+                                {user.externalId}
+                              </code>
                             )}
                           </div>
                         </div>
@@ -420,9 +424,11 @@ export function SubscribersSection() {
                     </td>
                     <td className="px-4 py-3 hidden lg:table-cell">
                       {user.email ? (
-                        <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                          <Mail className="h-3.5 w-3.5" />
-                          {user.email}
+                        <span className="flex min-w-0 items-center gap-1.5 text-sm text-muted-foreground">
+                          <Mail className="h-3.5 w-3.5 shrink-0" />
+                          <span className="truncate" title={user.email}>
+                            {user.email}
+                          </span>
                         </span>
                       ) : (
                         <span className="text-muted-foreground/40 text-xs">—</span>
@@ -430,9 +436,11 @@ export function SubscribersSection() {
                     </td>
                     <td className="px-4 py-3 hidden xl:table-cell">
                       {user.walletAddress ? (
-                        <span className="flex items-center gap-1.5 font-mono text-xs text-muted-foreground">
-                          <Wallet className="h-3.5 w-3.5" />
-                          {user.walletAddress.slice(0, 8)}…{user.walletAddress.slice(-6)}
+                        <span className="flex min-w-0 items-center gap-1.5 font-mono text-xs text-muted-foreground">
+                          <Wallet className="h-3.5 w-3.5 shrink-0" />
+                          <span className="truncate" title={user.walletAddress}>
+                            {user.walletAddress.slice(0, 8)}…{user.walletAddress.slice(-6)}
+                          </span>
                           <CopyButton text={user.walletAddress} />
                         </span>
                       ) : (
@@ -440,13 +448,19 @@ export function SubscribersSection() {
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
-                        <div>
-                          <div className="text-sm font-medium text-foreground">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <Building2 className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                        <div className="min-w-0">
+                          <div
+                            className="truncate text-sm font-medium text-foreground"
+                            title={user.company?.name ?? "Unknown company"}
+                          >
                             {user.company?.name ?? "Unknown company"}
                           </div>
-                          <div className="text-xs text-muted-foreground">
+                          <div
+                            className="truncate text-xs text-muted-foreground"
+                            title={user.company?.email ?? user.company?.walletAddress ?? user.companyId}
+                          >
                             {user.company?.email ?? user.company?.walletAddress ?? user.companyId}
                           </div>
                         </div>

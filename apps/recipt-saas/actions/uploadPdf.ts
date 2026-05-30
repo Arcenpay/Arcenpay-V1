@@ -8,6 +8,8 @@ import { inngest } from "@/inngest/client";
 import Event from "@/inngest/constant";
 import { getReceiptBillingClient } from "@/lib/arcenpay-server";
 import {
+  AI_SUMMARY_FEATURE_KEYS,
+  hasActiveEntitlement,
   normalizeWalletAddress,
   SCAN_FEATURE_KEY,
 } from "@/lib/receipt-billing";
@@ -80,6 +82,32 @@ export async function uploadPdf(formData: FormData) {
       };
     }
 
+    let aiSummaryEntitledAtUpload = false;
+    let aiSummaryFeatureKey: string | undefined;
+
+    for (const featureKey of AI_SUMMARY_FEATURE_KEYS) {
+      try {
+        const aiSummaryEntitlement =
+          await billingClient.checkEntitlement(featureKey);
+
+        if (hasActiveEntitlement(aiSummaryEntitlement)) {
+          aiSummaryEntitledAtUpload = true;
+          aiSummaryFeatureKey = featureKey;
+          break;
+        }
+      } catch (error) {
+        console.error(
+          "[receipt-saas] failed to check AI summary entitlement before upload",
+          {
+            featureKey,
+            userId: user.id,
+            walletAddress,
+            error,
+          },
+        );
+      }
+    }
+
     // handle convex upload logic here
     const uploadUrl = await convex.mutation(api.receipts.generateUploadUrl, {});
 
@@ -139,6 +167,8 @@ export async function uploadPdf(formData: FormData) {
         receiptId,
         clerkUserId: user.id,
         walletAddress,
+        aiSummaryEntitledAtUpload,
+        aiSummaryFeatureKey,
       },
     });
 

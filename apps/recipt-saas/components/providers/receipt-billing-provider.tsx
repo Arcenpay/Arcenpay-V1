@@ -4,6 +4,7 @@ import { useArcenPay } from "@arcenpay/react";
 import { useUser } from "@clerk/nextjs";
 import {
   createContext,
+  useCallback,
   useContext,
   useMemo,
   type ReactNode,
@@ -11,12 +12,14 @@ import {
 import { useAccount, useConnect, useDisconnect } from "wagmi";
 import {
   AI_SUMMARY_FEATURE_KEY,
+  formatPlanLabel,
   formatScanAllowance,
   getClerkWalletAddress,
   hasActiveEntitlement,
   normalizeWalletAddress,
   SCAN_FEATURE_KEY,
 } from "@/lib/receipt-billing";
+import { useArcenActivePlan } from "@/hooks/use-arcen-active-plan";
 import { useArcenCompanyEntitlements } from "@/hooks/use-arcen-company-entitlements";
 
 function useReceiptBillingValue() {
@@ -40,7 +43,17 @@ function useReceiptBillingValue() {
     [user],
   );
   const scanEntitlement = entitlements[SCAN_FEATURE_KEY] ?? null;
-  const aiSummaryEntitlement = entitlements[AI_SUMMARY_FEATURE_KEY] ?? null;
+  const aiSummaryEntitlement =
+    entitlements[AI_SUMMARY_FEATURE_KEY] ?? null;
+  const isSubscribed = hasActiveEntitlement(scanEntitlement);
+  const {
+    activePlan,
+    error: activePlanError,
+    loading: activePlanLoading,
+    refetch: refetchActivePlan,
+  } = useArcenActivePlan({
+    skip: !session.token || !isSubscribed,
+  });
   const liveWalletAddress = normalizeWalletAddress(
     isConnected ? address ?? null : null,
   );
@@ -55,6 +68,13 @@ function useReceiptBillingValue() {
     : clerkWalletAddress ?? liveWalletAddress ?? sessionWalletAddress ?? null;
   const allocation = scanEntitlement?.allocation ?? null;
   const usage = scanEntitlement?.usage ?? 0;
+  const reasonPlanName = scanEntitlement?.reason?.match(
+    /\bplan[_-]([a-z0-9][a-z0-9_-]*)/i,
+  )?.[1];
+  const planName =
+    formatPlanLabel(activePlan?.name) ??
+    formatPlanLabel(isSubscribed ? reasonPlanName : null) ??
+    (isSubscribed ? "Active subscription" : null);
   const usagePercentage =
     allocation && allocation > 0 ? Math.min((usage / allocation) * 100, 100) : 0;
   const preferredConnector =
@@ -65,6 +85,9 @@ function useReceiptBillingValue() {
     connectors.find((connector) => connector.type === "injected") ??
     connectors[0] ??
     null;
+  const refetchEntitlementData = useCallback(() => {
+    refetch();
+  }, [refetch]);
 
   const isIdentified = useMemo(() => {
     if (!user || !session.token || walletMismatch) {
@@ -117,15 +140,19 @@ function useReceiptBillingValue() {
     },
     disconnectWallet: () => disconnect(),
     isEntitlementLoading: loading,
+    isPlanLoading: activePlanLoading,
     isIdentified,
     isLoaded,
     isSignedIn: Boolean(user),
-    isSubscribed: hasActiveEntitlement(scanEntitlement),
+    isSubscribed,
     identityError: session.identifyError,
     isIdentifying: session.isIdentifying,
     liveWalletAddress,
-    planTier: null,
-    refetchEntitlements: refetch,
+    planError: activePlanError,
+    planName,
+    planTier: planName,
+    refetchActivePlan,
+    refetchEntitlements: refetchEntitlementData,
     scanEntitlement,
     scanEntitlementError: error,
     usage,

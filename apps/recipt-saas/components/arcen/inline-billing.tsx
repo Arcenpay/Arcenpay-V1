@@ -23,19 +23,22 @@ export function InlineBilling({
   const billing = useReceiptBilling();
 
   const refetchEntitlements = billing.refetchEntitlements;
+  const refetchActivePlan = billing.refetchActivePlan;
 
   const handleViewChange = useCallback(
     (view: string) => {
       if (view === "success" || view === "portal") {
         refetchEntitlements();
+        void refetchActivePlan();
       }
     },
-    [refetchEntitlements],
+    [refetchActivePlan, refetchEntitlements],
   );
 
   const handlePlanChange = useCallback(() => {
     refetchEntitlements();
-  }, [refetchEntitlements]);
+    void refetchActivePlan();
+  }, [refetchActivePlan, refetchEntitlements]);
 
   if (!billing.isLoaded) {
     return (

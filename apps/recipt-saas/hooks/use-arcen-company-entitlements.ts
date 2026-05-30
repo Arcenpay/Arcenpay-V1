@@ -125,11 +125,15 @@ export function useArcenCompanyEntitlements(
     };
   }, [fetchEntitlements]);
 
+  const refetch = useCallback(() => {
+    void fetchEntitlements(true);
+  }, [fetchEntitlements]);
+
   return {
     entitlements,
     loading,
     error,
     updatedAt,
-    refetch: () => fetchEntitlements(true),
+    refetch,
   };
 }

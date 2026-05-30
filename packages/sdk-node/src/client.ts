@@ -414,6 +414,24 @@ export class ArcenClient {
     });
   }
 
+  async listEntitlements(
+    companyKeys?: ArcenCompanyKeys,
+    userKeys?: ArcenUserKeys,
+  ): Promise<Record<string, EntitlementResult>> {
+    const result = await this.request<{ entitlements: EntitlementResult[] }>(
+      "GET",
+      "/api/v1/entitlements",
+      {
+        companyKeys,
+        userKeys,
+      },
+    );
+
+    return Object.fromEntries(
+      result.entitlements.map((entitlement) => [entitlement.key, entitlement]),
+    );
+  }
+
   async checkFlags(
     featureKeys: string[],
     companyKeys?: ArcenCompanyKeys,

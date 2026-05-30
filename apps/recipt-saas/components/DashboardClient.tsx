@@ -93,15 +93,26 @@ export default function DashboardClient() {
     );
   }
 
-  const statusTone =
-    billing.scanEntitlement?.exceeded || !billing.scanEntitlement?.enabled
+  const billingStillLoading =
+    billing.isIdentifying ||
+    billing.isEntitlementLoading;
+  const scanBlocked =
+    billing.scanEntitlement?.exceeded || !billing.scanEntitlement?.enabled;
+  const aiSummaryBlocked =
+    billing.aiSummaryEntitlement?.exceeded ||
+    !billing.aiSummaryEntitlement?.enabled;
+  const statusTone = billing.isEntitlementLoading
+    ? "outline"
+    : scanBlocked
       ? "destructive"
       : "secondary";
-  const aiSummaryTone =
-    billing.aiSummaryEntitlement?.exceeded || !billing.aiSummaryEntitlement?.enabled
+  const aiSummaryTone = billing.isEntitlementLoading
+    ? "outline"
+    : aiSummaryBlocked
       ? "outline"
       : "secondary";
   const linkedWalletLabel = formatWalletAddress(billing.clerkWalletAddress);
+  const scanUnavailable = !billingStillLoading && scanBlocked;
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(15,118,110,0.08),transparent_28%),radial-gradient(circle_at_top_right,rgba(234,88,12,0.08),transparent_24%)]">
@@ -162,9 +173,9 @@ export default function DashboardClient() {
                   <p className="mt-1 text-sm text-muted-foreground">
                     Use the same wallet you linked in Clerk for this account.
                   </p>
-                  <p className="mt-2 text-xs text-muted-foreground">
+                  {/* <p className="mt-2 text-xs text-muted-foreground">
                     Clerk-linked wallet: {linkedWalletLabel}
-                  </p>
+                  </p> */}
                 </div>
 
                 <div className="rounded-2xl border border-border/60 bg-background/80 p-4">
@@ -175,16 +186,18 @@ export default function DashboardClient() {
                   <div className="text-lg font-semibold">
                     {billing.walletMismatch
                       ? "Wallet mismatch"
-                      : billing.planTier
-                        ? billing.planTier
-                        : "No active plan"}
+                      : billingStillLoading
+                        ? "Checking plan..."
+                        : billing.planName ?? "No active plan"}
                   </div>
                   <p className="mt-1 text-sm text-muted-foreground">
                     {billing.walletMismatch
                       ? "The connected wallet does not match the wallet linked in Clerk for this account."
-                      : billing.isSubscribed
-                      ? "ArcenPay is actively enforcing scan access for this wallet."
-                      : "Choose a plan to unlock receipt scanning and metered usage."}
+                      : billingStillLoading
+                        ? "Syncing the latest ArcenPay subscription state for this wallet."
+                        : billing.isSubscribed
+                          ? "ArcenPay is actively enforcing scan access for this wallet."
+                          : "Choose a plan to unlock receipt scanning and metered usage."}
                   </p>
                 </div>
 
@@ -195,19 +208,25 @@ export default function DashboardClient() {
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="text-lg font-semibold">
-                      {billing.canUseAiSummary ? "Included" : "Pro feature"}
+                      {billing.isEntitlementLoading
+                        ? "Checking..."
+                        : billing.canUseAiSummary
+                          ? "Included"
+                          : "Pro feature"}
                     </span>
                     <Badge variant={aiSummaryTone}>
-                      {billing.aiSummaryEntitlement?.enabled
-                        ? billing.aiSummaryEntitlement?.exceeded
-                          ? "Quota reached"
-                          : "Ready"
-                        : "Locked"}
+                      {billing.isEntitlementLoading
+                        ? "Syncing"
+                        : billing.aiSummaryEntitlement?.enabled
+                          ? billing.aiSummaryEntitlement?.exceeded
+                            ? "Quota reached"
+                            : "Ready"
+                          : "Locked"}
                     </Badge>
                   </div>
                   <p className="mt-1 text-sm text-muted-foreground">
                     Premium receipt summaries are only generated when the
-                    `ai_summary` entitlement is active.
+                    `ai_summery` entitlement is active.
                   </p>
                 </div>
 
@@ -219,11 +238,13 @@ export default function DashboardClient() {
                   <div className="flex items-center gap-3">
                     <span className="text-lg font-semibold">{billing.usageLabel}</span>
                     <Badge variant={statusTone}>
-                      {billing.scanEntitlement?.enabled
-                        ? billing.scanEntitlement?.exceeded
-                          ? "Limit reached"
-                          : "Ready"
-                        : "Unavailable"}
+                      {billing.isEntitlementLoading
+                        ? "Syncing"
+                        : billing.scanEntitlement?.enabled
+                          ? billing.scanEntitlement?.exceeded
+                            ? "Limit reached"
+                            : "Ready"
+                          : "Unavailable"}
                     </Badge>
                   </div>
                   {billing.allocation != null && (
@@ -273,8 +294,7 @@ export default function DashboardClient() {
 
         {(billing.walletRequired ||
           billing.walletMismatch ||
-          billing.scanEntitlement?.exceeded ||
-          !billing.scanEntitlement?.enabled) && (
+          scanUnavailable) && (
           <Card className="mt-6 border-amber-400/40 bg-amber-50/70 shadow-sm dark:bg-amber-500/10">
             <CardContent className="flex flex-col gap-4 p-5 md:flex-row md:items-center md:justify-between">
               <div className="flex items-start gap-3">
@@ -313,7 +333,7 @@ export default function DashboardClient() {
               <CardDescription>
                 PDF uploads are checked against the ArcenPay `scan`
                 entitlement before processing starts, while premium summaries
-                only run when `ai_summary` is available.
+                only run when `ai_summery` is available.
               </CardDescription>
             </CardHeader>
             <CardContent>

@@ -32,6 +32,11 @@ export type { Tokens } from "./components/ArcenEmbed";
 
 // Hooks — for programmatic usage beyond embed components
 export { useFlag, useFlags } from "./hooks/useFlag";
+export { useCompanyEntitlements } from "./hooks/useCompanyEntitlements";
+export type {
+  UseCompanyEntitlementsOptions,
+  UseCompanyEntitlementsReturn,
+} from "./hooks/useCompanyEntitlements";
 export { useEntitlement } from "./hooks/useEntitlement";
 export {
   ENTITLEMENT_ERROR_CODES,

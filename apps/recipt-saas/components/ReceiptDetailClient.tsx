@@ -407,8 +407,8 @@ export default function ReceiptDetailClient({
                   <div className="space-y-3">
                     <p className="text-sm text-black dark:text-white">
                       {aiSummaryLockedForReceipt
-                        ? "This receipt was scanned without `ai_summary` access, so only the scan details were processed."
-                        : "AI summaries are only generated for workspaces with the `ai_summary` entitlement, typically on Pro plans."}
+                        ? "This receipt was scanned without `ai_summery` access, so only the scan details were processed."
+                        : "AI summaries are only generated for workspaces with the `ai_summery` entitlement, typically on Pro plans."}
                     </p>
                     {!billing.canUseAiSummary && (
                       <Button

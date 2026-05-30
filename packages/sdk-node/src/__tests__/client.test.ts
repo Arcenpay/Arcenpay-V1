@@ -157,6 +157,42 @@ describe("ArcenClient", () => {
     });
   });
 
+  describe("listEntitlements()", () => {
+    it("returns all entitlements keyed by feature key", async () => {
+      mockFetch.mockResolvedValueOnce(
+        mockResponse({
+          entitlements: [
+            {
+              key: "scan",
+              enabled: true,
+              reason: "Entitled by plan",
+              allocation: 100,
+              usage: 7,
+              exceeded: false,
+            },
+            {
+              key: "ai_summary",
+              enabled: false,
+              reason: "Not included in the current plan",
+              allocation: null,
+              usage: 0,
+              exceeded: false,
+            },
+          ],
+        }),
+      );
+
+      const result = await client.listEntitlements({ id: "customer-123" });
+
+      expect(result.scan.enabled).toBe(true);
+      expect(result.ai_summary.enabled).toBe(false);
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining("/api/v1/entitlements"),
+        expect.objectContaining({ method: "GET" }),
+      );
+    });
+  });
+
   describe("consumeEntitlement()", () => {
     it("uses the session token after identify() and returns canonical metered state", async () => {
       mockFetch

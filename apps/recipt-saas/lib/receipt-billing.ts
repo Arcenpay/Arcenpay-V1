@@ -2,6 +2,9 @@ import type { UserResource } from "@clerk/types";
 
 export const SCAN_FEATURE_KEY = "scan";
 export const AI_SUMMARY_FEATURE_KEY = "ai_summery";
+export const AI_SUMMARY_FEATURE_KEYS = [
+  AI_SUMMARY_FEATURE_KEY,
+] as const;
 
 type ReceiptBillingIdentityInput = {
   clerkUserId: string;
@@ -69,6 +72,20 @@ export function hasActiveEntitlement(
   } | null,
 ) {
   return Boolean(entitlement?.enabled && !entitlement?.exceeded);
+}
+
+export function formatPlanLabel(planName?: string | null) {
+  const normalized = planName?.trim();
+
+  if (!normalized) {
+    return null;
+  }
+
+  return normalized
+    .split(/[\s_-]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
 }
 
 export function getClerkWalletAddress(
