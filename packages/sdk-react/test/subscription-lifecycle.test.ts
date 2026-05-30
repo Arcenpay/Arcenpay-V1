@@ -13,7 +13,9 @@ describe("subscription lifecycle helpers", () => {
         selectedPlanName: "Starter",
         effectiveAtLabel: "May 31, 2026",
       }),
-    ).toBe("Plan change scheduled. Starter will take effect on May 31, 2026.");
+    ).toBe(
+      "Downgrade scheduled. Your current access remains active until May 31, 2026. Then your plan will switch to Starter.",
+    );
   });
 
   it("returns a scheduled message when billing period changes from monthly to annual", () => {
@@ -25,7 +27,7 @@ describe("subscription lifecycle helpers", () => {
         previousBillingPeriod: "monthly",
         effectiveAtLabel: "May 31, 2026",
       }),
-    ).toBe("Plan change scheduled. Pro Annual billing will take effect on May 31, 2026.");
+    ).toBe("Plan change scheduled. Pro will take effect on May 31, 2026.");
   });
 
   it("returns an upgrade message with billing period change note", () => {
@@ -37,7 +39,9 @@ describe("subscription lifecycle helpers", () => {
         previousBillingPeriod: "monthly",
         prorationAmountDue: "50.00",
       }),
-    ).toBe("Plan upgraded. $50.00 was charged for the remaining term. Billing changed to Annual.");
+    ).toBe(
+      "Plan upgraded. $50.00 was charged for the remaining term. Renewals are now on annual billing.",
+    );
   });
 
   it("returns an upgrade message without billing period change when periods match", () => {

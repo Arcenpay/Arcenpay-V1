@@ -7,6 +7,27 @@
 import { createHmac, timingSafeEqual } from "crypto";
 import type { SubscriptionEventData } from "./events";
 
+function resolveWebhookEventName(event: SubscriptionEventData): string {
+  switch (event.type) {
+    case "minted":
+      return "subscription.minted";
+    case "renewed":
+      return "subscription.renewed";
+    case "cancelled":
+      return "subscription.cancelled";
+    case "plan_changed":
+      return "subscription.plan_changed";
+    case "billing_executed": {
+      const billingReason = Number(event.billingReason ?? 0n);
+      return billingReason === 0
+        ? "subscription.minted"
+        : "subscription.renewed";
+    }
+    default:
+      return `subscription.${event.type}`;
+  }
+}
+
 export interface WebhookConfig {
   /** Provider-configured webhook endpoint URL */
   url: string;
@@ -71,8 +92,9 @@ export class WebhookService {
    * Deliver a webhook for a subscription event
    */
   async deliverEvent(event: SubscriptionEventData): Promise<void> {
+    const canonicalEvent = resolveWebhookEventName(event);
     const payload: WebhookPayload = {
-      event: `subscription.${event.type}`,
+      event: canonicalEvent,
       timestamp: event.timestamp,
       data: {
         tokenId: event.tokenId?.toString(),
@@ -103,6 +125,8 @@ export class WebhookService {
           "Content-Type": "application/json",
           "X-ArcenPay-Signature": signature,
           "X-ArcenPay-Delivery": id,
+          "X-ArcenPay-Event": payload.event,
+          "X-ArcenPay-Timestamp": String(payload.timestamp),
           "User-Agent": "ArcenPay-Webhook/1.0",
         },
         body,

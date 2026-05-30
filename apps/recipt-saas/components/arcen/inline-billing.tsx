@@ -3,14 +3,20 @@
 import { ArcenEmbed } from "@arcenpay/react";
 import { SignInButton } from "@clerk/nextjs";
 import { useCallback } from "react";
-import { CreditCard, Loader2, Wallet } from "lucide-react";
+import {
+  AlertTriangle,
+  CreditCard,
+  Loader2,
+  RefreshCw,
+  Wallet,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useReceiptBilling } from "@/hooks/use-receipt-billing";
 import { formatWalletAddress } from "@/lib/receipt-billing";
 
 export function InlineBilling({
-  initialView = "checkout",
+  initialView = "portal",
 }: {
   initialView?: "portal" | "checkout" | "payment" | "success" | "unsubscribe";
 }) {
@@ -27,12 +33,9 @@ export function InlineBilling({
     [refetchEntitlements],
   );
 
-  const handlePlanChange = useCallback(
-    () => {
-      refetchEntitlements();
-    },
-    [refetchEntitlements],
-  );
+  const handlePlanChange = useCallback(() => {
+    refetchEntitlements();
+  }, [refetchEntitlements]);
 
   if (!billing.isLoaded) {
     return (
@@ -118,14 +121,44 @@ export function InlineBilling({
     );
   }
 
-  if (!billing.isIdentified || billing.isEntitlementLoading) {
-    return (
-      <div className="flex min-h-80 items-center justify-center rounded-3xl border border-border/70 bg-card/80">
-        <div className="flex items-center gap-3 text-sm text-muted-foreground">
-          <Loader2 className="h-5 w-5 animate-spin text-primary" />
-          Preparing your ArcenPay billing workspace...
+  if (!billing.isIdentified) {
+    if (billing.isIdentifying || billing.isEntitlementLoading) {
+      return (
+        <div className="flex min-h-80 items-center justify-center rounded-3xl border border-border/70 bg-card/80">
+          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            Preparing your ArcenPay billing workspace...
+          </div>
         </div>
-      </div>
+      );
+    }
+
+    const errorMessage =
+      billing.identityError ??
+      "Unable to authenticate with ArcenPay. Check your connection and origin settings.";
+
+    return (
+      <Card className="border-destructive/50 bg-destructive/5">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-destructive">
+            <AlertTriangle className="h-5 w-5" />
+            Connection failed
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4 text-sm text-muted-foreground">
+          <p>{errorMessage}</p>
+          <Button
+            variant="outline"
+            className="w-fit"
+            onClick={() => {
+              window.location.reload();
+            }}
+          >
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Retry
+          </Button>
+        </CardContent>
+      </Card>
     );
   }
 

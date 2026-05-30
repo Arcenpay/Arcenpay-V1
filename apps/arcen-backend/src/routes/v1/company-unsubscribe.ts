@@ -19,6 +19,11 @@ import {
   stripLegacySubscriptionLifecycleTraits,
 } from "../../lib/billing/subscription-change-requests.js";
 import { resolvePublishedFreePlan } from "../../lib/catalog/catalog-billing.js";
+import {
+  isEmailDeliveryConfigured,
+  sendSubscriptionPlanChangeEmail,
+} from "../../lib/billing/email.js";
+import { findScopedSubscriberEmail } from "../../lib/billing/subscriber-emails.js";
 import { readAutopayAccountState } from "../../lib/payments/autopay-state.js";
 import {
   normalizeTxHash,
@@ -97,6 +102,8 @@ export async function POST(c: Context) {
       where: { id: companyId },
       select: {
         id: true,
+        name: true,
+        email: true,
         environmentId: true,
         activePlanId: true,
         traits: true,
@@ -385,6 +392,36 @@ export async function POST(c: Context) {
         autopayControl: autopayControl?.control ?? null,
         pendingVerification,
       }).catch(() => {});
+
+    const cancellationEmail =
+      company.email ??
+      (
+        await findScopedSubscriberEmail({
+          teamId,
+          environmentId:
+            company.subscriptionState?.environmentId ??
+            company.environmentId ??
+            null,
+          walletAddress: companyPaymentAccount,
+        })
+      )?.email ??
+      null;
+
+    if (cancellationEmail && isEmailDeliveryConfigured()) {
+      await sendSubscriptionPlanChangeEmail({
+        to: cancellationEmail,
+        customerName: company.name,
+        changeKind: "cancellation_scheduled",
+        currentPlanName: currentPlan?.name ?? null,
+        targetPlanName: freePlan.name,
+        effectiveAt: effectiveAt.toISOString(),
+      }).catch((err) => {
+        console.warn(
+          "[company-unsubscribe] Failed to send scheduled cancellation email:",
+          err,
+        );
+      });
+    }
 
     return c.json(
       {

@@ -488,11 +488,18 @@ model SubscriberEmail {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  walletAddress String @unique
+  scopeKey      String  @default("legacy")
+  teamId        String?
+  environmentId String?
+  companyId     String?
+  walletAddress String
   email         String
   planId        String?
 
+  @@unique([scopeKey, walletAddress])
   @@index([walletAddress])
+  @@index([teamId, environmentId, walletAddress])
+  @@index([companyId])
   @@index([email])
 }
 

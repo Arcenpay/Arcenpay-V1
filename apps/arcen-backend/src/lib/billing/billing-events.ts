@@ -4,6 +4,7 @@ import { toPrismaJson } from "../../utils/prisma-json.js";
 import { ensureInvoicePdfForTeam } from "./invoice-documents.js";
 import { sendInvoiceEmail } from "./email.js";
 import { deliverWebhook } from "../webhooks/deliver-webhook.js";
+import { findScopedSubscriberEmail } from "./subscriber-emails.js";
 import {
   recordFailedPayment,
   recordSuccessfulPayment,
@@ -30,6 +31,7 @@ export interface PersistBillingEventInput {
 
 export interface BillingRecipientLookupInput {
   teamId: string;
+  environmentId?: string | null;
   explicitEmail?: string | null;
   accessTokenUserId?: string | null;
   accessTokenCompanyId?: string | null;
@@ -103,9 +105,10 @@ export async function resolveBillingRecipientEmail(
   }
 
   if (input.walletAddress?.trim()) {
-    const record = await db.subscriberEmail.findUnique({
-      where: { walletAddress: input.walletAddress.toLowerCase() },
-      select: { email: true },
+    const record = await findScopedSubscriberEmail({
+      teamId: input.teamId,
+      environmentId: input.environmentId ?? null,
+      walletAddress: input.walletAddress,
     });
     if (record?.email) return record.email;
   }

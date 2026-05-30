@@ -75,6 +75,10 @@ export interface ArcenSessionValue {
   company: ArcenCompanyIdentity | null;
   /** Identified user */
   user: ArcenUserIdentity | null;
+  /** Last identify error message, or null if identify succeeded */
+  identifyError: string | null;
+  /** Whether an identify call is currently in flight */
+  isIdentifying: boolean;
   /**
    * Identify a company/user to establish context for all hooks/components.
    * Call once after your app's auth flow resolves.
@@ -109,6 +113,53 @@ import { resolveDashboardBaseUrl } from "../lib/api";
 
 const ARCENPAY_WAGMI_CHAINS = [sepolia, baseSepolia, base, arcTestnet] as const;
 const wagmiConfigCache = new Map<string, ReturnType<typeof createConfig>>();
+
+const IDENTIFY_TIMEOUT_MS = 20_000;
+
+function fetchWithTimeout(
+  url: string,
+  options: RequestInit & { timeoutMs?: number },
+): Promise<Response> {
+  const timeoutMs = options.timeoutMs ?? IDENTIFY_TIMEOUT_MS;
+  const controller = new AbortController();
+  const { signal: callerSignal, ...rest } = options;
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  const mergedSignal = callerSignal
+    ? composeAbortSignals(callerSignal, controller.signal)
+    : controller.signal;
+
+  return fetch(url, { ...rest, signal: mergedSignal }).finally(() => {
+    clearTimeout(timeoutId);
+  });
+}
+
+function composeAbortSignals(
+  a: AbortSignal,
+  b: AbortSignal,
+): AbortSignal {
+  if (a.aborted || b.aborted) {
+    return AbortSignal.abort();
+  }
+  const controller = new AbortController();
+  const onAbort = () => controller.abort();
+  a.addEventListener("abort", onAbort, { once: true });
+  b.addEventListener("abort", onAbort, { once: true });
+  return controller.signal;
+}
+
+async function readErrorMessage(
+  response: Response,
+  fallback: string,
+): Promise<string> {
+  const payload = (await response.json().catch(() => ({}))) as {
+    error?: string;
+    detail?: string;
+    message?: string;
+  };
+
+  return payload.detail ?? payload.error ?? payload.message ?? fallback;
+}
 
 function getRpcTransport(id: number) {
   const specific =
@@ -307,6 +358,8 @@ function ArcenPayRuntime({
     token: null,
     company: null,
     user: null,
+    identifyError: null,
+    isIdentifying: false,
     identify: async () => {
       throw new Error("ArcenPayProvider is not ready");
     },
@@ -316,18 +369,31 @@ function ArcenPayRuntime({
   const identify = useCallback(
     async (input: ArcenIdentifyInput) => {
       if (!publishableKey) {
-        throw new Error(
-          "ArcenPayProvider requires publishableKey to identify. Set NEXT_PUBLIC_ARCENPAY_PUBLISHABLE_KEY env var or pass it as a prop.",
-        );
+        const msg =
+          "ArcenPayProvider requires publishableKey to identify. Set NEXT_PUBLIC_ARCENPAY_PUBLISHABLE_KEY env var or pass it as a prop.";
+        setSession((current) => ({
+          ...current,
+          isIdentifying: false,
+          identifyError: msg,
+        }));
+        throw new Error(msg);
       }
 
+      setSession((current) => ({
+        ...current,
+        isIdentifying: true,
+        identifyError: null,
+      }));
+
       try {
-        const res = await fetch(`${baseUrl}/api/v1/events`, {
+        const headers = {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${publishableKey}`,
+        };
+
+        const res = await fetchWithTimeout(`${baseUrl}/api/v1/events`, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${publishableKey}`,
-          },
+          headers,
           body: JSON.stringify({
             event_type: "identify",
             ...(input.company ? { company: input.company } : {}),
@@ -336,19 +402,13 @@ function ArcenPayRuntime({
         });
 
         if (!res.ok) {
-          const err = (await res.json().catch(() => ({}))) as {
-            error?: string;
-          };
-          throw new Error(err.error ?? `HTTP ${res.status}`);
+          throw new Error(await readErrorMessage(res, `HTTP ${res.status}`));
         }
 
         // Generate a short-lived access token for embed/hook calls
-        const tokenRes = await fetch(`${baseUrl}/api/v1/access-tokens`, {
+        const tokenRes = await fetchWithTimeout(`${baseUrl}/api/v1/access-tokens`, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${publishableKey}`,
-          },
+          headers,
           body: JSON.stringify({
             company: input.company ?? {},
             user: input.user ?? {},
@@ -357,10 +417,9 @@ function ArcenPayRuntime({
         });
 
         if (!tokenRes.ok) {
-          const err = (await tokenRes.json().catch(() => ({}))) as {
-            error?: string;
-          };
-          throw new Error(err.error ?? `Failed to create session token`);
+          throw new Error(
+            await readErrorMessage(tokenRes, "Failed to create session token"),
+          );
         }
 
         const tokenData = (await tokenRes.json()) as {
@@ -373,13 +432,26 @@ function ArcenPayRuntime({
 
         setSession({
           isReady: true,
+          isIdentifying: false,
+          identifyError: null,
           token: tokenData.data?.token ?? null,
           company: input.company ? { ...input.company } : null,
           user: input.user ? { ...input.user } : null,
           identify,
         });
       } catch (err) {
-        console.error("[ArcenPayProvider] identify failed:", err);
+        const message =
+          err instanceof DOMException && err.name === "TimeoutError"
+            ? "ArcenPay identify timed out. Check your network connection."
+            : err instanceof Error
+              ? err.message
+              : "Failed to identify billing session.";
+
+        setSession((current) => ({
+          ...current,
+          isIdentifying: false,
+          identifyError: message,
+        }));
         throw err;
       }
     },
@@ -429,16 +501,6 @@ function ArcenPayRuntime({
         candidateQueries.map(async (query) => {
           const res = await fetch(`${baseUrl}${route}?${query}`);
           if (!res.ok) {
-            const detail = await res
-              .json()
-              .catch(() => ({} as { error?: string }));
-            console.warn("[ArcenPayProvider] smart-account config request failed", {
-              chainId,
-              route,
-              query,
-              status: res.status,
-              error: detail?.error ?? `HTTP ${res.status}`,
-            });
             return null;
           }
           const body = (await res.json()) as {
@@ -468,12 +530,7 @@ function ArcenPayRuntime({
           isReady: true,
         });
       })
-      .catch((error) => {
-        console.warn("[ArcenPayProvider] smart-account config fetch failed", {
-          chainId,
-          error: error instanceof Error ? error.message : String(error),
-        });
-      });
+      .catch(() => {});
 
     return () => {
       cancelled = true;

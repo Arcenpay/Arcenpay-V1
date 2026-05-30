@@ -7,6 +7,7 @@ type PlanChangeSuccessMessageInput = {
   previousBillingPeriod?: string | null;
   effectiveAtLabel?: string | null;
   prorationAmountDue?: string | null;
+  prorationCredit?: string | null;
   walletCreditCreated?: number;
   pendingVerification?: boolean;
   alreadyScheduled?: boolean;
@@ -84,20 +85,31 @@ export function buildPlanChangeSuccessMessage(
     if (billingPeriodChanged) {
       return `Plan change scheduled.${input.selectedPlanName ? ` ${input.selectedPlanName}` : " The updated subscription"} will take effect${input.effectiveAtLabel ? ` on ${input.effectiveAtLabel}` : " on the next renewal"}.`;
     }
+    if (input.selectedPlanName) {
+      return `Downgrade scheduled. Your current access remains active until${input.effectiveAtLabel ? ` ${input.effectiveAtLabel}. Then your plan will switch to ${input.selectedPlanName}.` : " the end of the current billing period."}`;
+    }
     return `Plan change scheduled.${input.selectedPlanName ? ` ${input.selectedPlanName} will take effect` : " The new plan will take effect"}${input.effectiveAtLabel ? ` on ${input.effectiveAtLabel}` : " on the next renewal"}.`;
   }
 
   if (mode === "immediate_prorated_upgrade") {
+    const prorationCredit =
+      input.prorationCredit !== null &&
+      input.prorationCredit !== undefined
+        ? Number(input.prorationCredit)
+        : 0;
+    const hasCredit =
+      Number.isFinite(prorationCredit) && prorationCredit > 0;
+
     const chargeNote = hasProrationCharge
-      ? ` $${prorationAmountDue.toFixed(2)} was charged for the remaining term.`
+      ? hasCredit
+        ? ` $${prorationAmountDue.toFixed(2)} charged after $${prorationCredit.toFixed(2)} credit for unused time.`
+        : ` $${prorationAmountDue.toFixed(2)} was charged for the remaining term.`
       : "";
     const downgradeNote = input.replacedScheduledDowngrade
       ? " The scheduled downgrade was removed."
       : "";
     const billingChangeNote = billingPeriodChanged
-      ? input.replacedScheduledDowngrade
-        ? " Future renewals now use the updated billing schedule."
-        : " Future renewals now use the updated billing schedule."
+      ? ` Renewals are now on ${input.targetBillingPeriod} billing.`
       : "";
     return `Plan upgraded.${chargeNote}${downgradeNote}${billingChangeNote}`;
   }

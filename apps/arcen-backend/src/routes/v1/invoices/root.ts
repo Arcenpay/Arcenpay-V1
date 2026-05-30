@@ -17,6 +17,108 @@ const listSchema = z.object({
   q: z.string().optional(),
 });
 
+function asRecord(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return value as Record<string, unknown>;
+}
+
+function readInvoiceTxHash(invoice: {
+  metadata: unknown;
+  payments?: Array<{ txHash: string | null }>;
+}): string | null {
+  const paymentTxHash = invoice.payments?.[0]?.txHash;
+  if (paymentTxHash && /^0x[0-9a-fA-F]{64}$/.test(paymentTxHash)) {
+    return paymentTxHash.toLowerCase();
+  }
+  const metadataTxHash = asRecord(invoice.metadata).txHash;
+  return typeof metadataTxHash === "string" &&
+    /^0x[0-9a-fA-F]{64}$/.test(metadataTxHash)
+    ? metadataTxHash.toLowerCase()
+    : null;
+}
+
+function readSubscriptionActivationInvoiceKey(invoice: {
+  companyId?: string | null;
+  customerWallet?: string | null;
+  customerEmail?: string | null;
+  planId?: string | null;
+  total?: unknown;
+  currency?: string | null;
+  issuedAt?: Date | string | null;
+  metadata: unknown;
+}): string | null {
+  const metadata = asRecord(invoice.metadata);
+  const mode = typeof metadata.mode === "string" ? metadata.mode : null;
+  const canonicalEventName =
+    typeof metadata.canonicalEventName === "string"
+      ? metadata.canonicalEventName
+      : null;
+  const isSubscriptionActivation =
+    mode === "subscription_activation" ||
+    canonicalEventName === "subscription.minted";
+
+  if (!isSubscriptionActivation || !invoice.planId) return null;
+
+  const tokenId =
+    typeof metadata.tokenId === "string" || typeof metadata.tokenId === "number"
+      ? String(metadata.tokenId)
+      : null;
+  const onChainPlanId =
+    typeof metadata.onChainPlanId === "string" ||
+    typeof metadata.onChainPlanId === "number"
+      ? String(metadata.onChainPlanId)
+      : null;
+  if (tokenId && onChainPlanId) {
+    return `activation:${tokenId}:${onChainPlanId}`;
+  }
+
+  const issuedAt =
+    invoice.issuedAt instanceof Date
+      ? invoice.issuedAt
+      : invoice.issuedAt
+        ? new Date(invoice.issuedAt)
+        : null;
+  const issuedDay =
+    issuedAt && !Number.isNaN(issuedAt.getTime())
+      ? issuedAt.toISOString().slice(0, 10)
+      : "unknown-day";
+  const customerKey =
+    invoice.companyId ??
+    invoice.customerWallet?.toLowerCase() ??
+    invoice.customerEmail?.toLowerCase() ??
+    "unknown-customer";
+
+  return [
+    "subscription-activation",
+    customerKey,
+    invoice.planId,
+    String(invoice.total ?? "0"),
+    invoice.currency ?? "USDC",
+    issuedDay,
+  ].join(":");
+}
+
+function scoreInvoiceForDisplay(invoice: {
+  customerEmail?: string | null;
+  customerWallet?: string | null;
+  metadata: unknown;
+  payments?: Array<{ txHash: string | null }>;
+  deliveries?: Array<{ status: string }>;
+}): number {
+  const metadata = asRecord(invoice.metadata);
+  return (
+    (readInvoiceTxHash(invoice) ? 16 : 0) +
+    (invoice.customerEmail ? 8 : 0) +
+    (invoice.customerWallet ? 4 : 0) +
+    (typeof metadata.customerName === "string" && metadata.customerName.trim()
+      ? 2
+      : 0) +
+    (invoice.deliveries?.some((delivery) => delivery.status === "SENT")
+      ? 1
+      : 0)
+  );
+}
+
 const createSchema = z.object({
   environmentMode: z.enum(["DEVELOPMENT", "PRODUCTION"]).default("DEVELOPMENT"),
   customerEmail: z.string().email().optional(),
@@ -109,6 +211,19 @@ export async function GET(c: Context) {
     include: {
       lineItems: true,
       deliveries: { orderBy: { createdAt: "desc" }, take: 3 },
+      payments: {
+        where: { txHash: { not: null } },
+        select: { txHash: true },
+        orderBy: { createdAt: "desc" },
+        take: 1,
+      },
+      company: {
+        select: {
+          name: true,
+          email: true,
+          walletAddress: true,
+        },
+      },
       paymentLinks: {
         select: {
           id: true,
@@ -124,7 +239,42 @@ export async function GET(c: Context) {
     take: 100,
   });
 
-  return c.json({ invoices });
+  const groupedInvoices = new Map<string, (typeof invoices)[number]>();
+  for (const invoice of invoices) {
+    const txHash = readInvoiceTxHash(invoice);
+    const invoiceKey = txHash
+      ? `tx:${txHash}`
+      : (readSubscriptionActivationInvoiceKey(invoice) ??
+        `invoice:${invoice.id}`);
+    const existing = groupedInvoices.get(invoiceKey);
+    if (
+      !existing ||
+      scoreInvoiceForDisplay(invoice) > scoreInvoiceForDisplay(existing)
+    ) {
+      groupedInvoices.set(invoiceKey, invoice);
+    }
+  }
+
+  const dedupedInvoices = Array.from(groupedInvoices.values()).map((invoice) => {
+    const metadata = asRecord(invoice.metadata);
+    const customerName =
+      typeof metadata.customerName === "string" && metadata.customerName.trim()
+        ? metadata.customerName.trim()
+        : invoice.company?.name?.trim() || null;
+
+    return {
+      ...invoice,
+      customerEmail: invoice.customerEmail ?? invoice.company?.email ?? null,
+      customerWallet:
+        invoice.customerWallet ?? invoice.company?.walletAddress ?? null,
+      metadata: {
+        ...metadata,
+        ...(customerName ? { customerName } : {}),
+      },
+    };
+  });
+
+  return c.json({ invoices: dedupedInvoices });
 }
 
 export async function POST(c: Context) {

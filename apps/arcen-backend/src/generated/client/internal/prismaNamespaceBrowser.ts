@@ -261,6 +261,10 @@ export const SubscriberEmailScalarFieldEnum = {
   id: 'id',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
+  scopeKey: 'scopeKey',
+  teamId: 'teamId',
+  environmentId: 'environmentId',
+  companyId: 'companyId',
   walletAddress: 'walletAddress',
   email: 'email',
   planId: 'planId'

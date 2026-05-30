@@ -24,6 +24,15 @@ interface Company {
   email: string | null;
   externalId: string | null;
   activePlanId: string | null;
+  billingPeriod?: "monthly" | "annual" | null;
+  activePlan?: {
+    id: string;
+    name: string;
+    tier: string;
+    price: string;
+    annualPrice?: string | null;
+    billingInterval?: number | null;
+  } | null;
   createdAt: string;
   lastSeenAt: string;
 }
@@ -39,7 +48,15 @@ interface CompanyDetail extends Company {
     usage?: number;
     exceeded?: boolean;
   }[];
-  activePlan: { id: string; name: string; tier: string; price: string } | null;
+  activePlan: {
+    id: string;
+    name: string;
+    tier: string;
+    price: string;
+    annualPrice?: string | null;
+    billingInterval?: number | null;
+  } | null;
+  billingPeriod?: "monthly" | "annual" | null;
   addOnGrants: Array<{
     id: string;
     status: string;
@@ -58,6 +75,22 @@ interface CompanyDetail extends Company {
       acceptedToken: string;
     };
   }>;
+}
+
+function formatPlanAmount(plan: Company["activePlan"], billingPeriod?: "monthly" | "annual" | null) {
+  if (!plan) return "";
+  const amount = billingPeriod === "annual" && plan.annualPrice
+    ? plan.annualPrice
+    : plan.price;
+  const numericAmount = Number(amount);
+  const suffix = billingPeriod === "annual" ? "/yr" : "/mo";
+  return Number.isFinite(numericAmount)
+    ? `$${numericAmount.toFixed(2)}${suffix}`
+    : `${amount}${suffix}`;
+}
+
+function formatBillingPeriodLabel(value?: "monthly" | "annual" | null) {
+  return value === "annual" ? "Yearly" : "Monthly";
 }
 
 // ─── CopyButton ───────────────────────────────────────────────────────────────
@@ -118,9 +151,13 @@ function CompanyDetailContent({ company, onClose }: { company: CompanyDetail; on
             <div className="flex items-center gap-3 p-3 rounded-lg bg-primary/5 border border-primary/20">
               <div className="flex-1">
                 <div className="font-medium text-sm">{company.activePlan.name}</div>
-                <div className="text-xs text-muted-foreground">{company.activePlan.tier}</div>
+                <div className="text-xs text-muted-foreground">
+                  {company.activePlan.tier} · {formatBillingPeriodLabel(company.billingPeriod)}
+                </div>
               </div>
-              <Badge variant="secondary" className="text-xs">{company.activePlan.price}</Badge>
+              <Badge variant="secondary" className="text-xs">
+                {formatPlanAmount(company.activePlan, company.billingPeriod)}
+              </Badge>
             </div>
           ) : (
             <div className="p-3 rounded-lg border border-dashed border-border/60 bg-muted/20 text-sm text-muted-foreground">
@@ -501,9 +538,18 @@ export function CompaniesSection() {
                   </td>
                   <td className="px-4 py-3 text-sm text-muted-foreground hidden lg:table-cell">{c.email ?? <span className="text-muted-foreground/40 text-xs">—</span>}</td>
                   <td className="px-4 py-3">
-                    {c.activePlanId
-                      ? <Badge variant="secondary" className="text-xs">Active</Badge>
-                      : <Badge variant="outline" className="text-xs text-muted-foreground/50">—</Badge>}
+                    {c.activePlan ? (
+                      <div className="flex flex-col gap-1">
+                        <span className="text-sm font-medium">{c.activePlan.name}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {formatBillingPeriodLabel(c.billingPeriod)} · {formatPlanAmount(c.activePlan, c.billingPeriod)}
+                        </span>
+                      </div>
+                    ) : c.activePlanId ? (
+                      <Badge variant="secondary" className="text-xs">Active</Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-xs text-muted-foreground/50">—</Badge>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-xs text-muted-foreground hidden sm:table-cell">
                     {formatRelativeTime(new Date(c.lastSeenAt).getTime() / 1000)}

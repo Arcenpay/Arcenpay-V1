@@ -835,14 +835,25 @@ async function buildBillingEventRequest(
     },
   );
 
-  if (!teamId) {
+  const resolvedTeamId = teamId || (process.env.FALLBACK_TEAM_ID || "").trim() || null;
+
+  if (!resolvedTeamId) {
     throw new Error(
-      `Unable to resolve teamId for billing event ${payload.eventType} (${payload.idempotencyKey})`,
+      `Unable to resolve teamId for billing event ${payload.eventType} (${payload.idempotencyKey}). ` +
+      `onChainPlanId=${payload.onChainPlanId ?? "null"}, tokenId=${payload.sourceTokenId ?? "null"}. ` +
+      `Set FALLBACK_TEAM_ID env var in the facilitator to route events when plan resolution fails.`,
+    );
+  }
+
+  if (!teamId) {
+    console.warn(
+      `[Facilitator] Using FALLBACK_TEAM_ID for billing event ${payload.eventType} (${payload.idempotencyKey}) — plan scope could not be resolved from the dashboard. ` +
+      `onChainPlanId=${payload.onChainPlanId ?? "null"}. Ensure the plan exists in the dashboard catalog with this onChainPlanId.`,
     );
   }
 
   return {
-    teamId,
+    teamId: resolvedTeamId,
     eventType: payload.eventType,
     eventName: payload.eventName,
     schemaVersion: payload.schemaVersion,
@@ -904,18 +915,40 @@ async function buildSubscriptionSyncRequest(
 jobQueue.startWorker<BillingEventJobPayload | SubscriptionSyncJobPayload>(
   "billing",
   async (job) => {
-    if (!DASHBOARD_URL) return;
+    if (!DASHBOARD_URL) {
+      const msg =
+        "[Facilitator] DASHBOARD_URL is not configured. Billing events cannot be routed to the dashboard backend. Set DASHBOARD_URL to your dashboard's origin (e.g. http://localhost:3300) so the facilitator can POST billing events to /api/v1/billing/events.";
+      console.error(msg);
+      throw new Error(msg);
+    }
+    if (!FACILITATOR_SECRET) {
+      const msg =
+        "[Facilitator] FACILITATOR_SECRET is not configured. Billing events cannot be authenticated against the dashboard backend. Set FACILITATOR_SECRET to match the backend's FACILITATOR_SECRET env var.";
+      console.error(msg);
+      throw new Error(msg);
+    }
     if (job.type === "billing_event") {
-      const requestPayload = await buildBillingEventRequest(
-        job.payload as BillingEventJobPayload,
+      const payload = job.payload as BillingEventJobPayload;
+      const teamId = (payload as Record<string, unknown>).teamId;
+      console.log(
+        `[Facilitator] Dispatching billing event ${payload.eventType} (${payload.idempotencyKey}) — teamId=${teamId ?? "null"}, onChainPlanId=${payload.onChainPlanId ?? "null"}`,
       );
+      const requestPayload = await buildBillingEventRequest(payload);
       const ok = await postToDashboard(
         "/api/v1/billing/events",
         requestPayload,
       );
       if (!ok) {
-        throw new Error("Dashboard POST /api/billing/events returned non-2xx");
+        console.error(
+          `[Facilitator] Billing event FAILED: ${payload.eventType} (${payload.idempotencyKey}) — teamId=${requestPayload.teamId}`,
+        );
+        throw new Error(
+          `Dashboard POST /api/billing/events returned non-2xx for event ${payload.idempotencyKey}`,
+        );
       }
+      console.log(
+        `[Facilitator] Billing event DELIVERED: ${payload.eventType} (${payload.idempotencyKey}) — teamId=${requestPayload.teamId}`,
+      );
       return;
     }
 
@@ -1136,7 +1169,12 @@ async function postToDashboard(
   payload: unknown,
   options?: { method?: "POST" | "PATCH" },
 ): Promise<boolean> {
-  if (!DASHBOARD_URL) return false;
+  if (!DASHBOARD_URL) {
+    console.warn(
+      `[Facilitator] Cannot post ${pathname} — DASHBOARD_URL is not configured.`,
+    );
+    return false;
+  }
   try {
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
@@ -1173,10 +1211,18 @@ async function postToDashboard(
 async function resolvePlanScopeFromDashboard(
   onChainPlanId: string,
 ): Promise<{ teamId: string; planId: string | null; environmentId: string | null } | null> {
-  if (!INTERNAL_API_BASE_URL) return null;
+  const internalBaseUrl = INTERNAL_API_BASE_URL || DASHBOARD_URL;
+  if (!internalBaseUrl) {
+    console.warn(
+      "[Facilitator] Neither INTERNAL_API_BASE_URL nor DASHBOARD_URL is configured — unable to resolve plan scope from dashboard. " +
+      "Billing event routing will depend solely on the subscription route store. " +
+      "Set DASHBOARD_URL so on-chain plan IDs can be matched to team/plan records.",
+    );
+    return null;
+  }
 
   const url = new URL(
-    buildInternalApiUrl(INTERNAL_API_BASE_URL, DASHBOARD_PLAN_RESOLVER_PATH),
+    buildInternalApiUrl(internalBaseUrl, DASHBOARD_PLAN_RESOLVER_PATH),
   );
   url.searchParams.set("onChainPlanId", onChainPlanId);
 
@@ -4388,7 +4434,7 @@ function logStartupBanner() {
 ║   🔗  Chain: ${String(CHAIN_ID).padEnd(36)}║
 ║   💰  x402 Protocol: Active                     ║
 ║   📣  Events: ${(eventListenerActive ? "✅  Watching" : "❌  Failed — check RPC_URL").padEnd(35)}║
-${statusLine("Webhooks", !!webhookService, "Active", "Off — set WEBHOOK_URL")}
+${statusLine("Webhooks", true, "Dashboard", "Dashboard")}
 ${statusLine("Email   ", !!emailService, "Active", "Off — set RESEND_API_KEY")}
 ║   ⛓️  Settlement: ${(settlementWriter ? "✅  On-chain" : "⚠️  Verify-only — set SETTLEMENT_PRIVATE_KEY").padEnd(31)}║
 ${statusLine("Redis   ", !!redisUsageStore, "Active", "Off — set REDIS_URL")}

@@ -18,7 +18,7 @@ export default function PlansPage() {
           </p>
         </div>
 
-        <InlineBilling initialView="checkout" />
+        <InlineBilling initialView="portal" />
       </div>
     </main>
   );

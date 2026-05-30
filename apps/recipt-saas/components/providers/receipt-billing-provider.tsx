@@ -121,6 +121,8 @@ function useReceiptBillingValue() {
     isLoaded,
     isSignedIn: Boolean(user),
     isSubscribed: hasActiveEntitlement(scanEntitlement),
+    identityError: session.identifyError,
+    isIdentifying: session.isIdentifying,
     liveWalletAddress,
     planTier: null,
     refetchEntitlements: refetch,

@@ -14,6 +14,19 @@ import type { Prisma } from "../../generated/client/client.js";
 import { getCompanyAddOnGrants } from "../../lib/companies/addon-grants.js";
 import { getCompanyEnvironmentWhere } from "../../lib/environments/company-scope.js";
 
+function asRecord(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return value as Record<string, unknown>;
+}
+
+function normalizeBillingPeriod(value: unknown): "monthly" | "annual" | null {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "annual" || normalized === "yearly") return "annual";
+  if (normalized === "monthly" || normalized === "month") return "monthly";
+  return null;
+}
+
 export async function GET(c: Context) {
   const ctx = await requireAnyAuth(c);
   if (isAnyAuthError(ctx)) return c.json({ ok: false, error: ctx.error }, ctx.status as any);
@@ -64,10 +77,17 @@ export async function GET(c: Context) {
         name: true,
         tier: true,
         price: true,
+        annualPrice: true,
         billingInterval: true,
       },
     });
   }
+
+  const activeBillingPeriod =
+    normalizeBillingPeriod(asRecord(company.traits).billingPeriod) ??
+    (activePlan?.billingInterval && Number(activePlan.billingInterval) >= 31_536_000
+      ? "annual"
+      : "monthly");
 
   const entitlementResults = await resolveEntitlementResults({
     teamId,
@@ -105,6 +125,7 @@ export async function GET(c: Context) {
       logoUrl: company.logoUrl,
       traits: company.traits,
       activePlan,
+      billingPeriod: activeBillingPeriod,
       activeAddOnIds,
       addOnGrants: addOnGrants.map((grant) => ({
         id: grant.id,

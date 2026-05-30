@@ -4,6 +4,19 @@ import { apiError } from "../../../utils/api-response.js";
 import { Prisma } from "../../../generated/client/client.js";
 import { requireAnyAuth, isAnyAuthError } from "../../../lib/auth/require-any-auth.js";
 
+function asRecord(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return value as Record<string, unknown>;
+}
+
+function normalizeBillingPeriod(value: unknown): "monthly" | "annual" | null {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "annual" || normalized === "yearly") return "annual";
+  if (normalized === "monthly" || normalized === "month") return "monthly";
+  return null;
+}
+
 export async function listCompanies(c: Context) {
   const auth = await requireAnyAuth(c);
   if (isAnyAuthError(auth)) {
@@ -47,6 +60,7 @@ export async function listCompanies(c: Context) {
       email: true,
       externalId: true,
       activePlanId: true,
+      traits: true,
       logoUrl: true,
       createdAt: true,
       lastSeenAt: true,
@@ -55,9 +69,49 @@ export async function listCompanies(c: Context) {
 
   const hasMore = companies.length > limit;
   const items = hasMore ? companies.slice(0, limit) : companies;
+  const activePlanIds = [
+    ...new Set(
+      items
+        .map((company) => company.activePlanId)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  ];
+  const activePlans =
+    activePlanIds.length > 0
+      ? await db.catalogPlan.findMany({
+          where: { id: { in: activePlanIds }, teamId },
+          select: {
+            id: true,
+            name: true,
+            tier: true,
+            price: true,
+            annualPrice: true,
+            billingInterval: true,
+          },
+        })
+      : [];
+  const activePlanById = new Map(activePlans.map((plan) => [plan.id, plan]));
 
   return c.json({
-    data: items,
+    data: items.map((company) => {
+      const traits = asRecord(company.traits);
+      const activePlan = company.activePlanId
+        ? activePlanById.get(company.activePlanId) ?? null
+        : null;
+      const billingPeriod =
+        normalizeBillingPeriod(traits.billingPeriod) ??
+        (activePlan?.billingInterval &&
+        Number(activePlan.billingInterval) >= 31_536_000
+          ? "annual"
+          : "monthly");
+
+      return {
+        ...company,
+        traits: undefined,
+        activePlan,
+        billingPeriod,
+      };
+    }),
     count: items.length,
     nextCursor: hasMore ? items[items.length - 1]?.id : undefined,
   });

@@ -33,6 +33,7 @@ import {
   upsertSubscriptionLedgerState,
 } from "../../lib/billing/billing-ledger.js";
 import { syncCustomerUserIdentity } from "../../lib/billing/customer-identity.js";
+import { upsertScopedSubscriberEmail } from "../../lib/billing/subscriber-emails.js";
 import { recordBillingAdjustment } from "../../lib/billing/billing-adjustments.js";
 import { consumeBillingCredit } from "../../lib/billing/billing-balances.js";
 import {
@@ -772,17 +773,13 @@ export async function handleCompanyPlanRequest(
     });
 
     if (companyPaymentAccount && companyUpdates.email) {
-      await db.subscriberEmail.upsert({
-        where: { walletAddress: companyPaymentAccount },
-        update: {
-          email: companyUpdates.email,
-          planId: company.activePlanId ?? planId,
-        },
-        create: {
-          walletAddress: companyPaymentAccount,
-          email: companyUpdates.email,
-          planId: company.activePlanId ?? planId,
-        },
+      await upsertScopedSubscriberEmail({
+        teamId,
+        environmentId: company.environmentId ?? null,
+        companyId: company.id,
+        walletAddress: companyPaymentAccount,
+        email: companyUpdates.email,
+        planId: company.activePlanId ?? planId,
       });
     }
   }
@@ -1646,29 +1643,16 @@ export async function handleCompanyPlanRequest(
         );
       }
 
-      const accessChangePeriodEnd = new Date(accessChange.currentPeriodEnd);
-      const shouldScheduleBillingPeriodActivation =
-        previousPlanId === plan.id &&
-        currentBillingPeriod !== normalizedBillingPeriod &&
-        !hasRenewalBoundaryMoved({
-          previousPeriodEnd: company.subscriptionState?.currentPeriodEnd,
-          nextPeriodEnd: accessChangePeriodEnd,
-        });
-      const lifecycleChangeType = shouldScheduleBillingPeriodActivation
-        ? "billing_period_change"
-        : "upgrade";
-      const lifecycleStage = shouldScheduleBillingPeriodActivation
-        ? "requested"
-        : "applied";
-      const lifecycleMode = shouldScheduleBillingPeriodActivation
-        ? "next_renewal_on_chain"
-        : "immediate_prorated_upgrade";
-      const lifecycleEffectiveAt = shouldScheduleBillingPeriodActivation
-        ? accessChangePeriodEnd
-        : effectiveAt;
-      const activeBillingPeriodAfterChange = shouldScheduleBillingPeriodActivation
-        ? currentBillingPeriod
-        : normalizedBillingPeriod;
+      const upgradedPeriodEnd = new Date(
+        effectiveAt.getTime() + expectedTargetIntervalSeconds * 1000,
+      );
+      const accessChangePeriodEnd = upgradedPeriodEnd;
+      const shouldScheduleBillingPeriodActivation = false;
+      const lifecycleChangeType = "upgrade";
+      const lifecycleStage = "applied";
+      const lifecycleMode = "immediate_prorated_upgrade";
+      const lifecycleEffectiveAt = effectiveAt;
+      const activeBillingPeriodAfterChange = normalizedBillingPeriod;
 
       let upgradeResult: {
         transitionId: string;
@@ -2081,7 +2065,7 @@ export async function handleCompanyPlanRequest(
                 previousPlanId: previousPlanId ?? null,
                 onChainPlanId: accessChange.onChainPlanId,
                 tokenId: accessChange.tokenId,
-                currentPeriodEnd: accessChange.currentPeriodEnd,
+                currentPeriodEnd: accessChangePeriodEnd.toISOString(),
                 autopayConfigTxHash: normalizedAutopayConfigTxHash,
                 accessChangeTxHash: finalizedAccessChangeTxHash,
                 paymentTxHash: normalizedPaymentTxHash,

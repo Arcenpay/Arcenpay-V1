@@ -153,10 +153,41 @@ async function upsertCompany(
       ...(input.email ? { email: input.email } : {}),
       ...(input.id ? { externalId: input.id } : {}),
     };
-    await db.arcenCompany.update({
-      where: { id: existing.id },
-      data: updates,
-    });
+    try {
+      await db.arcenCompany.update({
+        where: { id: existing.id },
+        data: updates,
+      });
+    } catch (err: unknown) {
+      const isP2002 =
+        err instanceof Error &&
+        "code" in err &&
+        (err as { code: string }).code === "P2002";
+      if (isP2002 && walletAddress) {
+        const existingByWallet = await db.arcenCompany.findFirst({
+          where: { teamId, environmentId, walletAddress },
+          select: { id: true, traits: true },
+        });
+        if (existingByWallet) {
+          const mergedTraitsForWallet = {
+            ...(existingByWallet.traits as Record<string, unknown>),
+            ...(traits ?? {}),
+          };
+          await db.arcenCompany.update({
+            where: { id: existingByWallet.id },
+            data: {
+              traits: mergedTraitsForWallet as unknown as Prisma.InputJsonValue,
+              lastSeenAt: new Date(),
+              ...(input.name ? { name: input.name } : {}),
+              ...(input.email ? { email: input.email } : {}),
+              ...(input.id ? { externalId: input.id } : {}),
+            },
+          });
+          return { id: existingByWallet.id, created: false };
+        }
+      }
+      throw err;
+    }
     return { id: existing.id, created: false };
   }
 
@@ -204,19 +235,52 @@ async function upsertUser(
       ...(existing.traits as Record<string, unknown>),
       ...(traits ?? {}),
     };
-    await db.arcenUser.update({
-      where: { id: existing.id },
-      data: {
-        companyId,
-        traits: mergedTraits as unknown as Prisma.InputJsonValue,
-        lastSeenAt: new Date(),
-        ...(input.name ? { name: input.name } : {}),
-        ...(input.email ? { email: input.email } : {}),
-        ...(walletAddress ? { walletAddress } : {}),
-        ...(input.clerk_user_id ? { clerkUserId: input.clerk_user_id } : {}),
-        ...(input.id ? { externalId: input.id } : {}),
-      },
-    });
+    try {
+      await db.arcenUser.update({
+        where: { id: existing.id },
+        data: {
+          companyId,
+          traits: mergedTraits as unknown as Prisma.InputJsonValue,
+          lastSeenAt: new Date(),
+          ...(input.name ? { name: input.name } : {}),
+          ...(input.email ? { email: input.email } : {}),
+          ...(walletAddress ? { walletAddress } : {}),
+          ...(input.clerk_user_id ? { clerkUserId: input.clerk_user_id } : {}),
+          ...(input.id ? { externalId: input.id } : {}),
+        },
+      });
+    } catch (err: unknown) {
+      const isP2002 =
+        err instanceof Error &&
+        "code" in err &&
+        (err as { code?: string }).code === "P2002";
+      if (isP2002 && walletAddress) {
+        const existingByWallet = await db.arcenUser.findFirst({
+          where: { teamId, environmentId, walletAddress },
+          select: { id: true, traits: true },
+        });
+        if (existingByWallet) {
+          const mergedTraitsForWallet = {
+            ...(existingByWallet.traits as Record<string, unknown>),
+            ...(traits ?? {}),
+          };
+          await db.arcenUser.update({
+            where: { id: existingByWallet.id },
+            data: {
+              companyId,
+              traits: mergedTraitsForWallet as unknown as Prisma.InputJsonValue,
+              lastSeenAt: new Date(),
+              ...(input.name ? { name: input.name } : {}),
+              ...(input.email ? { email: input.email } : {}),
+              ...(input.clerk_user_id ? { clerkUserId: input.clerk_user_id } : {}),
+              ...(input.id ? { externalId: input.id } : {}),
+            },
+          });
+          return { id: existingByWallet.id, created: false };
+        }
+      }
+      throw err;
+    }
     return { id: existing.id, created: false };
   }
 

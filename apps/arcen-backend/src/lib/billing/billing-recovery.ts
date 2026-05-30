@@ -11,6 +11,7 @@ import { deliverWebhook } from "../webhooks/deliver-webhook.js";
 import { sendPaidInvoiceReceipt } from "./invoice-notifications.js";
 import { allocateInvoiceNumber, toSix } from "./invoices.js";
 import { syncCustomerUserIdentity } from "./customer-identity.js";
+import { upsertScopedSubscriberEmail } from "./subscriber-emails.js";
 
 const BILLING_RECOVERY_RETRY_DELAYS_MS = [
   5 * 60 * 1000,
@@ -45,6 +46,10 @@ function parseDate(value: unknown): Date | null {
     return Number.isNaN(parsed.getTime()) ? null : parsed;
   }
   return null;
+}
+
+function isUniqueConstraintError(error: unknown): boolean {
+  return (error as { code?: string } | null)?.code === "P2002";
 }
 
 export function computeBillingRecoveryNextAttemptAt(
@@ -102,6 +107,225 @@ export interface FinalizeSubscriptionActivationInput {
   payload: SubscriptionActivationRecoveryPayload;
   taskId?: string | null;
   source?: string;
+}
+
+type ActivationBillingRecordParams = {
+  occurredAt: Date;
+  source: string;
+  subscriptionStateId?: string | null;
+};
+
+async function findSubscriptionActivationInvoice(input: {
+  client: any;
+  teamId: string;
+  companyId: string;
+  planId: string;
+  txHash: string;
+}) {
+  return input.client.invoice.findFirst({
+    where: {
+      teamId: input.teamId,
+      companyId: input.companyId,
+      planId: input.planId,
+      metadata: {
+        path: ["txHash"],
+        equals: input.txHash,
+      } as any,
+    },
+    orderBy: { issuedAt: "desc" },
+  });
+}
+
+async function resolveExistingActivationBillingRecords(input: {
+  txHash: string;
+  idempotencyKey: string;
+  teamId: string;
+  companyId: string;
+  planId: string;
+}) {
+  const existingPayment = await db.payment.findFirst({
+    where: {
+      OR: [
+        { txHash: input.txHash },
+        { idempotencyKey: input.idempotencyKey },
+      ],
+    },
+    select: { id: true, invoiceId: true },
+  });
+
+  const invoice = existingPayment?.invoiceId
+    ? await db.invoice.findUnique({ where: { id: existingPayment.invoiceId } })
+    : await findSubscriptionActivationInvoice({
+        client: db,
+        teamId: input.teamId,
+        companyId: input.companyId,
+        planId: input.planId,
+        txHash: input.txHash,
+      });
+
+  if (!invoice || !existingPayment) {
+    return null;
+  }
+
+  return {
+    invoice,
+    paymentId: existingPayment.id,
+  };
+}
+
+async function createOrReuseSubscriptionActivationBillingRecords(
+  input: FinalizeSubscriptionActivationInput,
+  params: ActivationBillingRecordParams,
+) {
+  const team = await db.team.findUnique({
+    where: { id: input.teamId },
+    select: { slug: true, invoicePrefix: true, environmentMode: true },
+  });
+  const prefix =
+    team?.invoicePrefix ??
+    (team ? `INV-${team.slug.toUpperCase()}` : "INV-ARCENPAY");
+  const invoiceAmount = toSix(input.payload.amount);
+  const paymentIdempotencyKey = `payment:subscription.activate:${input.payload.txHash}`;
+
+  try {
+    return await db.$transaction(async (transaction) => {
+      const existingPayment = await transaction.payment.findFirst({
+        where: {
+          OR: [
+            { txHash: input.payload.txHash },
+            { idempotencyKey: paymentIdempotencyKey },
+          ],
+        },
+        select: { id: true, invoiceId: true },
+      });
+
+      let invoice = existingPayment?.invoiceId
+        ? await transaction.invoice.findUnique({
+            where: { id: existingPayment.invoiceId },
+          })
+        : null;
+
+      if (!invoice) {
+        invoice = await findSubscriptionActivationInvoice({
+          client: transaction,
+          teamId: input.teamId,
+          companyId: input.payload.companyId,
+          planId: input.payload.catalogPlanId,
+          txHash: input.payload.txHash,
+        });
+      }
+
+      if (!invoice) {
+        const invoiceNumber = team
+          ? await allocateInvoiceNumber(input.teamId, prefix, params.occurredAt)
+          : `INV-${Date.now()}`;
+
+        invoice = await transaction.invoice.create({
+          data: {
+            teamId: input.teamId,
+            environmentId: input.payload.environmentId ?? null,
+            environmentMode: team?.environmentMode ?? "PRODUCTION",
+            status: "PAID",
+            number: invoiceNumber,
+            currency: input.payload.currency ?? "USDC",
+            customerEmail: input.payload.subscriberEmail ?? null,
+            customerWallet: normalizeWallet(input.payload.walletAddress),
+            subtotal: invoiceAmount,
+            taxTotal: "0.000000",
+            total: invoiceAmount,
+            amountPaid: invoiceAmount,
+            amountCredited: "0.000000",
+            amountOutstanding: "0.000000",
+            issuedAt: params.occurredAt,
+            paidAt: params.occurredAt,
+            planId: input.payload.catalogPlanId,
+            companyId: input.payload.companyId,
+            metadata: toPrismaJson({
+              source: params.source,
+              mode: "subscription_activation",
+              description: `Subscription activation — ${input.payload.catalogPlanName}`,
+              customerName: input.payload.customerName ?? null,
+              tokenId: input.payload.onChainTokenId,
+              onChainPlanId: input.payload.onChainPlanId,
+              txHash: input.payload.txHash,
+              ...(input.taskId ? { recoveryTaskId: input.taskId } : {}),
+            }),
+            lineItems: {
+              create: {
+                description: `Subscription activation — ${input.payload.catalogPlanName}`,
+                quantity: 1,
+                unitAmount: invoiceAmount,
+                taxRate: "0.0000",
+                lineSubtotal: invoiceAmount,
+                lineTax: "0.000000",
+                lineTotal: invoiceAmount,
+              },
+            },
+          },
+        });
+      }
+
+      if (existingPayment) {
+        await transaction.payment.update({
+          where: { id: existingPayment.id },
+          data: {
+            invoiceId: invoice.id,
+            companyId: input.payload.companyId,
+            subscriptionStateId: params.subscriptionStateId ?? null,
+          },
+        });
+        return { invoice, paymentId: existingPayment.id };
+      }
+
+      const payment = await transaction.payment.create({
+        data: {
+          idempotencyKey: paymentIdempotencyKey,
+          teamId: input.teamId,
+          environmentId: input.payload.environmentId ?? null,
+          companyId: input.payload.companyId,
+          invoiceId: invoice.id,
+          subscriptionStateId: params.subscriptionStateId ?? null,
+          kind: "SUBSCRIPTION_ACTIVATION",
+          status: "SUCCEEDED",
+          amount: invoiceAmount,
+          currency: input.payload.currency ?? "USDC",
+          payerWallet: normalizeWallet(input.payload.walletAddress),
+          recipientWallet: normalizeWallet(input.payload.merchantAddress),
+          acceptedToken: normalizeWallet(input.payload.acceptedToken),
+          txHash: input.payload.txHash,
+          occurredAt: params.occurredAt,
+          settledAt: params.occurredAt,
+          metadata: toPrismaJson({
+            source: params.source,
+            tokenId: input.payload.onChainTokenId,
+            onChainPlanId: input.payload.onChainPlanId,
+            expiration: input.payload.expiration,
+            ...(input.taskId ? { recoveryTaskId: input.taskId } : {}),
+          }),
+        },
+      });
+
+      return { invoice, paymentId: payment.id };
+    });
+  } catch (error) {
+    if (!isUniqueConstraintError(error)) {
+      throw error;
+    }
+
+    const existingRecords = await resolveExistingActivationBillingRecords({
+      txHash: input.payload.txHash,
+      idempotencyKey: paymentIdempotencyKey,
+      teamId: input.teamId,
+      companyId: input.payload.companyId,
+      planId: input.payload.catalogPlanId,
+    });
+
+    if (existingRecords) {
+      return existingRecords;
+    }
+
+    throw error;
+  }
 }
 
 function parseSubscriptionActivationPayload(
@@ -495,17 +719,13 @@ export async function finalizeSubscriptionActivation(
   const source = input.source?.trim() || "billing-recovery";
 
   if (input.payload.subscriberEmail) {
-    await db.subscriberEmail.upsert({
-      where: { walletAddress: normalizeWallet(input.payload.walletAddress)! },
-      update: {
-        email: input.payload.subscriberEmail,
-        planId: input.payload.catalogPlanId,
-      },
-      create: {
-        walletAddress: normalizeWallet(input.payload.walletAddress)!,
-        email: input.payload.subscriberEmail,
-        planId: input.payload.catalogPlanId,
-      },
+    await upsertScopedSubscriberEmail({
+      teamId: input.teamId,
+      environmentId: input.payload.environmentId ?? null,
+      companyId: input.payload.companyId,
+      walletAddress: input.payload.walletAddress,
+      email: input.payload.subscriberEmail,
+      planId: input.payload.catalogPlanId,
     });
   }
 
@@ -583,107 +803,15 @@ export async function finalizeSubscriptionActivation(
     walletAddress: input.payload.walletAddress,
   });
 
-  // Create invoice + record payment directly first, so the data is
-  // guaranteed to be in the database regardless of billing event outcome.
-  const team = await db.team.findUnique({
-    where: { id: input.teamId },
-    select: { slug: true, invoicePrefix: true, environmentMode: true },
-  });
-  const prefix = team?.invoicePrefix ?? (team ? `INV-${team.slug.toUpperCase()}` : "INV-ARCENPAY");
-  const invoiceNumber = team
-    ? await allocateInvoiceNumber(input.teamId, prefix, occurredAt)
-    : `INV-${Date.now()}`;
-  const invoiceAmount = toSix(input.payload.amount);
-
-  const invoice = await db.invoice.create({
-    data: {
-      teamId: input.teamId,
-      environmentId: input.payload.environmentId ?? null,
-      environmentMode: team?.environmentMode ?? "PRODUCTION",
-      status: "PAID",
-      number: invoiceNumber,
-      currency: input.payload.currency ?? "USDC",
-      customerEmail: input.payload.subscriberEmail ?? null,
-      customerWallet: normalizeWallet(input.payload.walletAddress),
-      subtotal: invoiceAmount,
-      taxTotal: "0.000000",
-      total: invoiceAmount,
-      amountPaid: invoiceAmount,
-      amountCredited: "0.000000",
-      amountOutstanding: "0.000000",
-      issuedAt: occurredAt,
-      paidAt: occurredAt,
-      planId: input.payload.catalogPlanId,
-      companyId: input.payload.companyId,
-      metadata: toPrismaJson({
-        source,
-        mode: "subscription_activation",
-        description: `Subscription activation — ${input.payload.catalogPlanName}`,
-        customerName: input.payload.customerName ?? null,
-        tokenId: input.payload.onChainTokenId,
-        onChainPlanId: input.payload.onChainPlanId,
-        txHash: input.payload.txHash,
-        ...(input.taskId ? { recoveryTaskId: input.taskId } : {}),
-      }),
-      lineItems: {
-        create: {
-          description: `Subscription activation — ${input.payload.catalogPlanName}`,
-          quantity: 1,
-          unitAmount: invoiceAmount,
-          taxRate: "0.0000",
-          lineSubtotal: invoiceAmount,
-          lineTax: "0.000000",
-          lineTotal: invoiceAmount,
-        },
-      },
-    },
-  });
-
-  let paymentId: string | null = null;
-  const existingPayment = await db.payment.findFirst({
-    where: { txHash: input.payload.txHash },
-    select: { id: true },
-  });
-  if (existingPayment) {
-    await db.payment.update({
-      where: { id: existingPayment.id },
-      data: {
-        invoiceId: invoice.id,
-        companyId: input.payload.companyId,
-        subscriptionStateId: subscriptionState?.id,
-      },
+  // Create invoice + record payment in one idempotent transaction. If a retry
+  // races the original confirmation, the unique Payment keys roll back the
+  // duplicate invoice attempt and we reuse the original rows.
+  const { invoice, paymentId } =
+    await createOrReuseSubscriptionActivationBillingRecords(input, {
+      occurredAt,
+      source,
+      subscriptionStateId: subscriptionState?.id,
     });
-    paymentId = existingPayment.id;
-  } else {
-    const payment = await db.payment.create({
-      data: {
-        idempotencyKey: `payment:subscription.activate:${input.payload.txHash}`,
-        teamId: input.teamId,
-        environmentId: input.payload.environmentId ?? null,
-        companyId: input.payload.companyId,
-        invoiceId: invoice.id,
-        subscriptionStateId: subscriptionState?.id,
-        kind: "SUBSCRIPTION_ACTIVATION",
-        status: "SUCCEEDED",
-        amount: invoiceAmount,
-        currency: input.payload.currency ?? "USDC",
-        payerWallet: normalizeWallet(input.payload.walletAddress),
-        recipientWallet: normalizeWallet(input.payload.merchantAddress),
-        acceptedToken: normalizeWallet(input.payload.acceptedToken),
-        txHash: input.payload.txHash,
-        occurredAt,
-        settledAt: occurredAt,
-        metadata: toPrismaJson({
-          source,
-          tokenId: input.payload.onChainTokenId,
-          onChainPlanId: input.payload.onChainPlanId,
-          expiration: input.payload.expiration,
-          ...(input.taskId ? { recoveryTaskId: input.taskId } : {}),
-        }),
-      },
-    });
-    paymentId = payment.id;
-  }
 
   // Ingest the billing event as a secondary operation (webhooks + subscription sync).
   // The invoice and payment are already persisted above, so this is non-blocking.
@@ -742,6 +870,7 @@ export async function finalizeSubscriptionActivation(
   return {
     subscriptionState,
     invoiceId: invoice.id,
+    paymentId,
     eventDeduped: billingEvent.deduped,
   };
 }

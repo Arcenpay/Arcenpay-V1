@@ -480,6 +480,19 @@ type PlanChangeConfirmation = {
   prorationEffectiveAt?: string;
 };
 
+type PlanChangeSubmissionResult = {
+  completed: boolean;
+  accessChangeRequired?: boolean;
+  accessChangeNote?: string;
+  preparedTransaction?: {
+    chainId?: number;
+    target?: string;
+    value?: string;
+    data?: string;
+    functionSignature?: string;
+  };
+};
+
 type CancellationConfirmation = {
   intent: SubscriptionCancellationIntent;
   txHash?: string;
@@ -515,7 +528,7 @@ type PlanChangePreviewResponse = {
   error?: string;
 };
 
-const AUTOPAY_START_TIME_BUFFER_SECONDS = 20;
+const AUTOPAY_START_TIME_BUFFER_SECONDS = 20; // stay inside backend activation readiness window
 
 interface PortalState {
   data: ComponentRenderData | null;
@@ -533,7 +546,8 @@ interface PortalState {
 
 type PortalAction =
   | { type: "FETCH_START" }
-  | { type: "FETCH_OK"; data: ComponentRenderData }
+  | { type: "FETCH_OK"; data: ComponentRenderData; view?: PortalView }
+  | { type: "HYDRATE_DATA"; data: ComponentRenderData }
   | { type: "FETCH_ERR"; error: string }
   | { type: "OPEN_CHECKOUT" }
   | { type: "OPEN_UNSUBSCRIBE" }
@@ -560,6 +574,26 @@ const initialState: PortalState = {
   successTxHash: null,
 };
 
+function getViewNavigationAction(
+  view: PortalView,
+): Extract<
+  PortalAction,
+  { type: "OPEN_CHECKOUT" | "OPEN_PAYMENT" | "OPEN_UNSUBSCRIBE" | "GOTO_PORTAL" }
+> {
+  switch (view) {
+    case "checkout":
+      return { type: "OPEN_CHECKOUT" };
+    case "payment":
+      return { type: "OPEN_PAYMENT" };
+    case "unsubscribe":
+      return { type: "OPEN_UNSUBSCRIBE" };
+    case "portal":
+    case "success":
+    default:
+      return { type: "GOTO_PORTAL" };
+  }
+}
+
 function reducer(state: PortalState, action: PortalAction): PortalState {
   switch (action.type) {
     case "FETCH_START":
@@ -571,13 +605,26 @@ function reducer(state: PortalState, action: PortalAction): PortalState {
         actionError: null,
         loading: false,
         data: action.data,
-        view: "portal",
+        view: action.view ?? "portal",
         billingPeriod: resolveActiveBillingPeriod({
           billingPeriod: action.data.billingPeriod,
           activePlan: action.data.activePlan,
         }),
         processing: false,
         flashMsg: null,
+      };
+    case "HYDRATE_DATA":
+      return {
+        ...state,
+        error: null,
+        actionError: null,
+        loading: false,
+        data: action.data,
+        billingPeriod: resolveActiveBillingPeriod({
+          billingPeriod: action.data.billingPeriod,
+          activePlan: action.data.activePlan,
+        }),
+        processing: false,
       };
     case "FETCH_ERR":
       return { ...state, loading: false, error: action.error, actionError: null };
@@ -643,6 +690,19 @@ function reducer(state: PortalState, action: PortalAction): PortalState {
     default:
       return state;
   }
+}
+
+async function readResponseError(
+  response: Response,
+  fallback: string,
+): Promise<string> {
+  const payload = (await response.json().catch(() => ({}))) as {
+    error?: string;
+    detail?: string;
+    message?: string;
+  };
+
+  return payload.detail ?? payload.error ?? payload.message ?? fallback;
 }
 
 // ─── Design helpers ───────────────────────────────────────────────────────────
@@ -2648,6 +2708,119 @@ async function submitWalletTransaction(params: {
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+const API_TIMEOUT_MS = 30_000;
+const PLAN_CHANGE_PAYMENT_STORAGE_PREFIX = "arcenpay:plan-change-payment:";
+
+async function fetchApiWithTimeout(
+  input: RequestInfo,
+  init: RequestInit & { timeoutMs?: number },
+): Promise<Response> {
+  const timeoutMs = init.timeoutMs ?? API_TIMEOUT_MS;
+  const controller = new AbortController();
+  const { signal: callerSignal, ...rest } = init;
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  const mergedSignal = callerSignal
+    ? composeEmbedAbortSignals(callerSignal, controller.signal)
+    : controller.signal;
+
+  try {
+    return await fetch(input, { ...rest, signal: mergedSignal });
+  } catch (e) {
+    if (
+      e instanceof DOMException &&
+      e.name === "AbortError" &&
+      !(callerSignal?.aborted)
+    ) {
+      throw new Error(
+        "Request timed out after " + (timeoutMs / 1000).toFixed(0) + "s. Please check your connection and try again.",
+      );
+    }
+    throw e;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+function composeEmbedAbortSignals(
+  a: AbortSignal,
+  b: AbortSignal,
+): AbortSignal {
+  if (a.aborted || b.aborted) {
+    return AbortSignal.abort();
+  }
+  const controller = new AbortController();
+  const onAbort = () => controller.abort();
+  a.addEventListener("abort", onAbort, { once: true });
+  b.addEventListener("abort", onAbort, { once: true });
+  return controller.signal;
+}
+
+function getPlanChangePaymentStorageKey(input: {
+  companyId?: string | null;
+  paymentAccount?: string | null;
+  targetOnChainPlanId?: string | null;
+  billingPeriod: "monthly" | "annual";
+  chainId?: number | null;
+}): string | null {
+  if (
+    !input.companyId ||
+    !input.paymentAccount ||
+    !input.targetOnChainPlanId ||
+    !input.chainId
+  ) {
+    return null;
+  }
+
+  return [
+    PLAN_CHANGE_PAYMENT_STORAGE_PREFIX,
+    input.chainId,
+    input.companyId.toLowerCase(),
+    input.paymentAccount.toLowerCase(),
+    input.targetOnChainPlanId,
+    input.billingPeriod,
+  ].join(":");
+}
+
+function readStoredPlanChangePayment(
+  key: string | null,
+): (PlanChangeConfirmation & { storedAt?: number }) | null {
+  if (!key || typeof window === "undefined") return null;
+  try {
+    const value = window.sessionStorage.getItem(key);
+    if (!value) return null;
+    const parsed = JSON.parse(value) as PlanChangeConfirmation & {
+      storedAt?: number;
+    };
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredPlanChangePayment(
+  key: string | null,
+  value: PlanChangeConfirmation,
+) {
+  if (!key || typeof window === "undefined") return;
+  try {
+    window.sessionStorage.setItem(
+      key,
+      JSON.stringify({ ...value, storedAt: Date.now() }),
+    );
+  } catch {
+    // Storage is a best-effort retry guard.
+  }
+}
+
+function clearStoredPlanChangePayment(key: string | null) {
+  if (!key || typeof window === "undefined") return;
+  try {
+    window.sessionStorage.removeItem(key);
+  } catch {
+    // Storage is a best-effort retry guard.
+  }
 }
 
 // ─── Responsive container width hook ─────────────────────────────────────────
@@ -5119,7 +5292,7 @@ function CheckoutContent({
     setCouponLoading(true);
     setCouponError("");
     try {
-      const res = await fetch(
+      const res = await fetchApiWithTimeout(
         `${apiBaseUrl}/api/v1/coupons/validate?code=${encodeURIComponent(coupon.trim())}&planId=${encodeURIComponent(effectiveSelectedPlanId)}&billingPeriod=${encodeURIComponent(billingPeriod)}`,
         {
           headers: {
@@ -6195,7 +6368,9 @@ function PaymentContent({
   customerEmail: string;
   onCustomerNameChange: (value: string) => void;
   onCustomerEmailChange: (value: string) => void;
-  onConfirm: (result?: PlanChangeConfirmation) => void;
+  onConfirm: (
+    result?: PlanChangeConfirmation,
+  ) => Promise<PlanChangeSubmissionResult | void> | PlanChangeSubmissionResult | void;
   onActivationComplete: (result: {
     txHash?: string;
     pending?: boolean;
@@ -6239,6 +6414,7 @@ function PaymentContent({
   const [planChangePreviewError, setPlanChangePreviewError] = useState("");
   const [planChangePreviewLoading, setPlanChangePreviewLoading] =
     useState(false);
+  const lastPaymentRef = useRef<PlanChangeConfirmation>({});
 
   const basePrice = getPlanDisplayPrice(selectedPlan, billingPeriod);
   const activeBillingPeriod = resolveActiveBillingPeriod({
@@ -6349,6 +6525,19 @@ function PaymentContent({
     smartAccountAddress.toLowerCase() !==
       resolvedWalletAddress.toLowerCase(),
   );
+  const companyRecord =
+    (data.company as Record<string, unknown> | null | undefined) ?? null;
+  const companyId =
+    typeof companyRecord?.id === "string" && companyRecord.id.trim()
+      ? companyRecord.id.trim()
+      : null;
+  const planChangePaymentStorageKey = getPlanChangePaymentStorageKey({
+    companyId,
+    paymentAccount: smartAccountAddress,
+    targetOnChainPlanId: selectedOnChainPlanId,
+    billingPeriod,
+    chainId,
+  });
 
   async function connectWindowEthereum(walletKind?: WalletKind) {
     setTxError("");
@@ -6483,7 +6672,7 @@ function PaymentContent({
     };
     activationTxHash?: `0x${string}`;
   }) {
-    const res = await fetch(`${apiBaseUrl}/api/v1/subscriptions/activate`, {
+    const res = await fetchApiWithTimeout(`${apiBaseUrl}/api/v1/subscriptions/activate`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -6523,7 +6712,7 @@ function PaymentContent({
     };
     activationTxHash: `0x${string}`;
   }) {
-    const maxAttempts = 6;
+    const maxAttempts = 12;
 
     for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
       const { res, json } = await requestHostedActivation({
@@ -6540,7 +6729,7 @@ function PaymentContent({
       }
 
       if (res.status === 425 && attempt < maxAttempts - 1) {
-        await sleep(2_000);
+        await sleep(3_000);
         continue;
       }
 
@@ -6761,49 +6950,57 @@ function PaymentContent({
 
     await waitForAutopaySetupReadiness();
 
-    const approveData = encodeFunctionData({
-      abi: [
-        {
-          type: "function",
-          name: "approve",
-          inputs: [
-            { name: "spender", type: "address" },
-            { name: "amount", type: "uint256" },
-          ],
-          outputs: [{ name: "", type: "bool" }],
-          stateMutability: "nonpayable",
-        },
-      ],
-      functionName: "approve",
-      args: [autopayAddress, maxApprovalAmount],
-    });
-
-    await submitPaymentAccountTransaction({
-      to: tokenAddress,
-      data: approveData,
-    });
-
     const allowanceCheckClient = createPublicClient({
       chain: getChain(paymentChainId),
       transport: http(),
     });
-    const allowance = (await allowanceCheckClient.readContract({
-      address: tokenAddress,
-      abi: [
-        {
-          type: "function",
-          name: "allowance",
-          inputs: [
-            { name: "owner", type: "address" },
-            { name: "spender", type: "address" },
-          ],
-          outputs: [{ name: "", type: "uint256" }],
-          stateMutability: "view",
-        },
-      ],
-      functionName: "allowance",
-      args: [billingPaymentAccount, autopayAddress],
-    })) as bigint;
+
+    const readAllowance = async () =>
+      (await allowanceCheckClient.readContract({
+        address: tokenAddress,
+        abi: [
+          {
+            type: "function",
+            name: "allowance",
+            inputs: [
+              { name: "owner", type: "address" },
+              { name: "spender", type: "address" },
+            ],
+            outputs: [{ name: "", type: "uint256" }],
+            stateMutability: "view",
+          },
+        ],
+        functionName: "allowance",
+        args: [billingPaymentAccount, autopayAddress],
+      })) as bigint;
+
+    let allowance = await readAllowance();
+
+    if (allowance < chargeAmount) {
+      const approveData = encodeFunctionData({
+        abi: [
+          {
+            type: "function",
+            name: "approve",
+            inputs: [
+              { name: "spender", type: "address" },
+              { name: "amount", type: "uint256" },
+            ],
+            outputs: [{ name: "", type: "bool" }],
+            stateMutability: "nonpayable",
+          },
+        ],
+        functionName: "approve",
+        args: [autopayAddress, maxApprovalAmount],
+      });
+
+      await submitPaymentAccountTransaction({
+        to: tokenAddress,
+        data: approveData,
+      });
+
+      allowance = await readAllowance();
+    }
 
     if (allowance < chargeAmount) {
       throw new Error(
@@ -6821,7 +7018,7 @@ function PaymentContent({
       throw new Error("Select a destination plan before continuing.");
     }
 
-    const res = await fetch(`${apiBaseUrl}/api/v1/companies/plan/preview`, {
+    const res = await fetchApiWithTimeout(`${apiBaseUrl}/api/v1/companies/plan/preview`, {
       method: "POST",
       signal,
       headers: {
@@ -6903,9 +7100,52 @@ function PaymentContent({
   async function handlePay() {
     setTxError("");
     if (price === 0) {
-      onConfirm({});
+      await onConfirm({});
       return;
     }
+
+    const storedPayment = readStoredPlanChangePayment(
+      planChangePaymentStorageKey,
+    );
+    const prevPayment = {
+      ...storedPayment,
+      ...lastPaymentRef.current,
+    };
+    const resumableTxHash =
+      prevPayment.paymentTxHash ??
+      prevPayment.accessChangeTxHash ??
+      prevPayment.autopayConfigTxHash ??
+      prevPayment.txHash;
+    if (resumableTxHash && chainId) {
+      try {
+        const publicClient = createPublicClient({
+          chain: getChain(chainId),
+          transport: http(),
+        });
+        const receipt = await publicClient.getTransactionReceipt({
+          hash: resumableTxHash as `0x${string}`,
+        });
+        if (receipt.status === "success") {
+          setTxStatus("confirmed");
+          const resumedConfirmation = {
+            txHash: prevPayment.txHash ?? resumableTxHash,
+            autopayConfigTxHash: prevPayment.autopayConfigTxHash,
+            accessChangeTxHash: prevPayment.accessChangeTxHash,
+            paymentTxHash: prevPayment.paymentTxHash,
+            prorationEffectiveAt: prevPayment.prorationEffectiveAt,
+          };
+          const resumedResult = await onConfirm(resumedConfirmation);
+          if (resumedResult?.completed) {
+            clearStoredPlanChangePayment(planChangePaymentStorageKey);
+            lastPaymentRef.current = {};
+          }
+          return;
+        }
+      } catch {
+        // tx not found — proceed with new payment
+      }
+    }
+    lastPaymentRef.current = {};
 
     if (unsupportedOnChainAnnualSelection) {
       setTxStatus("error");
@@ -7181,12 +7421,70 @@ function PaymentContent({
       }
 
       setTxStatus("confirmed");
-      onConfirm({
+      const confirmation = {
         txHash: paymentTransferTxHash ?? autopayTxHash,
         autopayConfigTxHash: autopayTxHash,
         paymentTxHash: paymentTransferTxHash,
         prorationEffectiveAt: preview?.effectiveAt,
-      });
+      };
+      lastPaymentRef.current = {
+        txHash: confirmation.txHash,
+        autopayConfigTxHash: autopayTxHash,
+        paymentTxHash: paymentTransferTxHash,
+        prorationEffectiveAt: preview?.effectiveAt,
+      };
+      writeStoredPlanChangePayment(planChangePaymentStorageKey, confirmation);
+
+      const submissionResult = await onConfirm(confirmation);
+      if (submissionResult?.accessChangeRequired) {
+        const preparedTarget =
+          submissionResult.preparedTransaction?.target ?? null;
+        const preparedData =
+          submissionResult.preparedTransaction?.data ?? null;
+
+        if (!preparedTarget || !isAddress(preparedTarget) || !preparedData) {
+          throw new Error(
+            submissionResult.accessChangeNote ??
+              "The subscription access-change transaction was missing.",
+          );
+        }
+
+        setTxStatus("approving");
+        const accessChangeTx = await submitPaymentAccountTransaction({
+          to: preparedTarget as `0x${string}`,
+          data: preparedData as `0x${string}`,
+          smartAccountAddressOverride:
+            smartAccountAddress && isAddress(smartAccountAddress)
+              ? (smartAccountAddress as `0x${string}`)
+              : undefined,
+        });
+
+        const finalConfirmation = {
+          ...confirmation,
+          txHash: accessChangeTx.txHash,
+          accessChangeTxHash: accessChangeTx.txHash,
+        };
+        lastPaymentRef.current = {
+          ...lastPaymentRef.current,
+          txHash: finalConfirmation.txHash,
+          accessChangeTxHash: accessChangeTx.txHash,
+        };
+        writeStoredPlanChangePayment(
+          planChangePaymentStorageKey,
+          finalConfirmation,
+        );
+
+        const finalResult = await onConfirm(finalConfirmation);
+        if (finalResult?.accessChangeRequired) {
+          throw new Error(
+            finalResult.accessChangeNote ??
+              "The subscription access change is still pending verification.",
+          );
+        }
+      }
+
+      clearStoredPlanChangePayment(planChangePaymentStorageKey);
+      lastPaymentRef.current = {};
     } catch (err: unknown) {
       setTxStatus("error");
       const msg = err instanceof Error ? err.message : "Transaction failed";
@@ -8445,18 +8743,18 @@ function UnsubscribeContent({
         return;
       }
 
-      const pauseData = encodeFunctionData({
+      const revokeData = encodeFunctionData({
         abi: [
           {
             type: "function",
-            name: "pauseAccount",
-            inputs: [],
+            name: "onUninstall",
+            inputs: [{ name: "data", type: "bytes" }],
             outputs: [],
             stateMutability: "nonpayable",
           },
         ],
-        functionName: "pauseAccount",
-        args: [],
+        functionName: "onUninstall",
+        args: ["0x"],
       });
 
       let txHash: `0x${string}` | undefined;
@@ -8469,7 +8767,7 @@ function UnsubscribeContent({
             walletClient: resolvedWalletClient,
             smartAccountAddress: smartAccountAddress as `0x${string}`,
             to: autopayAddress,
-            data: pauseData,
+            data: revokeData,
           });
           txHash = result.txHash;
         } catch (error) {
@@ -8490,7 +8788,7 @@ function UnsubscribeContent({
             walletClient: resolvedWalletClient,
             account: resolvedWalletAddress as `0x${string}`,
             to: autopayAddress,
-            data: pauseData,
+            data: revokeData,
           });
           txHash = result.txHash;
         }
@@ -8504,7 +8802,7 @@ function UnsubscribeContent({
           walletClient: resolvedWalletClient,
           account: resolvedWalletAddress as `0x${string}`,
           to: autopayAddress,
-          data: pauseData,
+          data: revokeData,
         });
         txHash = result.txHash;
       }
@@ -8585,6 +8883,24 @@ function UnsubscribeContent({
               ? "We will stop future automatic payments now. Your current plan stays active until the end of the current billing period, then your subscription moves to Free."
               : "Your current plan stays active until the end of the current billing period, then your subscription moves to Free."}
         </div>
+        {!scheduledCancellation && (
+          <div
+            style={{
+              padding: "10px 12px",
+              background: "#f9fafb",
+              border: "1px solid #e5e7eb",
+              borderRadius: 8,
+              fontSize: tokens.size - 2,
+              color: tokens.mutedColor,
+              lineHeight: 1.6,
+              marginBottom: 20,
+            }}
+          >
+            Your saved projects and billing history remain available. Premium
+            features stop only after the paid period ends, and you can
+            reactivate anytime.
+          </div>
+        )}
         {requiresOnChainCancellation && (
           <div
             style={{
@@ -9252,14 +9568,21 @@ export function ArcenEmbed({
   );
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
+  const initialViewRef = useRef<PortalView>(initialView ?? "portal");
+  const onViewChangeRef = useRef(onViewChange);
   const tokenRef = useRef(resolvedToken);
   const baseRef = useRef(resolvedBaseUrl);
   const abortRef = useRef<AbortController | null>(null);
+  const hasEmittedViewChangeRef = useRef(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const containerWidth = useContainerWidth(containerRef);
 
   const modalContentRef = useRef<HTMLDivElement | null>(null);
   const [modalContentWidth, setModalContentWidth] = useState(0);
+
+  useEffect(() => {
+    onViewChangeRef.current = onViewChange;
+  }, [onViewChange]);
 
   useEffect(() => {
     const el = modalContentRef.current;
@@ -9291,69 +9614,109 @@ export function ArcenEmbed({
 
   // Notify parent whenever view changes
   useEffect(() => {
-    onViewChange?.(state.view);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (!hasEmittedViewChangeRef.current) {
+      hasEmittedViewChangeRef.current = true;
+      return;
+    }
+    onViewChangeRef.current?.(state.view);
   }, [state.view]);
   useEffect(() => {
     tokenRef.current = accessToken ?? resolvedToken;
     baseRef.current = resolvedBaseUrl;
   }, [accessToken, resolvedToken, resolvedBaseUrl]);
 
-  const fetchData = useCallback(
+  const requestRenderData = useCallback(
     async (signal?: AbortSignal) => {
+      const res = await fetchApiWithTimeout(
+        `${baseRef.current}/api/v1/components/${resolvedId}/render`,
+        {
+          cache: "no-store",
+          signal,
+          headers: { Authorization: `Bearer ${tokenRef.current}` },
+        },
+      );
+      if (!res.ok) {
+        if (res.status === 401) throw new Error("__TOKEN_EXPIRED__");
+        throw new Error(await readResponseError(res, `HTTP ${res.status}`));
+      }
+      const json = await res.json();
+      return json.data as ComponentRenderData;
+    },
+    [resolvedId],
+  );
+
+  const fetchData = useCallback(
+    async (signal?: AbortSignal, options?: { view?: PortalView }) => {
       dispatch({ type: "FETCH_START" });
       try {
-        const res = await fetch(
-          `${baseRef.current}/api/v1/components/${resolvedId}/render`,
-          {
-            signal,
-            headers: { Authorization: `Bearer ${tokenRef.current}` },
-          },
-        );
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-          throw new Error(
-            ((err as Record<string, unknown>).error as string) ??
-              `HTTP ${res.status}`,
-          );
-        }
-        const json = await res.json();
-        dispatch({ type: "FETCH_OK", data: json.data as ComponentRenderData });
+        dispatch({
+          type: "FETCH_OK",
+          data: await requestRenderData(signal),
+          view: options?.view,
+        });
       } catch (e: unknown) {
-        if (e instanceof DOMException && e.name === "AbortError") return;
+        if (e instanceof DOMException && e.name === "AbortError") {
+          return;
+        }
         dispatch({
           type: "FETCH_ERR",
           error: e instanceof Error ? e.message : "Failed to load component",
         });
       }
     },
-    [resolvedId],
+    [requestRenderData],
+  );
+
+  const hydrateRenderDataInBackground = useCallback(
+    (label: string, options?: { attempts?: number; intervalMs?: number }) => {
+      const attempts = options?.attempts ?? 6;
+      const intervalMs = options?.intervalMs ?? 1_500;
+
+      void (async () => {
+        let lastError: unknown = null;
+        for (let attempt = 0; attempt < attempts; attempt += 1) {
+          if (attempt > 0) {
+            await sleep(intervalMs);
+          }
+          try {
+            const nextData = await requestRenderData();
+            dispatch({ type: "HYDRATE_DATA", data: nextData });
+            lastError = null;
+          } catch (cause) {
+            lastError = cause;
+          }
+        }
+        if (lastError) {
+          throw lastError;
+        }
+      })().catch((cause) => {
+        console.warn(`[ArcenEmbed] ${label} refresh failed after success:`, cause);
+      });
+    },
+    [requestRenderData],
   );
 
   useEffect(() => {
     if (mockData) {
-      dispatch({ type: "FETCH_OK", data: mockData });
-      if (initialView && initialView !== "portal") {
-        dispatch({
-          type:
-            initialView === "checkout"
-              ? "OPEN_CHECKOUT"
-              : initialView === "payment"
-                ? "OPEN_PAYMENT"
-                : initialView === "unsubscribe"
-                  ? "OPEN_UNSUBSCRIBE"
-                  : "GOTO_PORTAL",
-        });
-      }
+      dispatch({
+        type: "FETCH_OK",
+        data: mockData,
+        view: initialViewRef.current,
+      });
       return;
     }
     const controller = new AbortController();
     abortRef.current = controller;
-    fetchData(controller.signal);
+    fetchData(controller.signal, { view: initialViewRef.current });
     return () => {
       abortRef.current?.abort();
     };
-  }, [fetchData, mockData, initialView]);
+  }, [fetchData, mockData]);
+
+  useEffect(() => {
+    if (!mockData || !initialView) return;
+    dispatch(getViewNavigationAction(initialView));
+  }, [initialView, mockData]);
 
   useEffect(() => {
     setCouponQuote((current) => {
@@ -9390,7 +9753,10 @@ export function ArcenEmbed({
       body?: Record<string, unknown>,
       signal?: AbortSignal,
     ) => {
-      const res = await fetch(`${baseRef.current}${path}`, {
+      const url = `${baseRef.current}${path}`;
+      const token = tokenRef.current ? `${tokenRef.current.slice(0, 8)}...` : "none";
+      console.log(`[ArcenEmbed] POST ${url} (token=${token})`);
+      const res = await fetchApiWithTimeout(url, {
         method: "POST",
         signal,
         headers: {
@@ -9400,13 +9766,16 @@ export function ArcenEmbed({
         body: JSON.stringify(body ?? {}),
       });
       if (!res.ok) {
-        // Detect token expiry specifically — bubble up a sentinel so callers can show a refresh UI
+        const errBody = await readResponseError(res, `HTTP ${res.status}`);
+        console.error(`[ArcenEmbed] POST ${url} → ${res.status}: ${errBody}`);
+        if (res.status === 425) {
+          const retryDelayMs = 3_000;
+          console.log(`[ArcenEmbed] Auto-retrying in ${retryDelayMs / 1000}s (receipt not found / pending confirmations)...`);
+          await sleep(retryDelayMs);
+          return callApi(path, body, signal);
+        }
         if (res.status === 401) throw new Error("__TOKEN_EXPIRED__");
-        const err = await res.json().catch(() => ({}));
-        throw new Error(
-          ((err as Record<string, unknown>).error as string) ??
-            `HTTP ${res.status}`,
-        );
+        throw new Error(errBody);
       }
       return res.json();
     },
@@ -9414,8 +9783,14 @@ export function ArcenEmbed({
   );
 
   const handleSwitchPlan = useCallback(
-    async (planId: string, confirmation?: PlanChangeConfirmation) => {
-      dispatch({ type: "PROCESSING_START" });
+    async (
+      planId: string,
+      confirmation?: PlanChangeConfirmation,
+      options?: { returnAccessChange?: boolean; manageProcessing?: boolean },
+    ): Promise<PlanChangeSubmissionResult | void> => {
+      if (options?.manageProcessing !== false) {
+        dispatch({ type: "PROCESSING_START" });
+      }
       try {
         const normalizedCustomerName = normalizeCustomerName(customerName);
         const normalizedCustomerEmail = normalizeCustomerEmail(customerEmail);
@@ -9472,15 +9847,27 @@ export function ArcenEmbed({
               response as {
                 data?: {
                   accessChangeNote?: string;
+                  preparedTransaction?: PlanChangeSubmissionResult["preparedTransaction"];
                 };
               }
             )?.data?.accessChangeNote ??
             "ArcenPay could not finish this subscription switch yet. Refresh the portal and try the plan change again.";
+          if (options?.returnAccessChange) {
+            return {
+              completed: false,
+              accessChangeRequired: true,
+              accessChangeNote,
+              preparedTransaction: (
+                response as {
+                  data?: {
+                    preparedTransaction?: PlanChangeSubmissionResult["preparedTransaction"];
+                  };
+                }
+              )?.data?.preparedTransaction,
+            };
+          }
           throw new Error(accessChangeNote);
         }
-        await fetchData();
-        setCouponQuote(null);
-        onPlanChange?.(planId);
         const selectedPlan =
           state.data?.plans.find(
             (plan: ComponentPlanSummary) => plan.id === planId,
@@ -9503,6 +9890,9 @@ export function ArcenEmbed({
         const prorationAmountDue =
           (response as { data?: { proration?: { amountDue?: string } } })?.data
             ?.proration?.amountDue ?? null;
+        const prorationCredit =
+          (response as { data?: { proration?: { unusedOldPlanCredit?: string } } })?.data
+            ?.proration?.unusedOldPlanCredit ?? null;
         const effectiveAt =
           (response as { data?: { effectiveAt?: string } })?.data
             ?.effectiveAt ?? null;
@@ -9524,6 +9914,7 @@ export function ArcenEmbed({
             previousBillingPeriod,
             effectiveAtLabel,
             prorationAmountDue,
+            prorationCredit,
             walletCreditCreated,
             pendingVerification,
             alreadyScheduled,
@@ -9533,20 +9924,30 @@ export function ArcenEmbed({
           }),
           txHash: successTxHash,
         });
+        setCouponQuote(null);
+        onPlanChange?.(planId);
+        hydrateRenderDataInBackground("plan change");
+        return { completed: true };
       } catch (e: unknown) {
-        if (e instanceof DOMException && e.name === "AbortError") return;
+        if (e instanceof DOMException && e.name === "AbortError") {
+          dispatch({ type: "PROCESSING_ERR", error: "Request cancelled" });
+          return;
+        }
         const msg = e instanceof Error ? e.message : "Failed to switch plan";
         dispatch({
           type: msg === "__TOKEN_EXPIRED__" ? "FETCH_ERR" : "PROCESSING_ERR",
           error: msg === "__TOKEN_EXPIRED__" ? "__TOKEN_EXPIRED__" : msg,
         });
+        if (options?.manageProcessing === false) {
+          throw e;
+        }
       }
     },
     [
       callApi,
       couponQuote,
       customerEmail,
-      fetchData,
+      hydrateRenderDataInBackground,
       onPlanChange,
       state.data,
       state.billingPeriod,
@@ -9570,19 +9971,6 @@ export function ArcenEmbed({
         (plan: ComponentPlanSummary) => plan.id === effectivePlanId,
       );
 
-      await fetchData();
-      if (result.pending) {
-        for (let attempt = 0; attempt < 3; attempt += 1) {
-          await sleep(1_500);
-          await fetchData();
-        }
-      }
-      setCouponQuote(null);
-
-      if (selectedPlan?.id) {
-        onPlanChange?.(selectedPlan.id);
-      }
-
       dispatch({
         type: "GOTO_SUCCESS",
         successMsg:
@@ -9592,8 +9980,24 @@ export function ArcenEmbed({
             : "Subscription activated!"),
         txHash: result.txHash,
       });
+      setCouponQuote(null);
+
+      if (selectedPlan?.id) {
+        onPlanChange?.(selectedPlan.id);
+      }
+
+      hydrateRenderDataInBackground("activation", {
+        attempts: result.pending ? 12 : 10,
+        intervalMs: 2_000,
+      });
     },
-    [fetchData, onPlanChange, state.billingPeriod, state.data, state.selectedPlanId],
+    [
+      hydrateRenderDataInBackground,
+      onPlanChange,
+      state.billingPeriod,
+      state.data,
+      state.selectedPlanId,
+    ],
   );
 
   const handleUnsubscribe = useCallback(
@@ -9606,7 +10010,6 @@ export function ArcenEmbed({
           buildCancellationRequestBody(confirmation),
           unsubController.signal,
         );
-        await fetchData();
         const mode = String(
           (response as { data?: { mode?: string } })?.data?.mode ?? "",
         );
@@ -9632,14 +10035,19 @@ export function ArcenEmbed({
             successMsg: feedback.successMsg,
             txHash: confirmation.txHash,
           });
+          hydrateRenderDataInBackground("cancellation");
         } else {
+          await fetchData();
           dispatch({
             type: "GOTO_PORTAL",
             flashMsg: feedback.flashMsg,
           });
         }
       } catch (e: unknown) {
-        if (e instanceof DOMException && e.name === "AbortError") return;
+        if (e instanceof DOMException && e.name === "AbortError") {
+          dispatch({ type: "PROCESSING_ERR", error: "Request cancelled" });
+          return;
+        }
         const msg =
           e instanceof Error ? e.message : "Failed to cancel subscription";
         dispatch({
@@ -9648,7 +10056,7 @@ export function ArcenEmbed({
         });
       }
     },
-    [callApi, fetchData],
+    [callApi, fetchData, hydrateRenderDataInBackground],
   );
 
   const {
@@ -9690,10 +10098,18 @@ export function ArcenEmbed({
       return;
     }
 
+    if (
+      state.data.activePlan.onChainPlanId &&
+      getScheduledCancellationTransition(state.data)
+    ) {
+      dispatch({ type: "SELECT_PLAN", planId: state.data.activePlan.id });
+      dispatch({ type: "OPEN_PAYMENT" });
+      return;
+    }
+
     dispatch({ type: "PROCESSING_START" });
     try {
       const response = await callApi("/api/v1/companies/resume", {});
-      await fetchData();
       const effectiveAt =
         (response as { data?: { effectiveAt?: string | null } })?.data
           ?.effectiveAt ?? null;
@@ -9706,6 +10122,7 @@ export function ArcenEmbed({
           ? `Subscription resumed. Future renewals remain active through ${effectiveAtLabel} and beyond.`
           : "Subscription resumed. Future renewals are active again.",
       });
+      hydrateRenderDataInBackground("resume");
     } catch (e: unknown) {
       const msg =
         e instanceof Error ? e.message : "Failed to resume subscription";
@@ -9714,7 +10131,7 @@ export function ArcenEmbed({
         error: msg === "__TOKEN_EXPIRED__" ? "__TOKEN_EXPIRED__" : msg,
       });
     }
-  }, [allowPortalPlanChanges, callApi, fetchData, state.data]);
+  }, [allowPortalPlanChanges, callApi, hydrateRenderDataInBackground, state.data]);
 
   // Guard: loading — show skeleton first
   if (loading) {
@@ -9950,10 +10367,14 @@ export function ArcenEmbed({
   }
 
   if (error) {
+    const normalizedError = error.trim().toLowerCase();
     const isExpired =
       error.includes("__TOKEN_EXPIRED__") ||
-      error.toLowerCase().includes("expired") ||
-      error.toLowerCase().includes("invalid") ||
+      normalizedError === "401" ||
+      normalizedError === "access token required" ||
+      normalizedError === "invalid or expired access token" ||
+      normalizedError.includes("access token expired") ||
+      normalizedError.includes("billing session has timed out") ||
       error === "401";
     return (
       <div
@@ -10156,7 +10577,10 @@ export function ArcenEmbed({
               onCustomerEmailChange={setCustomerEmail}
               onConfirm={(txHash) => {
                 if (effectiveSelectedPlanId) {
-                  handleSwitchPlan(effectiveSelectedPlanId, txHash);
+                  return handleSwitchPlan(effectiveSelectedPlanId, txHash, {
+                    returnAccessChange: true,
+                    manageProcessing: false,
+                  });
                 }
               }}
               onActivationComplete={handleActivateSubscription}
@@ -10243,7 +10667,14 @@ export function ArcenEmbed({
                       selectedBillingPeriod: billingPeriod,
                     });
                     if (targetId && hasBillingSelectionChange) {
-                      handleSwitchPlan(targetId);
+                      const targetPlan = data.plans.find((p) => p.id === targetId);
+                      const targetPrice = parseFloat(String(targetPlan?.price ?? "0"));
+                      const currentPrice = parseFloat(String(data.activePlan?.price ?? "0"));
+                      if (targetPrice <= 0 && currentPrice > 0 && allowPortalCancellation) {
+                        dispatch({ type: "OPEN_UNSUBSCRIBE" });
+                      } else {
+                        handleSwitchPlan(targetId);
+                      }
                     } else {
                       dispatch({ type: "GOTO_PORTAL" });
                     }
@@ -10271,7 +10702,10 @@ export function ArcenEmbed({
                   onCustomerEmailChange={setCustomerEmail}
                   onConfirm={(txHash) => {
                     if (effectiveSelectedPlanId) {
-                      handleSwitchPlan(effectiveSelectedPlanId, txHash);
+                      return handleSwitchPlan(effectiveSelectedPlanId, txHash, {
+                        returnAccessChange: true,
+                        manageProcessing: false,
+                      });
                     }
                   }}
                   onActivationComplete={handleActivateSubscription}

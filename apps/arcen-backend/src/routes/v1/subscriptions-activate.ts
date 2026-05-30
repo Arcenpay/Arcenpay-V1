@@ -351,13 +351,40 @@ async function upsertCompanyForActivation(
     if (keys.name?.trim()) updates.name = keys.name.trim();
     if (keys.email?.trim()) updates.email = keys.email.trim();
     if (keys.wallet?.trim()) {
-      updates.walletAddress = keys.wallet.trim().toLowerCase();
+      const normalizedWallet = keys.wallet.trim().toLowerCase();
+      updates.walletAddress = normalizedWallet;
     }
     if (Object.keys(updates).length > 0) {
-      await db.arcenCompany.update({
-        where: { id: existing.id },
-        data: updates,
-      });
+      try {
+        await db.arcenCompany.update({
+          where: { id: existing.id },
+          data: updates,
+        });
+      } catch (err: unknown) {
+        const isUniqueConstraintError =
+          err instanceof Error &&
+          "code" in err &&
+          (err as { code: string }).code === "P2002";
+        if (isUniqueConstraintError && keys.wallet?.trim()) {
+          const normalizedWallet = keys.wallet.trim().toLowerCase();
+          const existingByWallet = await db.arcenCompany.findFirst({
+            where: {
+              teamId,
+              environmentId: environmentId ?? null,
+              walletAddress: normalizedWallet,
+            },
+            select: { id: true, activePlanId: true },
+          });
+          if (existingByWallet) {
+            return {
+              id: existingByWallet.id,
+              activePlanId: existingByWallet.activePlanId,
+              created: false,
+            };
+          }
+        }
+        throw err;
+      }
     }
     return {
       id: existing.id,
@@ -668,82 +695,10 @@ export async function POST(c: Context) {
     );
   }
 
-  const [tokenBalance, tokenAllowance, tokenDecimals, tokenSymbol] =
-    await Promise.all([
-      publicClient.readContract({
-        address: acceptedTokenAddress,
-        abi: erc20ReadAbi,
-        functionName: "balanceOf",
-        args: [paymentAccount],
-      }) as Promise<bigint>,
-      publicClient.readContract({
-        address: acceptedTokenAddress,
-        abi: erc20ReadAbi,
-        functionName: "allowance",
-        args: [paymentAccount, autopayAddress],
-      }) as Promise<bigint>,
-      publicClient
-        .readContract({
-          address: acceptedTokenAddress,
-          abi: erc20ReadAbi,
-          functionName: "decimals",
-        })
-        .then((value) => Number(value))
-        .catch(() => 6),
-      publicClient
-        .readContract({
-          address: acceptedTokenAddress,
-          abi: erc20ReadAbi,
-          functionName: "symbol",
-        })
-        .then((value) => String(value))
-        .catch(() => "tokens"),
-    ]);
-
-  if (tokenBalance < chargeAmount) {
-    return c.json(
-      {
-        error:
-          `The payment account does not have enough ${tokenSymbol} for the first charge. ` +
-          `Required: ${formatTokenAmount(chargeAmount, tokenDecimals, tokenSymbol)}. ` +
-          `Available: ${formatTokenAmount(tokenBalance, tokenDecimals, tokenSymbol)}.`,
-      },
-      409,
-      corsHeaders(origin),
-    );
-  }
-
-  if (tokenAllowance < chargeAmount) {
-    return c.json(
-      {
-        error:
-          `The payment account has not approved enough ${tokenSymbol} for autopay. ` +
-          `Required: ${formatTokenAmount(chargeAmount, tokenDecimals, tokenSymbol)}. ` +
-          `Approved: ${formatTokenAmount(tokenAllowance, tokenDecimals, tokenSymbol)}.`,
-      },
-      409,
-      corsHeaders(origin),
-    );
-  }
-
-  const startTime = Number(autopayConfig?.startTime ?? 0n);
-  const latestBlock = await publicClient.getBlock({ blockTag: "latest" });
-  const nowSeconds = Number(latestBlock.timestamp);
-  if (startTime > nowSeconds) {
-    const waitSeconds = startTime - nowSeconds;
-
-    if (waitSeconds > 45) {
-      return c.json(
-        {
-          error: `Autopay cannot start yet. The configured start time is ${new Date(startTime * 1000).toISOString()}.`,
-        },
-        409,
-        corsHeaders(origin),
-      );
-    }
-
-    await sleep((waitSeconds + 1) * 1000);
-  }
+  const submittedActivationTxHash =
+    (parsed.data.activationTxHash ?? parsed.data.txHash)?.toLowerCase() as
+      | `0x${string}`
+      | undefined;
 
   const existingTokenId = await readActiveWalletSubscriptionTokenId({
     publicClient,
@@ -803,6 +758,127 @@ export async function POST(c: Context) {
     });
 
     if (existingOnChainPlanId === onChainPlanId.toString()) {
+      let invoiceId: string | null = null;
+      let paymentId: string | null = null;
+      let recoveryTaskId: string | null = null;
+      let recoveryPending = false;
+
+      if (submittedActivationTxHash) {
+        const [activationTransaction, activationReceipt, subscriberEmail] =
+          await Promise.all([
+            publicClient
+              .getTransaction({ hash: submittedActivationTxHash })
+              .catch(() => null),
+            publicClient
+              .getTransactionReceipt({ hash: submittedActivationTxHash })
+              .catch(() => null),
+            resolveBillingRecipientEmail({
+              teamId,
+              environmentId: catalogPlan.environmentId ?? null,
+              explicitEmail:
+                parsed.data.subscriberEmail ?? sessionDefaults?.userEmail ?? null,
+              accessTokenUserId: embedTokenContext?.userId ?? null,
+              accessTokenCompanyId: embedTokenContext?.companyId ?? null,
+              companyId: company.id,
+              walletAddress: paymentAccount,
+            }),
+          ]);
+
+        let activationTxMatches = false;
+        if (
+          activationTransaction?.to?.toLowerCase() ===
+            autopayAddress.toLowerCase() &&
+          activationReceipt?.status === "success"
+        ) {
+          try {
+            const decoded = decodeFunctionData({
+              abi: ERC7579AutopayModuleABI,
+              data: activationTransaction.input,
+            });
+            const [decodedAccount, decodedAmount] = decoded.args as [
+              `0x${string}`,
+              bigint,
+            ];
+            activationTxMatches =
+              decoded.functionName === "execute" &&
+              decodedAccount.toLowerCase() === paymentAccount &&
+              decodedAmount === chargeAmount;
+          } catch {
+            activationTxMatches = false;
+          }
+        }
+
+        if (!activationTxMatches) {
+          console.warn(
+            "[subscriptions/activate] Skipping existing-token invoice finalization because the supplied activation tx could not be verified.",
+          );
+        } else {
+          let occurredAt = new Date();
+          if (activationReceipt?.blockNumber != null) {
+            const activationBlock = await publicClient
+              .getBlock({ blockNumber: activationReceipt.blockNumber })
+              .catch(() => null);
+            if (activationBlock?.timestamp != null) {
+              occurredAt = new Date(Number(activationBlock.timestamp) * 1000);
+            }
+          }
+
+          const finalizationPayload = {
+            companyId: company.id,
+            customerUserId:
+              embedTokenContext?.userId ?? sessionDefaults?.userId ?? null,
+            environmentId: catalogPlan.environmentId ?? null,
+            walletAddress: paymentAccount,
+            catalogPlanId: existingCatalogPlan?.id ?? catalogPlan.id,
+            catalogPlanName: existingCatalogPlan?.name ?? catalogPlan.name,
+            billingPeriod: resolvedBillingPeriod,
+            customerName:
+              typeof activationCompanyInput.name === "string" &&
+              activationCompanyInput.name.trim()
+                ? activationCompanyInput.name.trim()
+                : null,
+            onChainPlanId: existingOnChainPlanId,
+            onChainTokenId: existingTokenId.toString(),
+            expiration: existingExpiration.toString(),
+            txHash: submittedActivationTxHash,
+            amount: Number(chargeAmount) / 1e6,
+            currency: "USDC",
+            merchantAddress,
+            acceptedToken: catalogPlan.acceptedToken ?? null,
+            subscriberEmail,
+            occurredAt: occurredAt.toISOString(),
+            previousPlanId: company.activePlanId ?? null,
+          };
+
+          try {
+            const finalization = await finalizeSubscriptionActivation({
+              teamId,
+              payload: finalizationPayload,
+              source: "subscription.activate.reconcile",
+            });
+            invoiceId = finalization.invoiceId;
+            paymentId = finalization.paymentId;
+          } catch (finalizationError) {
+            console.error(
+              "[subscriptions/activate] Existing active subscription finalization failed; queuing recovery task.",
+              finalizationError,
+            );
+
+            const recoveryTask = await enqueueSubscriptionActivationRecovery({
+              teamId,
+              ...finalizationPayload,
+              occurredAt,
+            });
+            recoveryTaskId = recoveryTask.id;
+
+            const recoveryResult = await processBillingRecoveryTask({
+              taskId: recoveryTask.id,
+            });
+            recoveryPending = !recoveryResult.ok;
+          }
+        }
+      }
+
       const resumedCancellation =
         await clearScheduledCancellationTransition(company.id);
 
@@ -816,9 +892,13 @@ export async function POST(c: Context) {
             alreadyActive: true,
             reconciled: true,
             resumedCancellation,
+            invoiceId,
+            paymentId,
+            recoveryTaskId,
+            recoveryPending,
           },
         },
-        200,
+        recoveryPending ? 202 : 200,
         corsHeaders(origin),
       );
     }
@@ -840,6 +920,91 @@ export async function POST(c: Context) {
       409,
       corsHeaders(origin),
     );
+  }
+
+  const [tokenBalance, tokenAllowance, tokenDecimals, tokenSymbol] =
+    await Promise.all([
+      publicClient.readContract({
+        address: acceptedTokenAddress,
+        abi: erc20ReadAbi,
+        functionName: "balanceOf",
+        args: [paymentAccount],
+      }) as Promise<bigint>,
+      publicClient.readContract({
+        address: acceptedTokenAddress,
+        abi: erc20ReadAbi,
+        functionName: "allowance",
+        args: [paymentAccount, autopayAddress],
+      }) as Promise<bigint>,
+      publicClient
+        .readContract({
+          address: acceptedTokenAddress,
+          abi: erc20ReadAbi,
+          functionName: "decimals",
+        })
+        .then((value) => Number(value))
+        .catch(() => 6),
+      publicClient
+        .readContract({
+          address: acceptedTokenAddress,
+          abi: erc20ReadAbi,
+          functionName: "symbol",
+        })
+        .then((value) => String(value))
+        .catch(() => "tokens"),
+    ]);
+
+  if (tokenBalance < chargeAmount && !isInitialized) {
+    return c.json(
+      {
+        error:
+          `The payment account does not have enough ${tokenSymbol} for the first charge. ` +
+          `Required: ${formatTokenAmount(chargeAmount, tokenDecimals, tokenSymbol)}. ` +
+          `Available: ${formatTokenAmount(tokenBalance, tokenDecimals, tokenSymbol)}.`,
+      },
+      409,
+      corsHeaders(origin),
+    );
+  }
+
+  if (tokenBalance < chargeAmount && isInitialized) {
+    console.warn(
+      `[subscriptions-activate] Payment account balance (${formatTokenAmount(tokenBalance, tokenDecimals, tokenSymbol)}) ` +
+      `is below the charge amount (${formatTokenAmount(chargeAmount, tokenDecimals, tokenSymbol)}), ` +
+      `but autopay is already initialized — the first charge may have already been processed during installation.`,
+    );
+  }
+
+  if (tokenAllowance < chargeAmount) {
+    return c.json(
+      {
+        error:
+          `The payment account has not approved enough ${tokenSymbol} for autopay. ` +
+          `Required: ${formatTokenAmount(chargeAmount, tokenDecimals, tokenSymbol)}. ` +
+          `Approved: ${formatTokenAmount(tokenAllowance, tokenDecimals, tokenSymbol)}.`,
+      },
+      409,
+      corsHeaders(origin),
+    );
+  }
+
+  const startTime = Number(autopayConfig?.startTime ?? 0n);
+  const latestBlock = await publicClient.getBlock({ blockTag: "latest" });
+  const nowSeconds = Number(latestBlock.timestamp);
+  if (startTime > nowSeconds) {
+    const waitSeconds = startTime - nowSeconds;
+
+    if (waitSeconds > 45) {
+      return c.json(
+        {
+          error: `Autopay cannot start yet. The configured start time is ${new Date(startTime * 1000).toISOString()}.`,
+        },
+        409,
+        corsHeaders(origin),
+      );
+    }
+
+    await sleep((waitSeconds + 1) * 1000);
   }
 
   const walletConflict = await db.arcenCompany.findFirst({
@@ -876,11 +1041,6 @@ export async function POST(c: Context) {
     where: { id: company.id },
     select: { activePlanId: true },
   });
-
-  const submittedActivationTxHash =
-    (parsed.data.activationTxHash ?? parsed.data.txHash)?.toLowerCase() as
-      | `0x${string}`
-      | undefined;
 
   if (!submittedActivationTxHash) {
     const activationCalldata = encodeFunctionData({
@@ -1108,6 +1268,7 @@ export async function POST(c: Context) {
 
     const subscriberEmail = await resolveBillingRecipientEmail({
       teamId,
+      environmentId: catalogPlan.environmentId ?? null,
       explicitEmail:
         parsed.data.subscriberEmail ?? sessionDefaults?.userEmail ?? null,
       accessTokenUserId: embedTokenContext?.userId ?? null,
@@ -1145,13 +1306,17 @@ export async function POST(c: Context) {
 
     let recoveryTaskId: string | null = null;
     let recoveryPending = false;
+    let invoiceId: string | null = null;
+    let paymentId: string | null = null;
 
     try {
-      await finalizeSubscriptionActivation({
+      const finalization = await finalizeSubscriptionActivation({
         teamId,
         payload: finalizationPayload,
         source: "subscription.activate",
       });
+      invoiceId = finalization.invoiceId;
+      paymentId = finalization.paymentId;
     } catch (finalizationError) {
       console.error(
         "[subscriptions/activate] Immediate billing finalization failed; queuing recovery task.",
@@ -1179,6 +1344,8 @@ export async function POST(c: Context) {
           companyId: company.id,
           planId: catalogPlan.id,
           paymentAccount,
+          invoiceId,
+          paymentId,
           recoveryTaskId,
           recoveryPending,
         },

@@ -231,13 +231,15 @@ export async function verifyDirectErc20Transfer(
       amountAtomic: amount,
     };
   } catch (error) {
+    const message =
+      error instanceof Error ? error.message : String(error);
+    const isReceiptPending =
+      message.includes("could not be found") ||
+      message.includes("not be processed on a block");
     return {
       ok: false,
-      status: 502,
-      error:
-        error instanceof Error
-          ? error.message
-          : "Could not verify payment transaction.",
+      status: isReceiptPending ? 425 : 502,
+      error: message,
     };
   }
 }
@@ -560,13 +562,15 @@ export async function verifyAutopayPlanChange(
       currentPeriodEnd: new Date(Number(currentPeriodEnd) * 1000).toISOString(),
     };
   } catch (error) {
+    const message =
+      error instanceof Error ? error.message : String(error);
+    const isReceiptPending =
+      message.includes("could not be found") ||
+      message.includes("not be processed on a block");
     return {
       ok: false,
-      status: 502,
-      error:
-        error instanceof Error
-          ? error.message
-          : "Could not verify the on-chain plan change transaction.",
+      status: isReceiptPending ? 425 : 502,
+      error: message,
     };
   }
 }
@@ -758,13 +762,15 @@ export async function verifySubscriptionRegistryPlanChange(
       billerWallet: transaction.from.toLowerCase(),
     };
   } catch (error) {
+    const message =
+      error instanceof Error ? error.message : String(error);
+    const isReceiptPending =
+      message.includes("could not be found") ||
+      message.includes("not be processed on a block");
     return {
       ok: false,
-      status: 502,
-      error:
-        error instanceof Error
-          ? error.message
-          : "Could not verify the subscription registry plan-change transaction.",
+      status: isReceiptPending ? 425 : 502,
+      error: message,
     };
   }
 }
@@ -863,22 +869,48 @@ export async function verifyAutopayCancellationControl(
         }) as { eventName: string; args: Record<string, unknown> };
 
         if (
-          decoded.eventName !== "AutopayRevoked" &&
-          decoded.eventName !== "AccountAutopayPaused"
+          decoded.eventName === "AutopayRevoked" ||
+          decoded.eventName === "AccountAutopayPaused" ||
+          decoded.eventName === "AutopayPaused" ||
+          decoded.eventName === "AccountPaused"
         ) {
-          continue;
-        }
-
-        const args = decoded.args as { account?: string };
-        if (
-          typeof args.account === "string" &&
-          args.account.toLowerCase() === params.paymentAccount.toLowerCase()
-        ) {
-          control =
-            decoded.eventName === "AutopayRevoked" ? "REVOKED" : "PAUSED";
+          const args = decoded.args as { account?: string };
+          if (
+            typeof args.account === "string" &&
+            args.account.toLowerCase() === params.paymentAccount.toLowerCase()
+          ) {
+            control =
+              decoded.eventName === "AutopayRevoked" ? "REVOKED" : "PAUSED";
+          }
         }
       } catch {
         // Ignore unrelated logs on the same contract.
+      }
+    }
+
+    if (!control) {
+      const isCurrentlyPaused = (await publicClient.readContract({
+        address: autopayAddress,
+        abi: ERC7579AutopayModuleABI,
+        functionName: "isAccountPaused",
+        args: [params.paymentAccount as `0x${string}`],
+      })) as boolean;
+
+      if (isCurrentlyPaused) {
+        control = "PAUSED";
+      }
+
+      if (!control) {
+        const isCurrentlyInitialized = (await publicClient.readContract({
+          address: autopayAddress,
+          abi: ERC7579AutopayModuleABI,
+          functionName: "isInitialized",
+          args: [params.paymentAccount as `0x${string}`],
+        })) as boolean;
+
+        if (!isCurrentlyInitialized) {
+          control = "REVOKED";
+        }
       }
     }
 
@@ -931,13 +963,15 @@ export async function verifyAutopayCancellationControl(
       controlledAt: new Date().toISOString(),
     };
   } catch (error) {
+    const message =
+      error instanceof Error ? error.message : String(error);
+    const isReceiptPending =
+      message.includes("could not be found") ||
+      message.includes("not be processed on a block");
     return {
       ok: false,
-      status: 502,
-      error:
-        error instanceof Error
-          ? error.message
-          : "Could not verify the autopay cancellation-control transaction.",
+      status: isReceiptPending ? 425 : 502,
+      error: message,
     };
   }
 }
@@ -1054,13 +1088,15 @@ export async function verifySubscriptionCancellation(
       cancelledAt: new Date(Number(cancelledAt) * 1000).toISOString(),
     };
   } catch (error) {
+    const message =
+      error instanceof Error ? error.message : String(error);
+    const isReceiptPending =
+      message.includes("could not be found") ||
+      message.includes("not be processed on a block");
     return {
       ok: false,
-      status: 502,
-      error:
-        error instanceof Error
-          ? error.message
-          : "Could not verify the on-chain cancellation transaction.",
+      status: isReceiptPending ? 425 : 502,
+      error: message,
     };
   }
 }

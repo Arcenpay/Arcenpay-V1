@@ -93,10 +93,27 @@ async function upsertCompanyForToken(
     if (nextEmail) updates.email = nextEmail;
     if (nextWallet) updates.walletAddress = nextWallet;
     if (Object.keys(updates).length > 0) {
-      await db.arcenCompany.update({
-        where: { id: existing.id },
-        data: updates,
-      });
+      try {
+        await db.arcenCompany.update({
+          where: { id: existing.id },
+          data: updates,
+        });
+      } catch (err: unknown) {
+        const isP2002 =
+          err instanceof Error &&
+          "code" in err &&
+          (err as { code?: string }).code === "P2002";
+        if (isP2002 && nextWallet) {
+          const existingByWallet = await db.arcenCompany.findFirst({
+            where: { teamId, environmentId, walletAddress: nextWallet },
+            select: { id: true, activePlanId: true },
+          });
+          if (existingByWallet) {
+            return { id: existingByWallet.id, activePlanId: existingByWallet.activePlanId, created: false };
+          }
+        }
+        throw err;
+      }
     }
     return {
       id: existing.id,
@@ -181,10 +198,27 @@ async function upsertUserForToken(
     if (nextClerkUserId) updates.clerkUserId = nextClerkUserId;
 
     if (Object.keys(updates).length > 0) {
-      await db.arcenUser.update({
-        where: { id: existing.id },
-        data: updates,
-      });
+      try {
+        await db.arcenUser.update({
+          where: { id: existing.id },
+          data: updates,
+        });
+      } catch (err: unknown) {
+        const isP2002 =
+          err instanceof Error &&
+          "code" in err &&
+          (err as { code?: string }).code === "P2002";
+        if (isP2002 && nextWallet) {
+          const existingByWallet = await db.arcenUser.findFirst({
+            where: { teamId, environmentId, walletAddress: nextWallet },
+            select: { id: true },
+          });
+          if (existingByWallet) {
+            return { id: existingByWallet.id, created: false };
+          }
+        }
+        throw err;
+      }
     }
 
     return { id: existing.id, created: false };

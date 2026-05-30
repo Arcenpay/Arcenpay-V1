@@ -28,6 +28,10 @@ export type SubscriberEmailMinAggregateOutputType = {
   id: string | null
   createdAt: Date | null
   updatedAt: Date | null
+  scopeKey: string | null
+  teamId: string | null
+  environmentId: string | null
+  companyId: string | null
   walletAddress: string | null
   email: string | null
   planId: string | null
@@ -37,6 +41,10 @@ export type SubscriberEmailMaxAggregateOutputType = {
   id: string | null
   createdAt: Date | null
   updatedAt: Date | null
+  scopeKey: string | null
+  teamId: string | null
+  environmentId: string | null
+  companyId: string | null
   walletAddress: string | null
   email: string | null
   planId: string | null
@@ -46,6 +54,10 @@ export type SubscriberEmailCountAggregateOutputType = {
   id: number
   createdAt: number
   updatedAt: number
+  scopeKey: number
+  teamId: number
+  environmentId: number
+  companyId: number
   walletAddress: number
   email: number
   planId: number
@@ -57,6 +69,10 @@ export type SubscriberEmailMinAggregateInputType = {
   id?: true
   createdAt?: true
   updatedAt?: true
+  scopeKey?: true
+  teamId?: true
+  environmentId?: true
+  companyId?: true
   walletAddress?: true
   email?: true
   planId?: true
@@ -66,6 +82,10 @@ export type SubscriberEmailMaxAggregateInputType = {
   id?: true
   createdAt?: true
   updatedAt?: true
+  scopeKey?: true
+  teamId?: true
+  environmentId?: true
+  companyId?: true
   walletAddress?: true
   email?: true
   planId?: true
@@ -75,6 +95,10 @@ export type SubscriberEmailCountAggregateInputType = {
   id?: true
   createdAt?: true
   updatedAt?: true
+  scopeKey?: true
+  teamId?: true
+  environmentId?: true
+  companyId?: true
   walletAddress?: true
   email?: true
   planId?: true
@@ -157,6 +181,10 @@ export type SubscriberEmailGroupByOutputType = {
   id: string
   createdAt: Date
   updatedAt: Date
+  scopeKey: string
+  teamId: string | null
+  environmentId: string | null
+  companyId: string | null
   walletAddress: string
   email: string
   planId: string | null
@@ -187,6 +215,10 @@ export type SubscriberEmailWhereInput = {
   id?: Prisma.StringFilter<"SubscriberEmail"> | string
   createdAt?: Prisma.DateTimeFilter<"SubscriberEmail"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"SubscriberEmail"> | Date | string
+  scopeKey?: Prisma.StringFilter<"SubscriberEmail"> | string
+  teamId?: Prisma.StringNullableFilter<"SubscriberEmail"> | string | null
+  environmentId?: Prisma.StringNullableFilter<"SubscriberEmail"> | string | null
+  companyId?: Prisma.StringNullableFilter<"SubscriberEmail"> | string | null
   walletAddress?: Prisma.StringFilter<"SubscriberEmail"> | string
   email?: Prisma.StringFilter<"SubscriberEmail"> | string
   planId?: Prisma.StringNullableFilter<"SubscriberEmail"> | string | null
@@ -196,6 +228,10 @@ export type SubscriberEmailOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+  scopeKey?: Prisma.SortOrder
+  teamId?: Prisma.SortOrderInput | Prisma.SortOrder
+  environmentId?: Prisma.SortOrderInput | Prisma.SortOrder
+  companyId?: Prisma.SortOrderInput | Prisma.SortOrder
   walletAddress?: Prisma.SortOrder
   email?: Prisma.SortOrder
   planId?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -203,20 +239,29 @@ export type SubscriberEmailOrderByWithRelationInput = {
 
 export type SubscriberEmailWhereUniqueInput = Prisma.AtLeast<{
   id?: string
-  walletAddress?: string
+  scopeKey_walletAddress?: Prisma.SubscriberEmailScopeKeyWalletAddressCompoundUniqueInput
   AND?: Prisma.SubscriberEmailWhereInput | Prisma.SubscriberEmailWhereInput[]
   OR?: Prisma.SubscriberEmailWhereInput[]
   NOT?: Prisma.SubscriberEmailWhereInput | Prisma.SubscriberEmailWhereInput[]
   createdAt?: Prisma.DateTimeFilter<"SubscriberEmail"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"SubscriberEmail"> | Date | string
+  scopeKey?: Prisma.StringFilter<"SubscriberEmail"> | string
+  teamId?: Prisma.StringNullableFilter<"SubscriberEmail"> | string | null
+  environmentId?: Prisma.StringNullableFilter<"SubscriberEmail"> | string | null
+  companyId?: Prisma.StringNullableFilter<"SubscriberEmail"> | string | null
+  walletAddress?: Prisma.StringFilter<"SubscriberEmail"> | string
   email?: Prisma.StringFilter<"SubscriberEmail"> | string
   planId?: Prisma.StringNullableFilter<"SubscriberEmail"> | string | null
-}, "id" | "walletAddress">
+}, "id" | "scopeKey_walletAddress">
 
 export type SubscriberEmailOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+  scopeKey?: Prisma.SortOrder
+  teamId?: Prisma.SortOrderInput | Prisma.SortOrder
+  environmentId?: Prisma.SortOrderInput | Prisma.SortOrder
+  companyId?: Prisma.SortOrderInput | Prisma.SortOrder
   walletAddress?: Prisma.SortOrder
   email?: Prisma.SortOrder
   planId?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -232,6 +277,10 @@ export type SubscriberEmailScalarWhereWithAggregatesInput = {
   id?: Prisma.StringWithAggregatesFilter<"SubscriberEmail"> | string
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"SubscriberEmail"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"SubscriberEmail"> | Date | string
+  scopeKey?: Prisma.StringWithAggregatesFilter<"SubscriberEmail"> | string
+  teamId?: Prisma.StringNullableWithAggregatesFilter<"SubscriberEmail"> | string | null
+  environmentId?: Prisma.StringNullableWithAggregatesFilter<"SubscriberEmail"> | string | null
+  companyId?: Prisma.StringNullableWithAggregatesFilter<"SubscriberEmail"> | string | null
   walletAddress?: Prisma.StringWithAggregatesFilter<"SubscriberEmail"> | string
   email?: Prisma.StringWithAggregatesFilter<"SubscriberEmail"> | string
   planId?: Prisma.StringNullableWithAggregatesFilter<"SubscriberEmail"> | string | null
@@ -241,6 +290,10 @@ export type SubscriberEmailCreateInput = {
   id?: string
   createdAt?: Date | string
   updatedAt?: Date | string
+  scopeKey?: string
+  teamId?: string | null
+  environmentId?: string | null
+  companyId?: string | null
   walletAddress: string
   email: string
   planId?: string | null
@@ -250,6 +303,10 @@ export type SubscriberEmailUncheckedCreateInput = {
   id?: string
   createdAt?: Date | string
   updatedAt?: Date | string
+  scopeKey?: string
+  teamId?: string | null
+  environmentId?: string | null
+  companyId?: string | null
   walletAddress: string
   email: string
   planId?: string | null
@@ -259,6 +316,10 @@ export type SubscriberEmailUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  scopeKey?: Prisma.StringFieldUpdateOperationsInput | string
+  teamId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  companyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   walletAddress?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
   planId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -268,6 +329,10 @@ export type SubscriberEmailUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  scopeKey?: Prisma.StringFieldUpdateOperationsInput | string
+  teamId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  companyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   walletAddress?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
   planId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -277,6 +342,10 @@ export type SubscriberEmailCreateManyInput = {
   id?: string
   createdAt?: Date | string
   updatedAt?: Date | string
+  scopeKey?: string
+  teamId?: string | null
+  environmentId?: string | null
+  companyId?: string | null
   walletAddress: string
   email: string
   planId?: string | null
@@ -286,6 +355,10 @@ export type SubscriberEmailUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  scopeKey?: Prisma.StringFieldUpdateOperationsInput | string
+  teamId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  companyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   walletAddress?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
   planId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -295,15 +368,28 @@ export type SubscriberEmailUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  scopeKey?: Prisma.StringFieldUpdateOperationsInput | string
+  teamId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  companyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   walletAddress?: Prisma.StringFieldUpdateOperationsInput | string
   email?: Prisma.StringFieldUpdateOperationsInput | string
   planId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+}
+
+export type SubscriberEmailScopeKeyWalletAddressCompoundUniqueInput = {
+  scopeKey: string
+  walletAddress: string
 }
 
 export type SubscriberEmailCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+  scopeKey?: Prisma.SortOrder
+  teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrder
+  companyId?: Prisma.SortOrder
   walletAddress?: Prisma.SortOrder
   email?: Prisma.SortOrder
   planId?: Prisma.SortOrder
@@ -313,6 +399,10 @@ export type SubscriberEmailMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+  scopeKey?: Prisma.SortOrder
+  teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrder
+  companyId?: Prisma.SortOrder
   walletAddress?: Prisma.SortOrder
   email?: Prisma.SortOrder
   planId?: Prisma.SortOrder
@@ -322,6 +412,10 @@ export type SubscriberEmailMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+  scopeKey?: Prisma.SortOrder
+  teamId?: Prisma.SortOrder
+  environmentId?: Prisma.SortOrder
+  companyId?: Prisma.SortOrder
   walletAddress?: Prisma.SortOrder
   email?: Prisma.SortOrder
   planId?: Prisma.SortOrder
@@ -333,6 +427,10 @@ export type SubscriberEmailSelect<ExtArgs extends runtime.Types.Extensions.Inter
   id?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  scopeKey?: boolean
+  teamId?: boolean
+  environmentId?: boolean
+  companyId?: boolean
   walletAddress?: boolean
   email?: boolean
   planId?: boolean
@@ -342,6 +440,10 @@ export type SubscriberEmailSelectCreateManyAndReturn<ExtArgs extends runtime.Typ
   id?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  scopeKey?: boolean
+  teamId?: boolean
+  environmentId?: boolean
+  companyId?: boolean
   walletAddress?: boolean
   email?: boolean
   planId?: boolean
@@ -351,6 +453,10 @@ export type SubscriberEmailSelectUpdateManyAndReturn<ExtArgs extends runtime.Typ
   id?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  scopeKey?: boolean
+  teamId?: boolean
+  environmentId?: boolean
+  companyId?: boolean
   walletAddress?: boolean
   email?: boolean
   planId?: boolean
@@ -360,12 +466,16 @@ export type SubscriberEmailSelectScalar = {
   id?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  scopeKey?: boolean
+  teamId?: boolean
+  environmentId?: boolean
+  companyId?: boolean
   walletAddress?: boolean
   email?: boolean
   planId?: boolean
 }
 
-export type SubscriberEmailOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "updatedAt" | "walletAddress" | "email" | "planId", ExtArgs["result"]["subscriberEmail"]>
+export type SubscriberEmailOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "createdAt" | "updatedAt" | "scopeKey" | "teamId" | "environmentId" | "companyId" | "walletAddress" | "email" | "planId", ExtArgs["result"]["subscriberEmail"]>
 
 export type $SubscriberEmailPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "SubscriberEmail"
@@ -374,6 +484,10 @@ export type $SubscriberEmailPayload<ExtArgs extends runtime.Types.Extensions.Int
     id: string
     createdAt: Date
     updatedAt: Date
+    scopeKey: string
+    teamId: string | null
+    environmentId: string | null
+    companyId: string | null
     walletAddress: string
     email: string
     planId: string | null
@@ -803,6 +917,10 @@ export interface SubscriberEmailFieldRefs {
   readonly id: Prisma.FieldRef<"SubscriberEmail", 'String'>
   readonly createdAt: Prisma.FieldRef<"SubscriberEmail", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"SubscriberEmail", 'DateTime'>
+  readonly scopeKey: Prisma.FieldRef<"SubscriberEmail", 'String'>
+  readonly teamId: Prisma.FieldRef<"SubscriberEmail", 'String'>
+  readonly environmentId: Prisma.FieldRef<"SubscriberEmail", 'String'>
+  readonly companyId: Prisma.FieldRef<"SubscriberEmail", 'String'>
   readonly walletAddress: Prisma.FieldRef<"SubscriberEmail", 'String'>
   readonly email: Prisma.FieldRef<"SubscriberEmail", 'String'>
   readonly planId: Prisma.FieldRef<"SubscriberEmail", 'String'>

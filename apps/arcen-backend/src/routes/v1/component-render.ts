@@ -30,6 +30,7 @@ import {
 } from "../../lib/entitlements/embed-access-token.js";
 import { ensureInvoicePdfForTeam } from "../../lib/billing/invoice-documents.js";
 import { upsertSubscriptionLedgerState } from "../../lib/billing/billing-ledger.js";
+import { findScopedSubscriberEmail } from "../../lib/billing/subscriber-emails.js";
 import { getLatestSubscriptionChangeRequest } from "../../lib/billing/subscription-change-requests.js";
 import { corsHeaders } from "../../middleware/cors.js";
 import { toPrismaJson } from "../../utils/prisma-json.js";
@@ -304,6 +305,41 @@ function readInvoiceCustomerName(metadata: unknown): string | null {
     : null;
 }
 
+function readInvoiceTxHash(metadata: unknown): string | null {
+  const txHash = asRecord(metadata).txHash;
+  return typeof txHash === "string" && /^0x[0-9a-fA-F]{64}$/.test(txHash)
+    ? txHash.toLowerCase()
+    : null;
+}
+
+function readSubscriptionActivationInvoiceKey(metadata: unknown): string | null {
+  const record = asRecord(metadata);
+  const mode = typeof record.mode === "string" ? record.mode : null;
+  const canonicalEventName =
+    typeof record.canonicalEventName === "string"
+      ? record.canonicalEventName
+      : null;
+  if (
+    mode !== "subscription_activation" &&
+    canonicalEventName !== "subscription.minted"
+  ) {
+    return null;
+  }
+
+  const tokenId =
+    typeof record.tokenId === "string" || typeof record.tokenId === "number"
+      ? String(record.tokenId)
+      : null;
+  const onChainPlanId =
+    typeof record.onChainPlanId === "string" ||
+    typeof record.onChainPlanId === "number"
+      ? String(record.onChainPlanId)
+      : null;
+  return tokenId && onChainPlanId
+    ? `activation:${tokenId}:${onChainPlanId}`
+    : null;
+}
+
 function resolveComponentEntitlementFeatureType(
   flagFeatureType: string | null | undefined,
   metadataEntitlement: ComponentPlanMetadataEntitlement,
@@ -434,6 +470,7 @@ export async function GET(c: Context) {
         select: {
           id: true,
           name: true,
+          environmentId: true,
           walletAddress: true,
           email: true,
           activePlanId: true,
@@ -473,12 +510,15 @@ export async function GET(c: Context) {
       const companyTraits = asRecord(company.traits);
       const subscriberEmailRecord =
         company.subscriptionState?.walletAddress || company.walletAddress
-          ? await db.subscriberEmail.findUnique({
-              where: {
-                walletAddress: (company.subscriptionState?.walletAddress ??
-                  company.walletAddress)!.toLowerCase(),
-              },
-              select: { email: true },
+          ? await findScopedSubscriberEmail({
+              teamId,
+              environmentId:
+                company.subscriptionState?.environmentId ??
+                company.environmentId ??
+                null,
+              walletAddress:
+                company.subscriptionState?.walletAddress ??
+                company.walletAddress,
             })
           : null;
 
@@ -554,6 +594,9 @@ export async function GET(c: Context) {
         ) ??
         normalizeBillingPeriod(companyTraits.billingPeriod) ??
         deriveBillingPeriodFromInterval(activePlan?.billingInterval);
+      const configuredChainId =
+        (typeof activePlan?.chainId === "number" ? activePlan.chainId : null) ??
+        (company.subscriptionState?.chainId ?? DEFAULT_CHAIN_ID);
 
       const deferredBillingPeriodRepair = resolveDeferredBillingPeriodRepair({
         transition: latestChangeRequest,
@@ -609,63 +652,70 @@ export async function GET(c: Context) {
           null;
 
         if (latestChangeRequest?.id && repairedWalletAddress) {
-          await db.$transaction(async (tx) => {
-            await tx.subscriptionChangeRequest.update({
-              where: { id: String(latestChangeRequest?.id) },
-              data: {
-                changeType: "BILLING_PERIOD_CHANGE",
-                stage: "REQUESTED",
-                effectiveAt: new Date(deferredBillingPeriodRepair.effectiveAt),
-                appliedAt: null,
-                pendingVerification: false,
-                failureReason: null,
-                metadata: toPrismaJson(repairedTransitionMetadata),
-              },
-            });
+          try {
+            await db.$transaction(async (tx) => {
+              await tx.subscriptionChangeRequest.update({
+                where: { id: String(latestChangeRequest?.id) },
+                data: {
+                  changeType: "BILLING_PERIOD_CHANGE",
+                  stage: "REQUESTED",
+                  effectiveAt: new Date(deferredBillingPeriodRepair.effectiveAt),
+                  appliedAt: null,
+                  pendingVerification: false,
+                  failureReason: null,
+                  metadata: toPrismaJson(repairedTransitionMetadata),
+                },
+              });
 
-            await tx.arcenCompany.update({
-              where: { id: company.id },
-              data: {
-                traits: toPrismaJson(repairedTraits),
-              },
-            });
+              await tx.arcenCompany.update({
+                where: { id: company.id },
+                data: {
+                  traits: toPrismaJson(repairedTraits),
+                },
+              });
 
-            await upsertSubscriptionLedgerState(
-              {
-                teamId,
-                companyId: company.id,
-                walletAddress: repairedWalletAddress,
-                chainId: configuredChainId,
-                status:
-                  company.subscriptionState?.status === "PAST_DUE"
-                    ? "PAST_DUE"
-                    : "ACTIVE",
-                catalogPlanId:
-                  company.subscriptionState?.catalogPlanId ??
-                  (typeof activePlan?.id === "string" ? activePlan.id : null),
-                onChainPlanId:
-                  liveOnChainPlanId ??
-                  (typeof activePlan?.onChainPlanId === "string"
-                    ? activePlan.onChainPlanId
-                    : null),
-                onChainTokenId:
-                  liveOnChainTokenId ??
-                  company.subscriptionState?.onChainTokenId ??
-                  null,
-                currentPeriodEnd: new Date(
-                  deferredBillingPeriodRepair.effectiveAt,
-                ),
-                cancelAtPeriodEnd: false,
-                cancelledAt: null,
-                pastDueAt: null,
-                graceEndsAt: null,
-                lastEvent: "subscription.render_repaired_billing_period_change",
-                lastEventAt: now,
-                metadata: repairedStateMetadata,
-              },
-              tx,
+              await upsertSubscriptionLedgerState(
+                {
+                  teamId,
+                  companyId: company.id,
+                  walletAddress: repairedWalletAddress,
+                  chainId: configuredChainId,
+                  status:
+                    company.subscriptionState?.status === "PAST_DUE"
+                      ? "PAST_DUE"
+                      : "ACTIVE",
+                  catalogPlanId:
+                    company.subscriptionState?.catalogPlanId ??
+                    (typeof activePlan?.id === "string" ? activePlan.id : null),
+                  onChainPlanId:
+                    liveOnChainPlanId ??
+                    (typeof activePlan?.onChainPlanId === "string"
+                      ? activePlan.onChainPlanId
+                      : null),
+                  onChainTokenId:
+                    liveOnChainTokenId ??
+                    company.subscriptionState?.onChainTokenId ??
+                    null,
+                  currentPeriodEnd: new Date(
+                    deferredBillingPeriodRepair.effectiveAt,
+                  ),
+                  cancelAtPeriodEnd: false,
+                  cancelledAt: null,
+                  pastDueAt: null,
+                  graceEndsAt: null,
+                  lastEvent: "subscription.render_repaired_billing_period_change",
+                  lastEventAt: now,
+                  metadata: repairedStateMetadata,
+                },
+                tx,
+              );
+            });
+          } catch (error) {
+            console.error(
+              "[component-render] Failed to persist billing-period repair:",
+              error,
             );
-          });
+          }
         }
 
         activeBillingPeriod = deferredBillingPeriodRepair.previousBillingPeriod;
@@ -813,10 +863,31 @@ export async function GET(c: Context) {
             customerEmail: true,
             customerWallet: true,
             metadata: true,
+            payments: {
+              where: { txHash: { not: null } },
+              select: { txHash: true },
+              orderBy: { createdAt: "desc" },
+              take: 1,
+            },
           },
         });
+      const dedupedInvoices: typeof invoices = [];
+      const seenInvoiceKeys = new Set<string>();
+      for (const invoice of invoices) {
+        const txHash =
+          invoice.payments[0]?.txHash?.toLowerCase() ??
+          readInvoiceTxHash(invoice.metadata);
+        const invoiceKey = txHash
+          ? `tx:${txHash}`
+          : (readSubscriptionActivationInvoiceKey(invoice.metadata) ??
+            `invoice:${invoice.id}`);
+        if (seenInvoiceKeys.has(invoiceKey)) continue;
+        seenInvoiceKeys.add(invoiceKey);
+        dedupedInvoices.push(invoice);
+      }
+
       recentInvoices = await Promise.all(
-        invoices.map(async (invoice) => {
+        dedupedInvoices.map(async (invoice) => {
           let downloadUrl: string | null = null;
           try {
             const preparedInvoice = await ensureInvoicePdfForTeam(
@@ -845,10 +916,6 @@ export async function GET(c: Context) {
         }),
       );
 
-      // Derive payment chain from the active plan, then subscription state, then env default.
-      const configuredChainId =
-        (typeof activePlan?.chainId === "number" ? activePlan.chainId : null) ??
-        (company.subscriptionState?.chainId ?? DEFAULT_CHAIN_ID);
       billingPaymentAccount = company.subscriptionState?.walletAddress ?? null;
 
       if (company.subscriptionState?.currentPeriodEnd) {
@@ -1206,28 +1273,36 @@ export async function GET(c: Context) {
     };
 
     if (companyId && billingPaymentAccount) {
-      await upsertSubscriptionLedgerState({
-        teamId,
-        companyId,
-        walletAddress: billingPaymentAccount,
-        status: "ACTIVE",
-        catalogPlanId: liveMatchedPlan.id,
-        onChainPlanId: liveOnChainPlanId,
-        onChainTokenId: liveOnChainTokenId,
-        currentPeriodEnd: liveCurrentPeriodEnd
-          ? new Date(liveCurrentPeriodEnd)
-          : undefined,
-        cancelAtPeriodEnd: false,
-        cancelledAt: null,
-        pastDueAt: null,
-        graceEndsAt: null,
-        lastEvent: "subscription.render_reconciled",
-        lastEventAt: new Date(),
-        metadata: {
-          source: "component.render",
-          reconciliation: "live_onchain_subscription",
-        },
-      });
+      try {
+        await upsertSubscriptionLedgerState({
+          teamId,
+          companyId,
+          walletAddress: billingPaymentAccount,
+          chainId: liveMatchedPlan.chainId ?? null,
+          status: "ACTIVE",
+          catalogPlanId: liveMatchedPlan.id,
+          onChainPlanId: liveOnChainPlanId,
+          onChainTokenId: liveOnChainTokenId,
+          currentPeriodEnd: liveCurrentPeriodEnd
+            ? new Date(liveCurrentPeriodEnd)
+            : undefined,
+          cancelAtPeriodEnd: false,
+          cancelledAt: null,
+          pastDueAt: null,
+          graceEndsAt: null,
+          lastEvent: "subscription.render_reconciled",
+          lastEventAt: new Date(),
+          metadata: {
+            source: "component.render",
+            reconciliation: "live_onchain_subscription",
+          },
+        });
+      } catch (error) {
+        console.error(
+          "[component-render] Failed to persist live subscription reconciliation:",
+          error,
+        );
+      }
     }
   }
 

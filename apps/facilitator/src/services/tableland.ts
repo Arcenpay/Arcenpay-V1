@@ -4,6 +4,7 @@
 // ============================================================
 
 import { Database } from "@tableland/sdk";
+import { baseURIs } from "@tableland/evm/network";
 import type { PlanTier, TablelandEntitlement } from "@arcenpay/internal-core";
 // Tableland SDK requires a full ethers Signer — ethers is an explicit dependency.
 // Viem is used everywhere else; this is the one place ethers is intentional.
@@ -27,6 +28,23 @@ type TierFlagsMatrix = Record<
   Record<string, boolean | string | number>
 >;
 
+const TABLELAND_WRITE_SUPPORTED_CHAIN_IDS = new Set(
+  Object.values(baseURIs)
+    .map((uri) => {
+      try {
+        const parsed = new URL(uri);
+        const lastPathSegment = parsed.pathname
+          .split("/")
+          .filter(Boolean)
+          .pop();
+        return Number.parseInt(lastPathSegment ?? "", 10);
+      } catch {
+        return Number.NaN;
+      }
+    })
+    .filter((chainId) => Number.isInteger(chainId)),
+);
+
 export class TablelandService {
   private config: TablelandConfig;
   private initialized = false;
@@ -45,14 +63,21 @@ export class TablelandService {
     });
 
     if (this.config.privateKey && this.config.rpcUrl) {
-      // Tableland SDK is built on ethers and requires a real ethers Signer.
-      // ethers is an explicit peer in package.json — this usage is intentional.
-      const provider = new JsonRpcProvider(this.config.rpcUrl);
-      const signer = new Wallet(this.config.privateKey, provider);
-      this.dbWrite = new Database({
-        signer,
-        ...(this.config.gatewayUrl ? { baseUrl: this.config.gatewayUrl } : {}),
-      });
+      if (!TABLELAND_WRITE_SUPPORTED_CHAIN_IDS.has(this.config.chainId)) {
+        this.writesDisabledReason = `cannot use unsupported chain: ${this.config.chainId}`;
+        console.warn(
+          `[Tableland] Writes disabled for unsupported chain ${this.config.chainId}. Reads remain available via gateway.`,
+        );
+      } else {
+        // Tableland SDK is built on ethers and requires a real ethers Signer.
+        // ethers is an explicit peer in package.json — this usage is intentional.
+        const provider = new JsonRpcProvider(this.config.rpcUrl);
+        const signer = new Wallet(this.config.privateKey, provider);
+        this.dbWrite = new Database({
+          signer,
+          ...(this.config.gatewayUrl ? { baseUrl: this.config.gatewayUrl } : {}),
+        });
+      }
     }
 
     this.initialized = true;

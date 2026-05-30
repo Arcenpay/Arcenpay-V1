@@ -1,7 +1,7 @@
 import type { Context } from "hono";
 import { z } from "zod";
-import { db } from "../../../db.js";
 import { FACILITATOR_URL, FACILITATOR_SECRET } from "../../../config.js";
+import { upsertScopedSubscriberEmail } from "../../../lib/billing/subscriber-emails.js";
 
 const EmailSchema = z.object({
   walletAddress: z
@@ -25,10 +25,10 @@ export async function registerEmail(c: Context) {
 
     const { walletAddress, email, planId } = parsed.data;
 
-    await db.subscriberEmail.upsert({
-      where: { walletAddress },
-      update: { email, planId: planId ?? null },
-      create: { walletAddress, email, planId: planId ?? null },
+    await upsertScopedSubscriberEmail({
+      walletAddress,
+      email,
+      planId: planId ?? null,
     });
 
     fetch(`${FACILITATOR_URL}/api/subscriber/email`, {
