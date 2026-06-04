@@ -6,6 +6,8 @@ import { SCAN_FEATURE_KEY } from "@/lib/receipt-billing";
 import { createAgent, createTool, openai } from "@inngest/agent-kit";
 import { z } from "zod";
 
+type ToolParameters = Parameters<typeof createTool>[0]["parameters"];
+
 export const saveToDatabaseTool = createTool({
   name: "save-to-database",
   description: "save the given data into the convex database",
@@ -43,7 +45,7 @@ export const saveToDatabaseTool = createTool({
     ),
     clerkUserId: z.string(),
     walletAddress: z.string().optional(),
-  }) as any,
+  }) as unknown as ToolParameters,
   handler: async (params, ctx) => {
     const {
       fileDisplayName,

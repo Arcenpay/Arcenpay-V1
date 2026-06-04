@@ -14,13 +14,14 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SCAN_DIRS=(
   "$REPO_ROOT/apps"
   "$REPO_ROOT/packages"
+  "$REPO_ROOT/scripts"
   "$REPO_ROOT/circuits"
   "$REPO_ROOT/subgraph/src"
   "$REPO_ROOT/subgraph/scripts"
 )
 
 # Patterns that indicate unfinished work
-PATTERNS="TODO|FIXME|Coming in Sprint|Requires indexer"
+PATTERNS="TODO|FIXME|Coming in Sprint|Requires indexer|not implemented"
 
 # File extensions to check
 EXTENSIONS="ts,tsx,js,jsx,sol,yaml,yml"

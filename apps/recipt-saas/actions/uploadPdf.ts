@@ -108,7 +108,6 @@ export async function uploadPdf(formData: FormData) {
       }
     }
 
-    // handle convex upload logic here
     const uploadUrl = await convex.mutation(api.receipts.generateUploadUrl, {});
 
     console.log("Upload URL generated:", uploadUrl);
@@ -159,7 +158,6 @@ export async function uploadPdf(formData: FormData) {
 
     const fileUrl = await getFileDownloadUrl(storageId);
 
-    // TODO: Trigger inngest agent flow
     await inngest.send({
       name: Event.EXTRACT_DATA_FROM_PDF_AND_SAVE_TO_DATABASE,
       data: {

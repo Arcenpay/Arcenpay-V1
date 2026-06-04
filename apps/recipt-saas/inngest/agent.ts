@@ -68,6 +68,22 @@ function extractAssistantText(payload: unknown): string {
   return JSON.stringify(payload);
 }
 
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
+function normalizeReceiptItem(item: unknown) {
+  const record = asRecord(item);
+  return {
+    name: String(record.name ?? ""),
+    quantity: Number(record.quantity ?? 0),
+    unitPrice: Number(record.unit_price ?? record.unitPrice ?? 0),
+    totalPrice: Number(record.total_price ?? record.totalPrice ?? 0),
+  };
+}
+
 export const extractAndSavePDF = inngest.createFunction(
   { id: "extract-and-save-pdf" },
   { event: Event.EXTRACT_DATA_FROM_PDF_AND_SAVE_TO_DATABASE },
@@ -129,7 +145,7 @@ export const extractAndSavePDF = inngest.createFunction(
       model: openai({
         model: "gpt-4o-mini",
         defaultParameters: { max_completion_tokens: 2000 },
-      }) as any,
+      }),
       body: {
         messages: [
           {
@@ -151,7 +167,7 @@ If a value is missing, use an empty string for text and 0 for numbers.`,
             ],
           },
         ],
-      },
+      } as never,
     });
 
     // 3) Parse and normalize the model output into our DB fields
@@ -237,10 +253,11 @@ If a value is missing, use an empty string for text and 0 for numbers.`,
       aiSummaryAccess.featureKey || AI_SUMMARY_FEATURE_KEY;
 
     // Map to DB shape with minimal coercion
-    const merchant = parsed.merchant ?? {};
-    const transaction = parsed.transaction ?? {};
-    const totals = parsed.totals ?? {};
-    const items = Array.isArray(parsed.items) ? parsed.items : [];
+    const parsedRecord = asRecord(parsed);
+    const merchant = asRecord(parsedRecord.merchant);
+    const transaction = asRecord(parsedRecord.transaction);
+    const totals = asRecord(parsedRecord.totals);
+    const items = Array.isArray(parsedRecord.items) ? parsedRecord.items : [];
     let receiptSummary: string | undefined;
     const hasSummaryInputs =
       Boolean(String(merchant.name ?? "").trim()) ||
@@ -254,7 +271,7 @@ If a value is missing, use an empty string for text and 0 for numbers.`,
           model: openai({
             model: "gpt-4o-mini",
             defaultParameters: { max_completion_tokens: 250 },
-          }) as any,
+          }),
           body: {
             messages: [
               {
@@ -272,7 +289,7 @@ If a value is missing, use an empty string for text and 0 for numbers.`,
                 }),
               },
             ],
-          },
+          } as never,
         });
 
         const summaryText = extractAssistantText(summaryResult).trim();
@@ -296,13 +313,8 @@ If a value is missing, use an empty string for text and 0 for numbers.`,
       id: receiptId as Id<"receipts">,
       aiSummaryEnabledAtScan: canGenerateAiSummary,
       currency: String(totals.currency ?? "").toUpperCase(),
-      fileDisplayName: fileDisplayName ?? merchant.name ?? "Receipt",
-      items: items.map((it: any) => ({
-        name: String(it.name ?? ""),
-        quantity: Number(it.quantity ?? 0),
-        unitPrice: Number(it.unit_price ?? it.unitPrice ?? 0),
-        totalPrice: Number(it.total_price ?? it.totalPrice ?? 0),
-      })),
+      fileDisplayName: String(fileDisplayName ?? merchant.name ?? "Receipt"),
+      items: items.map(normalizeReceiptItem),
       merchantAddress: String(merchant.address ?? ""),
       merchantContact: String(merchant.contact ?? ""),
       merchantName: String(merchant.name ?? ""),

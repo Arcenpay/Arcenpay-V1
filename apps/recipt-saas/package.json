@@ -10,7 +10,8 @@
     "predev": "convex dev --until-success && convex dashboard",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "typecheck": "tsc --noEmit --incremental false",
+    "lint": "eslint app actions components convex hooks inngest lib middleware.ts next.config.ts --ignore-pattern 'convex/_generated/**' --ignore-pattern 'next-env.d.ts'"
   },
   "dependencies": {
     "@arcenpay/node": "*",

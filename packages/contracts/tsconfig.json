@@ -8,7 +8,8 @@
     "resolveJsonModule": true,
     "outDir": "./dist",
     "rootDir": "./",
-    "declaration": true
+    "declaration": true,
+    "types": ["node", "mocha"]
   },
   "include": ["hardhat.config.ts", "scripts/**/*.ts", "test/**/*.ts"],
   "exclude": ["node_modules", "dist", "artifacts", "cache", "out"]

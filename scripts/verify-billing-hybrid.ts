@@ -243,7 +243,7 @@ async function createDashboardDbClient(dashboardEnv: Record<string, string>) {
   const [{ Pool }, { PrismaPg }, { PrismaClient }] = await Promise.all([
     import("pg"),
     import("@prisma/adapter-pg"),
-    import("../apps/arcen-dashboard/src/generated/prisma/client.ts"),
+    import("../apps/arcen-backend/src/generated/client/client.ts"),
   ]);
 
   const pool = new Pool({ connectionString: process.env.DATABASE_URL });

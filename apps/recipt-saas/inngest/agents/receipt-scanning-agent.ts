@@ -1,12 +1,14 @@
 import { openai, createAgent, createTool } from "@inngest/agent-kit";
 import { z } from "zod";
 
+type ToolParameters = Parameters<typeof createTool>[0]["parameters"];
+
 export const parsePdfTool = createTool({
   name: "parse-pdf",
   description: "Analyzes the given PDF",
   parameters: z.object({
     pdfUrl: z.string().describe("The URL of the PDF to analyze"),
-  }) as any,
+  }) as unknown as ToolParameters,
   handler: async ({ pdfUrl }, ctx) => {
     try {
       const step = ctx.step!;
@@ -50,7 +52,7 @@ export const parsePdfTool = createTool({
           defaultParameters: {
             max_completion_tokens: 2000,
           },
-        }) as any,
+        }),
         body: {
           messages: [
             {
@@ -91,7 +93,7 @@ If information is missing, infer conservatively or set empty strings/zeros.`,
               ],
             },
           ],
-        },
+        } as never,
       });
     } catch (error) {
       throw error;

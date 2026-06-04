@@ -8,6 +8,7 @@
  */
 
 import type { Context } from "hono";
+import { createHash } from "node:crypto";
 import { requireApiKey, isApiKeyError } from "../../lib/auth/api-key-auth.js";
 import { db } from "../../db.js";
 
@@ -15,8 +16,151 @@ import { resolveCompany, resolveUser, type CompanyKeys, type UserKeys } from "..
 import { invalidateFlagCache } from "../../lib/entitlements/flag-cache.js";
 import { Prisma } from "../../generated/client/client.js";
 
-async function verifyReclaimProof(_proof: unknown): Promise<{ valid: boolean; error?: string; proofHash: string; providerId: string; providerName: string; claims: Record<string, unknown> }> {
-  throw new Error("verifyReclaimProof not implemented");
+type ReclaimVerification = {
+  valid: boolean;
+  error?: string;
+  status?: 422 | 503;
+  proofHash: string;
+  providerId: string;
+  providerName: string;
+  claims: Record<string, unknown>;
+};
+
+type ReclaimSdk = {
+  verifyProof?: (proof: unknown) => boolean | Promise<boolean>;
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function stableStringify(value: unknown): string {
+  if (typeof value === "bigint") return JSON.stringify(value.toString());
+  if (Array.isArray(value)) return `[${value.map(stableStringify).join(",")}]`;
+  if (isRecord(value)) {
+    return `{${Object.keys(value)
+      .sort()
+      .map((key) => `${JSON.stringify(key)}:${stableStringify(value[key])}`)
+      .join(",")}}`;
+  }
+  return JSON.stringify(value);
+}
+
+function proofHashFor(proof: unknown): string {
+  return createHash("sha256").update(stableStringify(proof)).digest("hex");
+}
+
+function firstString(...values: unknown[]): string | null {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return null;
+}
+
+function parseJsonRecord(value: unknown): Record<string, unknown> | null {
+  if (isRecord(value)) return value;
+  if (typeof value !== "string" || !value.trim()) return null;
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return isRecord(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function extractClaims(proof: Record<string, unknown>, claimData: Record<string, unknown>): Record<string, unknown> {
+  const directClaims = parseJsonRecord(proof.claims);
+  if (directClaims) return directClaims;
+
+  const extractedValues = parseJsonRecord(claimData.extractedParameterValues);
+  if (extractedValues) return extractedValues;
+
+  const context = parseJsonRecord(claimData.context);
+  if (context) return context;
+
+  const parameters = parseJsonRecord(claimData.parameters);
+  if (parameters) return parameters;
+
+  return Object.fromEntries(
+    Object.entries(claimData).filter(([key]) =>
+      ["context", "parameters", "provider", "providerId", "providerName"].includes(key) === false,
+    ),
+  );
+}
+
+async function loadReclaimVerifier(): Promise<ReclaimSdk | null> {
+  try {
+    const packageName = "@reclaimprotocol/js-sdk";
+    return (await import(packageName)) as ReclaimSdk;
+  } catch {
+    return null;
+  }
+}
+
+async function verifyReclaimProof(proof: unknown): Promise<ReclaimVerification> {
+  const proofHash = proofHashFor(proof);
+  const proofRecord = isRecord(proof) ? proof : {};
+  const claimData = parseJsonRecord(proofRecord.claimData) ?? proofRecord;
+  const providerId = firstString(
+    proofRecord.providerId,
+    proofRecord.provider,
+    claimData.providerId,
+    claimData.provider,
+  );
+  const providerName =
+    firstString(proofRecord.providerName, claimData.providerName, claimData.provider) ??
+    providerId ??
+    "Reclaim Protocol";
+  const claims = extractClaims(proofRecord, claimData);
+
+  if (!providerId) {
+    return {
+      valid: false,
+      status: 422,
+      error: "Reclaim proof is missing providerId/provider metadata.",
+      proofHash,
+      providerId: "",
+      providerName,
+      claims,
+    };
+  }
+
+  const reclaim = await loadReclaimVerifier();
+  if (!reclaim?.verifyProof) {
+    return {
+      valid: false,
+      status: 503,
+      error:
+        "Reclaim proof verification is not configured. Install @reclaimprotocol/js-sdk in the backend to enable zkTLS proof submission.",
+      proofHash,
+      providerId,
+      providerName,
+      claims,
+    };
+  }
+
+  try {
+    const valid = await reclaim.verifyProof(proof);
+    return {
+      valid,
+      status: valid ? undefined : 422,
+      error: valid ? undefined : "Reclaim proof verification failed.",
+      proofHash,
+      providerId,
+      providerName,
+      claims,
+    };
+  } catch (error) {
+    return {
+      valid: false,
+      status: 422,
+      error: error instanceof Error ? error.message : "Reclaim proof verification failed.",
+      proofHash,
+      providerId,
+      providerName,
+      claims,
+    };
+  }
 }
 
 export async function POST(c: Context) {
@@ -57,7 +201,10 @@ export async function POST(c: Context) {
   const verification = await verifyReclaimProof(body.proof);
 
   if (!verification.valid) {
-    return c.json({ error: "Invalid proof", detail: verification.error }, 422 as any);
+    return c.json(
+      { error: "Invalid proof", detail: verification.error },
+      (verification.status ?? 422) as any,
+    );
   }
 
   // Check for replay attack (same proof submitted twice)
