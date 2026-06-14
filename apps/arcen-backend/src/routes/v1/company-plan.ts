@@ -42,6 +42,7 @@ import {
 } from "../../lib/billing/email.js";
 import { sendPaidInvoiceReceipt } from "../../lib/billing/invoice-notifications.js";
 import { computeProrationSettlement } from "../../lib/billing/billing-proration.js";
+import { grantPlanCreditsForCompany } from "../../lib/billing/usage-credits.js";
 import {
   createSubscriptionChangeRequest,
   findSimilarOpenSubscriptionChangeRequest,
@@ -1749,6 +1750,32 @@ export async function handleCompanyPlanRequest(
               },
             }, tx);
 
+            if (!shouldScheduleBillingPeriodActivation) {
+              await grantPlanCreditsForCompany(
+                {
+                  teamId,
+                  environmentId:
+                    company.subscriptionState?.environmentId ??
+                    company.environmentId ??
+                    plan.environmentId ??
+                    null,
+                  companyId,
+                  planId: plan.id,
+                  billingPeriod: activeBillingPeriodAfterChange,
+                  periodStartedAt: periodStart,
+                  periodEndsAt: accessChangePeriodEnd,
+                  metadata: {
+                    source: "self_service",
+                    mode: lifecycleMode,
+                    previousPlanId: previousPlanId ?? null,
+                    accessChangeTxHash: finalizedAccessChangeTxHash,
+                    paymentTxHash: normalizedPaymentTxHash,
+                  },
+                },
+                tx,
+              );
+            }
+
             await revertOpenSubscriptionChangeRequests(
               {
                 teamId,
@@ -2463,6 +2490,26 @@ export async function handleCompanyPlanRequest(
     data: {
       activePlanId: planId,
       traits: toPrismaJson(nextTraits),
+    },
+  });
+
+  await grantPlanCreditsForCompany({
+    teamId,
+    environmentId:
+      company.subscriptionState?.environmentId ??
+      company.environmentId ??
+      plan.environmentId ??
+      null,
+    companyId,
+    planId,
+    billingPeriod: normalizedBillingPeriod,
+    periodStartedAt: new Date(),
+    periodEndsAt: company.subscriptionState?.currentPeriodEnd ?? null,
+    metadata: {
+      source: "self_service",
+      mode: "immediate",
+      previousPlanId: previousPlanId ?? null,
+      paymentTxHash: txHash ? normalizeTxHash(txHash) : null,
     },
   });
 

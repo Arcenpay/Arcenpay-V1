@@ -11,6 +11,11 @@ import {
 } from "../entitlements/flag-engine.js";
 import { resolveEntitlementResult } from "../entitlements/entitlements.js";
 import { touchEntityActivity } from "../platform/activity.js";
+import {
+  consumeCompanyCredits,
+  CreditLedgerError,
+  resolveCreditBurnConfig,
+} from "./usage-credits.js";
 
 type UsageEventStore = Pick<typeof db, "arcenEvent">;
 
@@ -145,8 +150,16 @@ export async function consumeMeteredEntitlement(
     select: { eventKey: true, featureType: true },
   });
 
+  const creditBurn = await resolveCreditBurnConfig({
+    teamId: input.teamId,
+    environmentId: company.environmentId ?? null,
+    featureKey: input.featureKey,
+  });
+
   const isMetered =
-    flag?.featureType === "event_based" || baseEntitlement.allocation !== null;
+    Boolean(creditBurn) ||
+    flag?.featureType === "event_based" ||
+    baseEntitlement.allocation !== null;
 
   if (!isMetered) {
     throw new ConsumeEntitlementError(
@@ -172,7 +185,7 @@ export async function consumeMeteredEntitlement(
           });
 
           if (existing) {
-            return { consumed: true, duplicate: true };
+            return { consumed: true, duplicate: true, creditError: null };
           }
         }
 
@@ -190,12 +203,44 @@ export async function consumeMeteredEntitlement(
           });
 
           if (currentUsage >= baseEntitlement.allocation) {
-            return { consumed: false, duplicate: false };
+            return { consumed: false, duplicate: false, creditError: null };
           }
-        } else if (!baseEntitlement.enabled) {
+        } else if (!baseEntitlement.enabled && !creditBurn) {
           // Feature is disabled for a non-allocation reason (e.g. plan doesn't include it).
           // Since there's no allocation to count against, we trust the enabled flag.
-          return { consumed: false, duplicate: false };
+          return { consumed: false, duplicate: false, creditError: null };
+        }
+
+        if (creditBurn) {
+          try {
+            await consumeCompanyCredits(
+              {
+                teamId: input.teamId,
+                environmentId: company.environmentId ?? null,
+                companyId: company.id,
+                creditTypeId: creditBurn.creditTypeId,
+                amount: creditBurn.amount,
+                featureKey: input.featureKey,
+                idempotencyKey: input.idempotencyKey
+                  ? `usage-credit:${input.idempotencyKey}`
+                  : undefined,
+                metadata: {
+                  eventKey,
+                  source: "consume",
+                },
+              },
+              tx,
+            );
+          } catch (error) {
+            if (error instanceof CreditLedgerError && error.statusCode === 402) {
+              return {
+                consumed: false,
+                duplicate: false,
+                creditError: "Insufficient credits",
+              };
+            }
+            throw error;
+          }
         }
 
         await tx.arcenEvent.create({
@@ -215,7 +260,7 @@ export async function consumeMeteredEntitlement(
           },
         });
 
-        return { consumed: true, duplicate: false };
+        return { consumed: true, duplicate: false, creditError: null };
       },
       {
         isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
@@ -240,6 +285,26 @@ export async function consumeMeteredEntitlement(
       enabled: false,
       reason: appendLimitReason(finalEntitlement.reason),
       consumed: false,
+    };
+  }
+
+  if (!transactionResult.consumed && transactionResult.creditError) {
+    return {
+      ...finalEntitlement,
+      enabled: false,
+      reason: transactionResult.creditError,
+      consumed: false,
+    };
+  }
+
+  if (creditBurn && transactionResult.consumed) {
+    return {
+      ...finalEntitlement,
+      enabled: true,
+      reason: transactionResult.duplicate
+        ? finalEntitlement.reason
+        : "Credit consumed",
+      consumed: true,
     };
   }
 

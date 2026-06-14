@@ -22,6 +22,7 @@ import {
   Settings2,
   Info,
 } from "lucide-react";
+import { SkeletonCard } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -44,6 +45,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { getUsdcAddress } from "@/lib/contracts";
 import { getChainLabel, resolveEnvironmentChainId } from "@/lib/default-chain";
+import { readJsonOrThrow } from "@/lib/http-json";
 import {
   mergePaymentLinkCheckoutAppearance,
   readPaymentLinkCheckoutAppearance,
@@ -211,15 +213,20 @@ export function PaymentsSection() {
         fetch("/api/v1/companies?limit=100", { cache: "no-store" }),
       ]);
 
-      const linksPayload = (await linksRes.json()) as {
-        paymentLinks?: PaymentLinkRow[];
-      };
-      const sessionsPayload = (await sessionsRes.json()) as {
-        checkoutSessions?: CheckoutSessionRow[];
-      };
-      const companiesPayload = (await companiesRes.json()) as {
-        data?: CompanyOption[];
-      };
+      const [linksPayload, sessionsPayload, companiesPayload] = await Promise.all([
+        readJsonOrThrow<{ paymentLinks?: PaymentLinkRow[] }>(
+          linksRes,
+          "Failed to load payment links",
+        ),
+        readJsonOrThrow<{ checkoutSessions?: CheckoutSessionRow[] }>(
+          sessionsRes,
+          "Failed to load checkout sessions",
+        ),
+        readJsonOrThrow<{ data?: CompanyOption[] }>(
+          companiesRes,
+          "Failed to load companies",
+        ),
+      ]);
 
       setPaymentLinks(
         Array.isArray(linksPayload.paymentLinks) ? linksPayload.paymentLinks : [],
@@ -231,6 +238,10 @@ export function PaymentsSection() {
         Array.isArray(companiesPayload.data)
           ? companiesPayload.data.filter((c) => c.walletAddress)
           : [],
+      );
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to load payments",
       );
     } finally {
       setLoading(false);
@@ -689,7 +700,7 @@ export function PaymentsSection() {
 
           {loading ? (
             <div className="flex min-h-[320px] items-center justify-center">
-              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              <SkeletonCard lines={4} />
             </div>
           ) : paymentLinks.length === 0 ? (
             <div className="flex min-h-[320px] flex-col items-center justify-center text-center">
@@ -836,8 +847,8 @@ export function PaymentsSection() {
         </div>
 
         {loading ? (
-          <div className="py-16 text-center">
-            <Loader2 className="mx-auto h-5 w-5 animate-spin text-muted-foreground" />
+          <div className="py-16">
+            <SkeletonCard lines={3} />
           </div>
         ) : checkoutSessions.length === 0 ? (
           <div className="rounded-xl border border-dashed border-border bg-secondary/10 py-12 text-center">

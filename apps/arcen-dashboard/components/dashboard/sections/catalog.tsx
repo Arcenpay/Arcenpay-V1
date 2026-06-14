@@ -73,6 +73,13 @@ import {
   Puzzle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  Skeleton,
+  SkeletonTable,
+  SkeletonCard,
+  SkeletonMetricGrid,
+  SkeletonList,
+} from "@/components/ui/skeleton";
 import { useEnvironment } from "@/contexts/environment-context";
 import { FeatureAvatar } from "./features";
 import { Web3Icon } from "@/components/web3-icon";
@@ -161,6 +168,10 @@ interface CatalogCreditType {
   unitsPerPack: number;
   price: string;
   acceptedToken: string;
+  metadata?: {
+    description?: string | null;
+    unitNamePlural?: string | null;
+  } | null;
   environmentMode: EnvMode;
   status: CatalogStatus;
   active: boolean;
@@ -2167,7 +2178,9 @@ function CreateCreditTypeDialog({
         body: JSON.stringify({
           name: form.name,
           code: autoCode || "credit",
+          description: form.description || undefined,
           unitName,
+          unitNamePlural: form.unitNamePlural || undefined,
           unitsPerPack: Number(form.unitsPerPack),
           price: Number(form.price),
           acceptedToken: form.acceptedToken,
@@ -2675,7 +2688,9 @@ function EditCreditTypeDialog({
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     name: credit.name,
+    description: credit.metadata?.description ?? "",
     unitNameSingle: credit.unitName,
+    unitNamePlural: credit.metadata?.unitNamePlural ?? "",
     unitsPerPack: String(credit.unitsPerPack),
     price: String(parseFloat(credit.price)),
     acceptedToken: credit.acceptedToken,
@@ -2686,7 +2701,9 @@ function EditCreditTypeDialog({
   useEffect(() => {
     setForm({
       name: credit.name,
+      description: credit.metadata?.description ?? "",
       unitNameSingle: credit.unitName,
+      unitNamePlural: credit.metadata?.unitNamePlural ?? "",
       unitsPerPack: String(credit.unitsPerPack),
       price: String(parseFloat(credit.price)),
       acceptedToken: credit.acceptedToken,
@@ -2720,7 +2737,9 @@ function EditCreditTypeDialog({
         body: JSON.stringify({
           id: credit.id,
           name: form.name,
+          description: form.description || null,
           unitName: form.unitNameSingle,
+          unitNamePlural: form.unitNamePlural || null,
           unitsPerPack: Number(form.unitsPerPack),
           price: Number(form.price),
           acceptedToken: form.acceptedToken,
@@ -2803,6 +2822,20 @@ function EditCreditTypeDialog({
 
             <div>
               <Label className="text-sm font-medium mb-2 block">
+                Description
+              </Label>
+              <Input
+                value={form.description}
+                onChange={(e) =>
+                  setForm({ ...form, description: e.target.value })
+                }
+                placeholder="Optional, displayed in customer components"
+                className="h-11 bg-background border-border"
+              />
+            </div>
+
+            <div>
+              <Label className="text-sm font-medium mb-2 block">
                 Unit name (singular) *
               </Label>
               <Input
@@ -2819,6 +2852,20 @@ function EditCreditTypeDialog({
                   {errors.unitNameSingle}
                 </p>
               )}
+            </div>
+
+            <div>
+              <Label className="text-sm font-medium mb-2 block">
+                Unit name (plural)
+              </Label>
+              <Input
+                value={form.unitNamePlural}
+                onChange={(e) =>
+                  setForm({ ...form, unitNamePlural: e.target.value })
+                }
+                placeholder="e.g. credits, calls, tokens"
+                className="h-11 bg-background border-border"
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -3467,7 +3514,7 @@ function PlansTable({
       </div>
 
       {loading ? (
-        <p className="text-sm text-muted-foreground py-4">Loading…</p>
+        <SkeletonTable rows={5} cols={5} />
       ) : plans.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border bg-secondary/15 px-6 py-12 text-center">
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl border border-border bg-card">
@@ -4050,12 +4097,7 @@ function AddOnsTable({
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="flex flex-col items-center gap-3">
-            <RefreshCw className="w-6 h-6 animate-spin text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">Loading add-ons...</p>
-          </div>
-        </div>
+        <SkeletonTable rows={5} cols={4} />
       ) : addOns.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 border border-dashed border-border rounded-lg bg-secondary/20">
           <Package className="w-12 h-12 text-muted-foreground/50 mb-4" />
@@ -4338,9 +4380,9 @@ function AddOnsTable({
                     {flagsLoading ? (
                       <div className="flex gap-1.5 flex-wrap">
                         {Array.from({ length: 3 }).map((_, i) => (
-                          <div
+                          <Skeleton
                             key={i}
-                            className="h-6 w-20 rounded-full bg-secondary animate-pulse"
+                            className="h-6 w-20 rounded-full"
                           />
                         ))}
                       </div>
@@ -4459,14 +4501,7 @@ function AddOnsTable({
 
             {/* Entitlements list */}
             {entLoading ? (
-              <div className="space-y-2">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="h-14 rounded-xl bg-secondary/60 animate-pulse"
-                  />
-                ))}
-              </div>
+              <SkeletonList items={3} />
             ) : (
               (() => {
                 const filtered = entitlements.filter(
@@ -4652,14 +4687,7 @@ function CreditTypesTable({
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="flex flex-col items-center gap-3">
-            <RefreshCw className="w-6 h-6 animate-spin text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">
-              Loading credit types...
-            </p>
-          </div>
-        </div>
+        <SkeletonTable rows={5} cols={4} />
       ) : creditTypes.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 border border-dashed border-border rounded-lg bg-secondary/20">
           <Coins className="w-12 h-12 text-muted-foreground/50 mb-4" />
@@ -5538,7 +5566,7 @@ function ConfigurationTab() {
         <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-card px-4 py-3 shadow-sm">
           <p className="text-xs text-muted-foreground">
             {loadingConfig
-              ? "Loading configuration…"
+              ? <Skeleton className="h-4 w-32" />
               : "Changes are saved per environment"}
           </p>
           <div className="flex items-center gap-2">
@@ -5924,7 +5952,7 @@ function AddEntitlementDialog({
           <div className="space-y-2">
             <Label className="text-sm font-medium">Feature</Label>
             {featuresLoading ? (
-              <div className="h-11 bg-secondary rounded-lg animate-pulse" />
+              <Skeleton className="h-11 w-full rounded-lg" />
             ) : (
               <Select
                 value={selectedFeature?.id ?? ""}
@@ -7300,7 +7328,7 @@ function AddCreditGrantDialog({
           <div className="space-y-1.5">
             <Label className="text-sm font-medium">Credit Type</Label>
             {creditsLoading ? (
-              <div className="h-10 bg-secondary rounded-lg animate-pulse" />
+              <Skeleton className="h-10 w-full rounded-lg" />
             ) : (
               <Select value={selectedId} onValueChange={setSelectedId}>
                 <SelectTrigger className="bg-secondary border-border h-10">
@@ -7832,9 +7860,7 @@ function PlanDetailView({
             </div>
 
             {entLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-              </div>
+              <SkeletonTable rows={4} cols={4} />
             ) : (
               <>
                 {filteredEnt.length > 0 ? (
@@ -8036,9 +8062,7 @@ function PlanDetailView({
               />
             </div>
             {cgLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-              </div>
+              <SkeletonTable rows={3} cols={3} />
             ) : creditGrants.length > 0 ? (
               <div className="bg-card border border-border rounded-xl overflow-hidden">
                 <table className="w-full text-sm">
@@ -8133,36 +8157,7 @@ function PlanDetailView({
             </Button>
           </div>
           {companiesLoading ? (
-            <div className="border border-border rounded-xl overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Company</TableHead>
-                    <TableHead>Identity</TableHead>
-                    <TableHead>Created</TableHead>
-                    <TableHead>Last Seen</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {Array.from({ length: 3 }).map((_, index) => (
-                    <TableRow key={index}>
-                      <TableCell>
-                        <div className="h-4 w-32 rounded bg-muted animate-pulse" />
-                      </TableCell>
-                      <TableCell>
-                        <div className="h-4 w-40 rounded bg-muted animate-pulse" />
-                      </TableCell>
-                      <TableCell>
-                        <div className="h-4 w-24 rounded bg-muted animate-pulse" />
-                      </TableCell>
-                      <TableCell>
-                        <div className="h-4 w-24 rounded bg-muted animate-pulse" />
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+            <SkeletonTable rows={3} cols={4} />
           ) : subscribedCompanies.length > 0 ? (
             <div className="border border-border rounded-xl overflow-hidden">
               <Table>
@@ -9281,7 +9276,8 @@ function CreditDetailView({
               {credit.code}
             </Badge>
             <Badge variant="secondary" className="text-xs font-semibold">
-              ${parseFloat(credit.price).toFixed(2)}/credit
+              {credit.unitsPerPack} {credit.unitName} for $
+              {parseFloat(credit.price).toFixed(2)}
             </Badge>
             <StatusBadge status={credit.status} />
             <div className="h-6 w-px bg-border hidden sm:block" />
@@ -9486,7 +9482,12 @@ function CreditDetailView({
                       >
                         <td className="py-3 px-4 font-medium flex items-center gap-2">
                           <Package className="w-3.5 h-3.5 text-blue-500" />
-                          {grant.planId} {/* Ideally show plan name here */}
+                          {grant.planName ?? grant.planId}
+                          {grant.planTier ? (
+                            <span className="text-xs text-muted-foreground font-mono">
+                              {grant.planTier}
+                            </span>
+                          ) : null}
                         </td>
                         <td className="py-3 px-4 text-foreground">
                           {grant.amount} units

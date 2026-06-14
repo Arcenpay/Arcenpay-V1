@@ -38,6 +38,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { getUsdcAddress } from "@/lib/contracts";
+import { SkeletonList, SkeletonTable } from "@/components/ui/skeleton";
 
 const ERC20_APPROVE_ABI = [{
   type: "function",
@@ -238,7 +239,7 @@ function ApiKeysTab() {
 
       {/* Keys list */}
       {loading ? (
-        <div className="text-sm text-muted-foreground">Loading…</div>
+        <SkeletonList items={3} />
       ) : keys.length === 0 ? (
         <div className="text-center py-10 border border-dashed border-border rounded-lg">
           <Key className="w-8 h-8 text-muted-foreground/40 mx-auto mb-2" />
@@ -362,7 +363,7 @@ function SessionsTab() {
       )}
 
       {loading ? (
-        <div className="text-sm text-muted-foreground">Loading…</div>
+        <SkeletonTable rows={3} cols={7} />
       ) : sessions.length === 0 ? (
         <div className="text-center py-10 border border-dashed border-border rounded-lg">
           <Database className="w-8 h-8 text-muted-foreground/40 mx-auto mb-2" />
@@ -1298,7 +1299,7 @@ function DispatchHistoryTab() {
       </div>
 
       {loading ? (
-        <div className="text-sm text-muted-foreground">Loading…</div>
+        <SkeletonTable rows={3} cols={5} />
       ) : requests.length === 0 ? (
         <div className="text-center py-10 border border-dashed border-border rounded-lg">
           <Clock className="w-8 h-8 text-muted-foreground/40 mx-auto mb-2" />

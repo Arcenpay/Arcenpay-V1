@@ -12,7 +12,9 @@ const createSchema = z.object({
     .string()
     .min(1)
     .regex(/^[a-z0-9_\-]+$/i),
+  description: z.string().trim().optional(),
   unitName: z.string().min(1),
+  unitNamePlural: z.string().trim().optional(),
   unitsPerPack: z.coerce.number().int().positive(),
   price: z.coerce.number().positive(),
   acceptedToken: z.string().min(1),
@@ -27,7 +29,9 @@ const updateSchema = z.object({
     .min(1)
     .regex(/^[a-z0-9_\-]+$/i)
     .optional(),
+  description: z.string().trim().nullable().optional(),
   unitName: z.string().min(1).optional(),
+  unitNamePlural: z.string().trim().nullable().optional(),
   unitsPerPack: z.coerce.number().int().positive().optional(),
   price: z.coerce.number().positive().optional(),
   acceptedToken: z.string().min(1).optional(),
@@ -94,6 +98,15 @@ export async function createCredit(c: Context) {
       unitsPerPack: data.unitsPerPack,
       price: data.price.toFixed(6),
       acceptedToken: data.acceptedToken,
+      metadata:
+        data.description || data.unitNamePlural
+          ? {
+              ...(data.description ? { description: data.description } : {}),
+              ...(data.unitNamePlural
+                ? { unitNamePlural: data.unitNamePlural }
+                : {}),
+            }
+          : undefined,
       status: "DRAFT",
       active: true,
       version: 1,
@@ -170,6 +183,28 @@ export async function updateCredit(c: Context) {
       ...(parsed.data.unitName !== undefined && {
         unitName: parsed.data.unitName,
       }),
+      ...(parsed.data.description !== undefined ||
+      parsed.data.unitNamePlural !== undefined
+        ? {
+            metadata: {
+              ...((existing.metadata &&
+              typeof existing.metadata === "object" &&
+              !Array.isArray(existing.metadata)
+                ? (existing.metadata as Record<string, unknown>)
+                : {}) as Record<string, unknown>),
+              ...(parsed.data.description !== undefined
+                ? parsed.data.description
+                  ? { description: parsed.data.description }
+                  : { description: null }
+                : {}),
+              ...(parsed.data.unitNamePlural !== undefined
+                ? parsed.data.unitNamePlural
+                  ? { unitNamePlural: parsed.data.unitNamePlural }
+                  : { unitNamePlural: null }
+                : {}),
+            },
+          }
+        : {}),
       ...(parsed.data.unitsPerPack !== undefined && {
         unitsPerPack: parsed.data.unitsPerPack,
       }),

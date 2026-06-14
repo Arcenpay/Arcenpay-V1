@@ -108,7 +108,13 @@ async function loadMergedMetadataEntitlements(
   const activeAddOnIds = company?.activeAddOnIds ?? [];
   if (activeAddOnIds.length > 0) {
     const addOns = await db.catalogAddOn.findMany({
-      where: { teamId, id: { in: activeAddOnIds } },
+      where: {
+        teamId,
+        id: { in: activeAddOnIds },
+        active: true,
+        status: "PUBLISHED",
+        ...(company?.environmentId ? { environmentId: company.environmentId } : {}),
+      },
       select: { id: true, metadata: true },
     });
 

@@ -417,6 +417,8 @@ export type CheckoutSessionWhereInput = {
   payment?: Prisma.XOR<Prisma.PaymentNullableScalarRelationFilter, Prisma.PaymentWhereInput> | null
   subscriptionState?: Prisma.XOR<Prisma.SubscriptionStateNullableScalarRelationFilter, Prisma.SubscriptionStateWhereInput> | null
   addOnGrants?: Prisma.CompanyAddOnGrantListRelationFilter
+  creditGrants?: Prisma.CompanyCreditGrantListRelationFilter
+  creditLedgerEntries?: Prisma.CreditLedgerEntryListRelationFilter
 }
 
 export type CheckoutSessionOrderByWithRelationInput = {
@@ -458,6 +460,8 @@ export type CheckoutSessionOrderByWithRelationInput = {
   payment?: Prisma.PaymentOrderByWithRelationInput
   subscriptionState?: Prisma.SubscriptionStateOrderByWithRelationInput
   addOnGrants?: Prisma.CompanyAddOnGrantOrderByRelationAggregateInput
+  creditGrants?: Prisma.CompanyCreditGrantOrderByRelationAggregateInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryOrderByRelationAggregateInput
 }
 
 export type CheckoutSessionWhereUniqueInput = Prisma.AtLeast<{
@@ -502,6 +506,8 @@ export type CheckoutSessionWhereUniqueInput = Prisma.AtLeast<{
   payment?: Prisma.XOR<Prisma.PaymentNullableScalarRelationFilter, Prisma.PaymentWhereInput> | null
   subscriptionState?: Prisma.XOR<Prisma.SubscriptionStateNullableScalarRelationFilter, Prisma.SubscriptionStateWhereInput> | null
   addOnGrants?: Prisma.CompanyAddOnGrantListRelationFilter
+  creditGrants?: Prisma.CompanyCreditGrantListRelationFilter
+  creditLedgerEntries?: Prisma.CreditLedgerEntryListRelationFilter
 }, "id" | "txHash">
 
 export type CheckoutSessionOrderByWithAggregationInput = {
@@ -607,6 +613,8 @@ export type CheckoutSessionCreateInput = {
   payment?: Prisma.PaymentCreateNestedOneWithoutCheckoutSessionsInput
   subscriptionState?: Prisma.SubscriptionStateCreateNestedOneWithoutCheckoutSessionsInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutCheckoutSessionInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutCheckoutSessionInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutCheckoutSessionInput
 }
 
 export type CheckoutSessionUncheckedCreateInput = {
@@ -640,6 +648,8 @@ export type CheckoutSessionUncheckedCreateInput = {
   cancelledAt?: Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutCheckoutSessionInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutCheckoutSessionInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutCheckoutSessionInput
 }
 
 export type CheckoutSessionUpdateInput = {
@@ -673,6 +683,8 @@ export type CheckoutSessionUpdateInput = {
   payment?: Prisma.PaymentUpdateOneWithoutCheckoutSessionsNestedInput
   subscriptionState?: Prisma.SubscriptionStateUpdateOneWithoutCheckoutSessionsNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutCheckoutSessionNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutCheckoutSessionNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutCheckoutSessionNestedInput
 }
 
 export type CheckoutSessionUncheckedUpdateInput = {
@@ -706,6 +718,8 @@ export type CheckoutSessionUncheckedUpdateInput = {
   cancelledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutCheckoutSessionNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutCheckoutSessionNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutCheckoutSessionNestedInput
 }
 
 export type CheckoutSessionCreateManyInput = {
@@ -1225,6 +1239,38 @@ export type CheckoutSessionUpdateOneWithoutAddOnGrantsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.CheckoutSessionUpdateToOneWithWhereWithoutAddOnGrantsInput, Prisma.CheckoutSessionUpdateWithoutAddOnGrantsInput>, Prisma.CheckoutSessionUncheckedUpdateWithoutAddOnGrantsInput>
 }
 
+export type CheckoutSessionCreateNestedOneWithoutCreditGrantsInput = {
+  create?: Prisma.XOR<Prisma.CheckoutSessionCreateWithoutCreditGrantsInput, Prisma.CheckoutSessionUncheckedCreateWithoutCreditGrantsInput>
+  connectOrCreate?: Prisma.CheckoutSessionCreateOrConnectWithoutCreditGrantsInput
+  connect?: Prisma.CheckoutSessionWhereUniqueInput
+}
+
+export type CheckoutSessionUpdateOneWithoutCreditGrantsNestedInput = {
+  create?: Prisma.XOR<Prisma.CheckoutSessionCreateWithoutCreditGrantsInput, Prisma.CheckoutSessionUncheckedCreateWithoutCreditGrantsInput>
+  connectOrCreate?: Prisma.CheckoutSessionCreateOrConnectWithoutCreditGrantsInput
+  upsert?: Prisma.CheckoutSessionUpsertWithoutCreditGrantsInput
+  disconnect?: Prisma.CheckoutSessionWhereInput | boolean
+  delete?: Prisma.CheckoutSessionWhereInput | boolean
+  connect?: Prisma.CheckoutSessionWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.CheckoutSessionUpdateToOneWithWhereWithoutCreditGrantsInput, Prisma.CheckoutSessionUpdateWithoutCreditGrantsInput>, Prisma.CheckoutSessionUncheckedUpdateWithoutCreditGrantsInput>
+}
+
+export type CheckoutSessionCreateNestedOneWithoutCreditLedgerEntriesInput = {
+  create?: Prisma.XOR<Prisma.CheckoutSessionCreateWithoutCreditLedgerEntriesInput, Prisma.CheckoutSessionUncheckedCreateWithoutCreditLedgerEntriesInput>
+  connectOrCreate?: Prisma.CheckoutSessionCreateOrConnectWithoutCreditLedgerEntriesInput
+  connect?: Prisma.CheckoutSessionWhereUniqueInput
+}
+
+export type CheckoutSessionUpdateOneWithoutCreditLedgerEntriesNestedInput = {
+  create?: Prisma.XOR<Prisma.CheckoutSessionCreateWithoutCreditLedgerEntriesInput, Prisma.CheckoutSessionUncheckedCreateWithoutCreditLedgerEntriesInput>
+  connectOrCreate?: Prisma.CheckoutSessionCreateOrConnectWithoutCreditLedgerEntriesInput
+  upsert?: Prisma.CheckoutSessionUpsertWithoutCreditLedgerEntriesInput
+  disconnect?: Prisma.CheckoutSessionWhereInput | boolean
+  delete?: Prisma.CheckoutSessionWhereInput | boolean
+  connect?: Prisma.CheckoutSessionWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.CheckoutSessionUpdateToOneWithWhereWithoutCreditLedgerEntriesInput, Prisma.CheckoutSessionUpdateWithoutCreditLedgerEntriesInput>, Prisma.CheckoutSessionUncheckedUpdateWithoutCreditLedgerEntriesInput>
+}
+
 export type CheckoutSessionCreateNestedManyWithoutPaymentLinkInput = {
   create?: Prisma.XOR<Prisma.CheckoutSessionCreateWithoutPaymentLinkInput, Prisma.CheckoutSessionUncheckedCreateWithoutPaymentLinkInput> | Prisma.CheckoutSessionCreateWithoutPaymentLinkInput[] | Prisma.CheckoutSessionUncheckedCreateWithoutPaymentLinkInput[]
   connectOrCreate?: Prisma.CheckoutSessionCreateOrConnectWithoutPaymentLinkInput | Prisma.CheckoutSessionCreateOrConnectWithoutPaymentLinkInput[]
@@ -1305,6 +1351,8 @@ export type CheckoutSessionCreateWithoutTeamInput = {
   payment?: Prisma.PaymentCreateNestedOneWithoutCheckoutSessionsInput
   subscriptionState?: Prisma.SubscriptionStateCreateNestedOneWithoutCheckoutSessionsInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutCheckoutSessionInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutCheckoutSessionInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutCheckoutSessionInput
 }
 
 export type CheckoutSessionUncheckedCreateWithoutTeamInput = {
@@ -1337,6 +1385,8 @@ export type CheckoutSessionUncheckedCreateWithoutTeamInput = {
   cancelledAt?: Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutCheckoutSessionInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutCheckoutSessionInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutCheckoutSessionInput
 }
 
 export type CheckoutSessionCreateOrConnectWithoutTeamInput = {
@@ -1430,6 +1480,8 @@ export type CheckoutSessionCreateWithoutEnvironmentInput = {
   payment?: Prisma.PaymentCreateNestedOneWithoutCheckoutSessionsInput
   subscriptionState?: Prisma.SubscriptionStateCreateNestedOneWithoutCheckoutSessionsInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutCheckoutSessionInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutCheckoutSessionInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutCheckoutSessionInput
 }
 
 export type CheckoutSessionUncheckedCreateWithoutEnvironmentInput = {
@@ -1462,6 +1514,8 @@ export type CheckoutSessionUncheckedCreateWithoutEnvironmentInput = {
   cancelledAt?: Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutCheckoutSessionInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutCheckoutSessionInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutCheckoutSessionInput
 }
 
 export type CheckoutSessionCreateOrConnectWithoutEnvironmentInput = {
@@ -1520,6 +1574,8 @@ export type CheckoutSessionCreateWithoutCatalogAddOnInput = {
   payment?: Prisma.PaymentCreateNestedOneWithoutCheckoutSessionsInput
   subscriptionState?: Prisma.SubscriptionStateCreateNestedOneWithoutCheckoutSessionsInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutCheckoutSessionInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutCheckoutSessionInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutCheckoutSessionInput
 }
 
 export type CheckoutSessionUncheckedCreateWithoutCatalogAddOnInput = {
@@ -1552,6 +1608,8 @@ export type CheckoutSessionUncheckedCreateWithoutCatalogAddOnInput = {
   cancelledAt?: Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutCheckoutSessionInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutCheckoutSessionInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutCheckoutSessionInput
 }
 
 export type CheckoutSessionCreateOrConnectWithoutCatalogAddOnInput = {
@@ -1610,6 +1668,8 @@ export type CheckoutSessionCreateWithoutInvoiceInput = {
   payment?: Prisma.PaymentCreateNestedOneWithoutCheckoutSessionsInput
   subscriptionState?: Prisma.SubscriptionStateCreateNestedOneWithoutCheckoutSessionsInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutCheckoutSessionInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutCheckoutSessionInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutCheckoutSessionInput
 }
 
 export type CheckoutSessionUncheckedCreateWithoutInvoiceInput = {
@@ -1642,6 +1702,8 @@ export type CheckoutSessionUncheckedCreateWithoutInvoiceInput = {
   cancelledAt?: Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutCheckoutSessionInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutCheckoutSessionInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutCheckoutSessionInput
 }
 
 export type CheckoutSessionCreateOrConnectWithoutInvoiceInput = {
@@ -1700,6 +1762,8 @@ export type CheckoutSessionCreateWithoutSubscriptionStateInput = {
   invoice?: Prisma.InvoiceCreateNestedOneWithoutCheckoutSessionsInput
   payment?: Prisma.PaymentCreateNestedOneWithoutCheckoutSessionsInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutCheckoutSessionInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutCheckoutSessionInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutCheckoutSessionInput
 }
 
 export type CheckoutSessionUncheckedCreateWithoutSubscriptionStateInput = {
@@ -1732,6 +1796,8 @@ export type CheckoutSessionUncheckedCreateWithoutSubscriptionStateInput = {
   cancelledAt?: Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutCheckoutSessionInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutCheckoutSessionInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutCheckoutSessionInput
 }
 
 export type CheckoutSessionCreateOrConnectWithoutSubscriptionStateInput = {
@@ -1790,6 +1856,8 @@ export type CheckoutSessionCreateWithoutPaymentInput = {
   invoice?: Prisma.InvoiceCreateNestedOneWithoutCheckoutSessionsInput
   subscriptionState?: Prisma.SubscriptionStateCreateNestedOneWithoutCheckoutSessionsInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutCheckoutSessionInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutCheckoutSessionInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutCheckoutSessionInput
 }
 
 export type CheckoutSessionUncheckedCreateWithoutPaymentInput = {
@@ -1822,6 +1890,8 @@ export type CheckoutSessionUncheckedCreateWithoutPaymentInput = {
   cancelledAt?: Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutCheckoutSessionInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutCheckoutSessionInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutCheckoutSessionInput
 }
 
 export type CheckoutSessionCreateOrConnectWithoutPaymentInput = {
@@ -1880,6 +1950,8 @@ export type CheckoutSessionCreateWithoutCompanyInput = {
   payment?: Prisma.PaymentCreateNestedOneWithoutCheckoutSessionsInput
   subscriptionState?: Prisma.SubscriptionStateCreateNestedOneWithoutCheckoutSessionsInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutCheckoutSessionInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutCheckoutSessionInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutCheckoutSessionInput
 }
 
 export type CheckoutSessionUncheckedCreateWithoutCompanyInput = {
@@ -1912,6 +1984,8 @@ export type CheckoutSessionUncheckedCreateWithoutCompanyInput = {
   cancelledAt?: Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutCheckoutSessionInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutCheckoutSessionInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutCheckoutSessionInput
 }
 
 export type CheckoutSessionCreateOrConnectWithoutCompanyInput = {
@@ -1970,6 +2044,8 @@ export type CheckoutSessionCreateWithoutAddOnGrantsInput = {
   invoice?: Prisma.InvoiceCreateNestedOneWithoutCheckoutSessionsInput
   payment?: Prisma.PaymentCreateNestedOneWithoutCheckoutSessionsInput
   subscriptionState?: Prisma.SubscriptionStateCreateNestedOneWithoutCheckoutSessionsInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutCheckoutSessionInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutCheckoutSessionInput
 }
 
 export type CheckoutSessionUncheckedCreateWithoutAddOnGrantsInput = {
@@ -2002,6 +2078,8 @@ export type CheckoutSessionUncheckedCreateWithoutAddOnGrantsInput = {
   paidAt?: Date | string | null
   cancelledAt?: Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutCheckoutSessionInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutCheckoutSessionInput
 }
 
 export type CheckoutSessionCreateOrConnectWithoutAddOnGrantsInput = {
@@ -2050,6 +2128,8 @@ export type CheckoutSessionUpdateWithoutAddOnGrantsInput = {
   invoice?: Prisma.InvoiceUpdateOneWithoutCheckoutSessionsNestedInput
   payment?: Prisma.PaymentUpdateOneWithoutCheckoutSessionsNestedInput
   subscriptionState?: Prisma.SubscriptionStateUpdateOneWithoutCheckoutSessionsNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutCheckoutSessionNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutCheckoutSessionNestedInput
 }
 
 export type CheckoutSessionUncheckedUpdateWithoutAddOnGrantsInput = {
@@ -2082,6 +2162,312 @@ export type CheckoutSessionUncheckedUpdateWithoutAddOnGrantsInput = {
   paidAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   cancelledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutCheckoutSessionNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutCheckoutSessionNestedInput
+}
+
+export type CheckoutSessionCreateWithoutCreditGrantsInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  purpose: $Enums.CheckoutSessionPurpose
+  status?: $Enums.CheckoutSessionStatus
+  customerEmail?: string | null
+  customerWallet?: string | null
+  customerName?: string | null
+  currency?: string
+  amount: runtime.Decimal | runtime.DecimalJsLike | number | string
+  acceptedToken: string
+  chainId?: number
+  recipientWallet: string
+  txHash?: string | null
+  verificationError?: string | null
+  successUrl?: string | null
+  cancelUrl?: string | null
+  expiresAt?: Date | string | null
+  paidAt?: Date | string | null
+  cancelledAt?: Date | string | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  team: Prisma.TeamCreateNestedOneWithoutCheckoutSessionsInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutCheckoutSessionsInput
+  paymentLink?: Prisma.PaymentLinkCreateNestedOneWithoutCheckoutSessionsInput
+  company?: Prisma.ArcenCompanyCreateNestedOneWithoutCheckoutSessionsInput
+  catalogAddOn?: Prisma.CatalogAddOnCreateNestedOneWithoutCheckoutSessionsInput
+  invoice?: Prisma.InvoiceCreateNestedOneWithoutCheckoutSessionsInput
+  payment?: Prisma.PaymentCreateNestedOneWithoutCheckoutSessionsInput
+  subscriptionState?: Prisma.SubscriptionStateCreateNestedOneWithoutCheckoutSessionsInput
+  addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutCheckoutSessionInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutCheckoutSessionInput
+}
+
+export type CheckoutSessionUncheckedCreateWithoutCreditGrantsInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  teamId: string
+  environmentId?: string | null
+  paymentLinkId?: string | null
+  companyId?: string | null
+  catalogAddOnId?: string | null
+  invoiceId?: string | null
+  paymentId?: string | null
+  subscriptionStateId?: string | null
+  purpose: $Enums.CheckoutSessionPurpose
+  status?: $Enums.CheckoutSessionStatus
+  customerEmail?: string | null
+  customerWallet?: string | null
+  customerName?: string | null
+  currency?: string
+  amount: runtime.Decimal | runtime.DecimalJsLike | number | string
+  acceptedToken: string
+  chainId?: number
+  recipientWallet: string
+  txHash?: string | null
+  verificationError?: string | null
+  successUrl?: string | null
+  cancelUrl?: string | null
+  expiresAt?: Date | string | null
+  paidAt?: Date | string | null
+  cancelledAt?: Date | string | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutCheckoutSessionInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutCheckoutSessionInput
+}
+
+export type CheckoutSessionCreateOrConnectWithoutCreditGrantsInput = {
+  where: Prisma.CheckoutSessionWhereUniqueInput
+  create: Prisma.XOR<Prisma.CheckoutSessionCreateWithoutCreditGrantsInput, Prisma.CheckoutSessionUncheckedCreateWithoutCreditGrantsInput>
+}
+
+export type CheckoutSessionUpsertWithoutCreditGrantsInput = {
+  update: Prisma.XOR<Prisma.CheckoutSessionUpdateWithoutCreditGrantsInput, Prisma.CheckoutSessionUncheckedUpdateWithoutCreditGrantsInput>
+  create: Prisma.XOR<Prisma.CheckoutSessionCreateWithoutCreditGrantsInput, Prisma.CheckoutSessionUncheckedCreateWithoutCreditGrantsInput>
+  where?: Prisma.CheckoutSessionWhereInput
+}
+
+export type CheckoutSessionUpdateToOneWithWhereWithoutCreditGrantsInput = {
+  where?: Prisma.CheckoutSessionWhereInput
+  data: Prisma.XOR<Prisma.CheckoutSessionUpdateWithoutCreditGrantsInput, Prisma.CheckoutSessionUncheckedUpdateWithoutCreditGrantsInput>
+}
+
+export type CheckoutSessionUpdateWithoutCreditGrantsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  purpose?: Prisma.EnumCheckoutSessionPurposeFieldUpdateOperationsInput | $Enums.CheckoutSessionPurpose
+  status?: Prisma.EnumCheckoutSessionStatusFieldUpdateOperationsInput | $Enums.CheckoutSessionStatus
+  customerEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  customerWallet?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  customerName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
+  amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  acceptedToken?: Prisma.StringFieldUpdateOperationsInput | string
+  chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  recipientWallet?: Prisma.StringFieldUpdateOperationsInput | string
+  txHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  verificationError?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  successUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  cancelUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  paidAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  cancelledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  team?: Prisma.TeamUpdateOneRequiredWithoutCheckoutSessionsNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutCheckoutSessionsNestedInput
+  paymentLink?: Prisma.PaymentLinkUpdateOneWithoutCheckoutSessionsNestedInput
+  company?: Prisma.ArcenCompanyUpdateOneWithoutCheckoutSessionsNestedInput
+  catalogAddOn?: Prisma.CatalogAddOnUpdateOneWithoutCheckoutSessionsNestedInput
+  invoice?: Prisma.InvoiceUpdateOneWithoutCheckoutSessionsNestedInput
+  payment?: Prisma.PaymentUpdateOneWithoutCheckoutSessionsNestedInput
+  subscriptionState?: Prisma.SubscriptionStateUpdateOneWithoutCheckoutSessionsNestedInput
+  addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutCheckoutSessionNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutCheckoutSessionNestedInput
+}
+
+export type CheckoutSessionUncheckedUpdateWithoutCreditGrantsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  paymentLinkId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  companyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  catalogAddOnId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  invoiceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  paymentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  subscriptionStateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  purpose?: Prisma.EnumCheckoutSessionPurposeFieldUpdateOperationsInput | $Enums.CheckoutSessionPurpose
+  status?: Prisma.EnumCheckoutSessionStatusFieldUpdateOperationsInput | $Enums.CheckoutSessionStatus
+  customerEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  customerWallet?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  customerName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
+  amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  acceptedToken?: Prisma.StringFieldUpdateOperationsInput | string
+  chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  recipientWallet?: Prisma.StringFieldUpdateOperationsInput | string
+  txHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  verificationError?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  successUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  cancelUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  paidAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  cancelledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutCheckoutSessionNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutCheckoutSessionNestedInput
+}
+
+export type CheckoutSessionCreateWithoutCreditLedgerEntriesInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  purpose: $Enums.CheckoutSessionPurpose
+  status?: $Enums.CheckoutSessionStatus
+  customerEmail?: string | null
+  customerWallet?: string | null
+  customerName?: string | null
+  currency?: string
+  amount: runtime.Decimal | runtime.DecimalJsLike | number | string
+  acceptedToken: string
+  chainId?: number
+  recipientWallet: string
+  txHash?: string | null
+  verificationError?: string | null
+  successUrl?: string | null
+  cancelUrl?: string | null
+  expiresAt?: Date | string | null
+  paidAt?: Date | string | null
+  cancelledAt?: Date | string | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  team: Prisma.TeamCreateNestedOneWithoutCheckoutSessionsInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutCheckoutSessionsInput
+  paymentLink?: Prisma.PaymentLinkCreateNestedOneWithoutCheckoutSessionsInput
+  company?: Prisma.ArcenCompanyCreateNestedOneWithoutCheckoutSessionsInput
+  catalogAddOn?: Prisma.CatalogAddOnCreateNestedOneWithoutCheckoutSessionsInput
+  invoice?: Prisma.InvoiceCreateNestedOneWithoutCheckoutSessionsInput
+  payment?: Prisma.PaymentCreateNestedOneWithoutCheckoutSessionsInput
+  subscriptionState?: Prisma.SubscriptionStateCreateNestedOneWithoutCheckoutSessionsInput
+  addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutCheckoutSessionInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutCheckoutSessionInput
+}
+
+export type CheckoutSessionUncheckedCreateWithoutCreditLedgerEntriesInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  teamId: string
+  environmentId?: string | null
+  paymentLinkId?: string | null
+  companyId?: string | null
+  catalogAddOnId?: string | null
+  invoiceId?: string | null
+  paymentId?: string | null
+  subscriptionStateId?: string | null
+  purpose: $Enums.CheckoutSessionPurpose
+  status?: $Enums.CheckoutSessionStatus
+  customerEmail?: string | null
+  customerWallet?: string | null
+  customerName?: string | null
+  currency?: string
+  amount: runtime.Decimal | runtime.DecimalJsLike | number | string
+  acceptedToken: string
+  chainId?: number
+  recipientWallet: string
+  txHash?: string | null
+  verificationError?: string | null
+  successUrl?: string | null
+  cancelUrl?: string | null
+  expiresAt?: Date | string | null
+  paidAt?: Date | string | null
+  cancelledAt?: Date | string | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutCheckoutSessionInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutCheckoutSessionInput
+}
+
+export type CheckoutSessionCreateOrConnectWithoutCreditLedgerEntriesInput = {
+  where: Prisma.CheckoutSessionWhereUniqueInput
+  create: Prisma.XOR<Prisma.CheckoutSessionCreateWithoutCreditLedgerEntriesInput, Prisma.CheckoutSessionUncheckedCreateWithoutCreditLedgerEntriesInput>
+}
+
+export type CheckoutSessionUpsertWithoutCreditLedgerEntriesInput = {
+  update: Prisma.XOR<Prisma.CheckoutSessionUpdateWithoutCreditLedgerEntriesInput, Prisma.CheckoutSessionUncheckedUpdateWithoutCreditLedgerEntriesInput>
+  create: Prisma.XOR<Prisma.CheckoutSessionCreateWithoutCreditLedgerEntriesInput, Prisma.CheckoutSessionUncheckedCreateWithoutCreditLedgerEntriesInput>
+  where?: Prisma.CheckoutSessionWhereInput
+}
+
+export type CheckoutSessionUpdateToOneWithWhereWithoutCreditLedgerEntriesInput = {
+  where?: Prisma.CheckoutSessionWhereInput
+  data: Prisma.XOR<Prisma.CheckoutSessionUpdateWithoutCreditLedgerEntriesInput, Prisma.CheckoutSessionUncheckedUpdateWithoutCreditLedgerEntriesInput>
+}
+
+export type CheckoutSessionUpdateWithoutCreditLedgerEntriesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  purpose?: Prisma.EnumCheckoutSessionPurposeFieldUpdateOperationsInput | $Enums.CheckoutSessionPurpose
+  status?: Prisma.EnumCheckoutSessionStatusFieldUpdateOperationsInput | $Enums.CheckoutSessionStatus
+  customerEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  customerWallet?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  customerName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
+  amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  acceptedToken?: Prisma.StringFieldUpdateOperationsInput | string
+  chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  recipientWallet?: Prisma.StringFieldUpdateOperationsInput | string
+  txHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  verificationError?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  successUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  cancelUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  paidAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  cancelledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  team?: Prisma.TeamUpdateOneRequiredWithoutCheckoutSessionsNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutCheckoutSessionsNestedInput
+  paymentLink?: Prisma.PaymentLinkUpdateOneWithoutCheckoutSessionsNestedInput
+  company?: Prisma.ArcenCompanyUpdateOneWithoutCheckoutSessionsNestedInput
+  catalogAddOn?: Prisma.CatalogAddOnUpdateOneWithoutCheckoutSessionsNestedInput
+  invoice?: Prisma.InvoiceUpdateOneWithoutCheckoutSessionsNestedInput
+  payment?: Prisma.PaymentUpdateOneWithoutCheckoutSessionsNestedInput
+  subscriptionState?: Prisma.SubscriptionStateUpdateOneWithoutCheckoutSessionsNestedInput
+  addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutCheckoutSessionNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutCheckoutSessionNestedInput
+}
+
+export type CheckoutSessionUncheckedUpdateWithoutCreditLedgerEntriesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  paymentLinkId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  companyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  catalogAddOnId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  invoiceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  paymentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  subscriptionStateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  purpose?: Prisma.EnumCheckoutSessionPurposeFieldUpdateOperationsInput | $Enums.CheckoutSessionPurpose
+  status?: Prisma.EnumCheckoutSessionStatusFieldUpdateOperationsInput | $Enums.CheckoutSessionStatus
+  customerEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  customerWallet?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  customerName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
+  amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  acceptedToken?: Prisma.StringFieldUpdateOperationsInput | string
+  chainId?: Prisma.IntFieldUpdateOperationsInput | number
+  recipientWallet?: Prisma.StringFieldUpdateOperationsInput | string
+  txHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  verificationError?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  successUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  cancelUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  expiresAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  paidAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  cancelledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutCheckoutSessionNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutCheckoutSessionNestedInput
 }
 
 export type CheckoutSessionCreateWithoutPaymentLinkInput = {
@@ -2114,6 +2500,8 @@ export type CheckoutSessionCreateWithoutPaymentLinkInput = {
   payment?: Prisma.PaymentCreateNestedOneWithoutCheckoutSessionsInput
   subscriptionState?: Prisma.SubscriptionStateCreateNestedOneWithoutCheckoutSessionsInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutCheckoutSessionInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutCheckoutSessionInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutCheckoutSessionInput
 }
 
 export type CheckoutSessionUncheckedCreateWithoutPaymentLinkInput = {
@@ -2146,6 +2534,8 @@ export type CheckoutSessionUncheckedCreateWithoutPaymentLinkInput = {
   cancelledAt?: Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutCheckoutSessionInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutCheckoutSessionInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutCheckoutSessionInput
 }
 
 export type CheckoutSessionCreateOrConnectWithoutPaymentLinkInput = {
@@ -2235,6 +2625,8 @@ export type CheckoutSessionUpdateWithoutTeamInput = {
   payment?: Prisma.PaymentUpdateOneWithoutCheckoutSessionsNestedInput
   subscriptionState?: Prisma.SubscriptionStateUpdateOneWithoutCheckoutSessionsNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutCheckoutSessionNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutCheckoutSessionNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutCheckoutSessionNestedInput
 }
 
 export type CheckoutSessionUncheckedUpdateWithoutTeamInput = {
@@ -2267,6 +2659,8 @@ export type CheckoutSessionUncheckedUpdateWithoutTeamInput = {
   cancelledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutCheckoutSessionNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutCheckoutSessionNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutCheckoutSessionNestedInput
 }
 
 export type CheckoutSessionUncheckedUpdateManyWithoutTeamInput = {
@@ -2361,6 +2755,8 @@ export type CheckoutSessionUpdateWithoutEnvironmentInput = {
   payment?: Prisma.PaymentUpdateOneWithoutCheckoutSessionsNestedInput
   subscriptionState?: Prisma.SubscriptionStateUpdateOneWithoutCheckoutSessionsNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutCheckoutSessionNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutCheckoutSessionNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutCheckoutSessionNestedInput
 }
 
 export type CheckoutSessionUncheckedUpdateWithoutEnvironmentInput = {
@@ -2393,6 +2789,8 @@ export type CheckoutSessionUncheckedUpdateWithoutEnvironmentInput = {
   cancelledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutCheckoutSessionNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutCheckoutSessionNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutCheckoutSessionNestedInput
 }
 
 export type CheckoutSessionUncheckedUpdateManyWithoutEnvironmentInput = {
@@ -2487,6 +2885,8 @@ export type CheckoutSessionUpdateWithoutCatalogAddOnInput = {
   payment?: Prisma.PaymentUpdateOneWithoutCheckoutSessionsNestedInput
   subscriptionState?: Prisma.SubscriptionStateUpdateOneWithoutCheckoutSessionsNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutCheckoutSessionNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutCheckoutSessionNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutCheckoutSessionNestedInput
 }
 
 export type CheckoutSessionUncheckedUpdateWithoutCatalogAddOnInput = {
@@ -2519,6 +2919,8 @@ export type CheckoutSessionUncheckedUpdateWithoutCatalogAddOnInput = {
   cancelledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutCheckoutSessionNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutCheckoutSessionNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutCheckoutSessionNestedInput
 }
 
 export type CheckoutSessionUncheckedUpdateManyWithoutCatalogAddOnInput = {
@@ -2613,6 +3015,8 @@ export type CheckoutSessionUpdateWithoutInvoiceInput = {
   payment?: Prisma.PaymentUpdateOneWithoutCheckoutSessionsNestedInput
   subscriptionState?: Prisma.SubscriptionStateUpdateOneWithoutCheckoutSessionsNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutCheckoutSessionNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutCheckoutSessionNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutCheckoutSessionNestedInput
 }
 
 export type CheckoutSessionUncheckedUpdateWithoutInvoiceInput = {
@@ -2645,6 +3049,8 @@ export type CheckoutSessionUncheckedUpdateWithoutInvoiceInput = {
   cancelledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutCheckoutSessionNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutCheckoutSessionNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutCheckoutSessionNestedInput
 }
 
 export type CheckoutSessionUncheckedUpdateManyWithoutInvoiceInput = {
@@ -2739,6 +3145,8 @@ export type CheckoutSessionUpdateWithoutSubscriptionStateInput = {
   invoice?: Prisma.InvoiceUpdateOneWithoutCheckoutSessionsNestedInput
   payment?: Prisma.PaymentUpdateOneWithoutCheckoutSessionsNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutCheckoutSessionNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutCheckoutSessionNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutCheckoutSessionNestedInput
 }
 
 export type CheckoutSessionUncheckedUpdateWithoutSubscriptionStateInput = {
@@ -2771,6 +3179,8 @@ export type CheckoutSessionUncheckedUpdateWithoutSubscriptionStateInput = {
   cancelledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutCheckoutSessionNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutCheckoutSessionNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutCheckoutSessionNestedInput
 }
 
 export type CheckoutSessionUncheckedUpdateManyWithoutSubscriptionStateInput = {
@@ -2865,6 +3275,8 @@ export type CheckoutSessionUpdateWithoutPaymentInput = {
   invoice?: Prisma.InvoiceUpdateOneWithoutCheckoutSessionsNestedInput
   subscriptionState?: Prisma.SubscriptionStateUpdateOneWithoutCheckoutSessionsNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutCheckoutSessionNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutCheckoutSessionNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutCheckoutSessionNestedInput
 }
 
 export type CheckoutSessionUncheckedUpdateWithoutPaymentInput = {
@@ -2897,6 +3309,8 @@ export type CheckoutSessionUncheckedUpdateWithoutPaymentInput = {
   cancelledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutCheckoutSessionNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutCheckoutSessionNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutCheckoutSessionNestedInput
 }
 
 export type CheckoutSessionUncheckedUpdateManyWithoutPaymentInput = {
@@ -2991,6 +3405,8 @@ export type CheckoutSessionUpdateWithoutCompanyInput = {
   payment?: Prisma.PaymentUpdateOneWithoutCheckoutSessionsNestedInput
   subscriptionState?: Prisma.SubscriptionStateUpdateOneWithoutCheckoutSessionsNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutCheckoutSessionNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutCheckoutSessionNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutCheckoutSessionNestedInput
 }
 
 export type CheckoutSessionUncheckedUpdateWithoutCompanyInput = {
@@ -3023,6 +3439,8 @@ export type CheckoutSessionUncheckedUpdateWithoutCompanyInput = {
   cancelledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutCheckoutSessionNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutCheckoutSessionNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutCheckoutSessionNestedInput
 }
 
 export type CheckoutSessionUncheckedUpdateManyWithoutCompanyInput = {
@@ -3117,6 +3535,8 @@ export type CheckoutSessionUpdateWithoutPaymentLinkInput = {
   payment?: Prisma.PaymentUpdateOneWithoutCheckoutSessionsNestedInput
   subscriptionState?: Prisma.SubscriptionStateUpdateOneWithoutCheckoutSessionsNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutCheckoutSessionNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutCheckoutSessionNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutCheckoutSessionNestedInput
 }
 
 export type CheckoutSessionUncheckedUpdateWithoutPaymentLinkInput = {
@@ -3149,6 +3569,8 @@ export type CheckoutSessionUncheckedUpdateWithoutPaymentLinkInput = {
   cancelledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutCheckoutSessionNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutCheckoutSessionNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutCheckoutSessionNestedInput
 }
 
 export type CheckoutSessionUncheckedUpdateManyWithoutPaymentLinkInput = {
@@ -3189,10 +3611,14 @@ export type CheckoutSessionUncheckedUpdateManyWithoutPaymentLinkInput = {
 
 export type CheckoutSessionCountOutputType = {
   addOnGrants: number
+  creditGrants: number
+  creditLedgerEntries: number
 }
 
 export type CheckoutSessionCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   addOnGrants?: boolean | CheckoutSessionCountOutputTypeCountAddOnGrantsArgs
+  creditGrants?: boolean | CheckoutSessionCountOutputTypeCountCreditGrantsArgs
+  creditLedgerEntries?: boolean | CheckoutSessionCountOutputTypeCountCreditLedgerEntriesArgs
 }
 
 /**
@@ -3210,6 +3636,20 @@ export type CheckoutSessionCountOutputTypeDefaultArgs<ExtArgs extends runtime.Ty
  */
 export type CheckoutSessionCountOutputTypeCountAddOnGrantsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.CompanyAddOnGrantWhereInput
+}
+
+/**
+ * CheckoutSessionCountOutputType without action
+ */
+export type CheckoutSessionCountOutputTypeCountCreditGrantsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.CompanyCreditGrantWhereInput
+}
+
+/**
+ * CheckoutSessionCountOutputType without action
+ */
+export type CheckoutSessionCountOutputTypeCountCreditLedgerEntriesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.CreditLedgerEntryWhereInput
 }
 
 
@@ -3252,6 +3692,8 @@ export type CheckoutSessionSelect<ExtArgs extends runtime.Types.Extensions.Inter
   payment?: boolean | Prisma.CheckoutSession$paymentArgs<ExtArgs>
   subscriptionState?: boolean | Prisma.CheckoutSession$subscriptionStateArgs<ExtArgs>
   addOnGrants?: boolean | Prisma.CheckoutSession$addOnGrantsArgs<ExtArgs>
+  creditGrants?: boolean | Prisma.CheckoutSession$creditGrantsArgs<ExtArgs>
+  creditLedgerEntries?: boolean | Prisma.CheckoutSession$creditLedgerEntriesArgs<ExtArgs>
   _count?: boolean | Prisma.CheckoutSessionCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["checkoutSession"]>
 
@@ -3378,6 +3820,8 @@ export type CheckoutSessionInclude<ExtArgs extends runtime.Types.Extensions.Inte
   payment?: boolean | Prisma.CheckoutSession$paymentArgs<ExtArgs>
   subscriptionState?: boolean | Prisma.CheckoutSession$subscriptionStateArgs<ExtArgs>
   addOnGrants?: boolean | Prisma.CheckoutSession$addOnGrantsArgs<ExtArgs>
+  creditGrants?: boolean | Prisma.CheckoutSession$creditGrantsArgs<ExtArgs>
+  creditLedgerEntries?: boolean | Prisma.CheckoutSession$creditLedgerEntriesArgs<ExtArgs>
   _count?: boolean | Prisma.CheckoutSessionCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type CheckoutSessionIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -3413,6 +3857,8 @@ export type $CheckoutSessionPayload<ExtArgs extends runtime.Types.Extensions.Int
     payment: Prisma.$PaymentPayload<ExtArgs> | null
     subscriptionState: Prisma.$SubscriptionStatePayload<ExtArgs> | null
     addOnGrants: Prisma.$CompanyAddOnGrantPayload<ExtArgs>[]
+    creditGrants: Prisma.$CompanyCreditGrantPayload<ExtArgs>[]
+    creditLedgerEntries: Prisma.$CreditLedgerEntryPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -3847,6 +4293,8 @@ export interface Prisma__CheckoutSessionClient<T, Null = never, ExtArgs extends 
   payment<T extends Prisma.CheckoutSession$paymentArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.CheckoutSession$paymentArgs<ExtArgs>>): Prisma.Prisma__PaymentClient<runtime.Types.Result.GetResult<Prisma.$PaymentPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   subscriptionState<T extends Prisma.CheckoutSession$subscriptionStateArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.CheckoutSession$subscriptionStateArgs<ExtArgs>>): Prisma.Prisma__SubscriptionStateClient<runtime.Types.Result.GetResult<Prisma.$SubscriptionStatePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   addOnGrants<T extends Prisma.CheckoutSession$addOnGrantsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.CheckoutSession$addOnGrantsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CompanyAddOnGrantPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  creditGrants<T extends Prisma.CheckoutSession$creditGrantsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.CheckoutSession$creditGrantsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CompanyCreditGrantPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  creditLedgerEntries<T extends Prisma.CheckoutSession$creditLedgerEntriesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.CheckoutSession$creditLedgerEntriesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CreditLedgerEntryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -4455,6 +4903,54 @@ export type CheckoutSession$addOnGrantsArgs<ExtArgs extends runtime.Types.Extens
   take?: number
   skip?: number
   distinct?: Prisma.CompanyAddOnGrantScalarFieldEnum | Prisma.CompanyAddOnGrantScalarFieldEnum[]
+}
+
+/**
+ * CheckoutSession.creditGrants
+ */
+export type CheckoutSession$creditGrantsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the CompanyCreditGrant
+   */
+  select?: Prisma.CompanyCreditGrantSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the CompanyCreditGrant
+   */
+  omit?: Prisma.CompanyCreditGrantOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.CompanyCreditGrantInclude<ExtArgs> | null
+  where?: Prisma.CompanyCreditGrantWhereInput
+  orderBy?: Prisma.CompanyCreditGrantOrderByWithRelationInput | Prisma.CompanyCreditGrantOrderByWithRelationInput[]
+  cursor?: Prisma.CompanyCreditGrantWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.CompanyCreditGrantScalarFieldEnum | Prisma.CompanyCreditGrantScalarFieldEnum[]
+}
+
+/**
+ * CheckoutSession.creditLedgerEntries
+ */
+export type CheckoutSession$creditLedgerEntriesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the CreditLedgerEntry
+   */
+  select?: Prisma.CreditLedgerEntrySelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the CreditLedgerEntry
+   */
+  omit?: Prisma.CreditLedgerEntryOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.CreditLedgerEntryInclude<ExtArgs> | null
+  where?: Prisma.CreditLedgerEntryWhereInput
+  orderBy?: Prisma.CreditLedgerEntryOrderByWithRelationInput | Prisma.CreditLedgerEntryOrderByWithRelationInput[]
+  cursor?: Prisma.CreditLedgerEntryWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.CreditLedgerEntryScalarFieldEnum | Prisma.CreditLedgerEntryScalarFieldEnum[]
 }
 
 /**

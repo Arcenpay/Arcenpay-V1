@@ -262,6 +262,16 @@ export type ArcenEvent = Prisma.ArcenEventModel
  */
 export type CompanyAddOnGrant = Prisma.CompanyAddOnGrantModel
 /**
+ * Model CompanyCreditGrant
+ * 
+ */
+export type CompanyCreditGrant = Prisma.CompanyCreditGrantModel
+/**
+ * Model CreditLedgerEntry
+ * 
+ */
+export type CreditLedgerEntry = Prisma.CreditLedgerEntryModel
+/**
  * Model PaymentLink
  * 
  */

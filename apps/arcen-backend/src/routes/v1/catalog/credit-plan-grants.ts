@@ -3,17 +3,50 @@ import { z } from "zod";
 import { db } from "../../../db.js";
 import { requirePermission, isErrorResponse } from "../../../lib/auth/api-auth.js";
 import { writeAuditEvent } from "../../../lib/platform/audit.js";
+import { toPrismaNullableJson } from "../../../utils/prisma-json.js";
 
 const planGrantSchema = z.object({
   planId: z.string().min(1),
-  amount: z.coerce.number().positive(),
+  amount: z.coerce.number().int().positive(),
+  resetPeriod: z
+    .enum(["plan_period", "monthly", "yearly", "never"])
+    .default("plan_period"),
+  autoTopUp: z.boolean().default(false),
 });
 
-function getPlanGrants(metadata: unknown): z.infer<typeof planGrantSchema>[] {
-  if (!metadata || typeof metadata !== "object") return [];
-  const meta = metadata as Record<string, unknown>;
-  if (!Array.isArray(meta.planGrants)) return [];
-  return meta.planGrants as z.infer<typeof planGrantSchema>[];
+type PlanCreditGrant = {
+  creditTypeId: string;
+  amount: number;
+  resetPeriod?: "plan_period" | "monthly" | "yearly" | "never";
+  autoTopUp?: boolean;
+};
+
+function asRecord(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return value as Record<string, unknown>;
+}
+
+function getPlanCreditGrants(metadata: unknown): PlanCreditGrant[] {
+  const creditGrants = asRecord(metadata).creditGrants;
+  if (!Array.isArray(creditGrants)) return [];
+  return creditGrants.filter((grant): grant is PlanCreditGrant => {
+    if (!grant || typeof grant !== "object") return false;
+    const candidate = grant as Record<string, unknown>;
+    return (
+      typeof candidate.creditTypeId === "string" &&
+      typeof candidate.amount === "number"
+    );
+  });
+}
+
+function writePlanCreditGrants(
+  metadata: unknown,
+  creditGrants: PlanCreditGrant[],
+): Record<string, unknown> {
+  return {
+    ...asRecord(metadata),
+    creditGrants,
+  };
 }
 
 export async function getCreditPlanGrants(c: Context) {
@@ -29,7 +62,35 @@ export async function getCreditPlanGrants(c: Context) {
     return c.json({ error: "Credit type not found" }, 404 as any);
   }
 
-  const planGrants = getPlanGrants(creditType.metadata);
+  const plans = await db.catalogPlan.findMany({
+    where: {
+      teamId: auth.team.teamId,
+      ...(creditType.environmentId ? { environmentId: creditType.environmentId } : {}),
+    },
+    select: {
+      id: true,
+      name: true,
+      tier: true,
+      status: true,
+      metadata: true,
+    },
+    orderBy: [{ name: "asc" }],
+  });
+
+  const planGrants = plans.flatMap((plan) =>
+    getPlanCreditGrants(plan.metadata)
+      .filter((grant) => grant.creditTypeId === creditType.id)
+      .map((grant) => ({
+        planId: plan.id,
+        planName: plan.name,
+        planTier: plan.tier,
+        planStatus: plan.status,
+        amount: grant.amount,
+        resetPeriod: grant.resetPeriod ?? "plan_period",
+        autoTopUp: grant.autoTopUp ?? false,
+      })),
+  );
+
   return c.json({ planGrants });
 }
 
@@ -52,24 +113,40 @@ export async function saveCreditPlanGrant(c: Context) {
     return c.json({ error: "Invalid request", details: parsed.error.flatten().fieldErrors }, 400 as any);
   }
 
-  const existing = getPlanGrants(creditType.metadata);
-  const planId = parsed.data.planId;
-
-  let newGrants;
-  if (existing.some((g) => g.planId === planId)) {
-    newGrants = existing.map((g) => (g.planId === planId ? parsed.data : g));
-  } else {
-    newGrants = [...existing, parsed.data];
+  const plan = await db.catalogPlan.findFirst({
+    where: {
+      id: parsed.data.planId,
+      teamId: auth.team.teamId,
+      ...(creditType.environmentId ? { environmentId: creditType.environmentId } : {}),
+    },
+    select: { id: true, metadata: true },
+  });
+  if (!plan) {
+    return c.json({ error: "Plan not found in this credit environment" }, 404 as any);
   }
 
-  const updatedMeta = {
-    ...((creditType.metadata as Record<string, unknown>) ?? {}),
-    planGrants: newGrants,
+  const existing = getPlanCreditGrants(plan.metadata);
+  const nextGrant: PlanCreditGrant = {
+    creditTypeId: creditType.id,
+    amount: parsed.data.amount,
+    resetPeriod: parsed.data.resetPeriod,
+    autoTopUp: parsed.data.autoTopUp,
   };
 
-  const updated = await db.catalogCreditType.update({
-    where: { id: creditType.id },
-    data: { metadata: updatedMeta },
+  let newGrants: PlanCreditGrant[];
+  if (existing.some((g) => g.creditTypeId === creditType.id)) {
+    newGrants = existing.map((g) =>
+      g.creditTypeId === creditType.id ? nextGrant : g,
+    );
+  } else {
+    newGrants = [...existing, nextGrant];
+  }
+
+  const updatedMeta = writePlanCreditGrants(plan.metadata, newGrants);
+
+  const updated = await db.catalogPlan.update({
+    where: { id: plan.id },
+    data: { metadata: toPrismaNullableJson(updatedMeta) },
   });
 
   await writeAuditEvent({
@@ -80,10 +157,18 @@ export async function saveCreditPlanGrant(c: Context) {
     action: "catalog.credit.plan_grant.save",
     resourceType: "CatalogCreditType",
     resourceId: creditType.id,
-    afterData: parsed.data,
+    afterData: { ...nextGrant, planId: plan.id },
   });
 
-  return c.json({ planGrants: newGrants, creditType: updated });
+  return c.json({
+    planGrant: {
+      planId: plan.id,
+      amount: nextGrant.amount,
+      resetPeriod: nextGrant.resetPeriod,
+      autoTopUp: nextGrant.autoTopUp,
+    },
+    plan: updated,
+  });
 }
 
 export async function deleteCreditPlanGrant(c: Context) {
@@ -104,21 +189,30 @@ export async function deleteCreditPlanGrant(c: Context) {
     return c.json({ error: "Credit type not found" }, 404 as any);
   }
 
-  const existing = getPlanGrants(creditType.metadata);
-  const filtered = existing.filter((g) => g.planId !== planId);
+  const plan = await db.catalogPlan.findFirst({
+    where: {
+      id: planId,
+      teamId: auth.team.teamId,
+      ...(creditType.environmentId ? { environmentId: creditType.environmentId } : {}),
+    },
+    select: { id: true, metadata: true },
+  });
+  if (!plan) {
+    return c.json({ error: "Plan not found in this credit environment" }, 404 as any);
+  }
+
+  const existing = getPlanCreditGrants(plan.metadata);
+  const filtered = existing.filter((g) => g.creditTypeId !== creditType.id);
 
   if (filtered.length === existing.length) {
     return c.json({ error: "Plan grant not found" }, 404 as any);
   }
 
-  const updatedMeta = {
-    ...((creditType.metadata as Record<string, unknown>) ?? {}),
-    planGrants: filtered,
-  };
+  const updatedMeta = writePlanCreditGrants(plan.metadata, filtered);
 
-  await db.catalogCreditType.update({
-    where: { id: creditType.id },
-    data: { metadata: updatedMeta },
+  await db.catalogPlan.update({
+    where: { id: plan.id },
+    data: { metadata: toPrismaNullableJson(updatedMeta) },
   });
 
   await writeAuditEvent({

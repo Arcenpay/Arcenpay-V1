@@ -14,6 +14,7 @@ import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter,
 } from "@/components/ui/sheet";
 import { formatRelativeTime } from "@/lib/format";
+import { SkeletonList, SkeletonCard } from "@/components/ui/skeleton";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -490,9 +491,7 @@ export function CompaniesSection() {
 
       {/* Table */}
       {loading ? (
-        <div className="space-y-2">
-          {[...Array(4)].map((_, i) => <div key={i} className="h-14 rounded-lg bg-muted/40 animate-pulse" />)}
-        </div>
+        <SkeletonList items={4} />
       ) : companies.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border bg-muted/20 p-14 text-center space-y-3">
           <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto">
@@ -571,19 +570,8 @@ export function CompaniesSection() {
       <Sheet open={detailOpen} onOpenChange={(v) => { if (!v) closeDetail(); }}>
         <SheetContent side="right" className="sm:max-w-xl flex flex-col p-0 overflow-y-auto">
           {loadingDetail ? (
-            <div className="flex flex-col">
-              <SheetHeader className="px-6 pt-6 pb-4 border-b border-border/60">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-xl bg-muted/60 animate-pulse" />
-                  <div className="space-y-1.5 flex-1">
-                    <div className="h-4 w-36 bg-muted/60 animate-pulse rounded" />
-                    <div className="h-3 w-52 bg-muted/60 animate-pulse rounded" />
-                  </div>
-                </div>
-              </SheetHeader>
-              <div className="px-6 py-5 space-y-3">
-                {[...Array(6)].map((_, i) => <div key={i} className="h-11 bg-muted/40 animate-pulse rounded-lg" />)}
-              </div>
+            <div className="px-6 py-5">
+              <SkeletonCard lines={6} />
             </div>
           ) : detailCompany ? (
             <CompanyDetailContent company={detailCompany} onClose={closeDetail} />

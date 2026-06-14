@@ -56,6 +56,9 @@ export function useDashboardSession() {
       const payload = (await response.json()) as DashboardSessionPayload;
       setData(payload);
       return payload;
+    } catch {
+      setData(null);
+      return null;
     } finally {
       setIsLoading(false);
     }

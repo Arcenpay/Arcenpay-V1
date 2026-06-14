@@ -358,6 +358,8 @@ export type PaymentWhereInput = {
   refunds?: Prisma.RefundListRelationFilter
   checkoutSessions?: Prisma.CheckoutSessionListRelationFilter
   addOnGrants?: Prisma.CompanyAddOnGrantListRelationFilter
+  creditGrants?: Prisma.CompanyCreditGrantListRelationFilter
+  creditLedgerEntries?: Prisma.CreditLedgerEntryListRelationFilter
 }
 
 export type PaymentOrderByWithRelationInput = {
@@ -393,6 +395,8 @@ export type PaymentOrderByWithRelationInput = {
   refunds?: Prisma.RefundOrderByRelationAggregateInput
   checkoutSessions?: Prisma.CheckoutSessionOrderByRelationAggregateInput
   addOnGrants?: Prisma.CompanyAddOnGrantOrderByRelationAggregateInput
+  creditGrants?: Prisma.CompanyCreditGrantOrderByRelationAggregateInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryOrderByRelationAggregateInput
 }
 
 export type PaymentWhereUniqueInput = Prisma.AtLeast<{
@@ -431,6 +435,8 @@ export type PaymentWhereUniqueInput = Prisma.AtLeast<{
   refunds?: Prisma.RefundListRelationFilter
   checkoutSessions?: Prisma.CheckoutSessionListRelationFilter
   addOnGrants?: Prisma.CompanyAddOnGrantListRelationFilter
+  creditGrants?: Prisma.CompanyCreditGrantListRelationFilter
+  creditLedgerEntries?: Prisma.CreditLedgerEntryListRelationFilter
 }, "id" | "idempotencyKey" | "txHash">
 
 export type PaymentOrderByWithAggregationInput = {
@@ -519,6 +525,8 @@ export type PaymentCreateInput = {
   refunds?: Prisma.RefundCreateNestedManyWithoutPaymentInput
   checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutPaymentInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutPaymentInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutPaymentInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutPaymentInput
 }
 
 export type PaymentUncheckedCreateInput = {
@@ -549,6 +557,8 @@ export type PaymentUncheckedCreateInput = {
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutPaymentInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedCreateNestedManyWithoutPaymentInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutPaymentInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutPaymentInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutPaymentInput
 }
 
 export type PaymentUpdateInput = {
@@ -579,6 +589,8 @@ export type PaymentUpdateInput = {
   refunds?: Prisma.RefundUpdateManyWithoutPaymentNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutPaymentNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutPaymentNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutPaymentNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutPaymentNestedInput
 }
 
 export type PaymentUncheckedUpdateInput = {
@@ -609,6 +621,8 @@ export type PaymentUncheckedUpdateInput = {
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutPaymentNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedUpdateManyWithoutPaymentNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutPaymentNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutPaymentNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutPaymentNestedInput
 }
 
 export type PaymentCreateManyInput = {
@@ -1062,6 +1076,38 @@ export type PaymentUpdateOneWithoutAddOnGrantsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.PaymentUpdateToOneWithWhereWithoutAddOnGrantsInput, Prisma.PaymentUpdateWithoutAddOnGrantsInput>, Prisma.PaymentUncheckedUpdateWithoutAddOnGrantsInput>
 }
 
+export type PaymentCreateNestedOneWithoutCreditGrantsInput = {
+  create?: Prisma.XOR<Prisma.PaymentCreateWithoutCreditGrantsInput, Prisma.PaymentUncheckedCreateWithoutCreditGrantsInput>
+  connectOrCreate?: Prisma.PaymentCreateOrConnectWithoutCreditGrantsInput
+  connect?: Prisma.PaymentWhereUniqueInput
+}
+
+export type PaymentUpdateOneWithoutCreditGrantsNestedInput = {
+  create?: Prisma.XOR<Prisma.PaymentCreateWithoutCreditGrantsInput, Prisma.PaymentUncheckedCreateWithoutCreditGrantsInput>
+  connectOrCreate?: Prisma.PaymentCreateOrConnectWithoutCreditGrantsInput
+  upsert?: Prisma.PaymentUpsertWithoutCreditGrantsInput
+  disconnect?: Prisma.PaymentWhereInput | boolean
+  delete?: Prisma.PaymentWhereInput | boolean
+  connect?: Prisma.PaymentWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.PaymentUpdateToOneWithWhereWithoutCreditGrantsInput, Prisma.PaymentUpdateWithoutCreditGrantsInput>, Prisma.PaymentUncheckedUpdateWithoutCreditGrantsInput>
+}
+
+export type PaymentCreateNestedOneWithoutCreditLedgerEntriesInput = {
+  create?: Prisma.XOR<Prisma.PaymentCreateWithoutCreditLedgerEntriesInput, Prisma.PaymentUncheckedCreateWithoutCreditLedgerEntriesInput>
+  connectOrCreate?: Prisma.PaymentCreateOrConnectWithoutCreditLedgerEntriesInput
+  connect?: Prisma.PaymentWhereUniqueInput
+}
+
+export type PaymentUpdateOneWithoutCreditLedgerEntriesNestedInput = {
+  create?: Prisma.XOR<Prisma.PaymentCreateWithoutCreditLedgerEntriesInput, Prisma.PaymentUncheckedCreateWithoutCreditLedgerEntriesInput>
+  connectOrCreate?: Prisma.PaymentCreateOrConnectWithoutCreditLedgerEntriesInput
+  upsert?: Prisma.PaymentUpsertWithoutCreditLedgerEntriesInput
+  disconnect?: Prisma.PaymentWhereInput | boolean
+  delete?: Prisma.PaymentWhereInput | boolean
+  connect?: Prisma.PaymentWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.PaymentUpdateToOneWithWhereWithoutCreditLedgerEntriesInput, Prisma.PaymentUpdateWithoutCreditLedgerEntriesInput>, Prisma.PaymentUncheckedUpdateWithoutCreditLedgerEntriesInput>
+}
+
 export type PaymentCreateNestedOneWithoutCheckoutSessionsInput = {
   create?: Prisma.XOR<Prisma.PaymentCreateWithoutCheckoutSessionsInput, Prisma.PaymentUncheckedCreateWithoutCheckoutSessionsInput>
   connectOrCreate?: Prisma.PaymentCreateOrConnectWithoutCheckoutSessionsInput
@@ -1105,6 +1151,8 @@ export type PaymentCreateWithoutTeamInput = {
   refunds?: Prisma.RefundCreateNestedManyWithoutPaymentInput
   checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutPaymentInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutPaymentInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutPaymentInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutPaymentInput
 }
 
 export type PaymentUncheckedCreateWithoutTeamInput = {
@@ -1134,6 +1182,8 @@ export type PaymentUncheckedCreateWithoutTeamInput = {
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutPaymentInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedCreateNestedManyWithoutPaymentInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutPaymentInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutPaymentInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutPaymentInput
 }
 
 export type PaymentCreateOrConnectWithoutTeamInput = {
@@ -1217,6 +1267,8 @@ export type PaymentCreateWithoutEnvironmentInput = {
   refunds?: Prisma.RefundCreateNestedManyWithoutPaymentInput
   checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutPaymentInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutPaymentInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutPaymentInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutPaymentInput
 }
 
 export type PaymentUncheckedCreateWithoutEnvironmentInput = {
@@ -1246,6 +1298,8 @@ export type PaymentUncheckedCreateWithoutEnvironmentInput = {
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutPaymentInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedCreateNestedManyWithoutPaymentInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutPaymentInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutPaymentInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutPaymentInput
 }
 
 export type PaymentCreateOrConnectWithoutEnvironmentInput = {
@@ -1301,6 +1355,8 @@ export type PaymentCreateWithoutInvoiceInput = {
   refunds?: Prisma.RefundCreateNestedManyWithoutPaymentInput
   checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutPaymentInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutPaymentInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutPaymentInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutPaymentInput
 }
 
 export type PaymentUncheckedCreateWithoutInvoiceInput = {
@@ -1330,6 +1386,8 @@ export type PaymentUncheckedCreateWithoutInvoiceInput = {
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutPaymentInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedCreateNestedManyWithoutPaymentInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutPaymentInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutPaymentInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutPaymentInput
 }
 
 export type PaymentCreateOrConnectWithoutInvoiceInput = {
@@ -1385,6 +1443,8 @@ export type PaymentCreateWithoutSubscriptionStateInput = {
   refunds?: Prisma.RefundCreateNestedManyWithoutPaymentInput
   checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutPaymentInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutPaymentInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutPaymentInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutPaymentInput
 }
 
 export type PaymentUncheckedCreateWithoutSubscriptionStateInput = {
@@ -1414,6 +1474,8 @@ export type PaymentUncheckedCreateWithoutSubscriptionStateInput = {
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutPaymentInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedCreateNestedManyWithoutPaymentInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutPaymentInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutPaymentInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutPaymentInput
 }
 
 export type PaymentCreateOrConnectWithoutSubscriptionStateInput = {
@@ -1469,6 +1531,8 @@ export type PaymentCreateWithoutAttemptsInput = {
   refunds?: Prisma.RefundCreateNestedManyWithoutPaymentInput
   checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutPaymentInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutPaymentInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutPaymentInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutPaymentInput
 }
 
 export type PaymentUncheckedCreateWithoutAttemptsInput = {
@@ -1498,6 +1562,8 @@ export type PaymentUncheckedCreateWithoutAttemptsInput = {
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutPaymentInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedCreateNestedManyWithoutPaymentInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutPaymentInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutPaymentInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutPaymentInput
 }
 
 export type PaymentCreateOrConnectWithoutAttemptsInput = {
@@ -1543,6 +1609,8 @@ export type PaymentUpdateWithoutAttemptsInput = {
   refunds?: Prisma.RefundUpdateManyWithoutPaymentNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutPaymentNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutPaymentNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutPaymentNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutPaymentNestedInput
 }
 
 export type PaymentUncheckedUpdateWithoutAttemptsInput = {
@@ -1572,6 +1640,8 @@ export type PaymentUncheckedUpdateWithoutAttemptsInput = {
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutPaymentNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedUpdateManyWithoutPaymentNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutPaymentNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutPaymentNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutPaymentNestedInput
 }
 
 export type PaymentCreateWithoutBillingAdjustmentsInput = {
@@ -1601,6 +1671,8 @@ export type PaymentCreateWithoutBillingAdjustmentsInput = {
   refunds?: Prisma.RefundCreateNestedManyWithoutPaymentInput
   checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutPaymentInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutPaymentInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutPaymentInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutPaymentInput
 }
 
 export type PaymentUncheckedCreateWithoutBillingAdjustmentsInput = {
@@ -1630,6 +1702,8 @@ export type PaymentUncheckedCreateWithoutBillingAdjustmentsInput = {
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutPaymentInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedCreateNestedManyWithoutPaymentInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutPaymentInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutPaymentInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutPaymentInput
 }
 
 export type PaymentCreateOrConnectWithoutBillingAdjustmentsInput = {
@@ -1675,6 +1749,8 @@ export type PaymentUpdateWithoutBillingAdjustmentsInput = {
   refunds?: Prisma.RefundUpdateManyWithoutPaymentNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutPaymentNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutPaymentNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutPaymentNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutPaymentNestedInput
 }
 
 export type PaymentUncheckedUpdateWithoutBillingAdjustmentsInput = {
@@ -1704,6 +1780,8 @@ export type PaymentUncheckedUpdateWithoutBillingAdjustmentsInput = {
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutPaymentNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedUpdateManyWithoutPaymentNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutPaymentNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutPaymentNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutPaymentNestedInput
 }
 
 export type PaymentCreateWithoutRefundsInput = {
@@ -1733,6 +1811,8 @@ export type PaymentCreateWithoutRefundsInput = {
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutPaymentInput
   checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutPaymentInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutPaymentInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutPaymentInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutPaymentInput
 }
 
 export type PaymentUncheckedCreateWithoutRefundsInput = {
@@ -1762,6 +1842,8 @@ export type PaymentUncheckedCreateWithoutRefundsInput = {
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutPaymentInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedCreateNestedManyWithoutPaymentInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutPaymentInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutPaymentInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutPaymentInput
 }
 
 export type PaymentCreateOrConnectWithoutRefundsInput = {
@@ -1807,6 +1889,8 @@ export type PaymentUpdateWithoutRefundsInput = {
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutPaymentNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutPaymentNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutPaymentNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutPaymentNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutPaymentNestedInput
 }
 
 export type PaymentUncheckedUpdateWithoutRefundsInput = {
@@ -1836,6 +1920,8 @@ export type PaymentUncheckedUpdateWithoutRefundsInput = {
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutPaymentNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedUpdateManyWithoutPaymentNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutPaymentNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutPaymentNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutPaymentNestedInput
 }
 
 export type PaymentCreateWithoutCompanyInput = {
@@ -1865,6 +1951,8 @@ export type PaymentCreateWithoutCompanyInput = {
   refunds?: Prisma.RefundCreateNestedManyWithoutPaymentInput
   checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutPaymentInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutPaymentInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutPaymentInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutPaymentInput
 }
 
 export type PaymentUncheckedCreateWithoutCompanyInput = {
@@ -1894,6 +1982,8 @@ export type PaymentUncheckedCreateWithoutCompanyInput = {
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutPaymentInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedCreateNestedManyWithoutPaymentInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutPaymentInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutPaymentInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutPaymentInput
 }
 
 export type PaymentCreateOrConnectWithoutCompanyInput = {
@@ -1949,6 +2039,8 @@ export type PaymentCreateWithoutAddOnGrantsInput = {
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutPaymentInput
   refunds?: Prisma.RefundCreateNestedManyWithoutPaymentInput
   checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutPaymentInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutPaymentInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutPaymentInput
 }
 
 export type PaymentUncheckedCreateWithoutAddOnGrantsInput = {
@@ -1978,6 +2070,8 @@ export type PaymentUncheckedCreateWithoutAddOnGrantsInput = {
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutPaymentInput
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutPaymentInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedCreateNestedManyWithoutPaymentInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutPaymentInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutPaymentInput
 }
 
 export type PaymentCreateOrConnectWithoutAddOnGrantsInput = {
@@ -2023,6 +2117,8 @@ export type PaymentUpdateWithoutAddOnGrantsInput = {
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutPaymentNestedInput
   refunds?: Prisma.RefundUpdateManyWithoutPaymentNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutPaymentNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutPaymentNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutPaymentNestedInput
 }
 
 export type PaymentUncheckedUpdateWithoutAddOnGrantsInput = {
@@ -2052,6 +2148,288 @@ export type PaymentUncheckedUpdateWithoutAddOnGrantsInput = {
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutPaymentNestedInput
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutPaymentNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedUpdateManyWithoutPaymentNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutPaymentNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutPaymentNestedInput
+}
+
+export type PaymentCreateWithoutCreditGrantsInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  idempotencyKey: string
+  kind: $Enums.PaymentKind
+  status?: $Enums.PaymentStatus
+  currency?: string
+  amount: runtime.Decimal | runtime.DecimalJsLike | number | string
+  payerWallet?: string | null
+  recipientWallet?: string | null
+  acceptedToken?: string | null
+  txHash?: string | null
+  externalRef?: string | null
+  occurredAt?: Date | string | null
+  settledAt?: Date | string | null
+  failedAt?: Date | string | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  team: Prisma.TeamCreateNestedOneWithoutPaymentsInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutPaymentsInput
+  company?: Prisma.ArcenCompanyCreateNestedOneWithoutPaymentsInput
+  invoice?: Prisma.InvoiceCreateNestedOneWithoutPaymentsInput
+  subscriptionState?: Prisma.SubscriptionStateCreateNestedOneWithoutPaymentsInput
+  attempts?: Prisma.PaymentAttemptCreateNestedManyWithoutPaymentInput
+  billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutPaymentInput
+  refunds?: Prisma.RefundCreateNestedManyWithoutPaymentInput
+  checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutPaymentInput
+  addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutPaymentInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutPaymentInput
+}
+
+export type PaymentUncheckedCreateWithoutCreditGrantsInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  teamId: string
+  environmentId?: string | null
+  companyId?: string | null
+  invoiceId?: string | null
+  subscriptionStateId?: string | null
+  idempotencyKey: string
+  kind: $Enums.PaymentKind
+  status?: $Enums.PaymentStatus
+  currency?: string
+  amount: runtime.Decimal | runtime.DecimalJsLike | number | string
+  payerWallet?: string | null
+  recipientWallet?: string | null
+  acceptedToken?: string | null
+  txHash?: string | null
+  externalRef?: string | null
+  occurredAt?: Date | string | null
+  settledAt?: Date | string | null
+  failedAt?: Date | string | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  attempts?: Prisma.PaymentAttemptUncheckedCreateNestedManyWithoutPaymentInput
+  billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutPaymentInput
+  refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutPaymentInput
+  checkoutSessions?: Prisma.CheckoutSessionUncheckedCreateNestedManyWithoutPaymentInput
+  addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutPaymentInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutPaymentInput
+}
+
+export type PaymentCreateOrConnectWithoutCreditGrantsInput = {
+  where: Prisma.PaymentWhereUniqueInput
+  create: Prisma.XOR<Prisma.PaymentCreateWithoutCreditGrantsInput, Prisma.PaymentUncheckedCreateWithoutCreditGrantsInput>
+}
+
+export type PaymentUpsertWithoutCreditGrantsInput = {
+  update: Prisma.XOR<Prisma.PaymentUpdateWithoutCreditGrantsInput, Prisma.PaymentUncheckedUpdateWithoutCreditGrantsInput>
+  create: Prisma.XOR<Prisma.PaymentCreateWithoutCreditGrantsInput, Prisma.PaymentUncheckedCreateWithoutCreditGrantsInput>
+  where?: Prisma.PaymentWhereInput
+}
+
+export type PaymentUpdateToOneWithWhereWithoutCreditGrantsInput = {
+  where?: Prisma.PaymentWhereInput
+  data: Prisma.XOR<Prisma.PaymentUpdateWithoutCreditGrantsInput, Prisma.PaymentUncheckedUpdateWithoutCreditGrantsInput>
+}
+
+export type PaymentUpdateWithoutCreditGrantsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  idempotencyKey?: Prisma.StringFieldUpdateOperationsInput | string
+  kind?: Prisma.EnumPaymentKindFieldUpdateOperationsInput | $Enums.PaymentKind
+  status?: Prisma.EnumPaymentStatusFieldUpdateOperationsInput | $Enums.PaymentStatus
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
+  amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  payerWallet?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  recipientWallet?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  acceptedToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  txHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  externalRef?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  occurredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  settledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  failedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  team?: Prisma.TeamUpdateOneRequiredWithoutPaymentsNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutPaymentsNestedInput
+  company?: Prisma.ArcenCompanyUpdateOneWithoutPaymentsNestedInput
+  invoice?: Prisma.InvoiceUpdateOneWithoutPaymentsNestedInput
+  subscriptionState?: Prisma.SubscriptionStateUpdateOneWithoutPaymentsNestedInput
+  attempts?: Prisma.PaymentAttemptUpdateManyWithoutPaymentNestedInput
+  billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutPaymentNestedInput
+  refunds?: Prisma.RefundUpdateManyWithoutPaymentNestedInput
+  checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutPaymentNestedInput
+  addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutPaymentNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutPaymentNestedInput
+}
+
+export type PaymentUncheckedUpdateWithoutCreditGrantsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  companyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  invoiceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  subscriptionStateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  idempotencyKey?: Prisma.StringFieldUpdateOperationsInput | string
+  kind?: Prisma.EnumPaymentKindFieldUpdateOperationsInput | $Enums.PaymentKind
+  status?: Prisma.EnumPaymentStatusFieldUpdateOperationsInput | $Enums.PaymentStatus
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
+  amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  payerWallet?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  recipientWallet?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  acceptedToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  txHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  externalRef?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  occurredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  settledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  failedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  attempts?: Prisma.PaymentAttemptUncheckedUpdateManyWithoutPaymentNestedInput
+  billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutPaymentNestedInput
+  refunds?: Prisma.RefundUncheckedUpdateManyWithoutPaymentNestedInput
+  checkoutSessions?: Prisma.CheckoutSessionUncheckedUpdateManyWithoutPaymentNestedInput
+  addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutPaymentNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutPaymentNestedInput
+}
+
+export type PaymentCreateWithoutCreditLedgerEntriesInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  idempotencyKey: string
+  kind: $Enums.PaymentKind
+  status?: $Enums.PaymentStatus
+  currency?: string
+  amount: runtime.Decimal | runtime.DecimalJsLike | number | string
+  payerWallet?: string | null
+  recipientWallet?: string | null
+  acceptedToken?: string | null
+  txHash?: string | null
+  externalRef?: string | null
+  occurredAt?: Date | string | null
+  settledAt?: Date | string | null
+  failedAt?: Date | string | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  team: Prisma.TeamCreateNestedOneWithoutPaymentsInput
+  environment?: Prisma.WorkspaceEnvironmentCreateNestedOneWithoutPaymentsInput
+  company?: Prisma.ArcenCompanyCreateNestedOneWithoutPaymentsInput
+  invoice?: Prisma.InvoiceCreateNestedOneWithoutPaymentsInput
+  subscriptionState?: Prisma.SubscriptionStateCreateNestedOneWithoutPaymentsInput
+  attempts?: Prisma.PaymentAttemptCreateNestedManyWithoutPaymentInput
+  billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutPaymentInput
+  refunds?: Prisma.RefundCreateNestedManyWithoutPaymentInput
+  checkoutSessions?: Prisma.CheckoutSessionCreateNestedManyWithoutPaymentInput
+  addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutPaymentInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutPaymentInput
+}
+
+export type PaymentUncheckedCreateWithoutCreditLedgerEntriesInput = {
+  id?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  teamId: string
+  environmentId?: string | null
+  companyId?: string | null
+  invoiceId?: string | null
+  subscriptionStateId?: string | null
+  idempotencyKey: string
+  kind: $Enums.PaymentKind
+  status?: $Enums.PaymentStatus
+  currency?: string
+  amount: runtime.Decimal | runtime.DecimalJsLike | number | string
+  payerWallet?: string | null
+  recipientWallet?: string | null
+  acceptedToken?: string | null
+  txHash?: string | null
+  externalRef?: string | null
+  occurredAt?: Date | string | null
+  settledAt?: Date | string | null
+  failedAt?: Date | string | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  attempts?: Prisma.PaymentAttemptUncheckedCreateNestedManyWithoutPaymentInput
+  billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutPaymentInput
+  refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutPaymentInput
+  checkoutSessions?: Prisma.CheckoutSessionUncheckedCreateNestedManyWithoutPaymentInput
+  addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutPaymentInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutPaymentInput
+}
+
+export type PaymentCreateOrConnectWithoutCreditLedgerEntriesInput = {
+  where: Prisma.PaymentWhereUniqueInput
+  create: Prisma.XOR<Prisma.PaymentCreateWithoutCreditLedgerEntriesInput, Prisma.PaymentUncheckedCreateWithoutCreditLedgerEntriesInput>
+}
+
+export type PaymentUpsertWithoutCreditLedgerEntriesInput = {
+  update: Prisma.XOR<Prisma.PaymentUpdateWithoutCreditLedgerEntriesInput, Prisma.PaymentUncheckedUpdateWithoutCreditLedgerEntriesInput>
+  create: Prisma.XOR<Prisma.PaymentCreateWithoutCreditLedgerEntriesInput, Prisma.PaymentUncheckedCreateWithoutCreditLedgerEntriesInput>
+  where?: Prisma.PaymentWhereInput
+}
+
+export type PaymentUpdateToOneWithWhereWithoutCreditLedgerEntriesInput = {
+  where?: Prisma.PaymentWhereInput
+  data: Prisma.XOR<Prisma.PaymentUpdateWithoutCreditLedgerEntriesInput, Prisma.PaymentUncheckedUpdateWithoutCreditLedgerEntriesInput>
+}
+
+export type PaymentUpdateWithoutCreditLedgerEntriesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  idempotencyKey?: Prisma.StringFieldUpdateOperationsInput | string
+  kind?: Prisma.EnumPaymentKindFieldUpdateOperationsInput | $Enums.PaymentKind
+  status?: Prisma.EnumPaymentStatusFieldUpdateOperationsInput | $Enums.PaymentStatus
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
+  amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  payerWallet?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  recipientWallet?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  acceptedToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  txHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  externalRef?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  occurredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  settledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  failedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  team?: Prisma.TeamUpdateOneRequiredWithoutPaymentsNestedInput
+  environment?: Prisma.WorkspaceEnvironmentUpdateOneWithoutPaymentsNestedInput
+  company?: Prisma.ArcenCompanyUpdateOneWithoutPaymentsNestedInput
+  invoice?: Prisma.InvoiceUpdateOneWithoutPaymentsNestedInput
+  subscriptionState?: Prisma.SubscriptionStateUpdateOneWithoutPaymentsNestedInput
+  attempts?: Prisma.PaymentAttemptUpdateManyWithoutPaymentNestedInput
+  billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutPaymentNestedInput
+  refunds?: Prisma.RefundUpdateManyWithoutPaymentNestedInput
+  checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutPaymentNestedInput
+  addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutPaymentNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutPaymentNestedInput
+}
+
+export type PaymentUncheckedUpdateWithoutCreditLedgerEntriesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamId?: Prisma.StringFieldUpdateOperationsInput | string
+  environmentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  companyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  invoiceId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  subscriptionStateId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  idempotencyKey?: Prisma.StringFieldUpdateOperationsInput | string
+  kind?: Prisma.EnumPaymentKindFieldUpdateOperationsInput | $Enums.PaymentKind
+  status?: Prisma.EnumPaymentStatusFieldUpdateOperationsInput | $Enums.PaymentStatus
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
+  amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  payerWallet?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  recipientWallet?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  acceptedToken?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  txHash?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  externalRef?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  occurredAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  settledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  failedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  metadata?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  attempts?: Prisma.PaymentAttemptUncheckedUpdateManyWithoutPaymentNestedInput
+  billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutPaymentNestedInput
+  refunds?: Prisma.RefundUncheckedUpdateManyWithoutPaymentNestedInput
+  checkoutSessions?: Prisma.CheckoutSessionUncheckedUpdateManyWithoutPaymentNestedInput
+  addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutPaymentNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutPaymentNestedInput
 }
 
 export type PaymentCreateWithoutCheckoutSessionsInput = {
@@ -2081,6 +2459,8 @@ export type PaymentCreateWithoutCheckoutSessionsInput = {
   billingAdjustments?: Prisma.BillingAdjustmentCreateNestedManyWithoutPaymentInput
   refunds?: Prisma.RefundCreateNestedManyWithoutPaymentInput
   addOnGrants?: Prisma.CompanyAddOnGrantCreateNestedManyWithoutPaymentInput
+  creditGrants?: Prisma.CompanyCreditGrantCreateNestedManyWithoutPaymentInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryCreateNestedManyWithoutPaymentInput
 }
 
 export type PaymentUncheckedCreateWithoutCheckoutSessionsInput = {
@@ -2110,6 +2490,8 @@ export type PaymentUncheckedCreateWithoutCheckoutSessionsInput = {
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedCreateNestedManyWithoutPaymentInput
   refunds?: Prisma.RefundUncheckedCreateNestedManyWithoutPaymentInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedCreateNestedManyWithoutPaymentInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedCreateNestedManyWithoutPaymentInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedCreateNestedManyWithoutPaymentInput
 }
 
 export type PaymentCreateOrConnectWithoutCheckoutSessionsInput = {
@@ -2155,6 +2537,8 @@ export type PaymentUpdateWithoutCheckoutSessionsInput = {
   billingAdjustments?: Prisma.BillingAdjustmentUpdateManyWithoutPaymentNestedInput
   refunds?: Prisma.RefundUpdateManyWithoutPaymentNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutPaymentNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutPaymentNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutPaymentNestedInput
 }
 
 export type PaymentUncheckedUpdateWithoutCheckoutSessionsInput = {
@@ -2184,6 +2568,8 @@ export type PaymentUncheckedUpdateWithoutCheckoutSessionsInput = {
   billingAdjustments?: Prisma.BillingAdjustmentUncheckedUpdateManyWithoutPaymentNestedInput
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutPaymentNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutPaymentNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutPaymentNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutPaymentNestedInput
 }
 
 export type PaymentCreateManyTeamInput = {
@@ -2237,6 +2623,8 @@ export type PaymentUpdateWithoutTeamInput = {
   refunds?: Prisma.RefundUpdateManyWithoutPaymentNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutPaymentNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutPaymentNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutPaymentNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutPaymentNestedInput
 }
 
 export type PaymentUncheckedUpdateWithoutTeamInput = {
@@ -2266,6 +2654,8 @@ export type PaymentUncheckedUpdateWithoutTeamInput = {
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutPaymentNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedUpdateManyWithoutPaymentNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutPaymentNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutPaymentNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutPaymentNestedInput
 }
 
 export type PaymentUncheckedUpdateManyWithoutTeamInput = {
@@ -2343,6 +2733,8 @@ export type PaymentUpdateWithoutEnvironmentInput = {
   refunds?: Prisma.RefundUpdateManyWithoutPaymentNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutPaymentNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutPaymentNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutPaymentNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutPaymentNestedInput
 }
 
 export type PaymentUncheckedUpdateWithoutEnvironmentInput = {
@@ -2372,6 +2764,8 @@ export type PaymentUncheckedUpdateWithoutEnvironmentInput = {
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutPaymentNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedUpdateManyWithoutPaymentNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutPaymentNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutPaymentNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutPaymentNestedInput
 }
 
 export type PaymentUncheckedUpdateManyWithoutEnvironmentInput = {
@@ -2449,6 +2843,8 @@ export type PaymentUpdateWithoutInvoiceInput = {
   refunds?: Prisma.RefundUpdateManyWithoutPaymentNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutPaymentNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutPaymentNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutPaymentNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutPaymentNestedInput
 }
 
 export type PaymentUncheckedUpdateWithoutInvoiceInput = {
@@ -2478,6 +2874,8 @@ export type PaymentUncheckedUpdateWithoutInvoiceInput = {
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutPaymentNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedUpdateManyWithoutPaymentNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutPaymentNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutPaymentNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutPaymentNestedInput
 }
 
 export type PaymentUncheckedUpdateManyWithoutInvoiceInput = {
@@ -2555,6 +2953,8 @@ export type PaymentUpdateWithoutSubscriptionStateInput = {
   refunds?: Prisma.RefundUpdateManyWithoutPaymentNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutPaymentNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutPaymentNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutPaymentNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutPaymentNestedInput
 }
 
 export type PaymentUncheckedUpdateWithoutSubscriptionStateInput = {
@@ -2584,6 +2984,8 @@ export type PaymentUncheckedUpdateWithoutSubscriptionStateInput = {
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutPaymentNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedUpdateManyWithoutPaymentNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutPaymentNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutPaymentNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutPaymentNestedInput
 }
 
 export type PaymentUncheckedUpdateManyWithoutSubscriptionStateInput = {
@@ -2661,6 +3063,8 @@ export type PaymentUpdateWithoutCompanyInput = {
   refunds?: Prisma.RefundUpdateManyWithoutPaymentNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUpdateManyWithoutPaymentNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUpdateManyWithoutPaymentNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUpdateManyWithoutPaymentNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUpdateManyWithoutPaymentNestedInput
 }
 
 export type PaymentUncheckedUpdateWithoutCompanyInput = {
@@ -2690,6 +3094,8 @@ export type PaymentUncheckedUpdateWithoutCompanyInput = {
   refunds?: Prisma.RefundUncheckedUpdateManyWithoutPaymentNestedInput
   checkoutSessions?: Prisma.CheckoutSessionUncheckedUpdateManyWithoutPaymentNestedInput
   addOnGrants?: Prisma.CompanyAddOnGrantUncheckedUpdateManyWithoutPaymentNestedInput
+  creditGrants?: Prisma.CompanyCreditGrantUncheckedUpdateManyWithoutPaymentNestedInput
+  creditLedgerEntries?: Prisma.CreditLedgerEntryUncheckedUpdateManyWithoutPaymentNestedInput
 }
 
 export type PaymentUncheckedUpdateManyWithoutCompanyInput = {
@@ -2727,6 +3133,8 @@ export type PaymentCountOutputType = {
   refunds: number
   checkoutSessions: number
   addOnGrants: number
+  creditGrants: number
+  creditLedgerEntries: number
 }
 
 export type PaymentCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -2735,6 +3143,8 @@ export type PaymentCountOutputTypeSelect<ExtArgs extends runtime.Types.Extension
   refunds?: boolean | PaymentCountOutputTypeCountRefundsArgs
   checkoutSessions?: boolean | PaymentCountOutputTypeCountCheckoutSessionsArgs
   addOnGrants?: boolean | PaymentCountOutputTypeCountAddOnGrantsArgs
+  creditGrants?: boolean | PaymentCountOutputTypeCountCreditGrantsArgs
+  creditLedgerEntries?: boolean | PaymentCountOutputTypeCountCreditLedgerEntriesArgs
 }
 
 /**
@@ -2782,6 +3192,20 @@ export type PaymentCountOutputTypeCountAddOnGrantsArgs<ExtArgs extends runtime.T
   where?: Prisma.CompanyAddOnGrantWhereInput
 }
 
+/**
+ * PaymentCountOutputType without action
+ */
+export type PaymentCountOutputTypeCountCreditGrantsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.CompanyCreditGrantWhereInput
+}
+
+/**
+ * PaymentCountOutputType without action
+ */
+export type PaymentCountOutputTypeCountCreditLedgerEntriesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.CreditLedgerEntryWhereInput
+}
+
 
 export type PaymentSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -2816,6 +3240,8 @@ export type PaymentSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   refunds?: boolean | Prisma.Payment$refundsArgs<ExtArgs>
   checkoutSessions?: boolean | Prisma.Payment$checkoutSessionsArgs<ExtArgs>
   addOnGrants?: boolean | Prisma.Payment$addOnGrantsArgs<ExtArgs>
+  creditGrants?: boolean | Prisma.Payment$creditGrantsArgs<ExtArgs>
+  creditLedgerEntries?: boolean | Prisma.Payment$creditLedgerEntriesArgs<ExtArgs>
   _count?: boolean | Prisma.PaymentCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["payment"]>
 
@@ -2916,6 +3342,8 @@ export type PaymentInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs
   refunds?: boolean | Prisma.Payment$refundsArgs<ExtArgs>
   checkoutSessions?: boolean | Prisma.Payment$checkoutSessionsArgs<ExtArgs>
   addOnGrants?: boolean | Prisma.Payment$addOnGrantsArgs<ExtArgs>
+  creditGrants?: boolean | Prisma.Payment$creditGrantsArgs<ExtArgs>
+  creditLedgerEntries?: boolean | Prisma.Payment$creditLedgerEntriesArgs<ExtArgs>
   _count?: boolean | Prisma.PaymentCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type PaymentIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -2946,6 +3374,8 @@ export type $PaymentPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     refunds: Prisma.$RefundPayload<ExtArgs>[]
     checkoutSessions: Prisma.$CheckoutSessionPayload<ExtArgs>[]
     addOnGrants: Prisma.$CompanyAddOnGrantPayload<ExtArgs>[]
+    creditGrants: Prisma.$CompanyCreditGrantPayload<ExtArgs>[]
+    creditLedgerEntries: Prisma.$CreditLedgerEntryPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -3374,6 +3804,8 @@ export interface Prisma__PaymentClient<T, Null = never, ExtArgs extends runtime.
   refunds<T extends Prisma.Payment$refundsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Payment$refundsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$RefundPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   checkoutSessions<T extends Prisma.Payment$checkoutSessionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Payment$checkoutSessionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CheckoutSessionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   addOnGrants<T extends Prisma.Payment$addOnGrantsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Payment$addOnGrantsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CompanyAddOnGrantPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  creditGrants<T extends Prisma.Payment$creditGrantsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Payment$creditGrantsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CompanyCreditGrantPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  creditLedgerEntries<T extends Prisma.Payment$creditLedgerEntriesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Payment$creditLedgerEntriesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$CreditLedgerEntryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -4014,6 +4446,54 @@ export type Payment$addOnGrantsArgs<ExtArgs extends runtime.Types.Extensions.Int
   take?: number
   skip?: number
   distinct?: Prisma.CompanyAddOnGrantScalarFieldEnum | Prisma.CompanyAddOnGrantScalarFieldEnum[]
+}
+
+/**
+ * Payment.creditGrants
+ */
+export type Payment$creditGrantsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the CompanyCreditGrant
+   */
+  select?: Prisma.CompanyCreditGrantSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the CompanyCreditGrant
+   */
+  omit?: Prisma.CompanyCreditGrantOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.CompanyCreditGrantInclude<ExtArgs> | null
+  where?: Prisma.CompanyCreditGrantWhereInput
+  orderBy?: Prisma.CompanyCreditGrantOrderByWithRelationInput | Prisma.CompanyCreditGrantOrderByWithRelationInput[]
+  cursor?: Prisma.CompanyCreditGrantWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.CompanyCreditGrantScalarFieldEnum | Prisma.CompanyCreditGrantScalarFieldEnum[]
+}
+
+/**
+ * Payment.creditLedgerEntries
+ */
+export type Payment$creditLedgerEntriesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the CreditLedgerEntry
+   */
+  select?: Prisma.CreditLedgerEntrySelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the CreditLedgerEntry
+   */
+  omit?: Prisma.CreditLedgerEntryOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.CreditLedgerEntryInclude<ExtArgs> | null
+  where?: Prisma.CreditLedgerEntryWhereInput
+  orderBy?: Prisma.CreditLedgerEntryOrderByWithRelationInput | Prisma.CreditLedgerEntryOrderByWithRelationInput[]
+  cursor?: Prisma.CreditLedgerEntryWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.CreditLedgerEntryScalarFieldEnum | Prisma.CreditLedgerEntryScalarFieldEnum[]
 }
 
 /**

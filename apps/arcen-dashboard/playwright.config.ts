@@ -57,25 +57,39 @@ export default defineConfig({
     },
   ],
 
-  // Start Next.js dev server before running tests (local only).
+  // Start backend + Next.js dev servers before running tests (local only).
   // In CI, PLAYWRIGHT_BASE_URL must point to an already-running server
   // (e.g. a Vercel preview deployment or a server started in a prior CI step).
   webServer: process.env.CI
     ? undefined
-    : {
-        command: "npm run dev",
-        url: BASE_URL,
-        reuseExistingServer: true,
-        timeout: 120_000,
-        env: {
-          // Prevent Next.js from requiring production env vars during tests
-          NODE_ENV: "test",
-          // Silence the subgraph "not configured" warning — tests mock the endpoint
-          NEXT_PUBLIC_GRAPH_URL: "http://localhost:9999/mock-subgraph",
-          // Route facilitator calls to localhost so Playwright can intercept them
-          NEXT_PUBLIC_FACILITATOR_URL: "http://localhost:3402",
-          // Disable Sentry in tests
-          SENTRY_DSN: "",
+    : [
+        {
+          command: "npm run dev --workspace @arcenpay/backend",
+          url: "http://localhost:3300/health",
+          reuseExistingServer: true,
+          timeout: 120_000,
+          env: {
+            NODE_ENV: "test",
+            SENTRY_DSN: "",
+          },
         },
-      },
+        {
+          command: "npm run dev",
+          url: BASE_URL,
+          reuseExistingServer: true,
+          timeout: 120_000,
+          env: {
+            // Prevent Next.js from requiring production env vars during tests
+            NODE_ENV: "test",
+            BACKEND_URL: "http://localhost:3300",
+            NEXT_PUBLIC_BACKEND_URL: "http://localhost:3300",
+            // Silence the subgraph "not configured" warning — tests mock the endpoint
+            NEXT_PUBLIC_GRAPH_URL: "http://localhost:9999/mock-subgraph",
+            // Route facilitator calls to localhost so Playwright can intercept them
+            NEXT_PUBLIC_FACILITATOR_URL: "http://localhost:3402",
+            // Disable Sentry in tests
+            SENTRY_DSN: "",
+          },
+        },
+      ],
 });

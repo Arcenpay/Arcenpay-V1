@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { SkeletonCard } from "@/components/ui/skeleton";
 import {
   Card,
   CardContent,
@@ -231,13 +232,9 @@ export function BillingSection() {
   if (loading) {
     return (
       <div className="space-y-6">
-        {[1, 2, 3].map((i) => (
-          <Card key={i}>
-            <CardContent className="p-6">
-              <div className="h-32 bg-muted animate-pulse rounded-lg" />
-            </CardContent>
-          </Card>
-        ))}
+        <SkeletonCard lines={5} />
+        <SkeletonCard lines={5} />
+        <SkeletonCard lines={5} />
       </div>
     );
   }

@@ -170,12 +170,19 @@ type ComponentPlanMetadataEntitlement = {
   icon?: string | null;
 };
 
+type ComponentMetadataEntitlement = ComponentPlanMetadataEntitlement & {
+  source: "plan" | "add_on";
+  sourceId: string;
+  sourceName?: string | null;
+};
+
 type ComponentPlanMetadataCreditGrant = {
   creditTypeId: string;
   amount: number;
   name?: string | null;
   code?: string | null;
   unitName?: string | null;
+  unitNamePlural?: string | null;
 };
 
 function listComponentPlanMetadataEntitlements(
@@ -211,6 +218,43 @@ function listComponentPlanMetadataEntitlements(
   });
 }
 
+function mergeComponentMetadataEntitlements(input: {
+  planId?: string | null;
+  planMetadata: unknown;
+  billingPeriod: "monthly" | "annual";
+  addOns: Array<{ id: string; name: string; metadata: unknown }>;
+}): ComponentMetadataEntitlement[] {
+  const byFeatureKey = new Map<string, ComponentMetadataEntitlement>();
+
+  if (input.planId) {
+    for (const entitlement of listComponentPlanMetadataEntitlements(
+      input.planMetadata,
+      input.billingPeriod,
+    )) {
+      byFeatureKey.set(entitlement.featureKey, {
+        ...entitlement,
+        source: "plan",
+        sourceId: input.planId,
+      });
+    }
+  }
+
+  for (const addOn of input.addOns) {
+    for (const entitlement of listComponentPlanMetadataEntitlements(addOn.metadata)) {
+      byFeatureKey.set(entitlement.featureKey, {
+        ...entitlement,
+        source: "add_on",
+        sourceId: addOn.id,
+        sourceName: addOn.name,
+      });
+    }
+  }
+
+  return Array.from(byFeatureKey.values()).filter(
+    (entry) => entry.enabled !== false,
+  );
+}
+
 function listComponentPlanMetadataCreditGrants(
   metadata: unknown,
 ): ComponentPlanMetadataCreditGrant[] {
@@ -227,6 +271,7 @@ function listComponentPlanMetadataCreditGrants(
         name?: string | null;
         code?: string | null;
         unitName?: string | null;
+        unitNamePlural?: string | null;
       } =>
         Boolean(
           entry &&
@@ -246,6 +291,8 @@ function listComponentPlanMetadataCreditGrants(
         name: typeof entry.name === "string" ? entry.name : null,
         code: typeof entry.code === "string" ? entry.code : null,
         unitName: typeof entry.unitName === "string" ? entry.unitName : null,
+        unitNamePlural:
+          typeof entry.unitNamePlural === "string" ? entry.unitNamePlural : null,
       };
     })
     .filter((entry) => entry.amount > 0);
@@ -255,7 +302,13 @@ function hydratePlanMetadataWithCreditGrants(
   metadata: unknown,
   creditsById: Map<
     string,
-    { id: string; name: string; code: string; unitName: string }
+    {
+      id: string;
+      name: string;
+      code: string;
+      unitName: string;
+      metadata: unknown;
+    }
   >,
 ): Record<string, unknown> | null {
   const record = asRecord(metadata);
@@ -273,6 +326,15 @@ function hydratePlanMetadataWithCreditGrants(
         name: creditType?.name ?? grant.name ?? grant.creditTypeId,
         code: creditType?.code ?? grant.code ?? null,
         unitName: creditType?.unitName ?? grant.unitName ?? "credits",
+        unitNamePlural:
+          creditType?.metadata &&
+          typeof creditType.metadata === "object" &&
+          !Array.isArray(creditType.metadata) &&
+          typeof (creditType.metadata as Record<string, unknown>).unitNamePlural ===
+            "string"
+            ? ((creditType.metadata as Record<string, unknown>)
+                .unitNamePlural as string)
+            : creditType?.unitName ?? grant.unitName ?? "credits",
       };
     }),
   };
@@ -289,7 +351,10 @@ function toCreditGrantEntitlements(
     usage: 0,
     exceeded: false,
     unitSingular: grant.unitName ?? "credit",
-    unitPlural: grant.unitName ?? "credits",
+    unitPlural:
+      typeof (grant as { unitNamePlural?: unknown }).unitNamePlural === "string"
+        ? ((grant as { unitNamePlural?: string }).unitNamePlural ?? "credits")
+        : grant.unitName ?? "credits",
     icon: null,
   }));
 }
@@ -576,6 +641,7 @@ export async function GET(c: Context) {
               name: true,
               code: true,
               unitName: true,
+              metadata: true,
             },
           });
           activePlan = {
@@ -597,6 +663,7 @@ export async function GET(c: Context) {
       const configuredChainId =
         (typeof activePlan?.chainId === "number" ? activePlan.chainId : null) ??
         (company.subscriptionState?.chainId ?? DEFAULT_CHAIN_ID);
+      const now = new Date();
 
       const deferredBillingPeriodRepair = resolveDeferredBillingPeriodRepair({
         transition: latestChangeRequest,
@@ -604,7 +671,6 @@ export async function GET(c: Context) {
         liveCurrentPeriodEnd,
       });
       if (deferredBillingPeriodRepair) {
-        const now = new Date();
         const repairedTransitionMetadata = {
           ...asRecord(latestChangeRequest?.metadata),
           mode: "next_renewal_on_chain",
@@ -759,6 +825,28 @@ export async function GET(c: Context) {
           userKeys,
         }),
       ]);
+      const activeAddOns = await db.catalogAddOn.findMany({
+        where: {
+          teamId,
+          active: true,
+          status: "PUBLISHED",
+          ...(company.environmentId ? { environmentId: company.environmentId } : {}),
+          companyGrants: {
+            some: {
+              teamId,
+              companyId: company.id,
+              status: "ACTIVE",
+              OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+            },
+          },
+        },
+        select: {
+          id: true,
+          name: true,
+          metadata: true,
+        },
+        orderBy: [{ updatedAt: "asc" }, { createdAt: "asc" }],
+      });
 
       const flagMap = new Map(flags.map((flag) => [flag.featureKey, flag]));
       const entitlementMap = new Map(
@@ -767,15 +855,17 @@ export async function GET(c: Context) {
           entitlement,
         ]),
       );
-      const activePlanEntitlements = listComponentPlanMetadataEntitlements(
-        activePlan?.metadata ?? null,
-        activeBillingPeriod ?? "monthly",
-      ).filter((entry) => entry.enabled !== false);
+      const activeCatalogEntitlements = mergeComponentMetadataEntitlements({
+        planId: typeof activePlan?.id === "string" ? activePlan.id : null,
+        planMetadata: activePlan?.metadata ?? null,
+        billingPeriod: activeBillingPeriod ?? "monthly",
+        addOns: activeAddOns,
+      });
       const activePlanCreditGrantEntitlements = toCreditGrantEntitlements(
         listComponentPlanMetadataCreditGrants(activePlan?.metadata ?? null),
       );
 
-      entitlements = activePlanEntitlements.map((entry) => {
+      entitlements = activeCatalogEntitlements.map((entry) => {
         const resolvedEntitlement = entitlementMap.get(entry.featureKey);
         const flag = flagMap.get(entry.featureKey);
         const featureType = resolveComponentEntitlementFeatureType(
@@ -816,6 +906,9 @@ export async function GET(c: Context) {
             flag?.unitSingular ??
             null,
           icon: entry.icon ?? flag?.icon ?? null,
+          source: entry.source,
+          sourceId: entry.sourceId,
+          sourceName: entry.sourceName ?? null,
         };
       });
       entitlements = [...entitlements, ...activePlanCreditGrantEntitlements];
@@ -834,8 +927,6 @@ export async function GET(c: Context) {
 
       // Invoice lookup: scoped strictly to this company by companyId.
       // Falls back to wallet/email for legacy invoices without companyId.
-      const now = new Date();
-
       const invoices = await db.invoice.findMany({
         where: {
           teamId,
@@ -1228,6 +1319,7 @@ export async function GET(c: Context) {
         name: true,
         code: true,
         unitName: true,
+        metadata: true,
       },
     });
     const creditTypeById = new Map(

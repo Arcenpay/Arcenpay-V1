@@ -428,6 +428,8 @@ export const ModelName = {
   ArcenUser: 'ArcenUser',
   ArcenEvent: 'ArcenEvent',
   CompanyAddOnGrant: 'CompanyAddOnGrant',
+  CompanyCreditGrant: 'CompanyCreditGrant',
+  CreditLedgerEntry: 'CreditLedgerEntry',
   PaymentLink: 'PaymentLink',
   CheckoutSession: 'CheckoutSession',
   CatalogFeatureFlag: 'CatalogFeatureFlag',
@@ -455,7 +457,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "authSession" | "emailAuthCode" | "team" | "workspaceEnvironment" | "teamMember" | "teamInvitation" | "providerProfile" | "subscriberEmail" | "authNonce" | "catalogPlan" | "catalogAddOn" | "catalogCreditType" | "catalogVersion" | "catalogConfig" | "catalogCoupon" | "billingTemplate" | "billingTemplateVersion" | "templateInstall" | "taxProfile" | "invoiceSequence" | "invoice" | "invoiceLine" | "invoiceDelivery" | "creditNote" | "auditEvent" | "billingEvent" | "subscriptionState" | "subscriptionChangeRequest" | "payment" | "paymentAttempt" | "billingAdjustment" | "billingBalance" | "refund" | "billingRecoveryTask" | "webhookDelivery" | "platformTierConfig" | "gasSpend" | "tierUpgradeHistory" | "supportTicket" | "arcenCompany" | "arcenUser" | "arcenEvent" | "companyAddOnGrant" | "paymentLink" | "checkoutSession" | "catalogFeatureFlag" | "flagRule" | "flagRuleCondition" | "companyOverride" | "embedAccessToken" | "arcenApiKey" | "zkTlsProof" | "embedComponent" | "arcenAgentConfig" | "arcenDispatchRequest"
+    modelProps: "user" | "authSession" | "emailAuthCode" | "team" | "workspaceEnvironment" | "teamMember" | "teamInvitation" | "providerProfile" | "subscriberEmail" | "authNonce" | "catalogPlan" | "catalogAddOn" | "catalogCreditType" | "catalogVersion" | "catalogConfig" | "catalogCoupon" | "billingTemplate" | "billingTemplateVersion" | "templateInstall" | "taxProfile" | "invoiceSequence" | "invoice" | "invoiceLine" | "invoiceDelivery" | "creditNote" | "auditEvent" | "billingEvent" | "subscriptionState" | "subscriptionChangeRequest" | "payment" | "paymentAttempt" | "billingAdjustment" | "billingBalance" | "refund" | "billingRecoveryTask" | "webhookDelivery" | "platformTierConfig" | "gasSpend" | "tierUpgradeHistory" | "supportTicket" | "arcenCompany" | "arcenUser" | "arcenEvent" | "companyAddOnGrant" | "companyCreditGrant" | "creditLedgerEntry" | "paymentLink" | "checkoutSession" | "catalogFeatureFlag" | "flagRule" | "flagRuleCondition" | "companyOverride" | "embedAccessToken" | "arcenApiKey" | "zkTlsProof" | "embedComponent" | "arcenAgentConfig" | "arcenDispatchRequest"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -3715,6 +3717,154 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    CompanyCreditGrant: {
+      payload: Prisma.$CompanyCreditGrantPayload<ExtArgs>
+      fields: Prisma.CompanyCreditGrantFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.CompanyCreditGrantFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CompanyCreditGrantPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.CompanyCreditGrantFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CompanyCreditGrantPayload>
+        }
+        findFirst: {
+          args: Prisma.CompanyCreditGrantFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CompanyCreditGrantPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.CompanyCreditGrantFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CompanyCreditGrantPayload>
+        }
+        findMany: {
+          args: Prisma.CompanyCreditGrantFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CompanyCreditGrantPayload>[]
+        }
+        create: {
+          args: Prisma.CompanyCreditGrantCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CompanyCreditGrantPayload>
+        }
+        createMany: {
+          args: Prisma.CompanyCreditGrantCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.CompanyCreditGrantCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CompanyCreditGrantPayload>[]
+        }
+        delete: {
+          args: Prisma.CompanyCreditGrantDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CompanyCreditGrantPayload>
+        }
+        update: {
+          args: Prisma.CompanyCreditGrantUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CompanyCreditGrantPayload>
+        }
+        deleteMany: {
+          args: Prisma.CompanyCreditGrantDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.CompanyCreditGrantUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.CompanyCreditGrantUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CompanyCreditGrantPayload>[]
+        }
+        upsert: {
+          args: Prisma.CompanyCreditGrantUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CompanyCreditGrantPayload>
+        }
+        aggregate: {
+          args: Prisma.CompanyCreditGrantAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateCompanyCreditGrant>
+        }
+        groupBy: {
+          args: Prisma.CompanyCreditGrantGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.CompanyCreditGrantGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.CompanyCreditGrantCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.CompanyCreditGrantCountAggregateOutputType> | number
+        }
+      }
+    }
+    CreditLedgerEntry: {
+      payload: Prisma.$CreditLedgerEntryPayload<ExtArgs>
+      fields: Prisma.CreditLedgerEntryFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.CreditLedgerEntryFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CreditLedgerEntryPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.CreditLedgerEntryFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CreditLedgerEntryPayload>
+        }
+        findFirst: {
+          args: Prisma.CreditLedgerEntryFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CreditLedgerEntryPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.CreditLedgerEntryFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CreditLedgerEntryPayload>
+        }
+        findMany: {
+          args: Prisma.CreditLedgerEntryFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CreditLedgerEntryPayload>[]
+        }
+        create: {
+          args: Prisma.CreditLedgerEntryCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CreditLedgerEntryPayload>
+        }
+        createMany: {
+          args: Prisma.CreditLedgerEntryCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.CreditLedgerEntryCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CreditLedgerEntryPayload>[]
+        }
+        delete: {
+          args: Prisma.CreditLedgerEntryDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CreditLedgerEntryPayload>
+        }
+        update: {
+          args: Prisma.CreditLedgerEntryUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CreditLedgerEntryPayload>
+        }
+        deleteMany: {
+          args: Prisma.CreditLedgerEntryDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.CreditLedgerEntryUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.CreditLedgerEntryUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CreditLedgerEntryPayload>[]
+        }
+        upsert: {
+          args: Prisma.CreditLedgerEntryUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CreditLedgerEntryPayload>
+        }
+        aggregate: {
+          args: Prisma.CreditLedgerEntryAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateCreditLedgerEntry>
+        }
+        groupBy: {
+          args: Prisma.CreditLedgerEntryGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.CreditLedgerEntryGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.CreditLedgerEntryCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.CreditLedgerEntryCountAggregateOutputType> | number
+        }
+      }
+    }
     PaymentLink: {
       payload: Prisma.$PaymentLinkPayload<ExtArgs>
       fields: Prisma.PaymentLinkFieldRefs
@@ -5491,6 +5641,55 @@ export const CompanyAddOnGrantScalarFieldEnum = {
 export type CompanyAddOnGrantScalarFieldEnum = (typeof CompanyAddOnGrantScalarFieldEnum)[keyof typeof CompanyAddOnGrantScalarFieldEnum]
 
 
+export const CompanyCreditGrantScalarFieldEnum = {
+  id: 'id',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  teamId: 'teamId',
+  environmentId: 'environmentId',
+  companyId: 'companyId',
+  creditTypeId: 'creditTypeId',
+  status: 'status',
+  source: 'source',
+  initialAmount: 'initialAmount',
+  remainingAmount: 'remainingAmount',
+  grantedAt: 'grantedAt',
+  expiresAt: 'expiresAt',
+  periodStartedAt: 'periodStartedAt',
+  periodEndsAt: 'periodEndsAt',
+  resetPeriod: 'resetPeriod',
+  paymentId: 'paymentId',
+  checkoutSessionId: 'checkoutSessionId',
+  idempotencyKey: 'idempotencyKey',
+  metadata: 'metadata'
+} as const
+
+export type CompanyCreditGrantScalarFieldEnum = (typeof CompanyCreditGrantScalarFieldEnum)[keyof typeof CompanyCreditGrantScalarFieldEnum]
+
+
+export const CreditLedgerEntryScalarFieldEnum = {
+  id: 'id',
+  createdAt: 'createdAt',
+  occurredAt: 'occurredAt',
+  teamId: 'teamId',
+  environmentId: 'environmentId',
+  companyId: 'companyId',
+  creditTypeId: 'creditTypeId',
+  grantId: 'grantId',
+  kind: 'kind',
+  amount: 'amount',
+  balanceAfter: 'balanceAfter',
+  featureKey: 'featureKey',
+  eventId: 'eventId',
+  paymentId: 'paymentId',
+  checkoutSessionId: 'checkoutSessionId',
+  idempotencyKey: 'idempotencyKey',
+  metadata: 'metadata'
+} as const
+
+export type CreditLedgerEntryScalarFieldEnum = (typeof CreditLedgerEntryScalarFieldEnum)[keyof typeof CreditLedgerEntryScalarFieldEnum]
+
+
 export const PaymentLinkScalarFieldEnum = {
   id: 'id',
   createdAt: 'createdAt',
@@ -6242,6 +6441,48 @@ export type ListEnumCompanyAddOnGrantSourceFieldRefInput<$PrismaModel> = FieldRe
 
 
 /**
+ * Reference to a field of type 'CompanyCreditGrantStatus'
+ */
+export type EnumCompanyCreditGrantStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'CompanyCreditGrantStatus'>
+    
+
+
+/**
+ * Reference to a field of type 'CompanyCreditGrantStatus[]'
+ */
+export type ListEnumCompanyCreditGrantStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'CompanyCreditGrantStatus[]'>
+    
+
+
+/**
+ * Reference to a field of type 'CompanyCreditGrantSource'
+ */
+export type EnumCompanyCreditGrantSourceFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'CompanyCreditGrantSource'>
+    
+
+
+/**
+ * Reference to a field of type 'CompanyCreditGrantSource[]'
+ */
+export type ListEnumCompanyCreditGrantSourceFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'CompanyCreditGrantSource[]'>
+    
+
+
+/**
+ * Reference to a field of type 'CreditLedgerEntryKind'
+ */
+export type EnumCreditLedgerEntryKindFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'CreditLedgerEntryKind'>
+    
+
+
+/**
+ * Reference to a field of type 'CreditLedgerEntryKind[]'
+ */
+export type ListEnumCreditLedgerEntryKindFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'CreditLedgerEntryKind[]'>
+    
+
+
+/**
  * Reference to a field of type 'PaymentLinkKind'
  */
 export type EnumPaymentLinkKindFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PaymentLinkKind'>
@@ -6449,6 +6690,8 @@ export type GlobalOmitConfig = {
   arcenUser?: Prisma.ArcenUserOmit
   arcenEvent?: Prisma.ArcenEventOmit
   companyAddOnGrant?: Prisma.CompanyAddOnGrantOmit
+  companyCreditGrant?: Prisma.CompanyCreditGrantOmit
+  creditLedgerEntry?: Prisma.CreditLedgerEntryOmit
   paymentLink?: Prisma.PaymentLinkOmit
   checkoutSession?: Prisma.CheckoutSessionOmit
   catalogFeatureFlag?: Prisma.CatalogFeatureFlagOmit

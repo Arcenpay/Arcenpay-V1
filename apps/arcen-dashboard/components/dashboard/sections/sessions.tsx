@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { SkeletonTable, SkeletonMetricGrid, SkeletonList } from "@/components/ui/skeleton";
 import {
   Dialog,
   DialogContent,
@@ -124,17 +125,6 @@ type SessionsPayload = {
     subgraphEnvKeys: string[];
   };
 };
-
-function SkeletonCard() {
-  return (
-    <Card className="border-border bg-card">
-      <CardContent className="p-4">
-        <div className="h-5 bg-secondary/80 rounded animate-pulse w-24 mb-2" />
-        <div className="h-7 bg-secondary/80 rounded animate-pulse w-20" />
-      </CardContent>
-    </Card>
-  );
-}
 
 export function SessionsSection() {
   const { isConnected } = useAccount();
@@ -341,7 +331,7 @@ export function SessionsSection() {
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {sessionsLoading
-          ? Array.from({ length: 3 }).map((_, i) => <SkeletonCard key={i} />)
+          ? <SkeletonMetricGrid count={3} />
           : [
               {
                 label: "Active Sessions",
@@ -429,17 +419,13 @@ export function SessionsSection() {
               </tr>
             </thead>
             <tbody>
-              {sessionsLoading &&
-                Array.from({ length: 3 }).map((_, i) => (
-                  <tr key={i} className="border-b border-border">
-                    {Array.from({ length: 4 }).map((__, j) => (
-                      <td key={j} className="py-3 px-4">
-                        <div className="h-4 bg-secondary/80 rounded animate-pulse w-24" />
-                      </td>
-                    ))}
-                    <td className="py-3 px-4" />
-                  </tr>
-                ))}
+              {sessionsLoading && (
+                <tr>
+                  <td colSpan={5}>
+                    <SkeletonTable rows={3} cols={4} />
+                  </td>
+                </tr>
+              )}
               {!sessionsLoading &&
                 sessions.map((session, index) => {
                   const lastSettlement = session.settlements?.[0];
@@ -610,16 +596,7 @@ export function SessionsSection() {
           </p>
         </div>
 
-        {sessionsLoading && (
-          <div className="space-y-2">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div
-                key={i}
-                className="h-12 bg-secondary/50 rounded-lg animate-pulse"
-              />
-            ))}
-          </div>
-        )}
+        {sessionsLoading && <SkeletonList items={3} />}
 
         {!sessionsLoading && proofs.length === 0 && (
           <div className="flex flex-col items-center justify-center py-10 text-center">

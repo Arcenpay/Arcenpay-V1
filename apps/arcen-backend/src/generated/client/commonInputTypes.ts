@@ -851,6 +851,57 @@ export type EnumCompanyAddOnGrantSourceWithAggregatesFilter<$PrismaModel = never
   _max?: Prisma.NestedEnumCompanyAddOnGrantSourceFilter<$PrismaModel>
 }
 
+export type EnumCompanyCreditGrantStatusFilter<$PrismaModel = never> = {
+  equals?: $Enums.CompanyCreditGrantStatus | Prisma.EnumCompanyCreditGrantStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.CompanyCreditGrantStatus[] | Prisma.ListEnumCompanyCreditGrantStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.CompanyCreditGrantStatus[] | Prisma.ListEnumCompanyCreditGrantStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumCompanyCreditGrantStatusFilter<$PrismaModel> | $Enums.CompanyCreditGrantStatus
+}
+
+export type EnumCompanyCreditGrantSourceFilter<$PrismaModel = never> = {
+  equals?: $Enums.CompanyCreditGrantSource | Prisma.EnumCompanyCreditGrantSourceFieldRefInput<$PrismaModel>
+  in?: $Enums.CompanyCreditGrantSource[] | Prisma.ListEnumCompanyCreditGrantSourceFieldRefInput<$PrismaModel>
+  notIn?: $Enums.CompanyCreditGrantSource[] | Prisma.ListEnumCompanyCreditGrantSourceFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumCompanyCreditGrantSourceFilter<$PrismaModel> | $Enums.CompanyCreditGrantSource
+}
+
+export type EnumCompanyCreditGrantStatusWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.CompanyCreditGrantStatus | Prisma.EnumCompanyCreditGrantStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.CompanyCreditGrantStatus[] | Prisma.ListEnumCompanyCreditGrantStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.CompanyCreditGrantStatus[] | Prisma.ListEnumCompanyCreditGrantStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumCompanyCreditGrantStatusWithAggregatesFilter<$PrismaModel> | $Enums.CompanyCreditGrantStatus
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumCompanyCreditGrantStatusFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumCompanyCreditGrantStatusFilter<$PrismaModel>
+}
+
+export type EnumCompanyCreditGrantSourceWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.CompanyCreditGrantSource | Prisma.EnumCompanyCreditGrantSourceFieldRefInput<$PrismaModel>
+  in?: $Enums.CompanyCreditGrantSource[] | Prisma.ListEnumCompanyCreditGrantSourceFieldRefInput<$PrismaModel>
+  notIn?: $Enums.CompanyCreditGrantSource[] | Prisma.ListEnumCompanyCreditGrantSourceFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumCompanyCreditGrantSourceWithAggregatesFilter<$PrismaModel> | $Enums.CompanyCreditGrantSource
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumCompanyCreditGrantSourceFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumCompanyCreditGrantSourceFilter<$PrismaModel>
+}
+
+export type EnumCreditLedgerEntryKindFilter<$PrismaModel = never> = {
+  equals?: $Enums.CreditLedgerEntryKind | Prisma.EnumCreditLedgerEntryKindFieldRefInput<$PrismaModel>
+  in?: $Enums.CreditLedgerEntryKind[] | Prisma.ListEnumCreditLedgerEntryKindFieldRefInput<$PrismaModel>
+  notIn?: $Enums.CreditLedgerEntryKind[] | Prisma.ListEnumCreditLedgerEntryKindFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumCreditLedgerEntryKindFilter<$PrismaModel> | $Enums.CreditLedgerEntryKind
+}
+
+export type EnumCreditLedgerEntryKindWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.CreditLedgerEntryKind | Prisma.EnumCreditLedgerEntryKindFieldRefInput<$PrismaModel>
+  in?: $Enums.CreditLedgerEntryKind[] | Prisma.ListEnumCreditLedgerEntryKindFieldRefInput<$PrismaModel>
+  notIn?: $Enums.CreditLedgerEntryKind[] | Prisma.ListEnumCreditLedgerEntryKindFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumCreditLedgerEntryKindWithAggregatesFilter<$PrismaModel> | $Enums.CreditLedgerEntryKind
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumCreditLedgerEntryKindFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumCreditLedgerEntryKindFilter<$PrismaModel>
+}
+
 export type EnumPaymentLinkKindFilter<$PrismaModel = never> = {
   equals?: $Enums.PaymentLinkKind | Prisma.EnumPaymentLinkKindFieldRefInput<$PrismaModel>
   in?: $Enums.PaymentLinkKind[] | Prisma.ListEnumPaymentLinkKindFieldRefInput<$PrismaModel>
@@ -1740,6 +1791,57 @@ export type NestedEnumCompanyAddOnGrantSourceWithAggregatesFilter<$PrismaModel =
   _count?: Prisma.NestedIntFilter<$PrismaModel>
   _min?: Prisma.NestedEnumCompanyAddOnGrantSourceFilter<$PrismaModel>
   _max?: Prisma.NestedEnumCompanyAddOnGrantSourceFilter<$PrismaModel>
+}
+
+export type NestedEnumCompanyCreditGrantStatusFilter<$PrismaModel = never> = {
+  equals?: $Enums.CompanyCreditGrantStatus | Prisma.EnumCompanyCreditGrantStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.CompanyCreditGrantStatus[] | Prisma.ListEnumCompanyCreditGrantStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.CompanyCreditGrantStatus[] | Prisma.ListEnumCompanyCreditGrantStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumCompanyCreditGrantStatusFilter<$PrismaModel> | $Enums.CompanyCreditGrantStatus
+}
+
+export type NestedEnumCompanyCreditGrantSourceFilter<$PrismaModel = never> = {
+  equals?: $Enums.CompanyCreditGrantSource | Prisma.EnumCompanyCreditGrantSourceFieldRefInput<$PrismaModel>
+  in?: $Enums.CompanyCreditGrantSource[] | Prisma.ListEnumCompanyCreditGrantSourceFieldRefInput<$PrismaModel>
+  notIn?: $Enums.CompanyCreditGrantSource[] | Prisma.ListEnumCompanyCreditGrantSourceFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumCompanyCreditGrantSourceFilter<$PrismaModel> | $Enums.CompanyCreditGrantSource
+}
+
+export type NestedEnumCompanyCreditGrantStatusWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.CompanyCreditGrantStatus | Prisma.EnumCompanyCreditGrantStatusFieldRefInput<$PrismaModel>
+  in?: $Enums.CompanyCreditGrantStatus[] | Prisma.ListEnumCompanyCreditGrantStatusFieldRefInput<$PrismaModel>
+  notIn?: $Enums.CompanyCreditGrantStatus[] | Prisma.ListEnumCompanyCreditGrantStatusFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumCompanyCreditGrantStatusWithAggregatesFilter<$PrismaModel> | $Enums.CompanyCreditGrantStatus
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumCompanyCreditGrantStatusFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumCompanyCreditGrantStatusFilter<$PrismaModel>
+}
+
+export type NestedEnumCompanyCreditGrantSourceWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.CompanyCreditGrantSource | Prisma.EnumCompanyCreditGrantSourceFieldRefInput<$PrismaModel>
+  in?: $Enums.CompanyCreditGrantSource[] | Prisma.ListEnumCompanyCreditGrantSourceFieldRefInput<$PrismaModel>
+  notIn?: $Enums.CompanyCreditGrantSource[] | Prisma.ListEnumCompanyCreditGrantSourceFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumCompanyCreditGrantSourceWithAggregatesFilter<$PrismaModel> | $Enums.CompanyCreditGrantSource
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumCompanyCreditGrantSourceFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumCompanyCreditGrantSourceFilter<$PrismaModel>
+}
+
+export type NestedEnumCreditLedgerEntryKindFilter<$PrismaModel = never> = {
+  equals?: $Enums.CreditLedgerEntryKind | Prisma.EnumCreditLedgerEntryKindFieldRefInput<$PrismaModel>
+  in?: $Enums.CreditLedgerEntryKind[] | Prisma.ListEnumCreditLedgerEntryKindFieldRefInput<$PrismaModel>
+  notIn?: $Enums.CreditLedgerEntryKind[] | Prisma.ListEnumCreditLedgerEntryKindFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumCreditLedgerEntryKindFilter<$PrismaModel> | $Enums.CreditLedgerEntryKind
+}
+
+export type NestedEnumCreditLedgerEntryKindWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.CreditLedgerEntryKind | Prisma.EnumCreditLedgerEntryKindFieldRefInput<$PrismaModel>
+  in?: $Enums.CreditLedgerEntryKind[] | Prisma.ListEnumCreditLedgerEntryKindFieldRefInput<$PrismaModel>
+  notIn?: $Enums.CreditLedgerEntryKind[] | Prisma.ListEnumCreditLedgerEntryKindFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumCreditLedgerEntryKindWithAggregatesFilter<$PrismaModel> | $Enums.CreditLedgerEntryKind
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumCreditLedgerEntryKindFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumCreditLedgerEntryKindFilter<$PrismaModel>
 }
 
 export type NestedEnumPaymentLinkKindFilter<$PrismaModel = never> = {

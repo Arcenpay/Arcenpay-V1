@@ -7,6 +7,7 @@ import {
   Zap, Shield, ChevronRight, Settings2, Info, ArrowLeft,
   MoreHorizontal, Copy, Building2, Pencil,
 } from "lucide-react";
+import { SkeletonList } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
@@ -1484,9 +1485,7 @@ function FlagDetailView({
             </div>
           )}
           {overridesLoading ? (
-            <div className="rounded-xl border border-border py-10 text-center text-sm text-muted-foreground">
-              Loading company overrides…
-            </div>
+            <SkeletonList items={2} />
           ) : overrides.length === 0 ? (
             <div className="border border-dashed border-border rounded-xl py-16 flex flex-col items-center justify-center gap-2">
               <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center mb-2">
@@ -1668,11 +1667,7 @@ export function FeatureFlagsSection() {
 
       {/* Flags table */}
       {loading ? (
-        <div className="space-y-2">
-          {[...Array(3)].map((_, i) => (
-            <div key={i} className="h-14 rounded-lg bg-muted/40 animate-pulse" />
-          ))}
-        </div>
+        <SkeletonList items={3} />
       ) : flags.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border bg-muted/20 p-14 text-center space-y-3">
           <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto">

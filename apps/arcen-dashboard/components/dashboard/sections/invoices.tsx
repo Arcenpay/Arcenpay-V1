@@ -12,6 +12,7 @@ import {
   Repeat,
   FileText,
 } from "lucide-react";
+import { SkeletonTable } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -229,16 +230,7 @@ function InvoiceTable({
         </TableRow>
       </TableHeader>
       <TableBody>
-        {loading && (
-          <TableRow>
-            <TableCell
-              colSpan={8}
-              className="py-8 text-center text-muted-foreground"
-            >
-              Loading invoices...
-            </TableCell>
-          </TableRow>
-        )}
+        {loading && <SkeletonTable rows={4} cols={7} />}
         {!loading && rows.length === 0 && (
           <TableRow>
             <TableCell

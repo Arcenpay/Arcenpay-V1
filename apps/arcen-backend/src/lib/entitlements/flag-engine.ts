@@ -167,6 +167,7 @@ export async function resolveCompany(
   keys: CompanyKeys,
 ): Promise<{
   id: string;
+  environmentId: string | null;
   traits: Record<string, unknown>;
   activePlanId: string | null;
   activeAddOnIds: string[];
@@ -192,6 +193,7 @@ export async function resolveCompany(
     },
     select: {
       id: true,
+      environmentId: true,
       traits: true,
       activePlanId: true,
       activeAddOnIds: true,
@@ -263,6 +265,7 @@ export async function resolveCompany(
 
   return {
     id: company.id,
+    environmentId: company.environmentId,
     traits: (company.traits as Record<string, unknown>) ?? {},
     activePlanId,
     billingPeriod: normalizeCatalogBillingPeriod(

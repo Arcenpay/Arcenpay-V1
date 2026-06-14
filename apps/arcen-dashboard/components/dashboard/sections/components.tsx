@@ -27,6 +27,7 @@ import {
   type ComponentElement,
 } from "@/components/dashboard/component-editor";
 import { normalizeComponentStyling } from "@/lib/component-design";
+import { SkeletonGrid } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import type { Section } from "@/app/(dashboard)/page";
 
@@ -344,6 +345,7 @@ interface ComponentsSectionProps {
 }
 
 export function ComponentsSection({ onSectionChange }: ComponentsSectionProps = {}) {
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [customComponents, setCustomComponents] = useState<ComponentConfig[]>(
     [],
@@ -426,7 +428,8 @@ export function ComponentsSection({ onSectionChange }: ComponentsSectionProps = 
         });
         setCustomComponents(loaded);
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
 
   const filteredComponents = customComponents.filter(
@@ -790,6 +793,9 @@ export function ComponentsSection({ onSectionChange }: ComponentsSectionProps = 
 
         {/* Empty state */}
         {!searchQuery && customComponents.length === 0 && (
+          loading ? (
+            <SkeletonGrid count={6} cols={3} />
+          ) : (
           <div className="border-2 border-dashed border-border rounded-2xl">
             <div className="flex flex-col items-center justify-center py-16 text-center px-6">
               <div className="w-16 h-16 rounded-2xl bg-secondary border border-border flex items-center justify-center mb-4">
@@ -811,6 +817,7 @@ export function ComponentsSection({ onSectionChange }: ComponentsSectionProps = 
               </Button>
             </div>
           </div>
+          )
         )}
 
         {/* No results */}

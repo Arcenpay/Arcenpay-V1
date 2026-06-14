@@ -4,8 +4,8 @@
  * This file saves browser storage state (cookies/localStorage) to
  * tests/e2e/.auth/user.json after a successful dashboard auth session.
  *
- * For local dev, you can skip auth setup entirely and run tests against
- * a server with auth disabled (SKIP_AUTH=true in .env.local).
+ * Authenticated tests require PLAYWRIGHT_SESSION_COOKIE. Without it, setup
+ * fails early with a clear message instead of producing downstream redirects.
  */
 
 import { test as setup, expect } from "@playwright/test";
@@ -34,23 +34,13 @@ setup("authenticate", async ({ page }) => {
     return;
   }
 
-  // If SKIP_AUTH is set, create an empty auth state (server must have auth disabled)
-  if (process.env.SKIP_AUTH === "true") {
-    await page.context().storageState({ path: AUTH_FILE });
-    return;
-  }
-
   // Navigate to login page. A fully automated email-code flow is not wired
   // into Playwright yet, so CI should inject PLAYWRIGHT_SESSION_COOKIE.
   await page.goto("/login");
   await expect(page).toHaveURL(/\/login/);
 
-  console.warn(
-    "[auth.setup] No PLAYWRIGHT_SESSION_COOKIE provided. " +
-      "Auth setup will be skipped — authenticated tests will fail. " +
-      "Set PLAYWRIGHT_SESSION_COOKIE to a valid arcen_session cookie or SKIP_AUTH=true.",
+  throw new Error(
+    "PLAYWRIGHT_SESSION_COOKIE is required for authenticated dashboard E2E tests. " +
+      "Create a valid arcen_session cookie first, then rerun test:e2e.",
   );
-
-  // Save empty state so downstream tests can run (they will fail if they need auth)
-  await page.context().storageState({ path: AUTH_FILE });
 });

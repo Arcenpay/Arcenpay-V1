@@ -8,8 +8,26 @@ import {
 import { recordSuccessfulPayment } from "../billing/billing-ledger.js";
 import { createIssuedChargeInvoice } from "../billing/billing-events.js";
 import { grantCompanyAddOn } from "../companies/addon-grants.js";
+import { grantCompanyCredits } from "../billing/usage-credits.js";
 import { sendPaidInvoiceReceipt } from "../billing/invoice-notifications.js";
 import { deliverWebhook } from "../webhooks/deliver-webhook.js";
+
+function asRecord(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return value as Record<string, unknown>;
+}
+
+function readPositiveInteger(value: unknown): number | null {
+  const numberValue =
+    typeof value === "number"
+      ? value
+      : typeof value === "string" && value.trim()
+        ? Number(value)
+        : Number.NaN;
+  return Number.isSafeInteger(numberValue) && numberValue > 0
+    ? numberValue
+    : null;
+}
 
 function normalizeWallet(value?: string | null): string | null {
   const trimmed = value?.trim().toLowerCase();
@@ -33,6 +51,101 @@ function deriveCheckoutDescription(input: {
       : input.paymentLinkName || "Invoice payment";
   }
   return input.paymentLinkName || "One-time payment";
+}
+
+function readCreditPurchaseMetadata(
+  ...metadataSources: unknown[]
+): { creditTypeId: string; bundleId?: string | null; units?: number | null } | null {
+  for (const source of metadataSources) {
+    const metadata = asRecord(source);
+    const purchase = asRecord(metadata.creditPurchase);
+    const sourceRecord =
+      Object.keys(purchase).length > 0 ? purchase : metadata;
+    const creditTypeId =
+      typeof sourceRecord.creditTypeId === "string" &&
+      sourceRecord.creditTypeId.trim()
+        ? sourceRecord.creditTypeId.trim()
+        : null;
+    if (!creditTypeId) continue;
+
+    return {
+      creditTypeId,
+      bundleId:
+        typeof sourceRecord.bundleId === "string" &&
+        sourceRecord.bundleId.trim()
+          ? sourceRecord.bundleId.trim()
+          : typeof sourceRecord.creditBundleId === "string" &&
+              sourceRecord.creditBundleId.trim()
+            ? sourceRecord.creditBundleId.trim()
+            : null,
+      units:
+        readPositiveInteger(sourceRecord.units) ??
+        readPositiveInteger(sourceRecord.amount),
+    };
+  }
+  return null;
+}
+
+async function resolveCreditPurchaseGrant(input: {
+  teamId: string;
+  environmentId?: string | null;
+  sessionAmount: number;
+  sessionMetadata?: unknown;
+  paymentLinkMetadata?: unknown;
+}) {
+  const purchase = readCreditPurchaseMetadata(
+    input.sessionMetadata,
+    input.paymentLinkMetadata,
+  );
+  if (!purchase) return null;
+
+  const creditType = await db.catalogCreditType.findFirst({
+    where: {
+      id: purchase.creditTypeId,
+      teamId: input.teamId,
+      active: true,
+      status: { not: "ARCHIVED" },
+      ...(input.environmentId ? { environmentId: input.environmentId } : {}),
+    },
+    select: { id: true, metadata: true },
+  });
+  if (!creditType) return null;
+
+  if (purchase.bundleId) {
+    const bundles = asRecord(creditType.metadata).bundles;
+    const bundle = Array.isArray(bundles)
+      ? bundles.map(asRecord).find((item) => item.id === purchase.bundleId)
+      : null;
+    const units = readPositiveInteger(bundle?.units);
+    const price =
+      typeof bundle?.price === "number"
+        ? bundle.price
+        : typeof bundle?.price === "string"
+          ? Number(bundle.price)
+          : Number.NaN;
+
+    if (!units || !Number.isFinite(price) || input.sessionAmount + 0.000001 < price) {
+      return null;
+    }
+
+    return {
+      creditTypeId: creditType.id,
+      units,
+      bundleId: purchase.bundleId,
+      bundleName:
+        typeof bundle?.name === "string" && bundle.name.trim()
+          ? bundle.name.trim()
+          : null,
+    };
+  }
+
+  if (!purchase.units) return null;
+  return {
+    creditTypeId: creditType.id,
+    units: purchase.units,
+    bundleId: null,
+    bundleName: null,
+  };
 }
 
 async function resolveOrCreateCompany(input: {
@@ -329,6 +442,42 @@ export async function confirmCheckoutSessionPayment(input: {
       metadata: {
         purpose: session.purpose,
         txHash: verification.txHash,
+      },
+    });
+  }
+
+  const creditPurchase = company?.id
+    ? await resolveCreditPurchaseGrant({
+        teamId: session.teamId,
+        environmentId: session.environmentId,
+        sessionAmount: Number(session.amount),
+        sessionMetadata: session.metadata,
+        paymentLinkMetadata: session.paymentLink?.metadata,
+      })
+    : null;
+
+  if (creditPurchase && company?.id) {
+    await grantCompanyCredits({
+      teamId: session.teamId,
+      environmentId: session.environmentId ?? null,
+      companyId: company.id,
+      creditTypeId: creditPurchase.creditTypeId,
+      amount: creditPurchase.units,
+      source: "CREDIT_BUNDLE",
+      paymentId: payment.id,
+      checkoutSessionId: session.id,
+      idempotencyKey: [
+        "credit-bundle",
+        session.id,
+        creditPurchase.creditTypeId,
+        creditPurchase.bundleId ?? creditPurchase.units,
+      ].join(":"),
+      metadata: {
+        purpose: session.purpose,
+        txHash: verification.txHash,
+        paymentLinkId: session.paymentLinkId,
+        bundleId: creditPurchase.bundleId,
+        bundleName: creditPurchase.bundleName,
       },
     });
   }

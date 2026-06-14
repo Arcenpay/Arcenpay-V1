@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { SkeletonTable } from "@/components/ui/skeleton";
 import {
   Card,
   CardContent,
@@ -839,7 +840,7 @@ const valid = sig === req.headers['x-arcenpay-signature'].replace('sha256=', '')
               <EyeOff className="w-8 h-8 text-muted-foreground/30 mx-auto" />
               <p className="text-sm text-muted-foreground">
                 {loadingLog
-                  ? "Loading deliveries…"
+                  ? <SkeletonTable rows={3} cols={4} />
                   : "No webhook deliveries yet. Configure an endpoint above and send a test."}
               </p>
             </div>

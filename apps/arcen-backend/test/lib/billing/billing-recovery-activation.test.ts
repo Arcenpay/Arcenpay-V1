@@ -8,6 +8,19 @@ const mockDb = vi.hoisted(() => ({
     findUnique: vi.fn(),
     update: vi.fn(),
   },
+  catalogPlan: {
+    findFirst: vi.fn(),
+  },
+  catalogCreditType: {
+    findFirst: vi.fn(),
+  },
+  companyCreditGrant: {
+    findFirst: vi.fn(),
+    create: vi.fn(),
+  },
+  creditLedgerEntry: {
+    create: vi.fn(),
+  },
   payment: {
     findFirst: vi.fn(),
     create: vi.fn(),
@@ -124,6 +137,13 @@ function setupActivationStores(options: { rollbackCreatedInvoice?: boolean } = {
     traits: {},
   });
   mockDb.arcenCompany.update.mockResolvedValue({});
+  mockDb.catalogPlan.findFirst.mockResolvedValue({
+    id: activationInput.payload.catalogPlanId,
+    environmentId: activationInput.payload.environmentId,
+    metadata: {},
+  });
+  mockDb.catalogCreditType.findFirst.mockResolvedValue(null);
+  mockDb.companyCreditGrant.findFirst.mockResolvedValue(null);
   mockUpsertScopedSubscriberEmail.mockResolvedValue({});
   mockUpsertSubscriptionLedgerState.mockResolvedValue({ id: "state-1" });
   mockSyncCustomerUserIdentity.mockResolvedValue({});

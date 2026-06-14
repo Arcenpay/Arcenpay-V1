@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { SkeletonList } from "@/components/ui/skeleton";
 import {
   Users,
   Search,
@@ -354,11 +355,7 @@ export function SubscribersSection() {
       </div>
 
       {loading ? (
-        <div className="space-y-2">
-          {[...Array(4)].map((_, index) => (
-            <div key={index} className="h-14 rounded-lg bg-muted/40 animate-pulse" />
-          ))}
-        </div>
+        <SkeletonList items={4} />
       ) : users.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border bg-muted/20 p-14 text-center space-y-3">
           <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto">
