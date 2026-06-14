@@ -745,21 +745,21 @@ export function SettingsSection() {
               </div>
 
               {linkedWallet && isLinkedWalletConnected ? (
-                <div className="flex items-start gap-2 rounded-lg border border-green-500/20 bg-green-500/5 p-3 text-sm text-green-700">
+                <div className="flex items-start gap-2 rounded-lg border border-border bg-secondary p-3 text-sm text-foreground">
                   <Check className="w-4 h-4 shrink-0 mt-0.5" />
                   Connected wallet matches the workspace wallet.
                 </div>
               ) : null}
 
               {linkedWallet && isWrongWalletConnected ? (
-                <div className="flex items-start gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-sm text-amber-700">
+                <div className="flex items-start gap-2 rounded-lg border border-border bg-secondary p-3 text-sm text-warning">
                   <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
                   Connected wallet does not match {linkedWalletLabel}. Reconnect with the linked wallet before signing transactions.
                 </div>
               ) : null}
 
               {hasConnectedWallet && !isOnConfiguredNetwork ? (
-                <div className="flex items-start gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-sm text-amber-700">
+                <div className="flex items-start gap-2 rounded-lg border border-border bg-secondary p-3 text-sm text-warning">
                   <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
                   This wallet is on an unsupported network. Switch to {configuredChainLabel} to match the current workspace environment.
                 </div>
@@ -1325,7 +1325,7 @@ export function SettingsSection() {
                       <code className="text-sm font-mono text-foreground break-all">{linkedWallet}</code>
                     </div>
                     <div className="flex items-center gap-2 ml-4 shrink-0">
-                      <Badge variant="secondary" className="bg-success/10 text-success border-success/20">
+                      <Badge variant="secondary" className="bg-secondary text-foreground border-border">
                         Linked
                       </Badge>
                       <Button
@@ -1347,7 +1347,7 @@ export function SettingsSection() {
                     </div>
                   </div>
                   {connectedAddress && connectedAddress.toLowerCase() !== linkedWallet.toLowerCase() && (
-                    <div className="flex items-start gap-2 p-3 rounded-lg bg-warning/5 border border-warning/20">
+                    <div className="flex items-start gap-2 p-3 rounded-lg bg-secondary border border-border">
                       <AlertTriangle className="w-4 h-4 text-warning shrink-0 mt-0.5" />
                       <p className="text-xs text-muted-foreground">
                         Your connected wallet{" "}
@@ -1372,7 +1372,7 @@ export function SettingsSection() {
                         Link your wallet to enable on-chain subscriptions, plan management, and usage billing.
                       </p>
                     </div>
-                    <Badge variant="secondary" className="bg-warning/10 text-warning border-warning/20 shrink-0">
+                    <Badge variant="secondary" className="bg-secondary text-foreground border-border shrink-0">
                       Not Linked
                     </Badge>
                   </div>
@@ -1842,8 +1842,8 @@ export function SettingsSection() {
                   variant="secondary"
                   className={
                     gmpBalance && parseFloat(gmpBalance.formatted) > 0.01
-                      ? "bg-success/10 text-success border-success/20"
-                      : "bg-warning/10 text-warning border-warning/20"
+                      ? "bg-secondary text-foreground border-border"
+                      : "bg-secondary text-foreground border-border"
                   }
                 >
                   {gmpBalance && parseFloat(gmpBalance.formatted) > 0.01
@@ -1878,8 +1878,8 @@ export function SettingsSection() {
                         variant="secondary"
                         className={
                           configured
-                            ? "bg-success/10 text-success border-success/20"
-                            : "bg-warning/10 text-warning border-warning/20"
+                            ? "bg-secondary text-foreground border-border"
+                            : "bg-secondary text-foreground border-border"
                         }
                       >
                         {configured ? "Configured" : "Not Set"}
@@ -1984,7 +1984,7 @@ export function SettingsSection() {
           value="danger"
           className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300"
         >
-          <Card className="border-destructive/30 bg-card">
+          <Card className="border-border bg-card">
             <CardHeader>
               <CardTitle className="text-base font-medium text-destructive flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4" />
@@ -2023,7 +2023,7 @@ export function SettingsSection() {
               ].map((action) => (
                 <div
                   key={action.title}
-                  className="flex items-center justify-between p-4 rounded-lg bg-destructive/5 border border-destructive/20"
+                  className="flex items-center justify-between p-4 rounded-lg bg-secondary border border-border"
                 >
                   <div>
                     <p className="font-medium text-foreground">
@@ -2035,7 +2035,7 @@ export function SettingsSection() {
                   </div>
                   <Button
                     variant="outline"
-                    className="border-destructive/30 text-destructive hover:bg-destructive/10 shrink-0"
+                    className="border-border text-destructive hover:bg-secondary shrink-0"
                     disabled={!isConnected}
                     onClick={() =>
                       setPendingDangerAction({

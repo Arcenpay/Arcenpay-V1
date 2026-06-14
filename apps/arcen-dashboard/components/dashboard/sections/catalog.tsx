@@ -400,8 +400,8 @@ function EnvBadge({ mode }: { mode: EnvMode }) {
       variant="outline"
       className={
         mode === "PRODUCTION"
-          ? "border-orange-400 text-orange-400"
-          : "border-blue-400 text-blue-400"
+          ? "border-orange-400 text-foreground"
+          : "border-blue-400 text-foreground"
       }
     >
       {mode === "PRODUCTION" ? "PROD" : "DEV"}
@@ -450,7 +450,7 @@ function ChainSyncBadge({ status }: { status: ChainSyncStatus }) {
     return (
       <Badge
         variant="secondary"
-        className="text-yellow-600 border-yellow-400 text-xs"
+        className="text-warning border-border text-xs"
       >
         Needs sync
       </Badge>
@@ -677,7 +677,7 @@ function CreatePlanDialog({
                       or ${form.annualPrice} USDC / year
                       {form.price &&
                         Number(form.annualPrice) < Number(form.price) * 12 && (
-                          <span className="text-green-500 ml-1">
+                          <span className="text-foreground0 ml-1">
                             (save{" "}
                             {Math.round(
                               (1 -
@@ -725,7 +725,7 @@ function CreatePlanDialog({
                 </div>
 
                 {errors._global && (
-                  <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                  <div className="p-3 rounded-lg bg-secondary border border-border">
                     <p className="text-sm text-destructive">{errors._global}</p>
                   </div>
                 )}
@@ -793,7 +793,7 @@ function CreatePlanDialog({
                     <h3 className="text-xl font-bold text-foreground tracking-tight">
                       Pricing
                     </h3>
-                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-warning/10 text-warning border border-warning/20">
+                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-secondary text-warning border border-border">
                       {env === "DEVELOPMENT" ? "DEV" : "PROD"}
                     </span>
                   </div>
@@ -870,7 +870,7 @@ function CreatePlanDialog({
                               </span>
                               {selectedChainOpt && (
                                 <span
-                                  className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0 ${selectedChainOpt.tag === "mainnet" ? "bg-success/10 text-success" : "bg-secondary text-muted-foreground border border-border"}`}
+                                  className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0 ${selectedChainOpt.tag === "mainnet" ? "bg-secondary text-success" : "bg-secondary text-muted-foreground border border-border"}`}
                                 >
                                   {selectedChainOpt.tag}
                                 </span>
@@ -1283,7 +1283,7 @@ function CreatePlanDialog({
                                 form.annualPrice &&
                                 Number(form.annualPrice) > 0 && (
                                   <div className="pt-6 text-right">
-                                    <p className="text-xs font-semibold text-green-500">
+                                    <p className="text-xs font-semibold text-foreground0">
                                       {Math.round(
                                         (1 -
                                           Number(form.annualPrice) /
@@ -1533,7 +1533,7 @@ function CreateAddOnDialog({
                         ? "One-time"
                         : "Recurring"}
                     </span>
-                    <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-blue-50 border border-blue-200 text-blue-700">
+                    <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-blue-50 border border-blue-200 text-foreground">
                       {form.saleMode === "STANDALONE"
                         ? "Standalone"
                         : form.saleMode === "UPSELL"
@@ -1584,7 +1584,7 @@ function CreateAddOnDialog({
                 </div>
 
                 {errors._global && (
-                  <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                  <div className="p-3 rounded-lg bg-secondary border border-border">
                     <p className="text-sm text-destructive">{errors._global}</p>
                   </div>
                 )}
@@ -1814,7 +1814,7 @@ function CreateAddOnDialog({
                               </span>
                               {selectedChainOpt && (
                                 <span
-                                  className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0 ${selectedChainOpt.tag === "mainnet" ? "bg-success/10 text-success" : "bg-secondary text-muted-foreground border border-border"}`}
+                                  className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0 ${selectedChainOpt.tag === "mainnet" ? "bg-secondary text-success" : "bg-secondary text-muted-foreground border border-border"}`}
                                 >
                                   {selectedChainOpt.tag}
                                 </span>
@@ -2309,7 +2309,7 @@ function CreateCreditTypeDialog({
                 </div>
 
                 {errors._global && (
-                  <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                  <div className="p-3 rounded-lg bg-secondary border border-border">
                     <p className="text-sm text-destructive">{errors._global}</p>
                   </div>
                 )}
@@ -2484,7 +2484,7 @@ function CreateCreditTypeDialog({
                           </span>
                           {selectedChainOpt && (
                             <span
-                              className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0 ${selectedChainOpt.tag === "mainnet" ? "bg-success/10 text-success" : "bg-secondary text-muted-foreground border border-border"}`}
+                              className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0 ${selectedChainOpt.tag === "mainnet" ? "bg-secondary text-success" : "bg-secondary text-muted-foreground border border-border"}`}
                             >
                               {selectedChainOpt.tag}
                             </span>
@@ -2798,7 +2798,7 @@ function EditCreditTypeDialog({
             className="p-6 space-y-6"
           >
             {errors._global && (
-              <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+              <div className="p-3 rounded-lg bg-secondary border border-border">
                 <p className="text-sm text-destructive">{errors._global}</p>
               </div>
             )}
@@ -3584,7 +3584,7 @@ function PlansTable({
                             <span className="block text-[10px] text-muted-foreground">
                               ${parseFloat(plan.annualPrice).toFixed(2)}/yr
                               {parseFloat(plan.price) > 0 && (
-                                <span className="ml-1 text-green-500">
+                                <span className="ml-1 text-foreground0">
                                   ·{" "}
                                   {Math.round(
                                     (1 -
@@ -4580,7 +4580,7 @@ function AddOnsTable({
                             deleteEntitlement(entAddon.id, ent.featureKey)
                           }
                           disabled={deletingKey === ent.featureKey}
-                          className="shrink-0 p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
+                          className="shrink-0 p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-secondary transition-colors disabled:opacity-50"
                           title="Remove entitlement"
                         >
                           {deletingKey === ent.featureKey ? (
@@ -4734,7 +4734,7 @@ function CreditTypesTable({
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-lg bg-linear-to-br from-amber-500/20 to-orange-400/10 border border-border flex items-center justify-center">
-                        <Coins className="w-4 h-4 text-amber-500" />
+                        <Coins className="w-4 h-4 text-foreground0" />
                       </div>
                       <div>
                         <p className="text-sm font-medium">{ct.name}</p>
@@ -5146,7 +5146,7 @@ function ConfigurationTab() {
       </div>
 
       {configError && (
-        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+        <div className="rounded-lg border border-border bg-secondary p-3 text-sm text-destructive">
           {configError}
         </div>
       )}
@@ -6477,7 +6477,7 @@ function EditPlanDialog({
                         {form.price &&
                           Number(form.annualPrice) <
                             Number(form.price) * 12 && (
-                            <span className="text-green-500 ml-1">
+                            <span className="text-foreground0 ml-1">
                               (save{" "}
                               {Math.round(
                                 (1 -
@@ -6527,14 +6527,14 @@ function EditPlanDialog({
                 </div>
 
                 {errors._global && (
-                  <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                  <div className="p-3 rounded-lg bg-secondary border border-border">
                     <p className="text-sm text-destructive">{errors._global}</p>
                   </div>
                 )}
 
                 {isOnChainLocked && (
-                  <div className="rounded-lg border border-yellow-500/20 bg-yellow-500/5 p-4">
-                    <p className="text-sm font-medium text-yellow-700 dark:text-yellow-300">
+                  <div className="rounded-lg border border-border bg-secondary p-4">
+                    <p className="text-sm font-medium text-warning">
                       This plan is already on-chain.
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
@@ -6695,7 +6695,7 @@ function EditPlanDialog({
                               </span>
                               {selectedChainOpt && (
                                 <span
-                                  className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0 ${selectedChainOpt.tag === "mainnet" ? "bg-success/10 text-success" : "bg-secondary text-muted-foreground border border-border"}`}
+                                  className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0 ${selectedChainOpt.tag === "mainnet" ? "bg-secondary text-success" : "bg-secondary text-muted-foreground border border-border"}`}
                                 >
                                   {selectedChainOpt.tag}
                                 </span>
@@ -7132,7 +7132,7 @@ function EditPlanDialog({
                                 form.annualPrice &&
                                 Number(form.annualPrice) > 0 && (
                                   <div className="pt-6 text-right">
-                                    <p className="text-xs font-semibold text-green-500">
+                                    <p className="text-xs font-semibold text-foreground0">
                                       {Math.round(
                                         (1 -
                                           Number(form.annualPrice) /
@@ -7350,7 +7350,7 @@ function AddCreditGrantDialog({
                       <SelectItem key={ct.id} value={ct.id}>
                         <div className="flex items-center gap-2 py-0.5">
                           <div className="w-5 h-5 rounded bg-secondary border border-border flex items-center justify-center shrink-0">
-                            <Coins className="w-3 h-3 text-amber-500" />
+                            <Coins className="w-3 h-3 text-foreground0" />
                           </div>
                           <div>
                             <p className="text-sm font-medium">{ct.name}</p>
@@ -7658,7 +7658,7 @@ function PlanDetailView({
             {/* Price badge */}
             <Badge
               variant="secondary"
-              className={`text-xs font-semibold ${isFree ? "text-green-600" : ""}`}
+              className={`text-xs font-semibold ${isFree ? "text-foreground" : ""}`}
             >
               {isFree ? "Free" : planPriceLabel(plan)}
             </Badge>
@@ -7668,7 +7668,7 @@ function PlanDetailView({
               parseFloat(plan.annualPrice) > 0 && (
                 <Badge
                   variant="outline"
-                  className="text-xs font-semibold text-green-600 border-green-500/30 bg-green-500/5"
+                  className="text-xs font-semibold text-foreground border-border bg-secondary"
                 >
                   ${parseFloat(plan.annualPrice).toFixed(2)}/yr
                   {parseFloat(plan.price) > 0 && (
@@ -7704,7 +7704,7 @@ function PlanDetailView({
                   <DropdownMenuItem onClick={copyId}>
                     {copiedId ? (
                       <>
-                        <Check className="w-3.5 h-3.5 mr-2 text-green-500" />
+                        <Check className="w-3.5 h-3.5 mr-2 text-foreground0" />
                         Copied!
                       </>
                     ) : (
@@ -7946,7 +7946,7 @@ function PlanDetailView({
                                     />
                                   </div>
                                   <span
-                                    className={`text-sm font-medium ${ent.enabled ? "text-green-600" : "text-muted-foreground"}`}
+                                    className={`text-sm font-medium ${ent.enabled ? "text-foreground" : "text-muted-foreground"}`}
                                   >
                                     {ent.enabled ? "On" : "Off"}
                                   </span>
@@ -8084,7 +8084,7 @@ function PlanDetailView({
                         className="border-b border-border last:border-0 hover:bg-secondary/10"
                       >
                         <td className="py-3 px-4 font-medium flex items-center gap-2">
-                          <Coins className="w-3.5 h-3.5 text-amber-500" />
+                          <Coins className="w-3.5 h-3.5 text-foreground0" />
                           {grant.name ?? grant.creditTypeId}
                           {grant.code ? (
                             <span className="text-xs text-muted-foreground font-mono">
@@ -8099,7 +8099,7 @@ function PlanDetailView({
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-secondary"
                             onClick={() =>
                               deleteCreditGrant(grant.creditTypeId)
                             }
@@ -8245,7 +8245,7 @@ function PlanDetailView({
                 </p>
                 <p className="text-lg font-semibold">
                   {isFree ? (
-                    <span className="text-green-500">Free</span>
+                    <span className="text-foreground0">Free</span>
                   ) : (
                     `$${parseFloat(plan.price).toFixed(2)}`
                   )}
@@ -8266,7 +8266,7 @@ function PlanDetailView({
                     <p className="text-xs text-muted-foreground">
                       USDC / yr
                       {parseFloat(plan.price) > 0 && (
-                        <span className="ml-1.5 text-green-500 font-medium">
+                        <span className="ml-1.5 text-foreground0 font-medium">
                           {Math.round(
                             (1 -
                               parseFloat(plan.annualPrice) /
@@ -8342,7 +8342,7 @@ function PlanDetailView({
               </div>
             ) : plan.chainSyncStatus === "SYNCED" ? (
               <div className="space-y-3">
-                <div className="flex items-center gap-2 text-green-500 text-sm font-medium">
+                <div className="flex items-center gap-2 text-foreground0 text-sm font-medium">
                   <Check className="w-4 h-4" />
                   Registered on-chain
                 </div>
@@ -8358,15 +8358,15 @@ function PlanDetailView({
                 )}
               </div>
             ) : plan.chainSyncStatus === "PENDING" ? (
-              <div className="flex items-center justify-between p-4 rounded-lg bg-yellow-500/5 border border-yellow-500/20">
-                <div className="flex items-center gap-2 text-yellow-600 text-sm dark:text-yellow-400">
+              <div className="flex items-center justify-between p-4 rounded-lg bg-secondary border border-border">
+                <div className="flex items-center gap-2 text-warning text-sm">
                   <Loader2 className="w-4 h-4" />
                   Pending on-chain sync
                 </div>
                 <Button
                   size="sm"
                   variant="outline"
-                  className="gap-1.5 border-yellow-500/30 text-yellow-600 hover:bg-yellow-500/10 dark:text-yellow-400"
+                  className="gap-1.5 border-border text-warning hover:bg-secondary"
                   onClick={() =>
                     toast.info("Use the sync button in the plans list")
                   }
@@ -8375,7 +8375,7 @@ function PlanDetailView({
                 </Button>
               </div>
             ) : (
-              <div className="flex items-center gap-2 text-destructive text-sm p-4 rounded-lg bg-destructive/5 border border-destructive/20">
+              <div className="flex items-center gap-2 text-destructive text-sm p-4 rounded-lg bg-secondary border border-border">
                 <AlertTriangle className="w-4 h-4 shrink-0" />
                 <div>
                   <p className="font-medium">Sync failed</p>
@@ -8616,7 +8616,7 @@ function AddOnDetailView({
                   <DropdownMenuItem onClick={copyId}>
                     {copiedId ? (
                       <>
-                        <Check className="w-3.5 h-3.5 mr-2 text-green-500" />
+                        <Check className="w-3.5 h-3.5 mr-2 text-foreground0" />
                         Copied!
                       </>
                     ) : (
@@ -8638,7 +8638,7 @@ function AddOnDetailView({
                           </>
                         ) : copiedCheckout ? (
                           <>
-                            <Check className="w-3.5 h-3.5 mr-2 text-green-500" />
+                            <Check className="w-3.5 h-3.5 mr-2 text-foreground0" />
                             Checkout link copied
                           </>
                         ) : (
@@ -9294,7 +9294,7 @@ function CreditDetailView({
                   <DropdownMenuItem onClick={copyId}>
                     {copiedId ? (
                       <>
-                        <Check className="w-3.5 h-3.5 mr-2 text-green-500" />
+                        <Check className="w-3.5 h-3.5 mr-2 text-foreground0" />
                         Copied!
                       </>
                     ) : (
@@ -9420,7 +9420,7 @@ function CreditDetailView({
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-secondary"
                             onClick={() => deleteBundle(b.id)}
                           >
                             <Trash2 className="w-4 h-4" />
@@ -9481,7 +9481,7 @@ function CreditDetailView({
                         className="border-b border-border last:border-0 hover:bg-secondary/10"
                       >
                         <td className="py-3 px-4 font-medium flex items-center gap-2">
-                          <Package className="w-3.5 h-3.5 text-blue-500" />
+                          <Package className="w-3.5 h-3.5 text-foreground0" />
                           {grant.planName ?? grant.planId}
                           {grant.planTier ? (
                             <span className="text-xs text-muted-foreground font-mono">
@@ -9496,7 +9496,7 @@ function CreditDetailView({
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-secondary"
                             onClick={() => deletePlanGrant(grant.planId)}
                           >
                             <Trash2 className="w-4 h-4" />

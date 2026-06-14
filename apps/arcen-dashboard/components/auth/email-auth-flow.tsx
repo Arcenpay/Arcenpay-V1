@@ -268,7 +268,7 @@ export function EmailAuthFlow({ inviteToken }: EmailAuthFlowProps) {
           ) : null}
 
           {error ? (
-            <div className="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <div className="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-foreground">
               {error}
             </div>
           ) : null}
@@ -286,7 +286,7 @@ export function EmailAuthFlow({ inviteToken }: EmailAuthFlowProps) {
                     </p>
                     {isConnected && address ? (
                       <div className="mt-2 flex items-center gap-2 text-sm text-foreground">
-                        <CheckCircle2 className="h-4 w-4 text-green-600" />
+                        <CheckCircle2 className="h-4 w-4 text-foreground" />
                         <span className="font-mono">{shortAddress(address)}</span>
                       </div>
                     ) : (
@@ -385,7 +385,7 @@ export function EmailAuthFlow({ inviteToken }: EmailAuthFlowProps) {
               </Button>
 
               {debugCode ? (
-                <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                <div className="rounded-xl border border-border bg-secondary px-4 py-3 text-sm text-warning">
                   Dev code: <span className="font-mono font-semibold">{debugCode}</span>
                 </div>
               ) : null}
@@ -440,7 +440,7 @@ export function EmailAuthFlow({ inviteToken }: EmailAuthFlowProps) {
                   </p>
                 ) : null}
                 {debugCode ? (
-                  <p className="text-xs text-amber-700">
+                  <p className="text-xs text-warning">
                     Dev fallback code: <span className="font-mono">{debugCode}</span>
                   </p>
                 ) : null}

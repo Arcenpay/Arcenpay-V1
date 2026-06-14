@@ -234,7 +234,7 @@ export default function Dashboard() {
 
   return (
     <EnvironmentProvider>
-      <div className="flex min-h-screen bg-background">
+      <div className="flex min-h-screen bg-background antialiased">
         <Sidebar
           activeSection={activeSection}
           onSectionChange={handleSectionChange}
@@ -247,7 +247,7 @@ export default function Dashboard() {
           className={cn(
             "flex-1 flex flex-col transition-all duration-300 ease-out",
             "lg:ml-0",
-            sidebarCollapsed ? "lg:ml-[64px]" : "lg:ml-[220px]",
+            sidebarCollapsed ? "lg:ml-[68px]" : "lg:ml-[240px]",
           )}
         >
           <Header

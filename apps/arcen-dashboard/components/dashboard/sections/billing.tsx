@@ -108,17 +108,17 @@ const TIER_CONFIG = {
   },
   PLUS: {
     icon: Crown,
-    color: "text-blue-500",
-    bgColor: "bg-blue-500/10",
-    borderColor: "border-blue-500/30",
+    color: "text-foreground0",
+    bgColor: "bg-secondary",
+    borderColor: "border-border",
     label: "Pro",
     description: "10 dev + 10 prod environments",
   },
   PRO: {
     icon: Rocket,
-    color: "text-purple-500",
-    bgColor: "bg-purple-500/10",
-    borderColor: "border-purple-500/30",
+    color: "text-foreground0",
+    bgColor: "bg-secondary",
+    borderColor: "border-border",
     label: "Enterprise",
     description: "Unlimited environments and support",
   },
@@ -306,7 +306,7 @@ export function BillingSection() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Fuel className="w-5 h-5 text-orange-500" />
+              <Fuel className="w-5 h-5 text-foreground0" />
               Gas Sponsorship
               {gasBudget.budgetAlertTriggered && (
                 <Badge variant="destructive" className="text-[10px]">
@@ -408,7 +408,7 @@ export function BillingSection() {
               }`}
             >
               Yearly
-              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-green-500/15 text-green-600 dark:text-green-400">
+              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-secondary text-foreground dark:text-foreground">
                 -20%
               </span>
             </button>
@@ -466,7 +466,7 @@ export function BillingSection() {
                     )}
                   </div>
                   {billingInterval === "yearly" && monthlyPrice > 0 && (
-                    <p className="text-[11px] text-green-600 dark:text-green-400 -mt-1">
+                    <p className="text-[11px] text-foreground dark:text-foreground -mt-1">
                       Billed ${Math.floor(monthlyPrice * 0.8 * 12)}/yr
                     </p>
                   )}
@@ -519,7 +519,7 @@ export function BillingSection() {
                         className="flex items-center gap-2 text-sm"
                       >
                         {tierInfo.features[key] ? (
-                          <Check className="w-3.5 h-3.5 text-green-500 shrink-0" />
+                          <Check className="w-3.5 h-3.5 text-foreground0 shrink-0" />
                         ) : (
                           <X className="w-3.5 h-3.5 text-muted-foreground/30 shrink-0" />
                         )}

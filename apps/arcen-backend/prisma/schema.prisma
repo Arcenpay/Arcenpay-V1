@@ -384,6 +384,7 @@ model Team {
   embedComponents   EmbedComponent[]
   agentConfig       ArcenAgentConfig?
   dispatchRequests  ArcenDispatchRequest[]
+  profileData       Json?
 
   @@index([slug])
   @@index([platformTier])

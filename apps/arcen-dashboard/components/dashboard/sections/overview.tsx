@@ -10,7 +10,6 @@ import {
   DollarSign,
   Users,
   Layers,
-  Receipt,
   AlertTriangle,
 } from "lucide-react";
 import { formatUsdc } from "@/lib/format";
@@ -22,15 +21,10 @@ type OverviewPayload = {
     environmentMode: "DEVELOPMENT" | "PRODUCTION";
     chainId: number;
   };
-  degraded: boolean;
-  dependencyHealth: {
-    protocolFees: "ok" | "unavailable";
-  };
   metrics: {
     activePlans: number;
     activeSubscribers: number;
     paidInvoiceRevenue30dRaw: string;
-    protocolFeesRaw: string | null;
   };
 };
 
@@ -97,10 +91,6 @@ export function OverviewSection() {
       payload?.metrics.paidInvoiceRevenue30dRaw != null
         ? formatUsdc(payload.metrics.paidInvoiceRevenue30dRaw)
         : "—",
-    feesCollected:
-      payload?.metrics.protocolFeesRaw != null
-        ? formatUsdc(payload.metrics.protocolFeesRaw)
-        : "—",
     activePlans:
       payload?.metrics.activePlans != null
         ? String(payload.metrics.activePlans)
@@ -111,24 +101,15 @@ export function OverviewSection() {
     <div className="space-y-6">
       {/* Wallet disconnected banner */}
       {mounted && !isConnected && (
-        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-warning/5 border border-warning/20 animate-in fade-in slide-in-from-top-2 duration-300">
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-secondary border border-border">
           <AlertTriangle className="w-4 h-4 text-warning shrink-0" />
           <p className="text-sm text-muted-foreground">
             Wallet disconnected — showing data for {getChainLabel(effectiveChainId)}.
           </p>
         </div>
       )}
-      {payload?.degraded && (
-        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-warning/5 border border-warning/20 animate-in fade-in slide-in-from-top-2 duration-300">
-          <AlertTriangle className="w-4 h-4 text-warning shrink-0" />
-          <p className="text-sm text-muted-foreground">
-            Some protocol-level metrics are temporarily unavailable. Missing values are shown as dashes instead of zeroes.
-          </p>
-        </div>
-      )}
-
       {/* Metric cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <MetricCard
           title="Active Subscribers"
           value={mounted ? metrics.activeSubscribers : "—"}
@@ -146,19 +127,11 @@ export function OverviewSection() {
           loading={mounted && (isLoading || envLoading)}
         />
         <MetricCard
-          title="Protocol Fees Collected"
-          value={mounted ? metrics.feesCollected : "—"}
-          changeType="neutral"
-          icon={Receipt}
-          delay={2}
-          loading={mounted && (isLoading || envLoading)}
-        />
-        <MetricCard
           title="Active Plans"
           value={mounted ? metrics.activePlans : "—"}
           changeType="neutral"
           icon={Layers}
-          delay={3}
+          delay={2}
           loading={mounted && (isLoading || envLoading)}
         />
       </div>

@@ -66,21 +66,21 @@ function getUserLabel(event: EventRecord): string | null {
 function EventTypeBadge({ type, name }: { type: string; name?: string | null }) {
   if (type === "track") {
     return (
-      <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300 text-xs">
+      <Badge className="bg-blue-100 text-foreground dark:bg-blue-950 dark:text-foreground text-xs">
         <Zap className="h-3 w-3 mr-1" /> {name ?? "track"}
       </Badge>
     );
   }
   if (type === "identify") {
     return (
-      <Badge className="bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300 text-xs">
+      <Badge className="bg-purple-100 text-foreground dark:bg-purple-950 dark:text-foreground text-xs">
         <User className="h-3 w-3 mr-1" /> identify
       </Badge>
     );
   }
   if (type === "flag_check") {
     return (
-      <Badge className="bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300 text-xs">
+      <Badge className="bg-green-100 text-foreground dark:bg-green-950 dark:text-foreground text-xs">
         <Flag className="h-3 w-3 mr-1" /> {name ?? "flag_check"}
       </Badge>
     );
@@ -185,7 +185,7 @@ export function EventsStreamSection() {
             onClick={() => setAutoRefresh(!autoRefresh)}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs border transition-colors ${
               autoRefresh
-                ? "border-green-500/30 bg-green-500/5 text-green-600 dark:text-green-400"
+                ? "border-border bg-secondary text-foreground dark:text-foreground"
                 : "border-border text-muted-foreground"
             }`}
           >

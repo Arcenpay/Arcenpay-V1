@@ -73,7 +73,7 @@ function CopyButton({ text }: { text: string }) {
       className="text-muted-foreground hover:text-foreground transition-colors"
     >
       {copied ? (
-        <Check className="h-3 w-3 text-emerald-500" />
+        <Check className="h-3 w-3 text-foreground0" />
       ) : (
         <Copy className="h-3 w-3" />
       )}
@@ -270,7 +270,7 @@ function CreateUserSheet({
           </div>
 
           {error && (
-            <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+            <div className="rounded-lg border border-border bg-secondary px-3 py-2 text-sm text-destructive">
               {error}
             </div>
           )}

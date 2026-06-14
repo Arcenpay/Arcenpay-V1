@@ -179,7 +179,8 @@ export const TeamScalarFieldEnum = {
   invoicePrefix: 'invoicePrefix',
   platformTier: 'platformTier',
   tierExpiresAt: 'tierExpiresAt',
-  tierSubscriptionId: 'tierSubscriptionId'
+  tierSubscriptionId: 'tierSubscriptionId',
+  profileData: 'profileData'
 } as const
 
 export type TeamScalarFieldEnum = (typeof TeamScalarFieldEnum)[keyof typeof TeamScalarFieldEnum]

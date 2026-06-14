@@ -103,7 +103,7 @@ function CopyButton({ text }: { text: string }) {
       onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 1500); }}
       className="ml-1 text-muted-foreground hover:text-foreground transition-colors"
     >
-      {copied ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
+      {copied ? <Check className="h-3 w-3 text-foreground0" /> : <Copy className="h-3 w-3" />}
     </button>
   );
 }
@@ -179,7 +179,7 @@ function CompanyDetailContent({ company, onClose }: { company: CompanyDetail; on
           ) : (
             <div className="space-y-1.5">
               {enabled.map((e) => (
-                <div key={e.featureKey} className="flex items-center justify-between px-3 py-2 rounded-lg bg-emerald-500/5 border border-emerald-500/20">
+                <div key={e.featureKey} className="flex items-center justify-between px-3 py-2 rounded-lg bg-secondary border border-emerald-500/20">
                   <div>
                     <span className="font-mono text-xs">{e.featureKey}</span>
                     {(e.allocation !== null && e.allocation !== undefined) && (
@@ -190,7 +190,7 @@ function CompanyDetailContent({ company, onClose }: { company: CompanyDetail; on
                     )}
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge className="bg-emerald-500/15 text-emerald-600 border-emerald-500/30 text-xs dark:text-emerald-400">✓ True</Badge>
+                    <Badge className="bg-secondary text-foreground border-border text-xs dark:text-foreground">✓ True</Badge>
                     <span className="text-xs text-muted-foreground/70">{e.reason}</span>
                   </div>
                 </div>
@@ -254,10 +254,10 @@ function CompanyDetailContent({ company, onClose }: { company: CompanyDetail; on
         {/* Overrides */}
         {company.overrides.length > 0 && (
           <section>
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-400 mb-2 flex items-center gap-1.5">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-warning mb-2 flex items-center gap-1.5">
               <Zap className="h-3.5 w-3.5" /> Company Overrides
             </h3>
-            <div className="space-y-1.5 p-3 rounded-lg border border-amber-300/40 bg-amber-50/30 dark:bg-amber-950/20">
+            <div className="space-y-1.5 p-3 rounded-lg border border-border bg-secondary">
               {company.overrides.map((o) => (
                 <div key={o.id} className="flex items-center justify-between text-sm">
                   <span className="font-mono text-xs">{o.featureKey}</span>
@@ -400,7 +400,7 @@ function CreateCompanySheet({ open, onOpenChange, onCreated }: {
           </div>
 
           {error && (
-            <div className="flex items-start gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-secondary border border-border text-destructive text-sm">
               <Info className="h-4 w-4 flex-shrink-0 mt-0.5" />{error}
             </div>
           )}

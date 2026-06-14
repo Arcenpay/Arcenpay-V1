@@ -189,43 +189,6 @@ export type EnumPlatformTierFilter<$PrismaModel = never> = {
   not?: Prisma.NestedEnumPlatformTierFilter<$PrismaModel> | $Enums.PlatformTier
 }
 
-export type EnumEnvironmentModeWithAggregatesFilter<$PrismaModel = never> = {
-  equals?: $Enums.EnvironmentMode | Prisma.EnumEnvironmentModeFieldRefInput<$PrismaModel>
-  in?: $Enums.EnvironmentMode[] | Prisma.ListEnumEnvironmentModeFieldRefInput<$PrismaModel>
-  notIn?: $Enums.EnvironmentMode[] | Prisma.ListEnumEnvironmentModeFieldRefInput<$PrismaModel>
-  not?: Prisma.NestedEnumEnvironmentModeWithAggregatesFilter<$PrismaModel> | $Enums.EnvironmentMode
-  _count?: Prisma.NestedIntFilter<$PrismaModel>
-  _min?: Prisma.NestedEnumEnvironmentModeFilter<$PrismaModel>
-  _max?: Prisma.NestedEnumEnvironmentModeFilter<$PrismaModel>
-}
-
-export type EnumPlatformTierWithAggregatesFilter<$PrismaModel = never> = {
-  equals?: $Enums.PlatformTier | Prisma.EnumPlatformTierFieldRefInput<$PrismaModel>
-  in?: $Enums.PlatformTier[] | Prisma.ListEnumPlatformTierFieldRefInput<$PrismaModel>
-  notIn?: $Enums.PlatformTier[] | Prisma.ListEnumPlatformTierFieldRefInput<$PrismaModel>
-  not?: Prisma.NestedEnumPlatformTierWithAggregatesFilter<$PrismaModel> | $Enums.PlatformTier
-  _count?: Prisma.NestedIntFilter<$PrismaModel>
-  _min?: Prisma.NestedEnumPlatformTierFilter<$PrismaModel>
-  _max?: Prisma.NestedEnumPlatformTierFilter<$PrismaModel>
-}
-
-export type EnumTeamRoleFilter<$PrismaModel = never> = {
-  equals?: $Enums.TeamRole | Prisma.EnumTeamRoleFieldRefInput<$PrismaModel>
-  in?: $Enums.TeamRole[] | Prisma.ListEnumTeamRoleFieldRefInput<$PrismaModel>
-  notIn?: $Enums.TeamRole[] | Prisma.ListEnumTeamRoleFieldRefInput<$PrismaModel>
-  not?: Prisma.NestedEnumTeamRoleFilter<$PrismaModel> | $Enums.TeamRole
-}
-
-export type EnumTeamRoleWithAggregatesFilter<$PrismaModel = never> = {
-  equals?: $Enums.TeamRole | Prisma.EnumTeamRoleFieldRefInput<$PrismaModel>
-  in?: $Enums.TeamRole[] | Prisma.ListEnumTeamRoleFieldRefInput<$PrismaModel>
-  notIn?: $Enums.TeamRole[] | Prisma.ListEnumTeamRoleFieldRefInput<$PrismaModel>
-  not?: Prisma.NestedEnumTeamRoleWithAggregatesFilter<$PrismaModel> | $Enums.TeamRole
-  _count?: Prisma.NestedIntFilter<$PrismaModel>
-  _min?: Prisma.NestedEnumTeamRoleFilter<$PrismaModel>
-  _max?: Prisma.NestedEnumTeamRoleFilter<$PrismaModel>
-}
-
 export type JsonNullableFilter<$PrismaModel = never> =
 | Prisma.PatchUndefined<
     Prisma.Either<Required<JsonNullableFilterBase<$PrismaModel>>, Exclude<keyof Required<JsonNullableFilterBase<$PrismaModel>>, 'path'>>,
@@ -248,6 +211,26 @@ export type JsonNullableFilterBase<$PrismaModel = never> = {
   gt?: runtime.InputJsonValue | Prisma.JsonFieldRefInput<$PrismaModel>
   gte?: runtime.InputJsonValue | Prisma.JsonFieldRefInput<$PrismaModel>
   not?: runtime.InputJsonValue | Prisma.JsonFieldRefInput<$PrismaModel> | Prisma.JsonNullValueFilter
+}
+
+export type EnumEnvironmentModeWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.EnvironmentMode | Prisma.EnumEnvironmentModeFieldRefInput<$PrismaModel>
+  in?: $Enums.EnvironmentMode[] | Prisma.ListEnumEnvironmentModeFieldRefInput<$PrismaModel>
+  notIn?: $Enums.EnvironmentMode[] | Prisma.ListEnumEnvironmentModeFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumEnvironmentModeWithAggregatesFilter<$PrismaModel> | $Enums.EnvironmentMode
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumEnvironmentModeFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumEnvironmentModeFilter<$PrismaModel>
+}
+
+export type EnumPlatformTierWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.PlatformTier | Prisma.EnumPlatformTierFieldRefInput<$PrismaModel>
+  in?: $Enums.PlatformTier[] | Prisma.ListEnumPlatformTierFieldRefInput<$PrismaModel>
+  notIn?: $Enums.PlatformTier[] | Prisma.ListEnumPlatformTierFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumPlatformTierWithAggregatesFilter<$PrismaModel> | $Enums.PlatformTier
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumPlatformTierFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumPlatformTierFilter<$PrismaModel>
 }
 
 export type JsonNullableWithAggregatesFilter<$PrismaModel = never> =
@@ -275,6 +258,23 @@ export type JsonNullableWithAggregatesFilterBase<$PrismaModel = never> = {
   _count?: Prisma.NestedIntNullableFilter<$PrismaModel>
   _min?: Prisma.NestedJsonNullableFilter<$PrismaModel>
   _max?: Prisma.NestedJsonNullableFilter<$PrismaModel>
+}
+
+export type EnumTeamRoleFilter<$PrismaModel = never> = {
+  equals?: $Enums.TeamRole | Prisma.EnumTeamRoleFieldRefInput<$PrismaModel>
+  in?: $Enums.TeamRole[] | Prisma.ListEnumTeamRoleFieldRefInput<$PrismaModel>
+  notIn?: $Enums.TeamRole[] | Prisma.ListEnumTeamRoleFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumTeamRoleFilter<$PrismaModel> | $Enums.TeamRole
+}
+
+export type EnumTeamRoleWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.TeamRole | Prisma.EnumTeamRoleFieldRefInput<$PrismaModel>
+  in?: $Enums.TeamRole[] | Prisma.ListEnumTeamRoleFieldRefInput<$PrismaModel>
+  notIn?: $Enums.TeamRole[] | Prisma.ListEnumTeamRoleFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumTeamRoleWithAggregatesFilter<$PrismaModel> | $Enums.TeamRole
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumTeamRoleFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumTeamRoleFilter<$PrismaModel>
 }
 
 export type EnumCatalogStatusFilter<$PrismaModel = never> = {
@@ -1205,23 +1205,6 @@ export type NestedEnumPlatformTierWithAggregatesFilter<$PrismaModel = never> = {
   _max?: Prisma.NestedEnumPlatformTierFilter<$PrismaModel>
 }
 
-export type NestedEnumTeamRoleFilter<$PrismaModel = never> = {
-  equals?: $Enums.TeamRole | Prisma.EnumTeamRoleFieldRefInput<$PrismaModel>
-  in?: $Enums.TeamRole[] | Prisma.ListEnumTeamRoleFieldRefInput<$PrismaModel>
-  notIn?: $Enums.TeamRole[] | Prisma.ListEnumTeamRoleFieldRefInput<$PrismaModel>
-  not?: Prisma.NestedEnumTeamRoleFilter<$PrismaModel> | $Enums.TeamRole
-}
-
-export type NestedEnumTeamRoleWithAggregatesFilter<$PrismaModel = never> = {
-  equals?: $Enums.TeamRole | Prisma.EnumTeamRoleFieldRefInput<$PrismaModel>
-  in?: $Enums.TeamRole[] | Prisma.ListEnumTeamRoleFieldRefInput<$PrismaModel>
-  notIn?: $Enums.TeamRole[] | Prisma.ListEnumTeamRoleFieldRefInput<$PrismaModel>
-  not?: Prisma.NestedEnumTeamRoleWithAggregatesFilter<$PrismaModel> | $Enums.TeamRole
-  _count?: Prisma.NestedIntFilter<$PrismaModel>
-  _min?: Prisma.NestedEnumTeamRoleFilter<$PrismaModel>
-  _max?: Prisma.NestedEnumTeamRoleFilter<$PrismaModel>
-}
-
 export type NestedJsonNullableFilter<$PrismaModel = never> =
 | Prisma.PatchUndefined<
     Prisma.Either<Required<NestedJsonNullableFilterBase<$PrismaModel>>, Exclude<keyof Required<NestedJsonNullableFilterBase<$PrismaModel>>, 'path'>>,
@@ -1244,6 +1227,23 @@ export type NestedJsonNullableFilterBase<$PrismaModel = never> = {
   gt?: runtime.InputJsonValue | Prisma.JsonFieldRefInput<$PrismaModel>
   gte?: runtime.InputJsonValue | Prisma.JsonFieldRefInput<$PrismaModel>
   not?: runtime.InputJsonValue | Prisma.JsonFieldRefInput<$PrismaModel> | Prisma.JsonNullValueFilter
+}
+
+export type NestedEnumTeamRoleFilter<$PrismaModel = never> = {
+  equals?: $Enums.TeamRole | Prisma.EnumTeamRoleFieldRefInput<$PrismaModel>
+  in?: $Enums.TeamRole[] | Prisma.ListEnumTeamRoleFieldRefInput<$PrismaModel>
+  notIn?: $Enums.TeamRole[] | Prisma.ListEnumTeamRoleFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumTeamRoleFilter<$PrismaModel> | $Enums.TeamRole
+}
+
+export type NestedEnumTeamRoleWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.TeamRole | Prisma.EnumTeamRoleFieldRefInput<$PrismaModel>
+  in?: $Enums.TeamRole[] | Prisma.ListEnumTeamRoleFieldRefInput<$PrismaModel>
+  notIn?: $Enums.TeamRole[] | Prisma.ListEnumTeamRoleFieldRefInput<$PrismaModel>
+  not?: Prisma.NestedEnumTeamRoleWithAggregatesFilter<$PrismaModel> | $Enums.TeamRole
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumTeamRoleFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumTeamRoleFilter<$PrismaModel>
 }
 
 export type NestedEnumCatalogStatusFilter<$PrismaModel = never> = {

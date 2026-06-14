@@ -69,20 +69,20 @@ const FEATURE_TYPE_META: Record<
   boolean: {
     label: "Boolean",
     icon: ToggleLeft,
-    color: "text-blue-500",
+    color: "text-foreground0",
     description: "Simple on/off access — is this feature enabled for the user?",
   },
   event: {
     label: "Event-based",
     icon: Activity,
-    color: "text-violet-500",
+    color: "text-foreground0",
     description:
       "Metered by event count — track usage and gate based on thresholds.",
   },
   trait: {
     label: "Trait-based",
     icon: Tag,
-    color: "text-amber-500",
+    color: "text-foreground0",
     description:
       "Determined by a company or user trait value stored on their profile.",
   },

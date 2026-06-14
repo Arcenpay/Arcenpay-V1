@@ -65,8 +65,39 @@ export async function getProfile(c: Context) {
     auth.session,
     teamId,
   );
+
+  // No environment yet — return team-level onboarding profile
   if (!activeEnvironment) {
-    return c.json({ error: "No workspace environment selected" }, 409 as any);
+    const teamRecord = await db.team.findUnique({
+      where: { id: teamId },
+      select: { profileData: true },
+    });
+    const raw = teamRecord?.profileData;
+    const profileData = raw && typeof raw === "object" && !Array.isArray(raw)
+      ? raw as Record<string, unknown>
+      : {};
+    return c.json({
+      providerName: typeof profileData.providerName === "string" ? profileData.providerName : null,
+      website: typeof profileData.website === "string" ? profileData.website : null,
+      contactEmail: typeof profileData.contactEmail === "string" ? profileData.contactEmail : null,
+      legalName: null,
+      billingEmail: null,
+      supportEmail: null,
+      supportPhone: null,
+      supportUrl: null,
+      addressLine1: null,
+      addressLine2: null,
+      city: null,
+      state: null,
+      postalCode: null,
+      country: null,
+      taxId: null,
+      gstin: null,
+      notifyEmail: true,
+      notifyWebhook: false,
+      webhookUrl: null,
+      apiKeyPrefix: null,
+    });
   }
 
   const profile = await db.providerProfile.findUnique({
@@ -115,14 +146,6 @@ export async function putProfile(c: Context) {
 
   const { team } = auth;
   const teamId = team.teamId;
-  const activeEnvironment = await requireResolvedActiveEnvironment(
-    auth.session,
-    teamId,
-  );
-  if (!activeEnvironment) {
-    return c.json({ error: "No workspace environment selected" }, 409 as any);
-  }
-
   const d = parsed.data;
   const data: Record<string, unknown> = {};
   if (d.providerName !== undefined) data.providerName = d.providerName || null;
@@ -146,6 +169,50 @@ export async function putProfile(c: Context) {
   if (d.webhookUrl !== undefined) data.webhookUrl = d.webhookUrl || null;
   if (d.webhookSigningSecret !== undefined)
     data.webhookSigningSecret = d.webhookSigningSecret;
+
+  const activeEnvironment = await requireResolvedActiveEnvironment(
+    auth.session,
+    teamId,
+  );
+
+  // No environment yet — store profile at team level for onboarding
+  if (!activeEnvironment) {
+    const onboardingProfile: Record<string, unknown> = {};
+    if (data.providerName) onboardingProfile.providerName = data.providerName;
+    if (data.website) onboardingProfile.website = data.website;
+    if (data.contactEmail) onboardingProfile.contactEmail = data.contactEmail;
+    if (data.legalName) onboardingProfile.legalName = data.legalName;
+    if (data.billingEmail) onboardingProfile.billingEmail = data.billingEmail;
+    if (data.supportEmail) onboardingProfile.supportEmail = data.supportEmail;
+    if (data.supportPhone) onboardingProfile.supportPhone = data.supportPhone;
+    if (data.supportUrl) onboardingProfile.supportUrl = data.supportUrl;
+    if (data.addressLine1) onboardingProfile.addressLine1 = data.addressLine1;
+    if (data.addressLine2) onboardingProfile.addressLine2 = data.addressLine2;
+    if (data.city) onboardingProfile.city = data.city;
+    if (data.state) onboardingProfile.state = data.state;
+    if (data.postalCode) onboardingProfile.postalCode = data.postalCode;
+    if (data.country) onboardingProfile.country = data.country;
+    if (data.taxId) onboardingProfile.taxId = data.taxId;
+    if (data.gstin) onboardingProfile.gstin = data.gstin;
+
+    await db.team.update({
+      where: { id: teamId },
+      data: { profileData: onboardingProfile as any },
+    });
+
+    await writeAuditEvent({
+      headers: c.req.raw.headers,
+      teamId,
+      userId: team.userId,
+      walletAddress: team.walletAddress,
+      action: "provider.profile.update.onboarding",
+      resourceType: "Team",
+      resourceId: teamId,
+      afterData: onboardingProfile,
+    });
+
+    return c.json({ ...data, providerName: data.providerName ?? null, website: data.website ?? null, contactEmail: data.contactEmail ?? null });
+  }
 
   const before = await db.providerProfile.findUnique({
     where: {

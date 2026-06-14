@@ -637,20 +637,20 @@ export function ComponentsSection({ onSectionChange }: ComponentsSectionProps = 
         {/* Prerequisite banner */}
         {!prereqs.loading &&
           (prereqs.publishedPlans === 0 || prereqs.featureFlags === 0) && (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 p-4">
+            <div className="rounded-xl border border-border bg-secondary p-4">
               <div className="flex items-start gap-3">
-                <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
+                <AlertTriangle className="w-4 h-4 text-foreground0 mt-0.5 shrink-0" />
                 <div className="space-y-1.5">
-                  <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">
+                  <p className="text-sm font-semibold text-warning">
                     Complete setup to unlock components
                   </p>
-                  <ul className="text-xs text-amber-700 dark:text-amber-300 space-y-1">
+                  <ul className="text-xs text-warning space-y-1">
                     {prereqs.publishedPlans === 0 && (
                       <li>
                         •{" "}
                         {onSectionChange ? (
                           <button
-                            className="underline underline-offset-2 hover:text-amber-900 dark:hover:text-amber-100 transition-colors"
+                            className="underline underline-offset-2 hover:text-warning transition-colors"
                             onClick={() => onSectionChange("catalog-plans")}
                           >
                             Create and publish at least one plan
@@ -669,7 +669,7 @@ export function ComponentsSection({ onSectionChange }: ComponentsSectionProps = 
                           •{" "}
                           {onSectionChange ? (
                             <button
-                              className="underline underline-offset-2 hover:text-amber-900 dark:hover:text-amber-100 transition-colors"
+                              className="underline underline-offset-2 hover:text-warning transition-colors"
                               onClick={() => onSectionChange("catalog-plans")}
                             >
                               Register your plans on-chain
@@ -685,7 +685,7 @@ export function ComponentsSection({ onSectionChange }: ComponentsSectionProps = 
                         •{" "}
                         {onSectionChange ? (
                           <button
-                            className="underline underline-offset-2 hover:text-amber-900 dark:hover:text-amber-100 transition-colors"
+                            className="underline underline-offset-2 hover:text-warning transition-colors"
                             onClick={() => onSectionChange("feature-flags")}
                           >
                             Configure at least one feature flag
@@ -768,7 +768,7 @@ export function ComponentsSection({ onSectionChange }: ComponentsSectionProps = 
                         </button>
                         <button
                           title="Delete"
-                          className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-destructive/10 transition-colors"
+                          className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-secondary transition-colors"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleDeleteComponent(component.id);

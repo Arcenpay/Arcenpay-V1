@@ -1410,7 +1410,7 @@ function ElementMiniPreview({ type }: { type: string }) {
       return (
         <div className="w-full px-3 scale-[0.85] flex items-center justify-start">
           <div className="h-4 w-16 rounded-md bg-accent/70 flex items-center justify-center">
-            <div className="h-1 w-8 rounded bg-white/50" />
+            <div className="h-1 w-8 rounded bg-foreground/50" />
           </div>
         </div>
       );
@@ -2418,7 +2418,7 @@ const { data } = await res.json();
                             e.stopPropagation();
                             removeElement(el.id);
                           }}
-                          className="w-5 h-5 flex items-center justify-center rounded hover:bg-destructive/10"
+                          className="w-5 h-5 flex items-center justify-center rounded hover:bg-secondary"
                         >
                           <Trash2 className="w-3 h-3 text-destructive" />
                         </button>
@@ -3134,7 +3134,7 @@ const { data } = await res.json();
                     </SelectContent>
                   </Select>
                   {previewCompanyId && (
-                    <span className="text-[10px] text-blue-600 font-medium whitespace-nowrap">
+                    <span className="text-[10px] text-foreground font-medium whitespace-nowrap">
                       Live data
                     </span>
                   )}
@@ -3166,7 +3166,7 @@ const { data } = await res.json();
                       className={cn(
                         "shrink-0 rounded-full px-2 py-0.5 font-medium",
                         previewCompanyId
-                          ? "bg-blue-500/10 text-blue-600"
+                          ? "bg-secondary text-foreground"
                           : "bg-secondary text-muted-foreground",
                       )}
                     >
@@ -3384,11 +3384,11 @@ const { data } = await res.json();
                 </div>
               )}
               {config.id.startsWith("custom-") && (
-                <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
-                  <p className="text-xs font-semibold text-amber-800 dark:text-amber-200 mb-1">
+                <div className="bg-secondary border border-border rounded-xl p-4">
+                  <p className="text-xs font-semibold text-warning mb-1">
                     Save your component first
                   </p>
-                  <p className="text-xs text-amber-700 dark:text-amber-300">
+                  <p className="text-xs text-warning">
                     Click &quot;Save&quot; to persist this component and get a
                     permanent component ID you can embed.
                   </p>

@@ -35,7 +35,7 @@ type AuditEntry = {
 function ActorBadge({ type }: { type: ActorType }) {
   if (type === "USER") {
     return (
-      <Badge className="gap-1 bg-indigo-500/10 text-indigo-400 border-indigo-500/20">
+      <Badge className="gap-1 bg-secondary text-foreground border-border">
         <User className="w-3 h-3" />
         User
       </Badge>
@@ -43,7 +43,7 @@ function ActorBadge({ type }: { type: ActorType }) {
   }
   if (type === "API") {
     return (
-      <Badge className="gap-1 bg-amber-500/10 text-amber-400 border-amber-500/20">
+      <Badge className="gap-1 bg-secondary text-foreground border-border">
         <Cpu className="w-3 h-3" />
         API
       </Badge>

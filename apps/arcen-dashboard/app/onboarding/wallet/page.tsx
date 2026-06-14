@@ -95,7 +95,7 @@ export default function ConnectWalletPage() {
       }
 
       toast.success("Wallet linked");
-      router.push("/");
+      router.push("/onboarding/provider-profile");
       router.refresh();
     } catch (error: unknown) {
       const message =
@@ -170,7 +170,7 @@ export default function ConnectWalletPage() {
                 ) : null}
 
                 {isWrongWalletConnected ? (
-                  <div className="flex items-start gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-3 text-sm text-amber-700">
+                  <div className="flex items-start gap-2 rounded-lg border border-warning/20 bg-warning/5 px-3 py-3 text-sm text-warning">
                     <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
                     <span>
                       A different wallet is connected. Reconnect with {linkedWalletLabel} to use
@@ -180,7 +180,7 @@ export default function ConnectWalletPage() {
                 ) : null}
 
                 {isWrongNetwork ? (
-                  <div className="flex items-start gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-3 text-sm text-amber-700">
+                  <div className="flex items-start gap-2 rounded-lg border border-warning/20 bg-warning/5 px-3 py-3 text-sm text-warning">
                     <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
                     <span>
                       Switch this wallet to a supported network ({SUPPORTED_WALLET_CHAIN_LABEL}) to continue.
@@ -306,7 +306,7 @@ export default function ConnectWalletPage() {
                 </div>
 
                 {isWrongNetwork ? (
-                  <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-3 text-sm text-amber-700">
+                  <div className="rounded-lg border border-warning/20 bg-warning/5 px-3 py-3 text-sm text-warning">
                     Switch this wallet to a supported network ({SUPPORTED_WALLET_CHAIN_LABEL}) before linking it.
                   </div>
                 ) : null}

@@ -121,7 +121,7 @@ function classifyInvoice(invoice: InvoiceItem): InvoiceSource {
 function InvoiceStatusBadge({ status }: { status: InvoiceStatus }) {
   if (status === "PAID") {
     return (
-      <Badge className="border-success/20 bg-success/10 text-success">
+      <Badge className="border-border bg-secondary text-success">
         PAID
       </Badge>
     );
@@ -145,7 +145,7 @@ function InvoiceStatusBadge({ status }: { status: InvoiceStatus }) {
 function DeliveryBadge({ status }: { status: DeliveryStatus }) {
   if (status === "SENT") {
     return (
-      <Badge className="border-success/20 bg-success/10 text-xs text-success">
+      <Badge className="border-border bg-secondary text-xs text-success">
         Sent
       </Badge>
     );
@@ -183,7 +183,7 @@ function InvoiceSourceBadge({
 
   if (source === "SUBSCRIPTION") {
     return (
-      <Badge className="gap-1 border-amber-500/20 bg-amber-500/10 text-amber-200">
+      <Badge className="gap-1 border-border bg-secondary text-foreground">
         <Repeat className="h-3 w-3" />
         Subscription
       </Badge>

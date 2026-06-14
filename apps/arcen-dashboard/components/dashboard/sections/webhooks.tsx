@@ -96,10 +96,10 @@ function DeliveryRow({ entry }: { entry: DeliveryEntry }) {
 
   const statusClass =
     entry.status === "delivered"
-      ? "bg-success/10 text-success border-success/20"
+      ? "bg-secondary text-foreground border-border"
       : entry.status === "failed"
-        ? "bg-destructive/10 text-destructive border-destructive/20"
-        : "bg-warning/10 text-warning border-warning/20";
+        ? "bg-secondary text-foreground border-border"
+        : "bg-secondary text-foreground border-border";
 
   const relTime = (() => {
     const diff = Date.now() - new Date(entry.deliveredAt).getTime();
@@ -488,8 +488,8 @@ export function WebhooksSection() {
                     variant="secondary"
                     className={
                       canDisableWebhookSetup || canSaveWebhookSetup
-                        ? "bg-success/10 text-success border-success/20"
-                        : "bg-warning/10 text-warning border-warning/20"
+                        ? "bg-secondary text-foreground border-border"
+                        : "bg-secondary text-foreground border-border"
                     }
                   >
                     {canDisableWebhookSetup
@@ -545,8 +545,8 @@ export function WebhooksSection() {
                 <div
                   className={`flex items-start gap-3 p-4 rounded-lg border text-sm ${
                     testResult.ok
-                      ? "bg-success/5 border-success/20"
-                      : "bg-destructive/5 border-destructive/20"
+                      ? "bg-success/5 border-border"
+                      : "bg-secondary border-border"
                   }`}
                 >
                   {testResult.ok ? (
@@ -693,7 +693,7 @@ export function WebhooksSection() {
               variant="secondary"
               className={
                 hasSecret
-                  ? "bg-success/10 text-success border-success/20"
+                  ? "bg-secondary text-foreground border-border"
                   : "bg-muted/50 text-muted-foreground border-border"
               }
             >
@@ -703,7 +703,7 @@ export function WebhooksSection() {
 
           {/* Newly generated secret — show once */}
           {newSecret && (
-            <div className="space-y-2 p-4 rounded-xl border border-warning/30 bg-warning/5">
+            <div className="space-y-2 p-4 rounded-xl border border-border bg-secondary">
               <p className="text-xs font-semibold text-warning flex items-center gap-1.5">
                 <AlertTriangle className="w-3.5 h-3.5" />
                 Copy this secret now — it will not be shown again
@@ -831,7 +831,7 @@ const valid = sig === req.headers['x-arcenpay-signature'].replace('sha256=', '')
         </CardHeader>
         <CardContent>
           {logWarning && (
-            <div className="mb-4 rounded-lg border border-warning/20 bg-warning/5 px-3 py-2 text-xs text-muted-foreground">
+            <div className="mb-4 rounded-lg border border-border bg-secondary px-3 py-2 text-xs text-muted-foreground">
               {logWarning}
             </div>
           )}

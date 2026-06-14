@@ -86,7 +86,7 @@ export function RecentActivity({ chainId, environmentKey }: RecentActivityProps)
                 </div>
             </div>
             {warning && (
-                <div className="mb-4 rounded-lg border border-warning/20 bg-warning/5 px-3 py-2 text-xs text-muted-foreground">
+                <div className="mb-4 rounded-lg border border-border bg-secondary px-3 py-2 text-xs text-muted-foreground">
                     {warning}
                 </div>
             )}
@@ -97,7 +97,7 @@ export function RecentActivity({ chainId, environmentKey }: RecentActivityProps)
                 </div>
             ) : jobs.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
-                    <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center mb-4">
+                    <div className="w-12 h-12 rounded-xl bg-surface border border-border flex items-center justify-center mb-4">
                         <Activity className="w-6 h-6 text-muted-foreground" />
                     </div>
                     <p className="text-sm font-medium text-foreground mb-1">No activity yet</p>
@@ -110,7 +110,7 @@ export function RecentActivity({ chainId, environmentKey }: RecentActivityProps)
                     {jobs.map((job) => (
                         <div
                             key={`${job.sessionId}-${job.createdAt}-${job.status}`}
-                            className="flex items-center justify-between rounded-lg border border-border/60 bg-secondary/30 px-3 py-2"
+                            className="flex items-center justify-between rounded-lg border border-border bg-surface px-3 py-2"
                         >
                             <div>
                                 <p className="text-sm font-medium text-foreground">
