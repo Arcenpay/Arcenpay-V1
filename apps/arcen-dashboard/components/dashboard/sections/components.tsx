@@ -639,7 +639,7 @@ export function ComponentsSection({ onSectionChange }: ComponentsSectionProps = 
           (prereqs.publishedPlans === 0 || prereqs.featureFlags === 0) && (
             <div className="rounded-xl border border-border bg-secondary p-4">
               <div className="flex items-start gap-3">
-                <AlertTriangle className="w-4 h-4 text-foreground0 mt-0.5 shrink-0" />
+                <AlertTriangle className="w-4 h-4 text-foreground mt-0.5 shrink-0" />
                 <div className="space-y-1.5">
                   <p className="text-sm font-semibold text-warning">
                     Complete setup to unlock components

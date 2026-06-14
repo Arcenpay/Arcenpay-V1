@@ -223,31 +223,31 @@ export function Header({ activeSection, onMobileMenuToggle }: HeaderProps) {
   };
 
   return (
-    <header className="h-14 border-b border-border bg-background sticky top-0 z-30 flex items-center justify-between px-4 md:px-6">
-      <div className="flex items-center gap-3">
+    <header className="h-14 border-b border-border bg-background sticky top-0 z-30 flex items-center justify-between px-4 md:px-6 min-w-0">
+      <div className="flex items-center gap-3 min-w-0 flex-1">
         {/* Mobile hamburger */}
         {onMobileMenuToggle && (
             <button
             type="button"
             onClick={onMobileMenuToggle}
-            className="lg:hidden inline-flex h-9 w-9 items-center justify-center rounded-lg text-foreground hover:bg-muted/50 transition-colors"
+            className="lg:hidden inline-flex h-9 w-9 items-center justify-center rounded-lg text-foreground hover:bg-muted/50 transition-colors shrink-0"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
         )}
-        <div>
-          <h1 className="text-base font-semibold text-foreground tracking-tight">
+        <div className="min-w-0 overflow-hidden">
+          <h1 className="text-base font-semibold text-foreground tracking-tight truncate">
             {sectionTitles[activeSection]}
           </h1>
-          <span className="hidden md:block text-[13px] text-muted-foreground">
+          <span className="hidden md:block text-[13px] text-muted-foreground truncate">
             {sectionDescriptions[activeSection]}
           </span>
         </div>
       </div>
 
-      <div className="flex items-center gap-2 md:gap-3">
+      <div className="flex items-center gap-2 md:gap-3 shrink-0">
         {/* Environment switcher */}
         <div ref={environmentRef} className="relative hidden sm:block">
           <button

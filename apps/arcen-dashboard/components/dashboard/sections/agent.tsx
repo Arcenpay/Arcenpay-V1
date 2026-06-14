@@ -372,19 +372,20 @@ function SessionsTab() {
         </div>
       ) : (
         <div className="border border-border rounded-lg overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border bg-secondary/30">
-                <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Session</th>
-                <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Agent</th>
-                <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Funded</th>
-                <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Settled</th>
-                <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Withdrawn</th>
-                <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Balance</th>
-                <th className="text-center px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border bg-secondary/30">
+                  <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Session</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Agent</th>
+                  <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Funded</th>
+                  <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Settled</th>
+                  <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Withdrawn</th>
+                  <th className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Balance</th>
+                  <th className="text-center px-4 py-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
               {sessions.map((s) => (
                 <React.Fragment key={s.id}>
                   <tr
@@ -402,7 +403,7 @@ function SessionsTab() {
                     <td className="px-4 py-3 text-right text-muted-foreground">{formatUsdc(s.totalWithdrawn)}</td>
                     <td className="px-4 py-3 text-right font-medium">{formatUsdc(s.currentBalance)}</td>
                     <td className="px-4 py-3 text-center">
-                      <Badge variant={BigInt(s.currentBalance) > 0n ? "default" : "secondary"} className={cn("text-xs", BigInt(s.currentBalance) > 0n && "bg-secondary text-foreground0 border-border")}>
+                      <Badge variant={BigInt(s.currentBalance) > 0n ? "default" : "secondary"} className={cn("text-xs", BigInt(s.currentBalance) > 0n && "bg-secondary text-foreground border-border")}>
                         {BigInt(s.currentBalance) > 0n ? "Active" : "Closed"}
                       </Badge>
                     </td>
@@ -427,6 +428,7 @@ function SessionsTab() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </div>
@@ -861,7 +863,7 @@ function PermissionsTab() {
               <p className="text-sm font-medium text-foreground">Agent Wallet Active</p>
               <code className="text-xs font-mono text-foreground block truncate">{agentWallet}</code>
             </div>
-            <Badge variant="outline" className="text-xs text-foreground0 border-border bg-secondary shrink-0">
+            <Badge variant="outline" className="text-xs text-foreground border-border bg-secondary shrink-0">
               Active
             </Badge>
           </div>
@@ -1150,8 +1152,8 @@ function PermissionsTab() {
         <Button onClick={savePermissions} disabled={saving || loading}>
           {loading ? "Loading…" : saving ? "Saving…" : saved ? "Saved ✓" : "Save Permissions"}
         </Button>
-        {saved && <span className="text-xs text-foreground0">Settings saved</span>}
-        {saveError && <span className="text-xs text-foreground0">{saveError}</span>}
+        {saved && <span className="text-xs text-foreground">Settings saved</span>}
+        {saveError && <span className="text-xs text-foreground">{saveError}</span>}
       </div>
 
       {/* Add Provider Dialog */}
@@ -1281,8 +1283,8 @@ function DispatchHistoryTab() {
   const statusBadge = (status: string) => {
     const variants: Record<string, { color: string; label: string }> = {
       pending: { color: "bg-secondary text-foreground border-border", label: "Pending" },
-      approved: { color: "bg-secondary text-foreground0 border-border", label: "Approved" },
-      denied: { color: "bg-secondary text-foreground0 border-border", label: "Denied" },
+      approved: { color: "bg-secondary text-foreground border-border", label: "Approved" },
+      denied: { color: "bg-secondary text-foreground border-border", label: "Denied" },
       expired: { color: "bg-muted text-muted-foreground border-border", label: "Expired" },
     };
     const v = variants[status] ?? variants.expired;
@@ -1376,7 +1378,7 @@ export function AgentSection() {
             </div>
           </div>
           {isConnected && (
-            <Badge variant="outline" className="text-xs gap-1 text-foreground0 border-border bg-secondary">
+            <Badge variant="outline" className="text-xs gap-1 text-foreground border-border bg-secondary">
               <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
               Wallet connected
             </Badge>

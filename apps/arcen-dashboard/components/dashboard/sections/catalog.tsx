@@ -677,7 +677,7 @@ function CreatePlanDialog({
                       or ${form.annualPrice} USDC / year
                       {form.price &&
                         Number(form.annualPrice) < Number(form.price) * 12 && (
-                          <span className="text-foreground0 ml-1">
+                          <span className="text-foreground ml-1">
                             (save{" "}
                             {Math.round(
                               (1 -
@@ -1283,7 +1283,7 @@ function CreatePlanDialog({
                                 form.annualPrice &&
                                 Number(form.annualPrice) > 0 && (
                                   <div className="pt-6 text-right">
-                                    <p className="text-xs font-semibold text-foreground0">
+                                    <p className="text-xs font-semibold text-foreground">
                                       {Math.round(
                                         (1 -
                                           Number(form.annualPrice) /
@@ -3584,7 +3584,7 @@ function PlansTable({
                             <span className="block text-[10px] text-muted-foreground">
                               ${parseFloat(plan.annualPrice).toFixed(2)}/yr
                               {parseFloat(plan.price) > 0 && (
-                                <span className="ml-1 text-foreground0">
+                                <span className="ml-1 text-foreground">
                                   ·{" "}
                                   {Math.round(
                                     (1 -
@@ -4734,7 +4734,7 @@ function CreditTypesTable({
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-lg bg-linear-to-br from-amber-500/20 to-orange-400/10 border border-border flex items-center justify-center">
-                        <Coins className="w-4 h-4 text-foreground0" />
+                        <Coins className="w-4 h-4 text-foreground" />
                       </div>
                       <div>
                         <p className="text-sm font-medium">{ct.name}</p>
@@ -6477,7 +6477,7 @@ function EditPlanDialog({
                         {form.price &&
                           Number(form.annualPrice) <
                             Number(form.price) * 12 && (
-                            <span className="text-foreground0 ml-1">
+                            <span className="text-foreground ml-1">
                               (save{" "}
                               {Math.round(
                                 (1 -
@@ -7132,7 +7132,7 @@ function EditPlanDialog({
                                 form.annualPrice &&
                                 Number(form.annualPrice) > 0 && (
                                   <div className="pt-6 text-right">
-                                    <p className="text-xs font-semibold text-foreground0">
+                                    <p className="text-xs font-semibold text-foreground">
                                       {Math.round(
                                         (1 -
                                           Number(form.annualPrice) /
@@ -7350,7 +7350,7 @@ function AddCreditGrantDialog({
                       <SelectItem key={ct.id} value={ct.id}>
                         <div className="flex items-center gap-2 py-0.5">
                           <div className="w-5 h-5 rounded bg-secondary border border-border flex items-center justify-center shrink-0">
-                            <Coins className="w-3 h-3 text-foreground0" />
+                            <Coins className="w-3 h-3 text-foreground" />
                           </div>
                           <div>
                             <p className="text-sm font-medium">{ct.name}</p>
@@ -7704,7 +7704,7 @@ function PlanDetailView({
                   <DropdownMenuItem onClick={copyId}>
                     {copiedId ? (
                       <>
-                        <Check className="w-3.5 h-3.5 mr-2 text-foreground0" />
+                        <Check className="w-3.5 h-3.5 mr-2 text-foreground" />
                         Copied!
                       </>
                     ) : (
@@ -8084,7 +8084,7 @@ function PlanDetailView({
                         className="border-b border-border last:border-0 hover:bg-secondary/10"
                       >
                         <td className="py-3 px-4 font-medium flex items-center gap-2">
-                          <Coins className="w-3.5 h-3.5 text-foreground0" />
+                          <Coins className="w-3.5 h-3.5 text-foreground" />
                           {grant.name ?? grant.creditTypeId}
                           {grant.code ? (
                             <span className="text-xs text-muted-foreground font-mono">
@@ -8245,7 +8245,7 @@ function PlanDetailView({
                 </p>
                 <p className="text-lg font-semibold">
                   {isFree ? (
-                    <span className="text-foreground0">Free</span>
+                    <span className="text-foreground">Free</span>
                   ) : (
                     `$${parseFloat(plan.price).toFixed(2)}`
                   )}
@@ -8266,7 +8266,7 @@ function PlanDetailView({
                     <p className="text-xs text-muted-foreground">
                       USDC / yr
                       {parseFloat(plan.price) > 0 && (
-                        <span className="ml-1.5 text-foreground0 font-medium">
+                        <span className="ml-1.5 text-foreground font-medium">
                           {Math.round(
                             (1 -
                               parseFloat(plan.annualPrice) /
@@ -8342,7 +8342,7 @@ function PlanDetailView({
               </div>
             ) : plan.chainSyncStatus === "SYNCED" ? (
               <div className="space-y-3">
-                <div className="flex items-center gap-2 text-foreground0 text-sm font-medium">
+                <div className="flex items-center gap-2 text-foreground text-sm font-medium">
                   <Check className="w-4 h-4" />
                   Registered on-chain
                 </div>
@@ -8616,7 +8616,7 @@ function AddOnDetailView({
                   <DropdownMenuItem onClick={copyId}>
                     {copiedId ? (
                       <>
-                        <Check className="w-3.5 h-3.5 mr-2 text-foreground0" />
+                        <Check className="w-3.5 h-3.5 mr-2 text-foreground" />
                         Copied!
                       </>
                     ) : (
@@ -8638,7 +8638,7 @@ function AddOnDetailView({
                           </>
                         ) : copiedCheckout ? (
                           <>
-                            <Check className="w-3.5 h-3.5 mr-2 text-foreground0" />
+                            <Check className="w-3.5 h-3.5 mr-2 text-foreground" />
                             Checkout link copied
                           </>
                         ) : (
@@ -9294,7 +9294,7 @@ function CreditDetailView({
                   <DropdownMenuItem onClick={copyId}>
                     {copiedId ? (
                       <>
-                        <Check className="w-3.5 h-3.5 mr-2 text-foreground0" />
+                        <Check className="w-3.5 h-3.5 mr-2 text-foreground" />
                         Copied!
                       </>
                     ) : (
@@ -9481,7 +9481,7 @@ function CreditDetailView({
                         className="border-b border-border last:border-0 hover:bg-secondary/10"
                       >
                         <td className="py-3 px-4 font-medium flex items-center gap-2">
-                          <Package className="w-3.5 h-3.5 text-foreground0" />
+                          <Package className="w-3.5 h-3.5 text-foreground" />
                           {grant.planName ?? grant.planId}
                           {grant.planTier ? (
                             <span className="text-xs text-muted-foreground font-mono">

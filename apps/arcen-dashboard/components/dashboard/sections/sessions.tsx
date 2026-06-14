@@ -537,7 +537,7 @@ export function SessionsSection() {
                   ? "text-success"
                   : job.status === "failed"
                     ? "text-destructive"
-                    : "text-foreground0";
+                    : "text-foreground";
               return (
                 <div
                   key={job.sessionId}

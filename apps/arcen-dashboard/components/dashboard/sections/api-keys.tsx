@@ -49,7 +49,7 @@ function CopyableKey({ value }: { value: string }) {
         onClick={() => { navigator.clipboard.writeText(value); setCopied(true); setTimeout(() => setCopied(false), 1500); }}
         className="text-muted-foreground hover:text-foreground"
       >
-        {copied ? <Check className="h-3 w-3 text-foreground0" /> : <Copy className="h-3 w-3" />}
+        {copied ? <Check className="h-3 w-3 text-foreground" /> : <Copy className="h-3 w-3" />}
       </button>
     </div>
   );
@@ -128,7 +128,7 @@ function ApiKeysContent() {
       {newKey && (
         <div className="rounded-lg border border-border bg-secondary p-4">
           <div className="flex items-start gap-3">
-            <AlertTriangle className="h-5 w-5 text-foreground0 flex-shrink-0 mt-0.5" />
+            <AlertTriangle className="h-5 w-5 text-foreground flex-shrink-0 mt-0.5" />
             <div className="flex-1 min-w-0">
               <p className="font-medium text-foreground dark:text-foreground text-sm">
                 Key created: <strong>{newKey.name}</strong>

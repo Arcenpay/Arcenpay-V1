@@ -563,7 +563,7 @@ export function PaymentsSection() {
         <div className="rounded-2xl border border-border bg-card p-5">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary">
-              <Link2 className="h-5 w-5 text-foreground0" />
+              <Link2 className="h-5 w-5 text-foreground" />
             </div>
             <div>
               <p className="text-2xl font-semibold">{activeLinks.length}</p>
@@ -574,7 +574,7 @@ export function PaymentsSection() {
         <div className="rounded-2xl border border-border bg-card p-5">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary">
-              <DollarSign className="h-5 w-5 text-foreground0" />
+              <DollarSign className="h-5 w-5 text-foreground" />
             </div>
             <div>
               <p className="text-2xl font-semibold">
@@ -587,7 +587,7 @@ export function PaymentsSection() {
         <div className="rounded-2xl border border-border bg-card p-5">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary">
-              <Clock className="h-5 w-5 text-foreground0" />
+              <Clock className="h-5 w-5 text-foreground" />
             </div>
             <div>
               <p className="text-2xl font-semibold">{pendingSessions}</p>
@@ -598,7 +598,7 @@ export function PaymentsSection() {
         <div className="rounded-2xl border border-border bg-card p-5">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary">
-              <Users className="h-5 w-5 text-foreground0" />
+              <Users className="h-5 w-5 text-foreground" />
             </div>
             <div>
               <p className="text-2xl font-semibold">{checkoutSessions.length}</p>
@@ -692,14 +692,14 @@ export function PaymentsSection() {
                       }
                     />
                     {form.successUrl && /^https?:\/\/.+/.test(form.successUrl) && (
-                      <Check className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground0" />
+                      <Check className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground" />
                     )}
                     {form.successUrl && !/^https?:\/\/.+/.test(form.successUrl) && (
-                      <X className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground0" />
+                      <X className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground" />
                     )}
                   </div>
                   {form.successUrl && !/^https?:\/\/.+/.test(form.successUrl) && (
-                    <p className="text-xs text-foreground0">Must start with http:// or https://</p>
+                    <p className="text-xs text-foreground">Must start with http:// or https://</p>
                   )}
                 </div>
                 <div className="space-y-1.5">
@@ -718,14 +718,14 @@ export function PaymentsSection() {
                       }
                     />
                     {form.cancelUrl && /^https?:\/\/.+/.test(form.cancelUrl) && (
-                      <Check className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground0" />
+                      <Check className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground" />
                     )}
                     {form.cancelUrl && !/^https?:\/\/.+/.test(form.cancelUrl) && (
-                      <X className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground0" />
+                      <X className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground" />
                     )}
                   </div>
                   {form.cancelUrl && !/^https?:\/\/.+/.test(form.cancelUrl) && (
-                    <p className="text-xs text-foreground0">Must start with http:// or https://</p>
+                    <p className="text-xs text-foreground">Must start with http:// or https://</p>
                   )}
                 </div>
               </div>
@@ -1033,9 +1033,9 @@ export function PaymentsSection() {
                               onClick={() => toggleLinkStatus(link)}
                             >
                               {isActive ? (
-                                <Link2Off className="h-3.5 w-3.5 text-foreground0" />
+                                <Link2Off className="h-3.5 w-3.5 text-foreground" />
                               ) : (
-                                <Link2 className="h-3.5 w-3.5 text-foreground0" />
+                                <Link2 className="h-3.5 w-3.5 text-foreground" />
                               )}
                             </Button>
                             <Button
@@ -1139,7 +1139,7 @@ export function PaymentsSection() {
                         {session.status.toLowerCase()}
                       </Badge>
                       {session.verificationError && (
-                        <div className="mt-1 flex items-center gap-1 text-[10px] text-foreground0">
+                        <div className="mt-1 flex items-center gap-1 text-[10px] text-foreground">
                           <AlertCircle className="h-3 w-3 shrink-0" />
                           <span className="truncate max-w-[120px]">{session.verificationError}</span>
                         </div>
@@ -1231,14 +1231,14 @@ export function PaymentsSection() {
                       }
                     />
                     {editForm.successUrl && /^https?:\/\/.+/.test(editForm.successUrl) && (
-                      <Check className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground0" />
+                      <Check className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground" />
                     )}
                     {editForm.successUrl && !/^https?:\/\/.+/.test(editForm.successUrl) && (
-                      <X className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground0" />
+                      <X className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground" />
                     )}
                   </div>
                   {editForm.successUrl && !/^https?:\/\/.+/.test(editForm.successUrl) && (
-                    <p className="text-xs text-foreground0">Must start with http:// or https://</p>
+                    <p className="text-xs text-foreground">Must start with http:// or https://</p>
                   )}
                 </div>
                 <div className="space-y-1.5">
@@ -1256,14 +1256,14 @@ export function PaymentsSection() {
                       }
                     />
                     {editForm.cancelUrl && /^https?:\/\/.+/.test(editForm.cancelUrl) && (
-                      <Check className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground0" />
+                      <Check className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground" />
                     )}
                     {editForm.cancelUrl && !/^https?:\/\/.+/.test(editForm.cancelUrl) && (
-                      <X className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground0" />
+                      <X className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground" />
                     )}
                   </div>
                   {editForm.cancelUrl && !/^https?:\/\/.+/.test(editForm.cancelUrl) && (
-                    <p className="text-xs text-foreground0">Must start with http:// or https://</p>
+                    <p className="text-xs text-foreground">Must start with http:// or https://</p>
                   )}
                 </div>
               </div>

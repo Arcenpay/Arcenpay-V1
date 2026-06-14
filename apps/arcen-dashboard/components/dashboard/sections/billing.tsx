@@ -108,7 +108,7 @@ const TIER_CONFIG = {
   },
   PLUS: {
     icon: Crown,
-    color: "text-foreground0",
+    color: "text-foreground",
     bgColor: "bg-secondary",
     borderColor: "border-border",
     label: "Pro",
@@ -116,7 +116,7 @@ const TIER_CONFIG = {
   },
   PRO: {
     icon: Rocket,
-    color: "text-foreground0",
+    color: "text-foreground",
     bgColor: "bg-secondary",
     borderColor: "border-border",
     label: "Enterprise",
@@ -306,7 +306,7 @@ export function BillingSection() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Fuel className="w-5 h-5 text-foreground0" />
+              <Fuel className="w-5 h-5 text-foreground" />
               Gas Sponsorship
               {gasBudget.budgetAlertTriggered && (
                 <Badge variant="destructive" className="text-[10px]">
@@ -519,7 +519,7 @@ export function BillingSection() {
                         className="flex items-center gap-2 text-sm"
                       >
                         {tierInfo.features[key] ? (
-                          <Check className="w-3.5 h-3.5 text-foreground0 shrink-0" />
+                          <Check className="w-3.5 h-3.5 text-foreground shrink-0" />
                         ) : (
                           <X className="w-3.5 h-3.5 text-muted-foreground/30 shrink-0" />
                         )}

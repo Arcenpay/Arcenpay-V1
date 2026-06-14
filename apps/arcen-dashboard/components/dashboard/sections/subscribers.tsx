@@ -73,7 +73,7 @@ function CopyButton({ text }: { text: string }) {
       className="text-muted-foreground hover:text-foreground transition-colors"
     >
       {copied ? (
-        <Check className="h-3 w-3 text-foreground0" />
+        <Check className="h-3 w-3 text-foreground" />
       ) : (
         <Copy className="h-3 w-3" />
       )}

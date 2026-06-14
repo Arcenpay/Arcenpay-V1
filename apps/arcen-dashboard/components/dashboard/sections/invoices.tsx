@@ -463,17 +463,17 @@ export function InvoicesSection() {
 
   return (
     <div className="space-y-6">
-      <Card className="border-border bg-card">
-        <CardHeader className="flex flex-row items-center justify-between gap-4">
-          <div>
-            <CardTitle className="text-base font-medium">
+      <Card className="border-border bg-card overflow-hidden">
+        <CardHeader className="flex flex-row items-center justify-between gap-4 min-w-0">
+          <div className="min-w-0 overflow-hidden">
+            <CardTitle className="text-base font-medium truncate">
               Invoice Center
             </CardTitle>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-1 text-sm text-muted-foreground truncate">
               Keep one-time payment-link invoices separate from recurring subscription billing.
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <Button
               variant="outline"
               size="sm"
@@ -590,15 +590,17 @@ export function InvoicesSection() {
                   Review every invoice with its billing source labeled clearly.
                 </p>
               </div>
-              <InvoiceTable
-                rows={filteredRows}
-                loading={loading}
-                busyId={busyId}
-                emptyMessage="No invoices found."
-                onMarkStatus={handleMarkStatus}
-                onDownload={handleDownload}
-                onResend={handleResend}
-              />
+              <div className="w-full overflow-x-auto">
+                <InvoiceTable
+                  rows={filteredRows}
+                  loading={loading}
+                  busyId={busyId}
+                  emptyMessage="No invoices found."
+                  onMarkStatus={handleMarkStatus}
+                  onDownload={handleDownload}
+                  onResend={handleResend}
+                />
+              </div>
             </TabsContent>
 
             {(["PAYMENT_LINK", "SUBSCRIPTION", "OTHER"] as InvoiceSource[]).map(
@@ -612,15 +614,17 @@ export function InvoicesSection() {
                       {SOURCE_COPY[source].description}
                     </p>
                   </div>
-                  <InvoiceTable
-                    rows={filteredRows}
-                    loading={loading}
-                    busyId={busyId}
-                    emptyMessage={SOURCE_COPY[source].empty}
-                    onMarkStatus={handleMarkStatus}
-                    onDownload={handleDownload}
-                    onResend={handleResend}
-                  />
+                  <div className="w-full overflow-x-auto">
+                    <InvoiceTable
+                      rows={filteredRows}
+                      loading={loading}
+                      busyId={busyId}
+                      emptyMessage={SOURCE_COPY[source].empty}
+                      onMarkStatus={handleMarkStatus}
+                      onDownload={handleDownload}
+                      onResend={handleResend}
+                    />
+                  </div>
                 </TabsContent>
               ),
             )}

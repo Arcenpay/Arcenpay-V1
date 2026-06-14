@@ -103,7 +103,7 @@ function CopyButton({ text }: { text: string }) {
       onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 1500); }}
       className="ml-1 text-muted-foreground hover:text-foreground transition-colors"
     >
-      {copied ? <Check className="h-3 w-3 text-foreground0" /> : <Copy className="h-3 w-3" />}
+      {copied ? <Check className="h-3 w-3 text-foreground" /> : <Copy className="h-3 w-3" />}
     </button>
   );
 }

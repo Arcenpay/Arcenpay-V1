@@ -245,7 +245,7 @@ export default function Dashboard() {
         />
         <div
           className={cn(
-            "flex-1 flex flex-col transition-all duration-300 ease-out",
+            "flex-1 flex flex-col transition-all duration-300 ease-out min-w-0",
             "lg:ml-0",
             sidebarCollapsed ? "lg:ml-[68px]" : "lg:ml-[240px]",
           )}
@@ -255,10 +255,10 @@ export default function Dashboard() {
             onMobileMenuToggle={() => setMobileSidebarOpen((v) => !v)}
           />
           <SubgraphLagBanner />
-          <main className="flex-1 p-3 sm:p-4 lg:p-6 overflow-auto">
+          <main className="flex-1 p-3 sm:p-4 lg:p-6 overflow-y-auto overflow-x-hidden min-w-0">
             <div
               key={activeSection}
-              className="animate-in fade-in slide-in-from-bottom-4 duration-500"
+              className="animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-full"
             >
               {renderSection()}
             </div>

@@ -1232,7 +1232,7 @@ function FlagDetailView({
               <div className="flex items-center gap-2 mt-0.5">
                 <code className="text-xs font-mono text-muted-foreground">{flag.featureKey}</code>
                 <button onClick={copyKey} className="text-muted-foreground hover:text-foreground transition-colors">
-                  {copiedKey ? <Check className="w-3 h-3 text-foreground0" /> : <Copy className="w-3 h-3" />}
+                  {copiedKey ? <Check className="w-3 h-3 text-foreground" /> : <Copy className="w-3 h-3" />}
                 </button>
               </div>
             </div>
@@ -1253,7 +1253,7 @@ function FlagDetailView({
                 {saving ? (
                   <><RefreshCw className="w-3.5 h-3.5 animate-spin" />Saving…</>
                 ) : saved ? (
-                  <><Check className="w-3.5 h-3.5 text-foreground0" />Saved</>
+                  <><Check className="w-3.5 h-3.5 text-foreground" />Saved</>
                 ) : (
                   "Save Rules"
                 )}
@@ -1267,7 +1267,7 @@ function FlagDetailView({
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={copyKey}>
                     {copiedKey ? (
-                      <><Check className="w-3.5 h-3.5 mr-2 text-foreground0" />Copied!</>
+                      <><Check className="w-3.5 h-3.5 mr-2 text-foreground" />Copied!</>
                     ) : (
                       <><Copy className="w-3.5 h-3.5 mr-2" />Copy Feature Key</>
                     )}
