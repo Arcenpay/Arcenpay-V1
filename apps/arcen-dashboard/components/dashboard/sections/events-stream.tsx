@@ -199,7 +199,7 @@ export function EventsStreamSection() {
       </div>
 
       {/* Event table */}
-      <div className="rounded-xl border border-border overflow-hidden">
+      <div className="rounded-xl border border-border overflow-hidden overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-muted/40">
             <tr>

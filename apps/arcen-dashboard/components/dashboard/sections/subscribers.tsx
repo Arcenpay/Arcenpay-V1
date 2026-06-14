@@ -376,7 +376,7 @@ export function SubscribersSection() {
           )}
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-border bg-card">
+        <div className="overflow-x-auto rounded-xl border border-border bg-card">
           <table className="w-full table-fixed text-sm">
             <thead>
               <tr className="bg-muted/40 border-b border-border/60">
