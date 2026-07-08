@@ -1,10 +1,6 @@
 import { db } from "../../db.js";
 import { countLegacySubscriptionTransitions } from "./subscription-change-requests.js";
-
-function asRecord(value: unknown): Record<string, unknown> {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
-  return value as Record<string, unknown>;
-}
+import { asRecord } from "./utils.js";
 
 function isOpenLifecycleStage(stage: string | null | undefined): boolean {
   return (

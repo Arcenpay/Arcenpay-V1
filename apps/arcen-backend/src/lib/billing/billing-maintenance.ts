@@ -13,11 +13,7 @@ import {
 import { deliverWebhook } from "../webhooks/deliver-webhook.js";
 import { computeProrationQuote } from "./billing-proration.js";
 import { getLatestSubscriptionChangeRequest } from "./subscription-change-requests.js";
-
-function asRecord(value: unknown): Record<string, unknown> {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
-  return value as Record<string, unknown>;
-}
+import { asRecord, deriveBillingPeriodFromInterval } from "./utils.js";
 
 function normalizeBillingPeriod(
   value: unknown,
@@ -27,14 +23,6 @@ function normalizeBillingPeriod(
   if (normalized === "annual" || normalized === "yearly") return "annual";
   if (normalized === "monthly" || normalized === "month") return "monthly";
   return null;
-}
-
-function deriveBillingPeriodFromInterval(
-  billingInterval: unknown,
-): "monthly" | "annual" {
-  return typeof billingInterval === "number" && billingInterval >= 31_536_000
-    ? "annual"
-    : "monthly";
 }
 
 function priceToNumber(price: unknown): number {

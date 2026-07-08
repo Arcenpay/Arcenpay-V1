@@ -1,6 +1,7 @@
 import { Prisma } from "../../generated/client/client.js";
 import { db } from "../../db.js";
 import { toPrismaJson } from "../../utils/prisma-json.js";
+import { asRecord, readString } from "./utils.js";
 
 type CreditDb = typeof db | Prisma.TransactionClient;
 
@@ -24,15 +25,6 @@ export class CreditLedgerError extends Error {
     super(message);
     this.name = "CreditLedgerError";
   }
-}
-
-function asRecord(value: unknown): Record<string, unknown> {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
-  return value as Record<string, unknown>;
-}
-
-function readString(value: unknown): string | null {
-  return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
 function readPositiveInteger(value: unknown): number | null {

@@ -33,6 +33,7 @@ import {
   getContractAddresses,
   PlanFactoryABI,
   SubscriptionRegistryABI,
+  YEARLY_INTERVAL,
 } from "@arcenpay/internal-core";
 import { Prisma } from "../../generated/client/client.js";
 import { db } from "../../db.js";
@@ -80,7 +81,7 @@ const bodySchema = z.object({
   company: companySchema,
 });
 
-const ANNUAL_BILLING_INTERVAL_SECONDS = 31_536_000;
+const ANNUAL_BILLING_INTERVAL_SECONDS = YEARLY_INTERVAL;
 
 const registryOwnerOfAbi = [
   {

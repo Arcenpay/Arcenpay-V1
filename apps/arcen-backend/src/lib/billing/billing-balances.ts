@@ -2,14 +2,11 @@ import type { Prisma } from "../../generated/client/client.js";
 import { db } from "../../db.js";
 import { toPrismaJson } from "../../utils/prisma-json.js";
 import { toSix } from "./invoices.js";
+import { normalizeWallet } from "./utils.js";
 
 type BillingBalanceDb = Pick<typeof db, "arcenCompany" | "billingBalance" | "invoice">;
 type InvoiceBalanceDb = Pick<typeof db, "invoice">;
 type DbClient = BillingBalanceDb | Prisma.TransactionClient;
-
-function normalizeWallet(value?: string | null): string | null {
-  return value?.trim() ? value.trim().toLowerCase() : null;
-}
 
 async function resolveCompany(
   input: {

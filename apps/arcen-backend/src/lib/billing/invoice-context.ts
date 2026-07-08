@@ -1,15 +1,5 @@
 import { db } from "../../db.js";
-
-function readRecord(value: unknown): Record<string, unknown> {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    return {};
-  }
-  return value as Record<string, unknown>;
-}
-
-function readString(value: unknown): string | null {
-  return typeof value === "string" && value.trim() ? value.trim() : null;
-}
+import { asRecord, readString } from "./utils.js";
 
 export type LoadedInvoiceContext = Awaited<ReturnType<typeof loadInvoiceBillingContext>>;
 
@@ -40,12 +30,12 @@ export async function loadInvoiceBillingContext(
     return null;
   }
 
-  const metadata = readRecord(invoice.metadata);
+  const metadata = asRecord(invoice.metadata);
   const companyId = readString(metadata.companyId);
   const explicitCustomerName = readString(metadata.customerName);
-  const billingAddress = readRecord(metadata.billingAddress);
-  const receiptMeta = readRecord(metadata.receipt);
-  const receiptEmailMeta = readRecord(metadata.receiptEmail);
+  const billingAddress = asRecord(metadata.billingAddress);
+  const receiptMeta = asRecord(metadata.receipt);
+  const receiptEmailMeta = asRecord(metadata.receiptEmail);
 
   const [profile, company] = await Promise.all([
     db.providerProfile.findFirst({
@@ -215,7 +205,7 @@ export function getPaymentMethodLabel(
   const metadata = input.metadata;
   const explicit =
     readString(metadata.paymentMethodLabel) ||
-    readString(readRecord(input.payment?.metadata).paymentMethodLabel);
+    readString(asRecord(input.payment?.metadata).paymentMethodLabel);
   if (explicit) return explicit;
 
   if (input.payment?.acceptedToken) {

@@ -1,5 +1,5 @@
-import { Hono, type Context } from "hono";
-import { runBillingDunningSweep } from "../../../lib/billing/billing-dunning.js";
+import { Hono } from "hono";
+import { getDunningPreview, runDunningSweep } from "./billing-dunning.js";
 import { getDeadLetterEvents, replayDeadLetterEvents } from "./dead-letter.js";
 import { replayDeadLetterById } from "./dead-letter-by-id.js";
 import { migrateLegacyBillingLifecycle } from "./billing-migrate-lifecycle.js";
@@ -8,13 +8,9 @@ import { getBillingRuntime } from "./billing-runtime.js";
 import { getGaReadiness } from "./ga-readiness.js";
 import { getWorkerHealth } from "./worker-health.js";
 
-async function runDunning(c: Context) {
-  return c.json(await runBillingDunningSweep({ now: new Date() }));
-}
-
 export const opsRoutes = new Hono()
-  .get("/billing/dunning", runDunning)
-  .post("/billing/dunning", runDunning)
+  .get("/billing/dunning", getDunningPreview)
+  .post("/billing/dunning", runDunningSweep)
   .get("/billing/reconciliation", getReconciliation)
   .get("/billing/runtime", getBillingRuntime)
   .post("/billing/migrate-lifecycle", migrateLegacyBillingLifecycle)

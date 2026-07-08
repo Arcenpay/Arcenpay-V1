@@ -15,6 +15,7 @@ import {
 } from "viem";
 import { deliverWebhook } from "../../lib/webhooks/deliver-webhook.js";
 import { resolveEntitlementResults } from "../../lib/entitlements/entitlements.js";
+import { YEARLY_INTERVAL } from "@arcenpay/internal-core";
 import {
   extractEmbedAccessToken,
   resolveEmbedAccessToken,
@@ -107,12 +108,12 @@ function deriveBillingPeriodFromPlan(
   plan: { billingInterval?: number | null } | null | undefined,
 ): "monthly" | "annual" {
   return typeof plan?.billingInterval === "number" &&
-    plan.billingInterval >= 31_536_000
+    plan.billingInterval >= YEARLY_INTERVAL
     ? "annual"
     : "monthly";
 }
 
-const ANNUAL_BILLING_INTERVAL_SECONDS = 31_536_000;
+const ANNUAL_BILLING_INTERVAL_SECONDS = YEARLY_INTERVAL;
 const PERIOD_END_RENEWAL_TOLERANCE_MS = 5 * 60 * 1000;
 
 function resolveExpectedAutopayIntervalSeconds(input: {

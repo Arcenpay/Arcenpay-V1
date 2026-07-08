@@ -1,7 +1,7 @@
 import type { Context } from "hono";
 import { db } from "../../../db.js";
 import { writeAuditEvent } from "../../../lib/platform/audit.js";
-import { FACILITATOR_URL, FACILITATOR_SECRET } from "../../../config.js";
+import { ingestBillingEvent } from "../../../lib/billing/billing-events.js";
 import { requireTeamRoles, isErrorResponse } from "../../../lib/auth/api-auth.js";
 
 function shouldTriggerInvoice(eventType: string): boolean {
@@ -26,34 +26,13 @@ export async function replayDeadLetterById(c: Context) {
     return c.json({ error: "Billing event not found or already processed" }, 404 as any);
   }
 
-  const upstream = await fetch(`${FACILITATOR_URL}/api/billing/events`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(FACILITATOR_SECRET
-        ? { Authorization: `Bearer ${FACILITATOR_SECRET}` }
-        : {}),
-    },
-    body: JSON.stringify({
-      teamId: event.teamId,
-      eventType: event.eventType,
-      idempotencyKey: event.idempotencyKey,
-      eventName:
-        typeof (event.payload as any)?._event?.name === "string"
-          ? (event.payload as any)._event.name
-          : undefined,
-      schemaVersion:
-        typeof (event.payload as any)?._event?.schemaVersion === "string"
-          ? (event.payload as any)._event.schemaVersion
-          : undefined,
-      occurredAt:
-        typeof (event.payload as any)?._event?.occurredAt === "string"
-          ? (event.payload as any)._event.occurredAt
-          : undefined,
-      payload: event.payload,
-      source: "ops-replay",
-      triggerInvoice: shouldTriggerInvoice(event.eventType),
-    }),
+  const result = await ingestBillingEvent({
+    teamId: event.teamId,
+    eventType: event.eventType as any,
+    idempotencyKey: event.idempotencyKey,
+    payload: event.payload as Record<string, unknown>,
+    source: "ops-replay",
+    triggerInvoice: shouldTriggerInvoice(event.eventType),
   });
 
   await writeAuditEvent({
@@ -66,15 +45,13 @@ export async function replayDeadLetterById(c: Context) {
     resourceId: event.id,
     metadata: {
       eventType: event.eventType,
-      ok: upstream.ok,
-      status: upstream.status,
+      ok: !result.skipped,
     },
   });
 
-  if (!upstream.ok) {
+  if (result.skipped) {
     return c.json({
-        error: "Facilitator rejected replay",
-        facilitatorStatus: upstream.status,
+        error: "Event replay was skipped",
       }, 502 as any);
   }
 

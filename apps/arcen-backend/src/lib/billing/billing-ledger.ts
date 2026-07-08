@@ -2,15 +2,12 @@ import { db } from "../../db.js";
 import { toPrismaJson } from "../../utils/prisma-json.js";
 import { toSix } from "./invoices.js";
 import { applyInvoicePayment } from "./billing-balances.js";
+import { normalizeWallet } from "./utils.js";
 
 type BillingLedgerDb = Pick<
   typeof db,
   "arcenCompany" | "subscriptionState" | "payment" | "paymentAttempt" | "invoice"
 >;
-
-function normalizeWallet(value?: string | null): string | null {
-  return value?.trim() ? value.trim().toLowerCase() : null;
-}
 
 async function resolveCompany(input: {
   teamId: string;

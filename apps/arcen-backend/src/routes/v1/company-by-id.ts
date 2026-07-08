@@ -10,6 +10,7 @@ import type { Context } from "hono";
 import { requireAnyAuth, isAnyAuthError } from "../../lib/auth/require-any-auth.js";
 import { db } from "../../db.js";
 import { resolveEntitlementResults } from "../../lib/entitlements/entitlements.js";
+import { YEARLY_INTERVAL } from "@arcenpay/internal-core";
 import type { Prisma } from "../../generated/client/client.js";
 import { getCompanyAddOnGrants } from "../../lib/companies/addon-grants.js";
 import { getCompanyEnvironmentWhere } from "../../lib/environments/company-scope.js";
@@ -85,7 +86,7 @@ export async function GET(c: Context) {
 
   const activeBillingPeriod =
     normalizeBillingPeriod(asRecord(company.traits).billingPeriod) ??
-    (activePlan?.billingInterval && Number(activePlan.billingInterval) >= 31_536_000
+    (activePlan?.billingInterval && Number(activePlan.billingInterval) >= YEARLY_INTERVAL
       ? "annual"
       : "monthly");
 

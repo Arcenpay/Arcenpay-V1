@@ -5,6 +5,7 @@ import { toPrismaJson } from "../../../utils/prisma-json.js";
 import { resolvePublishedFreePlan } from "../../../lib/catalog/catalog-billing.js";
 import { upsertSubscriptionLedgerState } from "../../../lib/billing/billing-ledger.js";
 import { getLatestSubscriptionChangeRequest } from "../../../lib/billing/subscription-change-requests.js";
+import { YEARLY_INTERVAL } from "@arcenpay/internal-core";
 
 function asRecord(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
@@ -29,7 +30,7 @@ function deriveBillingPeriodFromInterval(
   if (typeof billingInterval !== "number") return "monthly";
   // Seconds thresholds: 30 days (monthly), 365 days (annual)
   // Everything between is treated as monthly; custom intervals default to monthly
-  return billingInterval >= 31_536_000 ? "annual" : "monthly";
+  return billingInterval >= YEARLY_INTERVAL ? "annual" : "monthly";
 }
 
 const bodySchema = z.object({

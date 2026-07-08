@@ -13,6 +13,7 @@ import {
   getContractAddresses,
   PlanFactoryABI,
   SubscriptionRegistryABI,
+  YEARLY_INTERVAL,
 } from "@arcenpay/internal-core";
 import type { ComponentInvoiceSummary } from "@arcenpay/internal-core";
 import { db } from "../../db.js";
@@ -72,7 +73,7 @@ function normalizeBillingPeriod(value: unknown): "monthly" | "annual" | null {
 function deriveBillingPeriodFromInterval(
   billingInterval: unknown,
 ): "monthly" | "annual" {
-  return typeof billingInterval === "number" && billingInterval >= 31_536_000
+  return typeof billingInterval === "number" && billingInterval >= YEARLY_INTERVAL
     ? "annual"
     : "monthly";
 }
