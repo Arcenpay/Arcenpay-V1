@@ -342,21 +342,31 @@ function hydratePlanMetadataWithCreditGrants(
 
 function toCreditGrantEntitlements(
   creditGrants: ComponentPlanMetadataCreditGrant[],
+  balanceByTypeId: Map<string, { remaining: number; initial: number }> = new Map(),
 ): Array<Record<string, unknown>> {
-  return creditGrants.map((grant) => ({
-    featureKey: `credit:${grant.code ?? grant.creditTypeId}`,
-    name: grant.name ?? grant.creditTypeId,
-    value: grant.amount,
-    featureType: "credit",
-    usage: 0,
-    exceeded: false,
-    unitSingular: grant.unitName ?? "credit",
-    unitPlural:
-      typeof (grant as { unitNamePlural?: unknown }).unitNamePlural === "string"
-        ? ((grant as { unitNamePlural?: string }).unitNamePlural ?? "credits")
-        : grant.unitName ?? "credits",
-    icon: null,
-  }));
+  return creditGrants.map((grant) => {
+    const bal = balanceByTypeId.get(grant.creditTypeId);
+    // When real balance data is available use it; fall back to the catalog
+    // allocation so the component always has something meaningful to display.
+    const remaining = bal?.remaining ?? grant.amount;
+    const initial = bal?.initial ?? grant.amount;
+    const used = Math.max(0, initial - remaining);
+    return {
+      featureKey: `credit:${grant.code ?? grant.creditTypeId}`,
+      name: grant.name ?? grant.creditTypeId,
+      value: remaining,   // current credit balance
+      limit: initial,     // total allocated
+      featureType: "credit",
+      usage: used,
+      exceeded: remaining < 1,
+      unitSingular: grant.unitName ?? "credit",
+      unitPlural:
+        typeof (grant as { unitNamePlural?: unknown }).unitNamePlural === "string"
+          ? ((grant as { unitNamePlural?: string }).unitNamePlural ?? "credits")
+          : grant.unitName ?? "credits",
+      icon: null,
+    };
+  });
 }
 
 function readInvoiceCustomerName(metadata: unknown): string | null {
@@ -865,6 +875,62 @@ export async function GET(c: Context) {
         listComponentPlanMetadataCreditGrants(activePlan?.metadata ?? null),
       );
 
+      // ── Real credit balance for embed ──────────────────────────────────────
+      // Collect credit grants from BOTH the active plan AND every active add-on
+      // so the user sees a unified credit widget regardless of origin.
+      const allActiveCreditGrants: ComponentPlanMetadataCreditGrant[] = [
+        ...listComponentPlanMetadataCreditGrants(activePlan?.metadata ?? null),
+        ...activeAddOns.flatMap((addOn) =>
+          listComponentPlanMetadataCreditGrants(addOn.metadata),
+        ),
+      ];
+      // De-duplicate by creditTypeId — last writer (add-on) wins for display metadata
+      const deduplicatedCreditGrants = Array.from(
+        allActiveCreditGrants
+          .reduce((map, grant) => {
+            map.set(grant.creditTypeId, grant);
+            return map;
+          }, new Map<string, ComponentPlanMetadataCreditGrant>())
+          .values(),
+      );
+
+      // Query the actual remaining balance from the ledger for this company
+      const creditBalanceByTypeId = new Map<string, { remaining: number; initial: number }>();
+      if (company && deduplicatedCreditGrants.length > 0) {
+        const nowForBalance = new Date();
+        const companyGrantRows = await db.companyCreditGrant.findMany({
+          where: {
+            teamId,
+            companyId: company.id,
+            status: "ACTIVE",
+            creditTypeId: { in: deduplicatedCreditGrants.map((g) => g.creditTypeId) },
+            OR: [{ expiresAt: null }, { expiresAt: { gt: nowForBalance } }],
+          },
+          select: { creditTypeId: true, remainingAmount: true, initialAmount: true },
+        });
+        // Aggregate across multiple grants of the same credit type
+        for (const companyGrant of companyGrantRows) {
+          const existing = creditBalanceByTypeId.get(companyGrant.creditTypeId);
+          if (existing) {
+            existing.remaining += companyGrant.remainingAmount;
+            existing.initial += companyGrant.initialAmount;
+          } else {
+            creditBalanceByTypeId.set(companyGrant.creditTypeId, {
+              remaining: companyGrant.remainingAmount,
+              initial: companyGrant.initialAmount,
+            });
+          }
+        }
+      }
+
+      const allCreditGrantEntitlements = toCreditGrantEntitlements(
+        deduplicatedCreditGrants,
+        creditBalanceByTypeId,
+      );
+      // The plan-only version is superseded by the richer merged set.
+      void activePlanCreditGrantEntitlements;
+
+
       entitlements = activeCatalogEntitlements.map((entry) => {
         const resolvedEntitlement = entitlementMap.get(entry.featureKey);
         const flag = flagMap.get(entry.featureKey);
@@ -911,7 +977,7 @@ export async function GET(c: Context) {
           sourceName: entry.sourceName ?? null,
         };
       });
-      entitlements = [...entitlements, ...activePlanCreditGrantEntitlements];
+      entitlements = [...entitlements, ...allCreditGrantEntitlements];
 
       usageData = entitlements
         .filter((entitlement) => entitlement.featureType === "event_based")

@@ -26,11 +26,14 @@ function toUiFeatureType(
 
 function toStoredFeatureType(
   featureType: string,
-): "boolean" | "event_based" {
+): "boolean" | "event_based" | "trait_based" {
   switch (featureType) {
     case "event":
     case "event_based":
       return "event_based";
+    case "trait":
+    case "trait_based":
+      return "trait_based";
     default:
       return "boolean";
   }
@@ -113,19 +116,14 @@ export async function POST(c: Context) {
   }
 
   const featureType = body.featureType ?? "boolean";
-  const validTypes = ["boolean", "event", "event_based"];
+  const validTypes = ["boolean", "event", "event_based", "trait", "trait_based"];
   if (!validTypes.includes(featureType)) {
     return c.json({ error: "Invalid featureType" }, 400 as any);
   }
   if (body.icon && body.icon.trim().length > 4096) {
     return c.json({ error: "icon is too long" }, 400 as any);
   }
-  if (body.traitKey) {
-    return c.json({
-        error:
-          "Trait-based features are not yet supported by the persisted feature schema. Create the flag directly instead of using the feature shortcut.",
-      }, 400 as any);
-  }
+
 
   // Check for duplicate featureKey within team
   const existing = await db.catalogFeatureFlag.findUnique({
@@ -135,13 +133,18 @@ export async function POST(c: Context) {
     return c.json({ error: "A feature with this key already exists" }, 409 as any);
   }
 
+  // For trait/event features, the traitKey or eventKey is the data key used
+  // during rule evaluation. Prefer explicit eventKey, then traitKey.
+  const resolvedMetricKey =
+    body.eventKey ?? (body.traitKey ?? null);
+
   const flag = await db.catalogFeatureFlag.create({
     data: {
       teamId,
       name: body.name.trim(),
       featureKey: body.featureKey.trim(),
       featureType: toStoredFeatureType(featureType),
-      eventKey: body.eventKey ?? null,
+      eventKey: resolvedMetricKey,
       description: body.description ?? null,
       icon: body.icon?.trim() || null,
       defaultValue: false,

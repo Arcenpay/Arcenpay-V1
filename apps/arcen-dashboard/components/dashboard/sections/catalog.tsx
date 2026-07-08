@@ -2669,6 +2669,327 @@ function CreateCreditTypeDialog({
   );
 }
 
+// ─── Edit Add-On Dialog ─────────────────────────────────────────────────────────
+
+function EditAddOnDialog({
+  addon,
+  onSaved,
+}: {
+  addon: CatalogAddOn;
+  onSaved: () => void;
+}) {
+  const { activeEnvironment } = useEnvironment();
+  const chainId = useChainId();
+  const lockedChainId =
+    activeEnvironment?.chainId ?? resolveEnvironmentChainId(addon.environmentMode);
+  const tokenOptions = getTokenOptionsForChain(lockedChainId);
+
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [billingIntervalDays, setBillingIntervalDays] = useState(
+    addon.billingIntervalDays ?? 30,
+  );
+  const [form, setForm] = useState({
+    name: addon.name,
+    description: addon.description ?? "",
+    billingType: addon.billingType,
+    saleMode: addon.saleMode,
+    price: String(parseFloat(addon.price)),
+    acceptedToken: addon.acceptedToken,
+  });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    setForm({
+      name: addon.name,
+      description: addon.description ?? "",
+      billingType: addon.billingType,
+      saleMode: addon.saleMode,
+      price: String(parseFloat(addon.price)),
+      acceptedToken: addon.acceptedToken,
+    });
+    setBillingIntervalDays(addon.billingIntervalDays ?? 30);
+  }, [addon]);
+
+  function validate() {
+    const e: Record<string, string> = {};
+    if (!form.name.trim()) e.name = "Required";
+    const p = Number(form.price);
+    if (!form.price || isNaN(p) || p <= 0) e.price = "Must be positive";
+    return e;
+  }
+
+  async function handleSubmit(ev: React.FormEvent) {
+    ev.preventDefault();
+    const errs = validate();
+    if (Object.keys(errs).length) {
+      setErrors(errs);
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch("/api/catalog/add-ons", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: addon.id,
+          name: form.name,
+          description: form.description || null,
+          billingType: form.billingType,
+          saleMode: form.saleMode,
+          billingIntervalDays:
+            form.billingType === "RECURRING" ? billingIntervalDays : null,
+          price: Number(form.price),
+          acceptedToken: form.acceptedToken,
+        }),
+      });
+      if (res.ok) {
+        toast.success("Add-on updated");
+        setOpen(false);
+        onSaved();
+      } else {
+        const data = await res.json();
+        setErrors({ _global: data.error || "Failed to update add-on" });
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const selectedChainOpt = tokenOptions.find(
+    (o) => o.address === form.acceptedToken,
+  );
+  const chainName = (o: TokenOption) => o.chainLabel;
+  const chainInitial = (o: TokenOption) => {
+    const n = o.chainLabel;
+    return n.startsWith("Base")
+      ? "B"
+      : n.startsWith("Sepolia")
+        ? "S"
+        : n.startsWith("Arc")
+          ? "A"
+          : (n[0]?.toUpperCase() ?? "?");
+  };
+
+  return (
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger asChild>
+        <Button size="sm" variant="outline" className="gap-2">
+          Edit Add-On
+        </Button>
+      </SheetTrigger>
+      <SheetContent className="w-full sm:max-w-2xl p-0 overflow-hidden flex flex-col">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
+          <h2 className="text-base font-semibold">Edit Add-On</h2>
+          <button
+            onClick={() => setOpen(false)}
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-secondary hover:text-foreground transition-all"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto">
+          <form
+            id="edit-addon-form"
+            onSubmit={handleSubmit}
+            className="p-6 space-y-6"
+          >
+            {errors._global && (
+              <div className="p-3 rounded-lg bg-secondary border border-border">
+                <p className="text-sm text-destructive">{errors._global}</p>
+              </div>
+            )}
+
+            <div>
+              <Label className="text-sm font-medium mb-2 block">
+                Add-on name *
+              </Label>
+              <Input
+                value={form.name}
+                onChange={(e) => {
+                  setForm({ ...form, name: e.target.value });
+                  setErrors((p) => ({ ...p, name: "" }));
+                }}
+                className="h-11 bg-background border-border"
+              />
+              {errors.name && (
+                <p className="text-xs text-destructive mt-1">{errors.name}</p>
+              )}
+            </div>
+
+            <div>
+              <Label className="text-sm font-medium mb-2 block">
+                Description
+              </Label>
+              <Input
+                value={form.description}
+                onChange={(e) =>
+                  setForm({ ...form, description: e.target.value })
+                }
+                className="h-11 bg-background border-border"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-sm font-medium mb-2 block">
+                  Billing Type
+                </Label>
+                <Select
+                  value={form.billingType}
+                  onValueChange={(v) =>
+                    setForm({
+                      ...form,
+                      billingType: v as "ONE_TIME" | "RECURRING",
+                      ...(v === "RECURRING" && { saleMode: "UPSELL" as const }),
+                    })
+                  }
+                >
+                  <SelectTrigger className="h-11 bg-background border-border">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ONE_TIME">One Time</SelectItem>
+                    <SelectItem value="RECURRING">Recurring</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-sm font-medium mb-2 block">
+                  Sale Mode
+                </Label>
+                <Select
+                  value={form.saleMode}
+                  onValueChange={(v) =>
+                    setForm({
+                      ...form,
+                      saleMode: v as "STANDALONE" | "UPSELL" | "BOTH",
+                    })
+                  }
+                >
+                  <SelectTrigger className="h-11 bg-background border-border">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="STANDALONE">Standalone</SelectItem>
+                    <SelectItem value="UPSELL">Upsell</SelectItem>
+                    <SelectItem value="BOTH">Both</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {form.billingType === "RECURRING" && (
+              <div>
+                <Label className="text-sm font-medium mb-2 block">
+                  Billing Interval (days)
+                </Label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={billingIntervalDays}
+                  onChange={(e) =>
+                    setBillingIntervalDays(Number(e.target.value) || 30)
+                  }
+                  className="h-11 bg-background border-border"
+                />
+              </div>
+            )}
+
+            <div>
+              <Label className="text-sm font-medium mb-2 block">
+                Price (USDC) *
+              </Label>
+              <Input
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={form.price}
+                onChange={(e) => {
+                  setForm({ ...form, price: e.target.value });
+                  setErrors((p) => ({ ...p, price: "" }));
+                }}
+                className="h-11 bg-background border-border"
+              />
+              {errors.price && (
+                <p className="text-xs text-destructive mt-1">{errors.price}</p>
+              )}
+            </div>
+
+            <div>
+              <Label className="text-sm font-medium mb-2 block">
+                Accepted Token
+              </Label>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    className="flex items-center justify-between w-full h-11 px-3 rounded-lg bg-background border border-border text-sm hover:border-ring/50 transition-colors"
+                  >
+                    {selectedChainOpt ? (
+                      <div className="flex items-center gap-2.5">
+                        <Web3Icon chainId={selectedChainOpt.chainId} size="sm" />
+                        <div className="text-left">
+                          <p className="text-sm font-medium leading-none">
+                            {chainName(selectedChainOpt)}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-0.5 font-mono">
+                            {selectedChainOpt.symbol} ·{" "}
+                            {selectedChainOpt.address.slice(0, 6)}…
+                            {selectedChainOpt.address.slice(-4)}
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">Select token</span>
+                    )}
+                    <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)]">
+                  {tokenOptions.map((o) => (
+                    <DropdownMenuItem
+                      key={o.address}
+                      onClick={() =>
+                        setForm({ ...form, acceptedToken: o.address })
+                      }
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <span className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-[11px] font-bold">
+                          {chainInitial(o)}
+                        </span>
+                        <div className="text-left">
+                          <p className="text-sm font-medium">{chainName(o)}</p>
+                          <p className="text-xs text-muted-foreground font-mono">
+                            {o.symbol}
+                          </p>
+                        </div>
+                      </div>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </form>
+        </div>
+
+        <div className="px-6 py-4 border-t border-border shrink-0 flex justify-end gap-3">
+          <Button variant="outline" onClick={() => setOpen(false)}>
+            Cancel
+          </Button>
+          <Button type="submit" form="edit-addon-form" disabled={loading}>
+            {loading ? (
+              <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />
+            ) : null}
+            Save Changes
+          </Button>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
 // ─── Edit Credit Type Dialog ────────────────────────────────────────────────────
 
 function EditCreditTypeDialog({
@@ -4066,6 +4387,28 @@ function AddOnsTable({
     }
   }
 
+  async function handleDelete(id: string) {
+    setUpdating(id);
+    try {
+      const res = await fetch("/api/catalog/add-ons", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({} as { error?: string }));
+        toast.error(data.error ?? "Failed to delete add-on");
+      } else {
+        toast.success("Add-on deleted");
+        load();
+      }
+    } catch {
+      toast.error("Could not delete add-on");
+    } finally {
+      setUpdating(null);
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
@@ -4225,6 +4568,19 @@ function AddOnsTable({
                                 {statusActionLabel(s)}
                               </DropdownMenuItem>
                             ))}
+                          </>
+                        )}
+                        {addon.status !== "PUBLISHED" && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-destructive"
+                              disabled={updating === addon.id}
+                              onClick={() => handleDelete(addon.id)}
+                            >
+                              <Trash2 className="w-3.5 h-3.5 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
                           </>
                         )}
                       </DropdownMenuContent>
@@ -4622,6 +4978,7 @@ function CreditTypesTable({
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<CatalogStatus | "">("");
   const [updating, setUpdating] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -4653,6 +5010,28 @@ function CreditTypesTable({
       if (res.ok) load();
     } finally {
       setUpdating(null);
+    }
+  }
+
+  async function handleDelete(id: string) {
+    setDeleting(id);
+    try {
+      const res = await fetch("/api/catalog/credits", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({} as { error?: string }));
+        toast.error(data.error ?? "Failed to delete credit type");
+      } else {
+        toast.success("Credit type deleted");
+        load();
+      }
+    } catch {
+      toast.error("Could not delete credit type");
+    } finally {
+      setDeleting(null);
     }
   }
 
@@ -4782,6 +5161,16 @@ function CreditTypesTable({
                             {statusActionLabel(s)}
                           </DropdownMenuItem>
                         ))}
+                        {ct.status !== "PUBLISHED" && (
+                          <DropdownMenuItem
+                            className="text-destructive"
+                            disabled={deleting === ct.id}
+                            onClick={() => handleDelete(ct.id)}
+                          >
+                            <Trash2 className="w-3.5 h-3.5 mr-2" />
+                            {deleting === ct.id ? "Deleting..." : "Delete"}
+                          </DropdownMenuItem>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -8606,6 +8995,7 @@ function AddOnDetailView({
             <StatusBadge status={addon.status} />
             <div className="h-6 w-px bg-border hidden sm:block" />
             <div className="flex items-center gap-2">
+              <EditAddOnDialog addon={addon} onSaved={onUpdated} />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="icon" className="h-9 w-9">
@@ -8686,6 +9076,23 @@ function AddOnDetailView({
                       className="text-destructive focus:text-destructive"
                     >
                       Archive Add-On
+                    </DropdownMenuItem>
+                  )}
+                  {addon.status !== "PUBLISHED" && (
+                    <DropdownMenuItem
+                      onClick={async () => {
+                        await fetch("/api/catalog/add-ons", {
+                          method: "DELETE",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ id: addon.id }),
+                        });
+                        onUpdated();
+                        toast.success("Add-on deleted");
+                      }}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Trash2 className="w-3.5 h-3.5 mr-2" />
+                      Delete Permanently
                     </DropdownMenuItem>
                   )}
                 </DropdownMenuContent>
@@ -9339,6 +9746,23 @@ function CreditDetailView({
                       className="text-destructive focus:text-destructive"
                     >
                       Archive
+                    </DropdownMenuItem>
+                  )}
+                  {credit.status !== "PUBLISHED" && (
+                    <DropdownMenuItem
+                      onClick={async () => {
+                        await fetch("/api/catalog/credits", {
+                          method: "DELETE",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ id: credit.id }),
+                        });
+                        onUpdated();
+                        toast.success("Credit type deleted");
+                      }}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Trash2 className="w-3.5 h-3.5 mr-2" />
+                      Delete Permanently
                     </DropdownMenuItem>
                   )}
                 </DropdownMenuContent>

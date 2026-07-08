@@ -81,11 +81,27 @@ async function resolveOnChainPlan(
   wallet: string,
   environmentId?: string | null,
 ): Promise<string | null> {
-  const client = getViemClient(DEFAULT_CHAIN_ID);
+  // Resolve the chain from the company's environment; fall back to
+  // DEFAULT_CHAIN_ID only for legacy records without an environment.
+  let chainId: typeof DEFAULT_CHAIN_ID = DEFAULT_CHAIN_ID;
+  if (environmentId) {
+    try {
+      const env = await db.workspaceEnvironment.findUnique({
+        where: { id: environmentId },
+        select: { chainId: true },
+      });
+      // Cast is safe: only valid supported chain IDs are stored in WorkspaceEnvironment
+      if (env?.chainId) chainId = env.chainId as typeof DEFAULT_CHAIN_ID;
+    } catch {
+      // Non-fatal — fall back to DEFAULT_CHAIN_ID
+    }
+  }
+
+  const client = getViemClient(chainId);
   if (!client) return null;
 
   try {
-    const contracts = getContractAddresses(DEFAULT_CHAIN_ID);
+    const contracts = getContractAddresses(chainId);
     if (!contracts.subscriptionRegistry) return null;
 
     const [tokenId, hasActiveSubscription] = await Promise.all([

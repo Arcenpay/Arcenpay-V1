@@ -16,6 +16,7 @@ import {
   CreditLedgerError,
   resolveCreditBurnConfig,
 } from "./usage-credits.js";
+import { deliverWebhook } from "../webhooks/deliver-webhook.js";
 
 type UsageEventStore = Pick<typeof db, "arcenEvent">;
 
@@ -271,6 +272,48 @@ export async function consumeMeteredEntitlement(
   await touchEntityActivity(company.id, user?.id ?? null);
   invalidateUsageCache(input.teamId, company.id, eventKey);
   invalidateFlagCache(`${input.teamId}:`);
+
+  // ── Low-balance webhook (fire-and-forget) ─────────────────────────────────
+  // After a successful credit consumption, notify the team if the remaining
+  // balance for this credit type drops below 20 % of the initial allocation
+  // (or below an absolute floor of 10 credits). This gives merchants a chance
+  // to top up before service is fully interrupted.
+  if (creditBurn && transactionResult.consumed && !transactionResult.duplicate) {
+    (async () => {
+      try {
+        const now = new Date();
+        const activeGrants = await db.companyCreditGrant.findMany({
+          where: {
+            teamId: input.teamId,
+            companyId: company.id,
+            creditTypeId: creditBurn.creditTypeId,
+            status: "ACTIVE",
+            OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+          },
+          select: { remainingAmount: true, initialAmount: true },
+        });
+        const totalRemaining = activeGrants.reduce((s, g) => s + g.remainingAmount, 0);
+        const totalInitial = activeGrants.reduce((s, g) => s + g.initialAmount, 0);
+        const LOW_BALANCE_RATIO = 0.2;
+        const isLowBalance =
+          totalInitial > 0 &&
+          (totalRemaining <= totalInitial * LOW_BALANCE_RATIO);
+        if (isLowBalance) {
+          await deliverWebhook(input.teamId, "credit.low_balance", {
+            companyId: company.id,
+            creditTypeId: creditBurn.creditTypeId,
+            remainingBalance: totalRemaining,
+            initialBalance: totalInitial,
+            percentRemaining:
+              totalInitial > 0 ? Math.round((totalRemaining / totalInitial) * 100) : 0,
+            featureKey: input.featureKey,
+          });
+        }
+      } catch {
+        // Best-effort: never let webhook delivery block the SDK response
+      }
+    })();
+  }
 
   const finalEntitlement = await resolveEntitlementResult({
     teamId: input.teamId,

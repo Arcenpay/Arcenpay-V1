@@ -313,6 +313,74 @@ export async function grantPlanCreditsForCompany(
   return { grants: created, skipped: false as const };
 }
 
+export async function grantAddOnCreditsForCompany(
+  input: {
+    teamId: string;
+    environmentId?: string | null;
+    companyId: string;
+    catalogAddOnId: string;
+    expiresAt?: Date | null;
+    metadata?: Record<string, unknown>;
+  },
+  client: CreditDb = db,
+) {
+  const addOn = await client.catalogAddOn.findFirst({
+    where: { id: input.catalogAddOnId, teamId: input.teamId },
+    select: { id: true, environmentId: true, metadata: true },
+  });
+  if (!addOn) return { grants: [], skipped: true as const };
+
+  const grants = readPlanCreditGrants(addOn.metadata);
+  const created = [];
+
+  for (const grant of grants) {
+    const creditType = await client.catalogCreditType.findFirst({
+      where: {
+        id: grant.creditTypeId,
+        teamId: input.teamId,
+        active: true,
+        status: { not: "ARCHIVED" },
+        ...(addOn.environmentId ? { environmentId: addOn.environmentId } : {}),
+      },
+      select: { id: true },
+    });
+    if (!creditType) continue;
+
+    // Use a unique idempotency key for this grant
+    const idempotencyKey = [
+      "addon-credit",
+      input.companyId,
+      addOn.id,
+      creditType.id,
+      input.expiresAt ? input.expiresAt.getTime() : "never",
+    ].join(":");
+
+    const result = await grantCompanyCredits(
+      {
+        teamId: input.teamId,
+        environmentId: input.environmentId ?? addOn.environmentId ?? null,
+        companyId: input.companyId,
+        creditTypeId: creditType.id,
+        amount: grant.amount,
+        source: "CREDIT_BUNDLE", // Credits from add-ons are bundles
+        idempotencyKey,
+        periodStartedAt: new Date(),
+        expiresAt: input.expiresAt ?? (grant.resetPeriod === "never" ? null : null),
+        resetPeriod: grant.resetPeriod ?? "never",
+        metadata: {
+          ...(input.metadata ?? {}),
+          catalogAddOnId: addOn.id,
+          autoTopUp: grant.autoTopUp ?? false,
+        },
+      },
+      client,
+    );
+    created.push(result);
+  }
+
+  return { grants: created, skipped: false as const };
+}
+
 function readFeatureCost(metadata: unknown, featureKey: string): number | null {
   const record = asRecord(metadata);
   const creditCosts = asRecord(record.creditCosts);
