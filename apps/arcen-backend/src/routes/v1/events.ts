@@ -565,11 +565,12 @@ export async function POST(c: Context) {
           idempotencyKey: b.idempotencyKey,
         });
 
-        if (!result.consumed) {
+        const meteredResult = result as any;
+        if (!meteredResult.consumed) {
           return jsonWithCors(
             c,
-            { error: result.reason || "Limit reached or insufficient credits" },
-            result.reason.includes("Insufficient credits") ? 402 : 429
+            { error: meteredResult.reason || "Limit reached or insufficient credits" },
+            meteredResult.reason.includes("Insufficient credits") ? 402 : 429
           );
         }
 

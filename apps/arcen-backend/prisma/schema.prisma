@@ -1365,7 +1365,6 @@ model ArcenCompany {
   @@unique([teamId, environmentId, externalId])
   @@index([teamId, environmentId, email])
   @@index([teamId, environmentId, lastSeenAt])
-  @@map("SchematicCompany")
 }
 
 model ArcenUser {
@@ -1393,7 +1392,6 @@ model ArcenUser {
   @@index([teamId, environmentId, companyId])
   @@index([teamId, environmentId, externalId])
   @@index([teamId, environmentId, email])
-  @@map("SchematicUser")
 }
 
 model ArcenEvent {
@@ -1414,7 +1412,6 @@ model ArcenEvent {
   @@index([teamId, environmentId, name, companyId, sentAt])
   @@index([teamId, environmentId, eventType, sentAt])
   @@index([teamId, environmentId, companyId, sentAt])
-  @@map("SchematicEvent")
 }
 
 model CompanyAddOnGrant {
@@ -1739,7 +1736,6 @@ model ArcenApiKey {
 
   @@index([teamId])
   @@index([teamId, environmentId])
-  @@map("SchematicApiKey")
 }
 
 // zkTLS proofs submitted via Reclaim Protocol

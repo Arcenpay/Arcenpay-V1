@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "../../../db.js";
 import { writeAuditEvent } from "../../../lib/platform/audit.js";
 import { getTeamTierInfo, getTierLimits, TIER_PRICING, TIER_FEATURES } from "../../../lib/catalog/tier-guard.js";
+import { activateTeamPlatformTier, cancelTeamPlatformTier } from "../../../lib/billing/platform-tier-billing.js";
 import { requireTeamRoles, isErrorResponse } from "../../../lib/auth/api-auth.js";
 import type { PlatformTier } from "../../../generated/client/client.js";
 
@@ -32,20 +33,20 @@ export async function getTier(c: Context) {
 
 const upgradeSchema = z.object({
   targetTier: z.enum(["FREE", "PLUS", "PRO"]),
-  txHash: z.string().optional(),
+  walletAddress: z.string().optional(),
 });
 
 export async function postTier(c: Context) {
   const auth = await requireTeamRoles(c, ["OWNER"]);
   if (isErrorResponse(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any as any);
 
-  const body = await c.req.json() .catch(() => ({}));
+  const body = await c.req.json().catch(() => ({}));
   const parsed = upgradeSchema.safeParse(body);
   if (!parsed.success) {
     return c.json({ error: "Invalid request", details: parsed.error.flatten().fieldErrors }, 400 as any);
   }
 
-  const { targetTier, txHash } = parsed.data;
+  const { targetTier, walletAddress } = parsed.data;
 
   const currentTeam = await db.team.findUnique({
     where: { id: auth.team.teamId },
@@ -61,15 +62,6 @@ export async function postTier(c: Context) {
 
   const tierOrder: Record<string, number> = { FREE: 0, PLUS: 1, PRO: 2 };
   const isUpgrade = tierOrder[targetTier] > tierOrder[currentTeam.platformTier];
-
-  if (isUpgrade && targetTier !== "FREE" && !txHash) {
-    return c.json({
-        error: "Payment required",
-        message: "Please complete the on-chain subscription payment first.",
-        targetTier,
-        pricing: TIER_PRICING,
-      }, 402 as any);
-  }
 
   if (!isUpgrade) {
     const targetLimits = await getTierLimits(targetTier as PlatformTier);
@@ -107,32 +99,62 @@ export async function postTier(c: Context) {
       ? null
       : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
-  const [updated] = await db.$transaction([
-    db.team.update({
-      where: { id: auth.team.teamId },
-      data: {
-        platformTier: targetTier as PlatformTier,
-        tierExpiresAt,
-        ...(txHash ? { tierSubscriptionId: txHash } : {}),
-      },
-      select: {
-        id: true,
-        platformTier: true,
-        tierExpiresAt: true,
-        tierSubscriptionId: true,
-      },
-    }),
-    db.tierUpgradeHistory.create({
-      data: {
-        teamId: auth.team.teamId,
-        fromTier: currentTeam.platformTier,
-        toTier: targetTier as PlatformTier,
-        txHash: txHash ?? null,
-        amountUsd: isUpgrade ? TIER_PRICING[targetTier as PlatformTier].priceUsdc : null,
-        userId: auth.team.userId,
-      },
-    }),
-  ]);
+  let billingResult: {
+    subscriptionStateId: string | null;
+    invoiceId: string | null;
+    paymentId: string | null;
+  } = { subscriptionStateId: null, invoiceId: null, paymentId: null };
+
+  if (isUpgrade && targetTier !== "FREE") {
+    const activation = await activateTeamPlatformTier({
+      teamId: auth.team.teamId,
+      targetTier: targetTier as PlatformTier,
+      walletAddress: walletAddress ?? auth.team.walletAddress ?? undefined,
+    });
+
+    if (!activation.ok) {
+      return c.json({
+          error: "Activation failed",
+          message: activation.error ?? "Could not activate platform tier subscription.",
+        }, 500 as any);
+    }
+
+    billingResult = activation;
+  }
+
+  if (!isUpgrade && targetTier === "FREE") {
+    await cancelTeamPlatformTier({ teamId: auth.team.teamId });
+  }
+
+  const updated = await db.team.update({
+    where: { id: auth.team.teamId },
+    data: {
+      platformTier: targetTier as PlatformTier,
+      tierExpiresAt,
+      ...(billingResult.subscriptionStateId
+        ? { tierSubscriptionId: billingResult.subscriptionStateId }
+        : targetTier === "FREE"
+          ? { tierSubscriptionId: null }
+          : {}),
+    },
+    select: {
+      id: true,
+      platformTier: true,
+      tierExpiresAt: true,
+      tierSubscriptionId: true,
+    },
+  });
+
+  await db.tierUpgradeHistory.create({
+    data: {
+      teamId: auth.team.teamId,
+      fromTier: currentTeam.platformTier,
+      toTier: targetTier as PlatformTier,
+      txHash: null,
+      amountUsd: isUpgrade ? TIER_PRICING[targetTier as PlatformTier].priceUsdc : null,
+      userId: auth.team.userId,
+    },
+  });
 
   await writeAuditEvent({
     headers: c.req.raw.headers,
@@ -143,12 +165,13 @@ export async function postTier(c: Context) {
     resourceType: "Team",
     resourceId: auth.team.teamId,
     beforeData: { tier: currentTeam.platformTier },
-    afterData: { tier: targetTier, txHash },
+    afterData: { tier: targetTier, billingResult },
   });
 
   return c.json({
     ok: true,
     team: updated,
+    billing: billingResult,
     message: isUpgrade
       ? `Successfully upgraded to ${targetTier} tier!`
       : `Downgraded to ${targetTier} tier.`,

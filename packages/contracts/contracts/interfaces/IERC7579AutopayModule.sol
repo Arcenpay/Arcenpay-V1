@@ -114,6 +114,22 @@ interface IERC7579AutopayModule is IERC7579Module {
         uint8 routeUsed
     );
 
+    /// @notice Emitted when a cross-chain dispatch fails
+    event CrossChainDispatchFailed(
+        address indexed account,
+        uint256 destinationChainId
+    );
+
+    /// @notice Emitted when a live account state is imported during migration
+    event AccountStateImported(
+        address indexed account,
+        uint256 indexed planId,
+        uint64 lastPullTime
+    );
+
+    /// @notice Emitted when migration imports are permanently finalized
+    event MigrationFinalized();
+
     // ============================================================
     //                     CORE FUNCTIONS
     // ============================================================

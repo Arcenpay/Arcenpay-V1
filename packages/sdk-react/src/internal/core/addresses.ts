@@ -45,15 +45,15 @@ const ADDRESSES: Record<number, ContractAddresses> = {
     zkUsageVerifier: '0x0000000000000000000000000000000000000000',
     mirrorRegistry: '0x0000000000000000000000000000000000000000',
   },
-  // Arc Testnet (Testnet) — Deployed 2026-05-16 17:12 UTC
+  // Arc Testnet (Testnet) — Deployed 2026-07-08 12:51 UTC
   5042002: {
-    subscriptionRegistry: '0xc0cB8B3F507ac7A0920102C3f58FB8Ef4F935a8c',
-    autopayModule: '0xB36336A2924581E71BCA50F5a96238a0Db8dD1cf',
-    planFactory: '0x0d9b6C0108B0978a65672Fe54250a62182B4BBD9',
-    feeCollector: '0x429e802066694D929a851323d9D05499b99f61d6',
-    sessionVault: '0x41B5cB5Ac8E57ccee966f827ec56Bda5cEC0d3c7',
-    zkUsageVerifier: '0xB2189b0018838D395b324909616C8673e48ADdE8',
-    mirrorRegistry: '0xb1C798a44A450589254040E16EBf79095B32947A',
+    subscriptionRegistry: '0x6F590e66B83D8A29A106C1274D6CB66DAc1666F7',
+    autopayModule: '0xF18E8F80e4E917912235e035999E49c7B429608b',
+    planFactory: '0xD9cbc3479557cC3C41Cc23c5bbAC17697b122e25',
+    feeCollector: '0x6CF2777Ed84ae15D5814CE7022b546dE2e55301a',
+    sessionVault: '0x84f973E334034f8f6b821a8E4c0Ec2f8Df238b33',
+    zkUsageVerifier: '0x6404826D859efF7fcaef26F316dD55C0e83E0418',
+    mirrorRegistry: '0xE4b4820058a351cD21d208605F2c44715DB424Ab',
   },
 };
 

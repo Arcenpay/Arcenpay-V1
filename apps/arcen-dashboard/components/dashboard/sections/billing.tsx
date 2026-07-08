@@ -199,17 +199,11 @@ export function BillingSection() {
     setUpgrading(true);
 
     try {
-      // For downgrades to FREE, no payment needed
-      // For upgrades, in production this would trigger an on-chain payment first
       const res = await fetch("/api/platform/tier", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           targetTier: selectedTier,
-          // txHash would come from on-chain payment in production
-          ...(selectedTier !== "FREE"
-            ? { txHash: `pending-${Date.now()}` }
-            : {}),
         }),
       });
 

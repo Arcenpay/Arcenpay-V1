@@ -35,14 +35,6 @@ interface ISubscriptionRegistry {
         uint64 expiration
     );
 
-    /// @notice Emitted on successful billing cycle
-    event BillingSuccess(
-        uint256 indexed tokenId,
-        uint256 indexed planId,
-        uint256 amount,
-        uint256 timestamp
-    );
-
     /// @notice Emitted when a cross-chain sync message is dispatched
     event CrossChainDispatchRequested(
         uint256 indexed tokenId,

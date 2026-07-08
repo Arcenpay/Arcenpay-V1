@@ -191,7 +191,7 @@ type AutopayActivationSnapshot = {
 };
 
 async function readAutopayActivationSnapshot(params: {
-  publicClient: ReturnType<typeof createPublicClient>;
+  publicClient: any;
   autopayAddress: `0x${string}`;
   paymentAccount: `0x${string}`;
 }): Promise<AutopayActivationSnapshot> {
@@ -223,7 +223,7 @@ async function readAutopayActivationSnapshot(params: {
 }
 
 async function waitForAutopayActivationSnapshot(params: {
-  publicClient: ReturnType<typeof createPublicClient>;
+  publicClient: any;
   autopayAddress: `0x${string}`;
   paymentAccount: `0x${string}`;
   expectedPlanId: bigint;
@@ -306,7 +306,7 @@ function normalizeActivationError(message: string): {
 }
 
 async function assertReceiptFinalized(params: {
-  publicClient: ReturnType<typeof createPublicClient>;
+  publicClient: any;
   receipt: { blockNumber?: bigint | null };
   label: string;
 }): Promise<void> {
@@ -411,7 +411,7 @@ async function upsertCompanyForActivation(
 }
 
 async function readActiveWalletSubscriptionTokenId(params: {
-  publicClient: ReturnType<typeof createPublicClient>;
+  publicClient: any;
   subscriptionRegistryAddress: `0x${string}`;
   wallet: `0x${string}`;
 }): Promise<bigint> {
