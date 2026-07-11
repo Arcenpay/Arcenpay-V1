@@ -42,6 +42,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
+import { useTeamTier } from "@/hooks/use-team-tier";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -1285,6 +1286,10 @@ export function FeaturesSection() {
   const [typeFilter, setTypeFilter] = useState<FeatureType | "all">("all");
   const [selectedFeature, setSelectedFeature] = useState<Feature | null>(null);
   const [showCreate, setShowCreate] = useState(false);
+  const { currentTier } = useTeamTier();
+
+  const flagsLimitReached = currentTier && features.length >= currentTier.limits.maxFeatureFlags;
+  const canCreateFlags = currentTier && !flagsLimitReached;
 
   const fetchFeatures = useCallback(async () => {
     setLoading(true);
@@ -1360,13 +1365,21 @@ export function FeaturesSection() {
             Define the capabilities your product offers — Boolean, Event-based, or Trait-based.
           </p>
         </div>
-        <Button
-          onClick={() => setShowCreate(true)}
-          className="flex items-center gap-2 shrink-0"
-        >
-          <Plus className="w-4 h-4" />
-          Create feature
-        </Button>
+        {canCreateFlags ? (
+          <Button
+            onClick={() => setShowCreate(true)}
+            className="flex items-center gap-2 shrink-0"
+          >
+            <Plus className="w-4 h-4" />
+            Create feature
+          </Button>
+        ) : (
+            <div className="text-xs text-muted-foreground px-3 py-2 rounded-lg border border-border bg-muted/30">
+              {flagsLimitReached
+                ? `Feature flag limit reached (${currentTier?.limits.maxFeatureFlags}). Upgrade for more.`
+                : "Loading tier info..."}
+            </div>
+          )}
       </div>
 
       {/* Filters */}

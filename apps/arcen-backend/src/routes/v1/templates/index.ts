@@ -8,6 +8,7 @@ import { toPrismaJson } from "../../../utils/prisma-json.js";
 import { getTemplateVersions } from "./versions.js";
 import { getTemplateInstalls, installTemplate } from "./install.js";
 import { uninstallTemplate } from "./uninstall.js";
+import { TIER_FEATURES } from "../../../lib/catalog/tier-guard.js";
 
 const createSchema = z.object({
   name: z.string().min(1),
@@ -55,6 +56,22 @@ async function getTemplates(c: Context) {
 async function createTemplate(c: Context) {
   const auth = await requirePermission(c, "templates:write");
   if (isErrorResponse(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any as any);
+
+  const currentTeam = await db.team.findUnique({
+    where: { id: auth.team.teamId },
+    select: { platformTier: true },
+  });
+  if (!currentTeam) {
+    return c.json({ error: "Team not found" }, 404 as any);
+  }
+
+  const features = TIER_FEATURES[currentTeam.platformTier];
+  if (!features.customBranding) {
+    return c.json({
+      error: "UPGRADE_REQUIRED",
+      message: "Custom embed templates are only available on Growth and Enterprise plans. Please upgrade your platform billing plan.",
+    }, 403 as any);
+  }
 
   const body = await c.req.json() .catch(() => ({}));
   const parsed = createSchema.safeParse(body);

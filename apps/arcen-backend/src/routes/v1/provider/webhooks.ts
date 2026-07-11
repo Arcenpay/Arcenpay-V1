@@ -11,6 +11,7 @@ import {
   CANONICAL_WEBHOOK_EVENTS,
   CANONICAL_WEBHOOK_EVENT_IDS,
 } from "../../../lib/webhooks/webhook-events.js";
+import { getTierLimits, TIER_FEATURES } from "../../../lib/catalog/tier-guard.js";
 
 const EventSubSchema = z.object({
   id: z.string().refine(
@@ -115,6 +116,15 @@ export async function putWebhookConfig(c: Context) {
     return c.json({ error: "No workspace environment selected" }, 409 as any);
   }
   const { webhookUrl, eventSubscriptions } = parsed.data;
+
+  const currentTeam = await db.team.findUnique({
+    where: { id: teamId },
+    select: { platformTier: true },
+  });
+  if (!currentTeam) {
+    return c.json({ error: "Team not found" }, 404 as any);
+  }
+
   const existingProfile = await db.providerProfile.findUnique({
     where: {
       teamId_environmentId: {
@@ -128,6 +138,35 @@ export async function putWebhookConfig(c: Context) {
       notificationPreferences: true,
     },
   });
+
+  const limits = await getTierLimits(currentTeam.platformTier);
+
+  if (webhookUrl) {
+    const existingWebhookEnvCount = await db.providerProfile.count({
+      where: {
+        teamId,
+        webhookUrl: { not: null },
+        environmentId: { not: activeEnvironment.id },
+      },
+    });
+    const alreadyHasUrl = existingProfile?.webhookUrl != null ? 0 : 1;
+    if (existingWebhookEnvCount + alreadyHasUrl >= limits.maxWebhooks) {
+      return c.json({
+        error: "UPGRADE_REQUIRED",
+        message: `Your ${currentTeam.platformTier} plan allows webhooks on only ${limits.maxWebhooks} environment(s). You currently have ${existingWebhookEnvCount + alreadyHasUrl}. Upgrade to Growth or Enterprise for more.`,
+      }, 403 as any);
+    }
+  }
+
+  if (currentTeam.platformTier === "FREE" && eventSubscriptions !== undefined) {
+    const hasDisabled = eventSubscriptions.some((sub) => !sub.enabled);
+    if (hasDisabled) {
+      return c.json({
+        error: "UPGRADE_REQUIRED",
+        message: "Per-event webhook preferences are only available on Growth and Enterprise tiers. Free tier endpoints must subscribe to all events.",
+      }, 403 as any);
+    }
+  }
 
   // Block saving a URL without a signing secret
   if (webhookUrl && !existingProfile?.webhookSigningSecret) {

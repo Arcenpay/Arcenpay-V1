@@ -8,6 +8,10 @@ export async function getProofHistory(c: Context) {
     return c.json({ error: "Unauthorized" }, 401 as any);
   }
 
+  if (!session.currentTeamId) {
+    return c.json({ error: "No active team selected" }, 400 as any);
+  }
+
   try {
     const rawLimit = Number(c.req.query("limit") || "12");
     const limit = Number.isFinite(rawLimit)

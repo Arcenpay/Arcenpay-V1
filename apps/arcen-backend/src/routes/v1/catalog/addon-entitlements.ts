@@ -8,6 +8,7 @@ import {
     writeMetadataEntitlements,
 } from "../../../lib/catalog/catalog-entitlements.js";
 import { toPrismaNullableJson } from "../../../utils/prisma-json.js";
+import { assertCanCreateAddOn } from "../../../lib/catalog/tier-guard.js";
 
 const entitlementSchema = z.object({
     featureName: z.string().min(1),
@@ -65,6 +66,18 @@ export async function addAddOnEntitlement(c: Context) {
         const addOn = await findAddOn(id, auth.team.teamId);
         if (!addOn) {
             return c.json({ error: "Add-on not found" }, 404 as any);
+        }
+
+        // Fetch the add-on's environment ID for tier check
+        const fullAddOn = await db.catalogAddOn.findFirst({
+            where: { id },
+            select: { environmentId: true },
+        });
+        if (fullAddOn?.environmentId) {
+            const addOnCheck = await assertCanCreateAddOn(auth.team.teamId, fullAddOn.environmentId);
+            if (!addOnCheck.allowed) {
+                return c.json({ error: "UPGRADE_REQUIRED", message: addOnCheck.reason }, 403 as any);
+            }
         }
 
         const body = await c.req.json() .catch(() => ({}));

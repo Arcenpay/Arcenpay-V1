@@ -250,6 +250,30 @@ export async function createPlan(c: Context) {
     }, 400 as any);
   }
 
+  const currentTeam = await db.team.findUnique({
+    where: { id: auth.team.teamId },
+    select: { platformTier: true },
+  });
+  if (!currentTeam) {
+    return c.json({ error: "Team not found" }, 404 as any);
+  }
+
+  if (currentTeam.platformTier === "FREE") {
+    if (data.annualPrice !== undefined && data.annualPrice > 0) {
+      return c.json({
+        error: "UPGRADE_REQUIRED",
+        message: "Annual billing options are only available on Growth and Enterprise tiers. Free tier plans must use monthly billing only.",
+      }, 403 as any);
+    }
+    const MONTHLY_INTERVAL = 2_592_000;
+    if (data.billingInterval > MONTHLY_INTERVAL) {
+      return c.json({
+        error: "UPGRADE_REQUIRED",
+        message: "Annual / custom long-term billing intervals are only available on Growth and Enterprise tiers. Free tier plans are restricted to Monthly billing only.",
+      }, 403 as any);
+    }
+  }
+
   const tierCheck = await assertCanCreatePlan(auth.team.teamId);
   if (!tierCheck.allowed) {
     return c.json({

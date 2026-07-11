@@ -5,6 +5,7 @@ import { requirePermission, isErrorResponse } from "../../../lib/auth/api-auth.j
 import { writeAuditEvent } from "../../../lib/platform/audit.js";
 import { requireResolvedActiveEnvironment } from "../../../lib/environments/workspace-environments.js";
 import { isAcceptedTokenSupportedOnChain } from "../../../lib/environments/supported-tokens.js";
+import { assertCanCreateCreditType } from "../../../lib/catalog/tier-guard.js";
 
 const createSchema = z.object({
   name: z.string().min(1),
@@ -82,6 +83,15 @@ export async function createCredit(c: Context) {
   if (!activeEnvironment) {
     return c.json({ error: "No workspace environment selected" }, 409 as any);
   }
+
+  const creditCheck = await assertCanCreateCreditType(auth.team.teamId, activeEnvironment.id);
+  if (!creditCheck.allowed) {
+    return c.json({
+      error: creditCheck.limit === 0 ? "UPGRADE_REQUIRED" : "LIMIT_REACHED",
+      message: creditCheck.reason,
+    }, creditCheck.limit === 0 ? 403 as any : 409 as any);
+  }
+
   if (!isAcceptedTokenSupportedOnChain(activeEnvironment.chainId, data.acceptedToken)) {
     return c.json({
       error: `Accepted token must belong to ${activeEnvironment.name}'s configured chain.`,
@@ -165,6 +175,14 @@ export async function updateCredit(c: Context) {
   );
   if (!activeEnvironment || existing.environmentId !== activeEnvironment.id) {
     return c.json({ error: "Switch to this credit environment before editing it." }, 409 as any);
+  }
+
+  const creditCheck = await assertCanCreateCreditType(auth.team.teamId, activeEnvironment.id);
+  if (!creditCheck.allowed) {
+    return c.json({
+      error: "UPGRADE_REQUIRED",
+      message: creditCheck.reason,
+    }, 403 as any);
   }
   if (
     parsed.data.acceptedToken !== undefined &&
@@ -279,6 +297,14 @@ export async function deleteCredit(c: Context) {
   );
   if (!activeEnvironment || existing.environmentId !== activeEnvironment.id) {
     return c.json({ error: "Switch to this credit type's environment before deleting it." }, 409 as any);
+  }
+
+  const creditCheck = await assertCanCreateCreditType(auth.team.teamId, activeEnvironment.id);
+  if (!creditCheck.allowed) {
+    return c.json({
+      error: "UPGRADE_REQUIRED",
+      message: creditCheck.reason,
+    }, 403 as any);
   }
 
   if (existing.status === "PUBLISHED") {

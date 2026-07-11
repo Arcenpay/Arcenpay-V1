@@ -421,6 +421,7 @@ export const ModelName = {
   BillingRecoveryTask: 'BillingRecoveryTask',
   WebhookDelivery: 'WebhookDelivery',
   PlatformTierConfig: 'PlatformTierConfig',
+  PlatformBillingPlan: 'PlatformBillingPlan',
   GasSpend: 'GasSpend',
   TierUpgradeHistory: 'TierUpgradeHistory',
   SupportTicket: 'SupportTicket',
@@ -457,7 +458,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "authSession" | "emailAuthCode" | "team" | "workspaceEnvironment" | "teamMember" | "teamInvitation" | "providerProfile" | "subscriberEmail" | "authNonce" | "catalogPlan" | "catalogAddOn" | "catalogCreditType" | "catalogVersion" | "catalogConfig" | "catalogCoupon" | "billingTemplate" | "billingTemplateVersion" | "templateInstall" | "taxProfile" | "invoiceSequence" | "invoice" | "invoiceLine" | "invoiceDelivery" | "creditNote" | "auditEvent" | "billingEvent" | "subscriptionState" | "subscriptionChangeRequest" | "payment" | "paymentAttempt" | "billingAdjustment" | "billingBalance" | "refund" | "billingRecoveryTask" | "webhookDelivery" | "platformTierConfig" | "gasSpend" | "tierUpgradeHistory" | "supportTicket" | "arcenCompany" | "arcenUser" | "arcenEvent" | "companyAddOnGrant" | "companyCreditGrant" | "creditLedgerEntry" | "paymentLink" | "checkoutSession" | "catalogFeatureFlag" | "flagRule" | "flagRuleCondition" | "companyOverride" | "embedAccessToken" | "arcenApiKey" | "zkTlsProof" | "embedComponent" | "arcenAgentConfig" | "arcenDispatchRequest"
+    modelProps: "user" | "authSession" | "emailAuthCode" | "team" | "workspaceEnvironment" | "teamMember" | "teamInvitation" | "providerProfile" | "subscriberEmail" | "authNonce" | "catalogPlan" | "catalogAddOn" | "catalogCreditType" | "catalogVersion" | "catalogConfig" | "catalogCoupon" | "billingTemplate" | "billingTemplateVersion" | "templateInstall" | "taxProfile" | "invoiceSequence" | "invoice" | "invoiceLine" | "invoiceDelivery" | "creditNote" | "auditEvent" | "billingEvent" | "subscriptionState" | "subscriptionChangeRequest" | "payment" | "paymentAttempt" | "billingAdjustment" | "billingBalance" | "refund" | "billingRecoveryTask" | "webhookDelivery" | "platformTierConfig" | "platformBillingPlan" | "gasSpend" | "tierUpgradeHistory" | "supportTicket" | "arcenCompany" | "arcenUser" | "arcenEvent" | "companyAddOnGrant" | "companyCreditGrant" | "creditLedgerEntry" | "paymentLink" | "checkoutSession" | "catalogFeatureFlag" | "flagRule" | "flagRuleCondition" | "companyOverride" | "embedAccessToken" | "arcenApiKey" | "zkTlsProof" | "embedComponent" | "arcenAgentConfig" | "arcenDispatchRequest"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -3199,6 +3200,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    PlatformBillingPlan: {
+      payload: Prisma.$PlatformBillingPlanPayload<ExtArgs>
+      fields: Prisma.PlatformBillingPlanFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.PlatformBillingPlanFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformBillingPlanPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.PlatformBillingPlanFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformBillingPlanPayload>
+        }
+        findFirst: {
+          args: Prisma.PlatformBillingPlanFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformBillingPlanPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.PlatformBillingPlanFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformBillingPlanPayload>
+        }
+        findMany: {
+          args: Prisma.PlatformBillingPlanFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformBillingPlanPayload>[]
+        }
+        create: {
+          args: Prisma.PlatformBillingPlanCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformBillingPlanPayload>
+        }
+        createMany: {
+          args: Prisma.PlatformBillingPlanCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.PlatformBillingPlanCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformBillingPlanPayload>[]
+        }
+        delete: {
+          args: Prisma.PlatformBillingPlanDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformBillingPlanPayload>
+        }
+        update: {
+          args: Prisma.PlatformBillingPlanUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformBillingPlanPayload>
+        }
+        deleteMany: {
+          args: Prisma.PlatformBillingPlanDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.PlatformBillingPlanUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.PlatformBillingPlanUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformBillingPlanPayload>[]
+        }
+        upsert: {
+          args: Prisma.PlatformBillingPlanUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PlatformBillingPlanPayload>
+        }
+        aggregate: {
+          args: Prisma.PlatformBillingPlanAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregatePlatformBillingPlan>
+        }
+        groupBy: {
+          args: Prisma.PlatformBillingPlanGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PlatformBillingPlanGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.PlatformBillingPlanCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PlatformBillingPlanCountAggregateOutputType> | number
+        }
+      }
+    }
     GasSpend: {
       payload: Prisma.$GasSpendPayload<ExtArgs>
       fields: Prisma.GasSpendFieldRefs
@@ -5521,6 +5596,28 @@ export const PlatformTierConfigScalarFieldEnum = {
 export type PlatformTierConfigScalarFieldEnum = (typeof PlatformTierConfigScalarFieldEnum)[keyof typeof PlatformTierConfigScalarFieldEnum]
 
 
+export const PlatformBillingPlanScalarFieldEnum = {
+  id: 'id',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  tier: 'tier',
+  chainId: 'chainId',
+  onChainPlanId: 'onChainPlanId',
+  planName: 'planName',
+  priceMicros: 'priceMicros',
+  billingIntervalSeconds: 'billingIntervalSeconds',
+  acceptedToken: 'acceptedToken',
+  treasuryWallet: 'treasuryWallet',
+  bootstrapTxHash: 'bootstrapTxHash',
+  syncStatus: 'syncStatus',
+  syncError: 'syncError',
+  syncedAt: 'syncedAt',
+  metadata: 'metadata'
+} as const
+
+export type PlatformBillingPlanScalarFieldEnum = (typeof PlatformBillingPlanScalarFieldEnum)[keyof typeof PlatformBillingPlanScalarFieldEnum]
+
+
 export const GasSpendScalarFieldEnum = {
   id: 'id',
   createdAt: 'createdAt',
@@ -6684,6 +6781,7 @@ export type GlobalOmitConfig = {
   billingRecoveryTask?: Prisma.BillingRecoveryTaskOmit
   webhookDelivery?: Prisma.WebhookDeliveryOmit
   platformTierConfig?: Prisma.PlatformTierConfigOmit
+  platformBillingPlan?: Prisma.PlatformBillingPlanOmit
   gasSpend?: Prisma.GasSpendOmit
   tierUpgradeHistory?: Prisma.TierUpgradeHistoryOmit
   supportTicket?: Prisma.SupportTicketOmit

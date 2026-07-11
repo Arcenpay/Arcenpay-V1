@@ -113,6 +113,7 @@ import {
   sendSmartAccountTransaction,
 } from "@arcenpay/react/smart-account";
 import { useDashboardWallet } from "@/hooks/use-dashboard-wallet";
+import { useTeamTier } from "@/hooks/use-team-tier";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -5995,6 +5996,7 @@ export function CatalogAddOnsSection() {
   const { envMode } = useEnvironment();
   const [refresh, setRefresh] = useState(0);
   const [selectedAddOn, setSelectedAddOn] = useState<CatalogAddOn | null>(null);
+  const { currentTier } = useTeamTier();
 
   function tr() {
     setRefresh((n) => n + 1);
@@ -6013,6 +6015,8 @@ export function CatalogAddOnsSection() {
     );
   }
 
+  const canCreateAddOns = currentTier && currentTier.limits.maxAddOns > 0;
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -6027,7 +6031,13 @@ export function CatalogAddOnsSection() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <CreateAddOnDialog env={envMode} onCreated={tr} />
+          {canCreateAddOns ? (
+            <CreateAddOnDialog env={envMode} onCreated={tr} />
+          ) : (
+            <div className="text-xs text-muted-foreground px-3 py-2 rounded-lg border border-border bg-muted/30">
+              Upgrade to Growth or Enterprise to create add-ons
+            </div>
+          )}
         </div>
       </div>
       <AddOnsTable
@@ -6044,6 +6054,7 @@ export function CatalogCreditsSection() {
   const [refresh, setRefresh] = useState(0);
   const [selectedCredit, setSelectedCredit] =
     useState<CatalogCreditType | null>(null);
+  const { currentTier } = useTeamTier();
 
   function tr() {
     setRefresh((n) => n + 1);
@@ -6062,6 +6073,8 @@ export function CatalogCreditsSection() {
     );
   }
 
+  const canCreateCredits = currentTier && currentTier.limits.maxCreditTypes > 0;
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -6075,7 +6088,13 @@ export function CatalogCreditsSection() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <CreateCreditTypeDialog env={envMode} onCreated={tr} />
+          {canCreateCredits ? (
+            <CreateCreditTypeDialog env={envMode} onCreated={tr} />
+          ) : (
+            <div className="text-xs text-muted-foreground px-3 py-2 rounded-lg border border-border bg-muted/30">
+              Upgrade to Growth or Enterprise to create credits
+            </div>
+          )}
         </div>
       </div>
       <CreditTypesTable
