@@ -10,7 +10,7 @@
     "dev": "tsx watch src/server.ts",
     "start": "node dist/server.js",
     "test": "npm run test:unit",
-    "test:unit": "node --import tsx --test tests/**/*.test.ts",
+    "test:unit": "node --import tsx --test tests/*.test.ts",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
     "clean": "rm -rf dist"
   },
