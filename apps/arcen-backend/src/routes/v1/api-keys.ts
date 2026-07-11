@@ -11,6 +11,7 @@ import { requirePermission, isErrorResponse } from "../../lib/auth/api-auth.js";
 import { generateApiKey } from "../../lib/auth/api-key-auth.js";
 import { db } from "../../db.js";
 import { requireResolvedActiveEnvironment } from "../../lib/environments/workspace-environments.js";
+import { assertCanCreateApiKey } from "../../lib/catalog/tier-guard.js";
 
 export async function GET(c: Context) {
   const ctx = await requirePermission(c, "catalog:read");
@@ -63,6 +64,14 @@ export async function POST(c: Context) {
 
   if (!body.name?.trim()) {
     return c.json({ error: "name is required" }, 400 as any);
+  }
+
+  const keyCheck = await assertCanCreateApiKey(team.teamId, activeEnvironment.id);
+  if (!keyCheck.allowed) {
+    return c.json({
+      error: "LIMIT_REACHED",
+      message: keyCheck.reason,
+    }, 409 as any);
   }
 
   const { raw, hash, prefix } = generateApiKey();

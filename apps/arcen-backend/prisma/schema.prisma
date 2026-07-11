@@ -1259,6 +1259,29 @@ model PlatformTierConfig {
   gasDailyBudgetUsd          Decimal @default(0.50) @db.Decimal(10, 2)
 }
 
+model PlatformBillingPlan {
+  id        String       @id @default(cuid())
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  tier      PlatformTier
+  chainId   Int
+
+  onChainPlanId String?
+  planName      String
+  priceMicros   Int
+  billingIntervalSeconds Int
+  acceptedToken String
+  treasuryWallet String
+  bootstrapTxHash String?
+  syncStatus ChainSyncStatus @default(PENDING)
+  syncError  String?
+  syncedAt   DateTime?
+  metadata   Json?
+
+  @@unique([chainId, tier])
+  @@index([syncStatus])
+}
+
 // ─── Gas Sponsorship Tracking ─────────────────────────────────────────────────
 
 model GasSpend {

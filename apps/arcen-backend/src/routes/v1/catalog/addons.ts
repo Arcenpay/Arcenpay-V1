@@ -6,6 +6,7 @@ import { writeAuditEvent } from "../../../lib/platform/audit.js";
 import { APP_URL } from "../../../config.js";
 import { requireResolvedActiveEnvironment } from "../../../lib/environments/workspace-environments.js";
 import { isAcceptedTokenSupportedOnChain } from "../../../lib/environments/supported-tokens.js";
+import { assertCanCreateAddOn } from "../../../lib/catalog/tier-guard.js";
 
 const createSchema = z.object({
   name: z.string().min(1),
@@ -134,6 +135,15 @@ export async function createAddOn(c: Context) {
   if (!activeEnvironment) {
     return c.json({ error: "No workspace environment selected" }, 409 as any);
   }
+
+  const addOnCheck = await assertCanCreateAddOn(auth.team.teamId, activeEnvironment.id);
+  if (!addOnCheck.allowed) {
+    return c.json({
+      error: addOnCheck.limit === 0 ? "UPGRADE_REQUIRED" : "LIMIT_REACHED",
+      message: addOnCheck.reason,
+    }, addOnCheck.limit === 0 ? 403 as any : 409 as any);
+  }
+
   if (!isAcceptedTokenSupportedOnChain(activeEnvironment.chainId, data.acceptedToken)) {
     return c.json({
       error: `Accepted token must belong to ${activeEnvironment.name}'s configured chain.`,
@@ -213,6 +223,14 @@ export async function updateAddOn(c: Context) {
   );
   if (!activeEnvironment || existing.environmentId !== activeEnvironment.id) {
     return c.json({ error: "Switch to this add-on's environment before editing it." }, 409 as any);
+  }
+
+  const addOnCheck = await assertCanCreateAddOn(auth.team.teamId, activeEnvironment.id);
+  if (!addOnCheck.allowed) {
+    return c.json({
+      error: "UPGRADE_REQUIRED",
+      message: addOnCheck.reason,
+    }, 403 as any);
   }
   if (
     parsed.data.acceptedToken !== undefined &&
@@ -315,6 +333,14 @@ export async function deleteAddOn(c: Context) {
   );
   if (!activeEnvironment || existing.environmentId !== activeEnvironment.id) {
     return c.json({ error: "Switch to this add-on's environment before deleting it." }, 409 as any);
+  }
+
+  const addOnCheck = await assertCanCreateAddOn(auth.team.teamId, activeEnvironment.id);
+  if (!addOnCheck.allowed) {
+    return c.json({
+      error: "UPGRADE_REQUIRED",
+      message: addOnCheck.reason,
+    }, 403 as any);
   }
 
   if (existing.status === "PUBLISHED") {

@@ -88,6 +88,7 @@ export const ModelName = {
   BillingRecoveryTask: 'BillingRecoveryTask',
   WebhookDelivery: 'WebhookDelivery',
   PlatformTierConfig: 'PlatformTierConfig',
+  PlatformBillingPlan: 'PlatformBillingPlan',
   GasSpend: 'GasSpend',
   TierUpgradeHistory: 'TierUpgradeHistory',
   SupportTicket: 'SupportTicket',
@@ -854,6 +855,28 @@ export const PlatformTierConfigScalarFieldEnum = {
 } as const
 
 export type PlatformTierConfigScalarFieldEnum = (typeof PlatformTierConfigScalarFieldEnum)[keyof typeof PlatformTierConfigScalarFieldEnum]
+
+
+export const PlatformBillingPlanScalarFieldEnum = {
+  id: 'id',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  tier: 'tier',
+  chainId: 'chainId',
+  onChainPlanId: 'onChainPlanId',
+  planName: 'planName',
+  priceMicros: 'priceMicros',
+  billingIntervalSeconds: 'billingIntervalSeconds',
+  acceptedToken: 'acceptedToken',
+  treasuryWallet: 'treasuryWallet',
+  bootstrapTxHash: 'bootstrapTxHash',
+  syncStatus: 'syncStatus',
+  syncError: 'syncError',
+  syncedAt: 'syncedAt',
+  metadata: 'metadata'
+} as const
+
+export type PlatformBillingPlanScalarFieldEnum = (typeof PlatformBillingPlanScalarFieldEnum)[keyof typeof PlatformBillingPlanScalarFieldEnum]
 
 
 export const GasSpendScalarFieldEnum = {

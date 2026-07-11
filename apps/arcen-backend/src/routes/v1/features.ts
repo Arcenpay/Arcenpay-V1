@@ -7,6 +7,7 @@ import type { Context } from "hono";
 import { requirePermission, isErrorResponse } from "../../lib/auth/api-auth.js";
 import { db } from "../../db.js";
 import { loadPublishedPlanLinksByFeatureKey } from "../../lib/catalog/catalog-entitlements.js";
+import { getTierLimits, TIER_FEATURES } from "../../lib/catalog/tier-guard.js";
 
 function toUiFeatureType(
   featureType: string | null | undefined,
@@ -124,6 +125,33 @@ export async function POST(c: Context) {
     return c.json({ error: "icon is too long" }, 400 as any);
   }
 
+
+  // Enforce feature flag tier limits
+  const currentTeam = await db.team.findUnique({
+    where: { id: teamId },
+    select: { platformTier: true },
+  });
+  if (!currentTeam) {
+    return c.json({ error: "Team not found" }, 404 as any);
+  }
+
+  const limits = await getTierLimits(currentTeam.platformTier);
+  const currentFlagCount = await db.catalogFeatureFlag.count({ where: { teamId } });
+  if (currentFlagCount >= limits.maxFeatureFlags) {
+    return c.json({
+      error: "LIMIT_REACHED",
+      message: `You have reached the limit of ${limits.maxFeatureFlags} feature flags for your ${currentTeam.platformTier} plan. Please upgrade to create more.`,
+    }, 409 as any);
+  }
+
+  const features = TIER_FEATURES[currentTeam.platformTier];
+  const storedType = toStoredFeatureType(featureType);
+  if (!features.customBranding && storedType !== "boolean") {
+    return c.json({
+      error: "UPGRADE_REQUIRED",
+      message: "Non-boolean feature types are only available on Growth and Enterprise plans. Please upgrade your platform billing plan.",
+    }, 403 as any);
+  }
 
   // Check for duplicate featureKey within team
   const existing = await db.catalogFeatureFlag.findUnique({

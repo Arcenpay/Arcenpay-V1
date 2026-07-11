@@ -181,6 +181,30 @@ export function getGraphUrl(chainId: number): string {
   }
 }
 
+// ── ArcenPay Platform Self-Billing ───────────────────────────────────────────
+
+export const PLATFORM_BILLING_CHAIN_ID = Number(
+  process.env.PLATFORM_BILLING_CHAIN_ID || "5042002",
+);
+
+export const PLATFORM_BILLING_OPS_PRIVATE_KEY: string = (() => {
+  const val = process.env.PLATFORM_BILLING_OPS_PRIVATE_KEY;
+  return requireInProd("PLATFORM_BILLING_OPS_PRIVATE_KEY", val);
+})();
+
+export const PLATFORM_BILLING_TREASURY_ADDRESS: string = (() => {
+  const val = process.env.PLATFORM_BILLING_TREASURY_ADDRESS;
+  return requireInProd("PLATFORM_BILLING_TREASURY_ADDRESS", val);
+})();
+
+export const PLATFORM_BILLING_ACCEPTED_TOKEN: string = (() => {
+  const val =
+    process.env.PLATFORM_BILLING_ACCEPTED_TOKEN ||
+    ArcenPayCore.getTokenAddress(PLATFORM_BILLING_CHAIN_ID, "USDC") ||
+    "";
+  return requireInProd("PLATFORM_BILLING_ACCEPTED_TOKEN", val);
+})();
+
 // ── Auth ──────────────────────────────────────────────────────────────────────
 
 /**

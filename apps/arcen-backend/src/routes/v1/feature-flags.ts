@@ -7,6 +7,7 @@ import type { Context } from "hono";
 import { requirePermission, isErrorResponse } from "../../lib/auth/api-auth.js";
 import { db } from "../../db.js";
 import { loadPublishedPlanEntitlementsByFeatureKey } from "../../lib/catalog/catalog-entitlements.js";
+import { getTierLimits, TIER_FEATURES } from "../../lib/catalog/tier-guard.js";
 
 export async function GET(c: Context) {
   const ctx = await requirePermission(c, "catalog:read");
@@ -123,6 +124,34 @@ export async function POST(c: Context) {
   // Validate featureKey format — must start and end with alphanumeric
   if (!/^[a-z0-9][a-z0-9_-]{0,62}[a-z0-9]$/i.test(body.featureKey)) {
     return c.json({ error: "featureKey must start and end with an alphanumeric character and contain only letters, numbers, hyphens, and underscores" }, 400 as any);
+  }
+
+  const currentTeam = await db.team.findUnique({
+    where: { id: team.teamId },
+    select: { platformTier: true },
+  });
+  if (!currentTeam) {
+    return c.json({ error: "Team not found" }, 404 as any);
+  }
+
+  const limits = await getTierLimits(currentTeam.platformTier);
+  const currentFlagCount = await db.catalogFeatureFlag.count({
+    where: { teamId: team.teamId },
+  });
+  if (currentFlagCount >= limits.maxFeatureFlags) {
+    return c.json({
+      error: "LIMIT_REACHED",
+      message: `You have reached the limit of ${limits.maxFeatureFlags} feature flags for your ${currentTeam.platformTier} plan. Please upgrade to create more.`,
+    }, 409 as any);
+  }
+
+  const reqType = body.featureType ?? "boolean";
+  const features = TIER_FEATURES[currentTeam.platformTier];
+  if (!features.customBranding && reqType !== "boolean") {
+    return c.json({
+      error: "UPGRADE_REQUIRED",
+      message: "Non-boolean feature flags (Numeric, event_based, trait_based) are only available on Growth and Enterprise plans. Please upgrade your platform billing plan.",
+    }, 403 as any);
   }
 
   const existing = await db.catalogFeatureFlag.findUnique({

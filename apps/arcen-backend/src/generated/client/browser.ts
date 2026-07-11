@@ -203,6 +203,11 @@ export type WebhookDelivery = Prisma.WebhookDeliveryModel
  */
 export type PlatformTierConfig = Prisma.PlatformTierConfigModel
 /**
+ * Model PlatformBillingPlan
+ * 
+ */
+export type PlatformBillingPlan = Prisma.PlatformBillingPlanModel
+/**
  * Model GasSpend
  * 
  */

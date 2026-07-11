@@ -6,10 +6,13 @@
 
 import type { Context } from "hono";
 import { requirePermission, isErrorResponse } from "../../lib/auth/api-auth.js";
+import { db } from "../../db.js";
 
 export async function POST(c: Context) {
   const ctx = await requirePermission(c, "catalog:write");
   if (isErrorResponse(ctx)) return c.json({ ok: false, error: ctx.error }, ctx.status as any);
+
+  const { team } = ctx;
 
   let body: {
     provider: {

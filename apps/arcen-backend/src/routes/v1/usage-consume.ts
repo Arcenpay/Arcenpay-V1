@@ -7,6 +7,7 @@ import {
   ConsumeEntitlementError,
 } from "../../lib/billing/usage-consume.js";
 import { corsHeaders } from "../../middleware/cors.js";
+import { db } from "../../db.js";
 
 function jsonWithCors(c: Context, body: unknown, status = 200 as any) {
   return c.json(body, status as any, corsHeaders(c.req.header("origin")));
@@ -151,6 +152,17 @@ export async function POST(c: Context) {
       : undefined;
   } else {
     return jsonWithCors(c, { error: "Authorization required" }, 401);
+  }
+
+  const currentTeam = await db.team.findUnique({
+    where: { id: teamId },
+    select: { platformTier: true },
+  });
+  if (!currentTeam || currentTeam.platformTier === "FREE") {
+    return jsonWithCors(c, {
+      error: "UPGRADE_REQUIRED",
+      message: "Usage metering and credit consumption are only available on Growth and Enterprise tiers. Please upgrade your platform billing plan.",
+    }, 403);
   }
 
   try {

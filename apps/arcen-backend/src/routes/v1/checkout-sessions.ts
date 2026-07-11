@@ -84,6 +84,8 @@ export async function POST(c: Context) {
   const auth = await requireAnyAuth(c);
   if (isAnyAuthError(auth)) return c.json({ ok: false, error: auth.error }, auth.status as any as any);
 
+
+
   const activeEnvironment =
     auth.source === "session" && auth.sessionId
       ? await requireResolvedActiveEnvironment(
